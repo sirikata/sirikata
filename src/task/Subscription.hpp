@@ -1,4 +1,4 @@
-/** Iridium Kernel -- Task scheduling system
+/*     Iridium Kernel -- Task scheduling system
  *  Subscription.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -35,19 +35,35 @@
 
 #include <typeinfo>
 #include <string>
+#include "HashMap.hpp"
+
 
 namespace Iridium {
+
+/**
+ * Subscription.hpp -- Defines a SubscriptionId, as well as macros
+ * to ease the creation of a unique identifier to go along with the
+ * boost::function objects passed into EventManager and TimerQueue.
+ */
 namespace Task {
 
+/**
+ * An ID to allow comparing two callback functions.  It is up
+ * to the creator to ensure uniqueness of SubscriptionId objects.
+ *
+ * @see TimerQueue
+ * @see EventManager
+ */
 class SubscriptionId {
 private:
-	void *mThisPtr; // do not dereference
-	const char *mClassId;
-	std::string mUniqueId; // usuallycontains class or function name, and other arguments.
+	void *mThisPtr; /// do not dereference
+	const char *mClassId; /// A compile-time constant, usually a class name or file or module name.
+	std::string mUniqueId; /// usually contains class or function name, and other arguments.
 
 public:
 
-	static inline bool operator== (const SubscriptionId &other) const {
+	/// Equality comparison
+	inline bool operator== (const SubscriptionId &other) const {
 		if (mThisPtr != other.mThisPtr)
 			return false;
 		if (mClassId == NULL && other.mClassId == NULL)
@@ -59,7 +75,8 @@ public:
 			return false;
 		return (mUniqueId == other.mUniqueId);
 	}
-	static inline bool operator< (const SubscriptionId &other) const {
+	/// Ordering comparison
+	inline bool operator< (const SubscriptionId &other) const {
 		if (mThisPtr == other.mThisPtr) {
 			if (mClassId == NULL && other.mClassId != NULL)
 				return true;
@@ -90,12 +107,26 @@ public:
 	SubscriptionId(void *thisPtr,
 				const char *classId,
 				const std::string &uniqueId)
-		: mThisPtr(thisPtr), mClassId(classId), mUniqueId(str) {
+		: mThisPtr(thisPtr), mClassId(classId), mUniqueId(uniqueId) {
 	}
 
+	/**
+	 * Create a null subscription ID.  A null subscription ID cannot be
+	 * explicitly unsubscribed (and has greater efficiency when adding
+	 * or removing event listeners)
+	 */
 	static inline SubscriptionId null() {
 		return SubscriptionId(NULL, NULL, std::string());
 	}
+
+	/// Hasher functor to be used in a hash_map.
+	struct Hasher {
+		int operator() (const SubscriptionId &sid) const{
+			return HASH<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
+				HASH<const char *>() (sid.mClassId) * 41 +
+				HASH<const char *>() (sid.mUniqueId.c_str());
+		}
+	};
 };
 
 // TODO: provide a better (fool-proof) interface for these.

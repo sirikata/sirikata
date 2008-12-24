@@ -1,4 +1,4 @@
-/** Iridium Kernel -- Task scheduling system
+/*     Iridium Kernel -- Task scheduling system
  *  TimerQueue.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -44,13 +44,22 @@
 
 
 namespace Iridium {
+
+/** TimerQueue.hpp -- includes definitions for TimedEvent and TimerQueue */
 namespace Task {
 
+/**
+ * A thunk to be called upon reaching the specified absolute time.
+ *
+ * @returns the number of seconds until the function shall be called
+ * again, 0 if the function should be called next frame (ASAP), or
+ * negative if it should be removed from the timer queue.
+ */
 typedef boost::function0<DeltaTime> TimedEvent;
 
 
 
-/** A work queue that runs on each frame? */
+/** A work queue that runs on each frame. */
 class TimerQueue {
 	std::map<AbsTime, std::list<TimedEvent> > mQueue;
 public:
@@ -68,9 +77,10 @@ public:
 	void schedule(AbsTime nextTime,
 				const TimedEvent &ev);
 
+	/// @see schedule(AbsTime, const TimedEvent&)
 	inline void schedule(DeltaTime delta,
 				const TimedEvent &ev) {
-		schedule(AbsTime.now() + delta, ev);
+		schedule(AbsTime::now() + delta, ev);
 	}
 	
 	/**
@@ -89,10 +99,11 @@ public:
 				const TimedEvent &ev,
 				const SubscriptionId &id);
 
+	/// @see schedule(AbsTime, const TimedEvent&, const SubscriptionId&)
 	inline void schedule(DeltaTime delta,
 				const TimedEvent &ev,
 				const SubscriptionId &id) {
-		schedule(AbsTime.now() + delta, ev, id);
+		schedule(AbsTime::now() + delta, ev, id);
 	}
 
 	/**
@@ -102,12 +113,14 @@ public:
 	 *
 	 * @param removeId  the exact SubscriptionID to search for.
 	 */
-	void unschedule(const SubscriptionId &removeID);
+	void unschedule(const SubscriptionId &removeId);
 };
 
+/// Global TimerQueue singleton.
 extern TimerQueue timer_queue;
 
 }
 }
 
+#endif
 

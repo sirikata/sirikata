@@ -1,4 +1,4 @@
-/** Iridium Kernel -- Task scheduling system
+/*     Iridium Kernel -- Task scheduling system
  *  EventManager.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -39,10 +39,27 @@
 #include <boost/weak_ptr.hpp>
 #include <string>
 #include <algorithm>
+#include <map>
+#include <list>
+#include <vector>
 
+#include "HashMap.hpp"
 #include "Subscription.hpp"
+#include "Event.hpp"
+#include "Time.hpp"
+
+/** @namespace Iridium::Task 
+ * Iridium::Task contains the task-oriented functions for communication
+ * across the program, as well as a scheduler to manage space CPU cycles
+ * between graphics frames.
+ */
 
 namespace Iridium {
+
+/**
+ * EventManager.hpp -- EventManager class definition, as well as the
+ * EventResponse and EventOrder enumerations.
+ */
 namespace Task {
 
 // TODO: Add events with timeouts.
@@ -51,6 +68,12 @@ namespace Task {
 // it may be better to store two copies of the event and have unsubscribe
 // only unsubscribe one of those two (use a multi_map for mRemoveById.
 
+
+
+/**
+ * Defines the set of return values for an EventListener. An acceptable
+ * value includes the bitwise or of any values in the enum.
+ */
 class EventResponse {
 	enum {
 		NOP,
@@ -59,6 +82,11 @@ class EventResponse {
 	} mResp;
 };
 
+/**
+ * Defines constants to allow a strict ordering of event processing.
+ * At the moment, since there is not a good use case for this,
+ * there are only three legal orderings specified.
+ */
 enum EventOrder {
 	EARLY,
 	MIDDLE,
@@ -66,42 +94,58 @@ enum EventOrder {
 	NUM_EVENTORDER
 };
 
+/// Exception thrown if an invalid EventOrder is passed.
+class EventOrderException : std::exception {};
+
 /** Some EventManagers may require a different base class which
  * inherits from Event but have additional properties. */
 template <class EventBase>
 class EventManager {
 
 	/* TYPEDEFS */
-
+public:
+	/// A shared_ptr to an Event.
 	typedef boost::shared_ptr<EventBase> EventPtr;
+
+	/**
+	 * A boost::function1 taking an Event and returning a value indicating
+	 * Whether to cancel the event, remove the event responder, or some
+	 * other values.
+	 *
+	 * @see EventResponse
+	 */
 	typedef boost::function1<EventResponse, EventPtr> EventListener;
-	
+
+private:
 	/// if the listener does not corresond to an id, use SubscriptionId::null().
 	typedef std::pair<EventListener, SubscriptionId> ListenerSubscriptionInfo;
 	typedef std::list<ListenerSubscriptionInfo> ListenerList;
 	class PartiallyOrderedListenerList {
 		ListenerList ll [NUM_EVENTORDER];
 	public:
-		ListenerList &operator [] (size_t i) const {
+		ListenerList &operator [] (size_t i) {
 			return ll[i];
 		}
 	};
 
 	class EventSubscriptionInfo {
 		ListenerList &mList;
-		ListenerList::iterator mIter;
+		typename ListenerList::iterator mIter;
+		friend class EventManager<EventBase>;
 	public:
 
 		EventSubscriptionInfo(ListenerList &list,
-						const ListenerList::iterator &iter)
-			: mList(list), mEventId(evid) {
+						typename ListenerList::iterator &iter)
+			: mList(list), mIter(iter) {
 		}
 	};
 	
-	typedef std::hash_map<IdPair::Secondary, PartiallyOrderedListenerList> SecondaryListenerMap;
-	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo
+	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList,
+				IdPair::Secondary::Hasher> SecondaryListenerMap;
+	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo> PrimaryListenerMap;
-	typedef std::hash_map<SubscriptionId, EventSubscriptionInfo> RemoveMap;
+	typedef HashMap<SubscriptionId, EventSubscriptionInfo,
+				SubscriptionId::Hasher> RemoveMap;
 	
 	/* MEMBERS */
 
@@ -112,14 +156,17 @@ class EventManager {
 	/* PRIVATE FUNCTIONS */
 
 	PrimaryListenerInfo &insertPriId(const IdPair::Primary &pri);
-	PrimaryOrderedListenerList &insertSecId(SecondaryListenerMap &map,
-				const IdPair::Secondary &pri);
+	PartiallyOrderedListenerList &insertSecId(SecondaryListenerMap &map,
+				const IdPair::Secondary &sec);
 
 	/// Removee if the passed element has no items left.
 	/// Call after anything that could remove items from the map.
-	bool cleanUp(PrimaryListenerMap::iterator &iter);
+	bool cleanUp(typename PrimaryListenerMap::iterator &iter);
 	bool cleanUp(SecondaryListenerMap &slm,
-				SecondaryListenerMap::iterator &slm_iter);
+				typename SecondaryListenerMap::iterator &slm_iter);
+
+
+	int clearListenerList(ListenerList &list);
 
 	void processEventQueue(AbsTime forceCompletionBy);
 
@@ -182,7 +229,7 @@ public:
 	 * @see EventResponse
 	 * @see EventListener
 	 */
-	void subscribe(const IdPair & id,
+	void subscribe(const IdPair & eventId,
 				const EventListener & listener,
 				const SubscriptionId & removeId,
 				EventOrder when=MIDDLE);
@@ -205,7 +252,7 @@ public:
 	 * @see EventResponse
 	 * @see EventListener
 	 */
-	void subscribe(const IdPair::Primary & priId,
+	void subscribe(const IdPair::Primary & primaryId,
 				const EventListener & listener,
 				const SubscriptionId & removeId,
 				EventOrder when=MIDDLE);
@@ -227,12 +274,12 @@ public:
 	 */
 	int removeAllByInterest(const IdPair &whichId);
 	/**
-	 * [NOTE: Is a function like this necessary? useful? encourages bad style?]
-	 * 
-	 * Removes all listeners which are specifically waiting for the PrimaryId.
+	 * Removes all listeners which are waiting for any event of this event type.
 	 * Since the event system supports both generic (any event of a type) and
 	 * specific (specific occurence of an event) listeners, two boolean flags 
 	 * pecify which types are to be removed.
+	 * 
+	 * [NOTE: Is a function like this necessary? useful? encourages bad style?]
 	 * 
 	 * @param whichId   a PrimaryId equal to the one subscribed.
 	 * @param specific  true if specific subscribers should be removed (default true)
@@ -254,6 +301,12 @@ public:
 	DeltaTime fire(EventPtr ev);
 
 };
+
+/**
+ * Generic Event Manager -- the most common type that accepts any
+ * subclass of Event.
+ */
+typedef class EventManager<Event> GenEventManager;
 
 }
 }
