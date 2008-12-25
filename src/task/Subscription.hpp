@@ -56,9 +56,9 @@ namespace Task {
  */
 class SubscriptionId {
 private:
-	void *mThisPtr; /// do not dereference
-	const char *mClassId; /// A compile-time constant, usually a class name or file or module name.
-	std::string mUniqueId; /// usually contains class or function name, and other arguments.
+	void *mThisPtr; ///< do not dereference
+	const char *mClassId; ///< A compile-time constant, usually a class name or file or module name.
+	std::string mUniqueId; ///< usually contains class or function name, and other arguments.
 
 public:
 

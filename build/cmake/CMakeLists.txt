@@ -66,6 +66,111 @@ MACRO(VERIFY_VERSION package_name major minor subminor)
 ENDMACRO(VERIFY_VERSION)
 
 
+MACRO(CAR var)
+  SET(${var} ${ARGV1})
+ENDMACRO(CAR)
+MACRO(CDR var junk)
+  SET(${var} ${ARGN})
+ENDMACRO(CDR)
+
+MACRO(LIST_CONTAINS var value)
+  SET(${var})
+  FOREACH (value2 ${ARGN})
+    IF (${value} STREQUAL ${value2})
+      SET(${var} TRUE)
+    ENDIF (${value} STREQUAL ${value2})
+  ENDFOREACH (value2)
+ENDMACRO(LIST_CONTAINS)
+
+MACRO(PARSE_ARGUMENTS prefix arg_names option_names)
+  SET(DEFAULT_ARGS)
+  FOREACH(arg_name ${arg_names})
+    SET(${prefix}_${arg_name})
+  ENDFOREACH(arg_name)
+  FOREACH(option ${option_names})
+    SET(${prefix}_${option} FALSE)
+  ENDFOREACH(option)
+
+  SET(current_arg_name DEFAULT_ARGS)
+  SET(current_arg_list)
+  FOREACH(arg ${ARGN})
+    LIST_CONTAINS(is_arg_name ${arg} ${arg_names})
+    IF (is_arg_name)
+      SET(${prefix}_${current_arg_name} ${current_arg_list})
+      SET(current_arg_name ${arg})
+      SET(current_arg_list)
+    ELSE (is_arg_name)
+      LIST_CONTAINS(is_option ${arg} ${option_names})
+      IF (is_option)
+	SET(${prefix}_${arg} TRUE)
+      ELSE (is_option)
+	SET(current_arg_list ${current_arg_list} ${arg})
+      ENDIF (is_option)
+    ENDIF (is_arg_name)
+  ENDFOREACH(arg)
+  SET(${prefix}_${current_arg_name} ${current_arg_list})
+ENDMACRO(PARSE_ARGUMENTS)
+
+MACRO(ADD_CXXTEST_CPP_TARGET)
+  PARSE_ARGUMENTS(CXXTEST "DEPENDS;INPUTDIR;OUTPUTDIR;LIBRARYDIR" "" ${ARGN})
+  CAR(CXXTEST_NAME ${CXXTEST_DEFAULT_ARGS})
+  CDR(CXXTEST_FILES ${CXXTEST_DEFAULT_ARGS})
+
+  SET(CXXTEST_EXEC_TARGET ${CXXTEST_NAME})
+
+  SET(CXXTEST_TEST_FILES)
+  SET(CXXTEST_H_FILES)
+
+  SET(CXXTEST_OPTIONS --runner=StdioPrinter)
+  #IF(CXXTEST_OUTPUTDIR)
+  #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
+  #ENDIF(CXXTEST_OUTPUTDIR)
+  FIND_PACKAGE(Perl)
+  IF(PERL_EXECUTABLE)
+    SET(CXXTEST_COMPILER ${PERL_EXECUTABLE})
+    SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.pl)
+  ELSE()
+    FIND_PACKAGE(PythonInterp)
+    IF(PYTHON_EXECUTABLE)
+      SET(CXXTEST_COMPILER ${PYTHON_EXECUTABLE})
+      SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)    
+    ELSE()
+      MESSAGE(WARNING "Cannot locate python or perl")
+    ENDIF()
+  ENDIF()
+  SET(CXXTEST_CPP_FILE ${CXXTEST_OUTPUTDIR}/test.cc)
+  FOREACH(FILE ${CXXTEST_FILES})
+    SET(CXXTEST_H_FILE ${CXXTEST_INPUTDIR}/${FILE}.test.h)
+
+    SET(CXXTEST_TEST_FILES ${CXXTEST_TEST_FILES} ${CXXTEST_H_FILE})
+  ENDFOREACH(FILE)
+  IF (CXXTEST_COMPILER)
+    ADD_CUSTOM_COMMAND(OUTPUT ${CXXTEST_CPP_FILE}
+                       COMMAND ${CXXTEST_COMPILER} ${CXXTEST_GEN} ${CXXTEST_OPTIONS} -o ${CXXTEST_CPP_FILE} ${CXXTEST_TEST_FILES}
+                       DEPENDS ${CXXTEST_TEST_FILES} ${CXXTEST_DEPENDS}
+                       COMMENT "Building ${CXXTEST_TEST_FILES} -> ${CXXTEST_CPP_FILE}")
+  ELSE()
+    ADD_CUSTOM_COMMAND(OUTPUT ${CXXTEST_CPP_FILE}
+                       COMMAND "touch ${CXXTEST_CPP_FILE}")
+  ENDIF()
+
+  SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CXXTEST_CPP_FILE})
+
+#  ADD_CUSTOM_TARGET(CXX_TEST ALL
+#                    DEPENDS ${CXXTEST_FILES} ${CXXTEST_DEPENDS} ${CXXTEST_ALL_OUTPUTS})
+ENDMACRO(ADD_CXXTEST_CPP_TARGET)
+
+SET(CXXTESTSources
+  Mytest Othertest)
+SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
+
+ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
+	INPUTDIR ${TOP_LEVEL}/test
+	LIBRARYDIR ${CXXTESTRoot}
+	OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
+
+SET(CxxTestLibSources ${CXXTEST_CPP_FILE})
+
 #dependencies
 IF(NOT PLATFORM_LIBS)
   SET(PLATFORM_LIBS ${TOP_LEVEL}/../dependencies/)
@@ -97,12 +202,12 @@ SET(Boost_LIBRARIES
     ${Boost_THREAD_LIBRARY})
 
 #cxx flags
-INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/include ${Boost_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/include ${Boost_INCLUDE_DIRS} ${CXXTESTRoot})
 
 #source files
 SET(SOURCE_DIR ${TOP_LEVEL}/src)
 SET(IRIDESCENCE_SOURCES ${SOURCE_DIR}/task/EventManager.cpp)
-SET(TEST_SOURCES ${SOURCE_DIR}/task/EventManager.cpp)
+SET(TEST_SOURCES ${CxxTestLibSources} ) #${TOP_LEVEL}/test/main.cpp
 
 
 
@@ -123,11 +228,13 @@ IF(CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]")
     SET_TARGET_PROPERTIES(iridescence PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
   ENDIF()
 
-  ADD_EXECUTABLE(test EXCLUDE_FROM_ALL ${TEST_SOURCES})
-  TARGET_LINK_LIBRARIES(test ${TEST_LIBRARIES})
+  ADD_EXECUTABLE(test_debug EXCLUDE_FROM_ALL ${TEST_SOURCES})
+  TARGET_LINK_LIBRARIES(test_debug ${TEST_LIBRARIES})
   IF(Iridescence_LDFLAGS)
-    SET_TARGET_PROPERTIES(test PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
+    SET_TARGET_PROPERTIES(test_debug PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
   ENDIF()
+
+  SET(TEST_BINARY test_debug)
 
 ELSE()
   ADD_EXECUTABLE(iridescence_release ${IRIDESCENCE_SOURCES})
@@ -141,4 +248,11 @@ ELSE()
   IF(Iridescence_LDFLAGS)
     SET_TARGET_PROPERTIES(test_release PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
   ENDIF()
+
+  SET(TEST_BINARY test_release)
+
 ENDIF()
+
+ADD_CUSTOM_TARGET(test
+	DEPENDS ${TEST_BINARY}
+	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TEST_BINARY})

@@ -366,7 +366,7 @@ ELSE (_boost_IN_CACHE)
       _boost_COMPILER_VERSION ${_boost_COMPILER_VERSION})
     SET (_boost_COMPILER "-gcc${_boost_COMPILER_VERSION}")
     MESSAGE(STATUS ${_boost_COMPILER})
-  ENDIF(MINGW)
+  ENDIF()
   IF (UNIX)
     IF (0)#NOT CMAKE_COMPILER_IS_GNUCC)
       # We assume that we have the Intel compiler.
