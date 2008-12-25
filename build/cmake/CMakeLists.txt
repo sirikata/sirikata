@@ -135,7 +135,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
       SET(CXXTEST_COMPILER ${PYTHON_EXECUTABLE})
       SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)    
     ELSE()
-      MESSAGE(WARNING "Cannot locate python or perl")
+      MESSAGE("!!! Cannot locate python or perl -- tests will not be compiled.")
     ENDIF()
   ENDIF()
   SET(CXXTEST_CPP_FILE ${CXXTEST_OUTPUTDIR}/test.cc)
@@ -151,7 +151,8 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
                        COMMENT "Building ${CXXTEST_TEST_FILES} -> ${CXXTEST_CPP_FILE}")
   ELSE()
     ADD_CUSTOM_COMMAND(OUTPUT ${CXXTEST_CPP_FILE}
-                       COMMAND "touch ${CXXTEST_CPP_FILE}")
+                       COMMAND exit 1
+                       COMMENT "Unable to build ${CXXTEST_CPP_FILE} because python and perl were not found.")
   ENDIF()
 
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CXXTEST_CPP_FILE})
@@ -253,6 +254,11 @@ ELSE()
 
 ENDIF()
 
+#ENABLE_TESTING()
+#ADD_TEST(test ${EXECUTABLE_OUTPUT_PATH}/${TEST_BINARY}
+#  DEPENDS ${EXECUTABLE_OUTPUT_PATH}/${TEST_BINARY}) 
+
 ADD_CUSTOM_TARGET(test
-	DEPENDS ${TEST_BINARY}
+	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${TEST_BINARY}
 	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TEST_BINARY})
+
