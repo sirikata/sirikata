@@ -33,6 +33,7 @@
 #ifndef IRIDIUM_Time_HPP__
 #define IRIDIUM_Time_HPP__
 
+#include <inttypes.h>
 
 namespace Iridium {
 
@@ -164,6 +165,15 @@ public:
 	 * for time synchronization over the network.
 	 */
 	static AbsTime now(); // Only way to generate an AbsTime for now...
+	
+	/**
+	 * Creates a 'null' absolute time that is equivalent to
+	 * a long time ago in a galaxy far away.  Always less than
+	 * a real time, and equal to another null() value.
+	 *
+	 * @returns a 'null' time to be used if a timeout is not applicable.
+	 */
+	static AbsTime null() { return AbsTime(0); }
 
 /*
 	static inline AbsTime frameTime() {

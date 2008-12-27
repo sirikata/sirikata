@@ -79,7 +79,32 @@ class EventResponse {
 		NOP,
 		DELETE_LISTENER=1,
 		CANCEL_EVENT=2,
+		DELETE_LISTENER_AND_CANCEL_EVENT = DELETE_LISTENER | CANCEL_EVENT,
 	} mResp;
+
+	template <class Ev> friend class EventManager;
+
+public:
+	static EventResponse nop() {
+		EventResponse retval;
+		retval.mResp=NOP;
+		return retval;
+	}
+	static EventResponse del() {
+		EventResponse retval;
+		retval.mResp=DELETE_LISTENER;
+		return retval;
+	}
+	static EventResponse cancel() {
+		EventResponse retval;
+		retval.mResp=CANCEL_EVENT;
+		return retval;
+	}
+	static EventResponse cancelAndDel() {
+		EventResponse retval;
+		retval.mResp=DELETE_LISTENER_AND_CANCEL_EVENT;
+		return retval;
+	}
 };
 
 /**
@@ -123,10 +148,10 @@ private:
 	class PartiallyOrderedListenerList {
 		ListenerList ll [NUM_EVENTORDER];
 	public:
-		ListenerList &operator [] (size_t i) {
-			return ll[i];
-		}
-	};
+			ListenerList &operator [] (size_t i) {
+				return ll[i];
+			}
+		};
 
 	class EventSubscriptionInfo {
 		ListenerList &mList;
@@ -146,12 +171,19 @@ private:
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo> PrimaryListenerMap;
 	typedef HashMap<SubscriptionId, EventSubscriptionInfo,
 				SubscriptionId::Hasher> RemoveMap;
+	typedef std::vector<EventPtr> EventList;
 	
 	/* MEMBERS */
 
 	PrimaryListenerMap mListeners;
-	std::vector<EventPtr> mUnprocessed;
+	EventList mUnprocessed;
 	RemoveMap mRemoveById; ///< Used for unsubscribe: always keep in sync.
+
+	bool mProcessing; ///< we are not allowed to immediately remove listeners.
+	bool mClearCurrentList;
+	ListenerList *mProcessingList; ///< if non-NULL, do not allow removes from this list.
+	
+	std::list<SubscriptionId> mUnsubscribeList;
 
 	/* PRIVATE FUNCTIONS */
 
@@ -168,10 +200,11 @@ private:
 
 	int clearListenerList(ListenerList &list);
 
-	void processEventQueue(AbsTime forceCompletionBy);
-
+	bool fireAll(EventPtr ev, ListenerList &lili, AbsTime forceCompletionBy);
 public:
 	/* PUBLIC FUNCTIONS */
+	/// FIXME: This is for testing purposes only--do not make public.
+	void temporary_processEventQueue(AbsTime forceCompletionBy);
 
 	/**
 	 * Subscribes to a specific event. The listener function will receieve
@@ -298,7 +331,7 @@ public:
 	 * @param ev  A shared_ptr to an Event to be stored in the queue.
 	 * @see   Event
 	 */
-	DeltaTime fire(EventPtr ev);
+	void fire(EventPtr ev);
 
 };
 

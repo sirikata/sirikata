@@ -34,6 +34,7 @@
 #define IRIDIUM_Event_HPP__
 
 #include "HashMap.hpp"
+#include <ostream>
 
 namespace Iridium {
 
@@ -62,8 +63,8 @@ public:
 		 * an intptr_t when passed to the constructor. */
 		typedef intptr_t IntType;
 	private:
-		intptr_t mIntValue;
-		std::string mStrValue;
+		const intptr_t mIntValue;
+		const std::string mStrValue;
 	public:
 
 		/** Creates a Secondary ID with an integer or pointer value
@@ -79,8 +80,28 @@ public:
 		 * an empty string here results in undefined behavior when
 		 * comparing to Secondary(0) or Secondary::null(). */
 
-		Secondary(const std::string &str) : mStrValue(str),
-				mIntValue(HASH<const char *>()(str.c_str())) {}
+		Secondary(const std::string &str) :
+				mIntValue(HASH<const char *>()(str.c_str())),
+				mStrValue(str) {}
+
+		/**
+		 * Displays string value (up to 60 chars), or integer
+		 * value if the string is empty.
+		 */
+		inline friend std::ostream& operator << (
+				std::ostream &os,
+				const Secondary &id) {
+			if (id.mStrValue.empty()) {
+				os << id.mIntValue;
+			} else {
+				if (id.mStrValue.size() > 60) {
+					os << '\"' << id.mStrValue.substr(57) << "\"...";
+				} else {
+					os << '\"' << id.mStrValue << '\"';
+				}
+			}
+			return os;
+		}
 
 		/// Equality comparison
 		inline bool operator== (const Secondary &otherId) const {
@@ -119,11 +140,19 @@ public:
 	 * mapping from string to integer. */
 	class Primary {
 	private:
-		int mId;
+		const int mId;
+		static int getUniqueId(const std::string &id);
 	public:
 		/** Lookup the eventName in the internal static map (and create
 		 * an entry if one does not yet exist) */
 		Primary(const std::string &eventName);
+
+		/// Currently only displays the integer version of primary ID.
+		inline friend std::ostream& operator << (
+						std::ostream &os,
+						const Primary &id) {
+			return os << id.mId;
+		}
 
 		/// Ordering comparison
 		inline bool operator< (const Primary &other) const {
@@ -146,6 +175,13 @@ public:
 	Primary mPriId;
 	/// Public Secondary key.
 	Secondary mSecId;
+
+	/// Prints out an ID -- Use for debugging only.
+	inline friend std::ostream& operator << (
+				std::ostream &os,
+				const IdPair &id) {
+		return os << "<ID:" << id.mPriId << "; " << id.mSecId << '>';
+	}
 	
 	/// Create based on an already existing Primary and Secondary ID.
 	IdPair(const Primary &pri, const Secondary &sec)
@@ -197,7 +233,7 @@ public:
 	}
 
 	/** Most subclasses will use aditional members, free them properly. */
-	virtual ~Event();
+	virtual ~Event() {}
 
 	/// Returns the IdPair to compare for equality.
 	inline const IdPair &getId () const {
