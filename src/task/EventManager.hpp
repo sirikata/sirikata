@@ -42,9 +42,10 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <set>
 
 #include "HashMap.hpp"
-#include "Subscription.hpp"
+#include "UniqueId.hpp"
 #include "Event.hpp"
 #include "Time.hpp"
 
@@ -85,21 +86,25 @@ class EventResponse {
 	template <class Ev> friend class EventManager;
 
 public:
+	/// the event listener will be called again, and event stays on the queue.
 	static EventResponse nop() {
 		EventResponse retval;
 		retval.mResp=NOP;
 		return retval;
 	}
+	/// Never call this function again (One-shot listener).
 	static EventResponse del() {
 		EventResponse retval;
 		retval.mResp=DELETE_LISTENER;
 		return retval;
 	}
+	/// Take the event off the queue after this stage (EARLY,MIDDLE,LATE)
 	static EventResponse cancel() {
 		EventResponse retval;
 		retval.mResp=CANCEL_EVENT;
 		return retval;
 	}
+	/// Kill the listener and kill the event (probably not useful).
 	static EventResponse cancelAndDel() {
 		EventResponse retval;
 		retval.mResp=DELETE_LISTENER_AND_CANCEL_EVENT;
@@ -142,6 +147,7 @@ public:
 	typedef boost::function1<EventResponse, EventPtr> EventListener;
 
 private:
+
 	/// if the listener does not corresond to an id, use SubscriptionId::null().
 	typedef std::pair<EventListener, SubscriptionId> ListenerSubscriptionInfo;
 	typedef std::list<ListenerSubscriptionInfo> ListenerList;
@@ -152,25 +158,37 @@ private:
 				return ll[i];
 			}
 		};
-
-	class EventSubscriptionInfo {
-		ListenerList &mList;
-		typename ListenerList::iterator mIter;
-		friend class EventManager<EventBase>;
-	public:
-
-		EventSubscriptionInfo(ListenerList &list,
-						typename ListenerList::iterator &iter)
-			: mList(list), mIter(iter) {
-		}
-	};
 	
 	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList,
 				IdPair::Secondary::Hasher> SecondaryListenerMap;
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo> PrimaryListenerMap;
-	typedef HashMap<SubscriptionId, EventSubscriptionInfo,
-				SubscriptionId::Hasher> RemoveMap;
+
+	class EventSubscriptionInfo {
+		ListenerList *mList;
+		typename ListenerList::iterator mIter;
+
+		// used for garbage collection after unsubscribing.
+		SecondaryListenerMap *secondaryMap;
+		typename SecondaryListenerMap::iterator secondaryIter;
+
+		friend class EventManager<EventBase>;
+	public:
+
+		EventSubscriptionInfo(ListenerList *list,
+					typename ListenerList::iterator &iter)
+			: mList(list), mIter(iter), secondaryMap(NULL) {
+		}
+
+		EventSubscriptionInfo(ListenerList *list,
+					typename ListenerList::iterator &iter,
+					SecondaryListenerMap *slm,
+					typename SecondaryListenerMap::iterator &slmIter)
+			: mList(list), mIter(iter),
+			 secondaryMap(slm), secondaryIter(slmIter) {
+		}
+	};
+	typedef HashMap<SubscriptionId, EventSubscriptionInfo> RemoveMap;
 	typedef std::vector<EventPtr> EventList;
 	
 	/* MEMBERS */
@@ -179,28 +197,42 @@ private:
 	EventList mUnprocessed;
 	RemoveMap mRemoveById; ///< Used for unsubscribe: always keep in sync.
 
-	bool mProcessing; ///< we are not allowed to immediately remove listeners.
-	bool mClearCurrentList;
-	ListenerList *mProcessingList; ///< if non-NULL, do not allow removes from this list.
-	
-	std::list<SubscriptionId> mUnsubscribeList;
+	/// if non-NULL, do not allow removes from this list.
+	ListenerList *mProcessingList;
+
+	/// Unsubscription requests received for the current ListenerList.
+	std::set<SubscriptionId> mProcessingUnsubscribe;
+
+	/// These listeners need to be called with NULL argument.
+	std::list<EventListener> mRemovedListeners;
 
 	/* PRIVATE FUNCTIONS */
 
 	PrimaryListenerInfo &insertPriId(const IdPair::Primary &pri);
-	PartiallyOrderedListenerList &insertSecId(SecondaryListenerMap &map,
+
+	typename SecondaryListenerMap::iterator insertSecId(
+				SecondaryListenerMap &map,
 				const IdPair::Secondary &sec);
 
-	/// Removee if the passed element has no items left.
-	/// Call after anything that could remove items from the map.
-	bool cleanUp(typename PrimaryListenerMap::iterator &iter);
-	bool cleanUp(SecondaryListenerMap &slm,
+
+	/** Cleans up the removal ID like unsubscribe, but does not
+	 * free the actual event or put it in mRemovedListeners. */
+	void clearRemoveId(SubscriptionId removeId);
+
+	/** Removee if the passed element has no items left.
+	 * Call after anything that could remove items from the map. */
+	bool cleanUp(SecondaryListenerMap *slm,
 				typename SecondaryListenerMap::iterator &slm_iter);
 
+	void addListener(ListenerList *insertList,
+				const EventListener &listener,
+				SubscriptionId removeId);
 
 	int clearListenerList(ListenerList &list);
 
-	bool fireAll(EventPtr ev, ListenerList &lili, AbsTime forceCompletionBy);
+	bool callAllListeners(EventPtr ev,
+				ListenerList *lili,
+				AbsTime forceCompletionBy);
 public:
 	/* PUBLIC FUNCTIONS */
 	/// FIXME: This is for testing purposes only--do not make public.
@@ -216,7 +248,7 @@ public:
 	 *
 	 * @param eventId    the specific event to subscribe to
 	 * @param listener   a (usually bound) boost::function taking an EventPtr
-     * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 *
 	 * @see EventResponse
 	 * @see EventListener
@@ -233,7 +265,7 @@ public:
 	 *
 	 * @param primaryId  the event type to subscribe to
 	 * @param listener   a (usually bound) boost::function taking an EventPtr
-     * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 *
 	 * @see EventResponse
 	 * @see EventListener
@@ -255,16 +287,15 @@ public:
 	 *
 	 * @param eventId    the specific event to subscribe to
 	 * @param listener   a (usually bound) boost::function taking an EventPtr
-	 * @param removeId   a SubscriptionId that can be passed to unsubscribe
-     * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @returns          a SubscriptionId that can be passed to unsubscribe
 	 *
 	 * @see SubscriptionId
 	 * @see EventResponse
 	 * @see EventListener
 	 */
-	void subscribe(const IdPair & eventId,
+	SubscriptionId subscribeId(const IdPair & eventId,
 				const EventListener & listener,
-				const SubscriptionId & removeId,
 				EventOrder when=MIDDLE);
 	/**
 	 * Subscribes to a given event type. The listener function will receieve ALL
@@ -278,50 +309,28 @@ public:
 	 *
 	 * @param primaryId  the event type to subscribe to
 	 * @param listener   a (usually bound) boost::function taking an EventPtr
-	 * @param removeId   a SubscriptionId that can be passed to unsubscribe
-     * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
+	 * @returns          a SubscriptionId that can be passed to unsubscribe
 	 *
 	 * @see SubscriptionId
 	 * @see EventResponse
 	 * @see EventListener
 	 */
-	void subscribe(const IdPair::Primary & primaryId,
+	SubscriptionId subscribeId(const IdPair::Primary & primaryId,
 				const EventListener & listener,
-				const SubscriptionId & removeId,
 				EventOrder when=MIDDLE);
 	
 	/**
 	 * Unsubscribes from the event matching removeId. The removeId should be
 	 * created using the same CLASS_ID or GEN_ID macros that were used when
 	 * creating the subscription.
+	 * Note that double-deletes *are* allowed because attempting to avoid
+	 * them is too risky (timeouts, return value, explicit unsubscribe).
+	 * Hence, there is no return value to 'unsubscribe'.
 	 *
 	 * @param removeId  the exact SubscriptionID to search for.
 	 */
-	void unsubscribe(const SubscriptionId &removeId);
-
-	/**
-	 * Removes all listeners which are specifically waiting for the given IdPair.
-	 * 
-	 * @param whichId  an IdPair equal to the one subscribed.
-	 * @returns        the number of EventListeners which matched whichId
-	 */
-	int removeAllByInterest(const IdPair &whichId);
-	/**
-	 * Removes all listeners which are waiting for any event of this event type.
-	 * Since the event system supports both generic (any event of a type) and
-	 * specific (specific occurence of an event) listeners, two boolean flags 
-	 * pecify which types are to be removed.
-	 * 
-	 * [NOTE: Is a function like this necessary? useful? encourages bad style?]
-	 * 
-	 * @param whichId   a PrimaryId equal to the one subscribed.
-	 * @param specific  true if specific subscribers should be removed (default true)
-	 * @param generic   true if generic subscribers should be removed (default true)
-	 * @returns         the number of EventListeners which matched whichId
-	 */
-	int removeAllByInterest(const IdPair::Primary &whichId,
-				bool generic=true,
-				bool specific=true);
+	void unsubscribe(SubscriptionId removeId);
 
 	/**
 	 * Puts the passed event into the mUnprocessed event queue, which will be

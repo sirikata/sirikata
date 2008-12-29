@@ -1,5 +1,5 @@
 /*     Iridium Kernel -- Task scheduling system
- *  Subscription.hpp
+ *  UniqueId.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
@@ -30,31 +30,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IRIDIUM_Subscription_HPP__
-#define IRIDIUM_Subscription_HPP__
+#ifndef IRIDIUM_UniqueId_HPP__
+#define IRIDIUM_UniqueId_HPP__
 
 #include <typeinfo>
+#include <list>
 #include <string>
+#include <string.h>
 #include "HashMap.hpp"
 
 
 namespace Iridium {
 
 /**
- * Subscription.hpp -- Defines a SubscriptionId, as well as macros
- * to ease the creation of a unique identifier to go along with the
+ * UniqueId.hpp -- Defines a SubscriptionId, as well as macros
+ * to ease the creation of a FunctionId to go along with the
  * boost::function objects passed into EventManager and TimerQueue.
  */
 namespace Task {
 
 /**
  * An ID to allow comparing two callback functions.  It is up
- * to the creator to ensure uniqueness of SubscriptionId objects.
+ * to the creator to ensure uniqueness of FunctionId objects.
  *
  * @see TimerQueue
  * @see EventManager
  */
-class SubscriptionId {
+class FunctionId {
 private:
 	void *mThisPtr; ///< do not dereference
 	const char *mClassId; ///< A compile-time constant, usually a class name or file or module name.
@@ -63,7 +65,7 @@ private:
 public:
 
 	/// Equality comparison
-	inline bool operator== (const SubscriptionId &other) const {
+	inline bool operator== (const FunctionId &other) const {
 		if (mThisPtr != other.mThisPtr)
 			return false;
 		if (mClassId == NULL && other.mClassId == NULL)
@@ -76,7 +78,7 @@ public:
 		return (mUniqueId == other.mUniqueId);
 	}
 	/// Ordering comparison
-	inline bool operator< (const SubscriptionId &other) const {
+	inline bool operator< (const FunctionId &other) const {
 		if (mThisPtr == other.mThisPtr) {
 			if (mClassId == NULL && other.mClassId != NULL)
 				return true;
@@ -104,7 +106,7 @@ public:
 	 * @param uniqueId  A specific string representing the request, usually
 	 *                  the same as the corresponding SecondaryId.
 	 */
-	SubscriptionId(void *thisPtr,
+	FunctionId(void *thisPtr,
 				const char *classId,
 				const std::string &uniqueId)
 		: mThisPtr(thisPtr), mClassId(classId), mUniqueId(uniqueId) {
@@ -115,13 +117,13 @@ public:
 	 * explicitly unsubscribed (and has greater efficiency when adding
 	 * or removing event listeners)
 	 */
-	static inline SubscriptionId null() {
-		return SubscriptionId(NULL, NULL, std::string());
+	static inline FunctionId null() {
+		return FunctionId(NULL, NULL, std::string());
 	}
 
 	/// Hasher functor to be used in a hash_map.
 	struct Hasher {
-		int operator() (const SubscriptionId &sid) const{
+		int operator() (const FunctionId &sid) const{
 			return HASH<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
 				HASH<const char *>() (sid.mClassId) * 41 +
 				HASH<const char *>() (sid.mUniqueId.c_str());
@@ -138,6 +140,75 @@ public:
 /// A generic ID.
 #define GEN_ID(ptr, constname, id) \
 	SubscriptionId(ptr, "[" constname "]", id)
+
+
+
+/** A default integer that reuses IDs to stay compact. */
+class CompactSubId {
+public:
+	typedef int Type; ///< What primitive storage type this needs
+private:
+	static std::list<Type> freelist;
+	static Type nextid;
+public:
+	/** allocate the next available id (may come from freelist) */
+	static inline Type alloc() {
+		// LOCK
+		int front;
+		if (freelist.empty()) {
+			front = nextid++;
+		} else {
+			front = freelist.front();
+			freelist.pop_front();
+		}
+		// UNLOCK
+		return front;
+	}
+	/** Return this ID to the freelist (be careful of double-frees) */
+	static inline void free(Type id) {
+		// LOCK
+		freelist.push_back(id);
+		// UNLOCK
+	}
+	/** Return a 'null' id that is only equal to another null id. */
+	static inline Type null() {
+		return -1;
+	}
+};
+
+/** A 64-bit number that is always increasing, and never reuses IDs. */
+class IncreasingSubId {
+public:
+	typedef int64_t Type; ///< What primitive storage type this needs
+private:
+	static Type nextid;
+public:
+	/** allocate the next available id */
+	static inline Type alloc() {
+		// LOCK
+		return nextid++;
+		// UNLOCK
+	}
+	/** Called when an ID is no longer needed (for debug) */
+	static inline void free(Type id) {
+	}
+
+	/** Return a 'null' id that is only equal to another null id. */
+	static inline Type null() {
+		return -1;
+	}
+};
+
+//#ifdef _DEBUG
+
+/** EventManager allows double-frees, so it is not safe to reuse IDs. */
+typedef IncreasingSubId SubscriptionIdClass;
+//#else
+//typedef CompactSubId SubscriptionIdClass;
+//#endif
+
+/// The primitive type associated with SubscriptionIdClass.
+typedef SubscriptionIdClass::Type SubscriptionId;
 
 
 }

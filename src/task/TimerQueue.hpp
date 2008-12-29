@@ -41,6 +41,7 @@
 #include <algorithm>
 
 #include "Time.hpp"
+#include "UniqueId.hpp"
 
 
 namespace Iridium {

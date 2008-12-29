@@ -182,7 +182,6 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
 ENDMACRO(ADD_CXXTEST_CPP_TARGET)
 
 SET(CXXTESTSources
-  ${TOP_LEVEL}/test/Mytest.test.h 
   ${TOP_LEVEL}/test/EventSystem.hpp )
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
@@ -230,6 +229,7 @@ SET(SOURCE_DIR ${TOP_LEVEL}/src)
 SET(IRIDESCENCE_SOURCES
 	${SOURCE_DIR}/task/EventManager.cpp
 	${SOURCE_DIR}/task/Event.cpp
+	${SOURCE_DIR}/task/UniqueId.cpp
 	${SOURCE_DIR}/task/Time.cpp
 )
 SET(TEST_SOURCES ${CxxTestLibSources} ) #${TOP_LEVEL}/test/main.cpp

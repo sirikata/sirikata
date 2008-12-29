@@ -32,7 +32,7 @@
 
 #include "EventManager.hpp"
 #include "Time.hpp"
-#include "Subscription.hpp"
+#include "UniqueId.hpp"
 #include "Event.hpp"
 
 #include "TimerQueue.hpp"
@@ -45,6 +45,11 @@ namespace Iridium {
  * EventManager.cpp -- Definition for EventManager functions;
  * Also includes explicit template instantiations for EventManager<Event>
  */
+
+
+
+// ============= SUBSCRIPTION FUNCTIONS ==============
+
 namespace Task {
 
 template <class T>
@@ -64,7 +69,7 @@ typename EventManager<T>::PrimaryListenerInfo &
 
 	
 template <class T>
-typename EventManager<T>::PartiallyOrderedListenerList &
+typename EventManager<T>::SecondaryListenerMap::iterator
 	EventManager<T>::insertSecId(
 			SecondaryListenerMap &secondListeners,
 			const IdPair::Secondary &sec)
@@ -76,7 +81,24 @@ typename EventManager<T>::PartiallyOrderedListenerList &
 				sec, PartiallyOrderedListenerList())
 			).first;
 	}
-	return (*iter2).second;
+	return iter2;
+}
+
+	/**
+	 * Standard function to add a listener to a ListenerList.
+	 *
+	 * Note that we use push_front so as not to disrupt any
+	 * events currently being processed (and possibly go in
+	 * an infinite loop, due to a stupid listener adding another
+	 * copy of itself back into the end).
+	 */
+template <class T>
+void EventManager<T>::addListener(ListenerList *insertList,
+			const EventListener &listener,
+			SubscriptionId removeId)
+{
+	insertList->push_front(
+		ListenerSubscriptionInfo(listener, removeId));
 }
 
 template <class T>
@@ -88,10 +110,12 @@ void EventManager<T>::subscribe(const IdPair &eventId,
 		throw EventOrderException();
 	}
 
-	SecondaryListenerMap &secondListeners = insertPriId(eventId.mPriId).second;
-	ListenerList &insertList =
-		insertSecId(secondListeners, eventId.mSecId)[whichOrder];
-	insertList.push_back(ListenerSubscriptionInfo(listener, SubscriptionId::null()));
+	SecondaryListenerMap &secondListeners =
+		insertPriId(eventId.mPriId).second;
+	typename SecondaryListenerMap::iterator secondIter =
+		insertSecId(secondListeners, eventId.mSecId);
+	ListenerList &insertList = (*secondIter).second[whichOrder];
+	addListener(&insertList, listener, SubscriptionIdClass::null());
 }
 
 template <class T>
@@ -103,300 +127,276 @@ void EventManager<T>::subscribe(const IdPair::Primary & primaryId,
 		throw EventOrderException();
 	}
 
-	ListenerList &insertList = insertPriId(primaryId).first[whichOrder];
-	insertList.push_back(ListenerSubscriptionInfo(listener, SubscriptionId::null()));
+	ListenerList &insertList =
+		insertPriId(primaryId).first[whichOrder];
+	addListener(&insertList, listener, SubscriptionIdClass::null());
 }
 	
 template <class T>
-void EventManager<T>::subscribe(
+SubscriptionId EventManager<T>::subscribeId(
 			const IdPair & eventId,
 			const EventListener & listener,
-			const SubscriptionId & removeId,
 			EventOrder whichOrder)
 {
-	if (removeId == SubscriptionId::null()) {
-		subscribe(eventId, listener, whichOrder);
-		return;
-	}
 	if (whichOrder < 0 || whichOrder >= NUM_EVENTORDER) {
 		throw EventOrderException();
 	}
 
-	SecondaryListenerMap &secondListeners = insertPriId(eventId.mPriId).second;
-	ListenerList &insertList =
-		insertSecId(secondListeners, eventId.mSecId)[whichOrder];
-	insertList.push_back(ListenerSubscriptionInfo(listener, removeId));
+	SubscriptionId removeId = SubscriptionIdClass::alloc();
+
+	SecondaryListenerMap &secondListeners =
+		insertPriId(eventId.mPriId).second;
+	typename SecondaryListenerMap::iterator secondIter =
+		insertSecId(secondListeners, eventId.mSecId);
+	ListenerList &insertList = (*secondIter).second[whichOrder];
+	addListener(&insertList, listener, removeId);
 
 	typename ListenerList::iterator iter = insertList.end();
-	--iter;
-	EventSubscriptionInfo info (insertList, iter);
-	unsubscribe(removeId); // if anything was there before, remove it.
-	mRemoveById.insert(typename RemoveMap::value_type(removeId, info));
+	mRemoveById.insert(
+		typename RemoveMap::value_type(removeId,
+			EventSubscriptionInfo(
+				&insertList,
+				--iter,
+				&secondListeners,
+				secondIter)));
 
+	return removeId;
 }
 template <class T>
-void EventManager<T>::subscribe(
+SubscriptionId EventManager<T>::subscribeId(
 			const IdPair::Primary & priId,
 			const EventListener & listener,
-			const SubscriptionId & removeId,
 			EventOrder whichOrder)
 {
-	if (removeId == SubscriptionId::null()) {
-		subscribe(priId, listener, whichOrder);
-		return;
-	}
 	if (whichOrder < 0 || whichOrder >= NUM_EVENTORDER) {
 		throw EventOrderException();
 	}
 
-	ListenerList &insertList = insertPriId(priId).first[whichOrder];
-	insertList.push_back(ListenerSubscriptionInfo(listener, removeId));
+	SubscriptionId removeId = SubscriptionIdClass::alloc();
+
+	ListenerList &insertList =
+		insertPriId(priId).first[whichOrder];
+	addListener(&insertList, listener, removeId);
 
 	typename ListenerList::iterator iter = insertList.end();
-	--iter;
-	EventSubscriptionInfo info (
-//				EventOrder(priId, IdPair::Secondary::null()),
-//				whichOrder,
-				insertList,
-				iter);
-	unsubscribe(removeId); // if anything was there before, remove it.
-	mRemoveById.insert(typename RemoveMap::value_type(removeId, info));
+	mRemoveById.insert(
+		typename RemoveMap::value_type(removeId,
+			EventSubscriptionInfo(
+				&insertList,
+				--iter)));
+
+	return removeId;
 }
-	
+
+// ============= UNSUBSCRIPTION FUNCTIONS ==============
+
 template <class T>
-void EventManager<T>::unsubscribe(
-			const SubscriptionId &removeId)
+void EventManager<T>::clearRemoveId(
+			SubscriptionId removeId)
 {
 	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
 	if (iter == mRemoveById.end()) {
-		return; // throw an exception?
-	}
-
-	(*iter).second.mList.erase((*iter).second.mIter);
-	mRemoveById.erase(iter);
-}
-
-
-template <class T>
-int EventManager<T>::clearListenerList(
-			ListenerList &list)
-{
-	SubscriptionId nullId = SubscriptionId::null();
-	
-	for (typename ListenerList::iterator iter = list.begin();
-			iter!=list.end(); ++iter) {
-		if (!((*iter).second == nullId)) {
-			typename RemoveMap::iterator subIdIter;
-			subIdIter = mRemoveById.find((*iter).second);
-			if (subIdIter != mRemoveById.end()) {
-				mRemoveById.erase(subIdIter);
-			}
-		}
-	}
-	int ret = list.size();
-	if (mProcessingList == &list) {
-		if (mClearCurrentList) {
-			ret = 0; // already "cleared".
-		}
-		mClearCurrentList = true;
+		std::cerr << "failed to clear removeId " << removeId <<
+			" -- usually this is from a double-unsubscribe. ";
+		int double_unsubscribe = 0;
+		assert(double_unsubscribe);
 	} else {
-		list.clear();
+		mRemoveById.erase(iter);
+		SubscriptionIdClass::free(removeId);
 	}
-	return ret;
 }
 
 template <class T>
-bool EventManager<T>::cleanUp(
-	typename PrimaryListenerMap::iterator &iter)
+void EventManager<T>::unsubscribe(
+			SubscriptionId removeId)
 {
-	bool isEmpty = true;
-	for (int i = 0; i < NUM_EVENTORDER; i++) {
-		isEmpty = isEmpty && (*iter).second.first[i].empty();
-	}
-	isEmpty = isEmpty && (*iter).second.second.empty();
+	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
+	if (iter == mRemoveById.end()) {
+		std::cerr << "!!! Unsubscribe for removeId " << removeId <<
+			" -- usually this is from a double-unsubscribe. ";
+	} else {
+		EventSubscriptionInfo &subInfo = (*iter).second;
+		if (subInfo.mList == mProcessingList) {
+			// The reason there is no return value to unsubscribe.
+			std::cout << "**** Pending unsubscribe " << removeId;
+			mProcessingUnsubscribe.insert(removeId);
+		} else {
+			std::cout << "**** Unsubscribe " << removeId;
+			mRemovedListeners.push_back((*subInfo.mIter).first);
+			subInfo.mList->erase(subInfo.mIter);
+			if (subInfo.secondaryMap) {
+				std::cout << " with Secondary ID " <<
+					(*subInfo.secondaryIter).first << std::endl << "\t";
+				cleanUp(subInfo.secondaryMap, subInfo.secondaryIter);
+			}
 
-	if (isEmpty) {
-		mListeners.erase(iter);
+			mRemoveById.erase(iter);
+			SubscriptionIdClass::free(removeId);
+		}
+		std::cout << std::endl;
 	}
-	return isEmpty;
 }
 
 template <class T>
 bool EventManager<T>::cleanUp(
-	SecondaryListenerMap &slm,
+	SecondaryListenerMap *slm,
 	typename SecondaryListenerMap::iterator &slm_iter)
 {
 	bool isEmpty = true;
 	for (int i = 0; i < NUM_EVENTORDER; i++) {
+		if (&((*slm_iter).second[i]) == mProcessingList) {
+			return false; // don't clean up the list we're processing.
+		}
 		isEmpty = isEmpty && (*slm_iter).second[i].empty();
 	}
 	if (isEmpty) {
-		slm.erase(slm_iter);
+		std::cout << "[Cleaning up Secondary ID " << (*slm_iter).first << "]" << std::endl;
+		slm->erase(slm_iter);
 	}
 	return isEmpty;
 }
 
-template <class T>
-int EventManager<T>::removeAllByInterest(
-			const IdPair &eventId)
-{
-	int total = 0;
-	
-	typename PrimaryListenerMap::iterator iter = mListeners.find(eventId.mPriId);
-	if (iter == mListeners.end()) {
-		return 0;
-	}
-	SecondaryListenerMap &secondListeners = (*iter).second.second;
-	typename SecondaryListenerMap::iterator iter2;
-	iter2 = secondListeners.find(eventId.mSecId);
-	if (iter2 == secondListeners.end()) {
-		return 0;
-	}
-	for (int i = 0; i < NUM_EVENTORDER; i++) {
-		total += (*iter2).second[i].size();
-		clearListenerList((*iter2).second[i]);
-	}
 
-	bool isEmpty = cleanUp(secondListeners, iter2);
-	if (isEmpty) {
-		cleanUp(iter);
-	}
-
-	// List should not be empty if we did not remove anything.
-	assert(!(total == 0 && isEmpty == true));
-	return total;
-}
-
-
-template <class T>
-int EventManager<T>::removeAllByInterest(
-			const IdPair::Primary &whichId,
-			bool generic,
-			bool specific)
-{
-	int total = 0;
-	
-	typename PrimaryListenerMap::iterator iter;
-	iter = mListeners.find(whichId);
-	if (iter == mListeners.end()) {
-		return 0;
-	}
-	if (generic) {
-		for (int i = 0; i < NUM_EVENTORDER; i++) {
-			total += (*iter).second.first[i].size();
-			clearListenerList((*iter).second.first[i]);
-		}
-	}
-
-	if (specific) {
-		SecondaryListenerMap &secmap = (*iter).second.second;
-		for (typename SecondaryListenerMap::iterator iter2 = secmap.begin();
-				iter2 != secmap.end();
-				++iter2) {
-			for (int i = 0; i < NUM_EVENTORDER; i++) {
-				total += (*iter2).second[i].size();
-				clearListenerList((*iter2).second[i]);
-			}
-		}
-		secmap.clear();
-	}
-	
-	bool isEmpty = cleanUp(iter);
-
-	// List should not be empty if we did not remove anything.
-	assert(!(total == 0 && isEmpty == true));
-
-	return total;
-}
+// =============== EVENT QUEUE FUNCTIONS ===============
 
 template <class T>
 void EventManager<T>::fire(EventPtr ev) {
+	std::cout << "**** Firing event " << (void*)(&(*ev)) <<
+		" with " << ev->getId() << std::endl;
 	mUnprocessed.push_back(ev);
-	
 };
 
 
-/* FIXME: We need a "never" constant for AbsTime that is always grreater than
-   anything else */
+/* FIXME: We need a "never" constant for AbsTime that is
+   always grreater than anything else */
 
 template <class T>
-bool EventManager<T>::fireAll(EventPtr ev,
-			ListenerList &lili,
+bool EventManager<T>::callAllListeners(EventPtr ev,
+			ListenerList *lili,
 			AbsTime forceCompletionBy) {
-	mClearCurrentList = false;
-	mProcessingList = &lili;
+	mProcessingList = lili;
 
 	bool cancel = false;
-	typename ListenerList::iterator iter = lili.begin();
-	/* FIXME: Disallow 'unsubscribe()' while in this while loop.
-	 * We make a temporary mUnsubscribe list, and unsubscribe all of them
-	 * after we are done here.
+	typename ListenerList::iterator iter = lili->begin();
+	/* Disallow 'unsubscribe()' while in this while loop.
+	 * We make a temporary mUnsubscribe list, and unsubscribe all
+	 * of them after we are done here.
+	 *
+	 * The reason for this is 'iter' or 'next' may end up getting
+	 * deleted in the process.
 	 */
-	while (iter!=lili.end()) {
+	while (iter!=lili->end()) {
 		typename ListenerList::iterator next = iter;
 		++next;
 		// Now call the event listener.
+		std::cout << " >>>\tCalling " << (*iter).second <<
+			"..." << std::endl;
 		EventResponse resp = (*iter).first(ev);
+		std::cout << " >>>\t\tReturned ";
 		if (((int)resp.mResp) & EventResponse::DELETE_LISTENER) {
-			lili.erase(iter);
+			std::cout << "DELETE_LISTENER ";
+			lili->erase(iter);
+			if ((*iter).second != SubscriptionIdClass::null()) {
+				clearRemoveId((*iter).second);
+				// We do not want to send a NULL message to it.
+				// if we are removing due to return value.
+			}
 		}
 		if (((int)resp.mResp) & EventResponse::CANCEL_EVENT) {
+			std::cout << "CANCEL_EVENT";
 			cancel = true;
 		}
+		std::cout << std::endl;
 		iter = next;
 	}
 	mProcessingList = NULL;
-	if (mClearCurrentList) {
-		clearListenerList(lili);
-		mClearCurrentList = false;
-	}
 	return cancel;
 }
+
+
 template <class T>
 void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
-	mProcessing = true;
+	AbsTime startTime = AbsTime::now();
+	std::cout << " >>> Processing events." << std::endl;
+	std::list<EventListener> procListeners;
+	mRemovedListeners.swap(procListeners);
+
+	for (typename std::list<EventListener>::iterator iter = procListeners.begin();
+			iter != procListeners.end();
+			++iter) {
+		std::cout << " >>>\tNotifying UNSUBSCRIBED listener." << std::endl;
+		(*iter) (EventPtr((Event*)NULL));
+	}
+
+
 	EventList processingList; // allow people to keep adding new events
 	mUnprocessed.swap(processingList);
 
-	for (typename EventList::iterator evIter = processingList.begin();
-			evIter != processingList.end(); ++evIter) {
+	typename EventList::iterator evIter;
+	for (evIter = processingList.begin();
+			evIter != processingList.end();
+			++evIter) {
 		EventPtr ev = (*evIter);
-		typename PrimaryListenerMap::iterator priIter = mListeners.find(ev->getId().mPriId);
+		typename PrimaryListenerMap::iterator priIter =
+			mListeners.find(ev->getId().mPriId);
 		if (priIter == mListeners.end()) {
 			// FIXME: Should this ever happen?
-			std::cerr << "WARNING: No listeners defined for event type " << ev->getId().mPriId << std::endl;
+			std::cerr << " >>>\tWARNING: No listeners for type " <<
+				"event type " << ev->getId().mPriId << std::endl;
 			continue;
 		}
+		PartiallyOrderedListenerList &primaryLists =
+			(*priIter).second.first;
+		SecondaryListenerMap &secondaryMap =
+			(*priIter).second.second;
+
+		// Call once per event order.
 		for (int i = 0; i < NUM_EVENTORDER; i++) {
-			std::cout << "Firing all " << i << std::endl;
+			std::cout << " >>>\tFiring " << ev->getId() <<
+				" [order " << i << "]" << std::endl;
 			bool cancel = false;
-			cancel = cancel || fireAll(ev, (*priIter).second.first[i], forceCompletionBy);
-			typename SecondaryListenerMap::iterator secIter = (*priIter).second.second.find(ev->getId().mSecId);
-			if (secIter != (*priIter).second.second.end()) {
-				cancel = cancel || fireAll(ev, (*secIter).second[i], forceCompletionBy);
+			if (callAllListeners(ev, &(primaryLists[i]), forceCompletionBy)) {
+				cancel = cancel || true;
 			}
-			std::list<SubscriptionId>::const_iterator unsubIter;
-			mProcessing = false; // allow unsubscribe() to work.
-			for (unsubIter = mUnsubscribeList.begin();
-					unsubIter != mUnsubscribeList.end();
+			/*
+			 * We must do this lookup at each iteration because
+			 * it is possible for elements in secondaryMap to be "cleaned up"
+			 * and removed.
+			 * On the other hand, because primary event types are supposed to
+			 * be a fixed set of ids, it is not worthwhile cleaning them up.
+			 */
+			typename SecondaryListenerMap::iterator secIter =
+					secondaryMap.find(ev->getId().mSecId);
+			if (secIter != secondaryMap.end() &&
+					!(*secIter).second[i].empty()) {
+				if (callAllListeners(ev, &((*secIter).second[i]), forceCompletionBy)) {
+					cancel = cancel || true;
+				}
+				// all listeners may have returned false.
+				cleanUp(&secondaryMap, secIter);
+
+				// secIter may be invalidated.
+				secIter = secondaryMap.end();
+			}
+			std::set<SubscriptionId>::const_iterator unsubIter;
+			for (unsubIter = mProcessingUnsubscribe.begin();
+					unsubIter != mProcessingUnsubscribe.end();
 					++unsubIter) {
 			 	unsubscribe(*unsubIter);
 			}
-			mUnsubscribeList.clear();
-			mProcessing = true;
-			//if (secIter != (*priIter).second.second.end()) {
-			//	cleanUp((*priIter).second.second, secIter);
-			//}
-			//cleanUp(priIter);
-			// *** FIXME: priIter or secIter may be invalid ***
+			mProcessingUnsubscribe.clear();
+
 			if (cancel) {
-				std::cout << "Cancelling " << ev->getId() << std::endl;
+				std::cout << " >>>\tCancelling " << ev->getId() << std::endl;
 				break;
 			}
 		}
-		std::cout << "Finished " << ev->getId() << std::endl;
+		std::cout << " >>>\tFinished " << ev->getId() << std::endl;
 	}
-	mProcessing = false;
+	AbsTime finishTime = AbsTime::now();
+	std::cout << "**** Done processing events this round. " <<
+		"Took " << (float)(finishTime-startTime) <<
+		" seconds." << std::endl;
 }
 
 // instantiate any versions of this queue.

@@ -58,7 +58,7 @@ public:
     }
     Task::EventResponse doNotCall(Task::GenEventManager::EventPtr){
         mFail=true;
-        return Task::EventResponse::nop();
+        return Task::EventResponse::del();
     }
     Task::EventResponse oneShotTest(Task::GenEventManager::EventPtr){
         mCount++;
@@ -86,12 +86,30 @@ public:
         mManager->subscribe(e->getId(),
                             boost::bind(&EventSystemTestSuite::doNotCall,this,_1));
         mManager->fire(a);
-        
+    
 	mManager->temporary_processEventQueue(Task::AbsTime::null()); // FIXME: This function will change.
+	// call twice just to make sure.
+	mManager->temporary_processEventQueue(Task::AbsTime::null());
 
 	int handler_A_should_have_been_called_exactly_once = mCount;
         TS_ASSERT_EQUALS(handler_A_should_have_been_called_exactly_once,1);
         TS_ASSERT(mFail==false&&"Wrong handler got the signal");            
-    }
+
+    int a_removeId = mManager->subscribeId(a->getId(),
+                            boost::bind(&EventSystemTestSuite::oneShotTest,this,_1));
+	mManager->unsubscribe(a_removeId);
+	mCount = 0;
+	mManager->fire(a);
+	mManager->fire(b);
+	mManager->fire(c);
+	mManager->fire(d);
+	mManager->fire(e);
+	
+	mManager->temporary_processEventQueue(Task::AbsTime::null());
+
+        TS_ASSERT(mFail==true&&"Not enough handlers passed");
+	int unsubscribe_should_be_0 = mCount;
+        TS_ASSERT_EQUALS(unsubscribe_should_be_0, 0);
+  }
 };
 

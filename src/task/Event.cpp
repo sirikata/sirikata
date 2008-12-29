@@ -6,9 +6,10 @@
 namespace Iridium {
 namespace Task {
 
+/// Stores the map from primary ID to integer--items are never deleted.
 typedef std::map<std::string, int> IDMapType;
 
-static std::map<std::string, int> idMap;
+static IDMapType idMap;
 static int max_id = 0;
 int IdPair::Primary::getUniqueId(const std::string &id) {
 	IDMapType::iterator iter = idMap.find(id);
