@@ -125,7 +125,7 @@ public:
 
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
-			int operator() (const Secondary &sec) const{
+			size_t operator() (const Secondary &sec) const{
 				return HASH<const char *>()(sec.mStrValue.c_str()) * 37 +
 					HASH<intptr_t>()(sec.mIntValue) * 31;
 			}
@@ -165,7 +165,7 @@ public:
 
 		/// Trivial hasher functor to be used in a hash_map.
 		struct Hasher {
-			int operator() (const Primary &pri) const{
+			size_t operator() (const Primary &pri) const{
 				return pri.mId;
 			}
 		};

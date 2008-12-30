@@ -188,7 +188,7 @@ private:
 			 secondaryMap(slm), secondaryIter(slmIter) {
 		}
 	};
-	typedef HashMap<SubscriptionId, EventSubscriptionInfo> RemoveMap;
+	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
 	typedef std::vector<EventPtr> EventList;
 	
 	/* MEMBERS */

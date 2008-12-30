@@ -123,7 +123,7 @@ public:
 
 	/// Hasher functor to be used in a hash_map.
 	struct Hasher {
-		int operator() (const FunctionId &sid) const{
+		std::size_t operator() (const FunctionId &sid) const{
 			return HASH<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
 				HASH<const char *>() (sid.mClassId) * 41 +
 				HASH<const char *>() (sid.mUniqueId.c_str());
@@ -209,7 +209,15 @@ typedef IncreasingSubId SubscriptionIdClass;
 
 /// The primitive type associated with SubscriptionIdClass.
 typedef SubscriptionIdClass::Type SubscriptionId;
-
+struct SubscriptionIdHasher {
+	std::size_t operator() (SubscriptionId sid) const{
+#ifdef __APPLE__
+		return HASH<unsigned int>()(((unsigned int)(sid>>32))^(unsigned int)sid);
+#else
+		return HASH<unsigned int>()(sid);
+#endif
+	}
+};
 
 }
 }
