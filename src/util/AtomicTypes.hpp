@@ -95,7 +95,8 @@ public:
     }
 };     
 #else
-template<> class SizedAtomicValue<int size> {
+template<int size> class SizedAtomicValue {
+public:
     template <typename T> static T add(volatile T*scalar, T other) {
         return __sync_add_and_fetch(scalar, other);
     }

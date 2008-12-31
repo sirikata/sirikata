@@ -57,7 +57,7 @@ public:
         a=test;
         a++;
         a+=235;
-        int32_t output=a.read();
+        uint32_t output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
     }
     void testAtomicIncrement64( void ) {
