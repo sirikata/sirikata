@@ -182,6 +182,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
 ENDMACRO(ADD_CXXTEST_CPP_TARGET)
 
 SET(CXXTESTSources
+  ${TOP_LEVEL}/test/AtomicTest.hpp
   ${TOP_LEVEL}/test/EventSystem.hpp )
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
