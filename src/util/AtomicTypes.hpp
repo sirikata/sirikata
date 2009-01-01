@@ -118,14 +118,14 @@ class AtomicValue {
 private:
     volatile char mMemory[sizeof(T)+(sizeof(T)==4?4:(sizeof(T)==2?2:(sizeof(T)==8?8:16)))];
     static volatile T*ALIGN(volatile char* data) {
-        size_t shiftammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
-        shiftammt=~shiftammt;
-        return (volatile T*)(((size_t)data)&shiftammt);
+        size_t bitandammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
+        size_t notbitandammt=~bitandammt;
+        return (volatile T*)((((size_t)data)+bitandammt)&notbitandammt);
     }
     static volatile const T*ALIGN(volatile const char* data) {
-        size_t shiftammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
-        shiftammt=~shiftammt;
-        return (volatile const T*)(((size_t)data)&shiftammt);
+        size_t bitandammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
+        size_t notbitandammt=~bitandammt;
+        return (volatile const T*)((((size_t)data)+bitandammt)&notbitandammt);
     }
 public:
     AtomicValue() {
