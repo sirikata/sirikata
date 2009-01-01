@@ -13,7 +13,7 @@
 #
 # Currently this module searches for the following version numbers:
 # 1.33, 1.33.0, 1.33.1, 1.34, 1.34.0, 1.34.1, 1.35, 1.35.0, 1.35.1, 1.36, 
-# 1.36.0, 1.36.1
+# 1.36.0, 1.36.1 1.37.0 1.37.1
 #
 # The components list needs to be the actual names of boost libraries, that is
 # the part of the actual library files that differ on different libraries. So
@@ -36,7 +36,7 @@
 #                                the boost include directory. The default list
 #                                of version numbers is:
 #                                1.33, 1.33.0, 1.33.1, 1.34, 1.34.0, 1.34.1, 
-#                                1.35, 1.35.0, 1.35.1, 1.36, 1.36.0, 1.36.1
+#                                1.35, 1.35.0, 1.35.1, 1.36, 1.36.0, 1.36.1 1.37.0
 #                                If you want to look for an older or newer
 #                                version set this variable to a list of
 #                                strings, where each string contains a number, i.e.
@@ -105,7 +105,7 @@ if (Boost_FIND_VERSION_EXACT)
   endif (Boost_FIND_VERSION_PATCH)
 else (Boost_FIND_VERSION_EXACT)
   set( _boost_TEST_VERSIONS ${Boost_ADDITIONAL_VERSIONS} 
-    "1.36.1" "1.36.0" "1.36" "1.35.1" "1.35.0" "1.35" )
+    "1.37.1" "1.37.0" "1.36.1" "1.36.0" "1.36" "1.35.1" "1.35.0" "1.35" )
 endif (Boost_FIND_VERSION_EXACT)
 
 # The reason that we failed to find Boost. This will be set to a
@@ -313,10 +313,21 @@ ELSE (_boost_IN_CACHE)
     # Look for a standard boost header file.
     FIND_PATH(Boost_INCLUDE_DIR
       NAMES         boost/config.hpp
-      HINTS         ${_boost_INCLUDE_SEARCH_DIRS}
+      PATHS         ${_boost_INCLUDE_SEARCH_DIRS}
       PATH_SUFFIXES ${_boost_PATH_SUFFIXES}
+      NO_DEFAULT_PATH
       )
+    IF(NOT Boost_INCLUDE_DIR)
+      FIND_PATH(Boost_INCLUDE_DIR
+        NAMES         boost/config.hpp
+        PATHS         ${_boost_INCLUDE_SEARCH_DIRS}
+        PATH_SUFFIXES ${_boost_PATH_SUFFIXES}
+        )       
+    ENDIF(NOT Boost_INCLUDE_DIR)
   ENDIF( NOT Boost_INCLUDE_DIR )
+  SET(_boost_LIBRARIES_SEARCH_DIRS 
+    ${Boost_INCLUDE_DIR}/lib
+    ${_boost_LIBRARIES_SEARCH_DIRS})
 
   IF(Boost_INCLUDE_DIR)
     # Extract Boost_VERSION and Boost_LIB_VERSION from version.hpp
@@ -443,7 +454,8 @@ ELSE (_boost_IN_CACHE)
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}
-        HINTS  ${_boost_LIBRARIES_SEARCH_DIRS}
+        PATHS  ${_boost_LIBRARIES_SEARCH_DIRS}
+        NO_DEFAULT_PATH
     )
 
     FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_DEBUG
@@ -452,9 +464,29 @@ ELSE (_boost_IN_CACHE)
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}-${_boost_ABI_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}-${_boost_ABI_TAG}
-        HINTS  ${_boost_LIBRARIES_SEARCH_DIRS}
+        PATHS  ${_boost_LIBRARIES_SEARCH_DIRS}
+        NO_DEFAULT_PATH
     )
-
+    IF (NOT Boost_${UPPERCOMPONENT}_LIBRARY_RELEASE)
+      FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_RELEASE
+          NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}
+          PATHS  ${_boost_LIBRARIES_SEARCH_DIRS}
+      )
+    ENDIF()
+    IF (NOT Boost_${UPPERCOMPONENT}_LIBRARY_DEBUG)
+      FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_DEBUG
+          NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}-${_boost_ABI_TAG}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}-${_boost_ABI_TAG}
+          PATHS  ${_boost_LIBRARIES_SEARCH_DIRS}
+      )
+    ENDIF()
     _Boost_ADJUST_LIB_VARS(${UPPERCOMPONENT})
     IF( Boost_USE_STATIC_LIBS )
       SET(CMAKE_FIND_LIBRARY_SUFFIXES ${_boost_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
