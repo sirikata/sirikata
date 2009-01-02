@@ -232,6 +232,7 @@ SET(IRIDESCENCE_SOURCES
 	${SOURCE_DIR}/task/UniqueId.cpp
 	${SOURCE_DIR}/task/Time.cpp
 	${SOURCE_DIR}/util/internal_sha2.cpp
+	${SOURCE_DIR}/util/Sha256.cpp
 	${SOURCE_DIR}/util/UUID.cpp
 )
 SET(TEST_SOURCES ${CxxTestLibSources} ) #${TOP_LEVEL}/test/main.cpp
