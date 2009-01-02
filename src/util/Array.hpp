@@ -33,7 +33,7 @@
 #include <cstddef>
 #include <stdexcept>
 namespace Iridium {
-template <class T, std::size_t N, bool integral_type> class Array {
+template <class T, std::size_t N, bool integral_type=true> class Array {
 public:
     enum {static_size=N};
     static std::size_t size() {return N;}
@@ -118,6 +118,9 @@ public:
             }
             return true;
         }
+    }
+    bool operator !=(const Array &other)const {
+        return !(*this==other);
     }
 };
 
