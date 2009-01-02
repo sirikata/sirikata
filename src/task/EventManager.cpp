@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -67,7 +67,7 @@ typename EventManager<T>::PrimaryListenerInfo &
 	return (*iter).second;
 }
 
-	
+
 template <class T>
 typename EventManager<T>::SecondaryListenerMap::iterator
 	EventManager<T>::insertSecId(
@@ -131,7 +131,7 @@ void EventManager<T>::subscribe(const IdPair::Primary & primaryId,
 		insertPriId(primaryId).first[whichOrder];
 	addListener(&insertList, listener, SubscriptionIdClass::null());
 }
-	
+
 template <class T>
 SubscriptionId EventManager<T>::subscribeId(
 			const IdPair & eventId,
@@ -208,7 +208,8 @@ void EventManager<T>::clearRemoveId(
 
 template <class T>
 void EventManager<T>::unsubscribe(
-			SubscriptionId removeId)
+			SubscriptionId removeId,
+			bool notifyListener)
 {
 	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
 	if (iter == mRemoveById.end()) {
@@ -219,10 +220,16 @@ void EventManager<T>::unsubscribe(
 		if (subInfo.mList == mProcessingList) {
 			// The reason there is no return value to unsubscribe.
 			std::cout << "**** Pending unsubscribe " << removeId;
-			mProcessingUnsubscribe.insert(removeId);
+			if (mProcessingUnsubscribe.insert(removeId).second == true) {
+				if (notifyListener) {
+					mRemovedListeners.push_back((*subInfo.mIter).first);
+				}
+			}
 		} else {
 			std::cout << "**** Unsubscribe " << removeId;
-			mRemovedListeners.push_back((*subInfo.mIter).first);
+			if (notifyListener) {
+				mRemovedListeners.push_back((*subInfo.mIter).first);
+			}
 			subInfo.mList->erase(subInfo.mIter);
 			if (subInfo.secondaryMap) {
 				std::cout << " with Secondary ID " <<
@@ -382,7 +389,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			for (unsubIter = mProcessingUnsubscribe.begin();
 					unsubIter != mProcessingUnsubscribe.end();
 					++unsubIter) {
-			 	unsubscribe(*unsubIter);
+			 	unsubscribe(*unsubIter, false);
 			}
 			mProcessingUnsubscribe.clear();
 
@@ -400,7 +407,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 }
 
 // instantiate any versions of this queue.
-template class EventManager<Event>; 
+template class EventManager<Event>;
 
 }
 }

@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -51,7 +51,7 @@ namespace Task {
  *
  * @par
  * To convert x to an absolute time, use <code>AbsTime::now() + x</code>
- * 
+ *
  * @see AbsTime
  */
 class DeltaTime {
@@ -62,7 +62,10 @@ public:
 	DeltaTime(double t) {
 		this->mDeltaTime = t;
 	}
-	
+
+	/// Simple helper function -- returns "AbsTime::now() + (*this)".
+	class AbsTime fromNow() const;
+
 	/// Arethmetic operator-- subtract two DeltaTime values.
 	inline DeltaTime operator- (const DeltaTime &other) const {
 		return DeltaTime(mDeltaTime - other.mDeltaTime);
@@ -108,7 +111,7 @@ public:
  * Represents an absolute system time.  Note: AbsTime is stored internally
  * as a double.  The only two ways to create an AbsTime object are by adding
  * to another AbsTime, and by calling AbsTime::now().
- * 
+ *
  * @par
  * Note that as AbsTime is a local time for purposes of event processing
  * only, there are no conversion functions, except by taking the difference
@@ -117,9 +120,9 @@ public:
  * @see DeltaTime
  */
 class AbsTime {
-	
+
 	double mTime;
-	
+
 	/// Private constructor-- Use "now()" to create an AbsTime.
 	explicit AbsTime(double t) {
 		this->mTime = t;
@@ -165,7 +168,7 @@ public:
 	 * for time synchronization over the network.
 	 */
 	static AbsTime now(); // Only way to generate an AbsTime for now...
-	
+
 	/**
 	 * Creates a 'null' absolute time that is equivalent to
 	 * a long time ago in a galaxy far away.  Always less than
@@ -181,6 +184,10 @@ public:
 	}
 */
 };
+
+inline AbsTime DeltaTime::fromNow() const {
+	return AbsTime::now() + (*this);
+}
 
 }
 }

@@ -1,9 +1,9 @@
 /*     Iridium Utilities -- Iridium Synchronization Utilities
- *  ThreadSafeQueue.hpp
+ *  LockFreeQueue.hpp
  *
  *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -30,11 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/// LockFreeQueue.hpp
 namespace Iridium {
 
-template <typename T> class ThreadSafeQueue {
+/// A queue of any type that has thread-safe push() and pop() functions.
+template <typename T> class LockFreeQueue {
 private:
-    struct Node {        
+    struct Node {
         volatile Node * mNext;
         T mContent;
         Node() {
@@ -46,13 +48,13 @@ private:
         return __sync_bool_compare_and_swap (&target, comperand, exchange);
     }
     class FreeNodePool {
-        
+
         volatile Node *mHead;
     public:
         FreeNodePool() {
             mHead = new Node();
-        } 
-        
+        }
+
         Node* allocate() {
             volatile Node* node=NULL;
             do {
@@ -65,8 +67,8 @@ private:
             return_node->mContent=T();
             return return_node;
         }
-        
-        void release(Node *node) {            
+
+        void release(Node *node) {
             node->mContent = T();
             do {
                 node->mNext = mHead->mNext;
@@ -76,15 +78,20 @@ private:
     volatile Node *mHead;
     volatile Node *mTail;
 public:
-    ThreadSafeQueue() {
+    LockFreeQueue() {
         mHead = mFreeNodePool.allocate();
         mTail = mHead;
     }
-    
+
+    /**
+     * Pushes value onto the queue
+     *
+     * @param value  Will be copied and placed onto the end of the queue.
+     */
     void push(const T &value) {
         volatile Node* formerTail = NULL;
         volatile Node* formerTailNext=NULL;
-        
+
         Node* newerNode = mFreeNodePool.allocate();
         newerNode->mContent = value;
         volatile Node*newNode=newerNode;
@@ -92,7 +99,7 @@ public:
         while (!successfulAddNode) {
             formerTail = mTail;
             formerTailNext = formerTail->mNext;
-            
+
             if (mTail == formerTail) {
                 if (formerTailNext == NULL)
                     successfulAddNode = compare_and_swap(&mTail->mNext, NULL, newNode);
@@ -100,19 +107,26 @@ public:
                     compare_and_swap(&mTail, formerTail, formerTailNext);
             }
         }
-        
+
         compare_and_swap(&mTail, formerTail, newNode);
     }
+
+    /**
+     * Pops the front value from the queue and places it in value.
+     *
+     * @param value  Will have the T at the front of the queue copied into it.
+     * @returns      whether value was changed (if the queue had at least one item).
+     */
     bool pop(T &value) {
         volatile Node* formerHead = NULL;
-        
+
         bool headAlreadyAdvanced = false;
         while (!headAlreadyAdvanced) {
-            
+
             formerHead = mHead;
             volatile Node* formerHeadNext = formerHead->mNext;
             volatile Node*formerTail = mTail;
-            
+
             if (formerHead == mHead) {
                 if (formerHead == formerTail) {
                     if (formerHeadNext == NULL) {
@@ -121,7 +135,7 @@ public:
                     }
                     compare_and_swap(&mTail, formerTail, formerHeadNext);
                 }
-                
+
                 else {
                     value = ((Node*)formerHeadNext)->mContent;//FIXME volatile cast only allowed if mContent is primitive type of pointer size or less
                     headAlreadyAdvanced = compare_and_swap(&mHead, formerHead, formerHeadNext);

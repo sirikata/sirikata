@@ -77,12 +77,6 @@ public:
 	 */
 	void schedule(AbsTime nextTime,
 				const TimedEvent &ev);
-
-	/// @see schedule(AbsTime, const TimedEvent&)
-	inline void schedule(DeltaTime delta,
-				const TimedEvent &ev) {
-		schedule(AbsTime::now() + delta, ev);
-	}
 	
 	/**
 	 * Schedules this event to occur at nextTime.  In addition to the handler's
@@ -93,24 +87,15 @@ public:
 	 * 
 	 * @param nextTime  The absolute time to sechedule ev.
 	 * @param ev        A (usually bound) boost::function to be called at nextTime.
-	 * @param id        An id that can be passed to unschedule to prematurely cancel
+	 * @returns         An id that can be passed to unschedule to prematurely cancel
 	 *                  the timed event from being thrown.
 	 */
-	void schedule(AbsTime nextTime,
-				const TimedEvent &ev,
-				const SubscriptionId &id);
-
-	/// @see schedule(AbsTime, const TimedEvent&, const SubscriptionId&)
-	inline void schedule(DeltaTime delta,
-				const TimedEvent &ev,
-				const SubscriptionId &id) {
-		schedule(AbsTime::now() + delta, ev, id);
-	}
+	SubscriptionId scheduleId(AbsTime nextTime,
+				const TimedEvent &ev);
 
 	/**
 	 * Unsubscribes from the event matching removeId. The removeId should be
-	 * created using the same CLASS_ID or GEN_ID macros that were used when
-	 * creating the subscription.
+	 * the value returned when creating the subscription.
 	 *
 	 * @param removeId  the exact SubscriptionID to search for.
 	 */

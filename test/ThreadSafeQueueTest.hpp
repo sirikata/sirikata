@@ -48,10 +48,10 @@ class ThreadSafeQueueTest : public CxxTest::TestSuite
             e=-i;
         }
     };
-    ThreadSafeQueue<boost::shared_ptr<MyClass> > * mQueue;
+    LockFreeQueue<boost::shared_ptr<MyClass> > * mQueue;
 public:
     void setUp( void ) {
-        mQueue= new    ThreadSafeQueue<boost::shared_ptr<MyClass> >();
+        mQueue= new    LockFreeQueue<boost::shared_ptr<MyClass> >();
     }
     void tearDown (void ) {
         delete mQueue;

@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -49,7 +49,7 @@
 #include "Event.hpp"
 #include "Time.hpp"
 
-/** @namespace Iridium::Task 
+/** @namespace Iridium::Task
  * Iridium::Task contains the task-oriented functions for communication
  * across the program, as well as a scheduler to manage space CPU cycles
  * between graphics frames.
@@ -158,7 +158,7 @@ private:
 				return ll[i];
 			}
 		};
-	
+
 	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList,
 				IdPair::Secondary::Hasher> SecondaryListenerMap;
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
@@ -190,7 +190,7 @@ private:
 	};
 	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
 	typedef std::vector<EventPtr> EventList;
-	
+
 	/* MEMBERS */
 
 	PrimaryListenerMap mListeners;
@@ -273,7 +273,7 @@ public:
 	void subscribe(const IdPair::Primary & primaryId,
 				const EventListener & listener,
 				EventOrder when=MIDDLE);
-	
+
 	/**
 	 * Subscribes to a specific event. The listener function will receieve
 	 * only events whose type matches eventId.mPriId, and whose secondary
@@ -319,7 +319,7 @@ public:
 	SubscriptionId subscribeId(const IdPair::Primary & primaryId,
 				const EventListener & listener,
 				EventOrder when=MIDDLE);
-	
+
 	/**
 	 * Unsubscribes from the event matching removeId. The removeId should be
 	 * created using the same CLASS_ID or GEN_ID macros that were used when
@@ -328,15 +328,16 @@ public:
 	 * them is too risky (timeouts, return value, explicit unsubscribe).
 	 * Hence, there is no return value to 'unsubscribe'.
 	 *
-	 * @param removeId  the exact SubscriptionID to search for.
+	 * @param removeId        the exact SubscriptionID to search for.
+	 * @param notifyListener  whether to call the EventListener with NULL.
 	 */
-	void unsubscribe(SubscriptionId removeId);
+	void unsubscribe(SubscriptionId removeId, bool notifyListener=false);
 
 	/**
 	 * Puts the passed event into the mUnprocessed event queue, which will be
 	 * fired at the end of the frame corresponding to its IdPair. See the Event
 	 * class for more information.
-	 * 
+	 *
 	 * @param ev  A shared_ptr to an Event to be stored in the queue.
 	 * @see   Event
 	 */
