@@ -29,7 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-class btVector3;
+#ifndef _VECTOR3_HPP_
+#define _VECTOR3_HPP_
 namespace Iridium {
 template <typename scalar> class Vector3 {
 public:
@@ -60,9 +61,15 @@ public:
         assert(i<3);
         return v[i];
     }
+#if 0
     template<class T> operator T() const{
         return T(x,y,z);
     }
+#else
+    template<class T> T convert(const T*ptr=NULL) const{
+        return T(x,y,z);
+    }
+#endif
     scalar operator[](const unsigned int i) const{
         assert(i<3);
         return v[i];
@@ -105,6 +112,9 @@ public:
     }
     Vector3 operator-(const Vector3&other) const {
         return Vector3(x-other.x,y-other.y,z-other.z);
+    }
+    Vector3 operator-() const {
+        return Vector3(-x,-y,-z);
     }
     Vector3& operator*=(scalar scale) {
         x*=scale;
@@ -194,3 +204,4 @@ template<typename scalar> inline std::ostream& operator <<(std::ostream& os, con
 }
 
 }
+#endif
