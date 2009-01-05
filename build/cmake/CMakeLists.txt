@@ -184,6 +184,7 @@ ENDMACRO(ADD_CXXTEST_CPP_TARGET)
 SET(CXXTESTSources
   ${TOP_LEVEL}/test/AtomicTest.hpp
   ${TOP_LEVEL}/test/Vector3Test.hpp 
+  ${TOP_LEVEL}/test/Matrix3Test.hpp 
   ${TOP_LEVEL}/test/QuaternionTest.hpp 
   ${TOP_LEVEL}/test/EventTest.hpp )
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)

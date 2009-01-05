@@ -93,7 +93,7 @@ public:
         return other + uv + uuv;
     }
 
-    Quaternion Quaternion::inverse() const {
+    Quaternion inverse() const {
         scalar len=lengthSquared();
         if (len>1e-8) {
             return Quaternion(w/len,-x/len,-y/len,-z/len);

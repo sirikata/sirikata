@@ -139,15 +139,26 @@ public:
         return *this;
     }
     Matrix3x3 operator* (const Matrix3x3&other)const {
-        return Matrix3x3(getCol(0).componentMultiply(other.getRow(0)),
-                       getCol(1).componentMultiply(other.getRow(1)),
-                       getCol(2).componentMultiply(other.getRow(2)),
-                       COLUMNS());
+        Vector3<scalar> ocol0=other.getCol(0);
+        Vector3<scalar> ocol1=other.getCol(1);
+        Vector3<scalar> ocol2=other.getCol(2);
+        return Matrix3x3(mCol[0]*ocol0.x+mCol[1]*ocol0.y+mCol[2]*ocol0.z,
+                         mCol[0]*ocol1.x+mCol[1]*ocol1.y+mCol[2]*ocol1.z,
+                         mCol[0]*ocol2.x+mCol[1]*ocol2.y+mCol[2]*ocol2.z,
+                         COLUMNS());
     }
     Matrix3x3& operator*= (const Matrix3x3&other) {
-        mCol[0]=getCol(0).componentMultiply(other.getRow(0));
-        mCol[1]=getCol(1).componentMultiply(other.getRow(1));
-        mCol[2]=getCol(2).componentMultiply(other.getRow(2));
+        Vector3<scalar> ocol0=other.getCol(0);
+        Vector3<scalar> ocol1=other.getCol(1);
+        Vector3<scalar> ocol2=other.getCol(2);
+        //cannot do this *= inplace
+        ocol0=mCol[0]*ocol0.x+mCol[1]*ocol0.y+mCol[2]*ocol0.z;
+        ocol1=mCol[0]*ocol1.x+mCol[1]*ocol1.y+mCol[2]*ocol1.z;
+        ocol2=mCol[0]*ocol2.x+mCol[1]*ocol2.y+mCol[2]*ocol2.z;
+        //have to copy back
+        mCol[0]=ocol0;
+        mCol[1]=ocol1;
+        mCol[2]=ocol2;
         return *this;
     }
     Matrix3x3& operator*= (scalar other) {

@@ -31,6 +31,7 @@
  */
 #ifndef _VECTOR3_HPP_
 #define _VECTOR3_HPP_
+#include <assert.h>
 namespace Iridium {
 template <typename scalar> class Vector3 {
 public:
