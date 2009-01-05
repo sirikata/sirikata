@@ -177,9 +177,17 @@ public:
                mCol[2].x*(double)mCol[0].y*mCol[1].z -
                mCol[2].x*(double)mCol[1].y*mCol[0].z;
     }
-    
-    
+    std::string toString() const {
+        std::ostringstream os;
+        os<<"{ col1:"<<mCol[0]<<" col2:"<<mCol[1]<<" col3:"<<mCol[2]<<'}';
+        return os.str();
+    }    
 };
+template<typename scalar> inline std::ostream& operator <<(std::ostream& os, const Matrix3x3<scalar> &rhs) {
+    os<<"{ col1:"<<rhs.getCol(0)<<" col2:"<<rhs.getCol(1)<<" col3:"<<rhs.getCol(2)<<'}';
+    return os;
+}
+
 template <typename T,typename S> Vector3<T> operator *(const Vector3<T>&vec, const Matrix3x3<S>&mat) {
     return Vector3<T>(mat.getCol(0).dot(vec),
                       mat.getCol(1).dot(vec),
