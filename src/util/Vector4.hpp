@@ -140,6 +140,9 @@ public:
         w-=other.w;
         return *this;
     }
+    Vector4 componentMultiply(const Vector4&other) const {
+        return Vector4(x*other.x,y*other.y,z*other.z,w*other.w);
+    }
     scalar dot(const Vector4 &other) const{
         return x*other.x+y*other.y+z*other.z+w*other.w;
     }

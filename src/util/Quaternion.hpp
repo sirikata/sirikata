@@ -35,7 +35,9 @@
 #include "Vector4.hpp"
 namespace Iridium {
 class Quaternion:public Vector4<float> {
+public:
     typedef float scalar;
+private:
     Quaternion(const Vector4<scalar>&value):Vector4<scalar>(value){
         
     }
@@ -47,7 +49,10 @@ public:
         
     }
     Quaternion(const Vector3<scalar>&axis, scalar angle);
-    void ToAngleAxis (scalar& returnAngleRadians,
+    Quaternion(const Vector3<scalar> &xAxis,
+               const Vector3<scalar> &yAxis,
+               const Vector3<scalar> &zAxis);
+    void toAngleAxis (scalar& returnAngleRadians,
                       Vector3<scalar>& returnAxis) const;
 
     Quaternion operator+(const Quaternion&other) const{
@@ -98,6 +103,9 @@ public:
     Vector3<scalar> xAxis() const;
     Vector3<scalar> yAxis() const;
     Vector3<scalar> zAxis() const;
+    void toAxes(Vector3<scalar> &xAxis,
+                Vector3<scalar> &yAxis,
+                Vector3<scalar> &zAxis)const;
 };
 inline Quaternion operator *(Quaternion::scalar s,const Quaternion&q) {
     return Quaternion(s*q.x,s*q.y,s*q.z,s*q.w);
