@@ -37,61 +37,64 @@
 #include <vector>
 #include "TransferLayer.hpp"
 #include "CacheLayer.hpp"
-#include "CacheManager.hpp"
-
-#include "task/Time.hpp"
-#include "task/TimerQueue.hpp"
+#include "TransferManager.hpp"
 
 namespace Iridium {
 /** CacheLayer.hpp -- Class dealing with HTTP downloads. */
 namespace Transfer {
 
-#define RETRY_TIME 1.0
 
 class HTTPRequest {
-	boost::function2<void, const SparseDataPtr &, bool> callback;
-	URI myURI;
-	Range myRange;
+	typedef boost::function3<void, HTTPRequest*,
+			const DenseDataPtr &, bool> CallbackFunc;
+	URI mURI;
+	Range mRange;
+	CallbackFunc mCallback;
 public:
+
+	inline const URI &getURI() const {return mURI;}
+	inline const Range &getRange() const {return mRange;}
+
+	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool);
+
 	HTTPRequest(const URI &uri, const Range &range)
-		: myURI(uri), myRange(range) {
+		: mURI(uri), mRange(range), mCallback(&nullCallback) {
 	}
 
-	void setCallback(const boost::function2<void, const DenseData &, bool> &cb);
+	void setCallback(const CallbackFunc &cb) {
+		mCallback = cb;
+	}
 
-	bool go();
+	void go();
 };
-typedef boost::shared_ptr<HTTPRequest> HTTPRequestPtr;
+
+//typedef boost::shared_ptr<HTTPRequest> HTTPRequestPtr;
 
 /** Not really a cache layer, but implements the interface.*/
-class HTTPTransfer : TransferLayer {
-	void httpCallback(const FileId &fileId, int triesLeft, const Range &requestedRange,
-			const boost::function1<void, SparseDataPtr> &callback,
-			DenseData *recvData, bool permanentError) {
+class NetworkTransfer : TransferLayer {
+	void httpCallback(
+			TransferCallback callback,
+			HTTPRequest* httpreq,
+			const DenseDataPtr &recvData,
+			bool permanentError) {
 		if (recvData) {
 			// Now go back through the chain!
-			{boost::scoped_lock forCache(mTransferManager->mLock);
-				TransferLayer::populateParentCaches(fileId, requestedRange, callback);
-			}
+			TransferLayer::populateParentCaches(httpreq->getURI().fingerprint(), recvData);
 			callback(recvData);
 		} else {
-			if (permanentError) {
-				boost::scoped_lock forData(mTransferManager->mLock);
-				TransferLayer::getData(fileId, requestedRange, callback);
-			} else {
-				Task::timer_queue.schedule(Task::AbsTime::now() + RETRY_TIME,
-					boost::bind(getData, this, fileId, requestedRange, callback, triesLeft-1));
-			}
+			TransferLayer::getData(httpreq->getURI(), httpreq->getRange(), callback);
 		}
 	}
 
 public:
-	virtual bool getData(const FileId &fileId, const Range &requestedRange,
-				boost::function1<void, SparseDataPtr> callback, int numTries=3) {
-		HTTPRequestPtr thisRequest (new HTTPRequest(URI(fileId), requestedRange));
-		thisRequest->setCallback(boost::bind(&HTTPTransfer::httpCallback, this, fileId, numTries));
+	virtual bool getData(const URI &downloadURI,
+			const Range &requestedRange,
+			const TransferCallback &callback) {
+		HTTPRequest* thisRequest = new HTTPRequest(downloadURI, requestedRange);
+		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, callback));
 		// should call callback when it finishes.
-		return thisRequest->go(); // (if returns false, already called callback).
+		thisRequest->go();
+		return true;
 	}
 };
 

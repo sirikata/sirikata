@@ -35,34 +35,134 @@
 #define IRIDIUM_DiskCache_HPP__
 
 #include "CacheLayer.hpp"
+#include "util/ThreadSafeQueue.hpp"
 
 namespace Iridium {
 namespace Transfer {
 
+// should really be a config option.
+//#define NUM_WORKER_THREADS 10
 
+/// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
 class DiskCache : CacheLayer {
-	typedef std::map<FileId, std::pair<std::list<Range>, CacheInfoPtr > > FileMap;
-	FileMap mFiles;
-protected:
-	virtual void populateCache(const FileId& file, const DenseData &data) {
-		//
-	}
+public:
+	typedef std::list<Range> CacheData;
+
 private:
-	void finishedReading(const FileId &fileId, const TransferCallback&callback,
-			const DenseData &data) {
-		mCacheManager.mLock.acquire();
-		TransferLayer::populatePreviousCaches(fileId, data);
-		mCacheManager.mLock.release();
-		callback(data);
+	typedef CacheMap<CacheData> DiskMap;
+	DiskMap mFiles;
+
+	struct DiskRequest;
+	boost::thread mWorkerThread;
+	ThreadSafeQueue<DiskReqeust> mRequestQueue;
+
+	struct DiskRequest {
+		URI fileURI;
+		Range toRead;
+		TransferCallback finished;
+		boost::shared_ptr<DenseData> data; // if NULL, read data.
+	};
+
+	void workerThread() {
+		boost::shared_ptr<DiskRequest> req;
+		while (true) {
+			req = mRequestQueue.blockingPop();
+			if (req->data) {
+				// Note: TransferLayer::populatePreviousCaches has already been called.
+				FILE *fp;
+				std::string fileId = fileURI.fingerprint();
+				if (!mFiles->alloc(req->mRange.mLength)) {
+					continue;
+				}
+
+				fp = fopen(fileId.c_str(), "wb");
+				if (!fp) {
+					std::cerr << "Failed to open " << fileId <<
+						"for writing; reason: " << errno << std::endl;
+					continue;
+				}
+				fseek(req->data->mRange.mStart);
+				fwrite(req->data->mData.data(), 1,
+						req->data->mRange.mLength, fp);
+				fclose(fp);
+
+				{
+					DiskMap::write_iterator writer(mFiles);
+
+					writer.insert(req->fileURI.fingerprint(), FileInfo());
+					(*writer).push_back(mRange);
+					writer->use();
+				}
+			} else {
+				// check that we still have this file..........?
+				std::string fileId = fileURI.fingerprint();
+				FILE *fp = fopen(fileId.c_str(), "rb");
+				if (!fp) {
+					std::cerr << "Failed to open " << fileId <<
+						"for reading; reason: " << errno << std::endl;
+					TransferLayer::getData(req->fileURI, req->toRead, req->finished);
+					continue;
+				}
+				fseek(req->toRead.mStart);
+				DenseDataPtr datum(new DenseData(
+						req->toRead.mStart,
+						req->toRead.mLength));
+				fread(&(*datum.mData.begin()), 1,
+						req->toRead.mLength, fp);
+				fclose(fp);
+
+				TransferLayer::populatePreviousCaches(req->fileId, datum);
+				req->finished(datum);
+			}
+		}
+	}
+
+	void readDataFromDisk(const URI &fileURI,
+			const Range &requestedRange,
+			const TransferCallback&callback) {
+		DiskRequest *req = new DiskRequest();
+		req->fileURI = fileURI;
+		req->finished = callback;
+		req->toRead = requestedRange;
+
+		mRequestQueue.push(req);
+	}
+
+protected:
+	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
+		DiskRequest *req = new DiskRequest();
+		req->fileId = fileId;
+		req->data = data;
+
+		mRequestQueue.push(req);
+
+		TransferLayer::populatePreviousCaches(req->fileId, datum);
 	}
 
 public:
-	virtual bool getData(const FileId &fileId, const Range &requestedRange,
+
+	DiskCache(CachePolicy<CacheData> *policy, TransferManager *cacheMgr, CacheLayer *respondTo, TransferLayer *tryNext)
+			: CacheLayer(cacheMgr, respondTo, tryNext),
+			mWorkerThread(boost::bind(&DiskCache::workerThread, this)),
+			mFiles(policy) {
+	}
+
+	virtual bool getData(const URI &fileId,
+			const Range &requestedRange,
 			const TransferCallback&callback) {
-		DataMap::const_iterator iter = mFiles.find(fileID);
-		if (requestedRange.isContainedBy((*iter).first)) {
-			readDataFromDisk(fileId, requestedRange,
-					boost::bind(&finishedReading, this, fileId, callback));
+		bool haveRange = false;
+		{
+			DiskMap::read_iterator iter(mFiles);
+
+			if (iter.find(fileId.fingerprint())) {
+				haveRange = requestedRange.isContainedBy(*iter);
+			}
+			if (haveRange) {
+				iter->use(); // or is it more proper to use() after reading from disk?
+			}
+		}
+		if (haveRange) {
+			readDataFromDisk(fileId, requestedRange, callback);
 		} else {
 			TransferLayer::getData(fileId, requestedRange, callback);
 		}

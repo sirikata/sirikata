@@ -58,6 +58,7 @@ struct Range {
 };
 
 
+/// Represents a single block of data, and also knows the range of the file it came from.
 class DenseData {
 public:
 	Range mRange;
@@ -73,6 +74,9 @@ public:
 	void merge(const DenseData&other);
 };
 
+typedef boost::shared_ptr<DenseData> DenseDataPtr;
+
+/// Represents a series of DenseData.  Often you may have adjacent DenseData.
 class SparseData {
 	///sorted vector of Range/vector pairs
 	std::list<DenseData> mSparseData;

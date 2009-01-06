@@ -31,12 +31,12 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#include "CacheLayer.hpp"
+#include "TransferLayer.hpp"
 
 namespace Iridium {
 namespace Transfer {
 
-void TransferManager::populateParentCaches(const FileId &fileId, const DenseData &data) {
+void TransferLayer::populateParentCaches(const Fingerprint &fileId, const DenseData &data) {
 	if (mRespondTo) {
 		mRespondTo->populateCache(fileId, data);
 	}

@@ -41,6 +41,12 @@
 namespace Iridium {
 namespace Transfer {
 
+/** Manages requests going into the cache.
+ *
+ * @see DownloadManager
+ * @see TransferLayer
+ * @see CacheLayer
+ */
 class TransferManager {
 	TransferLayer *mFirstTransferLayer;
 
@@ -48,26 +54,33 @@ class TransferManager {
 		bool mPending; //pending overlapping requests.
 
 		Range mReqRange;
-		boost::function1<void, const FileId&, const SparseDataPtr&> mCallback;
+		boost::function1<void, const Fingerprint&, const SparseDataPtr&> mCallback;
 	};
-	typedef std::map<FileId, std::list<RequestInfo> > RequestMap;
+	typedef std::map<Fingerprint, std::list<RequestInfo> > RequestMap;
 	RequestMap mActiveRequests;
 
 	boost::mutex mLock;
 public:
 
-	bool download(const FileId &name, const boost::function4<void, const URI&,
-				const Fingerprint&, const SparseDataPtr&, STATUS>&callback,
+	void finishedRequest(const URI &name, const boost::function3<void, const URI&,
+			const SparseDataPtr&, bool>&callback) {
+		// TODO: What to do when finished?
+	}
+
+	bool download(const URI &name, const boost::function3<void, const URI&,
+				const SparseDataPtr&, bool>&callback,
 				Range range) {
-		mLock.acquire();
 		// check for overlapping requests.
 		// if overlapping, put in "pendingOn"
 		// if not,
-		bool async = mFirstTransferLayer->getData(name, range, boost::bind(finishedRequest, name, callback));
+		bool async = mFirstTransferLayer->getData(name, range, boost::bind(&TransferManager::finishedRequest, this, name, callback));
+		// async can only be used for optimization
+		// it is possible that the request finished by a different thread even if it returned true.
+		/*
 		if (async) {
 			// not instantaneous--we must add it to our mActiveRequests
 		}
-		mLock.release();
+		*/
 		return async;
 	}
 };

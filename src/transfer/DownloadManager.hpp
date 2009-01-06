@@ -39,7 +39,7 @@ namespace Transfer {
 
 
 class DownloadManager {
-	std::list<TransferItem>
+	std::list<TransferItem> activeDownloads;
 };
 
 

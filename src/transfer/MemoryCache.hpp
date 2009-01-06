@@ -42,35 +42,58 @@ namespace Iridium {
 /** MemoryCache.hpp -- MemoryCache -- the first layer of transfer cache. */
 namespace Transfer {
 
+/// MemoryCache is usually the first layer in the cache--simple map from FileId to SparseData.
 class MemoryCache : CacheLayer {
+public:
+	typedef SparseDataPtr CacheData;
 
-	typedef std::map<FileId, std::pair<SparseDataPtr, CacheInfoPtr> > DataMap;
-	DataMap mData;
+private:
+	typedef CacheMap<DiskInfo> MemoryMap;
+	MemoryMap mData;
 
 protected:
-	virtual void populateCache(const FileId &fileId, const DenseData &respondData) {
-		DataMap::const_iterator iter = mData.find(fileId);
-		if (iter == mData.end()) {
-			iter = mData.insert(fileId, new SparseData()).second;
+	virtual void populateCache(const Fingerprint &fileId, const DenseDataPtr &respondData) {
+		{
+			MemoryMap::write_iterator writer;
+			if (mCachePolicy->allocateSpace(writer, respondData.length())) {
+				if (writer.insert(fileId, SparseDataPtr())) {
+					writer.use();
+					*writer = respondData;
+				} else {
+					size_t length = (*writer)->add(respondData);
+					writer.update(fileId, length);
+				}
+
+			}
 		}
-		if (mCachePolicy->allocateSpace(respondData.length())) {
-			mCachePolicy->insertAndUse(fileId, respondData.length());
-			TransferLayer::populateParentCaches(fileId, respondData);
-		}
+		TransferLayer::populateParentCaches(fileId, respondData);
 	}
 
 public:
-	virtual bool getData(const FileId &fileId, const Range &requestedRange,
+	MemoryCache(CachePolicy<CacheData> *policy, TransferManager *cacheMgr, CacheLayer *respondTo, TransferLayer *tryNext)
+			: CacheLayer(cacheMgr, respondTo, tryNext),
+			mFiles(policy) {
+	}
+
+	virtual bool getData(const URI &uri, const Range &requestedRange,
 			const TransferCallback&callback) {
-		DataMap::const_iterator iter = mData.find(fileId);
-		if (iter != mData.end()) {
-			const SparseDataPtr &sparseData = (*iter).second;
-			if (sparseData->containsRange(range)) {
-				callback(sparseData);
-				return false;
+		SparseDataPtr foundData;
+		{
+			DataMap::read_iterator iter(mData);
+			if (iter.find(uri.fingerprint())) {
+				const SparseDataPtr &sparseData = (*iter).second;
+				if (sparseData->containsRange(range)) {
+					foundData = sparseData;
+				}
 			}
 		}
-		return TransferLayer::getData(fileId, range, callback);
+		if (foundData) {
+			TransferLayer::populateParentCaches(uri.fingerprint(), foundData);
+			callback(foundData);
+			return false;
+		} else {
+			return TransferLayer::getData(uri, range, callback);
+		}
 	}
 };
 

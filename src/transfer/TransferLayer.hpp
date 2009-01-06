@@ -45,6 +45,7 @@
 #include <vector>
 
 #include "TransferData.hpp"
+#include "URI.hpp"
 
 namespace Iridium {
 /** TransferLayer.hpp -- TransferLayer and Range */
@@ -57,14 +58,7 @@ namespace Transfer {
  *                    SparseDataPtr is guaranteed to contain the requested block,
  *                    but it may be seprated into adjacent DenseData pieces.
  */
-typedef boost::function1<void, SparseDataPtr> TransferCallback;
-
-struct URI {
-	std::string hash;
-	std::string preferredServer;
-};
-
-typedef URI FileId;
+typedef boost::function1<void, const SparseDataPtr&> TransferCallback;
 
 class TransferManager;
 class CacheLayer;
@@ -85,7 +79,7 @@ protected:
 	 *
 	 * @TODO: Handle two requests for the same chunk at the same time.
 	 * */
-	void populateParentCaches(const FileId &fileId, const DenseData &data);
+	void populateParentCaches(const Fingerprint &fileId, const DenseDataPtr &data);
 public:
 
 	virtual ~TransferLayer() {
@@ -102,15 +96,15 @@ public:
 	 * Query this cache layer.  If successful, call callback with the data and also
 	 * call populateCache in order to populate the previous cache levels.
 	 *
-	 * @param fileId         A unique identifier corresponding to the file (probably a hash).
+	 * @param uri         A unique identifier corresponding to the file (contains a hash).
 	 * @param requestedRange A Range object specifying a single range that you need.
 	 * @param callback       To be called with the data if successful, or NULL if failed.
 	 * @return          false, if the callback happened synchronously (i.e. in memory cache)
 	 */
-	virtual bool getData(const FileId &fileId, const Range &requestedRange,
+	virtual bool getData(const URI &uri, const Range &requestedRange,
 			const TransferCallback&callback) {
 		if (mNext) {
-			return mNext->getData(fileId, requestedRange, callback);
+			return mNext->getData(uri, requestedRange, callback);
 		} else {
 			callback(SparseDataPtr());
 			return false;
@@ -121,5 +115,8 @@ public:
 
 }
 }
+
+#include "CacheLayer.hpp"
+// definition of populateParentCaches
 
 #endif /* IRIDIUM_TransferLayer_HPP__ */

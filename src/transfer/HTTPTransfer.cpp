@@ -32,14 +32,39 @@
 /*  Created on: Dec 31, 2008 */
 
 #include "HTTPTransfer.hpp"
-#include "CacheLayer.hpp"
+#include "task/Time.hpp"
+#include "task/TimerQueue.hpp"
+#include "util/ThreadSafeQueue.hpp"
 
 namespace Iridium {
 namespace Transfer {
 
-void HTTPRequest::setCallback(const boost::function2<void, const DenseData &, bool> &cb);
+#define RETRY_TIME 1.0
 
-bool HTTPRequest::go();
+namespace {
+static boost::once_flag flag = BOOST_ONCE_INIT;
+
+static ThreadSafeQueue<HTTPRequest*> requestQueue;
+
+
+void initHTTP () {
+}
+
+}
+
+
+
+void HTTPRequest::nullCallback(HTTPRequest*, const DenseDataPtr &, bool) {
+}
+
+void HTTPRequest::go() {
+	requestQueue.push(this);
+	boost::call_once(initHTTP, flag);
+}
+
+
+//Task::timer_queue.schedule(Task::AbsTime::now() + RETRY_TIME,
+//	boost::bind(&getData, this, fileId, requestedRange, callback, triesLeft-1));
 
 }
 }
