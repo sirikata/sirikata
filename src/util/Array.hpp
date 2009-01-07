@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -31,7 +31,9 @@
  */
 
 #include <cstddef>
+#include <cstring>
 #include <stdexcept>
+
 namespace Iridium {
 template <class T, std::size_t N, bool integral_type=true> class Array {
 public:
@@ -59,7 +61,7 @@ public:
         return this;
     }
     Array* memcpy(const void *input, std::size_t len) {
-        if (len==(static_size*sizeof(T))) {        
+        if (len==(static_size*sizeof(T))) {
             for (std::size_t i=0;i<N;++i) {
                 mElems[i]=((T*)input)[i];
             }
@@ -72,35 +74,35 @@ public:
     const_iterator begin() const { return mElems; }
     iterator end() { return mElems+static_size; }
     const_iterator end() const { return mElems+static_size; }
-    reference operator[](size_type i) { 
+    reference operator[](size_type i) {
         return mElems[i];
     }
-    const_reference operator[](size_type i) const {     
-        return mElems[i]; 
+    const_reference operator[](size_type i) const {
+        return mElems[i];
     }
-    reference front() { 
-        return mElems[0]; 
+    reference front() {
+        return mElems[0];
     }
     const_reference front() const {
         return mElems[0];
     }
-    reference back() { 
-        return mElems[static_size-1]; 
+    reference back() {
+        return mElems[static_size-1];
     }
-    const_reference back() const { 
-        return mElems[static_size-1]; 
+    const_reference back() const {
+        return mElems[static_size-1];
     }
     const T* data() const { return mElems; }
     T* data() { return mElems; }
     static const Array& nil() {
         static Array nix;
         static unsigned char nothing[static_size*sizeof(T)]={0};
-        static Array nil=*nix.memcpy(nothing,static_size);        
+        static Array nil=*nix.memcpy(nothing,static_size);
         return nil;
     }
     bool operator <(const Array &other)const {
         if (integral_type) {
-            return memcmp(mElems,other.mElems,static_size*sizeof(T))<0;
+            return std::memcmp(mElems,other.mElems,static_size*sizeof(T))<0;
         }else {
             for (size_t i=0;i<static_size;++i) {
                 if (mElems[i]<other.mElems[i]) return true;
@@ -111,7 +113,7 @@ public:
     }
     bool operator ==(const Array &other)const {
         if (integral_type) {
-            return memcmp(mElems,other.mElems,static_size*sizeof(T))==0;
+            return std::memcmp(mElems,other.mElems,static_size*sizeof(T))==0;
         }else {
             for (size_t i=0;i<static_size;++i) {
                 if (!(mElems[i]==other.mElems[i])) return false;

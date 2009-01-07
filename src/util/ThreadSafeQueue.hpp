@@ -33,6 +33,8 @@
 #ifndef IRIDIUM_ThreadSafeQueue_HPP__
 #define IRIDIUM_ThreadSafeQueue_HPP__
 
+#include <boost/thread.hpp>
+
 /// ThreadSafeQueue.hpp
 namespace Iridium {
 

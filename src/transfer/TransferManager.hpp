@@ -37,6 +37,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include "CacheLayer.hpp"
 
 namespace Iridium {
 namespace Transfer {
@@ -48,13 +49,13 @@ namespace Transfer {
  * @see CacheLayer
  */
 class TransferManager {
-	TransferLayer *mFirstTransferLayer;
+	CacheLayer *mFirstTransferLayer;
 
 	struct RequestInfo {
 		bool mPending; //pending overlapping requests.
 
 		Range mReqRange;
-		boost::function1<void, const Fingerprint&, const SparseDataPtr&> mCallback;
+		boost::function1<void, const Fingerprint&, const SparseData*> mCallback;
 	};
 	typedef std::map<Fingerprint, std::list<RequestInfo> > RequestMap;
 	RequestMap mActiveRequests;
@@ -63,12 +64,12 @@ class TransferManager {
 public:
 
 	void finishedRequest(const URI &name, const boost::function3<void, const URI&,
-			const SparseDataPtr&, bool>&callback) {
+			const SparseData*, bool>&callback) {
 		// TODO: What to do when finished?
 	}
 
 	bool download(const URI &name, const boost::function3<void, const URI&,
-				const SparseDataPtr&, bool>&callback,
+				const SparseData*, bool>&callback,
 				Range range) {
 		// check for overlapping requests.
 		// if overlapping, put in "pendingOn"

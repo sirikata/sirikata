@@ -34,7 +34,10 @@
 #ifndef IRIDIUM_DiskCache_HPP__
 #define IRIDIUM_DiskCache_HPP__
 
-#include "CacheLayer.hpp"
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"
 
 namespace Iridium {
@@ -44,34 +47,36 @@ namespace Transfer {
 //#define NUM_WORKER_THREADS 10
 
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
-class DiskCache : CacheLayer {
+class DiskCache : public CacheLayer {
 public:
-	typedef std::list<Range> CacheData;
+	typedef RangeList CacheData;
 
 private:
-	typedef CacheMap<CacheData> DiskMap;
+	boost::thread mWorkerThread;
+
+	typedef CacheMap DiskMap; //<CacheData> DiskMap;
 	DiskMap mFiles;
 
 	struct DiskRequest;
-	boost::thread mWorkerThread;
-	ThreadSafeQueue<DiskReqeust> mRequestQueue;
+	ThreadSafeQueue<DiskRequest*> mRequestQueue;
 
 	struct DiskRequest {
+		DiskRequest(URI myURI) :fileURI(myURI) {}
+
 		URI fileURI;
 		Range toRead;
 		TransferCallback finished;
 		boost::shared_ptr<DenseData> data; // if NULL, read data.
 	};
-
+public:
 	void workerThread() {
-		boost::shared_ptr<DiskRequest> req;
 		while (true) {
-			req = mRequestQueue.blockingPop();
+			boost::shared_ptr<DiskRequest> req (mRequestQueue.blockingPop());
 			if (req->data) {
 				// Note: TransferLayer::populatePreviousCaches has already been called.
 				FILE *fp;
-				std::string fileId = fileURI.fingerprint();
-				if (!mFiles->alloc(req->mRange.mLength)) {
+				std::string fileId = req->fileURI.fingerprint().convertToHexString();
+				if (!mFiles.alloc(req->data->mRange.mLength)) {
 					continue;
 				}
 
@@ -81,38 +86,58 @@ private:
 						"for writing; reason: " << errno << std::endl;
 					continue;
 				}
-				fseek(req->data->mRange.mStart);
+				// FIXME: may not work with 64-bit files?
+				fseek(fp, req->data->mRange.mStart, SEEK_SET);
 				fwrite(req->data->mData.data(), 1,
 						req->data->mRange.mLength, fp);
+				fflush(fp);
+				size_t diskUsage;
+				{
+					struct stat st;
+					fstat(fileno(fp), &st);
+#ifdef _WIN32
+					diskUsage = st.st_size;
+#else
+					// http://lkml.indiana.edu/hypermail/linux/kernel/9812.2/0216.html
+					diskUsage = 512 * st.st_blocks;
+#endif
+				}
 				fclose(fp);
 
 				{
 					DiskMap::write_iterator writer(mFiles);
 
-					writer.insert(req->fileURI.fingerprint(), FileInfo());
-					(*writer).push_back(mRange);
-					writer->use();
+					if (writer.insert(req->fileURI.fingerprint(), new CacheData, diskUsage)) {
+						writer.use();
+					} else {
+						writer.update(diskUsage);
+					}
+					RangeList *data = writer;
+					data->push_back(req->data->mRange);
 				}
 			} else {
 				// check that we still have this file..........?
-				std::string fileId = fileURI.fingerprint();
+				std::string fileId = req->fileURI.fingerprint().convertToHexString();
 				FILE *fp = fopen(fileId.c_str(), "rb");
 				if (!fp) {
 					std::cerr << "Failed to open " << fileId <<
 						"for reading; reason: " << errno << std::endl;
-					TransferLayer::getData(req->fileURI, req->toRead, req->finished);
+					CacheLayer::getData(req->fileURI, req->toRead, req->finished);
 					continue;
 				}
-				fseek(req->toRead.mStart);
-				DenseDataPtr datum(new DenseData(
+				// FIXME: may not work with 64-bit files?
+				fseek(fp, req->toRead.mStart, SEEK_SET);
+				DenseDataPtr datum(new DenseData(Range(
 						req->toRead.mStart,
-						req->toRead.mLength));
-				fread(&(*datum.mData.begin()), 1,
+						req->toRead.mLength)));
+				fread(&(*datum->mData.begin()), 1,
 						req->toRead.mLength, fp);
 				fclose(fp);
 
-				TransferLayer::populatePreviousCaches(req->fileId, datum);
-				req->finished(datum);
+				CacheLayer::populateParentCaches(req->fileURI.fingerprint(), datum);
+				SparseData data;
+				data.addValidData(datum);
+				req->finished(&data);
 			}
 		}
 	}
@@ -120,8 +145,7 @@ private:
 	void readDataFromDisk(const URI &fileURI,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
-		DiskRequest *req = new DiskRequest();
-		req->fileURI = fileURI;
+		DiskRequest *req = new DiskRequest(fileURI);
 		req->finished = callback;
 		req->toRead = requestedRange;
 
@@ -130,21 +154,26 @@ private:
 
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
-		DiskRequest *req = new DiskRequest();
-		req->fileId = fileId;
+		DiskRequest *req = new DiskRequest(URI(fileId, ""));
 		req->data = data;
 
 		mRequestQueue.push(req);
 
-		TransferLayer::populatePreviousCaches(req->fileId, datum);
+		CacheLayer::populateParentCaches(req->fileURI.fingerprint(), data);
+	}
+
+	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
+		unlink(fileId.convertToHexString().c_str());
+		CacheData *toDelete = (CacheData*)cacheLayerData;
+		delete toDelete;
 	}
 
 public:
 
-	DiskCache(CachePolicy<CacheData> *policy, TransferManager *cacheMgr, CacheLayer *respondTo, TransferLayer *tryNext)
+	DiskCache(CachePolicy *policy, TransferManager *cacheMgr, CacheLayer *respondTo, CacheLayer *tryNext)
 			: CacheLayer(cacheMgr, respondTo, tryNext),
 			mWorkerThread(boost::bind(&DiskCache::workerThread, this)),
-			mFiles(policy) {
+			mFiles(this, policy) {
 	}
 
 	virtual bool getData(const URI &fileId,
@@ -155,16 +184,18 @@ public:
 			DiskMap::read_iterator iter(mFiles);
 
 			if (iter.find(fileId.fingerprint())) {
-				haveRange = requestedRange.isContainedBy(*iter);
+				const RangeList *list = iter;
+				haveRange = requestedRange.isContainedBy(*list);
 			}
 			if (haveRange) {
-				iter->use(); // or is it more proper to use() after reading from disk?
+				iter.use(); // or is it more proper to use() after reading from disk?
 			}
 		}
 		if (haveRange) {
 			readDataFromDisk(fileId, requestedRange, callback);
+			return true;
 		} else {
-			TransferLayer::getData(fileId, requestedRange, callback);
+			return CacheLayer::getData(fileId, requestedRange, callback);
 		}
 	}
 };

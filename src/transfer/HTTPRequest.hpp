@@ -1,5 +1,5 @@
-/*     Iridium ransfer -- Content Transfer management system
- *  HTTPTransfer.cpp
+/*     Iridium Network Utilities
+ *  HTTPRequest.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,42 +29,63 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*  Created on: Dec 31, 2008 */
+/*  Created on: Jan 7, 2009 */
 
-#include "HTTPTransfer.hpp"
-#include "task/Time.hpp"
-#include "task/TimerQueue.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#ifndef IRIDIUM_HTTPRequest_HPP__
+#define IRIDIUM_HTTPRequest_HPP__
+
+#include <vector>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
+
+#include "URI.hpp"
+#include "TransferData.hpp"
 
 namespace Iridium {
 namespace Transfer {
 
-#define RETRY_TIME 1.0
+/// Downloads the specified file in another thread and calls callback when finished.
+class HTTPRequest {
+public:
+	typedef boost::function3<void, HTTPRequest*,
+			const DenseDataPtr &, bool> CallbackFunc;
+private:
+	URI mURI;
+	Range mRange;
+	CallbackFunc mCallback;
 
-namespace {
-static boost::once_flag flag = BOOST_ONCE_INIT;
+	/** The default callback--useful for POST queries where you do not care about the response */
+	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool){
+	}
+public:
 
-static ThreadSafeQueue<HTTPRequest*> requestQueue;
+	HTTPRequest(const URI &uri, const Range &range)
+		: mURI(uri), mRange(range), mCallback(&nullCallback) {
+	}
 
+	/// URI getter
+	inline const URI &getURI() const {return mURI;}
 
-void initHTTP () {
+	/// Range getter
+	inline const Range &getRange() const {return mRange;}
+
+	/// Setter for the response function.
+	void setCallback(const CallbackFunc &cb) {
+		mCallback = cb;
+	}
+
+	/**
+	 *  Executes the query.  The 'this' pointer must be on the heap and
+	 *  must not be subsequently referenced.  It will be placed in this
+	 *  thread's work queue.
+	 */
+
+	void go();
+};
+
+//typedef boost::shared_ptr<HTTPRequest> HTTPRequestPtr;
+
+}
 }
 
-}
-
-
-
-void HTTPRequest::nullCallback(HTTPRequest*, const DenseDataPtr &, bool) {
-}
-
-void HTTPRequest::go() {
-	requestQueue.push(this);
-	boost::call_once(initHTTP, flag);
-}
-
-
-//Task::timer_queue.schedule(Task::AbsTime::now() + RETRY_TIME,
-//	boost::bind(&getData, this, fileId, requestedRange, callback, triesLeft-1));
-
-}
-}
+#endif /* IRIDIUM_HTTPRequest_HPP__ */

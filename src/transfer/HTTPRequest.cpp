@@ -1,5 +1,5 @@
-/*     Iridium Transfer -- Content Transfer management system
- *  TransferLayer.cpp
+/*     Iridium ransfer -- Content Transfer management system
+ *  HTTPTransfer.cpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,18 +29,43 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*  Created on: Jan 1, 2009 */
+/*  Created on: Dec 31, 2008 */
 
-#include "TransferLayer.hpp"
+#include "HTTPRequest.hpp"
+#include "task/Time.hpp"
+#include "task/TimerQueue.hpp"
+#include "util/ThreadSafeQueue.hpp"
+#include "DiskCache.hpp"
+#include "MemoryCache.hpp"
+#include "LRUPolicy.hpp"
 
 namespace Iridium {
 namespace Transfer {
 
-void TransferLayer::populateParentCaches(const Fingerprint &fileId, const DenseData &data) {
-	if (mRespondTo) {
-		mRespondTo->populateCache(fileId, data);
-	}
+#define RETRY_TIME 1.0
+
+namespace {
+static boost::once_flag flag = BOOST_ONCE_INIT;
+
+static ThreadSafeQueue<HTTPRequest*> requestQueue;
+
+
+void initHTTP () {
+	DiskCache(new LRUPolicy(16384),NULL,NULL,NULL);
 }
+
+}
+
+
+
+void HTTPRequest::go() {
+	requestQueue.push(this);
+	boost::call_once(initHTTP, flag);
+}
+
+
+//Task::timer_queue.schedule(Task::AbsTime::now() + RETRY_TIME,
+//	boost::bind(&getData, this, fileId, requestedRange, callback, triesLeft-1));
 
 }
 }

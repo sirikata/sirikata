@@ -33,17 +33,34 @@
 #ifndef IRIDIUM_TransferData_HPP__
 #define IRIDIUM_TransferData_HPP__
 
+#include <boost/shared_ptr.hpp>
 #include <vector>
+#include <list>
 
 namespace Iridium {
 namespace Transfer {
 
 /** Range identifier -- specifies two segments of a file. */
 struct Range {
+	typedef uint64_t offset_type;
+
 	/// A 64-bit starting byte.
-	uint64_t mStart;
+	offset_type mStart;
 	/// Length is a size_t (may only be 32 bits).
 	size_t mLength;
+
+	Range() :mStart(0), mLength(0) {}
+
+	Range(offset_type start, size_t length)
+		: mStart(start), mLength(length) {
+	}
+
+	inline int startbyte() const {
+		return mStart;
+	}
+	inline int length() const {
+		return mLength;
+	}
 
 	inline bool operator< (const Range &other) const {
 		if (mLength == other.mLength) {
@@ -52,10 +69,51 @@ struct Range {
 		return mLength < other.mLength;
 	}
 
+	template <class ListType>
+	bool isContainedBy(const ListType &list) const {
+		typename ListType::const_iterator iter = list.begin();
+		offset_type mEnd = mStart + mLength;
+		bool found = false;
+		offset_type lastEnd = 0;
+
+		while (iter != list.end()) {
+			offset_type start = (*iter).startbyte();
+			offset_type end = start + (*iter).length();
+
+			if (mStart >= start && mStart < end) {
+				found = true;
+				lastEnd = end;
+				break;
+			}
+			++iter;
+		}
+		if (!found) {
+			return false;
+		}
+		found = false;
+		while (iter != list.end()) {
+			offset_type start = (*iter).startbyte();
+			if (start != lastEnd) {
+				found = false; // gap in range.
+				break;
+			}
+			offset_type end = start + (*iter).length();
+
+			if (mEnd <= end) {
+				found = true;
+				break;
+			}
+			++iter;
+		}
+		return found;
+	}
+
 	inline bool operator== (const Range &other) const {
 		return mLength == other.mLength && mStart == other.mStart;
 	}
 };
+
+typedef std::list<Range> RangeList;
 
 
 /// Represents a single block of data, and also knows the range of the file it came from.
@@ -64,6 +122,14 @@ public:
 	Range mRange;
 	std::vector<unsigned char> mData;
 
+	DenseData(const Range &range)
+			:mRange(range) {
+		mData.reserve(range.mLength);
+	}
+
+	inline int startbyte() const {
+		return mRange.mStart;
+	}
 	inline int length() const {
 		return mRange.mLength;
 	}
@@ -78,21 +144,50 @@ typedef boost::shared_ptr<DenseData> DenseDataPtr;
 
 /// Represents a series of DenseData.  Often you may have adjacent DenseData.
 class SparseData {
+	typedef std::list<DenseDataPtr> ListType;
 	///sorted vector of Range/vector pairs
-	std::list<DenseData> mSparseData;
+	ListType mSparseData;
+	/*
 	///The timestamp of last file update, in case the file changes itself midstream
 	int64_t timestamp;
 	///the length of the fully filled file, were it all there
 	size_t mFileLength;
+	*/
 public:
-	///Serializes the sparse data into a dense stream
-	void serialize(std::ostream&);
-	///unserializes the sparse data from a dense stream
-	void unserialize(std::istream&);
+	typedef ListType::iterator iterator;
+	iterator ptrbegin() {
+		return mSparseData.begin();
+	}
+	iterator ptrend() {
+		return mSparseData.end();
+	}
+
+	/// Simple stub iterator class for use by Range::isContainedBy()
+	class const_iterator : public ListType::const_iterator {
+	public:
+		const_iterator(const ListType::const_iterator &e) :
+			ListType::const_iterator(e) {
+		}
+		inline const DenseData &operator* () const {
+			return *(this->ListType::const_iterator::operator*());
+		}
+	};
+	const_iterator begin() const {
+		return mSparseData.begin();
+	}
+	const_iterator end() const {
+		return mSparseData.end();
+	}
 	///adds a range of valid data to the SparseData set.
-	void addValidData(const Range&, unsigned char *data);
-	///gets the length of the sparse file, were it fully populated
-	size_t getFileLength();
+	void addValidData(const DenseDataPtr &data);
+	///gets the space used by the sparse file
+	inline size_t getSpaceUsed() {
+		size_t length;
+		for (const_iterator iter = begin(); iter != end(); ++iter) {
+			length += (*iter).length();
+		}
+		return length;
+	}
 	/**
 	 * gets a pointer to data starting at offset
 	 * @param offset specifies where in the sparse file the data should be gotten from
@@ -103,7 +198,7 @@ public:
 	unsigned char *dataAt(size_t offset, size_t &length);
 
 };
-typedef boost::shared_ptr<SparseData> SparseDataPtr;
+//typedef boost::shared_ptr<SparseData> SparseDataPtr;
 
 }
 }

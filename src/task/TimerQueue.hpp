@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -39,6 +39,8 @@
 #include <boost/weak_ptr.hpp>
 #include <string>
 #include <algorithm>
+#include <list>
+#include <map>
 
 #include "Time.hpp"
 #include "UniqueId.hpp"
@@ -71,20 +73,20 @@ public:
 	 *
 	 * Note that as long as ev returns a positive return value, the event will
 	 * be rescheduled for that time.
-	 * 
+	 *
 	 * @param nextTime  The absolute time to sechedule ev.
 	 * @param ev        A (usually bound) boost::function to be called at nextTime.
 	 */
 	void schedule(AbsTime nextTime,
 				const TimedEvent &ev);
-	
+
 	/**
 	 * Schedules this event to occur at nextTime.  In addition to the handler's
 	 * return value, the event may be removed by calling unschedule(id).
 	 *
 	 * Note that as long as ev returns a positive return value, the event will
 	 * be rescheduled for that time.
-	 * 
+	 *
 	 * @param nextTime  The absolute time to sechedule ev.
 	 * @param ev        A (usually bound) boost::function to be called at nextTime.
 	 * @returns         An id that can be passed to unschedule to prematurely cancel

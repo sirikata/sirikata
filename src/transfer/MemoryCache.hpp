@@ -43,56 +43,69 @@ namespace Iridium {
 namespace Transfer {
 
 /// MemoryCache is usually the first layer in the cache--simple map from FileId to SparseData.
-class MemoryCache : CacheLayer {
+class MemoryCache : public CacheLayer {
 public:
-	typedef SparseDataPtr CacheData;
+	typedef SparseData CacheData;
 
 private:
-	typedef CacheMap<DiskInfo> MemoryMap;
+	typedef CacheMap MemoryMap;
 	MemoryMap mData;
 
 protected:
 	virtual void populateCache(const Fingerprint &fileId, const DenseDataPtr &respondData) {
 		{
-			MemoryMap::write_iterator writer;
-			if (mCachePolicy->allocateSpace(writer, respondData.length())) {
-				if (writer.insert(fileId, SparseDataPtr())) {
+			MemoryMap::write_iterator writer(mData);
+			if (mData.alloc(respondData->mRange.mLength, writer)) {
+				if (writer.insert(fileId, new SparseData(), respondData->mRange.mLength)) {
+					SparseData *sparse = writer;
+					(*sparse).addValidData(respondData);
 					writer.use();
-					*writer = respondData;
 				} else {
-					size_t length = (*writer)->add(respondData);
-					writer.update(fileId, length);
+					SparseData *sparse = writer;
+					(*sparse).addValidData(respondData);
+					writer.update((*sparse).getSpaceUsed());
 				}
 
 			}
 		}
-		TransferLayer::populateParentCaches(fileId, respondData);
+		CacheLayer::populateParentCaches(fileId, respondData);
+	}
+
+	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
+		CacheData *toDelete = (CacheData*)cacheLayerData;
+		delete toDelete;
 	}
 
 public:
-	MemoryCache(CachePolicy<CacheData> *policy, TransferManager *cacheMgr, CacheLayer *respondTo, TransferLayer *tryNext)
+	MemoryCache(CachePolicy *policy, TransferManager *cacheMgr, CacheLayer *respondTo, CacheLayer *tryNext)
 			: CacheLayer(cacheMgr, respondTo, tryNext),
-			mFiles(policy) {
+			mData(this, policy) {
 	}
 
 	virtual bool getData(const URI &uri, const Range &requestedRange,
 			const TransferCallback&callback) {
-		SparseDataPtr foundData;
+		bool haveData = false;
+		SparseData foundData;
 		{
-			DataMap::read_iterator iter(mData);
+			MemoryMap::read_iterator iter(mData);
 			if (iter.find(uri.fingerprint())) {
-				const SparseDataPtr &sparseData = (*iter).second;
-				if (sparseData->containsRange(range)) {
-					foundData = sparseData;
+				const SparseData *sparseData = iter;
+				if (requestedRange.isContainedBy(*sparseData)) {
+					haveData = true;
+					foundData = *sparseData;
 				}
 			}
 		}
-		if (foundData) {
-			TransferLayer::populateParentCaches(uri.fingerprint(), foundData);
-			callback(foundData);
+		if (haveData) {
+			for (SparseData::iterator iter = foundData.ptrbegin();
+					iter != foundData.ptrend();
+					++iter) {
+				CacheLayer::populateParentCaches(uri.fingerprint(), (*iter));
+			}
+			callback(&foundData);
 			return false;
 		} else {
-			return TransferLayer::getData(uri, range, callback);
+			return CacheLayer::getData(uri, requestedRange, callback);
 		}
 	}
 };

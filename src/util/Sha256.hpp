@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -30,6 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "Array.hpp"
+
+#include <string>
+#include <cstdlib>
+#include <cstring>
+
 namespace Iridium {
 class SHA256 {
 public:
@@ -75,7 +80,7 @@ public:
     /**
      * Looks at the first 64 characters and pairs them into 32 bytes
      * \param digest must be a string of length 64
-     * \throws std::invalid_argument if nonhex character encountered 
+     * \throws std::invalid_argument if nonhex character encountered
      */
     static SHA256 convertFromHex(const std::string&digest);
     /**
@@ -89,7 +94,7 @@ public:
      * Looks at the first 32 bytes
      * Creates a shasum with these 32 raw bytes
      * \param digest must be exactly 32 bytes long
-     */    
+     */
     static SHA256 convertFromBinary(const void*digest){
         SHA256 retval;
         memcpy(retval.mData.data(),digest,static_size);
@@ -114,7 +119,7 @@ public:
     const SHA256&nil(){
         static SHA256 nil;
         static char empty_array[static_size]={0};
-        static void* result=memcpy(nil.mData.data(),empty_array,static_size);
+        static void* result=std::memcpy(nil.mData.data(),empty_array,static_size);
         return nil;
     }
     /**
@@ -124,6 +129,6 @@ public:
         static SHA256 empty=computeDigest(NULL,0);
         return empty;
     }
-    
+
 };
 }

@@ -41,16 +41,17 @@
 namespace Iridium {
 namespace Transfer {
 
-template <class CacheInfo> class CacheMap;
-
 /// Critical to the functioning of CacheLayer--makes decisions which pieces of data to keep and which to throw out.
-template <class CacheInfo>
-class CachePolicy {
+//template <class CacheInfo>
+template <class CacheMap>
+class CachePolicyMap {
 public:
+	typedef typename CacheMap::write_iterator write_iterator;
+
 	typedef void *Data;
 
 	/// Virtual destructor since children will allocate class members.
-	virtual ~CachePolicy() {
+	virtual ~CachePolicyMap() {
 	}
 
 	/**
@@ -98,8 +99,14 @@ public:
 	 */
 	virtual bool allocateSpace(
 			size_t requiredSpace,
-			typename CacheMap<CacheInfo>::write_iterator &writer) = 0;
+			write_iterator &writer) = 0;
 };
+
+
+// Hack to hold off instantiation until CacheMap::write_iterator is defined.
+// Anyone know how to create a forward reference to an inner class?
+class CacheMap;
+typedef CachePolicyMap<CacheMap> CachePolicy;
 
 }
 }

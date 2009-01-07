@@ -40,21 +40,24 @@
 namespace Iridium {
 namespace Transfer {
 
-class LRUPolicy : CachePolicy {
-	typedef LRUList::iterator* LRUData;
+/// Simple LRU policy--does not do any ordering by size.
+class LRUPolicy : public CachePolicy {
 
 	typedef std::pair<Fingerprint, size_t> LRUElement;
 	typedef std::list<LRUElement> LRUList;
+	typedef LRUList::iterator* LRUData;
 
 	size_t mTotalSize;
+	float mMaxSizePct;
 	ssize_t mFreeSpace;
 
 	LRUList mLeastUsed;
 	// std::list<Fingerprint>::const_iterator
 
 public:
-	LRUPolicy(size_t allocatedSpace)
+	LRUPolicy(size_t allocatedSpace, float maxSizePct=0.5)
 		: mTotalSize(allocatedSpace),
+		mMaxSizePct(maxSizePct),
 		mFreeSpace((ssize_t)allocatedSpace) {
 	}
 
@@ -74,7 +77,7 @@ public:
 	}
 
 	virtual void destroy(const Fingerprint &id, const Data &data) {
-		LRUData *lrudata = (LRUData)data;
+		LRUData lrudata = (LRUData)data;
 
 		mFreeSpace += (**lrudata).second; // return the space
 
@@ -85,7 +88,7 @@ public:
 	virtual Data create(const Fingerprint &id, size_t size) {
 		mFreeSpace -= size; // remove the space
 
-		mLeastUsed.push_back(LRUData(id, size));
+		mLeastUsed.push_back(LRUElement(id, size));
 		LRUList::iterator newIter = mLeastUsed.end();
 		--newIter; // I wish push_back returned an iterator
 
@@ -94,19 +97,23 @@ public:
 
 	virtual bool allocateSpace(
 			size_t requiredSpace,
-			typename CacheMap<CacheInfo>::write_iterator &writer)
+			CacheMap::write_iterator &writer)
 	{
-		if ((double)requiredSpace > (double)mTotalSize * 0.75) {
+		if (((ssize_t)requiredSpace) < 0) {
+			// overflows a ssize_t.
 			return false;
 		}
-		while (mFreeSpace < requiredSpace && !mLeastUsed.empty()) {
+		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
+			return false;
+		}
+		while (mFreeSpace < (ssize_t)requiredSpace && !mLeastUsed.empty()) {
 			LRUList::iterator lruiter = mLeastUsed.begin();
 			requiredSpace -= (*lruiter).second;
 
 			writer.find((*lruiter).first);
 			writer.erase(); // calls destroy();
 		}
-		return (mFreeSpace > requiredSpace);
+		return (mFreeSpace > (ssize_t)requiredSpace);
 	}
 };
 

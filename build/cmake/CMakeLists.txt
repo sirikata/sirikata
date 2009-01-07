@@ -230,6 +230,7 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/src ${TOP_LEV
 #source files
 SET(SOURCE_DIR ${TOP_LEVEL}/src)
 SET(IRIDESCENCE_SOURCES
+	${SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${SOURCE_DIR}/task/EventManager.cpp
 	${SOURCE_DIR}/task/Event.cpp
 	${SOURCE_DIR}/task/UniqueId.cpp

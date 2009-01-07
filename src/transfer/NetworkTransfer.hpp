@@ -35,43 +35,15 @@
 #define IRIDIUM_HTTPTransfer_HPP__
 
 #include <vector>
-#include "TransferLayer.hpp"
 #include "CacheLayer.hpp"
-#include "TransferManager.hpp"
 
 namespace Iridium {
 /** CacheLayer.hpp -- Class dealing with HTTP downloads. */
 namespace Transfer {
 
 
-class HTTPRequest {
-	typedef boost::function3<void, HTTPRequest*,
-			const DenseDataPtr &, bool> CallbackFunc;
-	URI mURI;
-	Range mRange;
-	CallbackFunc mCallback;
-public:
-
-	inline const URI &getURI() const {return mURI;}
-	inline const Range &getRange() const {return mRange;}
-
-	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool);
-
-	HTTPRequest(const URI &uri, const Range &range)
-		: mURI(uri), mRange(range), mCallback(&nullCallback) {
-	}
-
-	void setCallback(const CallbackFunc &cb) {
-		mCallback = cb;
-	}
-
-	void go();
-};
-
-//typedef boost::shared_ptr<HTTPRequest> HTTPRequestPtr;
-
 /** Not really a cache layer, but implements the interface.*/
-class NetworkTransfer : TransferLayer {
+class NetworkTransfer : CacheLayer {
 	void httpCallback(
 			TransferCallback callback,
 			HTTPRequest* httpreq,
@@ -79,10 +51,12 @@ class NetworkTransfer : TransferLayer {
 			bool permanentError) {
 		if (recvData) {
 			// Now go back through the chain!
-			TransferLayer::populateParentCaches(httpreq->getURI().fingerprint(), recvData);
-			callback(recvData);
+			CacheLayer::populateParentCaches(httpreq->getURI().fingerprint(), recvData);
+			SparseData data;
+			data.addValidData(recvData);
+			callback(&data);
 		} else {
-			TransferLayer::getData(httpreq->getURI(), httpreq->getRange(), callback);
+			CacheLayer::getData(httpreq->getURI(), httpreq->getRange(), callback);
 		}
 	}
 
@@ -91,7 +65,7 @@ public:
 			const Range &requestedRange,
 			const TransferCallback &callback) {
 		HTTPRequest* thisRequest = new HTTPRequest(downloadURI, requestedRange);
-		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, callback));
+		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, callback, _1, _2, _3));
 		// should call callback when it finishes.
 		thisRequest->go();
 		return true;

@@ -44,6 +44,7 @@ namespace Transfer {
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 
+/// URI stores both a uri string as well as a Fingerprint to verify it.
 class URI {
 	Fingerprint mHash;
 	std::string mIdentifier;
