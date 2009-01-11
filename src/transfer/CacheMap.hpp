@@ -56,7 +56,7 @@ public:
 
 private:
 	typedef CachePolicy::Data PolicyData;
-	typedef std::pair<CacheInfo, PolicyData> MapEntry;
+	typedef std::pair<CacheInfo, std::pair<PolicyData, size_t> > MapEntry;
 	typedef std::map<Fingerprint, MapEntry> MapClass;
 
 	MapClass mMap;
@@ -154,14 +154,19 @@ public:
 			return (*mIter).first;
 		}
 
+		/// @returns the stored space usage of this item.
+		inline size_t getSize() const {
+			return (*mIter).second.second.second;
+		}
+
 		/// @returns the CachePolicy opaque data (does not check validity)
 		inline PolicyData &getPolicyInfo() {
-			return (*mIter).second.second;
+			return (*mIter).second.second.first;
 		}
 
 		/// Sets the use bit in the corresponding cache policy.
 		inline void use() {
-			mCachemap->mPolicy->use(getId(), getPolicyInfo());
+			mCachemap->mPolicy->use(getId(), getPolicyInfo(), getSize());
 		}
 	};
 
@@ -217,14 +222,19 @@ public:
 			return (*mIter).first;
 		}
 
+		/// @returns the stored space usage of this item.
+		inline size_t getSize() const {
+			return (*mIter).second.second.second;
+		}
+
 		/// @returns the CachePolicy opaque data (does not check validity)
 		inline PolicyData &getPolicyInfo() {
-			return (*mIter).second.second;
+			return (*mIter).second.second.first;
 		}
 
 		/// Sets the use bit in the corresponding cache policy.
 		inline void use() {
-			mCachemap->mPolicy->use(getId(), getPolicyInfo());
+			mCachemap->mPolicy->use(getId(), getPolicyInfo(), getSize());
 		}
 
 		/**
@@ -234,8 +244,10 @@ public:
 		 * @param newSize  The new total size of this element.
 		 */
 		inline void update(size_t newSize) {
+			size_t oldSize = getSize();
+			(*mIter).second.second.second = newSize;
 			mCachemap->mPolicy->useAndUpdate(getId(),
-					getPolicyInfo(), newSize);
+					getPolicyInfo(), oldSize, newSize);
 		}
 
 		/**
@@ -245,8 +257,8 @@ public:
 s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 */
 		void erase() {
-			mCachemap->mPolicy->destroy(getId(), getPolicyInfo());
-			mCachemap->mOwner->destroyCacheEntry(getId(), (*this));
+			mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
+			mCachemap->mOwner->destroyCacheEntry(getId(), (*this), getSize());
 			mMap->erase(mIter);
 			mIter = mMap->end();
 		}
@@ -256,8 +268,8 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 */
 		void eraseAll() {
 			for (mIter = mMap->begin(); mIter != mMap->end(); ++mIter) {
-				mCachemap->mPolicy->destroy(getId(), getPolicyInfo());
-				mCachemap->mOwner->destroyCacheEntry(getId(), (*this));
+				mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
+				mCachemap->mOwner->destroyCacheEntry(getId(), (*this), getSize());
 			}
 			mMap->clear();
 			mIter = mMap->end();
@@ -279,11 +291,11 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		bool insert(const Fingerprint &id, const CacheInfo &member, size_t size) {
 			std::pair<MapClass::iterator, bool> ins=
 				mMap->insert(MapClass::value_type(id,
-						MapEntry(member, PolicyData())));
+						MapEntry(member, std::pair<PolicyData, size_t>(PolicyData(), size))));
 			mIter = ins.first;
 
 			if (ins.second) {
-				(*mIter).second.second = mCachemap->mPolicy->create(id, size);
+				(*mIter).second.second.first = mCachemap->mPolicy->create(id, size);
 			}
 			return ins.second;
 		}

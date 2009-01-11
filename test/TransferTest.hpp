@@ -30,7 +30,7 @@ public:
 	virtual void setUp() {
 		mHTTPTransfer = new Transfer::NetworkTransfer(NULL);
 		mDiskCache = new Transfer::DiskCache(new Transfer::LRUPolicy(32000), "diskCache/", mHTTPTransfer);
-		mMemoryCache = new Transfer::MemoryCache(new Transfer::LRUPolicy(32000000), mDiskCache);
+		mMemoryCache = new Transfer::MemoryCache(new Transfer::LRUPolicy(3200), mDiskCache);
 		mTransfer = new Transfer::TransferManager(mMemoryCache);
 	}
 
@@ -54,8 +54,7 @@ public:
 			myData->debugPrint(std::cout);
 			const Transfer::DenseData &densedata = (*myData->begin());
 			TS_ASSERT_EQUALS (densedata.length(), uri.length());
-			std::cout << SHA256::computeDigest(densedata.data(), densedata.length()) <<std::endl;
-			std::cout << uri.fingerprint() <<std::endl;
+			TS_ASSERT_EQUALS (SHA256::computeDigest(densedata.data(), densedata.length()), uri.fingerprint());
 		} else {
 			std::cout << "fail!" << std::endl;
 		}
@@ -68,13 +67,13 @@ public:
 		std::cout << "Finished callback" << std::endl;
 	}
 
-	void testExampleCom( void ) {
+	bool doExampleComTest( void ) {
 		const char *expected = "55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80";
 		Transfer::URI exampleComUri (SHA256::convertFromHex(expected), 438, "http://example.com/");
 		std::cout << "shasum should be " <<  expected << std::endl;
 		volatile bool finishedTest = false;
 
-		mTransfer->download(exampleComUri,
+		bool async = mTransfer->download(exampleComUri,
 				boost::bind(&TransferManagerTestSuite::callbackExampleCom, this, &finishedTest, exampleComUri, _1),
 				Transfer::Range(0, exampleComUri.length()));
 
@@ -85,15 +84,23 @@ public:
 			}
 		}
 		std::cout << "Finished example.com test" << std::endl;
+		return async;
+	}
+
+	void testExampleCom( void ) {
+		doExampleComTest();
 	}
 	void testExampleCom2( void ) {
+		const bool asynchronous = true;
 		// test disk cache.
-		testExampleCom();
+		std::cout << "Testing disk cache..."<<std::endl;
+		TS_ASSERT(doExampleComTest() == asynchronous);
 
 		// test memory cache.
 		rename("diskCache/55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80","t");
 		// ensure it is not using the disk cache.
-		testExampleCom();
+		std::cout << "Testing memory cache..."<<std::endl;
+		TS_ASSERT(doExampleComTest() != asynchronous);
 		rename("t","diskCache/55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80");
 	}
 

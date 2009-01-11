@@ -43,7 +43,7 @@ namespace Transfer {
 /// Simple LRU policy--does not do any ordering by size.
 class LRUPolicy : public CachePolicy {
 
-	typedef std::pair<Fingerprint, size_t> LRUElement;
+	typedef Fingerprint LRUElement;
 	typedef std::list<LRUElement> LRUList;
 	typedef LRUList::iterator* LRUData;
 
@@ -61,26 +61,23 @@ public:
 		mFreeSpace((ssize_t)allocatedSpace) {
 	}
 
-	virtual void use(const Fingerprint &id, Data &data) {
+	virtual void use(const Fingerprint &id, Data &data, size_t size) {
 		// "All iterators remain valid"
 		mLeastUsed.splice(mLeastUsed.end(), mLeastUsed, *(LRUData)data);
 	}
 
-	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t size) {
-		use(id, data); // No optimizations to be made here.
+	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t oldsize, size_t newsize) {
+		use(id, data, newsize); // No optimizations to be made here.
 
-		LRUList::iterator &lruiter = *(LRUData)data;
-
-		mFreeSpace += ((*lruiter).second - size); // update the difference
-		(*lruiter).second = size;
-
+		mFreeSpace += (oldsize - newsize); // update the difference
 	}
 
-	virtual void destroy(const Fingerprint &id, const Data &data) {
+	virtual void destroy(const Fingerprint &id, const Data &data, size_t size) {
 		LRUData lrudata = (LRUData)data;
 
-		mFreeSpace += (**lrudata).second; // return the space
+		mFreeSpace += size; // return the space
 
+		std::cout << "[LRUPolicy] Freeing " << id << " (" << size << " bytes); " << mFreeSpace << " free" << std::endl;
 		mLeastUsed.erase(*lrudata);
 		delete lrudata;
 	}
@@ -88,7 +85,7 @@ public:
 	virtual Data create(const Fingerprint &id, size_t size) {
 		mFreeSpace -= size; // remove the space
 
-		mLeastUsed.push_back(LRUElement(id, size));
+		mLeastUsed.push_back(id);
 		LRUList::iterator newIter = mLeastUsed.end();
 		--newIter; // I wish push_back returned an iterator
 
@@ -106,13 +103,12 @@ public:
 		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
 			return false;
 		}
-		std::cout << mFreeSpace << (ssize_t)requiredSpace << std::endl;
+		std::cout << "[LRUPolicy] Need to allocate " << (ssize_t)requiredSpace << " bytes of " << mFreeSpace << " free" << std::endl;
 		while (mFreeSpace < (ssize_t)requiredSpace && !mLeastUsed.empty()) {
 			LRUList::iterator lruiter = mLeastUsed.begin();
-			requiredSpace -= (*lruiter).second;
+			writer.find((*lruiter));
 
-			writer.find((*lruiter).first);
-			writer.erase(); // calls destroy();
+			writer.erase(); // calls destroy(), increases mFreeSpace;
 		}
 		return (mFreeSpace > (ssize_t)requiredSpace);
 	}

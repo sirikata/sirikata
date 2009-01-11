@@ -88,7 +88,7 @@ protected:
 		}
 	}
 
-	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
+	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData, size_t releaseSize) {
 	}
 
 	/**

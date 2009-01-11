@@ -77,6 +77,14 @@ private:
 	boost::condition_variable destroyCV;
 	bool mCleaningUp; // do not delete any files.
 
+	static size_t getDiskUsage(const struct stat *st) {
+#ifdef _WIN32
+		return st->st_size;
+#else
+		// http://lkml.indiana.edu/hypermail/linux/kernel/9812.2/0216.html
+		return 512 * st->st_blocks;
+#endif
+	}
 public:
 	void workerThread() {
 		while (true) {
@@ -107,12 +115,7 @@ public:
 				{
 					struct stat st;
 					fstat(fileno(fp), &st);
-#ifdef _WIN32
-					diskUsage = st.st_size;
-#else
-					// http://lkml.indiana.edu/hypermail/linux/kernel/9812.2/0216.html
-					diskUsage = 512 * st.st_blocks;
-#endif
+					diskUsage = getDiskUsage(&st);
 				}
 				fclose(fp);
 
@@ -176,7 +179,7 @@ public:
 		DiskMap::read_iterator iter (mFiles);
 		while (iter.iterate()) {
 			std::string id = iter.getId().convertToHexString();
-			fp << id << " ";
+			fp << id << " " << iter.getSize() << ": ";
 			const RangeList *list = iter;
 			for (RangeList::const_iterator liter = list->begin(); liter != list->end(); ++liter) {
 				fp << (*liter).startbyte() << " " << (*liter).length() << "; ";
@@ -197,16 +200,18 @@ public:
 			std::istringstream iranges(theline);
 
 			std::string fingerprint;
+			size_t totalLength;
 
-			iranges >> fingerprint;
+			char c;
+			iranges >> fingerprint >> totalLength >> c;
 			if (fingerprint.empty()) {
 				continue;
 			}
 
-			std::cout << "Cached fingerprint:" << " "<<fingerprint << std::endl;
+			std::cout << "Cached fingerprint" << c << " " << fingerprint <<
+				"(" << totalLength << ")" << std::endl;
 
 			RangeList *rlist = new RangeList();
-			size_t totalLength;
 			while (iranges.good()) {
 				Range::offset_type start = 0;
 				size_t length = 0;
@@ -231,7 +236,6 @@ public:
 				char c;
 				iranges >> c;
 
-				totalLength += length;
 				rlist->push_back(Range(start, length));
 			}
 			writer.insert(SHA256::convertFromHex(fingerprint), rlist, totalLength);
@@ -249,7 +253,7 @@ protected:
 		CacheLayer::populateParentCaches(req->fileURI.fingerprint(), data);
 	}
 
-	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
+	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData, size_t releaseSize) {
 		if (!mCleaningUp) {
 			// don't want to erase the disk cache when exiting the program.
 			std::string toDelete = fileId.convertToHexString();

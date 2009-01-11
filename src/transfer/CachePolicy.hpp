@@ -59,7 +59,7 @@ public:
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
 	 */
-	virtual void use(const Fingerprint &id, Data &data) = 0;
+	virtual void use(const Fingerprint &id, Data &data, size_t size) = 0;
 
 	/**
 	 *  Marks the entry as used, and update the space usage
@@ -67,7 +67,7 @@ public:
 	 *  @param data  The opaque data corresponding to this policy.
 	 *  @param size  The amount of space actually used for this element.
 	 */
-	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t size) = 0;
+	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t oldsize, size_t newsize) = 0;
 
 	/**
 	 *  Deletes the opaque data (and anything other corresponding info)
@@ -75,7 +75,7 @@ public:
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
 	 */
-	virtual void destroy(const Fingerprint &id, const Data &data) = 0;
+	virtual void destroy(const Fingerprint &id, const Data &data, size_t size) = 0;
 
 	/**
 	 *  Allocates opaque data (and anything other corresponding info)
