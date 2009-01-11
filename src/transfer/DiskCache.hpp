@@ -34,8 +34,10 @@
 #ifndef IRIDIUM_DiskCache_HPP__
 #define IRIDIUM_DiskCache_HPP__
 
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fstream>
 
 #include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"
@@ -52,13 +54,15 @@ public:
 	typedef RangeList CacheData;
 
 private:
+	struct DiskRequest;
+	ThreadSafeQueue<boost::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
 	boost::thread mWorkerThread;
 
 	typedef CacheMap DiskMap; //<CacheData> DiskMap;
 	DiskMap mFiles;
 
-	struct DiskRequest;
-	ThreadSafeQueue<DiskRequest*> mRequestQueue;
+
+	std::string mPrefix; // directory or prefix name with trailing slash.
 
 	struct DiskRequest {
 		DiskRequest(URI myURI) :fileURI(myURI) {}
@@ -68,19 +72,27 @@ private:
 		TransferCallback finished;
 		boost::shared_ptr<DenseData> data; // if NULL, read data.
 	};
+
+	boost::mutex destroyLock;
+	boost::condition_variable destroyCV;
+	bool mCleaningUp; // do not delete any files.
+
 public:
 	void workerThread() {
 		while (true) {
 			boost::shared_ptr<DiskRequest> req (mRequestQueue.blockingPop());
+			if (!req) {
+				break;
+			}
 			if (req->data) {
 				// Note: TransferLayer::populatePreviousCaches has already been called.
-				FILE *fp;
 				std::string fileId = req->fileURI.fingerprint().convertToHexString();
 				if (!mFiles.alloc(req->data->mRange.mLength)) {
 					continue;
 				}
 
-				fp = fopen(fileId.c_str(), "wb");
+				std::string filePath = mPrefix + fileId;
+				FILE *fp = fopen(filePath.c_str(), "wb");
 				if (!fp) {
 					std::cerr << "Failed to open " << fileId <<
 						"for writing; reason: " << errno << std::endl;
@@ -118,7 +130,8 @@ public:
 			} else {
 				// check that we still have this file..........?
 				std::string fileId = req->fileURI.fingerprint().convertToHexString();
-				FILE *fp = fopen(fileId.c_str(), "rb");
+				std::string filePath = mPrefix + fileId;
+				FILE *fp = fopen(filePath.c_str(), "rb");
 				if (!fp) {
 					std::cerr << "Failed to open " << fileId <<
 						"for reading; reason: " << errno << std::endl;
@@ -140,21 +153,95 @@ public:
 				req->finished(&data);
 			}
 		}
+		{
+			boost::unique_lock<boost::mutex> wake_cv(destroyLock);
+			destroyCV.notify_one();
+		}
 	}
 
 	void readDataFromDisk(const URI &fileURI,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
-		DiskRequest *req = new DiskRequest(fileURI);
+		boost::shared_ptr<DiskRequest> req (new DiskRequest(fileURI));
 		req->finished = callback;
 		req->toRead = requestedRange;
 
 		mRequestQueue.push(req);
 	}
 
+	void serialize() {
+		std::string toOpen = mPrefix + "index.txt";
+		std::fstream fp (toOpen.c_str(), std::ios_base::out);
+
+		DiskMap::read_iterator iter (mFiles);
+		while (iter.iterate()) {
+			std::string id = iter.getId().convertToHexString();
+			fp << id << " ";
+			const RangeList *list = iter;
+			for (RangeList::const_iterator liter = list->begin(); liter != list->end(); ++liter) {
+				fp << (*liter).startbyte() << " " << (*liter).length() << "; ";
+			}
+			fp << std::endl;
+		}
+		fp.close();
+	}
+
+	void unserialize() {
+		std::string toOpen = mPrefix + "index.txt";
+		std::fstream fp (toOpen.c_str(), std::ios_base::in);
+
+		DiskMap::write_iterator writer (mFiles);
+		while (fp.good()) {
+			std::string theline;
+			std::getline (fp, theline);
+			std::istringstream iranges(theline);
+
+			std::string fingerprint;
+
+			iranges >> fingerprint;
+			if (fingerprint.empty()) {
+				continue;
+			}
+
+			std::cout << "Cached fingerprint:" << " "<<fingerprint << std::endl;
+
+			RangeList *rlist = new RangeList();
+			size_t totalLength;
+			while (iranges.good()) {
+				Range::offset_type start = 0;
+				size_t length = 0;
+				iranges >> start >> length;
+
+				if (length <= 0 || start < 0) {
+					continue;
+				}
+
+				if (!rlist->empty()) {
+					// merge adjacent ranges.
+					Range::offset_type oldStart = rlist->back().mStart;
+					size_t oldLength = rlist->back().mLength;
+					if (oldStart + (Range::offset_type)oldLength > start) {
+						size_t newLength = start + length - oldStart;
+						rlist->back().mLength = newLength;
+						totalLength += (newLength - oldLength);
+						continue;
+					}
+				}
+
+				char c;
+				iranges >> c;
+
+				totalLength += length;
+				rlist->push_back(Range(start, length));
+			}
+			writer.insert(SHA256::convertFromHex(fingerprint), rlist, totalLength);
+		}
+		fp.close();
+	}
+
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
-		DiskRequest *req = new DiskRequest(URI(fileId, ""));
+		boost::shared_ptr<DiskRequest> req (new DiskRequest(URI(fileId, data->length(), "")));
 		req->data = data;
 
 		mRequestQueue.push(req);
@@ -163,17 +250,60 @@ protected:
 	}
 
 	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
-		unlink(fileId.convertToHexString().c_str());
+		if (!mCleaningUp) {
+			// don't want to erase the disk cache when exiting the program.
+			std::string toDelete = fileId.convertToHexString();
+			unlink(toDelete.c_str());
+		}
 		CacheData *toDelete = (CacheData*)cacheLayerData;
 		delete toDelete;
 	}
 
 public:
 
-	DiskCache(CachePolicy *policy, TransferManager *cacheMgr, CacheLayer *respondTo, CacheLayer *tryNext)
-			: CacheLayer(cacheMgr, respondTo, tryNext),
+	DiskCache(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
+			: CacheLayer(tryNext),
 			mWorkerThread(boost::bind(&DiskCache::workerThread, this)),
-			mFiles(this, policy) {
+			mFiles(this, policy),
+			mPrefix(prefix),
+			mCleaningUp(false) {
+
+		std::string::size_type slash=0;
+		while (true) {
+			std::string::size_type fwdslash = mPrefix.find('/', slash);
+			std::string::size_type backslash = mPrefix.find('\\', slash);
+			slash = fwdslash<backslash ? fwdslash : backslash;
+			if (slash == std::string::npos) {
+				break;
+			}
+			std::string thisDir = mPrefix.substr(0, slash);
+			mkdir(thisDir.c_str(),
+#ifndef _WIN32
+					0755
+#endif
+				);
+
+			++slash;
+		}
+		// FIXME: read the list of files from disk?
+		try {
+			unserialize();
+		} catch (...) {
+			std::cerr << "ERROR loading cache index!" << std::endl;
+			/// do nothing
+		}
+	}
+
+	virtual ~DiskCache() {
+		boost::shared_ptr<DiskRequest> req;
+		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
+		mRequestQueue.push(req);
+		destroyCV.wait(sleep_cv); // we know the thread has terminated.
+
+		mCleaningUp = true; // don't allow destroyCacheEntry to delete files.
+
+		serialize();
+		// FIXME: serialize the list of files?
 	}
 
 	virtual bool getData(const URI &fileId,

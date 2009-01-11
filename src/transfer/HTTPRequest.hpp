@@ -44,6 +44,8 @@
 namespace Iridium {
 namespace Transfer {
 
+typedef void CURL;
+
 /// Downloads the specified file in another thread and calls callback when finished.
 class HTTPRequest {
 public:
@@ -51,26 +53,61 @@ public:
 			const DenseDataPtr &, bool> CallbackFunc;
 private:
 	URI mURI;
-	Range mRange;
+	Range mRequestedRange;
 	CallbackFunc mCallback;
+	CURL *mCurlRequest;
+
+	Range::offset_type mOffset;
+	DenseDataPtr mData;
 
 	/** The default callback--useful for POST queries where you do not care about the response */
 	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool){
 	}
+
+	size_t write(const unsigned char *begin, size_t amount);
+	size_t read(unsigned char *begin, size_t amount);
+	void gotHeader(const std::string &header);
+
+	static void curlLoop();
+	static void initCurl();
+	static void destroyCurl();
+
+	static size_t write_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);
+	static size_t read_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);
+	static size_t header_cb(char *data, size_t length, size_t count, HTTPRequest *handle);
+
 public:
 
+	inline const DenseDataPtr &getData() {
+		return mData;
+	}
+
+	inline Range::offset_type getOffset() const {
+		return mOffset;
+	}
+
+	inline void seek(Range::offset_type offset) {
+		if (offset >= mRequestedRange.startbyte() &&
+				offset < mRequestedRange.endbyte()) {
+			mOffset = offset;
+		}
+	}
+
 	HTTPRequest(const URI &uri, const Range &range)
-		: mURI(uri), mRange(range), mCallback(&nullCallback) {
+		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
+		mCurlRequest(NULL), mOffset(0), mData(new DenseData()) {
 	}
 
 	/// URI getter
 	inline const URI &getURI() const {return mURI;}
 
 	/// Range getter
-	inline const Range &getRange() const {return mRange;}
+	inline const Range &getRange() const {return mRequestedRange;}
+
+	void abort();
 
 	/// Setter for the response function.
-	void setCallback(const CallbackFunc &cb) {
+	inline void setCallback(const CallbackFunc &cb) {
 		mCallback = cb;
 	}
 

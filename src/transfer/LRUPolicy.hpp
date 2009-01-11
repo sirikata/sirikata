@@ -106,6 +106,7 @@ public:
 		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
 			return false;
 		}
+		std::cout << mFreeSpace << (ssize_t)requiredSpace << std::endl;
 		while (mFreeSpace < (ssize_t)requiredSpace && !mLeastUsed.empty()) {
 			LRUList::iterator lruiter = mLeastUsed.begin();
 			requiredSpace -= (*lruiter).second;

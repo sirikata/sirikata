@@ -130,5 +130,9 @@ public:
         return empty;
     }
 
+    friend inline std::ostream &operator <<(std::ostream &os, const SHA256&shasum) {
+    	return os << shasum.convertToHexString();
+    }
+
 };
 }

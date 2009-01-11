@@ -56,7 +56,7 @@ public:
 	 *
 	 * @param value  is a new'ed value (you must not keep a reference)
 	 */
-	void push(T value) {
+	void push(const T &value) {
 		boost::lock_guard<boost::mutex> push_to_list(mLock);
 
 		mList.push_back(value);
@@ -72,9 +72,9 @@ public:
 	T pop() {
 		boost::lock_guard<boost::mutex> pop_from_list(mLock);
 		if (mList.empty()) {
-			return boost::shared_ptr<T>();
+			return T();
 		} else {
-			const T &ret = mList.front();
+			T ret = mList.front();
 			mList.pop_front();
 			return ret;
 		}
@@ -90,7 +90,7 @@ public:
 		while (mList.empty()) {
 			mCV.wait(pop_and_sleep);
 		}
-		const T &item = mList.front();
+		T item = mList.front();
 		mList.pop_front();
 		return item;
 	}

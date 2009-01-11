@@ -53,8 +53,6 @@ namespace Iridium {
 /** CacheLayer.hpp -- CacheLayer superclass */
 namespace Transfer {
 
-class TransferManager;
-
 /**
  * Cache callback function passed into CacheLayer::getData.
  *
@@ -67,13 +65,15 @@ typedef boost::function1<void, const SparseData*> TransferCallback;
 /** Base class for cache layer--will try a next cache and respond with the data to
  * any previous cache layers so they can store that data as well. */
 class CacheLayer {
-protected:
-	TransferManager *mTransferManager;
 private:
 	CacheLayer *mRespondTo;
 	CacheLayer *mNext;
 
 	friend class CacheMap;
+
+	inline void setResponder(CacheLayer *other) {
+		mRespondTo = other;
+	}
 
 protected:
 	/** Goes up the heirararchy of cache layers filling in data.
@@ -100,16 +100,23 @@ protected:
 	virtual void populateCache(const Fingerprint &fileId, const DenseDataPtr &data) {
 		populateParentCaches(fileId, data);
 	}
+
 public:
 
 	virtual ~CacheLayer() {
+		if (mNext) {
+			mNext->setResponder(NULL);
+		}
 	}
 
 	/**
 	 * Constructor needs to know what cache layer to try next, and what to return to.
 	 */
-	CacheLayer(TransferManager *cacheman, CacheLayer *respondTo, CacheLayer *tryNext)
-		: mTransferManager(cacheman), mRespondTo(respondTo), mNext(tryNext) {
+	CacheLayer(CacheLayer *tryNext)
+			: mRespondTo(NULL), mNext(tryNext) {
+		if (tryNext) {
+			tryNext->setResponder(this);
+		}
 	}
 
 	/**

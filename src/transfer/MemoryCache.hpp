@@ -77,8 +77,8 @@ protected:
 	}
 
 public:
-	MemoryCache(CachePolicy *policy, TransferManager *cacheMgr, CacheLayer *respondTo, CacheLayer *tryNext)
-			: CacheLayer(cacheMgr, respondTo, tryNext),
+	MemoryCache(CachePolicy *policy, CacheLayer *tryNext)
+			: CacheLayer(tryNext),
 			mData(this, policy) {
 	}
 

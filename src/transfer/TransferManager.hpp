@@ -51,6 +51,7 @@ namespace Transfer {
 class TransferManager {
 	CacheLayer *mFirstTransferLayer;
 
+	/*
 	struct RequestInfo {
 		bool mPending; //pending overlapping requests.
 
@@ -59,22 +60,29 @@ class TransferManager {
 	};
 	typedef std::map<Fingerprint, std::list<RequestInfo> > RequestMap;
 	RequestMap mActiveRequests;
-
-	boost::mutex mLock;
+	 */
+	//boost::mutex mLock;
 public:
 
+	TransferManager(CacheLayer *firstLayer)
+			: mFirstTransferLayer(firstLayer) {
+	}
+
+	/*
 	void finishedRequest(const URI &name, const boost::function3<void, const URI&,
 			const SparseData*, bool>&callback) {
 		// TODO: What to do when finished?
 	}
+	*/
 
-	bool download(const URI &name, const boost::function3<void, const URI&,
-				const SparseData*, bool>&callback,
+	bool download(const URI &name,
+				const boost::function1<void, const SparseData*>&callback,
 				Range range) {
 		// check for overlapping requests.
 		// if overlapping, put in "pendingOn"
 		// if not,
-		bool async = mFirstTransferLayer->getData(name, range, boost::bind(&TransferManager::finishedRequest, this, name, callback));
+		//bool async = mFirstTransferLayer->getData(name, range, boost::bind(&TransferManager::finishedRequest, this, name, callback));
+		bool async = mFirstTransferLayer->getData(name, range, callback);
 		// async can only be used for optimization
 		// it is possible that the request finished by a different thread even if it returned true.
 		/*

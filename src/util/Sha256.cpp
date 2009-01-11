@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -44,9 +44,9 @@ static unsigned int numFromHex(unsigned char charValue) {
     if (charValue>='0'&&charValue<='9')
         return charValue-'0';
     if (charValue>='a'&&charValue<='f')
-        return charValue-'a';
+        return 10 + (charValue-'a');
     if (charValue>='A'&&charValue<='F')
-        return charValue-'A';
+        return 10 + (charValue-'A');
     static char error_message[]="Charater \'X\' not a hexidecimal number";
      error_message[10]=charValue;
     //not thread safe--but you'll get at least one of the error messages
@@ -58,7 +58,7 @@ std::string SHA256::convertToHexString() const {
     retval.resize(hex_size);
     for (unsigned int i=0;i<static_size;++i) {
         retval[i*2]=numToHex(mData[i]/16);
-        retval[i*2+1]=numToHex(mData[i]%16);        
+        retval[i*2+1]=numToHex(mData[i]%16);
     }
     return retval;
 }
@@ -67,7 +67,7 @@ Array<char,SHA256::hex_size> SHA256::convertToHex() const {
     Array<char,hex_size> retval;
     for (unsigned int i=0;i<static_size;++i) {
         retval[i*2]=numToHex(mData[i]/16);
-        retval[i*2+1]=numToHex(mData[i]%16);        
+        retval[i*2+1]=numToHex(mData[i]%16);
     }
     return retval;
 }

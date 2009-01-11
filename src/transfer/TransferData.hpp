@@ -36,13 +36,14 @@
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include <list>
+#include <iostream>
 
 namespace Iridium {
 namespace Transfer {
 
 /** Range identifier -- specifies two segments of a file. */
 struct Range {
-	typedef uint64_t offset_type;
+	typedef int64_t offset_type;
 
 	/// A 64-bit starting byte.
 	offset_type mStart;
@@ -55,11 +56,14 @@ struct Range {
 		: mStart(start), mLength(length) {
 	}
 
-	inline int startbyte() const {
+	inline offset_type startbyte() const {
 		return mStart;
 	}
-	inline int length() const {
+	inline size_t length() const {
 		return mLength;
+	}
+	inline Range::offset_type endbyte() const {
+		return mStart + mLength;
 	}
 
 	inline bool operator< (const Range &other) const {
@@ -71,12 +75,13 @@ struct Range {
 
 	template <class ListType>
 	bool isContainedBy(const ListType &list) const {
-		typename ListType::const_iterator iter = list.begin();
+		typename ListType::const_iterator iter = list.begin(),
+			enditer = list.end();
 		offset_type mEnd = mStart + mLength;
 		bool found = false;
 		offset_type lastEnd = 0;
 
-		while (iter != list.end()) {
+		while (iter != enditer) {
 			offset_type start = (*iter).startbyte();
 			offset_type end = start + (*iter).length();
 
@@ -91,9 +96,9 @@ struct Range {
 			return false;
 		}
 		found = false;
-		while (iter != list.end()) {
+		while (iter != enditer) {
 			offset_type start = (*iter).startbyte();
-			if (start != lastEnd) {
+			if (start > lastEnd) {
 				found = false; // gap in range.
 				break;
 			}
@@ -103,6 +108,7 @@ struct Range {
 				found = true;
 				break;
 			}
+			lastEnd = end;
 			++iter;
 		}
 		return found;
@@ -122,22 +128,38 @@ public:
 	Range mRange;
 	std::vector<unsigned char> mData;
 
-	DenseData(const Range &range)
-			:mRange(range) {
-		mData.reserve(range.mLength);
+	DenseData() {
 	}
 
-	inline int startbyte() const {
+	DenseData(const Range &range)
+			:mRange(range) {
+		mData.resize(range.mLength);
+	}
+
+	inline Range::offset_type startbyte() const {
 		return mRange.mStart;
 	}
-	inline int length() const {
+	inline size_t length() const {
 		return mRange.mLength;
+	}
+	inline Range::offset_type endbyte() const {
+		return mRange.mStart + mRange.mLength;
+	}
+
+	inline const unsigned char *data() const {
+		return &(mData[0]);
+	}
+
+	inline void setLength(size_t len) {
+		mRange.mLength = len;
+		mData.resize(mRange.mLength);
+		//message1.reserve(size);
+		//std::copy(data, data+len, std::back_inserter(mData));
 	}
 
 	inline bool operator <(const DenseData &other) const {
 		return mRange < other.mRange;
 	}
-	void merge(const DenseData&other);
 };
 
 typedef boost::shared_ptr<DenseData> DenseDataPtr;
@@ -155,10 +177,10 @@ class SparseData {
 	*/
 public:
 	typedef ListType::iterator iterator;
-	iterator ptrbegin() {
+	inline iterator ptrbegin() {
 		return mSparseData.begin();
 	}
-	iterator ptrend() {
+	inline iterator ptrend() {
 		return mSparseData.end();
 	}
 
@@ -172,14 +194,26 @@ public:
 			return *(this->ListType::const_iterator::operator*());
 		}
 	};
-	const_iterator begin() const {
+	inline const_iterator begin() const {
 		return mSparseData.begin();
 	}
-	const_iterator end() const {
+	inline const_iterator end() const {
 		return mSparseData.end();
 	}
 	///adds a range of valid data to the SparseData set.
-	void addValidData(const DenseDataPtr &data);
+	void addValidData(const DenseDataPtr &data) {
+		iterator endIter=ptrend(), iter=ptrbegin();
+		Range::offset_type startdata = data->startbyte();
+		while (iter != endIter) {
+			if ((*iter)->startbyte() > startdata) {
+				break;
+			}
+
+			++iter;
+		}
+		mSparseData.insert(iter, data);
+	}
+
 	///gets the space used by the sparse file
 	inline size_t getSpaceUsed() {
 		size_t length;
@@ -188,6 +222,22 @@ public:
 		}
 		return length;
 	}
+
+	void debugPrint(std::ostream &os) const {
+		size_t position = 0, len;
+		do {
+			const unsigned char *data = dataAt(position, len);
+			if (data) {
+				std::cout << "{GOT DATA "<<len<<"}";
+				std::cout << std::string(data, data+len);
+			} else if (len) {
+				std::cout << "[INVALID:" <<len<< "]";
+			}
+			position += len;
+		} while (len);
+		std::cout << std::endl;
+	}
+
 	/**
 	 * gets a pointer to data starting at offset
 	 * @param offset specifies where in the sparse file the data should be gotten from
@@ -195,7 +245,23 @@ public:
 	 * @returns data at that point unless offset is not yet valid in which case dataAt returns NULL with
 	 *          length being the range of INVALID data, or 0 if there is not valid data past that point
 	 */
-	unsigned char *dataAt(size_t offset, size_t &length);
+	const unsigned char *dataAt(Range::offset_type offset, size_t &length) const {
+		const_iterator enditer = end();
+		for (const_iterator iter = begin(); iter != enditer; ++iter) {
+			const Range &range = (*iter).mRange;
+			if (offset >= range.mStart && offset < range.mStart + (Range::offset_type)range.mLength) {
+				// We're within some valid data... return the DenseData.
+				length = range.mLength + (size_t)(range.mStart - offset);
+				return &((*iter).mData[offset - range.mStart]);
+			} else if (offset < range.mStart){
+				// we missed it.
+				length = (size_t)(range.mStart - offset);
+				return NULL;
+			}
+		}
+		length = 0;
+		return NULL;
+	}
 
 };
 //typedef boost::shared_ptr<SparseData> SparseDataPtr;

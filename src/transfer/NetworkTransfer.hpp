@@ -36,6 +36,7 @@
 
 #include <vector>
 #include "CacheLayer.hpp"
+#include "HTTPRequest.hpp"
 
 namespace Iridium {
 /** CacheLayer.hpp -- Class dealing with HTTP downloads. */
@@ -43,13 +44,18 @@ namespace Transfer {
 
 
 /** Not really a cache layer, but implements the interface.*/
-class NetworkTransfer : CacheLayer {
+class NetworkTransfer : public CacheLayer {
+	volatile bool cleanup;
+	std::list<HTTPRequest> activeTransfers;
+	boost::mutex transferLock; // for abort.
+
 	void httpCallback(
+			std::list<HTTPRequest>::iterator iter,
 			TransferCallback callback,
 			HTTPRequest* httpreq,
 			const DenseDataPtr &recvData,
-			bool permanentError) {
-		if (recvData) {
+			bool success) {
+		if (recvData && success) {
 			// Now go back through the chain!
 			CacheLayer::populateParentCaches(httpreq->getURI().fingerprint(), recvData);
 			SparseData data;
@@ -58,14 +64,42 @@ class NetworkTransfer : CacheLayer {
 		} else {
 			CacheLayer::getData(httpreq->getURI(), httpreq->getRange(), callback);
 		}
+		if (!cleanup) {
+			boost::unique_lock<boost::mutex> transfer_lock(transferLock);
+			activeTransfers.erase(iter);
+		}
 	}
 
 public:
+	NetworkTransfer(CacheLayer *next)
+			:CacheLayer(next) {
+		cleanup = false;
+	}
+
+	virtual ~NetworkTransfer() {
+		boost::unique_lock<boost::mutex> transfer_lock(transferLock);
+		cleanup = true;
+		for (std::list<HTTPRequest>::iterator iter = activeTransfers.begin();
+				iter != activeTransfers.end();
+				++iter) {
+			(*iter).abort();
+		}
+		activeTransfers.clear();
+	}
+
 	virtual bool getData(const URI &downloadURI,
 			const Range &requestedRange,
 			const TransferCallback &callback) {
-		HTTPRequest* thisRequest = new HTTPRequest(downloadURI, requestedRange);
-		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, callback, _1, _2, _3));
+		HTTPRequest *thisRequest;
+		std::list<HTTPRequest>::iterator transferIter;
+		{
+			boost::unique_lock<boost::mutex> access_activeTransfers(transferLock);
+			activeTransfers.push_back(HTTPRequest(downloadURI, requestedRange));
+			transferIter = activeTransfers.end();
+			--transferIter;
+			thisRequest = &(*transferIter);
+		}
+		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
 		// should call callback when it finishes.
 		thisRequest->go();
 		return true;

@@ -71,6 +71,11 @@ public:
 		mOwner(owner), mPolicy(policy) {
 	}
 
+	~CacheMap() {
+		write_iterator clearIterator(*this);
+		clearIterator.eraseAll();
+	}
+
 	/**
 	 * Allocates the requested number of bytes, and erases the
 	 * appropriate set of entries using CachePolicy::allocateSpace().
@@ -112,6 +117,15 @@ public:
 
 		/// @returns   if this iterator can be dereferenced.
 		inline operator bool () const{
+			return (mIter != mMap->end());
+		}
+
+		inline bool iterate () {
+			if (mIter == mMap->end()) {
+				mIter = mMap->begin();
+			} else {
+				++mIter;
+			}
 			return (mIter != mMap->end());
 		}
 
@@ -234,6 +248,18 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 			mCachemap->mPolicy->destroy(getId(), getPolicyInfo());
 			mCachemap->mOwner->destroyCacheEntry(getId(), (*this));
 			mMap->erase(mIter);
+			mIter = mMap->end();
+		}
+
+		/** Iterates through the whole map, destroy()ing everything.  Note that the
+		 * write_iterator contains no iterate() method because it is generally not safe.
+		 */
+		void eraseAll() {
+			for (mIter = mMap->begin(); mIter != mMap->end(); ++mIter) {
+				mCachemap->mPolicy->destroy(getId(), getPolicyInfo());
+				mCachemap->mOwner->destroyCacheEntry(getId(), (*this));
+			}
+			mMap->clear();
 			mIter = mMap->end();
 		}
 

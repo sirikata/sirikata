@@ -182,6 +182,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
 ENDMACRO(ADD_CXXTEST_CPP_TARGET)
 
 SET(CXXTESTSources
+  ${TOP_LEVEL}/test/TransferTest.hpp 
   ${TOP_LEVEL}/test/AtomicTest.hpp
   ${TOP_LEVEL}/test/Vector3Test.hpp 
   ${TOP_LEVEL}/test/Matrix3Test.hpp 
@@ -223,6 +224,12 @@ SET(Boost_LIBRARIES
     ${Boost_SIGNALS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY})
+
+FIND_LIBRARY( CURL_LIBRARY
+	NAMES curl
+	PATHS /usr/lib /usr/local/lib /opt/local/lib /sw/lib /sw/local/lib
+	DOC "cURL Transfer Library")
+SET(TEST_LIBRARIES ${CURL_LIBRARY})
 
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/src ${TOP_LEVEL}/include ${Boost_INCLUDE_DIRS} ${CXXTESTRoot})
