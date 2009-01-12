@@ -35,7 +35,6 @@
 
 #include <queue>
 #include <boost/function.hpp>
-#include <boost/bind.hpp>
 
 namespace Iridium {
 namespace ThreadSafeQueueNS{
@@ -46,7 +45,8 @@ void lock(Lock*lok);
 /// acquires lok, calls check, and while check returns false wait on a condition
 void wait(Lock*lok, 
           Condition* cond, 
-          const boost::function0<bool>&check);
+          const boost::function2<bool, void*, void *>&check,
+          void* arg1, void* arg2);
 /// Notifies the condition once
 void notify(Condition* cond);
 /// release the lock
@@ -158,11 +158,13 @@ public:
             return true;
         }
     }
-    bool waitCheck(T*retval) {
-        if (mList.empty())
+    static bool waitCheck(void * thus, void*vretval) {
+        T* retval=reinterpret_cast<T*>(vretval);
+        
+        if (reinterpret_cast <ThreadSafeQueue* >(thus)->mList.empty())
             return true;
-        *retval=mList.front();
-        mList.pop();
+        *retval=reinterpret_cast <ThreadSafeQueue* >(thus)->mList.front();
+        reinterpret_cast <ThreadSafeQueue* >(thus)->mList.pop();
         return false;
     }
 	/**
@@ -171,8 +173,7 @@ public:
 	 * @returns  the next item in the queue.  Will not return NULL.
 	 */
 	void blockingPop(T&retval) {
-        if (!pop(retval))
-            ThreadSafeQueueNS::wait(mLock,mCond, boost::bind(&ThreadSafeQueue<T>::waitCheck,this,&retval));
+        ThreadSafeQueueNS::wait(mLock,mCond, &ThreadSafeQueue<T>::waitCheck,this,&retval);
     }
 };
 

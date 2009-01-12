@@ -41,9 +41,9 @@ class Condition :public boost::condition_variable {
 void lock(Lock*lok) {
     lok->lock();
 }
-void wait(Lock*lok,Condition *cond, const boost::function0<bool>&check){
+void wait(Lock*lok,Condition *cond, const boost::function2<bool, void*, void*>&check, void * arg1, void * arg2){
     boost::unique_lock<boost::mutex> lock(*lok);
-    while (check()){
+    while (check(arg1,arg2)){
         cond->wait(lock);
     }
 }
