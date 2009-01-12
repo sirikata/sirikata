@@ -30,10 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Dec 31, 2008 */
-
 #include "HTTPRequest.hpp"
 #include "TransferData.hpp"
 #include "util/ThreadSafeQueue.hpp"
+
+#include <boost/thread.hpp>
 
 #include <curl/curl.h>
 
@@ -118,7 +119,6 @@ void HTTPRequest::gotHeader(const std::string &header) {
 }
 
 
-
 #define RETRY_TIME 1.0
 
 namespace {
@@ -134,7 +134,6 @@ namespace {
 	CURL *parent_easy_curl;
 
 }
-
 extern "C"
 void HTTPRequest::destroyCurl () {
 	curl_multi_cleanup(curlm);

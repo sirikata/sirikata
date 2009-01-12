@@ -88,7 +88,9 @@ private:
 public:
 	void workerThread() {
 		while (true) {
-			boost::shared_ptr<DiskRequest> req (mRequestQueue.blockingPop());
+			boost::shared_ptr<DiskRequest> req;
+
+            mRequestQueue.blockingPop(req);
 			if (!req) {
 				break;
 			}

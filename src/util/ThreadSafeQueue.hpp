@@ -33,35 +33,107 @@
 #ifndef IRIDIUM_ThreadSafeQueue_HPP__
 #define IRIDIUM_ThreadSafeQueue_HPP__
 
-#include <boost/thread.hpp>
+#include <queue>
+#include <boost/function.hpp>
+#include <boost/bind.hpp>
 
-/// ThreadSafeQueue.hpp
 namespace Iridium {
-
+namespace ThreadSafeQueueNS{
+class Lock;
+class Condition;
+/// acquires lok Locks a lock
+void lock(Lock*lok);
+/// acquires lok, calls check, and while check returns false wait on a condition
+void wait(Lock*lok, 
+          Condition* cond, 
+          const boost::function0<bool>&check);
+/// Notifies the condition once
+void notify(Condition* cond);
+/// release the lock
+void unlock(Lock*lok);
+/// creates a Lock class
+Lock* lockCreate();
+/// creates a condition
+Condition* condCreate();
+/// destroys the lock class
+void lockDestroy(Lock*oldlock);
+/// destroys the condition
+void condDestroy(Condition*oldcond);
+}
 /// A queue of any type that has thread-safe push() and pop() functions.
 template <typename T> class ThreadSafeQueue {
 private:
-	std::list<T> mList;
-	boost::mutex mLock;
-	boost::condition_variable mCV;
+	std::queue<T> mList;
+    ThreadSafeQueueNS::Lock* mLock;
+    ThreadSafeQueueNS::Condition* mCond;
 
-	inline ThreadSafeQueue& operator= (const ThreadSafeQueue &other) {}
-	inline ThreadSafeQueue(const ThreadSafeQueue&other) {}
+	ThreadSafeQueue& operator= (const ThreadSafeQueue &other){
+        if (this<&other) {
+            ThreadSafeQueueNS::lock(mLock);
+            ThreadSafeQueueNS::lock(other.mLock);
+        }else {
+            ThreadSafeQueueNS::lock(other.mLock);
+            ThreadSafeQueueNS::lock(mLock);
+        }
+        try {
+            mList=other.mList;
+        }catch (...) {
+            if (this<&other) {
+                ThreadSafeQueueNS::unlock(other.mLock);
+                ThreadSafeQueueNS::unlock(mLock);
+            }else {
+                ThreadSafeQueueNS::unlock(mLock);
+                ThreadSafeQueueNS::unlock(other.mLock);
+            }
+            throw;
+        }
+        if (this<&other) {
+            ThreadSafeQueueNS::unlock(other.mLock);
+            ThreadSafeQueueNS::unlock(mLock);
+        }else {
+            ThreadSafeQueueNS::unlock(mLock);
+            ThreadSafeQueueNS::unlock(other.mLock);
+        }
+
+        return *this;
+    }
+	ThreadSafeQueue(const ThreadSafeQueue &other){
+        mLock=ThreadSafeQueueNS::lockCreate();
+        mCond=ThreadSafeQueueNS::condCreate();
+        try {
+            mList=other.mList;
+            ThreadSafeQueueNS::unlock(other.mLock);
+        }catch (...) {
+            ThreadSafeQueueNS::unlock(other.mLock);  
+            throw;
+        }
+    }
 
 public:
-	ThreadSafeQueue() {}
-
+	ThreadSafeQueue() {
+        mLock=ThreadSafeQueueNS::lockCreate();
+        mCond=ThreadSafeQueueNS::condCreate();
+    }
+    ~ThreadSafeQueue(){
+        ThreadSafeQueueNS::lockDestroy(mLock);
+        ThreadSafeQueueNS::condDestroy(mCond);        
+    }
 	/**
 	 * Pushes value onto the queue
 	 *
 	 * @param value  is a new'ed value (you must not keep a reference)
 	 */
-	void push(const T &value) {
-		boost::lock_guard<boost::mutex> push_to_list(mLock);
-
-		mList.push_back(value);
-		mCV.notify_one();
-	}
+	void push(T value) {
+        ThreadSafeQueueNS::lock(mLock);
+        try {
+            mList.push(value);
+            ThreadSafeQueueNS::notify(mCond);
+        } catch (...) {
+            ThreadSafeQueueNS::unlock(mLock);
+            throw;
+        }
+        ThreadSafeQueueNS::unlock(mLock);
+    }
 
 	/**
 	 * Pops the front value from the queue and places it in value.
@@ -69,31 +141,39 @@ public:
 	 * @returns  the T at the front of the queue, or NULL if the queue
 	 *           was empty (or if another thread grabbed the item).
 	 */
-	T pop() {
-		boost::lock_guard<boost::mutex> pop_from_list(mLock);
-		if (mList.empty()) {
-			return T();
-		} else {
-			T ret = mList.front();
-			mList.pop_front();
-			return ret;
-		}
-	}
-
+	bool pop(T&ret) {
+        ThreadSafeQueueNS::lock(mLock);
+        if (mList.empty()) {
+            ThreadSafeQueueNS::unlock(mLock);
+            return false;
+        } else {
+            try {
+                ret = mList.front();
+                mList.pop();
+            }catch (...) {
+                ThreadSafeQueueNS::unlock(mLock);
+                throw;
+            }
+            ThreadSafeQueueNS::unlock(mLock);
+            return true;
+        }
+    }
+    bool waitCheck(T*retval) {
+        if (mList.empty())
+            return true;
+        *retval=mList.front();
+        mList.pop();
+        return false;
+    }
 	/**
 	 * Waits until an item is available on the list.
 	 *
 	 * @returns  the next item in the queue.  Will not return NULL.
 	 */
-	inline T blockingPop() {
-		boost::unique_lock<boost::mutex> pop_and_sleep(mLock);
-		while (mList.empty()) {
-			mCV.wait(pop_and_sleep);
-		}
-		T item = mList.front();
-		mList.pop_front();
-		return item;
-	}
+	void blockingPop(T&retval) {
+        if (!pop(retval))
+            ThreadSafeQueueNS::wait(mLock,mCond, boost::bind(&ThreadSafeQueue<T>::waitCheck,this,&retval));
+    }
 };
 
 }
