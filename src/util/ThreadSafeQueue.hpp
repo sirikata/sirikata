@@ -34,7 +34,6 @@
 #define IRIDIUM_ThreadSafeQueue_HPP__
 
 #include <queue>
-#include <boost/function.hpp>
 
 namespace Iridium {
 namespace ThreadSafeQueueNS{
@@ -45,7 +44,7 @@ void lock(Lock*lok);
 /// acquires lok, calls check, and while check returns false wait on a condition
 void wait(Lock*lok, 
           Condition* cond, 
-          const boost::function2<bool, void*, void *>&check,
+          bool(*check)(void*, void *),
           void* arg1, void* arg2);
 /// Notifies the condition once
 void notify(Condition* cond);
