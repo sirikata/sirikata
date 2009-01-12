@@ -66,7 +66,13 @@ private:
 	std::queue<T> mList;
     ThreadSafeQueueNS::Lock* mLock;
     ThreadSafeQueueNS::Condition* mCond;
-
+    /**
+     * Private function to copy a ThreadSafeQueue to another
+     * Must pick a particular order, in this case pointer order, to acquire the locks
+     * Must copy the list, and unlock if an exception is thrown
+     *
+     * @returns a reference to this class
+     */
 	ThreadSafeQueue& operator= (const ThreadSafeQueue &other){
         if (this<&other) {
             ThreadSafeQueueNS::lock(mLock);
@@ -100,6 +106,7 @@ private:
 	ThreadSafeQueue(const ThreadSafeQueue &other){
         mLock=ThreadSafeQueueNS::lockCreate();
         mCond=ThreadSafeQueueNS::condCreate();
+        ThreadSafeQueueNS::lock(other.mLock);
         try {
             mList=other.mList;
             ThreadSafeQueueNS::unlock(other.mLock);
@@ -107,6 +114,23 @@ private:
             ThreadSafeQueueNS::unlock(other.mLock);  
             throw;
         }
+    }
+
+  /**
+   * This function is a helper function for a condition wait on empty data
+   * Assumes the mLock is taken. Check if the list is empty--if so return true to wait longer. If not empty pop the front value and store the value in the value there
+   * @param thus is a ThreadSafeQueue pointer: the queue to be operated upon
+   * @param vretval is the item that should be filled with data to be popped from the queue
+   * @returns true if there is no data in the ThreadSafeQueue and data must be waited for
+   */
+    static bool waitCheck(void * thus, void*vretval) {
+        T* retval=reinterpret_cast<T*>(vretval);
+        
+        if (reinterpret_cast <ThreadSafeQueue* >(thus)->mList.empty())
+            return true;
+        *retval=reinterpret_cast <ThreadSafeQueue* >(thus)->mList.front();
+        reinterpret_cast <ThreadSafeQueue* >(thus)->mList.pop();
+        return false;
     }
 
 public:
@@ -157,15 +181,6 @@ public:
             ThreadSafeQueueNS::unlock(mLock);
             return true;
         }
-    }
-    static bool waitCheck(void * thus, void*vretval) {
-        T* retval=reinterpret_cast<T*>(vretval);
-        
-        if (reinterpret_cast <ThreadSafeQueue* >(thus)->mList.empty())
-            return true;
-        *retval=reinterpret_cast <ThreadSafeQueue* >(thus)->mList.front();
-        reinterpret_cast <ThreadSafeQueue* >(thus)->mList.pop();
-        return false;
     }
 	/**
 	 * Waits until an item is available on the list.
