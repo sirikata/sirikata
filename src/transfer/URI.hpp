@@ -37,6 +37,9 @@
 #include <string>
 #include "util/Sha256.hpp"
 
+typedef uint64_t cache_usize_type;
+typedef int64_t cache_ssize_type;
+
 namespace Iridium {
 /// URI.hpp: Fingerprint and URI class
 namespace Transfer {
@@ -47,11 +50,10 @@ typedef SHA256 Fingerprint;
 /// URI stores both a uri string as well as a Fingerprint to verify it.
 class URI {
 	Fingerprint mHash;
-	size_t mLength;
 	std::string mIdentifier;
 public:
-	URI(const Fingerprint &hash, size_t length, const std::string &url)
-			: mHash(hash), mLength(length), mIdentifier(url) {
+	URI(const Fingerprint &hash, const std::string &url)
+			: mHash(hash), mIdentifier(url) {
 	}
 
 	/// accessor for the hashed value
@@ -86,10 +88,6 @@ public:
 			}
 			return mIdentifier.substr(pos, slashpos-beginpos);
 		}
-	}
-
-	inline size_t length() const {
-		return mLength;
 	}
 
 	/// const accessor for the full string URI

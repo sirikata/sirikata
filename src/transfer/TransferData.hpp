@@ -37,37 +37,70 @@
 #include <vector>
 #include <list>
 #include <iostream>
+#include "URI.hpp" // defines cache_usize_type, cache_ssize_type
 
 namespace Iridium {
 namespace Transfer {
 
+enum Initializer { LENGTH, BOUNDS };
+
 /** Range identifier -- specifies two segments of a file. */
-struct Range {
-	typedef int64_t offset_type;
+class Range {
+public:
+	typedef cache_usize_type base_type;
+	typedef cache_usize_type length_type;
 
+	//static const length_type npos = (cache_usize_type)-1;
+private:
 	/// A 64-bit starting byte.
-	offset_type mStart;
-	/// Length is a size_t (may only be 32 bits).
-	size_t mLength;
+	base_type mStart;
+	/// Length should be 64-bit as ranges can apply to files on disk.
+	length_type mLength;
 
-	Range() :mStart(0), mLength(0) {}
+	bool mWholeFile;
 
-	Range(offset_type start, size_t length)
-		: mStart(start), mLength(length) {
+public:
+
+	Range(bool wholeFile)
+		: mStart(0), mLength(0), mWholeFile(wholeFile) {
 	}
 
-	inline offset_type startbyte() const {
+	Range(base_type start, bool wholeFile)
+		: mStart(start), mLength(0), mWholeFile(wholeFile) {
+	}
+
+	Range(base_type start, base_type length,
+			Initializer type, bool wholeFile=false)
+		: mStart(start), mLength(type==LENGTH?length:length-start), mWholeFile(wholeFile) {
+	}
+
+	inline bool goesToEndOfFile() const {
+		return mWholeFile;
+	}
+
+	inline base_type startbyte() const {
 		return mStart;
 	}
-	inline size_t length() const {
+	inline length_type length() const {
 		return mLength;
 	}
-	inline Range::offset_type endbyte() const {
+	inline base_type endbyte() const {
 		return mStart + mLength;
+	}
+
+	inline void setLength(length_type l, bool wholeFile) {
+		mLength = l;
+		mWholeFile = wholeFile;
+	}
+	inline void setBase(base_type s) {
+		mStart = s;
 	}
 
 	inline bool operator< (const Range &other) const {
 		if (mLength == other.mLength) {
+			if (mStart == other.mStart && (mWholeFile || other.mWholeFile)) {
+				return other.mWholeFile && !mWholeFile;
+			}
 			return mStart < other.mStart;
 		}
 		return mLength < other.mLength;
@@ -75,15 +108,19 @@ struct Range {
 
 	template <class ListType>
 	bool isContainedBy(const ListType &list) const {
+
 		typename ListType::const_iterator iter = list.begin(),
 			enditer = list.end();
-		offset_type mEnd = mStart + mLength;
+
 		bool found = false;
-		offset_type lastEnd = 0;
+		base_type lastEnd = 0;
 
 		while (iter != enditer) {
-			offset_type start = (*iter).startbyte();
-			offset_type end = start + (*iter).length();
+			base_type start = (*iter).startbyte();
+			if (mStart >= start && (*iter).goesToEndOfFile()) {
+				return true;
+			}
+			base_type end = (*iter).endbyte();
 
 			if (mStart >= start && mStart < end) {
 				found = true;
@@ -97,14 +134,18 @@ struct Range {
 		}
 		found = false;
 		while (iter != enditer) {
-			offset_type start = (*iter).startbyte();
+			base_type start = (*iter).startbyte();
 			if (start > lastEnd) {
 				found = false; // gap in range.
 				break;
 			}
-			offset_type end = start + (*iter).length();
+			base_type end = (*iter).endbyte();
 
-			if (mEnd <= end) {
+			// only an infinite range can include an infinite range.
+			if ((*iter).goesToEndOfFile()) {
+				return true;
+			}
+			if (!goesToEndOfFile() && endbyte() <= end) {
 				found = true;
 				break;
 			}
@@ -114,8 +155,58 @@ struct Range {
 		return found;
 	}
 
+	/// Removes overlapping ranges if possible (assumes a list ordered by starting byte).
+	template <class ListType>
+	void addToList(const typename ListType::value_type &data, ListType &list) const {
+		if (startbyte()==0 && goesToEndOfFile()) {
+			// favor a single chunk covering the whole file.
+			list.clear();
+			list.insert(list.end(), data);
+			return;
+		}
+
+		typename ListType::iterator endIter=list.end(), iter=list.begin();
+		Range::base_type startdata = startbyte();
+		Range::base_type maxend = startdata;
+		bool includeseof = false;
+		while (iter != endIter) {
+			if ((*iter).endbyte() > maxend) {
+				maxend = (*iter).endbyte();
+			}
+			if ((*iter).goesToEndOfFile()) {
+				includeseof = true;
+			}
+			// we do not want to allow for more than one
+			// range starting at the same start byte--
+			// If this is the case, one is guaranteed to overlap.
+			if ((*iter).startbyte() >= startdata) {
+				break;
+			}
+			++iter;
+		}
+		if (includeseof || (maxend > endbyte() && !goesToEndOfFile())) {
+			return; // already included by another range.
+		}
+		iter = list.insert(iter, data);
+		++iter;
+		while (iter != endIter) {
+			typename ListType::iterator nextIter = iter;
+			++nextIter;
+
+			if (goesToEndOfFile() ||
+					(!(*iter).goesToEndOfFile() && (*iter).endbyte() <= endbyte())) {
+				list.erase(iter);
+			}
+
+			iter = nextIter;
+		}
+	}
+
+	/// equality comparision
 	inline bool operator== (const Range &other) const {
-		return mLength == other.mLength && mStart == other.mStart;
+		return mLength == other.mLength &&
+			mStart == other.mStart &&
+			mWholeFile == other.mWholeFile;
 	}
 };
 
@@ -123,42 +214,30 @@ typedef std::list<Range> RangeList;
 
 
 /// Represents a single block of data, and also knows the range of the file it came from.
-class DenseData {
+class DenseData : public Range {
 public:
-	Range mRange;
 	std::vector<unsigned char> mData;
 
-	DenseData() {
+	DenseData(bool wholeFile)
+			:Range(wholeFile) {
 	}
 
 	DenseData(const Range &range)
-			:mRange(range) {
-		mData.resize(range.mLength);
-	}
-
-	inline Range::offset_type startbyte() const {
-		return mRange.mStart;
-	}
-	inline size_t length() const {
-		return mRange.mLength;
-	}
-	inline Range::offset_type endbyte() const {
-		return mRange.mStart + mRange.mLength;
+			:Range(range) {
+		if (range.length()) {
+			mData.resize(range.length());
+		}
 	}
 
 	inline const unsigned char *data() const {
 		return &(mData[0]);
 	}
 
-	inline void setLength(size_t len) {
-		mRange.mLength = len;
-		mData.resize(mRange.mLength);
+	inline void setLength(size_t len, bool is_npos) {
+		Range::setLength(len, is_npos);
+		mData.resize(len);
 		//message1.reserve(size);
 		//std::copy(data, data+len, std::back_inserter(mData));
-	}
-
-	inline bool operator <(const DenseData &other) const {
-		return mRange < other.mRange;
 	}
 };
 
@@ -167,20 +246,31 @@ typedef boost::shared_ptr<DenseData> DenseDataPtr;
 /// Represents a series of DenseData.  Often you may have adjacent DenseData.
 class SparseData {
 	typedef std::list<DenseDataPtr> ListType;
+
 	///sorted vector of Range/vector pairs
 	ListType mSparseData;
-	/*
-	///The timestamp of last file update, in case the file changes itself midstream
-	int64_t timestamp;
-	///the length of the fully filled file, were it all there
-	size_t mFileLength;
-	*/
 public:
-	typedef ListType::iterator iterator;
-	inline iterator ptrbegin() {
+	typedef DenseDataPtr value_type;
+
+	/// Simple stub iterator class for use by Range::isContainedBy()
+	class iterator : public ListType::iterator {
+	public:
+		iterator(const ListType::iterator &e) :
+			ListType::iterator(e) {
+		}
+		inline DenseData &operator* () {
+			return *(this->ListType::iterator::operator*());
+		}
+
+		inline const DenseDataPtr &getPtr() {
+			return this->ListType::iterator::operator*();
+		}
+	};
+
+	inline iterator begin() {
 		return mSparseData.begin();
 	}
-	inline iterator ptrend() {
+	inline iterator end() {
 		return mSparseData.end();
 	}
 
@@ -200,31 +290,36 @@ public:
 	inline const_iterator end() const {
 		return mSparseData.end();
 	}
+
+	inline iterator insert(const iterator &iter, const value_type &dd) {
+		return mSparseData.insert(iter, dd);
+	}
+
+	inline void erase(const iterator &iter) {
+		mSparseData.erase(iter);
+	}
+
+	inline void clear() {
+		return mSparseData.clear();
+	}
+
 	///adds a range of valid data to the SparseData set.
 	void addValidData(const DenseDataPtr &data) {
-		iterator endIter=ptrend(), iter=ptrbegin();
-		Range::offset_type startdata = data->startbyte();
-		while (iter != endIter) {
-			if ((*iter)->startbyte() > startdata) {
-				break;
-			}
-
-			++iter;
-		}
-		mSparseData.insert(iter, data);
+		data->addToList(data, *this);
 	}
 
 	///gets the space used by the sparse file
-	inline size_t getSpaceUsed() {
-		size_t length;
-		for (const_iterator iter = begin(); iter != end(); ++iter) {
+	inline cache_usize_type getSpaceUsed() const {
+		cache_usize_type length;
+		const_iterator myend = end();
+		for (const_iterator iter = begin(); iter != myend; ++iter) {
 			length += (*iter).length();
 		}
 		return length;
 	}
 
 	void debugPrint(std::ostream &os) const {
-		size_t position = 0, len;
+		Range::base_type position = 0, len;
 		do {
 			const unsigned char *data = dataAt(position, len);
 			if (data) {
@@ -245,17 +340,18 @@ public:
 	 * @returns data at that point unless offset is not yet valid in which case dataAt returns NULL with
 	 *          length being the range of INVALID data, or 0 if there is not valid data past that point
 	 */
-	const unsigned char *dataAt(Range::offset_type offset, size_t &length) const {
+	const unsigned char *dataAt(Range::base_type offset, Range::length_type &length) const {
 		const_iterator enditer = end();
 		for (const_iterator iter = begin(); iter != enditer; ++iter) {
-			const Range &range = (*iter).mRange;
-			if (offset >= range.mStart && offset < range.mStart + (Range::offset_type)range.mLength) {
+			const Range &range = (*iter);
+			if (offset >= range.startbyte() &&
+					(range.goesToEndOfFile() || offset < range.endbyte())) {
 				// We're within some valid data... return the DenseData.
-				length = range.mLength + (size_t)(range.mStart - offset);
-				return &((*iter).mData[offset - range.mStart]);
-			} else if (offset < range.mStart){
+				length = range.length() + (Range::length_type)(range.startbyte() - offset);
+				return &((*iter).mData[offset - range.startbyte()]);
+			} else if (offset < range.startbyte()){
 				// we missed it.
-				length = (size_t)(range.mStart - offset);
+				length = (size_t)(range.startbyte() - offset);
 				return NULL;
 			}
 		}

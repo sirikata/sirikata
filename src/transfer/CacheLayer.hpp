@@ -39,6 +39,7 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include <boost/utility.hpp>
 #include <string>
 #include <algorithm>
 #include <map>
@@ -64,7 +65,7 @@ typedef boost::function1<void, const SparseData*> TransferCallback;
 
 /** Base class for cache layer--will try a next cache and respond with the data to
  * any previous cache layers so they can store that data as well. */
-class CacheLayer {
+class CacheLayer : boost::noncopyable {
 private:
 	CacheLayer *mRespondTo;
 	CacheLayer *mNext;
@@ -88,7 +89,10 @@ protected:
 		}
 	}
 
-	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData, size_t releaseSize) {
+	struct CacheEntry {
+	};
+
+	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
 	}
 
 	/**
@@ -116,6 +120,12 @@ public:
 			: mRespondTo(NULL), mNext(tryNext) {
 		if (tryNext) {
 			tryNext->setResponder(this);
+		}
+	}
+
+	virtual void purgeFromCache(const Fingerprint &fileId) {
+		if (mNext) {
+			mNext->purgeFromCache(fileId);
 		}
 	}
 

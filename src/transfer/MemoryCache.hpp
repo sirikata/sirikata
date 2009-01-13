@@ -45,7 +45,9 @@ namespace Transfer {
 /// MemoryCache is usually the first layer in the cache--simple map from FileId to SparseData.
 class MemoryCache : public CacheLayer {
 public:
-	typedef SparseData CacheData;
+	struct CacheData : public CacheEntry {
+		SparseData mSparse;
+	};
 
 private:
 	typedef CacheMap MemoryMap;
@@ -55,15 +57,17 @@ protected:
 	virtual void populateCache(const Fingerprint &fileId, const DenseDataPtr &respondData) {
 		{
 			MemoryMap::write_iterator writer(mData);
-			if (mData.alloc(respondData->mRange.mLength, writer)) {
-				if (writer.insert(fileId, new SparseData(), respondData->mRange.mLength)) {
-					SparseData *sparse = writer;
-					(*sparse).addValidData(respondData);
+			if (mData.alloc(respondData->length(), writer)) {
+				bool newentry = writer.insert(fileId, respondData->length());
+				if (newentry) {
+					CacheData *cdata = new CacheData;
+					*writer = cdata;
+					cdata->mSparse.addValidData(respondData);
 					writer.use();
 				} else {
-					SparseData *sparse = writer;
-					(*sparse).addValidData(respondData);
-					writer.update((*sparse).getSpaceUsed());
+					CacheData *cdata = static_cast<CacheData*>(*writer);
+					cdata->mSparse.addValidData(respondData);
+					writer.update(cdata->mSparse.getSpaceUsed());
 				}
 
 			}
@@ -71,8 +75,8 @@ protected:
 		CacheLayer::populateParentCaches(fileId, respondData);
 	}
 
-	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData) {
-		CacheData *toDelete = (CacheData*)cacheLayerData;
+	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
+		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
 	}
 
@@ -82,6 +86,14 @@ public:
 			mData(this, policy) {
 	}
 
+	virtual void purgeFromCache(const Fingerprint &fileId) {
+		CacheMap::write_iterator iter(mData);
+		if (iter.find(fileId)) {
+			iter.erase();
+		}
+		CacheLayer::purgeFromCache(fileId);
+	}
+
 	virtual bool getData(const URI &uri, const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveData = false;
@@ -89,18 +101,18 @@ public:
 		{
 			MemoryMap::read_iterator iter(mData);
 			if (iter.find(uri.fingerprint())) {
-				const SparseData *sparseData = iter;
-				if (requestedRange.isContainedBy(*sparseData)) {
+				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
+				if (requestedRange.isContainedBy(sparseData)) {
 					haveData = true;
-					foundData = *sparseData;
+					foundData = sparseData;
 				}
 			}
 		}
 		if (haveData) {
-			for (SparseData::iterator iter = foundData.ptrbegin();
-					iter != foundData.ptrend();
+			for (SparseData::iterator iter = foundData.begin();
+					iter != foundData.end();
 					++iter) {
-				CacheLayer::populateParentCaches(uri.fingerprint(), (*iter));
+				CacheLayer::populateParentCaches(uri.fingerprint(), iter.getPtr());
 			}
 			callback(&foundData);
 			return false;

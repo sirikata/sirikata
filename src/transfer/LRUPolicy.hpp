@@ -45,72 +45,66 @@ class LRUPolicy : public CachePolicy {
 
 	typedef Fingerprint LRUElement;
 	typedef std::list<LRUElement> LRUList;
-	typedef LRUList::iterator* LRUData;
 
-	size_t mTotalSize;
-	float mMaxSizePct;
-	ssize_t mFreeSpace;
+	struct LRUData : public Data {
+		LRUList::iterator mIter;
+
+		LRUData(const LRUList::iterator &copyIter)
+			: mIter(copyIter) {
+		}
+	};
 
 	LRUList mLeastUsed;
 	// std::list<Fingerprint>::const_iterator
 
 public:
-	LRUPolicy(size_t allocatedSpace, float maxSizePct=0.5)
-		: mTotalSize(allocatedSpace),
-		mMaxSizePct(maxSizePct),
-		mFreeSpace((ssize_t)allocatedSpace) {
+	LRUPolicy(cache_usize_type allocatedSpace, float maxSizePct=0.5)
+		: CachePolicy(allocatedSpace, maxSizePct) {
 	}
 
-	virtual void use(const Fingerprint &id, Data &data, size_t size) {
+	virtual void use(const Fingerprint &id, Data* data, cache_usize_type size) {
+		LRUData *lrudata = static_cast<LRUData*>(data);
+
 		// "All iterators remain valid"
-		mLeastUsed.splice(mLeastUsed.end(), mLeastUsed, *(LRUData)data);
+		mLeastUsed.splice(mLeastUsed.end(), mLeastUsed, lrudata->mIter);
 	}
 
-	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t oldsize, size_t newsize) {
+	virtual void useAndUpdate(const Fingerprint &id, Data* data, cache_usize_type oldsize, size_t newsize) {
 		use(id, data, newsize); // No optimizations to be made here.
-
-		mFreeSpace += (oldsize - newsize); // update the difference
+		CachePolicy::updateSpace(oldsize, newsize);
 	}
 
-	virtual void destroy(const Fingerprint &id, const Data &data, size_t size) {
-		LRUData lrudata = (LRUData)data;
+	virtual void destroy(const Fingerprint &id, Data* data, cache_usize_type size) {
+		LRUData *lrudata = static_cast<LRUData*>(data);
 
-		mFreeSpace += size; // return the space
+		CachePolicy::updateSpace(size, 0);
 
 		std::cout << "[LRUPolicy] Freeing " << id << " (" << size << " bytes); " << mFreeSpace << " free" << std::endl;
-		mLeastUsed.erase(*lrudata);
+		mLeastUsed.erase(lrudata->mIter);
 		delete lrudata;
 	}
 
-	virtual Data create(const Fingerprint &id, size_t size) {
-		mFreeSpace -= size; // remove the space
+	virtual Data* create(const Fingerprint &id, cache_usize_type size) {
+		CachePolicy::updateSpace(0, size);
 
 		mLeastUsed.push_back(id);
 		LRUList::iterator newIter = mLeastUsed.end();
 		--newIter; // I wish push_back returned an iterator
 
-		return (Data)(new LRUList::iterator(newIter));
+		return new LRUData(newIter);
 	}
 
-	virtual bool allocateSpace(
-			size_t requiredSpace,
-			CacheMap::write_iterator &writer)
+	virtual bool nextItem(
+			cache_usize_type requiredSpace,
+			Fingerprint &myprint)
 	{
-		if (((ssize_t)requiredSpace) < 0) {
-			// overflows a ssize_t.
-			return false;
-		}
-		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
-			return false;
-		}
-		std::cout << "[LRUPolicy] Need to allocate " << (ssize_t)requiredSpace << " bytes of " << mFreeSpace << " free" << std::endl;
-		while (mFreeSpace < (ssize_t)requiredSpace && !mLeastUsed.empty()) {
-			LRUList::iterator lruiter = mLeastUsed.begin();
-			writer.find((*lruiter));
+		if (mFreeSpace < (cache_ssize_type)requiredSpace && !mLeastUsed.empty()) {
 
-			writer.erase(); // calls destroy(), increases mFreeSpace;
+			myprint = mLeastUsed.front();
+			return true;
+		} else {
+			return false;
 		}
-		return (mFreeSpace > (ssize_t)requiredSpace);
 	}
 };
 

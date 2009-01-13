@@ -49,14 +49,14 @@ namespace Transfer {
  */
 class CacheMap : boost::noncopyable {
 public:
-	typedef void *CacheInfo;
+	typedef CacheLayer::CacheEntry *CacheData;
 
 	class read_iterator;
 	class write_iterator;
 
 private:
-	typedef CachePolicy::Data PolicyData;
-	typedef std::pair<CacheInfo, std::pair<PolicyData, size_t> > MapEntry;
+	typedef CachePolicy::Data *PolicyData;
+	typedef std::pair<CacheData, std::pair<PolicyData, cache_usize_type> > MapEntry;
 	typedef std::map<Fingerprint, MapEntry> MapClass;
 
 	MapClass mMap;
@@ -84,13 +84,17 @@ public:
 	 * @returns         if the allocation was successful,
 	 *                  or false if the entry is not to be cached.
 	 */
-	inline bool alloc(size_t required) {
-		write_iterator writer(*this);
-		return mPolicy->allocateSpace(required, writer);
-	}
-
-	inline bool alloc(size_t required, write_iterator &writer) {
-		return mPolicy->allocateSpace(required, writer);
+	inline bool alloc(cache_usize_type required, write_iterator &writer) {
+		bool cachable = mPolicy->cachable(required);
+		if (!cachable) {
+			return false;
+		}
+		Fingerprint toDelete;
+		while (mPolicy->nextItem(required, toDelete)) {
+			writer.find(toDelete);
+			writer.erase();
+		}
+		return true;
 	}
 
 	/**
@@ -138,14 +142,8 @@ public:
 			return (bool)*this;
 		}
 
-		// Allow the user to cast this iterator to any pointer type.
-		template <class RealCacheInfo>
-		inline operator const RealCacheInfo* () const {
-			return (RealCacheInfo*)((*mIter).second.first);
-		}
-
 		/// @returns the current CacheInfo (does not check validity)
-		inline const CacheInfo& operator* () const {
+		inline CacheData operator* () const {
 			return (*mIter).second.first;
 		}
 
@@ -155,12 +153,12 @@ public:
 		}
 
 		/// @returns the stored space usage of this item.
-		inline size_t getSize() const {
+		inline cache_usize_type getSize() const {
 			return (*mIter).second.second.second;
 		}
 
 		/// @returns the CachePolicy opaque data (does not check validity)
-		inline PolicyData &getPolicyInfo() {
+		inline PolicyData getPolicyInfo() {
 			return (*mIter).second.second.first;
 		}
 
@@ -206,14 +204,8 @@ public:
 			return (bool)*this;
 		}
 
-		// Allow the user to cast this iterator to any pointer type.
-		template <class RealCacheInfo>
-		inline operator RealCacheInfo* () {
-			return (RealCacheInfo*)((*mIter).second.first);
-		}
-
 		/// @returns the current CacheInfo (does not check validity)
-		inline CacheInfo& operator* () {
+		inline CacheData &operator* () {
 			return (*mIter).second.first;
 		}
 
@@ -223,12 +215,12 @@ public:
 		}
 
 		/// @returns the stored space usage of this item.
-		inline size_t getSize() const {
+		inline cache_usize_type getSize() const {
 			return (*mIter).second.second.second;
 		}
 
 		/// @returns the CachePolicy opaque data (does not check validity)
-		inline PolicyData &getPolicyInfo() {
+		inline PolicyData getPolicyInfo() {
 			return (*mIter).second.second.first;
 		}
 
@@ -243,8 +235,8 @@ public:
 		 *
 		 * @param newSize  The new total size of this element.
 		 */
-		inline void update(size_t newSize) {
-			size_t oldSize = getSize();
+		inline void update(cache_usize_type newSize) {
+			cache_usize_type oldSize = getSize();
 			(*mIter).second.second.second = newSize;
 			mCachemap->mPolicy->useAndUpdate(getId(),
 					getPolicyInfo(), oldSize, newSize);
@@ -258,7 +250,7 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 */
 		void erase() {
 			mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
-			mCachemap->mOwner->destroyCacheEntry(getId(), (*this), getSize());
+			mCachemap->mOwner->destroyCacheEntry(getId(), (**this), getSize());
 			mMap->erase(mIter);
 			mIter = mMap->end();
 		}
@@ -269,7 +261,7 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		void eraseAll() {
 			for (mIter = mMap->begin(); mIter != mMap->end(); ++mIter) {
 				mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
-				mCachemap->mOwner->destroyCacheEntry(getId(), (*this), getSize());
+				mCachemap->mOwner->destroyCacheEntry(getId(), (**this), getSize());
 			}
 			mMap->clear();
 			mIter = mMap->end();
@@ -288,10 +280,10 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 *                only if the entry did not exist before.
 		 * @returns       If this element was actually inserted.
 		 */
-		bool insert(const Fingerprint &id, const CacheInfo &member, size_t size) {
+		bool insert(const Fingerprint &id, cache_usize_type size) {
 			std::pair<MapClass::iterator, bool> ins=
 				mMap->insert(MapClass::value_type(id,
-						MapEntry(member, std::pair<PolicyData, size_t>(PolicyData(), size))));
+						MapEntry(CacheData(), std::pair<PolicyData, cache_usize_type>(PolicyData(), size))));
 			mIter = ins.first;
 
 			if (ins.second) {

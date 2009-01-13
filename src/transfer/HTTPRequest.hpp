@@ -37,7 +37,7 @@
 #include <vector>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
-
+#include <boost/utility.hpp>
 #include "URI.hpp"
 #include "TransferData.hpp"
 
@@ -52,12 +52,12 @@ public:
 	typedef boost::function3<void, HTTPRequest*,
 			const DenseDataPtr &, bool> CallbackFunc;
 private:
-	URI mURI;
+	const URI mURI; // const because its c_str is passed to curl.
 	Range mRequestedRange;
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
 
-	Range::offset_type mOffset;
+	Range::base_type mOffset;
 	DenseDataPtr mData;
 
 	/** The default callback--useful for POST queries where you do not care about the response */
@@ -78,15 +78,23 @@ private:
 
 public:
 
+	inline HTTPRequest(const HTTPRequest &other)
+		: mURI(other.mURI), mRequestedRange(other.mRequestedRange),
+		mCallback(other.mCallback), mCurlRequest(NULL),
+		mOffset(other.mOffset), mData(other.mData){
+		// can't copy after starting the curl request.
+		assert(!other.mCurlRequest);
+	}
+
 	inline const DenseDataPtr &getData() {
 		return mData;
 	}
 
-	inline Range::offset_type getOffset() const {
+	inline Range::base_type getOffset() const {
 		return mOffset;
 	}
 
-	inline void seek(Range::offset_type offset) {
+	inline void seek(Range::base_type offset) {
 		if (offset >= mRequestedRange.startbyte() &&
 				offset < mRequestedRange.endbyte()) {
 			mOffset = offset;
@@ -95,7 +103,13 @@ public:
 
 	HTTPRequest(const URI &uri, const Range &range)
 		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
-		mCurlRequest(NULL), mOffset(0), mData(new DenseData()) {
+		mCurlRequest(NULL), mOffset(0), mData(new DenseData(range)) {
+	}
+
+	~HTTPRequest() {
+		if (mCurlRequest) {
+			abort();
+		}
 	}
 
 	/// URI getter

@@ -42,16 +42,31 @@ namespace Iridium {
 namespace Transfer {
 
 /// Critical to the functioning of CacheLayer--makes decisions which pieces of data to keep and which to throw out.
-//template <class CacheInfo>
-template <class CacheMap>
-class CachePolicyMap {
-public:
-	typedef typename CacheMap::write_iterator write_iterator;
+class CachePolicy {
 
-	typedef void *Data;
+protected:
+	cache_usize_type mTotalSize;
+	float mMaxSizePct;
+	cache_ssize_type mFreeSpace;
+
+	inline void updateSpace(cache_usize_type oldsize, cache_usize_type newsize) {
+		mFreeSpace -= oldsize;
+		mFreeSpace += newsize;
+	}
+
+public:
+
+	struct Data {
+	};
+
+	CachePolicy(cache_usize_type allocatedSpace, float maxSizePct)
+			: mTotalSize(allocatedSpace),
+			mMaxSizePct(maxSizePct),
+			mFreeSpace((cache_ssize_type)allocatedSpace) {
+		}
 
 	/// Virtual destructor since children will allocate class members.
-	virtual ~CachePolicyMap() {
+	virtual ~CachePolicy() {
 	}
 
 	/**
@@ -59,7 +74,7 @@ public:
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
 	 */
-	virtual void use(const Fingerprint &id, Data &data, size_t size) = 0;
+	virtual void use(const Fingerprint &id, Data* data, cache_usize_type size) = 0;
 
 	/**
 	 *  Marks the entry as used, and update the space usage
@@ -67,7 +82,7 @@ public:
 	 *  @param data  The opaque data corresponding to this policy.
 	 *  @param size  The amount of space actually used for this element.
 	 */
-	virtual void useAndUpdate(const Fingerprint &id, Data &data, size_t oldsize, size_t newsize) = 0;
+	virtual void useAndUpdate(const Fingerprint &id, Data* data, cache_usize_type oldsize, cache_usize_type newsize) = 0;
 
 	/**
 	 *  Deletes the opaque data (and anything other corresponding info)
@@ -75,7 +90,7 @@ public:
 	 *  @param id    The FileId corresponding to the data.
 	 *  @param data  The opaque data corresponding to this policy.
 	 */
-	virtual void destroy(const Fingerprint &id, const Data &data, size_t size) = 0;
+	virtual void destroy(const Fingerprint &id, Data* data, cache_usize_type size) = 0;
 
 	/**
 	 *  Allocates opaque data (and anything other corresponding info)
@@ -87,7 +102,7 @@ public:
 	 *               as was earlier passed to allocateSpace).
 	 *  @returns     The corresponding opaque data.
 	 */
-	virtual Data create(const Fingerprint &id, size_t size) = 0;
+	virtual Data* create(const Fingerprint &id, cache_usize_type size) = 0;
 
 	/**
 	 *  Allocates a certain number of bytes for use in a new cache entry.
@@ -97,16 +112,22 @@ public:
 	 *                        (to use to delete large entries)
 	 *  @returns              whether the space could be allocated
 	 */
-	virtual bool allocateSpace(
-			size_t requiredSpace,
-			write_iterator &writer) = 0;
+	virtual bool cachable(cache_usize_type requiredSpace) {
+		if (((cache_ssize_type)requiredSpace) < 0) {
+			// overflows a ssize_t.
+			return false;
+		}
+		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
+			std::cout << "[CachePolicy] Rejecting allocation for " << requiredSpace << " bytes of " << mFreeSpace << " free" << std::endl;
+			return false;
+		}
+		std::cout << "[CachePolicy] Need to allocate " << requiredSpace << " bytes of " << mFreeSpace << " free" << std::endl;
+		return true;
+	}
+
+	virtual bool nextItem(cache_usize_type requiredSpace, Fingerprint &myprint) = 0;
 };
 
-
-// Hack to hold off instantiation until CacheMap::write_iterator is defined.
-// Anyone know how to create a forward reference to an inner class?
-class CacheMap;
-typedef CachePolicyMap<CacheMap> CachePolicy;
 
 }
 }

@@ -75,6 +75,10 @@ public:
 	}
 	*/
 
+	inline void purgeFromCache(const Fingerprint &fprint) {
+		mFirstTransferLayer->purgeFromCache(fprint);
+	}
+
 	bool download(const URI &name,
 				const boost::function1<void, const SparseData*>&callback,
 				Range range) {

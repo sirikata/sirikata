@@ -51,21 +51,23 @@ namespace Transfer {
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
 class DiskCache : public CacheLayer {
 public:
-	typedef RangeList CacheData;
+	struct CacheData : public CacheEntry {
+		RangeList mRanges;
+	};
 
 private:
 	struct DiskRequest;
 	ThreadSafeQueue<boost::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
 	boost::thread mWorkerThread;
 
-	typedef CacheMap DiskMap; //<CacheData> DiskMap;
-	DiskMap mFiles;
+	CacheMap mFiles;
 
 
 	std::string mPrefix; // directory or prefix name with trailing slash.
 
 	struct DiskRequest {
-		DiskRequest(URI myURI) :fileURI(myURI) {}
+		DiskRequest(URI myURI, Range myRange)
+			:fileURI(myURI), toRead(myRange) {}
 
 		URI fileURI;
 		Range toRead;
@@ -77,12 +79,12 @@ private:
 	boost::condition_variable destroyCV;
 	bool mCleaningUp; // do not delete any files.
 
-	static size_t getDiskUsage(const struct stat *st) {
+	static cache_usize_type getDiskUsage(const struct stat *st) {
 #ifdef _WIN32
-		return st->st_size;
+		return (cache_usize_type)st->st_size;
 #else
 		// http://lkml.indiana.edu/hypermail/linux/kernel/9812.2/0216.html
-		return 512 * st->st_blocks;
+		return 512 * (cache_usize_type)st->st_blocks;
 #endif
 	}
 public:
@@ -97,8 +99,18 @@ public:
 			if (req->data) {
 				// Note: TransferLayer::populatePreviousCaches has already been called.
 				std::string fileId = req->fileURI.fingerprint().convertToHexString();
-				if (!mFiles.alloc(req->data->mRange.mLength)) {
-					continue;
+				{
+					CacheMap::write_iterator writer(mFiles);
+					if (!mFiles.alloc(req->data->length(), writer)) {
+						continue;
+					}
+					if (writer.find(req->fileURI.fingerprint())) {
+						RangeList &rlist = static_cast<CacheData*>(*writer)->mRanges;
+						if (req->data->isContainedBy(rlist)) {
+							// this range is already written to disk.
+							continue;
+						}
+					}
 				}
 
 				std::string filePath = mPrefix + fileId;
@@ -109,11 +121,11 @@ public:
 					continue;
 				}
 				// FIXME: may not work with 64-bit files?
-				fseek(fp, req->data->mRange.mStart, SEEK_SET);
+				fseek(fp, req->data->startbyte(), SEEK_SET);
 				fwrite(req->data->mData.data(), 1,
-						req->data->mRange.mLength, fp);
+						req->data->length(), fp);
 				fflush(fp);
-				size_t diskUsage;
+				cache_usize_type diskUsage;
 				{
 					struct stat st;
 					fstat(fileno(fp), &st);
@@ -122,15 +134,16 @@ public:
 				fclose(fp);
 
 				{
-					DiskMap::write_iterator writer(mFiles);
+					CacheMap::write_iterator writer(mFiles);
 
-					if (writer.insert(req->fileURI.fingerprint(), new CacheData, diskUsage)) {
+					if (writer.insert(req->fileURI.fingerprint(), diskUsage)) {
+						*writer = new CacheData;
 						writer.use();
 					} else {
 						writer.update(diskUsage);
 					}
-					RangeList *data = writer;
-					data->push_back(req->data->mRange);
+					RangeList &data = static_cast<CacheData*>(*writer)->mRanges;
+					req->data->addToList(*(req->data), data);
 				}
 			} else {
 				// check that we still have this file..........?
@@ -143,13 +156,16 @@ public:
 					CacheLayer::getData(req->fileURI, req->toRead, req->finished);
 					continue;
 				}
+				if (req->toRead.goesToEndOfFile()) {
+					struct stat st;
+					fstat(fileno(fp), &st);
+					req->toRead.setLength(st.st_size, true);
+				}
 				// FIXME: may not work with 64-bit files?
-				fseek(fp, req->toRead.mStart, SEEK_SET);
-				DenseDataPtr datum(new DenseData(Range(
-						req->toRead.mStart,
-						req->toRead.mLength)));
+				fseek(fp, req->toRead.startbyte(), SEEK_SET);
+				DenseDataPtr datum(new DenseData(req->toRead));
 				fread(&(*datum->mData.begin()), 1,
-						req->toRead.mLength, fp);
+						req->toRead.length(), fp);
 				fclose(fp);
 
 				CacheLayer::populateParentCaches(req->fileURI.fingerprint(), datum);
@@ -167,9 +183,9 @@ public:
 	void readDataFromDisk(const URI &fileURI,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
-		boost::shared_ptr<DiskRequest> req (new DiskRequest(fileURI));
+		boost::shared_ptr<DiskRequest> req (
+				new DiskRequest(fileURI, requestedRange));
 		req->finished = callback;
-		req->toRead = requestedRange;
 
 		mRequestQueue.push(req);
 	}
@@ -178,13 +194,17 @@ public:
 		std::string toOpen = mPrefix + "index.txt";
 		std::fstream fp (toOpen.c_str(), std::ios_base::out);
 
-		DiskMap::read_iterator iter (mFiles);
+		CacheMap::read_iterator iter (mFiles);
 		while (iter.iterate()) {
 			std::string id = iter.getId().convertToHexString();
 			fp << id << " " << iter.getSize() << ": ";
-			const RangeList *list = iter;
-			for (RangeList::const_iterator liter = list->begin(); liter != list->end(); ++liter) {
-				fp << (*liter).startbyte() << " " << (*liter).length() << "; ";
+			const RangeList &list = static_cast<const CacheData*>(*iter)->mRanges;
+			for (RangeList::const_iterator liter = list.begin(); liter != list.end(); ++liter) {
+				cache_ssize_type len = (cache_ssize_type)((*liter).length());
+				if ((*liter).goesToEndOfFile()) {
+					len = -len;
+				}
+				fp << (*liter).startbyte() << " " << len << "; ";
 			}
 			fp << std::endl;
 		}
@@ -195,14 +215,14 @@ public:
 		std::string toOpen = mPrefix + "index.txt";
 		std::fstream fp (toOpen.c_str(), std::ios_base::in);
 
-		DiskMap::write_iterator writer (mFiles);
+		CacheMap::write_iterator writer (mFiles);
 		while (fp.good()) {
 			std::string theline;
 			std::getline (fp, theline);
 			std::istringstream iranges(theline);
 
 			std::string fingerprint;
-			size_t totalLength;
+			cache_usize_type totalLength;
 
 			char c;
 			iranges >> fingerprint >> totalLength >> c;
@@ -213,41 +233,41 @@ public:
 			std::cout << "Cached fingerprint" << c << " " << fingerprint <<
 				"(" << totalLength << ")" << std::endl;
 
-			RangeList *rlist = new RangeList();
+			if (!writer.insert(SHA256::convertFromHex(fingerprint), totalLength)) {
+				continue;
+			}
+			CacheData *cdata = new CacheData();
+			RangeList *rlist = &cdata->mRanges;
 			while (iranges.good()) {
-				Range::offset_type start = 0;
-				size_t length = 0;
+				Range::base_type start = 0;
+				cache_ssize_type length = 0;
+				bool toEndOfFile = false;
 				iranges >> start >> length;
 
-				if (length <= 0 || start < 0) {
+				if (length == 0) {
 					continue;
 				}
-
-				if (!rlist->empty()) {
-					// merge adjacent ranges.
-					Range::offset_type oldStart = rlist->back().mStart;
-					size_t oldLength = rlist->back().mLength;
-					if (oldStart + (Range::offset_type)oldLength > start) {
-						size_t newLength = start + length - oldStart;
-						rlist->back().mLength = newLength;
-						totalLength += (newLength - oldLength);
-						continue;
-					}
+				if (length < 0) {
+					length = -length;
+					toEndOfFile = true;
 				}
+
+				Range toAdd (start, length, LENGTH, toEndOfFile);
+
+				toAdd.addToList(toAdd, *rlist);
 
 				char c;
 				iranges >> c;
-
-				rlist->push_back(Range(start, length));
 			}
-			writer.insert(SHA256::convertFromHex(fingerprint), rlist, totalLength);
+			*writer = cdata;
 		}
 		fp.close();
 	}
 
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
-		boost::shared_ptr<DiskRequest> req (new DiskRequest(URI(fileId, data->length(), "")));
+		boost::shared_ptr<DiskRequest> req (
+				new DiskRequest(URI(fileId, ""), *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
@@ -255,13 +275,13 @@ protected:
 		CacheLayer::populateParentCaches(req->fileURI.fingerprint(), data);
 	}
 
-	virtual void destroyCacheEntry(const Fingerprint &fileId,  void *cacheLayerData, size_t releaseSize) {
+	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
 		if (!mCleaningUp) {
 			// don't want to erase the disk cache when exiting the program.
-			std::string toDelete = fileId.convertToHexString();
-			unlink(toDelete.c_str());
+			std::string fileName = fileId.convertToHexString();
+			unlink(fileName.c_str());
 		}
-		CacheData *toDelete = (CacheData*)cacheLayerData;
+		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
 	}
 
@@ -312,16 +332,24 @@ public:
 		// FIXME: serialize the list of files?
 	}
 
+	virtual void purgeFromCache(const Fingerprint &fileId) {
+		CacheMap::write_iterator iter(mFiles);
+		if (iter.find(fileId)) {
+			iter.erase();
+		}
+		CacheLayer::purgeFromCache(fileId);
+	}
+
 	virtual bool getData(const URI &fileId,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveRange = false;
 		{
-			DiskMap::read_iterator iter(mFiles);
+			CacheMap::read_iterator iter(mFiles);
 
 			if (iter.find(fileId.fingerprint())) {
-				const RangeList *list = iter;
-				haveRange = requestedRange.isContainedBy(*list);
+				const RangeList &list = static_cast<const CacheData*>(*iter)->mRanges;
+				haveRange = requestedRange.isContainedBy(list);
 			}
 			if (haveRange) {
 				iter.use(); // or is it more proper to use() after reading from disk?

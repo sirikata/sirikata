@@ -50,7 +50,8 @@ size_t HTTPRequest::read_cb(unsigned char *data, size_t length, size_t count, HT
 	return handle->read(data, length*count);
 }
 
-static curl_off_t HTTPRequest_seek_cb(HTTPRequest *handle, curl_off_t offset, int origin) {
+static curl_off_t HTTPRequest_seek_cb(HTTPRequest *handle, curl_off_t curloffset, int origin) {
+	cache_ssize_type offset = curloffset;
 	switch (origin) {
 	case SEEK_SET:
 		handle->seek(handle->getData()->startbyte() + offset);
@@ -75,7 +76,7 @@ size_t HTTPRequest::write(const unsigned char *copyFrom, size_t length) {
 		return 0;
 	}
 	if (mData->length() < (size_t)(mOffset - mData->startbyte()) + length) {
-		mData->setLength((mOffset - mData->startbyte()) + length);
+		mData->setLength((mOffset - mData->startbyte()) + length, mRequestedRange.goesToEndOfFile());
 	}
 	unsigned char *copyTo = &(mData->mData[mOffset]);
 	std::copy(copyFrom, copyFrom + length, copyTo);
@@ -108,10 +109,10 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		headername[i] = tolower(headername[i]);
 	}
 	if (headername == "content-length") {
-		size_t dataToReserve = 0;
+		cache_usize_type dataToReserve = 0;
 		// lexical_cast doesn't correctly handle whitespace.
 		if (sscanf(headervalue.c_str(), "%lu", &dataToReserve) == 1) {
-			mData->setLength(dataToReserve);
+			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
 			std::cout << "LENGTH IS NOW "<< dataToReserve << std::endl;
 		}
 	}
@@ -228,9 +229,12 @@ void HTTPRequest::curlLoop () {
 					success = false;
 				}
 				curl_easy_cleanup(handle);
-				request->mCallback(request, request->getData(), success);
-				request->mCallback = NULL;
+
+				CallbackFunc temp (request->mCallback);
+				request->mCallback = nullCallback;
 				request->mCurlRequest = NULL;
+				// may delete request.
+				temp(request, request->getData(), success);
 			}
 		}
 
@@ -266,13 +270,13 @@ void HTTPRequest::curlLoop () {
 void HTTPRequest::abort() {
 	boost::lock_guard<boost::mutex> access_curl_handle(http_lock);
 
-	CURL *handle = mCurlRequest;
-	if (handle) {
-		curl_easy_cleanup(handle);
+	if (mCurlRequest) {
+		curl_easy_cleanup(mCurlRequest);
+		mCurlRequest = NULL;
 	}
-	if (mCallback) {
-		mCallback(this, getData(), false); // should delete this.
-	}
+	CallbackFunc temp (mCallback);
+	mCallback = nullCallback;
+	temp(this, getData(), false); // should delete this.
 }
 
 void HTTPRequest::go() {
@@ -286,8 +290,28 @@ void HTTPRequest::go() {
 	curl_easy_setopt(mCurlRequest, CURLOPT_SEEKDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
-	// guaranteed to reain valid until the next non-const member function:
-	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.uri().c_str());
+	// c_str is guaranteed to remain valid because mURI is const.
+	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.uri().c_str()); // safe for life of mURI.
+
+	std::ostringstream orangestring;
+	if (mRequestedRange.startbyte() != 0) {
+		orangestring << mRequestedRange.startbyte();
+		mOffset = mRequestedRange.startbyte();
+	}
+	orangestring << '-';
+	if (!mRequestedRange.goesToEndOfFile()) {
+		if (mRequestedRange.length() <= 0) {
+			// invalid range
+			mCallback(this, DenseDataPtr(new DenseData(mRequestedRange)), true);
+			return;
+		}
+		orangestring << (mRequestedRange.endbyte()-1);
+	}
+	std::string rangeString = orangestring.str();
+	if (rangeString != "-") {
+		// string leak!
+		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, strdup(rangeString.c_str()));
+	}
 
 	curl_multi_add_handle(curlm, mCurlRequest);
 
