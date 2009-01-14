@@ -66,13 +66,16 @@ private:
 	std::string mPrefix; // directory or prefix name with trailing slash.
 
 	struct DiskRequest {
-		DiskRequest(URI myURI, Range myRange)
-			:fileURI(myURI), toRead(myRange) {}
+		enum Operation {READ, WRITE, DELETE, EXIT} op;
+
+		DiskRequest(Operation op, const URI &myURI, const Range &myRange)
+			:op(op), fileURI(myURI), toRead(myRange) {}
 
 		URI fileURI;
 		Range toRead;
 		TransferCallback finished;
 		boost::shared_ptr<DenseData> data; // if NULL, read data.
+
 	};
 
 	boost::mutex destroyLock;
@@ -93,10 +96,9 @@ public:
 			boost::shared_ptr<DiskRequest> req;
 
             mRequestQueue.blockingPop(req);
-			if (!req) {
+			if (req->op == DiskRequest::EXIT) {
 				break;
-			}
-			if (req->data) {
+			} else if (req->op == DiskRequest::WRITE) {
 				// Note: TransferLayer::populatePreviousCaches has already been called.
 				std::string fileId = req->fileURI.fingerprint().convertToHexString();
 				{
@@ -114,6 +116,7 @@ public:
 				}
 
 				std::string filePath = mPrefix + fileId;
+				/////////////// FIXME: Sanatize fingerprint before opening files.
 				FILE *fp = fopen(filePath.c_str(), "wb");
 				if (!fp) {
 					std::cerr << "Failed to open " << fileId <<
@@ -122,7 +125,7 @@ public:
 				}
 				// FIXME: may not work with 64-bit files?
 				fseek(fp, req->data->startbyte(), SEEK_SET);
-				fwrite(req->data->mData.data(), 1,
+				fwrite(req->data->writableData(), 1,
 						req->data->length(), fp);
 				fflush(fp);
 				cache_usize_type diskUsage;
@@ -145,10 +148,11 @@ public:
 					RangeList &data = static_cast<CacheData*>(*writer)->mRanges;
 					req->data->addToList(*(req->data), data);
 				}
-			} else {
+			} else if (req->op == DiskRequest::READ) {
 				// check that we still have this file..........?
 				std::string fileId = req->fileURI.fingerprint().convertToHexString();
 				std::string filePath = mPrefix + fileId;
+				/////////////// FIXME: Sanatize fingerprint before opening files.
 				FILE *fp = fopen(filePath.c_str(), "rb");
 				if (!fp) {
 					std::cerr << "Failed to open " << fileId <<
@@ -164,7 +168,7 @@ public:
 				// FIXME: may not work with 64-bit files?
 				fseek(fp, req->toRead.startbyte(), SEEK_SET);
 				DenseDataPtr datum(new DenseData(req->toRead));
-				fread(&(*datum->mData.begin()), 1,
+				fread(datum->writableData(), 1,
 						req->toRead.length(), fp);
 				fclose(fp);
 
@@ -172,6 +176,11 @@ public:
 				SparseData data;
 				data.addValidData(datum);
 				req->finished(&data);
+			} else if (req->op == DiskRequest::DELETE) {
+				std::string fileId = req->fileURI.fingerprint().convertToHexString();
+				std::string filePath = mPrefix + fileId;
+				/////////////// FIXME: Sanatize fingerprint before opening files.
+				unlink(filePath.c_str());
 			}
 		}
 		{
@@ -184,7 +193,7 @@ public:
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		boost::shared_ptr<DiskRequest> req (
-				new DiskRequest(fileURI, requestedRange));
+				new DiskRequest(DiskRequest::READ, fileURI, requestedRange));
 		req->finished = callback;
 
 		mRequestQueue.push(req);
@@ -267,7 +276,7 @@ public:
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
 		boost::shared_ptr<DiskRequest> req (
-				new DiskRequest(URI(fileId, ""), *data));
+				new DiskRequest(DiskRequest::WRITE, URI(fileId, ""), *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
@@ -279,7 +288,8 @@ protected:
 		if (!mCleaningUp) {
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
-			unlink(fileName.c_str());
+			boost::shared_ptr<DiskRequest> req
+				(new DiskRequest(DiskRequest::DELETE, URI(fileId, ""), Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
@@ -321,7 +331,8 @@ public:
 	}
 
 	virtual ~DiskCache() {
-		boost::shared_ptr<DiskRequest> req;
+		boost::shared_ptr<DiskRequest> req
+			(new DiskRequest(DiskRequest::EXIT, URI(Fingerprint(),""), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.

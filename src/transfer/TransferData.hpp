@@ -61,7 +61,7 @@ private:
 
 public:
 
-	Range(bool wholeFile)
+	explicit Range(bool wholeFile)
 		: mStart(0), mLength(0), mWholeFile(wholeFile) {
 	}
 
@@ -72,6 +72,10 @@ public:
 	Range(base_type start, base_type length,
 			Initializer type, bool wholeFile=false)
 		: mStart(start), mLength(type==LENGTH?length:length-start), mWholeFile(wholeFile) {
+	}
+
+	Range(const Range &other)
+		: mStart(other.mStart), mLength(other.mLength), mWholeFile(other.mWholeFile) {
 	}
 
 	inline bool goesToEndOfFile() const {
@@ -214,14 +218,10 @@ typedef std::list<Range> RangeList;
 
 
 /// Represents a single block of data, and also knows the range of the file it came from.
-class DenseData : public Range {
-public:
+class DenseData : boost::noncopyable, public Range {
 	std::vector<unsigned char> mData;
 
-	DenseData(bool wholeFile)
-			:Range(wholeFile) {
-	}
-
+public:
 	DenseData(const Range &range)
 			:Range(range) {
 		if (range.length()) {
@@ -231,6 +231,17 @@ public:
 
 	inline const unsigned char *data() const {
 		return &(mData[0]);
+	}
+
+	inline unsigned char *writableData() {
+		return &(mData[0]);
+	}
+
+	inline const unsigned char *dataAt(base_type offset) const {
+		if (offset >= endbyte() || offset < startbyte()) {
+			return NULL;
+		}
+		return &(mData[offset-startbyte()]);
 	}
 
 	inline void setLength(size_t len, bool is_npos) {
@@ -310,7 +321,7 @@ public:
 
 	///gets the space used by the sparse file
 	inline cache_usize_type getSpaceUsed() const {
-		cache_usize_type length;
+		cache_usize_type length = 0;
 		const_iterator myend = end();
 		for (const_iterator iter = begin(); iter != myend; ++iter) {
 			length += (*iter).length();
@@ -348,7 +359,7 @@ public:
 					(range.goesToEndOfFile() || offset < range.endbyte())) {
 				// We're within some valid data... return the DenseData.
 				length = range.length() + (Range::length_type)(range.startbyte() - offset);
-				return &((*iter).mData[offset - range.startbyte()]);
+				return (*iter).dataAt(offset);
 			} else if (offset < range.startbyte()){
 				// we missed it.
 				length = (size_t)(range.startbyte() - offset);

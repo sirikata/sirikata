@@ -152,7 +152,7 @@ public:
 		// do not wait--we want to clean up these requests.
 	}
 
-	void _testRange( void ) {
+	void testOverlappingRange( void ) {
 		Transfer::TransferCallback simpleCB = boost::bind(&TransferManagerTestSuite::simpleCallback, this, _1);
 
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
@@ -167,7 +167,7 @@ public:
 		waitFor(3);
 
 		bool wasAsync = mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(6, 8, Transfer::BOUNDS));
+				Transfer::Range(6, 10, Transfer::BOUNDS));
 
 		// This request should now be cached.
 		TS_ASSERT(wasAsync == false);
@@ -200,6 +200,66 @@ public:
 				Transfer::Range(1, true, Transfer::BOUNDS));
 		TS_ASSERT(wasAsync == false);
 		waitFor(9);
+	}
+
+	void compareCallback(Transfer::DenseDataPtr compare, const Transfer::SparseData *myData) {
+		TS_ASSERT(myData!=NULL);
+		if (myData) {
+			Transfer::Range::base_type offset = compare->startbyte();
+			while (offset < compare->endbyte()) {
+				Transfer::Range::length_type len;
+				const unsigned char *gotData = myData->dataAt(offset, len);
+				const unsigned char *compareData = compare->dataAt(offset);
+				TS_ASSERT(gotData);
+				if (!gotData) {
+					break;
+				}
+				bool equal = memcmp(compareData, gotData, len+offset<compare->endbyte() ? len : compare->endbyte()-offset)==0;
+				TS_ASSERT(equal);
+				if (!equal) {
+					std::cout << std::endl << "WANT =======" << std::endl;
+					std::cout << compareData;
+					std::cout << std::endl << "GOT: =======" << std::endl;
+					std::cout << gotData;
+					std::cout << std::endl << "-----------" << std::endl;
+				}
+				offset += len;
+				if (offset >= compare->endbyte()) {
+					break;
+				}
+			}
+		}
+		notifyOne();
+	}
+
+	void testRange( void ) {
+		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
+
+		mTransfer->purgeFromCache(exampleComUri.fingerprint());
+		{
+			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
+			memcpy(expect->writableData(), "TML>\r\n", expect->length());
+			mTransfer->download(exampleComUri,
+					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
+					(Transfer::Range)*expect);
+		}
+		{
+			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
+			memcpy(expect->writableData(), "<HEAD>", expect->length());
+			mTransfer->download(exampleComUri,
+					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
+					(Transfer::Range)*expect);
+		}
+		waitFor(2);
+		{
+			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 12, Transfer::LENGTH)));
+			memcpy(expect->writableData(), "TML>\r\n<HEAD>", expect->length());
+			bool async = mTransfer->download(exampleComUri,
+					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
+					(Transfer::Range)*expect);
+			TS_ASSERT(async == false);
+		}
+		waitFor(3);
 	}
 
 };
