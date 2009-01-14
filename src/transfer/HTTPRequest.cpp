@@ -255,7 +255,8 @@ void HTTPRequest::initCurl () {
 	curl_easy_setopt(parent_easy_curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_WRITEFUNCTION, &HTTPRequest::write_cb);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_READFUNCTION, &HTTPRequest::read_cb);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_SEEKFUNCTION, &HTTPRequest_seek_cb);
+	// only used for uploads.
+	//curl_easy_setopt(parent_easy_curl, CURLOPT_SEEKFUNCTION, &HTTPRequest_seek_cb);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_HEADERFUNCTION, &HTTPRequest::header_cb);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_VERBOSE, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_FAILONERROR, 1);
@@ -388,7 +389,8 @@ void HTTPRequest::go() {
 	mCurlRequest = curl_easy_duphandle(parent_easy_curl);
 	curl_easy_setopt(mCurlRequest, CURLOPT_WRITEDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_READDATA, this);
-	curl_easy_setopt(mCurlRequest, CURLOPT_SEEKDATA, this);
+	// only used for uploads.
+	//curl_easy_setopt(mCurlRequest, CURLOPT_SEEKDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
 	// c_str is guaranteed to remain valid because mURI is const.

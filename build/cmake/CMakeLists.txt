@@ -217,11 +217,19 @@ IF(NOT BOOST_ROOT)
   ENDIF()
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
-FIND_PACKAGE(Boost COMPONENTS system signals program_options thread)
+IF(WIN32)
+FIND_PACKAGE(Boost COMPONENTS system program_options thread)
+ELSE(WIN32)
+FIND_PACKAGE(Boost COMPONENTS system)
+#STRING(REPLACE "boost_system" "boost_signals" Boost_SIGNALS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
+ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
+
 SET(Boost_LIBRARIES
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SIGNALS_LIBRARY}
+#    ${Boost_SIGNALS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY})
 

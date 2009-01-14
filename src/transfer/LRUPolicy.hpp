@@ -69,7 +69,7 @@ public:
 		mLeastUsed.splice(mLeastUsed.end(), mLeastUsed, lrudata->mIter);
 	}
 
-	virtual void useAndUpdate(const Fingerprint &id, Data* data, cache_usize_type oldsize, size_t newsize) {
+	virtual void useAndUpdate(const Fingerprint &id, Data* data, cache_usize_type oldsize, cache_usize_type newsize) {
 		use(id, data, newsize); // No optimizations to be made here.
 		CachePolicy::updateSpace(oldsize, newsize);
 	}

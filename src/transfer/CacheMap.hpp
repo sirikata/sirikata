@@ -65,6 +65,10 @@ private:
 	CacheLayer *mOwner;
 	CachePolicy *mPolicy;
 
+	inline void destroyCacheLayerEntry(const Fingerprint &id, const CacheData &data, cache_usize_type size) {
+		mOwner->destroyCacheEntry(id, data, size);
+	}
+
 public:
 
 	CacheMap(CacheLayer *owner, CachePolicy *policy) :
@@ -250,7 +254,7 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		 */
 		void erase() {
 			mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
-			mCachemap->mOwner->destroyCacheEntry(getId(), (**this), getSize());
+			mCachemap->destroyCacheLayerEntry(getId(), (**this), getSize());
 			mMap->erase(mIter);
 			mIter = mMap->end();
 		}
@@ -261,7 +265,7 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 		void eraseAll() {
 			for (mIter = mMap->begin(); mIter != mMap->end(); ++mIter) {
 				mCachemap->mPolicy->destroy(getId(), getPolicyInfo(), getSize());
-				mCachemap->mOwner->destroyCacheEntry(getId(), (**this), getSize());
+				mCachemap->destroyCacheLayerEntry(getId(), (**this), getSize());
 			}
 			mMap->clear();
 			mIter = mMap->end();
