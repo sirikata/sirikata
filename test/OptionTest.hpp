@@ -64,11 +64,9 @@ public:
         OptionValue *four=OptionSet::referenceOption("testInteger","four");        
         for (int i=0;i<6;++i) {
             OptionSet::getOptions("testInteger")->parse(countString(testString[i]),testString[i]);
-            Iridium::Any test=one->get();
-            int ans=test.as<int>();
-            TS_ASSERT_EQUALS(ans,answers[i][0]);
-            TS_ASSERT_EQUALS((*three)->as<int>(),answers[i][1]);
-            TS_ASSERT_EQUALS((*four)->as<int>(),answers[i][2]);
+            TS_ASSERT_EQUALS(one->as<int>(),answers[i][0]);
+            TS_ASSERT_EQUALS(three->as<int>(),answers[i][1]);
+            TS_ASSERT_EQUALS(four->as<int>(),answers[i][2]);
         }
     }
 };

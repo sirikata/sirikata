@@ -87,6 +87,8 @@ public:
     Any* get() {
         return &mValue;
     }
+    template <class T> T&as(){mValue.as<T>();}
+    template <class T> const T&as()const{return mValue.as<T>();}
     const char*description() const{
         return mDescription;
     }

@@ -68,11 +68,17 @@ public:
         mHolder=other.mHolder?other.mHolder->clone():NULL;
         return *this;
     }
-    template <class T> Any(const T&other) {
-        mHolder = new SubHolder<T>(other);
-    }
     Any(const Any&other) {
         mHolder=other.mHolder?other.mHolder->clone():NULL;
+    }
+    Any(const Any*other) {
+        mHolder=other?(other->mHolder?other->mHolder->clone():NULL):NULL;
+    }
+    Any(Any*other) {
+        mHolder=other?(other->mHolder?other->mHolder->clone():NULL):NULL;
+    }
+    template <class T> Any(const T&other) {
+        mHolder = new SubHolder<T>(other);
     }
     ~Any() {
         delete mHolder;

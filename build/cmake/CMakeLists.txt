@@ -188,7 +188,8 @@ SET(CXXTESTSources
   ${TOP_LEVEL}/test/Vector3Test.hpp 
   ${TOP_LEVEL}/test/Matrix3Test.hpp 
   ${TOP_LEVEL}/test/QuaternionTest.hpp 
-  ${TOP_LEVEL}/test/EventTest.hpp )
+  ${TOP_LEVEL}/test/OptionTest.hpp 
+ )
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
