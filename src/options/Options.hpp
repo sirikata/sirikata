@@ -35,7 +35,7 @@
 #include <map>
 namespace Iridium {
 class OptionSet;
-template <class T> class OptionValueType {
+template <class T> class OptionValueType {public:
     static Any lexical_cast(const std::string &value){
         T retval;
         std::istringstream ss(value);
@@ -43,7 +43,7 @@ template <class T> class OptionValueType {
         return retval;
     }
 };
-template <> class OptionValueType<std::string> {
+template <> class OptionValueType<std::string> {public:
     static Any lexical_cast(const std::string &value){
         return value;
     }
@@ -74,6 +74,19 @@ class OptionValue{
      */
     bool initializationSet(const OptionValue&other);
 public:
+    
+    const Any*operator->()const {
+        return &mValue;
+    }
+    Any*operator->() {
+        return &mValue;
+    }
+    const Any*get()const {
+        return &mValue;
+    }
+    Any* get() {
+        return &mValue;
+    }
     const char*description() const{
         return mDescription;
     }
@@ -84,7 +97,9 @@ public:
     OptionValue& operator=(const OptionValue&other);
     
     OptionValue() {
-        
+        mDescription="";mName="";
+        mChangeFunction=NULL;
+        mParser=NULL;
     }
     /**
      * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
@@ -94,7 +109,7 @@ public:
      * \parameter description is the textual description for the user when looking through the command line help
      * \parameter pointer holds a pointer to an OptionValue that will get set to the newly constructed class
      */
-    template<class T>OptionValue(const char*option, const std::string&defaultValue, T type, const char*description, OptionValue**pointer){
+    template<class T>OptionValue(const char*option, const std::string&defaultValue, T type, const char*description, OptionValue**pointer=NULL){
         mParser=boost::function1<Any,std::string>(&T::lexical_cast);
         mName=option;
         mDefaultValue=defaultValue;        
@@ -175,16 +190,20 @@ class OptionSet {
     std::map<std::string,OptionValue*> mNames;
     friend class InitializeOptions;
     void addOptionNoLock(OptionValue*);
+    static OptionSet*getOptionsNoLock(const std::string&s);
+    OptionValue* referenceOptionNoLock(const std::string &option, OptionValue**pointer);
 public:
     
     void parse(const std::string&);
     void parse(int, const char **);
     void addOption(OptionValue*v);
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer);
+    static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
     static std::map<std::string,OptionSet*>* optionSets() {
         static std::map<std::string,OptionSet*>*retval=new std::map<std::string,OptionSet*>();
         return retval;
     }
+    static OptionSet*getOptions(const std::string&s);
 };
 }
 

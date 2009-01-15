@@ -29,6 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _ANY_HPP_
+#define _ANY_HPP_
 #include <typeinfo>
 #include <stdlib.h>
 namespace Iridium {
@@ -63,14 +65,14 @@ public:
         return *this;
     }
     Any&operator =(const Any&other) {
-        mHolder=other.mHolder->clone();
+        mHolder=other.mHolder?other.mHolder->clone():NULL;
         return *this;
     }
     template <class T> Any(const T&other) {
         mHolder = new SubHolder<T>(other);
     }
     Any(const Any&other) {
-        mHolder=other.mHolder->clone();
+        mHolder=other.mHolder?other.mHolder->clone():NULL;
     }
     ~Any() {
         delete mHolder;
@@ -83,8 +85,8 @@ public:
      * And this item must be reset without removing the other.
      * Used in Option.hpp to allow for threadsafe reads
      */
-    template <class T>Any& newAndDoNotFree(const T&value){
-        mHolder=new SubHolder<T>(value);
+    Any& newAndDoNotFree(const Any&value){
+        mHolder=value.mHolder?value.mHolder->clone():NULL;
         return *this;
     }
     const std::type_info&typeOf() const {
@@ -104,3 +106,5 @@ public:
     }
 };
 }
+#endif
+

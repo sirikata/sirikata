@@ -124,7 +124,12 @@ public:
 };
 bool OptionValue::initializationSet(const OptionValue&other) {
     if (mParser==NULL){
-        *this=other;
+        mValue.newAndDoNotFree(other.mValue);
+        mDefaultValue=other.mDefaultValue;
+        mDescription=other.mDescription;
+        mParser=other.mParser;
+        mChangeFunction=other.mChangeFunction;
+        mName=other.mName;
         return true;
     }else if (other.mParser==NULL) {
         return true;
@@ -171,7 +176,23 @@ void OptionSet::parse(const std::string&args){
         OptionRegistration::update_options(mNames,output);
     }
 }
-OptionValue* OptionSet::referenceOption(const std::string&option,OptionValue**pointer) {
+OptionSet* OptionSet::getOptionsNoLock(const std::string&s){
+    std::map<std::string,OptionSet*>::iterator i=optionSets()->find(s);
+    if (i==optionSets()->end()){
+        return (*optionSets())[s]=new OptionSet;
+    }else{
+        return i->second;
+    }
+}
+OptionSet* OptionSet::getOptions(const std::string&s){
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+    return getOptionsNoLock(s);
+}
+OptionValue* OptionSet::referenceOption(const std::string&module, const std::string&option,OptionValue**pointer) {
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+    return getOptionsNoLock(module)->referenceOptionNoLock(option,pointer);
+}
+OptionValue* OptionSet::referenceOptionNoLock(const std::string&option,OptionValue**pointer) {
     std::map<std::string,OptionValue*>::iterator where=mNames.find(option);
     if (where==mNames.end()) {
         OptionValue* newed=new OptionValue;
@@ -181,6 +202,10 @@ OptionValue* OptionSet::referenceOption(const std::string&option,OptionValue**po
     }else {
         return where->second;
     }
+}
+OptionValue* OptionSet::referenceOption(const std::string&option,OptionValue**pointer) {    
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+    return referenceOptionNoLock(option,pointer);
 }
 void OptionSet::addOptionNoLock(OptionValue*option) {
     std::map<std::string,OptionValue*>::iterator where=mNames.find(option->mName);
@@ -200,9 +225,10 @@ InitializeOptions::InitializeOptions(const char * module,...) {
     va_list vl;
     va_start(vl,module);
     OptionValue* option;
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+    OptionSet* curmodule=OptionSet::getOptionsNoLock(module);
     while ((option=va_arg(vl,OptionValue*))!=NULL) {
-        boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        (*OptionSet::optionSets())[module]->addOptionNoLock(option);
+        curmodule->addOptionNoLock(option);
     }
  
 }
