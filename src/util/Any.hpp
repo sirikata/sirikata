@@ -29,13 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <typeinfo>
+#include <stdlib.h>
 namespace Iridium {
 class Any { 
     class Holder{
         friend class Any;
         virtual ~Holder(){};
         virtual Holder * clone()const=0;
-        virtual const std::type_info&type()const=0;
+        virtual const std::type_info& typeOf()const=0;
     };
     template <class T> class SubHolder:public Holder{
         friend class Any;
@@ -43,7 +45,7 @@ class Any {
     public:
         SubHolder(const T&val):mValue(val) {}
         virtual ~SubHolder(){}
-        virtual const std::type_info&type()const {
+        virtual const std::type_info&typeOf()const {
             return typeid(T);
         }
         virtual Holder *clone()const {
@@ -56,6 +58,7 @@ public:
         mHolder=NULL;
     }
     template <class T> Any&operator =(const T&other) {
+        delete mHolder;
         mHolder = new SubHolder<T>(other);
         return *this;
     }
@@ -75,8 +78,17 @@ public:
     bool empty() {
         return mHolder==NULL;
     }
-    const std::type_info&type() const {
-        return mHolder?mHolder->type():typeid(void);
+    /**
+     * If some other item has ownership of the value
+     * And this item must be reset without removing the other.
+     * Used in Option.hpp to allow for threadsafe reads
+     */
+    template <class T>Any& newAndDoNotFree(const T&value){
+        mHolder=new SubHolder<T>(value);
+        return *this;
+    }
+    const std::type_info&typeOf() const {
+        return mHolder?mHolder->typeOf():typeid(void);
     }
     template <class T> T& as () {
         return dynamic_cast<SubHolder<T>*>(mHolder)->mValue;

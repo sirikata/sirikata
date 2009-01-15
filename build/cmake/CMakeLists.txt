@@ -251,6 +251,7 @@ SET(IRIDESCENCE_SOURCES
 	${SOURCE_DIR}/task/Event.cpp
 	${SOURCE_DIR}/task/UniqueId.cpp
 	${SOURCE_DIR}/task/Time.cpp
+   	${SOURCE_DIR}/options/Options.cpp
 	${SOURCE_DIR}/util/internal_sha2.cpp
 	${SOURCE_DIR}/util/Quaternion.cpp
 	${SOURCE_DIR}/util/Sha256.cpp
