@@ -139,10 +139,10 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
 			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
-			std::cout << "LENGTH IS NOW "<< dataToReserve << std::endl;
+			std::cout << "DOWNLOADING FILE OF LENGTH "<< dataToReserve << std::endl;
 		}
 	}
-	std::cout << "Got header [" << headername << "] = " << headervalue << std::endl;
+	//std::cout << "Got header [" << headername << "] = " << headervalue << std::endl;
 }
 
 
@@ -250,7 +250,6 @@ void HTTPRequest::initCurl () {
 
 	// CURLOPT_PROGRESSFUNCTION may be useful for determining whether to timeout during an active connection.
 	parent_easy_curl = curl_easy_init( );
-	curl_easy_setopt(parent_easy_curl, CURLOPT_VERBOSE, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_NOPROGRESS, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_WRITEFUNCTION, &HTTPRequest::write_cb);
@@ -258,7 +257,7 @@ void HTTPRequest::initCurl () {
 	// only used for uploads.
 	//curl_easy_setopt(parent_easy_curl, CURLOPT_SEEKFUNCTION, &HTTPRequest_seek_cb);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_HEADERFUNCTION, &HTTPRequest::header_cb);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_VERBOSE, 1);
+	curl_easy_setopt(parent_easy_curl, CURLOPT_VERBOSE, 0);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_FAILONERROR, 1);
 	curl_easy_setopt(parent_easy_curl, CURLOPT_USERAGENT, "Iridium/0.1 (" __DATE__ ")");
 	curl_easy_setopt(parent_easy_curl, CURLOPT_CONNECTTIMEOUT, 5);

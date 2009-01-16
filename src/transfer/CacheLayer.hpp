@@ -123,6 +123,23 @@ public:
 		}
 	}
 
+	/* UNSAFE (for testing only)!
+	   Ensure you set this back to NULL before deallocating either CacheLayer.
+	*/
+	void setRespondTo(CacheLayer *newRespond) {
+		mRespondTo = newRespond;
+	}
+
+	void setNext(CacheLayer *newNext) {
+		if (mNext) {
+			mNext->setResponder(NULL);
+		}
+		mNext = newNext;
+		if (mNext) {
+			mNext->setResponder(this);
+		}
+	}
+
 	virtual void purgeFromCache(const Fingerprint &fileId) {
 		if (mNext) {
 			mNext->purgeFromCache(fileId);

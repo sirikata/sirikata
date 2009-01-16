@@ -188,6 +188,7 @@ SET(CXXTESTSources
   ${TOP_LEVEL}/test/Vector3Test.hpp 
   ${TOP_LEVEL}/test/Matrix3Test.hpp 
   ${TOP_LEVEL}/test/QuaternionTest.hpp 
+#  ${TOP_LEVEL}/test/EventTest.hpp
   ${TOP_LEVEL}/test/OptionTest.hpp 
  )
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
@@ -248,6 +249,7 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/src ${TOP_LEV
 SET(SOURCE_DIR ${TOP_LEVEL}/src)
 SET(IRIDESCENCE_SOURCES
 	${SOURCE_DIR}/transfer/HTTPRequest.cpp
+	${SOURCE_DIR}/transfer/DiskCache.cpp
 	${SOURCE_DIR}/task/EventManager.cpp
 	${SOURCE_DIR}/task/Event.cpp
 	${SOURCE_DIR}/task/UniqueId.cpp

@@ -53,9 +53,19 @@ class DiskCache : public CacheLayer {
 public:
 	struct CacheData : public CacheEntry {
 		RangeList mRanges;
+		bool wholeFile() const {
+			return mRanges.empty();
+		}
+		bool contains(const Range &range) const {
+			if (wholeFile()) {
+				return true;
+			}
+			return range.isContainedBy(mRanges);
+		}
 	};
 
 private:
+
 	struct DiskRequest;
 	ThreadSafeQueue<boost::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
 	boost::thread mWorkerThread;
@@ -82,112 +92,9 @@ private:
 	boost::condition_variable destroyCV;
 	bool mCleaningUp; // do not delete any files.
 
-	static cache_usize_type getDiskUsage(const struct stat *st) {
-#ifdef _WIN32
-		return (cache_usize_type)st->st_size;
-#else
-		// http://lkml.indiana.edu/hypermail/linux/kernel/9812.2/0216.html
-		return 512 * (cache_usize_type)st->st_blocks;
-#endif
-	}
 public:
-	void workerThread() {
-		while (true) {
-			boost::shared_ptr<DiskRequest> req;
-
-            mRequestQueue.blockingPop(req);
-			if (req->op == DiskRequest::EXIT) {
-				break;
-			} else if (req->op == DiskRequest::WRITE) {
-				// Note: TransferLayer::populatePreviousCaches has already been called.
-				std::string fileId = req->fileURI.fingerprint().convertToHexString();
-				{
-					CacheMap::write_iterator writer(mFiles);
-					if (!mFiles.alloc(req->data->length(), writer)) {
-						continue;
-					}
-					if (writer.find(req->fileURI.fingerprint())) {
-						RangeList &rlist = static_cast<CacheData*>(*writer)->mRanges;
-						if (req->data->isContainedBy(rlist)) {
-							// this range is already written to disk.
-							continue;
-						}
-					}
-				}
-
-				std::string filePath = mPrefix + fileId;
-				/////////////// FIXME: Sanatize fingerprint before opening files.
-				FILE *fp = fopen(filePath.c_str(), "wb");
-				if (!fp) {
-					std::cerr << "Failed to open " << fileId <<
-						"for writing; reason: " << errno << std::endl;
-					continue;
-				}
-				// FIXME: may not work with 64-bit files?
-				fseek(fp, req->data->startbyte(), SEEK_SET);
-				fwrite(req->data->writableData(), 1,
-						req->data->length(), fp);
-				fflush(fp);
-				cache_usize_type diskUsage;
-				{
-					struct stat st;
-					fstat(fileno(fp), &st);
-					diskUsage = getDiskUsage(&st);
-				}
-				fclose(fp);
-
-				{
-					CacheMap::write_iterator writer(mFiles);
-
-					if (writer.insert(req->fileURI.fingerprint(), diskUsage)) {
-						*writer = new CacheData;
-						writer.use();
-					} else {
-						writer.update(diskUsage);
-					}
-					RangeList &data = static_cast<CacheData*>(*writer)->mRanges;
-					req->data->addToList(*(req->data), data);
-				}
-			} else if (req->op == DiskRequest::READ) {
-				// check that we still have this file..........?
-				std::string fileId = req->fileURI.fingerprint().convertToHexString();
-				std::string filePath = mPrefix + fileId;
-				/////////////// FIXME: Sanatize fingerprint before opening files.
-				FILE *fp = fopen(filePath.c_str(), "rb");
-				if (!fp) {
-					std::cerr << "Failed to open " << fileId <<
-						"for reading; reason: " << errno << std::endl;
-					CacheLayer::getData(req->fileURI, req->toRead, req->finished);
-					continue;
-				}
-				if (req->toRead.goesToEndOfFile()) {
-					struct stat st;
-					fstat(fileno(fp), &st);
-					req->toRead.setLength(st.st_size, true);
-				}
-				// FIXME: may not work with 64-bit files?
-				fseek(fp, req->toRead.startbyte(), SEEK_SET);
-				DenseDataPtr datum(new DenseData(req->toRead));
-				fread(datum->writableData(), 1,
-						req->toRead.length(), fp);
-				fclose(fp);
-
-				CacheLayer::populateParentCaches(req->fileURI.fingerprint(), datum);
-				SparseData data;
-				data.addValidData(datum);
-				req->finished(&data);
-			} else if (req->op == DiskRequest::DELETE) {
-				std::string fileId = req->fileURI.fingerprint().convertToHexString();
-				std::string filePath = mPrefix + fileId;
-				/////////////// FIXME: Sanatize fingerprint before opening files.
-				unlink(filePath.c_str());
-			}
-		}
-		{
-			boost::unique_lock<boost::mutex> wake_cv(destroyLock);
-			destroyCV.notify_one();
-		}
-	}
+	void workerThread(); // defined in DiskCache.cpp
+	void unserialize(); // defined in DiskCache.cpp
 
 	void readDataFromDisk(const URI &fileURI,
 			const Range &requestedRange,
@@ -199,78 +106,41 @@ public:
 		mRequestQueue.push(req);
 	}
 
-	void serialize() {
-		std::string toOpen = mPrefix + "index.txt";
-		std::fstream fp (toOpen.c_str(), std::ios_base::out);
+	void serializeRanges(const RangeList &list, std::string &out) {
+		std::ostringstream outs;
 
-		CacheMap::read_iterator iter (mFiles);
-		while (iter.iterate()) {
-			std::string id = iter.getId().convertToHexString();
-			fp << id << " " << iter.getSize() << ": ";
-			const RangeList &list = static_cast<const CacheData*>(*iter)->mRanges;
-			for (RangeList::const_iterator liter = list.begin(); liter != list.end(); ++liter) {
-				cache_ssize_type len = (cache_ssize_type)((*liter).length());
-				if ((*liter).goesToEndOfFile()) {
-					len = -len;
-				}
-				fp << (*liter).startbyte() << " " << len << "; ";
+		for (RangeList::const_iterator liter = list.begin(); liter != list.end(); ++liter) {
+			cache_ssize_type len = (cache_ssize_type)((*liter).length());
+			if ((*liter).goesToEndOfFile()) {
+				len = -len;
 			}
-			fp << std::endl;
+			outs << (*liter).startbyte() << " " << len << "; ";
 		}
-		fp.close();
+		out = outs.str();
 	}
 
-	void unserialize() {
-		std::string toOpen = mPrefix + "index.txt";
-		std::fstream fp (toOpen.c_str(), std::ios_base::in);
+	void unserializeRanges(RangeList &rlist, std::istream &iranges) {
+		while (iranges.good()) {
+			Range::base_type start = 0;
+			cache_ssize_type length = 0;
+			bool toEndOfFile = false;
+			iranges >> start >> length;
 
-		CacheMap::write_iterator writer (mFiles);
-		while (fp.good()) {
-			std::string theline;
-			std::getline (fp, theline);
-			std::istringstream iranges(theline);
+			if (length == 0) {
+				continue;
+			}
+			if (length < 0) {
+				length = -length;
+				toEndOfFile = true;
+			}
 
-			std::string fingerprint;
-			cache_usize_type totalLength;
+			Range toAdd (start, length, LENGTH, toEndOfFile);
+
+			toAdd.addToList(toAdd, rlist);
 
 			char c;
-			iranges >> fingerprint >> totalLength >> c;
-			if (fingerprint.empty()) {
-				continue;
-			}
-
-			std::cout << "Cached fingerprint" << c << " " << fingerprint <<
-				"(" << totalLength << ")" << std::endl;
-
-			if (!writer.insert(SHA256::convertFromHex(fingerprint), totalLength)) {
-				continue;
-			}
-			CacheData *cdata = new CacheData();
-			RangeList *rlist = &cdata->mRanges;
-			while (iranges.good()) {
-				Range::base_type start = 0;
-				cache_ssize_type length = 0;
-				bool toEndOfFile = false;
-				iranges >> start >> length;
-
-				if (length == 0) {
-					continue;
-				}
-				if (length < 0) {
-					length = -length;
-					toEndOfFile = true;
-				}
-
-				Range toAdd (start, length, LENGTH, toEndOfFile);
-
-				toAdd.addToList(toAdd, *rlist);
-
-				char c;
-				iranges >> c;
-			}
-			*writer = cdata;
+			iranges >> c;
 		}
-		fp.close();
 	}
 
 protected:
@@ -301,31 +171,13 @@ public:
 			: CacheLayer(tryNext),
 			mWorkerThread(boost::bind(&DiskCache::workerThread, this)),
 			mFiles(this, policy),
-			mPrefix(prefix),
+			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
 
-		std::string::size_type slash=0;
-		while (true) {
-			std::string::size_type fwdslash = mPrefix.find('/', slash);
-			std::string::size_type backslash = mPrefix.find('\\', slash);
-			slash = fwdslash<backslash ? fwdslash : backslash;
-			if (slash == std::string::npos) {
-				break;
-			}
-			std::string thisDir = mPrefix.substr(0, slash);
-			mkdir(thisDir.c_str(),
-#ifndef _WIN32
-					0755
-#endif
-				);
-
-			++slash;
-		}
-		// FIXME: read the list of files from disk?
 		try {
 			unserialize();
 		} catch (...) {
-			std::cerr << "ERROR loading cache index!" << std::endl;
+			std::cerr << "ERROR loading file list!" << std::endl;
 			/// do nothing
 		}
 	}
@@ -339,8 +191,6 @@ public:
 
 		mCleaningUp = true; // don't allow destroyCacheEntry to delete files.
 
-		serialize();
-		// FIXME: serialize the list of files?
 	}
 
 	virtual void purgeFromCache(const Fingerprint &fileId) {
@@ -359,8 +209,8 @@ public:
 			CacheMap::read_iterator iter(mFiles);
 
 			if (iter.find(fileId.fingerprint())) {
-				const RangeList &list = static_cast<const CacheData*>(*iter)->mRanges;
-				haveRange = requestedRange.isContainedBy(list);
+				const CacheData *rlist = static_cast<const CacheData*>(*iter);
+				haveRange = rlist->contains(requestedRange);
 			}
 			if (haveRange) {
 				iter.use(); // or is it more proper to use() after reading from disk?

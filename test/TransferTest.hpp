@@ -15,40 +15,76 @@ using namespace Iridium;
 
 #define EXAMPLE_HASH "55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80"
 
-class TransferManagerTestSuite : public CxxTest::TestSuite
+class TransferTestSuite : public CxxTest::TestSuite
 {
-	Transfer::CacheLayer *mMemoryCache;
-	Transfer::CacheLayer *mDiskCache;
-	Transfer::CacheLayer *mHTTPTransfer;
-	Transfer::TransferManager *mTransfer;
+	typedef Transfer::CacheLayer CacheLayer;
+	std::vector< CacheLayer*> mCacheLayers;
 	volatile int finishedTest;
 
 	boost::mutex wakeMutex;
 	boost::condition_variable wakeCV;
 public:
-	TransferManagerTestSuite () {
+	TransferTestSuite () {
 	}
 
 	virtual void setUp() {
 		finishedTest = 0;
-		mHTTPTransfer = new Transfer::NetworkTransfer(NULL);
-		mDiskCache = new Transfer::DiskCache(new Transfer::LRUPolicy(32000), "diskCache/", mHTTPTransfer);
-		mMemoryCache = new Transfer::MemoryCache(new Transfer::LRUPolicy(3200), mDiskCache);
-		mTransfer = new Transfer::TransferManager(mMemoryCache);
+		mCacheLayers.clear();
 	}
 
+	CacheLayer *createTransferLayer(CacheLayer *next=NULL) {
+		CacheLayer *layer = new Transfer::NetworkTransfer(next);
+		mCacheLayers.push_back(layer);
+		return layer;
+	}
+	CacheLayer *createDiskCache(CacheLayer *next = NULL,
+				int size=32000,
+				std::string dir="diskCache") {
+		CacheLayer *layer = new Transfer::DiskCache(
+							new Transfer::LRUPolicy(size),
+							dir,
+							next);
+		mCacheLayers.push_back(layer);
+		return layer;
+	}
+	CacheLayer *createMemoryCache(CacheLayer *next = NULL,
+				int size=3200) {
+		CacheLayer *layer = new Transfer::MemoryCache(
+							new Transfer::LRUPolicy(size),
+							next);
+		mCacheLayers.push_back(layer);
+		return layer;
+	}
+	CacheLayer *createSimpleCache(bool memory, bool disk, bool http) {
+		CacheLayer *firstCache = NULL;
+		if (http) {
+			firstCache = createTransferLayer(firstCache);
+		}
+		if (disk) {
+			firstCache = createDiskCache(firstCache);
+		}
+		if (memory) {
+			firstCache = createMemoryCache(firstCache);
+		}
+		return firstCache;
+	}
+	void tearDownCache() {
+		for (std::vector<Transfer::CacheLayer*>::reverse_iterator iter =
+					 mCacheLayers.rbegin(); iter != mCacheLayers.rend(); ++iter) {
+			delete (*iter);
+		}
+		mCacheLayers.clear();
+	}
+	
 	virtual void tearDown() {
-		delete mTransfer;
-		delete mMemoryCache;
-		delete mDiskCache;
-		delete mHTTPTransfer;
+		tearDownCache();
 		finishedTest = 0;
 	}
 
-	static TransferManagerTestSuite * createSuite( void ) {
-		return new TransferManagerTestSuite();
+	static TransferTestSuite * createSuite( void ) {
+		return new TransferTestSuite();
 	}
-	static void destroySuite(TransferManagerTestSuite * k) {
+	static void destroySuite(TransferTestSuite * k) {
 		delete k;
 	}
 
@@ -78,12 +114,12 @@ public:
 		std::cout << "Finished callback" << std::endl;
 	}
 
-	bool doExampleComTest( void ) {
+	bool doExampleComTest( CacheLayer *transfer ) {
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
 
-		bool async = mTransfer->download(exampleComUri,
-				boost::bind(&TransferManagerTestSuite::callbackExampleCom, this, exampleComUri, _1),
-				Transfer::Range(true));
+		bool async = transfer->getData(exampleComUri,
+				Transfer::Range(true),
+				boost::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, _1));
 
 		waitFor(1);
 
@@ -91,27 +127,32 @@ public:
 		return async;
 	}
 
-	void testExampleCom( void ) {
-		doExampleComTest();
+	void testDiskCache_exampleCom( void ) {
+		CacheLayer *testCache = createSimpleCache(true, true, true);
+		testCache->purgeFromCache(SHA256::convertFromHex(EXAMPLE_HASH));
+		doExampleComTest(testCache);
+		tearDown();
+		// Ensure that it is now in the disk cache.
+		doExampleComTest(createSimpleCache(false, true, false));
 	}
-	void testExampleCom2( void ) {
-		const bool asynchronous = true;
+	void testMemoryCache_exampleCom( void ) {
+		CacheLayer *disk = createDiskCache();
+		CacheLayer *memory = createMemoryCache(disk);
 		// test disk cache.
 		std::cout << "Testing disk cache..."<<std::endl;
-		TS_ASSERT(doExampleComTest() == asynchronous);
+		doExampleComTest(memory);
 
 		// test memory cache.
-		rename("diskCache/" EXAMPLE_HASH,"t");
+		memory->setNext(NULL);
 		// ensure it is not using the disk cache.
 		std::cout << "Testing memory cache..."<<std::endl;
-		TS_ASSERT(doExampleComTest() != asynchronous);
-		rename("t","diskCache/" EXAMPLE_HASH);
+		doExampleComTest(memory);
 	}
 
 	void simpleCallback(const Transfer::SparseData *myData) {
 		TS_ASSERT(myData!=NULL);
 		if (myData) {
-			myData->debugPrint(std::cout);
+			//myData->debugPrint(std::cout);
 		}
 		notifyOne();
 	}
@@ -135,71 +176,121 @@ public:
 		Transfer::URI testUri2 (SHA256::computeDigest("56789"), "http://www.google.com/intl/en_ALL/images/logo.gif");
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
 
-		Transfer::TransferCallback simpleCB = boost::bind(&TransferManagerTestSuite::simpleCallback, this, _1);
-		Transfer::TransferCallback checkNullCB = boost::bind(&TransferManagerTestSuite::checkNullCallback, this, _1);
+		Transfer::TransferCallback simpleCB = boost::bind(&TransferTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback checkNullCB = boost::bind(&TransferTestSuite::checkNullCallback, this, _1);
 
-		mTransfer->purgeFromCache(testUri.fingerprint());
-		mTransfer->purgeFromCache(testUri2.fingerprint());
-		mTransfer->download(testUri, checkNullCB,
-				Transfer::Range(true));
-		mTransfer->download(testUri2, checkNullCB,
-				Transfer::Range(true));
+		CacheLayer *transfer = createSimpleCache(true, true, true);
+
+		transfer->purgeFromCache(testUri.fingerprint());
+		transfer->purgeFromCache(testUri2.fingerprint());
+		transfer->getData(testUri, Transfer::Range(true), checkNullCB);
+		transfer->getData(testUri2, Transfer::Range(true), checkNullCB);
 
 		// example.com should be in disk cache--make sure it waits for the request.
-		mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(true));
+		// disk cache is required to finish all pending requests before cleaning up.
+		transfer->getData(exampleComUri, Transfer::Range(true), simpleCB);
 
 		// do not wait--we want to clean up these requests.
 	}
 
 	void testOverlappingRange( void ) {
-		Transfer::TransferCallback simpleCB = boost::bind(&TransferManagerTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback simpleCB = boost::bind(&TransferTestSuite::simpleCallback, this, _1);
+		int numtests = 0;
+
+		CacheLayer *http = createTransferLayer();
+		CacheLayer *disk = createDiskCache(http);
+		CacheLayer *memory = createMemoryCache(disk);
 
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
-		mTransfer->purgeFromCache(exampleComUri.fingerprint());
-		mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(2, 8, Transfer::BOUNDS));
-		mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(8, 14, Transfer::BOUNDS));
-		mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(6, 14, Transfer::BOUNDS));
+		memory->purgeFromCache(exampleComUri.fingerprint());
 
-		waitFor(3);
+		std::string diskFile = "diskCache/" + exampleComUri.fingerprint().convertToHexString() + ".part";
+		// First test: GetData something which will overlap with the next two.
+		printf("1\n");
+		http->getData(exampleComUri,
+				Transfer::Range(6, 10, Transfer::BOUNDS),
+				simpleCB);
 
-		bool wasAsync = mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(6, 10, Transfer::BOUNDS));
+		waitFor(numtests+=1);
+		
+		// Now getData two pieces (both of these should kick out the first one)
+		printf("2/3\n");
+		http->getData(exampleComUri,
+				Transfer::Range(2, 8, Transfer::BOUNDS),
+				simpleCB);
+		http->getData(exampleComUri,
+				Transfer::Range(8, 14, Transfer::BOUNDS),
+				simpleCB);
 
-		// This request should now be cached.
-		TS_ASSERT(wasAsync == false);
-		waitFor(4);
+		waitFor(numtests+=2);
+		
+		// Now check that an overlapping range from before doesn't cause problems
+		printf("4\n");
+		http->getData(exampleComUri,
+				Transfer::Range(6, 13, Transfer::BOUNDS),
+				simpleCB);
 
-		wasAsync = mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(2, 14, Transfer::BOUNDS));
-		TS_ASSERT(wasAsync == false);
-		waitFor(5);
+		waitFor(numtests+=1);
 
-		// downloads from 2 to the end.
-		wasAsync = mTransfer->download(exampleComUri,
-				boost::bind(&TransferManagerTestSuite::checkOneDenseDataCallback, this, _1),
-				Transfer::Range(2, true));
-		TS_ASSERT(wasAsync == true);
-		waitFor(6);
+		printf("5 -> THIS ONE IS FAILING\n");
+		// Everything here should be cached
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(5, 8, Transfer::BOUNDS),
+				simpleCB);
 
-		wasAsync = mTransfer->download(exampleComUri,
-				boost::bind(&TransferManagerTestSuite::checkOneDenseDataCallback, this, _1),
-				Transfer::Range(true));
-		TS_ASSERT(wasAsync == true);
-		waitFor(7);
+		waitFor(numtests+=1);
 
-		wasAsync = mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(2, 14, Transfer::BOUNDS));
-		TS_ASSERT(wasAsync == false);
-		waitFor(8);
+		printf("6 -> THIS ONE IS FAILING?\n");
+		// And the whole range we just got.
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(2, 14, Transfer::BOUNDS),
+				simpleCB);
+		
+		waitFor(numtests+=1);
 
-		wasAsync = mTransfer->download(exampleComUri, simpleCB,
-				Transfer::Range(1, true, Transfer::BOUNDS));
-		TS_ASSERT(wasAsync == false);
-		waitFor(9);
+		printf("7\n");
+		// getDatas from 2 to the end. -- should not be cached
+		// and should overwrite all previous ranges because it is bigger.
+		memory->setNext(disk);
+		memory->getData(exampleComUri,
+				Transfer::Range(2, true),
+				simpleCB);
+		waitFor(numtests+=1);
+
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(2, true),
+				boost::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+		waitFor(numtests+=1);
+
+		// Whole file trumps anything else.
+		memory->setNext(disk);
+		memory->getData(exampleComUri,
+				Transfer::Range(true),
+				simpleCB);
+		waitFor(numtests+=1);
+
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(2, true),
+				boost::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+		waitFor(numtests+=1);
+
+		// should be cached
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(2, 14, Transfer::BOUNDS),
+				simpleCB);
+		waitFor(numtests+=1);
+
+		// should be 1--end should be cached as well.
+		memory->setNext(NULL);
+		memory->getData(exampleComUri,
+				Transfer::Range(1, 10, Transfer::BOUNDS, true),
+				simpleCB);
+		waitFor(numtests+=1);
 	}
 
 	void compareCallback(Transfer::DenseDataPtr compare, const Transfer::SparseData *myData) {
@@ -234,30 +325,33 @@ public:
 
 	void testRange( void ) {
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
+		CacheLayer *http = createTransferLayer();
+		CacheLayer *disk = createDiskCache(http);
+		CacheLayer *memory = createMemoryCache(disk);
 
-		mTransfer->purgeFromCache(exampleComUri.fingerprint());
+		memory->purgeFromCache(exampleComUri.fingerprint());
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "TML>\r\n", expect->length());
-			mTransfer->download(exampleComUri,
-					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
-					(Transfer::Range)*expect);
+			memory->getData(exampleComUri,
+					(Transfer::Range)*expect,
+					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "<HEAD>", expect->length());
-			mTransfer->download(exampleComUri,
-					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
-					(Transfer::Range)*expect);
+			memory->getData(exampleComUri,
+					(Transfer::Range)*expect,
+					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(2);
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 12, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "TML>\r\n<HEAD>", expect->length());
-			bool async = mTransfer->download(exampleComUri,
-					boost::bind(&TransferManagerTestSuite::compareCallback, this, expect, _1),
-					(Transfer::Range)*expect);
-			TS_ASSERT(async == false);
+			memory->setNext(NULL);
+			memory->getData(exampleComUri,
+					(Transfer::Range)*expect,
+					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(3);
 	}
