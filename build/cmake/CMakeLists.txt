@@ -259,7 +259,9 @@ SET(IRIDESCENCE_SOURCES
 	${SOURCE_DIR}/util/ThreadSafeQueue.cpp
 	${SOURCE_DIR}/util/UUID.cpp
 )
-SET(TEST_SOURCES ${CxxTestLibSources} ) #${TOP_LEVEL}/test/main.cpp
+SET(TEST_SOURCES ${CxxTestLibSources} )
+
+SET(IRIDIUM_EXEC_SOURCES ${TOP_LEVEL}/src/main.cpp )
 
 
 
@@ -283,17 +285,23 @@ ENDIF()
 #binaries
 IF(CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]")
   ADD_EXECUTABLE(test_debug EXCLUDE_FROM_ALL ${TEST_SOURCES})
+  ADD_EXECUTABLE(iridescence ${IRIDIUM_EXEC_SOURCES})
+  TARGET_LINK_LIBRARIES(iridescence iridium ${TEST_LIBRARIES})
   TARGET_LINK_LIBRARIES(test_debug iridium ${TEST_LIBRARIES})
   IF(Iridescence_LDFLAGS)
     SET_TARGET_PROPERTIES(test_debug PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
+    SET_TARGET_PROPERTIES(iridescence PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
   ENDIF()
 
   SET(TEST_BINARY test_debug)
 ELSE()
   ADD_EXECUTABLE(test_release EXCLUDE_FROM_ALL ${TEST_SOURCES})
+  ADD_EXECUTABLE(iridescencer ${IRIDIUM_EXEC_SOURCES})
+  TARGET_LINK_LIBRARIES(iridescencer iridium ${TEST_LIBRARIES})
   TARGET_LINK_LIBRARIES(test_release iridium ${TEST_LIBRARIES})
   IF(Iridescence_LDFLAGS)
     SET_TARGET_PROPERTIES(test_release PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
+    SET_TARGET_PROPERTIES(iridescencer PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
   ENDIF()
 
   SET(TEST_BINARY test_release)

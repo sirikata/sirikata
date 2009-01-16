@@ -32,6 +32,7 @@
 #include "Options.hpp"
 #include "boost/thread.hpp"
 #include "boost/program_options.hpp"
+#include <iostream>
 namespace Iridium {
 namespace {
 //from boost
@@ -114,12 +115,23 @@ public:
                                   i->second->description());
         }
     }
-    static void update_options(std::map<std::string,OptionValue*>&names, const boost::program_options::variables_map options) {
+    static bool update_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map options) {
+        if (options.count("help")){
+            try {
+                std::cout << options_description;
+            }
+            catch (...) {
+                std::cout << "Ran out of options to display!" << std::endl;
+                return false;
+            }
+            return false;
+        }
         for (std::map<std::string,OptionValue*>::iterator i=names.begin(),ie=names.end();
              i!=ie;
              ++i) {
             i->second->mValue.newAndDoNotFree(i->second->mParser(options[i->first].as<std::string>()));
         }
+        return true;
     }
 };
 bool OptionValue::initializationSet(const OptionValue&other) {
@@ -156,11 +168,15 @@ void OptionSet::parse(int argc, const char **argv){
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
         OptionRegistration::register_options(mNames,options);
     }
+    options.add_options()("help","Print available options");
     boost::program_options::store( parse_command_line(argc, const_cast<char**>(argv), options), output);
+    bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        OptionRegistration::update_options(mNames,output);
+        dienow=!OptionRegistration::update_options(mNames,options,output);
     }
+    if (dienow)
+        exit(0);
 }
 void OptionSet::parse(const std::string&args){
     boost::program_options::options_description options;
@@ -169,12 +185,16 @@ void OptionSet::parse(const std::string&args){
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
         OptionRegistration::register_options(mNames,options);
     }
+    options.add_options()("help","Print available options");
     std::vector<std::string> args_vec = splice_winmain(args);
     boost::program_options::store( boost::program_options::command_line_parser(args_vec).options(options).run(),output);
+    bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        OptionRegistration::update_options(mNames,output);
+        dienow=!OptionRegistration::update_options(mNames,options,output);
     }
+    if (dienow)
+        exit(0);
 }
 OptionSet* OptionSet::getOptionsNoLock(const std::string&s){
     std::map<std::string,OptionSet*>::iterator i=optionSets()->find(s);

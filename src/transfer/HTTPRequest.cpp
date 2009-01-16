@@ -245,7 +245,7 @@ void HTTPRequest::initCurl () {
 	curl_global_init(CURL_GLOBAL_ALL);
 	curlm = curl_multi_init();
 
-	curl_multi_setopt(curlm, CURLMOPT_PIPELINING, 1);
+	//curl_multi_setopt(curlm, CURLMOPT_PIPELINING, 1);
 	curl_multi_setopt(curlm, CURLMOPT_MAXCONNECTS, 8); // make higher if a server.
 
 	// CURLOPT_PROGRESSFUNCTION may be useful for determining whether to timeout during an active connection.
@@ -373,6 +373,7 @@ void HTTPRequest::abort() {
 	boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
 
 	if (mCurlRequest) {
+        curl_multi_remove_handle(curlm,mCurlRequest);
 		curl_easy_cleanup(mCurlRequest);
 		mCurlRequest = NULL;
 	}
