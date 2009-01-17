@@ -32,6 +32,7 @@
 #include "Sha256.hpp"
 #include "internal_sha2.hpp"
 #include <stdexcept>
+#include <iostream>
 namespace Iridium {
 static unsigned char numToHex(unsigned int num) {
     if (num<10)
