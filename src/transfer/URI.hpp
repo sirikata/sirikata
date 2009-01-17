@@ -36,9 +36,7 @@
 
 #include <string>
 #include "util/Sha256.hpp"
-
-typedef uint64_t cache_usize_type;
-typedef int64_t cache_ssize_type;
+#include "Range.hpp" // defines cache_usize_type, cache_ssize_type
 
 namespace Iridium {
 /// URI.hpp: Fingerprint and URI class

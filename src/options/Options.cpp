@@ -33,6 +33,8 @@
 #include "boost/thread.hpp"
 #include "boost/program_options.hpp"
 #include <iostream>
+#include <stdarg.h>
+
 namespace Iridium {
 namespace {
 //from boost

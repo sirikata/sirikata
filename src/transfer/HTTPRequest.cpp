@@ -139,7 +139,7 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
 			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
-			std::cout << "DOWNLOADING FILE OF LENGTH "<< dataToReserve << std::endl;
+			std::cout << "DOWNLOADING FILE RANGE " << (Range)(*mData) << std::endl;
 		}
 	}
 	//std::cout << "Got header [" << headername << "] = " << headervalue << std::endl;
@@ -233,6 +233,48 @@ namespace {
 	} globals;
 }
 
+CURL *HTTPRequest::allocDefaultCurl() {
+	CURL *mycurl = curl_easy_init( );
+	curl_easy_setopt(mycurl, CURLOPT_VERBOSE, 0);
+	curl_easy_setopt(mycurl, CURLOPT_NOPROGRESS, 1);
+	curl_easy_setopt(mycurl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(mycurl, CURLOPT_WRITEFUNCTION, &HTTPRequest::write_cb);
+	curl_easy_setopt(mycurl, CURLOPT_READFUNCTION, &HTTPRequest::read_cb);
+	// only used for uploads.
+	//curl_easy_setopt(mycurl, CURLOPT_SEEKFUNCTION, &HTTPRequest_seek_cb);
+	curl_easy_setopt(mycurl, CURLOPT_HEADERFUNCTION, &HTTPRequest::header_cb);
+	curl_easy_setopt(mycurl, CURLOPT_FAILONERROR, 1);
+	curl_easy_setopt(mycurl, CURLOPT_USERAGENT, "Iridium/0.1 (" __DATE__ ")");
+	curl_easy_setopt(mycurl, CURLOPT_CONNECTTIMEOUT, 5);
+	// curl_easy_setopt(mycurl, CURLOPT_TIMEOUT, ...); // if the connection is tarpitted by a nasty firewall...
+
+	// CURLOPT_DNS_USE_GLOBAL_CACHE: WARNING: this option is considered obsolete. Stop using it. Switch over to using the share interface instead! See CURLOPT_SHARE and curl_share_init(3).
+	// From curl_multi_add_handle: If the easy handle is not set to use a shared (CURLOPT_SHARE) or global DNS cache (CURLOPT_DNS_USE_GLOBAL_CACHE), it will be made to use the DNS cache that is shared between all easy handles within the multi handle when curl_multi_add_handle(3) is called.
+
+	/*
+	if (OPTIONS->proxydata) {
+		//CURLPROXY_HTTP, CURLPROXY_SOCKS4 (added in 7.15.2), CURLPROXY_SOCKS5, CURLPROXY_SOCKS4A (added in 7.18.0) and CURLPROXY_SOCKS5_HOSTNAME
+		curl_easy_setopt(mycurl, CURLOPT_PROXY, OPTIONS->proxydata);
+		curl_easy_setopt(mycurl, CURLOPT_PROXYTYPE, OPTIONS->proxytype);
+		// CURLOPT_PROXYUSERNAME
+		// CURLOPT_PROXYPASSWORD
+		// CURLOPT_PROXYAUTH
+	}
+	*/
+	return mycurl;
+}
+/*
+ThreadSafeQueue shasumQueue;
+void shasumLoop() {
+	HTTPRequest *req;
+	while (true) {
+		req = shasumQueue.blockingPop();
+		computeShasum(req->mData);
+		...
+	}
+}
+*/
+
 void HTTPRequest::initCurl () {
 	/*
 	 * FIXME: don't use CURL_WIN32_INIT as we use sockets for things other than curl.
@@ -245,53 +287,15 @@ void HTTPRequest::initCurl () {
 	curl_global_init(CURL_GLOBAL_ALL);
 	curlm = curl_multi_init();
 
-	//curl_multi_setopt(curlm, CURLMOPT_PIPELINING, 1);
+	curl_multi_setopt(curlm, CURLMOPT_PIPELINING, 0);
 	curl_multi_setopt(curlm, CURLMOPT_MAXCONNECTS, 8); // make higher if a server.
 
 	// CURLOPT_PROGRESSFUNCTION may be useful for determining whether to timeout during an active connection.
-	parent_easy_curl = curl_easy_init( );
-	curl_easy_setopt(parent_easy_curl, CURLOPT_NOPROGRESS, 1);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_NOSIGNAL, 1);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_WRITEFUNCTION, &HTTPRequest::write_cb);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_READFUNCTION, &HTTPRequest::read_cb);
-	// only used for uploads.
-	//curl_easy_setopt(parent_easy_curl, CURLOPT_SEEKFUNCTION, &HTTPRequest_seek_cb);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_HEADERFUNCTION, &HTTPRequest::header_cb);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_VERBOSE, 0);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_FAILONERROR, 1);
-	curl_easy_setopt(parent_easy_curl, CURLOPT_USERAGENT, "Iridium/0.1 (" __DATE__ ")");
-	curl_easy_setopt(parent_easy_curl, CURLOPT_CONNECTTIMEOUT, 5);
-	// curl_easy_setopt(parent_easy_curl, CURLOPT_TIMEOUT, ...); // if the connection is tarpitted by a nasty firewall...
-
-	// CURLOPT_DNS_USE_GLOBAL_CACHE: WARNING: this option is considered obsolete. Stop using it. Switch over to using the share interface instead! See CURLOPT_SHARE and curl_share_init(3).
-	// From curl_multi_add_handle: If the easy handle is not set to use a shared (CURLOPT_SHARE) or global DNS cache (CURLOPT_DNS_USE_GLOBAL_CACHE), it will be made to use the DNS cache that is shared between all easy handles within the multi handle when curl_multi_add_handle(3) is called.
-
-	/*
-	if (OPTIONS->proxydata) {
-		//CURLPROXY_HTTP, CURLPROXY_SOCKS4 (added in 7.15.2), CURLPROXY_SOCKS5, CURLPROXY_SOCKS4A (added in 7.18.0) and CURLPROXY_SOCKS5_HOSTNAME
-		curl_easy_setopt(parent_easy_curl, CURLOPT_PROXY, OPTIONS->proxydata);
-		curl_easy_setopt(parent_easy_curl, CURLOPT_PROXYTYPE, OPTIONS->proxytype);
-		// CURLOPT_PROXYUSERNAME
-		// CURLOPT_PROXYPASSWORD
-		// CURLOPT_PROXYAUTH
-	}
-	*/
+	parent_easy_curl = allocDefaultCurl();
 
 	globals.main_loop = boost::thread(&curlLoop);
 
 }
-
-/*
-ThreadSafeQueue shasumQueue;
-void shasumLoop() {
-	HTTPRequest *req;
-	while (true) {
-		req = shasumQueue.blockingPop();
-		computeShasum(req->mData);
-		...
-	}
-}
-*/
 
 void HTTPRequest::curlLoop () {
 	while (!globals.cleaningUp) {
@@ -335,16 +339,19 @@ void HTTPRequest::curlLoop () {
 		FD_ZERO(&write_fd_set);
 		FD_ZERO(&exc_fd_set);
 		int max_fd;
-		curl_multi_fdset(curlm,
+		{
+			boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
+			curl_multi_fdset(curlm,
 					&read_fd_set,
 					&write_fd_set,
 					&exc_fd_set,
 					&max_fd);
+			curl_multi_timeout(curlm, &timeout_ms);
+		}
 		FD_SET(globals.waitFd, &read_fd_set);
 		if (globals.waitFd > max_fd) {
 			max_fd = globals.waitFd;
 		}
-		curl_multi_timeout(curlm, &timeout_ms);
 		if (timeout_ms >= 0) {
 			struct timeval timeout_tv;
 			timeout_tv.tv_usec = 1000*(timeout_ms%1000);
@@ -372,7 +379,7 @@ void HTTPRequest::abort() {
 	boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
 
 	if (mCurlRequest) {
-        curl_multi_remove_handle(curlm,mCurlRequest);
+		curl_multi_remove_handle(curlm, mCurlRequest);
 		curl_easy_cleanup(mCurlRequest);
 		mCurlRequest = NULL;
 	}
@@ -386,7 +393,7 @@ void HTTPRequest::go() {
 
 	boost::call_once(&initCurl, flag);
 
-	mCurlRequest = curl_easy_duphandle(parent_easy_curl);
+	mCurlRequest = allocDefaultCurl(); //curl_easy_duphandle(parent_easy_curl);
 	curl_easy_setopt(mCurlRequest, CURLOPT_WRITEDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_READDATA, this);
 	// only used for uploads.

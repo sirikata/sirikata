@@ -60,6 +60,7 @@ protected:
 			if (mData.alloc(respondData->length(), writer)) {
 				bool newentry = writer.insert(fileId, respondData->length());
 				if (newentry) {
+					std::cout << fileId << " created " << *respondData << std::endl;
 					CacheData *cdata = new CacheData;
 					*writer = cdata;
 					cdata->mSparse.addValidData(respondData);
@@ -67,6 +68,16 @@ protected:
 				} else {
 					CacheData *cdata = static_cast<CacheData*>(*writer);
 					cdata->mSparse.addValidData(respondData);
+					std::cout << fileId << " already exists";
+					for (SparseData::const_iterator iter = cdata->mSparse.begin();
+							iter != cdata->mSparse.end();
+							++iter) {
+						std::cout << ',' << (*iter);
+						if ((Range)(*iter) == (Range)(*respondData)) {
+							std::cout << '*';
+						}
+					}
+					std::cout << std::endl;
 					writer.update(cdata->mSparse.getSpaceUsed());
 				}
 
@@ -102,6 +113,8 @@ public:
 			MemoryMap::read_iterator iter(mData);
 			if (iter.find(uri.fingerprint())) {
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
+				std::cout << "Found " << uri.fingerprint() << "; ranges=";
+				sparseData.debugPrint(std::cout);
 				if (requestedRange.isContainedBy(sparseData)) {
 					haveData = true;
 					foundData = sparseData;

@@ -71,6 +71,7 @@ private:
 	static void curlLoop();
 	static void initCurl();
 	static void destroyCurl();
+	static CURL *allocDefaultCurl();
 
 	static size_t write_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);
 	static size_t read_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);

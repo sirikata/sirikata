@@ -37,10 +37,13 @@
 #include <vector>
 #include <list>
 #include <iostream>
-#include "URI.hpp" // defines cache_usize_type, cache_ssize_type
+#include "Range.hpp"
 
 namespace Iridium {
 namespace Transfer {
+
+typedef uint64_t cache_usize_type;
+typedef int64_t cache_ssize_type;
 
 enum Initializer { LENGTH, BOUNDS };
 
@@ -110,6 +113,18 @@ public:
 		return mLength < other.mLength;
 	}
 
+	friend inline std::ostream &operator << (std::ostream &os, const Range &range) {
+		os << "[" << range.startbyte();
+		if (range.mLength) {
+			os << ", " << range.endbyte();
+		}
+		if (range.mWholeFile) {
+			os << " => eof";
+		}
+		os << ")";
+		return os;
+	}
+
 	template <class ListType>
 	bool isContainedBy(const ListType &list) const {
 
@@ -174,6 +189,10 @@ public:
 		Range::base_type maxend = startdata;
 		bool includeseof = false;
 		while (iter != endIter) {
+			// maxend is not relevant for ranges strictly above us.
+			if ((*iter).startbyte() > startdata) {
+				break;
+			}
 			if ((*iter).endbyte() > maxend) {
 				maxend = (*iter).endbyte();
 			}
@@ -289,6 +308,9 @@ public:
 	class const_iterator : public ListType::const_iterator {
 	public:
 		const_iterator(const ListType::const_iterator &e) :
+			ListType::const_iterator(e) {
+		}
+		const_iterator(const ListType::iterator &e) :
 			ListType::const_iterator(e) {
 		}
 		inline const DenseData &operator* () const {

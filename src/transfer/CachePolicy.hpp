@@ -50,8 +50,21 @@ protected:
 	cache_ssize_type mFreeSpace;
 
 	inline void updateSpace(cache_usize_type oldsize, cache_usize_type newsize) {
-		mFreeSpace -= oldsize;
-		mFreeSpace += newsize;
+		std::ostringstream oss;
+		oss << "[CachePolicy] ";
+		if (oldsize) {
+			if (newsize) {
+				oss << "Resizing cache data from " << oldsize << " to " << newsize;
+			} else {
+				oss << "Deallocating cache data of " << oldsize;
+			}
+		} else {
+			oss << "Allocating cache data of " << newsize;
+		}
+		mFreeSpace += oldsize;
+		mFreeSpace -= newsize;
+		oss << "; free space is now " << mFreeSpace << "." << std::endl;
+		std::cout << oss.str();
 	}
 
 public:
