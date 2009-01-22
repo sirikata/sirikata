@@ -38,10 +38,17 @@
 #include <sys/stat.h>
 
 #ifndef _WIN32
+#ifdef __APPLE__
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
-
+#define fstat64 fstat
+#define stat64 stat
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#include <dirent.h>
+#endif
 #else
 #include <io.h>
 
