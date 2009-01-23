@@ -49,6 +49,10 @@
 #include "Event.hpp"
 #include "Time.hpp"
 
+namespace boost {
+	class mutex;
+}
+
 /** @namespace Iridium::Task
  * Iridium::Task contains the task-oriented functions for communication
  * across the program, as well as a scheduler to manage space CPU cycles
@@ -137,6 +141,10 @@ public:
 	/// A shared_ptr to an Event.
 	typedef boost::shared_ptr<EventBase> EventPtr;
 
+	// to be acquired in processEvents()
+	boost::mutex *eventlock;
+	boost::mutex *listenerlock;
+
 	/**
 	 * A boost::function1 taking an Event and returning a value indicating
 	 * Whether to cancel the event, remove the event responder, or some
@@ -151,18 +159,25 @@ private:
 	/// if the listener does not corresond to an id, use SubscriptionId::null().
 	typedef std::pair<EventListener, SubscriptionId> ListenerSubscriptionInfo;
 	typedef std::list<ListenerSubscriptionInfo> ListenerList;
-	class PartiallyOrderedListenerList {
-		ListenerList ll [NUM_EVENTORDER];
-	public:
-			ListenerList &operator [] (size_t i) {
-				return ll[i];
-			}
-		};
 
-	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList,
+	/** Since std::map is free to reallocate its elements at its own choosing
+	 this class must be a pointer, not a statically-allocated array. (we want
+	 to be able to carry ListenerList iterators around) */
+	class PartiallyOrderedListenerList {
+		ListenerList ll[NUM_EVENTORDER];
+	public:
+		ListenerList &get (size_t i) {
+			return ll[i];
+		}
+		//ListenerList &operator [] (size_t i) {
+		//	return ll[i];
+		//}
+	};
+
+	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList*,
 				IdPair::Secondary::Hasher> SecondaryListenerMap;
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
-	typedef std::map<IdPair::Primary, PrimaryListenerInfo> PrimaryListenerMap;
+	typedef std::map<IdPair::Primary, PrimaryListenerInfo*> PrimaryListenerMap;
 
 	class EventSubscriptionInfo {
 		ListenerList *mList;
@@ -208,7 +223,7 @@ private:
 
 	/* PRIVATE FUNCTIONS */
 
-	PrimaryListenerInfo &insertPriId(const IdPair::Primary &pri);
+	PrimaryListenerInfo *insertPriId(const IdPair::Primary &pri);
 
 	typename SecondaryListenerMap::iterator insertSecId(
 				SecondaryListenerMap &map,
@@ -234,6 +249,11 @@ private:
 				ListenerList *lili,
 				AbsTime forceCompletionBy);
 public:
+
+	EventManager();
+
+	~EventManager();
+
 	/* PUBLIC FUNCTIONS */
 	/// FIXME: This is for testing purposes only--do not make public.
 	void temporary_processEventQueue(AbsTime forceCompletionBy);

@@ -226,6 +226,7 @@ ELSE (_boost_IN_CACHE)
   SET(_boost_INCLUDE_SEARCH_DIRS
     C:/boost/include
     "C:/boost"
+    "/usr/include"
     "/usr/local/include"
     "$ENV{ProgramFiles}/boost/boost_${Boost_FIND_VERSION_MAJOR}_${Boost_FIND_VERSION_MINOR}_${Boost_FIND_VERSION_PATCH}"
     "$ENV{ProgramFiles}/Boost"
@@ -235,6 +236,7 @@ ELSE (_boost_IN_CACHE)
   SET(_boost_LIBRARIES_SEARCH_DIRS
     C:/boost/lib
     "C:/boost"
+    "/usr/lib"
     "/usr/local/lib"
     "$ENV{ProgramFiles}/boost/boost_${Boost_FIND_VERSION_MAJOR}_${Boost_FIND_VERSION_MINOR}_${Boost_FIND_VERSION_PATCH}/lib"
     "$ENV{ProgramFiles}/Boost"

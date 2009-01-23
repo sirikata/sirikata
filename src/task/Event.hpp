@@ -3,7 +3,7 @@
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -53,13 +53,13 @@ namespace Task {
 class IdPair {
 public:
 	/** The Secondary ID should attempt to specify the specific type of
-	 * event (specific enough to prevent a large number of listeners, 
-	 * and generic enough not to force interested listeners to specify 
+	 * event (specific enough to prevent a large number of listeners,
+	 * and generic enough not to force interested listeners to specify
 	 * only a Primary ID. Usually something like a filename string or
 	 * UUID, however the pointer is allowed to be anything. */
 	class Secondary {
 	public:
-		/** Pointers passed into the constructor should be cast to 
+		/** Pointers passed into the constructor should be cast to
 		 * an intptr_t when passed to the constructor. */
 		typedef intptr_t IntType;
 	private:
@@ -69,19 +69,18 @@ public:
 
 		/** Creates a Secondary ID with an integer or pointer value
 		 * and an empty string (so will not be equal to a non-empty
-		 * string Secondary ID).  Note that Secondary::null() and
-		 * Secondary(0) are equal. */
+		 * string Secondary ID).  Note that Secondary::null(),
+		 * Secondary(0) and Secondary("") are equal. */
 		Secondary(intptr_t i) : mIntValue(i) {}
 
 		/**
 		 * Create a Secondary ID from a string.  This will first
 		 * compute the hash and store that in the integer value,
-		 * and then store the string in mStrValue. Note that passing
-		 * an empty string here results in undefined behavior when
-		 * comparing to Secondary(0) or Secondary::null(). */
+		 * and then store the string in mStrValue. Note that an empty
+		 * string is equal to Secondary(0) or Secondary::null(). */
 
 		Secondary(const std::string &str) :
-				mIntValue(HASH<const char *>()(str.c_str())),
+				mIntValue(str.empty() ? 0 : HASH<const char *>()(str.c_str())),
 				mStrValue(str) {}
 
 		/**
@@ -105,7 +104,7 @@ public:
 
 		/// Equality comparison
 		inline bool operator== (const Secondary &otherId) const {
-			return (mIntValue == otherId.mIntValue && 
+			return (mIntValue == otherId.mIntValue &&
 					mStrValue == otherId.mStrValue);
 		}
 		/// Ordering comparison
@@ -133,7 +132,7 @@ public:
 	};
 
 	/** One of a set of constant string values identifying the type of event.
-	 * Generally, if an event requires a dynamic_cast to the correct 
+	 * Generally, if an event requires a dynamic_cast to the correct
 	 * subclass of Event, that event should have a different Primary ID.
 	 * However, the primary ID should not be generated during execution,
 	 * since each new ID requires adding another member to the internal
@@ -182,7 +181,7 @@ public:
 				const IdPair &id) {
 		return os << "<ID:" << id.mPriId << "; " << id.mSecId << '>';
 	}
-	
+
 	/// Create based on an already existing Primary and Secondary ID.
 	IdPair(const Primary &pri, const Secondary &sec)
 		: mPriId(pri), mSecId(sec) {
@@ -220,7 +219,7 @@ protected:
 	 * a IdPair used to determine which EventListeners are interested:
 	 * The PrimaryId must not be an empty string, and should be one of a
 	 * predefined set of strings for efficiency reasons.
-	 * 
+	 *
 	 * Most events should have a SecondaryId (string, pointer, or number)
 	 * which identifies it, however in a few cases the secondary ID does not make
 	 * sense, in which case it should be @c IdPair::Secondary::null()
@@ -228,7 +227,7 @@ protected:
 	const IdPair mId;
 public:
 	/// Base class constructor takes in a constant IdPair.
-	Event(const IdPair &id) 
+	Event(const IdPair &id)
 		: mId(id) {
 	}
 
