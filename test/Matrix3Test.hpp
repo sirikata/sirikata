@@ -1,9 +1,9 @@
-/*     Iridium Tests -- Iridium Test Suite
+/*  Sirikata Tests -- Sirikata Test Suite
  *  Vector3Test.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,13 +33,13 @@
 #include <string>
 #include <sstream>
 #include "util/Matrix3x3.hpp"
-class Matrix3x3Test : public CxxTest::TestSuite 
+class Matrix3x3Test : public CxxTest::TestSuite
 {
-    typedef Iridium::Vector3<float> Vector3f;
-    typedef Iridium::Vector3<double> Vector3d;
-    typedef Iridium::Matrix3x3<float> Matrix3x3f;
-    typedef Iridium::Matrix3x3<double> Matrix3x3d;
-    typedef Iridium::COLUMNS COLUMNS;
+    typedef Sirikata::Vector3<float> Vector3f;
+    typedef Sirikata::Vector3<double> Vector3d;
+    typedef Sirikata::Matrix3x3<float> Matrix3x3f;
+    typedef Sirikata::Matrix3x3<double> Matrix3x3d;
+    typedef Sirikata::COLUMNS COLUMNS;
 public:
     void testAdd( void )
     {

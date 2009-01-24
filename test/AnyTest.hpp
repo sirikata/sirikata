@@ -1,9 +1,9 @@
-/*     Iridium Tests -- Iridium Test Suite
+/*  Sirikata Tests -- Sirikata Test Suite
  *  AnyTest.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,9 +31,9 @@
  */
 #include <cxxtest/TestSuite.h>
 #include "util/Any.hpp"
-class AnyTest : public CxxTest::TestSuite 
+class AnyTest : public CxxTest::TestSuite
 {
-    typedef Iridium::Any Any;
+    typedef Sirikata::Any Any;
 public:
     void testCopy( void )
     {
@@ -43,6 +43,6 @@ public:
         TS_ASSERT_EQUALS(y.as<int>(),4);
         x=5;
         TS_ASSERT_EQUALS(x.as<int>(),5);
-        
+
     }
 };

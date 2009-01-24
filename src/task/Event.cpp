@@ -3,7 +3,7 @@
 
 #include "Event.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Task {
 
 /// Stores the map from primary ID to integer--items are never deleted.

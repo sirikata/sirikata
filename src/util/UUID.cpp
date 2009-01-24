@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Iridium Synchronization Utilities
+/*  Sirikata Utilities -- Sirikata Synchronization Utilities
  *  UUID.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,11 +32,11 @@
 
 #include "UUID.hpp"
 #include "boost_uuid.hpp"
-BOOST_STATIC_ASSERT(Iridium::UUID::static_size==sizeof(boost_::uuid));
+BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
-namespace Iridium {
+namespace Sirikata {
 UUID::UUID(const std::string & other) {
-    boost_::uuid parsed_string(other);    
+    boost_::uuid parsed_string(other);
     mData.initialize(parsed_string.begin(),parsed_string.end());
 }
 UUID::UUID(const boost_::uuid&other){

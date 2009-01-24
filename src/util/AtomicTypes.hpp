@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Iridium Synchronization Utilities
+/*  Sirikata Utilities -- Sirikata Synchronization Utilities
  *  AtomicTypes.hpp
  *
  *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,15 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_ATOMIC_TYPES_HPP_
+#define _SIRIKATA_ATOMIC_TYPES_HPP_
+
 #include <stdint.h>
 #ifdef __APPLE__
 #include <libkern/OSAtomic.h>
 #endif
-namespace Iridium {
+namespace Sirikata {
 
 #ifdef _WIN32
 template <int size> class SizedAtomicValue {
-    
+
 };
 
 template<> class SizedAtomicValue<4> {
@@ -50,7 +54,7 @@ public:
     }
     template<typename T> static T dec(volatile T*scalar) {
         return (T)InterlockedDecrement((volatile LONG*)&scalar);
-    }    
+    }
 };
 template<> class SizedAtomicValue<8> {
 public:
@@ -62,7 +66,7 @@ public:
     }
     template<typename T> static T dec(volatile T*scalar) {
         return (T)InterlockedDecrement64((volatile LONGLONG*)&scalar);
-    }    
+    }
 };
 #elif defined(__APPLE__)
 template<int size> class SizedAtomicValue {
@@ -70,30 +74,30 @@ template<int size> class SizedAtomicValue {
 };
 
 template<> class SizedAtomicValue<4> {
-public:                                          
+public:
     template <typename T> static T add(volatile T* scalar,T other) {
-        return (T)OSAtomicAdd32((int32_t)other, (int32_t*)scalar); 
+        return (T)OSAtomicAdd32((int32_t)other, (int32_t*)scalar);
     }
     template <typename T> static T inc(volatile T*scalar) {
-        return (T)OSAtomicIncrement32((int32_t*)scalar); 
+        return (T)OSAtomicIncrement32((int32_t*)scalar);
     }
-    template <typename T> static T dec(volatile T*scalar) { 
-        return (T)OSAtomicDecrement32((int32_t*)scalar); 
+    template <typename T> static T dec(volatile T*scalar) {
+        return (T)OSAtomicDecrement32((int32_t*)scalar);
     }
 };
-                                                                              
+
 template<> class SizedAtomicValue<8> {
 public:
     template <typename T> static T add(volatile T* scalar, T other) {
         return (T)OSAtomicAdd64((int64_t)other, (int64_t*)scalar);
-    }                                                                       
+    }
     template <typename T> static T inc(volatile T*scalar) {
-        return (T)OSAtomicIncrement64((int64_t*)scalar); 
+        return (T)OSAtomicIncrement64((int64_t*)scalar);
     }
     template <typename T> static T dec(volatile T*scalar) {
-        return (T)OSAtomicDecrement64((int64_t*)scalar); 
+        return (T)OSAtomicDecrement64((int64_t*)scalar);
     }
-};     
+};
 #else
 template<int size> class SizedAtomicValue {
 public:
@@ -109,11 +113,11 @@ public:
 };
 #endif
 #ifdef _WIN32
-#pragma warning( push )                                                         
-#pragma warning (disable : 4312)                                                
+#pragma warning( push )
+#pragma warning (disable : 4312)
 #pragma warning (disable : 4197)
 #endif
-template <typename T> 
+template <typename T>
 class AtomicValue {
 private:
     volatile char mMemory[sizeof(T)+(sizeof(T)==4?4:(sizeof(T)==2?2:(sizeof(T)==8?8:16)))];
@@ -165,8 +169,8 @@ public:
     T operator ++() {
         return (T)SizedAtomicValue<sizeof(T)>::inc(ALIGN(mMemory));
     }
-    T operator --() { 
-        return (T)SizedAtomicValue<sizeof(T)>::dec(ALIGN(mMemory));       
+    T operator --() {
+        return (T)SizedAtomicValue<sizeof(T)>::dec(ALIGN(mMemory));
     }
     T operator++(int) {
         return (++*this)-(T)1;
@@ -179,3 +183,5 @@ public:
 #pragma warning( pop )
 #endif
 }
+
+#endif //_SIRIKATA_ATOMIC_TYPES_HPP_

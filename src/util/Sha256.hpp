@@ -1,4 +1,4 @@
-/*     Iridium Utilities -- Iridium Cryptography Utilities
+/*  Sirikata Utilities -- Sirikata Cryptography Utilities
  *  Sha256.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,13 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_SHA256_HPP_
+#define _SIRIKATA_SHA256_HPP_
+
 #include "Array.hpp"
 
 #include <string>
 #include <cstdlib>
 #include <cstring>
 
-namespace Iridium {
+namespace Sirikata {
 class SHA256 {
 public:
     enum {static_size=32,hex_size=64};
@@ -136,3 +140,5 @@ public:
 
 };
 }
+
+#endif //_SIRIKATA_SHA256_HPP_

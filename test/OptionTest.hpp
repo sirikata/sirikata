@@ -1,9 +1,9 @@
-/*     Iridium Tests -- Iridium Test Suite
+/*  Sirikata Tests -- Sirikata Test Suite
  *  OptionTest.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,12 +32,12 @@
 #include <cxxtest/TestSuite.h>
 #include "options/Options.hpp"
 #include <sstream>
-class OptionTest : public CxxTest::TestSuite 
+class OptionTest : public CxxTest::TestSuite
 {
-    typedef Iridium::OptionSet OptionSet;
-    typedef Iridium::OptionValue OptionValue;
-    typedef Iridium::OptionValueType<int> OptionValueTypeInt;
-    typedef Iridium::InitializeOptions InitializeOptions;
+    typedef Sirikata::OptionSet OptionSet;
+    typedef Sirikata::OptionValue OptionValue;
+    typedef Sirikata::OptionValueType<int> OptionValueTypeInt;
+    typedef Sirikata::InitializeOptions InitializeOptions;
 public:
     int countString (const char ** test) {
         int count=0;
@@ -61,7 +61,7 @@ public:
                             one=new OptionValue("one","1",OptionValueTypeInt(),"one is the lonliest number"),
                             new OptionValue("three","3",OptionValueTypeInt(),"three is the number to which I shalt count"),
                             NULL);
-        OptionValue *four=OptionSet::referenceOption("testInteger","four");        
+        OptionValue *four=OptionSet::referenceOption("testInteger","four");
         for (int i=0;i<6;++i) {
             OptionSet::getOptions("testInteger")->parse(countString(testString[i]),testString[i]);
             TS_ASSERT_EQUALS(one->as<int>(),answers[i][0]);

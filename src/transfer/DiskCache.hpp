@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  DiskCache.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,8 +31,8 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#ifndef IRIDIUM_DiskCache_HPP__
-#define IRIDIUM_DiskCache_HPP__
+#ifndef SIRIKATA_DiskCache_HPP__
+#define SIRIKATA_DiskCache_HPP__
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -42,7 +42,7 @@
 #include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Transfer {
 
 // should really be a config option.
@@ -228,4 +228,4 @@ public:
 }
 }
 
-#endif /* IRIDIUM_DiskCache_HPP__ */
+#endif /* SIRIKATA_DiskCache_HPP__ */

@@ -1,4 +1,4 @@
-/*     Iridium Utilities -- Iridium Synchronization Utilities
+/*  Sirikata Utilities -- Sirikata Synchronization Utilities
  *  ThreadSafeQueue.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,20 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IRIDIUM_ThreadSafeQueue_HPP__
-#define IRIDIUM_ThreadSafeQueue_HPP__
+#ifndef SIRIKATA_ThreadSafeQueue_HPP__
+#define SIRIKATA_ThreadSafeQueue_HPP__
 
 #include <queue>
 
-namespace Iridium {
+namespace Sirikata {
 namespace ThreadSafeQueueNS{
 class Lock;
 class Condition;
 /// acquires lok Locks a lock
 void lock(Lock*lok);
 /// acquires lok, calls check, and while check returns false wait on a condition
-void wait(Lock*lok, 
-          Condition* cond, 
+void wait(Lock*lok,
+          Condition* cond,
           bool(*check)(void*, void *),
           void* arg1, void* arg2);
 /// Notifies the condition once
@@ -110,7 +110,7 @@ private:
             mList=other.mList;
             ThreadSafeQueueNS::unlock(other.mLock);
         }catch (...) {
-            ThreadSafeQueueNS::unlock(other.mLock);  
+            ThreadSafeQueueNS::unlock(other.mLock);
             throw;
         }
     }
@@ -124,7 +124,7 @@ private:
    */
     static bool waitCheck(void * thus, void*vretval) {
         T* retval=reinterpret_cast<T*>(vretval);
-        
+
         if (reinterpret_cast <ThreadSafeQueue* >(thus)->mList.empty())
             return true;
         *retval=reinterpret_cast <ThreadSafeQueue* >(thus)->mList.front();
@@ -139,7 +139,7 @@ public:
     }
     ~ThreadSafeQueue(){
         ThreadSafeQueueNS::lockDestroy(mLock);
-        ThreadSafeQueueNS::condDestroy(mCond);        
+        ThreadSafeQueueNS::condDestroy(mCond);
     }
 	/**
 	 * Pushes value onto the queue

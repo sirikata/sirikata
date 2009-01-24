@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  MemoryCache.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,14 +31,14 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#ifndef IRIDIUM_MemoryCache_HPP__
-#define IRIDIUM_MemoryCache_HPP__
+#ifndef SIRIKATA_MemoryCache_HPP__
+#define SIRIKATA_MemoryCache_HPP__
 
 #include <map>
 
 #include "CacheLayer.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 /** MemoryCache.hpp -- MemoryCache -- the first layer of transfer cache. */
 namespace Transfer {
 
@@ -138,5 +138,4 @@ public:
 }
 }
 
-#endif /* IRIDIUM_MemoryCache_HPP__ */
-
+#endif /* SIRIKATA_MemoryCache_HPP__ */

@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  URI.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,14 +31,14 @@
  */
 /*  Created on: Jan 5, 2009 */
 
-#ifndef IRIDIUM_URI_HPP__
-#define IRIDIUM_URI_HPP__
+#ifndef SIRIKATA_URI_HPP__
+#define SIRIKATA_URI_HPP__
 
 #include <string>
 #include "util/Sha256.hpp"
 #include "Range.hpp" // defines cache_usize_type, cache_ssize_type
 
-namespace Iridium {
+namespace Sirikata {
 /// URI.hpp: Fingerprint and URI class
 namespace Transfer {
 
@@ -120,4 +120,4 @@ inline std::ostream &operator<<(std::ostream &str, const URI &uri) {
 }
 }
 
-#endif /* IRIDIUM_URI_HPP__ */
+#endif /* SIRIKATA_URI_HPP__ */

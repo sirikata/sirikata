@@ -1,4 +1,4 @@
-/*     Iridium Kernel -- Task scheduling system
+/*  Sirikata Kernel -- Task scheduling system
  *  Scheduler.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IRIDIUM_Scheduler_HPP__
-#define IRIDIUM_Scheduler_HPP__
+#ifndef SIRIKATA_Scheduler_HPP__
+#define SIRIKATA_Scheduler_HPP__
 
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
@@ -42,7 +42,7 @@
 
 #include "Time.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Task {
 
 /**

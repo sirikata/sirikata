@@ -1,6 +1,6 @@
 #include "UniqueId.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Task {
 
 IncreasingSubId::Type IncreasingSubId::nextid = 0;

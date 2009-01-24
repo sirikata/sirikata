@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  LRUPolicy.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,13 +31,13 @@
  */
 /*  Created on: Jan 5, 2009 */
 
-#ifndef IRIDIUM_LRUPolicy_HPP__
-#define IRIDIUM_LRUPolicy_HPP__
+#ifndef SIRIKATA_LRUPolicy_HPP__
+#define SIRIKATA_LRUPolicy_HPP__
 
 #include <vector>
 #include "CachePolicy.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Transfer {
 
 /// Simple LRU policy--does not do any ordering by size.
@@ -111,4 +111,4 @@ public:
 }
 }
 
-#endif /* IRIDIUM_LRUPolicy_HPP__ */
+#endif /* SIRIKATA_LRUPolicy_HPP__ */

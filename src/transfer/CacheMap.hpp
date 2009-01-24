@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  CacheMap.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,8 +31,8 @@
  */
 /*  Created on: Jan 7, 2009 */
 
-#ifndef IRIDIUM_CacheMap_HPP__
-#define IRIDIUM_CacheMap_HPP__
+#ifndef SIRIKATA_CacheMap_HPP__
+#define SIRIKATA_CacheMap_HPP__
 
 #include <map>
 #include <boost/thread/shared_mutex.hpp>
@@ -40,7 +40,7 @@
 #include "CachePolicy.hpp"
 #include "CacheLayer.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Transfer {
 
 /**
@@ -305,4 +305,4 @@ s		 * Also, calls CachePolicy::destroy() and CacheInfo::destroy()
 }
 }
 
-#endif /* IRIDIUM_CacheMap_HPP__ */
+#endif /* SIRIKATA_CacheMap_HPP__ */

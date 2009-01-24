@@ -1,9 +1,9 @@
-/*     Iridium Configuration Options -- Iridium Options
+/*  Sirikata Configuration Options -- Sirikata Options
  *  Options.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -35,7 +35,7 @@
 #include <iostream>
 #include <stdarg.h>
 
-namespace Iridium {
+namespace Sirikata {
 namespace {
 //from boost
 	    std::vector<std::string> splice_winmain(const std::string& input)
@@ -46,13 +46,13 @@ namespace {
  	        for(;i != e; ++i)
  	            if (!isspace(*i))
  	                break;
- 	       
+
  	        if (i != e) {
- 	   
+
  	            std::string current;
  	            bool inside_quoted = false;
  	            int backslash_count = 0;
- 	           
+
 	            for(; i != e; ++i) {
  	                if (*i == '"') {
  	                    // '"' preceded by even number (n) of backslashes generates
@@ -63,8 +63,8 @@ namespace {
  	                        // '"' preceded by odd number (n) of backslashes generates
  	                        // (n-1)/2 backslashes and is literal quote.
  	                    } else {
- 	                        current.append(backslash_count / 2, '\\');               
- 	                        current += '"';               
+ 	                        current.append(backslash_count / 2, '\\');
+ 	                        current += '"';
  	                    }
  	                    backslash_count = 0;
  	                } else if (*i == '\\') {
@@ -83,20 +83,20 @@ namespace {
  	                        for(;i != e && isspace(*i); ++i)
  	                            ;
  	                        --i;
- 	                    } else {                 
+ 	                    } else {
  	                        current += *i;
  	                    }
  	                }
  		        }
- 	
+
  	            // If we have trailing backslashes, add them
  	            if (backslash_count)
  	                current.append(backslash_count, '\\');
- 	       
+
  	            // If we have non-empty 'current' or we're still in quoted
  	            // section (even if 'current' is empty), add the last token.
  	            if (!current.empty() || inside_quoted)
- 	                result.push_back(current);       
+ 	                result.push_back(current);
  	        }
  	        return result;
  	    }
@@ -210,11 +210,11 @@ OptionSet* OptionSet::getOptionsNoLock(const std::string&s){
     }
 }
 OptionSet* OptionSet::getOptions(const std::string&s){
-    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
     return getOptionsNoLock(s);
 }
 OptionValue* OptionSet::referenceOption(const std::string&module, const std::string&option,OptionValue**pointer) {
-    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
     return getOptionsNoLock(module)->referenceOptionNoLock(option,pointer);
 }
 OptionValue* OptionSet::referenceOptionNoLock(const std::string&option,OptionValue**pointer) {
@@ -228,8 +228,8 @@ OptionValue* OptionSet::referenceOptionNoLock(const std::string&option,OptionVal
         return where->second;
     }
 }
-OptionValue* OptionSet::referenceOption(const std::string&option,OptionValue**pointer) {    
-    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());    
+OptionValue* OptionSet::referenceOption(const std::string&option,OptionValue**pointer) {
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
     return referenceOptionNoLock(option,pointer);
 }
 void OptionSet::addOptionNoLock(OptionValue*option) {
@@ -255,6 +255,6 @@ InitializeOptions::InitializeOptions(const char * module,...) {
     while ((option=va_arg(vl,OptionValue*))!=NULL) {
         curmodule->addOptionNoLock(option);
     }
- 
+
 }
 }

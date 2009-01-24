@@ -1,4 +1,4 @@
-/*     Iridium Kernel -- Task scheduling system
+/*  Sirikata Kernel -- Task scheduling system
  *  EventManager.cpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -41,7 +41,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
-namespace Iridium {
+namespace Sirikata {
 
 /**
  * EventManager.cpp -- Definition for EventManager functions;
@@ -419,7 +419,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			secIter = secondaryMap->find(ev->getId().mSecId);
 			if (secIter != secondaryMap->end() &&
 					!(*secIter).second->get(i).empty()) {
-				mProcessingList = &((*secIter).second->get(i));                
+				mProcessingList = &((*secIter).second->get(i));
 				lock_for_map_lookup.unlock();
                 if (!mProcessingList->empty())
                     eventHistory=EVENT_HANDLED;
@@ -454,7 +454,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
         (*ev)(eventHistory);
 		std::cout << " >>>\tFinished " << ev->getId() << std::endl;
 	}
-    
+
 	AbsTime finishTime = AbsTime::now();
 	std::cout << "**** Done processing events this round. " <<
 		"Took " << (float)(finishTime-startTime) <<

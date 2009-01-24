@@ -1,6 +1,6 @@
 #include "EventManager.hpp"
 #include "DependencyTask.hpp"
-namespace Iridium {
+namespace Sirikata {
 namespace Task {
 namespace {
 IdPair::Primary emptyId("");
@@ -11,7 +11,7 @@ class CallDependencyTask:public Event {
     CallDependencyTask(DependentTask*dt):Event(IdPair(emptyId,0)){
         mDependentTask=dt;
     }
-    
+
     virtual void operator()(EventHistory h) {
         (*mDependentTask)();
         this->Event::operator() (h);
@@ -23,7 +23,7 @@ class CallDependencyFailedTask:public Event {
     CallDependencyFailedTask(DependentTask *dt):Event(IdPair(emptyId,0)){
         mDependentTask=dt;
     }
-    
+
     virtual void operator()(EventHistory h) {
         mDependentTask->finish(false);
         this->Event::operator() (h);

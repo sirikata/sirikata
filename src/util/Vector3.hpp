@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Math Library
+/*  Sirikata Utilities -- Math Library
  *  Vector3.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,10 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _VECTOR3_HPP_
-#define _VECTOR3_HPP_
+#ifndef _SIRIKATA_VECTOR3_HPP_
+#define _SIRIKATA_VECTOR3_HPP_
 #include <assert.h>
-namespace Iridium {
+namespace Sirikata {
 template <typename scalar> class Vector3 {
 public:
     typedef scalar real;
@@ -48,7 +48,7 @@ public:
         this->x=x;
         this->y=y;
         this->z=z;
-    }    
+    }
     template <class V> explicit Vector3(const V&other) {
         x=other[0];
         y=other[1];

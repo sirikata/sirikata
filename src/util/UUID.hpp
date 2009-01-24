@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Iridium Synchronization Utilities
+/*  Sirikata Utilities -- Sirikata Synchronization Utilities
  *  UUID.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,20 +29,24 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_UUID_HPP_
+#define _SIRIKATA_UUID_HPP_
+
 #include "Array.hpp"
 
 namespace boost_{
 class uuid;
 }
 
-namespace Iridium {
+namespace Sirikata {
 class UUID {
 public:
     enum {static_size=16};
     typedef unsigned char byte;
     typedef Array<byte,static_size,true> Data;
     typedef Data::iterator iterator;
-    typedef Data::const_iterator const_iterator;    
+    typedef Data::const_iterator const_iterator;
 private:
     Data mData;
 public:
@@ -50,7 +54,7 @@ public:
     UUID() {}
     UUID (const byte *data,
           unsigned int length){
-        mData.memcpy(data,length);        
+        mData.memcpy(data,length);
     }
     UUID(const Data data):mData(data) {
     }
@@ -77,5 +81,7 @@ public:
 };
 
 }
-std::istream & operator>>(std::istream & is, Iridium::UUID & uuid);
-std::ostream & operator<<(std::ostream & os, const Iridium::UUID & uuid);
+std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
+std::ostream & operator<<(std::ostream & os, const Sirikata::UUID & uuid);
+
+#endif //_SIRIKATA_UUID_HPP_

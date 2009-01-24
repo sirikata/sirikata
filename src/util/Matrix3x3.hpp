@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Math Library
+/*  Sirikata Utilities -- Math Library
  *  Matrix3x3.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +31,7 @@
  */
 #ifndef _MATRIX3X3_HPP_
 #define _MATRIX3X3_HPP_
-namespace Iridium {
+namespace Sirikata {
 class COLUMNS{};
 class ROWS{};
 
@@ -192,7 +192,7 @@ public:
         std::ostringstream os;
         os<<"{ col1:"<<mCol[0]<<" col2:"<<mCol[1]<<" col3:"<<mCol[2]<<'}';
         return os.str();
-    }    
+    }
 };
 template<typename scalar> inline std::ostream& operator <<(std::ostream& os, const Matrix3x3<scalar> &rhs) {
     os<<"{ col1:"<<rhs.getCol(0)<<" col2:"<<rhs.getCol(1)<<" col3:"<<rhs.getCol(2)<<'}';
@@ -202,7 +202,7 @@ template<typename scalar> inline std::ostream& operator <<(std::ostream& os, con
 template <typename T,typename S> Vector3<T> operator *(const Vector3<T>&vec, const Matrix3x3<S>&mat) {
     return Vector3<T>(mat.getCol(0).dot(vec),
                       mat.getCol(1).dot(vec),
-                      mat.getCol(2).dot(vec));        
+                      mat.getCol(2).dot(vec));
 }
 template <typename T> Matrix3x3<T> operator *(T other, const Matrix3x3<T>&mat) {
     return Matrix3x3<T>(mat.getCol(0)*other,mat.getCol(1)*other,mat.getCol(2)*other,COLUMNS());

@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Math Library
+/*  Sirikata Utilities -- Math Library
  *  Vector4.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,7 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-namespace Iridium {
+
+#ifndef _SIRIKATA_VECTOR4_HPP_
+#define _SIRIKATA_VECTOR4_HPP_
+
+namespace Sirikata {
 template <typename scalar> class Vector3;
 
 template <typename scalar> class Vector4 {
@@ -201,3 +205,5 @@ template<typename scalar> inline std::ostream& operator <<(std::ostream& os, con
 }
 
 }
+
+#endif //_SIRIKATA_VECTOR4_HPP_

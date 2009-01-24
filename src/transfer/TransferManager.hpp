@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  TransferManager.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,15 +31,15 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#ifndef IRIDIUM_TransferManager_HPP__
-#define IRIDIUM_TransferManager_HPP__
+#ifndef SIRIKATA_TransferManager_HPP__
+#define SIRIKATA_TransferManager_HPP__
 
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 #include "CacheLayer.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 namespace Transfer {
 
 /** Manages requests going into the cache.
@@ -101,4 +101,4 @@ public:
 }
 }
 
-#endif /* IRIDIUM_TransferManager_HPP__ */
+#endif /* SIRIKATA_TransferManager_HPP__ */

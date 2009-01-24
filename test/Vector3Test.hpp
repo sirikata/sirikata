@@ -1,9 +1,9 @@
-/*     Iridium Tests -- Iridium Test Suite
+/*  Sirikata Tests -- Sirikata Test Suite
  *  Vector3Test.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,10 +33,10 @@
 #include <string>
 #include <sstream>
 #include "util/Vector3.hpp"
-class Vector3Test : public CxxTest::TestSuite 
+class Vector3Test : public CxxTest::TestSuite
 {
-    typedef Iridium::Vector3<float> Vector3f;
-    typedef Iridium::Vector3<double> Vector3d;
+    typedef Sirikata::Vector3<float> Vector3f;
+    typedef Sirikata::Vector3<double> Vector3d;
 public:
     void testAdd( void )
     {
@@ -64,7 +64,7 @@ public:
         TS_ASSERT_DELTA(c.dot(a),0,1e-08);
         TS_ASSERT_DELTA(c.dot(b),0,1e-08);
     }
-    void testLengthFloat ( void ) 
+    void testLengthFloat ( void )
     {
         Vector3f a(Vector3d(5,6.125,7));
         Vector3f b(Vector3d(8,-1.25,9.0625));
@@ -74,9 +74,9 @@ public:
         TS_ASSERT_DELTA(a.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(b.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(c.normal().length(),1,1e-08);
-        TS_ASSERT_DELTA(nearlyzero.normal().length(),0,1e-08);        
+        TS_ASSERT_DELTA(nearlyzero.normal().length(),0,1e-08);
     }
-    void testLengthDouble ( void ) 
+    void testLengthDouble ( void )
     {
         Vector3d a(Vector3f(5,6,7));
         Vector3d b(Vector3f(8,1,9));
@@ -86,7 +86,7 @@ public:
         TS_ASSERT_DELTA(a.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(b.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(c.normal().length(),1,1e-08);
-        TS_ASSERT_DELTA(nearlyzero.normal().length(),0,1e-08);        
+        TS_ASSERT_DELTA(nearlyzero.normal().length(),0,1e-08);
     }
     void testToString( void )
     {

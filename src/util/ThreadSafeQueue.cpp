@@ -1,4 +1,4 @@
-/*     Iridium Utilities -- Iridium Synchronization Utilities
+/*  Sirikata Utilities -- Sirikata Synchronization Utilities
  *  ThreadSafeQueue.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +32,7 @@
 
 #include "ThreadSafeQueue.hpp"
 #include <boost/thread.hpp>
-namespace Iridium {
+namespace Sirikata {
 namespace ThreadSafeQueueNS{
 class Lock :public boost::mutex {
 };
@@ -48,7 +48,7 @@ void wait(Lock*lok,Condition *cond, bool (*check) (void*, void*), void * arg1, v
     }
 }
 void notify(Condition *cond){
-    cond->notify_one();    
+    cond->notify_one();
 }
 void unlock(Lock*lok){
     lok->unlock();

@@ -9,7 +9,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
-using namespace Iridium;
+using namespace Sirikata;
 
 /*  Created on: Jan 10, 2009 */
 
@@ -75,7 +75,7 @@ public:
 		}
 		mCacheLayers.clear();
 	}
-	
+
 	virtual void tearDown() {
 		tearDownCache();
 		finishedTest = 0;
@@ -212,7 +212,7 @@ public:
 				simpleCB);
 
 		waitFor(numtests+=1);
-		
+
 		// Now getData two pieces (both of these should kick out the first one)
 		printf("2/3\n");
 		http->getData(exampleComUri,
@@ -223,7 +223,7 @@ public:
 				simpleCB);
 
 		waitFor(numtests+=2);
-		
+
 		// Now check that an overlapping range from before doesn't cause problems
 		printf("4\n");
 		http->getData(exampleComUri,
@@ -247,7 +247,7 @@ public:
 		memory->getData(exampleComUri,
 				Transfer::Range(2, 14, Transfer::BOUNDS),
 				simpleCB);
-		
+
 		waitFor(numtests+=1);
 
 		printf("7\n");
@@ -358,5 +358,4 @@ public:
 
 };
 
-using namespace Iridium;
-
+using namespace Sirikata;

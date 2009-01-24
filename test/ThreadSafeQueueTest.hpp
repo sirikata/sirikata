@@ -1,9 +1,9 @@
-/*     Iridium Tests -- Iridium Testing Framework
+/*  Sirikata Tests -- Sirikata Testing Framework
  *  ThreadSafeQueueTest.hpp
  *
  *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,7 +31,7 @@
  */
 #include <boost/shared_ptr.hpp>
 #include "util/ThreadSafeQueue.hpp"
-class ThreadSafeQueueTest : public CxxTest::TestSuite 
+class ThreadSafeQueueTest : public CxxTest::TestSuite
 {
     class MyClass {
         int a;

@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  CacheLayer.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -31,8 +31,8 @@
  */
 /*  Created on: Dec 31, 2008 */
 
-#ifndef IRIDIUM_CacheLayer_HPP__
-#define IRIDIUM_CacheLayer_HPP__
+#ifndef SIRIKATA_CacheLayer_HPP__
+#define SIRIKATA_CacheLayer_HPP__
 
 #include <vector>
 #include <boost/function.hpp>
@@ -50,7 +50,7 @@
 #include "URI.hpp"
 #include "CachePolicy.hpp"
 
-namespace Iridium {
+namespace Sirikata {
 /** CacheLayer.hpp -- CacheLayer superclass */
 namespace Transfer {
 
@@ -171,4 +171,4 @@ public:
 }
 }
 
-#endif /* IRIDIUM_CacheLayer_HPP__ */
+#endif /* SIRIKATA_CacheLayer_HPP__ */

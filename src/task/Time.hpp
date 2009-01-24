@@ -1,4 +1,4 @@
-/*     Iridium Kernel -- Task scheduling system
+/*  Sirikata Kernel -- Task scheduling system
  *  Time.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IRIDIUM_Time_HPP__
-#define IRIDIUM_Time_HPP__
+#ifndef SIRIKATA_Time_HPP__
+#define SIRIKATA_Time_HPP__
 
 #include <inttypes.h>
 
-namespace Iridium {
+namespace Sirikata {
 
 /**
  * Time.hpp -- Task-oriented time functions: DeltaTime and AbsTime

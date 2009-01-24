@@ -1,9 +1,9 @@
-/*     Iridium Utilities -- Math Library
+/*  Sirikata Utilities -- Math Library
  *  Quaternion.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,7 +34,7 @@
 #include "Quaternion.hpp"
 #include <cmath>
 #include "Matrix3x3.hpp"
-namespace Iridium {
+namespace Sirikata {
 Quaternion::Quaternion(const Vector3<Quaternion::scalar>&axis, Quaternion::scalar angle) {
         float sinHalfAngle=sin(angle*.5);
         x=sinHalfAngle*axis.x;
@@ -44,33 +44,33 @@ Quaternion::Quaternion(const Vector3<Quaternion::scalar>&axis, Quaternion::scala
     }
 
 Vector3<Quaternion::scalar> Quaternion::xAxis(void) const
-{                                                                           
-    //scalar fTx  = 2.0*x;                                                    
-    scalar fTy  = 2.0*y;                                                      
-    scalar fTz  = 2.0*z;                                                      
-    scalar fTwy = fTy*w;                                                      
-    scalar fTwz = fTz*w;                                                      
-    scalar fTxy = fTy*x;                                                      
-    scalar fTxz = fTz*x;                                                      
-    scalar fTyy = fTy*y;                                                       
-    scalar fTzz = fTz*z;                                                      
-    
-    return Vector3<scalar>(1.0-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);                  
-}         
+{
+    //scalar fTx  = 2.0*x;
+    scalar fTy  = 2.0*y;
+    scalar fTz  = 2.0*z;
+    scalar fTwy = fTy*w;
+    scalar fTwz = fTz*w;
+    scalar fTxy = fTy*x;
+    scalar fTxz = fTz*x;
+    scalar fTyy = fTy*y;
+    scalar fTzz = fTz*z;
+
+    return Vector3<scalar>(1.0-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);
+}
 
 Vector3<Quaternion::scalar> Quaternion::yAxis(void) const
-{                                                                           
-    scalar fTx  = 2.0*x;                                                      
-    scalar fTy  = 2.0*y;                                                      
-    scalar fTz  = 2.0*z;                                                      
-    scalar fTwx = fTx*w;                                                      
-    scalar fTwz = fTz*w;                                                      
-    scalar fTxx = fTx*x;                                                      
-    scalar fTxy = fTy*x;                                                      
-    scalar fTyz = fTz*y;                                                      
-    scalar fTzz = fTz*z;                                                      
-    
-    return Vector3<scalar>(fTxy-fTwz, 1.0-(fTxx+fTzz), fTyz+fTwx);                  
+{
+    scalar fTx  = 2.0*x;
+    scalar fTy  = 2.0*y;
+    scalar fTz  = 2.0*z;
+    scalar fTwx = fTx*w;
+    scalar fTwz = fTz*w;
+    scalar fTxx = fTx*x;
+    scalar fTxy = fTy*x;
+    scalar fTyz = fTz*y;
+    scalar fTzz = fTz*z;
+
+    return Vector3<scalar>(fTxy-fTwz, 1.0-(fTxx+fTzz), fTyz+fTwx);
 }
 Vector3<Quaternion::scalar> Quaternion::zAxis(void) const {
         scalar fTx  = 2.0*x;
@@ -81,7 +81,7 @@ Vector3<Quaternion::scalar> Quaternion::zAxis(void) const {
         scalar fTxx = fTx*x;
         scalar fTxz = fTz*x;
         scalar fTyy = fTy*y;
-        scalar fTyz = fTz*y;                                                    
+        scalar fTyz = fTz*y;
         return Vector3<scalar>(fTxz+fTwy, fTyz-fTwx, 1.0-(fTxx+fTyy));
 }
 //-----------------------------------------------------------------------
@@ -125,8 +125,8 @@ static void ToRotationMatrix(const Quaternion &q, Matrix3x3<Quaternion::scalar> 
         Quaternion::scalar fTyy = fTy*q.y;
         Quaternion::scalar fTyz = fTz*q.y;
         Quaternion::scalar fTzz = fTz*q.z;
-                          
-        kRot(0,0) = 1.0-(fTyy+fTzz); 
+
+        kRot(0,0) = 1.0-(fTyy+fTzz);
         kRot(0,1) = fTxy-fTwz;
         kRot(0,2) = fTxz+fTwy;
         kRot(1,0) = fTxy+fTwz;
@@ -142,17 +142,17 @@ void FromRotationMatrix (Quaternion &q, const Matrix3x3<Quaternion::scalar>& kRo
     Quaternion::scalar fRoot;
     if ( fTrace > 0.0 )
     {
-        // |w| > 1/2, may as well choose w > 1/2                            
-        fRoot = sqrt(fTrace + 1.0);  // 2w                            
+        // |w| > 1/2, may as well choose w > 1/2
+        fRoot = sqrt(fTrace + 1.0);  // 2w
         q.w = 0.5*fRoot;
-        fRoot = 0.5/fRoot;  // 1/(4w)                                       
+        fRoot = 0.5/fRoot;  // 1/(4w)
         q.x = (kRot(2,1)-kRot(1,2))*fRoot;
         q.y = (kRot(0,2)-kRot(2,0))*fRoot;
         q.z = (kRot(1,0)-kRot(0,1))*fRoot;
     }
     else
     {
-        // |w| <= 1/2                                                       
+        // |w| <= 1/2
         static unsigned int s_iNext[3] = { 1, 2, 0 };
         unsigned int i = 0;
         if ( kRot(1,1) > kRot(0,0) )

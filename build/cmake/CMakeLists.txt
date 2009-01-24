@@ -1,4 +1,4 @@
-#Copyright (c) 2008, 
+#Copyright (c) 2008, Patrick Reiter Horn
 #All rights reserved.
 #
 #Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
 #    * Redistributions in binary form must reproduce the above copyright notice,
 #      this list of conditions and the following disclaimer in the documentation
 #      and/or other materials provided with the distribution. 
-#    * Neither the name of the <ORGANIZATION> nor the names of its contributors
+#    * Neither the name of the Sirikata nor the names of its contributors
 #      may be used to endorse or promote products derived from this software
 #      without specific prior written permission. 
 #
@@ -59,7 +59,7 @@ MARK_AS_ADVANCED(
 
 #project global flags
 
-PROJECT(Iridescence CXX)
+PROJECT(Sirikata CXX)
 
 IF(NOT TOP_LEVEL)
   SET(TOP_LEVEL ${CMAKE_CURRENT_SOURCE_DIR}/../..)
@@ -252,7 +252,7 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/src ${TOP_LEV
 
 #source files
 SET(SOURCE_DIR ${TOP_LEVEL}/src)
-SET(IRIDESCENCE_SOURCES
+SET(SIRIKATA_CORE_SOURCES
 	${SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${SOURCE_DIR}/transfer/DiskCache.cpp
 	${SOURCE_DIR}/task/EventManager.cpp
@@ -268,7 +268,7 @@ SET(IRIDESCENCE_SOURCES
 )
 SET(TEST_SOURCES ${CxxTestLibSources} )
 
-SET(IRIDIUM_EXEC_SOURCES ${TOP_LEVEL}/src/main.cpp )
+SET(SIRIKATA_SOURCES ${TOP_LEVEL}/src/main.cpp )
 
 
 
@@ -277,42 +277,30 @@ SET(CMAKE_DEBUG_POSTFIX "_d")
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /usr/local)
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local)
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
-SET(IRIDESCENCE_LIBRARIES
+SET(SIRIKATA_CORE_LIBRARIES
     ${Boost_LIBRARIES})
 
 
 #libraries
-ADD_LIBRARY(iridium STATIC ${IRIDESCENCE_SOURCES})
-TARGET_LINK_LIBRARIES(iridium ${IRIDESCENCE_LIBRARIES})
-IF(Iridescence_LDFLAGS)
-  SET_TARGET_PROPERTIES(iridium PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
+ADD_LIBRARY(sirikata-core STATIC ${SIRIKATA_CORE_SOURCES})
+TARGET_LINK_LIBRARIES(sirikata-core ${SIRIKATA_CORE_LIBRARIES})
+IF(sirikata_core_LDFLAGS)
+  SET_TARGET_PROPERTIES(sirikata-core PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
 ENDIF()
 
 
 #binaries
-IF(CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]")
-  ADD_EXECUTABLE(test_debug EXCLUDE_FROM_ALL ${TEST_SOURCES})
-  ADD_EXECUTABLE(iridescence ${IRIDIUM_EXEC_SOURCES})
-  TARGET_LINK_LIBRARIES(iridescence iridium ${TEST_LIBRARIES})
-  TARGET_LINK_LIBRARIES(test_debug iridium ${TEST_LIBRARIES})
-  IF(Iridescence_LDFLAGS)
-    SET_TARGET_PROPERTIES(test_debug PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
-    SET_TARGET_PROPERTIES(iridescence PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
-  ENDIF()
-
-  SET(TEST_BINARY test_debug)
-ELSE()
-  ADD_EXECUTABLE(test_release EXCLUDE_FROM_ALL ${TEST_SOURCES})
-  ADD_EXECUTABLE(iridescencer ${IRIDIUM_EXEC_SOURCES})
-  TARGET_LINK_LIBRARIES(iridescencer iridium ${TEST_LIBRARIES})
-  TARGET_LINK_LIBRARIES(test_release iridium ${TEST_LIBRARIES})
-  IF(Iridescence_LDFLAGS)
-    SET_TARGET_PROPERTIES(test_release PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
-    SET_TARGET_PROPERTIES(iridescencer PROPERTIES LINK_FLAGS ${Iridescence_LDFLAGS})
-  ENDIF()
-
-  SET(TEST_BINARY test_release)
+ADD_EXECUTABLE(tests EXCLUDE_FROM_ALL ${TEST_SOURCES})
+ADD_EXECUTABLE(sirikata ${SIRIKATA_SOURCES})
+TARGET_LINK_LIBRARIES(tests sirikata-core ${TEST_LIBRARIES})
+TARGET_LINK_LIBRARIES(sirikata sirikata-core)
+IF(sirikata_LDFLAGS)
+  SET_TARGET_PROPERTIES(tests PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
+  SET_TARGET_PROPERTIES(sirikata PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
 ENDIF()
+
+# get the name of the test binary
+GET_PROPERTY(TEST_BINARY TARGET tests PROPERTY OUTPUT_NAME)
 
 #ENABLE_TESTING()
 #ADD_TEST(test ${EXECUTABLE_OUTPUT_PATH}/${TEST_BINARY}
@@ -321,4 +309,3 @@ ENDIF()
 ADD_CUSTOM_TARGET(test
 	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${TEST_BINARY}
 	COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${TEST_BINARY})
-

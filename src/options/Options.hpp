@@ -1,9 +1,9 @@
-/*     Iridium Configuration Options -- Iridium Options
+/*  Sirikata Configuration Options -- Sirikata Options
  *  Options.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
  *  met:
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -29,11 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_OPTIONS_HPP_
+#define _SIRIKATA_OPTIONS_HPP_
+
 #include "util/Any.hpp"
 #include <string>
 #include <boost/function.hpp>
 #include <map>
-namespace Iridium {
+namespace Sirikata {
 class OptionSet;
 template <class T> class OptionValueType {public:
     static Any lexical_cast(const std::string &value){
@@ -60,9 +64,9 @@ class OptionValue{
     boost::function1<Any,std::string> mParser;
     boost::function3<void,const std::string&,Any,Any>mChangeFunction;
     const char* mName;
-    
+
     static void noop(const std::string&,Any ,Any) {
-        
+
     }
     ///Option Registration needs to have access to mValue to set it for the very first time without triggering event
     friend class OptionRegistration;
@@ -74,7 +78,7 @@ class OptionValue{
      */
     bool initializationSet(const OptionValue&other);
 public:
-    
+
     const Any*operator->()const {
         return &mValue;
     }
@@ -97,7 +101,7 @@ public:
     }
     ///changes the option value and invokes mChangeFunction message
     OptionValue& operator=(const OptionValue&other);
-    
+
     OptionValue() {
         mDescription="";mName="";
         mChangeFunction=NULL;
@@ -114,7 +118,7 @@ public:
     template<class T>OptionValue(const char*option, const std::string&defaultValue, T type, const char*description, OptionValue**pointer=NULL){
         mParser=boost::function1<Any,std::string>(&T::lexical_cast);
         mName=option;
-        mDefaultValue=defaultValue;        
+        mDefaultValue=defaultValue;
         mDescription=description;
         mChangeFunction=boost::function3<void,const std::string&, Any, Any>(&OptionValue::noop);
         if (pointer)
@@ -188,14 +192,14 @@ public:
  * This class holds a set of options that may appear on a command line or within an argument to a module
  * Holds a static index to all OptionSets currently available in the program.
  */
-class OptionSet { 
+class OptionSet {
     std::map<std::string,OptionValue*> mNames;
     friend class InitializeOptions;
     void addOptionNoLock(OptionValue*);
     static OptionSet*getOptionsNoLock(const std::string&s);
     OptionValue* referenceOptionNoLock(const std::string &option, OptionValue**pointer);
 public:
-    
+
     void parse(const std::string&);
     void parse(int, const char **);
     void addOption(OptionValue*v);
@@ -220,3 +224,5 @@ static InitializeOptions o("",
                            NULL);
 extern OptionValue SHIELD_OPTION = referenceOption(CURRENT_MODULE,"ShieldOption");
 */
+
+#endif //_SIRIKATA_OPTIONS_HPP_

@@ -1,4 +1,4 @@
-/*     Iridium Transfer -- Content Transfer management system
+/*  Sirikata Transfer -- Content Transfer management system
  *  Range.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,15 +30,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IRIDIUM_Range_HPP__
-#define IRIDIUM_Range_HPP__
+#ifndef SIRIKATA_Range_HPP__
+#define SIRIKATA_Range_HPP__
 
 #include <list>
 #include <iostream>
 #include <sys/types.h>
 #include <stdint.h>
 
-namespace Iridium {
+namespace Sirikata {
 namespace Transfer {
 
 typedef uint64_t cache_usize_type;

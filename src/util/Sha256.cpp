@@ -1,4 +1,4 @@
-/*     Iridium Utilities -- Iridium Cryptography Utilities
+/*  Sirikata Utilities -- Sirikata Cryptography Utilities
  *  Sha256.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Iridium nor the names of its contributors may
+ *  * Neither the name of Sirikata nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -33,7 +33,7 @@
 #include "internal_sha2.hpp"
 #include <stdexcept>
 #include <iostream>
-namespace Iridium {
+namespace Sirikata {
 static unsigned char numToHex(unsigned int num) {
     if (num<10)
         return num+'0';
@@ -86,18 +86,18 @@ SHA256 SHA256::convertFromHex(const std::string&data){
 }
 SHA256 SHA256::computeDigest(const void*data, size_t length) {
     SHA256 retval;
-    Iridium::Util::Internal::SHA256_CTX context;
-    Iridium::Util::Internal::SHA256_Init(&context);
-    Iridium::Util::Internal::SHA256_Update(&context, (const unsigned char*)data, length);
-    Iridium::Util::Internal::SHA256_Final(retval.mData.data(), &context);
+    Sirikata::Util::Internal::SHA256_CTX context;
+    Sirikata::Util::Internal::SHA256_Init(&context);
+    Sirikata::Util::Internal::SHA256_Update(&context, (const unsigned char*)data, length);
+    Sirikata::Util::Internal::SHA256_Final(retval.mData.data(), &context);
     return retval;
 }
 SHA256 SHA256::computeDigest(const std::string&data) {
     SHA256 retval;
-    Iridium::Util::Internal::SHA256_CTX context;
-    Iridium::Util::Internal::SHA256_Init(&context);
-    Iridium::Util::Internal::SHA256_Update(&context, (const unsigned char*)data.data(), data.length());
-    Iridium::Util::Internal::SHA256_Final(retval.mData.data(), &context);
+    Sirikata::Util::Internal::SHA256_CTX context;
+    Sirikata::Util::Internal::SHA256_Init(&context);
+    Sirikata::Util::Internal::SHA256_Update(&context, (const unsigned char*)data.data(), data.length());
+    Sirikata::Util::Internal::SHA256_Final(retval.mData.data(), &context);
     return retval;
 }
 }
