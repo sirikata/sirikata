@@ -127,7 +127,6 @@ enum EventOrder {
 	LATE,
 	NUM_EVENTORDER
 };
-
 /// Exception thrown if an invalid EventOrder is passed.
 class EventOrderException : std::exception {};
 

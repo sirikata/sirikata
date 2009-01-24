@@ -128,10 +128,13 @@ public:
             }
             return false;
         }
+        if (options.count("TESTO"))
+            assert(false);
         for (std::map<std::string,OptionValue*>::iterator i=names.begin(),ie=names.end();
              i!=ie;
              ++i) {
-            i->second->mValue.newAndDoNotFree(i->second->mParser(options[i->first].as<std::string>()));
+            if (options.count(i->first))
+                i->second->mValue.newAndDoNotFree(i->second->mParser(options[i->first].as<std::string>()));
         }
         return true;
     }

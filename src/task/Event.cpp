@@ -23,6 +23,9 @@ int IdPair::Primary::getUniqueId(const std::string &id) {
 IdPair::Primary::Primary (const std::string &id)
 	: mId(getUniqueId(id)) {
 }
+void Event::operator() (EventHistory){
+    //FIXME should this delete the event?
+}
 
 }
 }

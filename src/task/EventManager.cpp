@@ -392,15 +392,18 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			secondaryMap =
 				&((*priIter).second->second);
 		}
+        bool cancel = false;
+        EventHistory eventHistory=EVENT_UNHANDLED;
 		// Call once per event order.
-		for (int i = 0; i < NUM_EVENTORDER; i++) {
+		for (int i = 0; i < NUM_EVENTORDER && cancel == false; i++) {
 			boost::unique_lock<boost::mutex> lock_for_map_lookup(*listenerlock);
 			std::cout << " >>>\tFiring " << ev->getId() <<
 				" [order " << i << "]" << std::endl;
-			bool cancel = false;
 			mProcessingList = &(primaryLists->get(i));
 			lock_for_map_lookup.unlock();
-			if (callAllListeners(ev, &(primaryLists->get(i)), forceCompletionBy)) {
+            if (!mProcessingList->empty())
+                eventHistory=EVENT_HANDLED;
+			if (callAllListeners(ev, mProcessingList, forceCompletionBy)) {
 				cancel = cancel || true;
 			}
 			lock_for_map_lookup.lock();
@@ -416,9 +419,12 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			secIter = secondaryMap->find(ev->getId().mSecId);
 			if (secIter != secondaryMap->end() &&
 					!(*secIter).second->get(i).empty()) {
-				mProcessingList = &((*secIter).second->get(i));
+				mProcessingList = &((*secIter).second->get(i));                
 				lock_for_map_lookup.unlock();
-				if (callAllListeners(ev, &((*secIter).second->get(i)), forceCompletionBy)) {
+                if (!mProcessingList->empty())
+                    eventHistory=EVENT_HANDLED;
+
+				if (callAllListeners(ev, mProcessingList, forceCompletionBy)) {
 					cancel = cancel || true;
 				}
 				lock_for_map_lookup.lock();
@@ -442,11 +448,13 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 
 			if (cancel) {
 				std::cout << " >>>\tCancelling " << ev->getId() << std::endl;
-				break;
 			}
 		}
+        if (cancel) eventHistory=EVENT_CANCELED;
+        (*ev)(eventHistory);
 		std::cout << " >>>\tFinished " << ev->getId() << std::endl;
 	}
+    
 	AbsTime finishTime = AbsTime::now();
 	std::cout << "**** Done processing events this round. " <<
 		"Took " << (float)(finishTime-startTime) <<

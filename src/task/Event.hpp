@@ -211,6 +211,11 @@ public:
 	}
 };
 
+enum EventHistory {
+    EVENT_CANCELED=0,
+    EVENT_HANDLED=1,
+    EVENT_UNHANDLED=2
+};
 
 /** Base class for any events that are to be thrown */
 class Event {
@@ -233,7 +238,9 @@ public:
 
 	/** Most subclasses will use aditional members, free them properly. */
 	virtual ~Event() {}
-
+    /** Call this after all listeners have received their messages
+        Can be used for additional compute on the event, or to remove it */
+    virtual void operator() (EventHistory);
 	/// Returns the IdPair to compare for equality.
 	inline const IdPair &getId () const {
 		return mId;
