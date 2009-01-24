@@ -1,5 +1,5 @@
 /*  Sirikata Kernel -- Task scheduling system
- *  Scheduler.hpp
+ *  DependencyTask.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.

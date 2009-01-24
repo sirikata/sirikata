@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Transfer management system
- *  DiskCache.hpp
+ *  DiskCache.cpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.

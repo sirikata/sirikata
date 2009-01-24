@@ -1,5 +1,5 @@
 /*  Sirikata ransfer -- Content Transfer management system
- *  HTTPTransfer.cpp
+ *  HTTPRequest.cpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
