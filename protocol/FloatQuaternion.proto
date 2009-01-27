@@ -1,0 +1,8 @@
+package Sirikata.PB;
+
+message FloatQuaternion {
+    required float w = 1;
+    required float x = 2;
+    required float y = 3;
+    required float z = 4;
+}
