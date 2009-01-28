@@ -77,6 +77,7 @@ namespace Task {
 // only unsubscribe one of those two (use a multi_map for mRemoveById.
 
 
+//#define USE_LOCK_FREE
 
 /**
  * Defines the set of return values for an EventListener. An acceptable
@@ -212,6 +213,11 @@ private:
 		bool onlyPrimary;
 		bool subscription;
 		bool notifyListener;
+
+		ListenerRequest()
+			: listenerId(SubscriptionIdClass::null()),
+			  eventId(IdPair::Primary("")) {
+		}
 
 		ListenerRequest(SubscriptionId myId,
 				bool notifyListener)

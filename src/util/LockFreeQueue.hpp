@@ -43,13 +43,11 @@ private:
     struct Node {
         volatile Node * mNext;
         T mContent;
-        Node() {
-            mContent=T();
-            mNext=NULL;
+        Node() :mNext(NULL), mContent() {
         }
     };
     static bool compare_and_swap(volatile Node*volatile *target, volatile Node *comperand, volatile Node * exchange){
-        return __sync_bool_compare_and_swap (&target, comperand, exchange);
+        return __sync_bool_compare_and_swap (target, comperand, exchange);
     }
     class FreeNodePool {
 
@@ -93,35 +91,35 @@ public:
     	NodeIterator(const NodeIterator &other);
     	void operator=(const NodeIterator &other);
 
-    	Node *mCurrent;
     	Node *mLastReturned;
+    	Node *mCurrent;
 
     	FreeNodePool *mFreePool;
 
     public:
     	NodeIterator(LockFreeQueue<T> &queue)
-    		: mCurrent(queue.fork()),
-    		  mLastReturned(NULL),
-    		  mFreePool(queue.mFreeNodePool) {
+    		: mLastReturned(queue.fork()),
+    		  mCurrent(const_cast<Node*>(mLastReturned->mNext)),
+    		  mFreePool(&queue.mFreeNodePool) {
     	}
 
     	~NodeIterator() {
     		if (mLastReturned) {
-    			mFreePool.release(mLastReturned);
+    			mFreePool->release(mLastReturned);
     		}
     		while (mCurrent) {
-    			mFreePool.release(mCurrent);
-    			mCurrent = mCurrent->mNext;
+    			mFreePool->release(mCurrent);
+    			mCurrent = const_cast<Node*>(mCurrent->mNext);
     		}
     	}
 
     	T *next() {
     		if (mLastReturned) {
-    			mFreePool.release(mLastReturned);
+    			mFreePool->release(mLastReturned);
     		}
     		mLastReturned = mCurrent;
     		if (mCurrent) {
-    			mCurrent = mCurrent->mNext;
+    			mCurrent = const_cast<Node*>(mCurrent->mNext);
         		return &mLastReturned->mContent;
     		} else {
     			return NULL;

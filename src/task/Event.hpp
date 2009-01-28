@@ -63,8 +63,8 @@ public:
 		 * an intptr_t when passed to the constructor. */
 		typedef intptr_t IntType;
 	private:
-		const intptr_t mIntValue;
-		const std::string mStrValue;
+		intptr_t mIntValue;
+		std::string mStrValue;
 	public:
 
 		/** Creates a Secondary ID with an integer or pointer value
@@ -139,7 +139,7 @@ public:
 	 * mapping from string to integer. */
 	class Primary {
 	private:
-		const int mId;
+		int mId;
 		static int getUniqueId(const std::string &id);
 	public:
 		/** Lookup the eventName in the internal static map (and create
