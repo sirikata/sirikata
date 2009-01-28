@@ -55,7 +55,7 @@ class EventSystemTestSuite : public CxxTest::TestSuite
     class EventC:public Task::Event{
     public:
         float mMessage;
-        EventC(float message):Event(Task::IdPair("Test","")),mMessage(message){}
+        EventC(float message):Event(Task::IdPair("Test",-1)),mMessage(message){}
     };
     class EventD:public Task::Event{
     public:

@@ -159,12 +159,13 @@ SubscriptionId EventManager<T>::subscribeId(
  * copy of itself back into the end).
  */
 template <class T>
-void EventManager<T>::addListener(ListenerList *insertList,
+typename EventManager<T>::ListenerList::iterator
+EventManager<T>::addListener(ListenerList *insertList,
 		const EventListener &listener,
 		SubscriptionId removeId)
 {
-insertList->push_front(
-	ListenerSubscriptionInfo(listener, removeId));
+	return insertList->insert( insertList->begin(),
+		ListenerSubscriptionInfo(listener, removeId));
 }
 
 template <class T>
@@ -174,25 +175,25 @@ void EventManager<T>::doSubscribeId(
 	PrimaryListenerInfo *newPrimary = insertPriId(req.eventId.mPriId);
 	ListenerList *insertList;
 	SecondaryListenerMap *secondListeners = NULL;
-	typename SecondaryListenerMap::iterator secondIter;
 	if (req.onlyPrimary) {
 		insertList = &(newPrimary->first.get(req.whichOrder));
 	} else {
 		secondListeners = &(newPrimary->second);
-		secondIter = insertSecId(*secondListeners, req.eventId.mSecId);
+		typename SecondaryListenerMap::iterator secondIter =
+			insertSecId(*secondListeners, req.eventId.mSecId);
 		insertList = &((*secondIter).second->get(req.whichOrder));
 	}
-	addListener(insertList, req.listenerFunc, req.listenerId);
+	typename ListenerList::iterator iter =
+		addListener(insertList, req.listenerFunc, req.listenerId);
 
 	if (req.listenerId != SubscriptionIdClass::null()) {
-		typename ListenerList::iterator iter = insertList->end();
 		mRemoveById.insert(
 			typename RemoveMap::value_type(req.listenerId,
 				EventSubscriptionInfo(
 					insertList,
-					--iter,
+					iter,
 					secondListeners,
-					secondIter)));
+					req.eventId.mSecId)));
 	}
 }
 
@@ -241,8 +242,10 @@ void EventManager<T>::doUnsubscribe(
 		subInfo.mList->erase(subInfo.mIter);
 		if (subInfo.secondaryMap) {
 			std::cout << " with Secondary ID " <<
-				(*subInfo.secondaryIter).first << std::endl << "\t";
-			cleanUp(subInfo.secondaryMap, subInfo.secondaryIter);
+				subInfo.secondaryId << std::endl << "\t";
+			typename SecondaryListenerMap::iterator deleteIter =
+				subInfo.secondaryMap->find(subInfo.secondaryId);
+			cleanUp(subInfo.secondaryMap, deleteIter);
 		}
 
 		mRemoveById.erase(iter);
@@ -306,12 +309,12 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 		std::cout << " >>>\t\tReturned ";
 		if (((int)resp.mResp) & EventResponse::DELETE_LISTENER) {
 			std::cout << "DELETE_LISTENER ";
-			lili->erase(iter);
 			if ((*iter).second != SubscriptionIdClass::null()) {
 				clearRemoveId((*iter).second);
 				// We do not want to send a NULL message to it.
 				// if we are removing due to return value.
 			}
+			lili->erase(iter);
 		}
 		if (((int)resp.mResp) & EventResponse::CANCEL_EVENT) {
 			std::cout << "CANCEL_EVENT";
@@ -334,10 +337,15 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 
 		const ListenerRequest *req;
 		while ((req = procListeners.next()) != NULL) {
-			std::cout << " >>>\tNotifying UNSUBSCRIBED listener." << std::endl;
 			if (req->subscription) {
+				std::cout << " >>>\tDoing subscription listener "<< req->listenerId << " for event " << req->eventId << " (" << req->onlyPrimary <<  ")." << std::endl;
 				doSubscribeId(*req);
 			} else {
+				std::cout << " >>>\t";
+				if (req->notifyListener) {
+					std::cout << "Notifying";
+				}
+				std::cout << "UNSUBSCRIBED listener " << req->listenerId << "." << std::endl;
 				doUnsubscribe(req->listenerId, req->notifyListener);
 			}
 		}

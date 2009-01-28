@@ -183,22 +183,23 @@ private:
 
 		// used for garbage collection after unsubscribing.
 		SecondaryListenerMap *secondaryMap;
-		typename SecondaryListenerMap::iterator secondaryIter;
+		IdPair::Secondary secondaryId;
 
 		friend class EventManager<EventBase>;
 	public:
 
 		EventSubscriptionInfo(ListenerList *list,
 					typename ListenerList::iterator &iter)
-			: mList(list), mIter(iter), secondaryMap(NULL) {
+			: mList(list), mIter(iter),
+			  secondaryMap(NULL), secondaryId(IdPair::Secondary::null()) {
 		}
 
 		EventSubscriptionInfo(ListenerList *list,
 					typename ListenerList::iterator &iter,
 					SecondaryListenerMap *slm,
-					typename SecondaryListenerMap::iterator &slmIter)
+					const IdPair::Secondary &slmKey)
 			: mList(list), mIter(iter),
-			 secondaryMap(slm), secondaryIter(slmIter) {
+			 secondaryMap(slm), secondaryId(slmKey) {
 		}
 	};
 	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
@@ -283,7 +284,8 @@ private:
 	bool cleanUp(SecondaryListenerMap *slm,
 				typename SecondaryListenerMap::iterator &slm_iter);
 
-	void addListener(ListenerList *insertList,
+	typename ListenerList::iterator
+		addListener(ListenerList *insertList,
 				const EventListener &listener,
 				SubscriptionId removeId);
 
