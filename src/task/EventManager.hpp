@@ -44,6 +44,9 @@
 #include <vector>
 #include <set>
 
+#include "util/LockFreeQueue.hpp"
+#include "util/ThreadSafeQueue.hpp"
+
 #include "HashMap.hpp"
 #include "UniqueId.hpp"
 #include "Event.hpp"
@@ -140,10 +143,6 @@ public:
 	/// A shared_ptr to an Event.
 	typedef boost::shared_ptr<EventBase> EventPtr;
 
-	// to be acquired in processEvents()
-	boost::mutex *eventlock;
-	boost::mutex *listenerlock;
-
 	/**
 	 * A boost::function1 taking an Event and returning a value indicating
 	 * Whether to cancel the event, remove the event responder, or some
@@ -203,22 +202,68 @@ private:
 		}
 	};
 	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
-	typedef std::vector<EventPtr> EventList;
+
+	struct ListenerRequest {
+		SubscriptionId listenerId;
+		IdPair eventId;
+		EventListener listenerFunc;
+		EventOrder whichOrder;
+		bool onlyPrimary;
+		bool subscription;
+		bool notifyListener;
+
+		ListenerRequest(SubscriptionId myId,
+				bool notifyListener)
+			: listenerId(myId),
+			  eventId(IdPair::Primary("")),
+			  subscription(false),
+			  notifyListener(notifyListener){
+		}
+
+		ListenerRequest(SubscriptionId myId,
+				const IdPair::Primary &priId,
+				const EventListener &listenerFunc,
+				EventOrder myOrder)
+			: listenerId(myId),
+			  eventId(priId),
+			  listenerFunc(listenerFunc),
+			  whichOrder(myOrder),
+			  onlyPrimary(true),
+			  subscription(true) {
+		}
+
+		ListenerRequest(SubscriptionId myId,
+				const IdPair &fullId,
+				const EventListener &listenerFunc,
+				EventOrder myOrder)
+			: listenerId(myId),
+			  eventId(fullId),
+			  listenerFunc(listenerFunc),
+			  whichOrder(myOrder),
+			  onlyPrimary(false),
+			  subscription(true) {
+		}
+	};
+
+#ifdef USE_LOCK_FREE
+	typedef LockFreeQueue<ListenerRequest> ListenerRequestList;
+	typedef LockFreeQueue<EventPtr> EventList;
+#else
+	typedef ThreadSafeQueue<ListenerRequest> ListenerRequestList;
+	typedef ThreadSafeQueue<EventPtr> EventList;
+#endif
 
 	/* MEMBERS */
 
 	PrimaryListenerMap mListeners;
+
 	EventList mUnprocessed;
+	ListenerRequestList mListenerRequests;
+
 	RemoveMap mRemoveById; ///< Used for unsubscribe: always keep in sync.
 
-	/// if non-NULL, do not allow removes from this list.
-	ListenerList *mProcessingList;
-
-	/// Unsubscription requests received for the current ListenerList.
-	std::set<SubscriptionId> mProcessingUnsubscribe;
-
 	/// These listeners need to be called with NULL argument.
-	std::list<EventListener> mRemovedListeners;
+	//std::list<EventListener> mRemovedListeners;
 
 	/* PRIVATE FUNCTIONS */
 
@@ -247,11 +292,12 @@ private:
 	bool callAllListeners(EventPtr ev,
 				ListenerList *lili,
 				AbsTime forceCompletionBy);
+
+	void doSubscribeId(const ListenerRequest &req);
+	void doUnsubscribe(
+			SubscriptionId removeId,
+			bool notifyListener);
 public:
-
-	EventManager();
-
-	~EventManager();
 
 	/* PUBLIC FUNCTIONS */
 	/// FIXME: This is for testing purposes only--do not make public.

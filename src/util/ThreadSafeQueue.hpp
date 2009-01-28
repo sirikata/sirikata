@@ -62,7 +62,8 @@ void condDestroy(Condition*oldcond);
 /// A queue of any type that has thread-safe push() and pop() functions.
 template <typename T> class ThreadSafeQueue {
 private:
-	std::queue<T> mList;
+	typedef std::deque<T> ListType;
+	ListType mList;
     ThreadSafeQueueNS::Lock* mLock;
     ThreadSafeQueueNS::Condition* mCond;
     /**
@@ -128,11 +129,38 @@ private:
         if (reinterpret_cast <ThreadSafeQueue* >(thus)->mList.empty())
             return true;
         *retval=reinterpret_cast <ThreadSafeQueue* >(thus)->mList.front();
-        reinterpret_cast <ThreadSafeQueue* >(thus)->mList.pop();
+        reinterpret_cast <ThreadSafeQueue* >(thus)->mList.pop_front();
         return false;
     }
 
 public:
+    class NodeIterator {
+    private:
+    	// Noncopyable
+    	NodeIterator(const NodeIterator &other);
+    	void operator=(const NodeIterator &other);
+
+    	T *mNext;
+    	ListType mSwappedList;
+
+    public:
+    	NodeIterator(ThreadSafeQueue<T> &queue) : mNext(NULL) {
+    		queue.swap(mSwappedList);
+    	}
+
+    	T *next() {
+    		if (mNext) {
+    			mSwappedList.pop_front();
+    		}
+    		if (mSwappedList.empty()) {
+    			return NULL;
+    		}
+    		mNext = &(mSwappedList.front());
+    		return mNext;
+    	}
+    };
+    friend class NodeIterator;
+
 	ThreadSafeQueue() {
         mLock=ThreadSafeQueueNS::lockCreate();
         mCond=ThreadSafeQueueNS::condCreate();
@@ -141,6 +169,13 @@ public:
         ThreadSafeQueueNS::lockDestroy(mLock);
         ThreadSafeQueueNS::condDestroy(mCond);
     }
+
+    void swap(std::deque<T> &swapWith) {
+        ThreadSafeQueueNS::lock(mLock);
+		mList.swap(swapWith);
+        ThreadSafeQueueNS::unlock(mLock);
+    }
+
 	/**
 	 * Pushes value onto the queue
 	 *
@@ -149,7 +184,7 @@ public:
 	void push(T value) {
         ThreadSafeQueueNS::lock(mLock);
         try {
-            mList.push(value);
+            mList.push_back(value);
             ThreadSafeQueueNS::notify(mCond);
         } catch (...) {
             ThreadSafeQueueNS::unlock(mLock);
@@ -172,7 +207,7 @@ public:
         } else {
             try {
                 ret = mList.front();
-                mList.pop();
+                mList.pop_front();
             }catch (...) {
                 ThreadSafeQueueNS::unlock(mLock);
                 throw;

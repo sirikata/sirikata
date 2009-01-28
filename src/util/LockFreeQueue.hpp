@@ -87,6 +87,75 @@ public:
         mTail = mHead;
     }
 
+    class NodeIterator {
+    private:
+    	// Noncopyable
+    	NodeIterator(const NodeIterator &other);
+    	void operator=(const NodeIterator &other);
+
+    	Node *mCurrent;
+    	Node *mLastReturned;
+
+    	FreeNodePool *mFreePool;
+
+    public:
+    	NodeIterator(LockFreeQueue<T> &queue)
+    		: mCurrent(queue.fork()),
+    		  mLastReturned(NULL),
+    		  mFreePool(queue.mFreeNodePool) {
+    	}
+
+    	~NodeIterator() {
+    		if (mLastReturned) {
+    			mFreePool.release(mLastReturned);
+    		}
+    		while (mCurrent) {
+    			mFreePool.release(mCurrent);
+    			mCurrent = mCurrent->mNext;
+    		}
+    	}
+
+    	T *next() {
+    		if (mLastReturned) {
+    			mFreePool.release(mLastReturned);
+    		}
+    		mLastReturned = mCurrent;
+    		if (mCurrent) {
+    			mCurrent = mCurrent->mNext;
+        		return &mLastReturned->mContent;
+    		} else {
+    			return NULL;
+    		}
+    	}
+    };
+
+private:
+    friend class NodeIterator;
+
+    Node *fork() {
+    	volatile Node *newHead = mFreeNodePool.allocate();
+		volatile Node *oldHead = mHead;
+
+    	// Acquire "lock" on head, for multiple people fork()ing at once.
+    	{
+    		while (oldHead == NULL ||
+						!compare_and_swap(&mHead, oldHead, NULL)) {
+    			oldHead = mHead;
+    		}
+    	}
+
+    	{
+			volatile Node *oldTail = mTail;
+			while (!compare_and_swap(&mTail, oldTail, newHead)) {
+				oldTail = mTail;
+			}
+    	}
+
+    	mHead = newHead;
+    	return const_cast<Node*>(oldHead);
+    }
+public:
+
     /**
      * Pushes value onto the queue
      *
@@ -128,6 +197,10 @@ public:
         while (!headAlreadyAdvanced) {
 
             formerHead = mHead;
+            if (formerHead == NULL) {
+            	// fork() function is operating on mTail.
+            	continue;
+            }
             volatile Node* formerHeadNext = formerHead->mNext;
             volatile Node*formerTail = mTail;
 

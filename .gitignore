@@ -1,0 +1,8 @@
+src/DoubleVector3.pb.cc
+src/DoubleVector3.pb.h
+src/FloatQuaternion.pb.cc
+src/FloatQuaternion.pb.h
+src/FloatVector3.pb.cc
+src/FloatVector3.pb.h
+
+dependencies

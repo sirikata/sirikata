@@ -182,6 +182,10 @@ public:
 		return os << "<ID:" << id.mPriId << "; " << id.mSecId << '>';
 	}
 
+	explicit IdPair(const Primary &pri)
+		: mPriId(pri), mSecId(Secondary::null()) {
+	}
+
 	/// Create based on an already existing Primary and Secondary ID.
 	IdPair(const Primary &pri, const Secondary &sec)
 		: mPriId(pri), mSecId(sec) {

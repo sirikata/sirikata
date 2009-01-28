@@ -38,8 +38,6 @@
 #include "TimerQueue.hpp"
 
 #include <iostream>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
 
 namespace Sirikata {
 
@@ -51,20 +49,6 @@ namespace Sirikata {
 
 
 namespace Task {
-
-
-template <class T>
-EventManager<T>::EventManager() {
-	eventlock = new boost::mutex;
-	listenerlock = new boost::mutex;
-}
-
-template <class T>
-EventManager<T>::~EventManager() {
-	delete eventlock;
-	delete listenerlock;
-}
-
 
 
 // ============= SUBSCRIPTION FUNCTIONS ==============
@@ -101,23 +85,6 @@ typename EventManager<T>::SecondaryListenerMap::iterator
 	return iter2;
 }
 
-	/**
-	 * Standard function to add a listener to a ListenerList.
-	 *
-	 * Note that we use push_front so as not to disrupt any
-	 * events currently being processed (and possibly go in
-	 * an infinite loop, due to a stupid listener adding another
-	 * copy of itself back into the end).
-	 */
-template <class T>
-void EventManager<T>::addListener(ListenerList *insertList,
-			const EventListener &listener,
-			SubscriptionId removeId)
-{
-	insertList->push_front(
-		ListenerSubscriptionInfo(listener, removeId));
-}
-
 template <class T>
 void EventManager<T>::subscribe(const IdPair &eventId,
 			const EventListener &listener,
@@ -127,14 +94,9 @@ void EventManager<T>::subscribe(const IdPair &eventId,
 		throw EventOrderException();
 	}
 
-	boost::lock_guard<boost::mutex>(*listenerlock);
-
-	SecondaryListenerMap &secondListeners =
-		insertPriId(eventId.mPriId)->second;
-	typename SecondaryListenerMap::iterator secondIter =
-		insertSecId(secondListeners, eventId.mSecId);
-	ListenerList &insertList = (*secondIter).second->get(whichOrder);
-	addListener(&insertList, listener, SubscriptionIdClass::null());
+	mListenerRequests.push(ListenerRequest(
+			SubscriptionIdClass::null(),
+			eventId, listener, whichOrder));
 }
 
 template <class T>
@@ -146,11 +108,9 @@ void EventManager<T>::subscribe(const IdPair::Primary & primaryId,
 		throw EventOrderException();
 	}
 
-	boost::lock_guard<boost::mutex>(*listenerlock);
-
-	ListenerList &insertList =
-		insertPriId(primaryId)->first.get(whichOrder);
-	addListener(&insertList, listener, SubscriptionIdClass::null());
+	mListenerRequests.push(ListenerRequest(
+			SubscriptionIdClass::null(),
+			IdPair(primaryId), listener, whichOrder));
 }
 
 template <class T>
@@ -164,23 +124,10 @@ SubscriptionId EventManager<T>::subscribeId(
 	}
 
 	SubscriptionId removeId = SubscriptionIdClass::alloc();
-	boost::lock_guard<boost::mutex>(*listenerlock);
 
-	SecondaryListenerMap &secondListeners =
-		insertPriId(eventId.mPriId)->second;
-	typename SecondaryListenerMap::iterator secondIter =
-		insertSecId(secondListeners, eventId.mSecId);
-	ListenerList &insertList = (*secondIter).second->get(whichOrder);
-	addListener(&insertList, listener, removeId);
-
-	typename ListenerList::iterator iter = insertList.end();
-	mRemoveById.insert(
-		typename RemoveMap::value_type(removeId,
-			EventSubscriptionInfo(
-				&insertList,
-				--iter,
-				&secondListeners,
-				secondIter)));
+	mListenerRequests.push(ListenerRequest(
+			removeId,
+			eventId, listener, whichOrder));
 
 	return removeId;
 }
@@ -195,20 +142,58 @@ SubscriptionId EventManager<T>::subscribeId(
 	}
 
 	SubscriptionId removeId = SubscriptionIdClass::alloc();
-	boost::lock_guard<boost::mutex>(*listenerlock);
 
-	ListenerList &insertList =
-		insertPriId(priId)->first.get(whichOrder);
-	addListener(&insertList, listener, removeId);
-
-	typename ListenerList::iterator iter = insertList.end();
-	mRemoveById.insert(
-		typename RemoveMap::value_type(removeId,
-			EventSubscriptionInfo(
-				&insertList,
-				--iter)));
+	mListenerRequests.push(ListenerRequest(
+			removeId,
+			IdPair(priId), listener, whichOrder));
 
 	return removeId;
+}
+
+/**
+ * Standard function to add a listener to a ListenerList.
+ *
+ * Note that we use push_front so as not to disrupt any
+ * events currently being processed (and possibly go in
+ * an infinite loop, due to a stupid listener adding another
+ * copy of itself back into the end).
+ */
+template <class T>
+void EventManager<T>::addListener(ListenerList *insertList,
+		const EventListener &listener,
+		SubscriptionId removeId)
+{
+insertList->push_front(
+	ListenerSubscriptionInfo(listener, removeId));
+}
+
+template <class T>
+void EventManager<T>::doSubscribeId(
+		const ListenerRequest &req)
+{
+	PrimaryListenerInfo *newPrimary = insertPriId(req.eventId.mPriId);
+	ListenerList *insertList;
+	SecondaryListenerMap *secondListeners = NULL;
+	typename SecondaryListenerMap::iterator secondIter;
+	if (req.onlyPrimary) {
+		insertList = &(newPrimary->first.get(req.whichOrder));
+	} else {
+		secondListeners = &(newPrimary->second);
+		secondIter = insertSecId(*secondListeners, req.eventId.mSecId);
+		insertList = &((*secondIter).second->get(req.whichOrder));
+	}
+	addListener(insertList, req.listenerFunc, req.listenerId);
+
+	if (req.listenerId != SubscriptionIdClass::null()) {
+		typename ListenerList::iterator iter = insertList->end();
+		mRemoveById.insert(
+			typename RemoveMap::value_type(req.listenerId,
+				EventSubscriptionInfo(
+					insertList,
+					--iter,
+					secondListeners,
+					secondIter)));
+	}
 }
 
 // ============= UNSUBSCRIPTION FUNCTIONS ==============
@@ -217,13 +202,12 @@ template <class T>
 void EventManager<T>::clearRemoveId(
 			SubscriptionId removeId)
 {
-	boost::lock_guard<boost::mutex>(*listenerlock);
 	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
 	if (iter == mRemoveById.end()) {
-		std::cerr << "failed to clear removeId " << removeId <<
-			" -- usually this is from a double-unsubscribe. ";
-		int double_unsubscribe = 0;
-		assert(double_unsubscribe);
+		std::cerr << "!!! Failed to clear removeId " << removeId <<
+			" -- usually this is from a double-unsubscribe. " << std::endl;
+		//int double_unsubscribe = 0;
+		//assert(double_unsubscribe);
 	} else {
 		mRemoveById.erase(iter);
 		SubscriptionIdClass::free(removeId);
@@ -235,36 +219,34 @@ void EventManager<T>::unsubscribe(
 			SubscriptionId removeId,
 			bool notifyListener)
 {
-	boost::lock_guard<boost::mutex>(*listenerlock);
+	mListenerRequests.push(ListenerRequest(
+			removeId, notifyListener));
+}
+
+template <class T>
+void EventManager<T>::doUnsubscribe(
+			SubscriptionId removeId,
+			bool notifyListener)
+{
 	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
 	if (iter == mRemoveById.end()) {
 		std::cerr << "!!! Unsubscribe for removeId " << removeId <<
 			" -- usually this is from a double-unsubscribe. ";
 	} else {
 		EventSubscriptionInfo &subInfo = (*iter).second;
-		if (subInfo.mList == mProcessingList) {
-			// The reason there is no return value to unsubscribe.
-			std::cout << "**** Pending unsubscribe " << removeId;
-			if (mProcessingUnsubscribe.insert(removeId).second == true) {
-				if (notifyListener) {
-					mRemovedListeners.push_back((*subInfo.mIter).first);
-				}
-			}
-		} else {
-			std::cout << "**** Unsubscribe " << removeId;
-			if (notifyListener) {
-				mRemovedListeners.push_back((*subInfo.mIter).first);
-			}
-			subInfo.mList->erase(subInfo.mIter);
-			if (subInfo.secondaryMap) {
-				std::cout << " with Secondary ID " <<
-					(*subInfo.secondaryIter).first << std::endl << "\t";
-				cleanUp(subInfo.secondaryMap, subInfo.secondaryIter);
-			}
-
-			mRemoveById.erase(iter);
-			SubscriptionIdClass::free(removeId);
+		std::cout << "**** Unsubscribe " << removeId;
+		if (notifyListener) {
+			(*subInfo.mIter).first(EventPtr());
 		}
+		subInfo.mList->erase(subInfo.mIter);
+		if (subInfo.secondaryMap) {
+			std::cout << " with Secondary ID " <<
+				(*subInfo.secondaryIter).first << std::endl << "\t";
+			cleanUp(subInfo.secondaryMap, subInfo.secondaryIter);
+		}
+
+		mRemoveById.erase(iter);
+		SubscriptionIdClass::free(removeId);
 		std::cout << std::endl;
 	}
 }
@@ -276,9 +258,6 @@ bool EventManager<T>::cleanUp(
 {
 	bool isEmpty = true;
 	for (int i = 0; i < NUM_EVENTORDER; i++) {
-		if (&((*slm_iter).second->get(i)) == mProcessingList) {
-			return false; // don't clean up the list we're processing.
-		}
 		isEmpty = isEmpty && (*slm_iter).second->get(i).empty();
 	}
 	if (isEmpty) {
@@ -294,10 +273,9 @@ bool EventManager<T>::cleanUp(
 
 template <class T>
 void EventManager<T>::fire(EventPtr ev) {
-	boost::lock_guard<boost::mutex>(*eventlock);
 	std::cout << "**** Firing event " << (void*)(&(*ev)) <<
 		" with " << ev->getId() << std::endl;
-	mUnprocessed.push_back(ev);
+	mUnprocessed.push(ev);
 };
 
 
@@ -350,106 +328,81 @@ template <class T>
 void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	AbsTime startTime = AbsTime::now();
 	std::cout << " >>> Processing events." << std::endl;
-	std::list<EventListener> procListeners;
+
 	{
-		boost::lock_guard<boost::mutex>(*listenerlock);
-		mRemovedListeners.swap(procListeners);
-	}
+		typename ListenerRequestList::NodeIterator procListeners(mListenerRequests);
 
-	for (typename std::list<EventListener>::iterator iter = procListeners.begin();
-			iter != procListeners.end();
-			++iter) {
-		std::cout << " >>>\tNotifying UNSUBSCRIBED listener." << std::endl;
-		(*iter) (EventPtr((Event*)NULL));
-	}
-
-	EventList processingList; // allow people to keep adding new events
-	{
-		boost::lock_guard<boost::mutex>(*eventlock);
-		mUnprocessed.swap(processingList);
-	}
-
-	typename EventList::iterator evIter;
-	for (evIter = processingList.begin();
-			evIter != processingList.end();
-			++evIter) {
-		EventPtr ev = (*evIter);
-		typename PrimaryListenerMap::iterator priIter;
-		PartiallyOrderedListenerList *primaryLists;
-		SecondaryListenerMap *secondaryMap;
-
-		{
-			boost::lock_guard<boost::mutex> map_lookup(*listenerlock);
-			priIter = mListeners.find(ev->getId().mPriId);
-			if (priIter == mListeners.end()) {
-				// FIXME: Should this ever happen?
-				std::cerr << " >>>\tWARNING: No listeners for type " <<
-				"event type " << ev->getId().mPriId << std::endl;
-				continue;
+		const ListenerRequest *req;
+		while ((req = procListeners.next()) != NULL) {
+			std::cout << " >>>\tNotifying UNSUBSCRIBED listener." << std::endl;
+			if (req->subscription) {
+				doSubscribeId(*req);
+			} else {
+				doUnsubscribe(req->listenerId, req->notifyListener);
 			}
-			primaryLists =
-				&((*priIter).second->first);
-			secondaryMap =
-				&((*priIter).second->second);
 		}
+	}
+
+	// allow people to keep adding new events
+	typename EventList::NodeIterator processingList(mUnprocessed);
+
+	EventPtr *evTemp;
+
+	while ((evTemp = processingList.next())!=NULL) {
+		EventPtr ev (*evTemp);
+
+		typename PrimaryListenerMap::iterator priIter =
+			mListeners.find(ev->getId().mPriId);
+		if (priIter == mListeners.end()) {
+			// FIXME: Should this ever happen?
+			std::cerr << " >>>\tWARNING: No listeners for type " <<
+			"event type " << ev->getId().mPriId << std::endl;
+			continue;
+		}
+
+		PartiallyOrderedListenerList *primaryLists =
+			&((*priIter).second->first);
+		SecondaryListenerMap *secondaryMap =
+			&((*priIter).second->second);
+
+		typename SecondaryListenerMap::iterator secIter;
+		secIter = secondaryMap->find(ev->getId().mSecId);
+
         bool cancel = false;
         EventHistory eventHistory=EVENT_UNHANDLED;
 		// Call once per event order.
 		for (int i = 0; i < NUM_EVENTORDER && cancel == false; i++) {
-			boost::unique_lock<boost::mutex> lock_for_map_lookup(*listenerlock);
 			std::cout << " >>>\tFiring " << ev->getId() <<
 				" [order " << i << "]" << std::endl;
-			mProcessingList = &(primaryLists->get(i));
-			lock_for_map_lookup.unlock();
-            if (!mProcessingList->empty())
-                eventHistory=EVENT_HANDLED;
-			if (callAllListeners(ev, mProcessingList, forceCompletionBy)) {
+			ListenerList *currentList = &(primaryLists->get(i));
+			if (!currentList->empty())
+				eventHistory=EVENT_HANDLED;
+			if (callAllListeners(ev, currentList, forceCompletionBy)) {
 				cancel = cancel || true;
 			}
-			lock_for_map_lookup.lock();
-			mProcessingList = NULL;
-			/*
-			 * We must do this lookup at each iteration because
-			 * it is possible for elements in secondaryMap to be "cleaned up"
-			 * and removed.
-			 * On the other hand, because primary event types are supposed to
-			 * be a fixed set of ids, it is not worthwhile cleaning them up.
-			 */
-			typename SecondaryListenerMap::iterator secIter;
-			secIter = secondaryMap->find(ev->getId().mSecId);
+
 			if (secIter != secondaryMap->end() &&
 					!(*secIter).second->get(i).empty()) {
-				mProcessingList = &((*secIter).second->get(i));
-				lock_for_map_lookup.unlock();
-                if (!mProcessingList->empty())
-                    eventHistory=EVENT_HANDLED;
+				currentList = &((*secIter).second->get(i));
+				if (!currentList->empty())
+					eventHistory=EVENT_HANDLED;
 
-				if (callAllListeners(ev, mProcessingList, forceCompletionBy)) {
+				if (callAllListeners(ev, currentList, forceCompletionBy)) {
 					cancel = cancel || true;
 				}
-				lock_for_map_lookup.lock();
-				mProcessingList = NULL;
 				// all listeners may have returned false.
-				secIter = secondaryMap->find(ev->getId().mSecId);
-				cleanUp(secondaryMap, secIter);
-
-				// secIter may be invalidated.
-				secIter = secondaryMap->end();
+				// cleanUp(secondaryMap, secIter);
+				// secIter = secondaryMap->find(ev->getId().mSecId);
 			}
-			lock_for_map_lookup.unlock();
-
-			std::set<SubscriptionId>::const_iterator unsubIter;
-			for (unsubIter = mProcessingUnsubscribe.begin();
-					unsubIter != mProcessingUnsubscribe.end();
-					++unsubIter) {
-			 	unsubscribe(*unsubIter, false);
-			}
-			mProcessingUnsubscribe.clear();
 
 			if (cancel) {
 				std::cout << " >>>\tCancelling " << ev->getId() << std::endl;
 			}
 		}
+		if (secIter != secondaryMap->end()) {
+			cleanUp(secondaryMap, secIter);
+		}
+
         if (cancel) eventHistory=EVENT_CANCELED;
         (*ev)(eventHistory);
 		std::cout << " >>>\tFinished " << ev->getId() << std::endl;
