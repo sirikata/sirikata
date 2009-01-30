@@ -41,6 +41,18 @@ IF(NOT CMAKE_BUILD_TYPE)
       "Build types include: Default Debug Release None RelWithDebInfo." FORCE
       )
 ENDIF()
+
+IF(WIN32)
+SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS")
+#-fno-rtti
+SET(CMAKE_CXX_FLAGS_DEFAULT "-O0 -g2 -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_DEFAULT "-O0 -g2 -Wall -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+
+ELSE()
 #-fno-rtti
 SET(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden")
 #-fno-rtti
@@ -50,6 +62,7 @@ SET(CMAKE_CXX_FLAGS_DEFAULT "-O0 -g2 -Wall -Wno-unused-function -Wno-unused-vari
 SET( CMAKE_C_FLAGS_DEFAULT "-g2 -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden" CACHE STRING
     "Built cflags with default settings."
     FORCE )
+ENDIF()
 SET( CMAKE_EXE_LINKER_FLAGS_DEFAULT
     "" CACHE STRING
     "Linking binaries with default settings."

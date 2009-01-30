@@ -33,7 +33,7 @@
 #ifndef SIRIKATA_Time_HPP__
 #define SIRIKATA_Time_HPP__
 
-#include <inttypes.h>
+#include "util/Platform.hpp"
 
 namespace Sirikata {
 
@@ -89,12 +89,12 @@ public:
 	}
 
 	/// Convert to an integer in milliseconds.
-	int toMilli() const {
-		return (int)(mDeltaTime*1000);
+	int64 toMilli() const {
+		return (int64)(mDeltaTime*1000);
 	}
 	/// Convert to an integer in microseconds.
-	int64_t toMicro() const {
-		return (int64_t)(mDeltaTime*1000000);
+	int64 toMicro() const {
+		return (int64)(mDeltaTime*1000000);
 	}
 
 	/// Equality comparison

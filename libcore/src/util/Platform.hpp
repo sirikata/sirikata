@@ -90,6 +90,10 @@ typedef __int32 int32;
 typedef unsigned __int32 uint32;
 typedef __int64 int64;
 typedef unsigned __int64 uint64;
+#define SIRIKATA_LITTLE_ENDIAN 1234
+#define SIRIKATA_BIG_ENDIAN    4321
+#define SIRIKATA_BYTE_ORDER    SIRIKATA_LITTLE_ENDIAN
+
 #else
 #include <stdint.h>
 typedef int8_t int8;
@@ -100,6 +104,9 @@ typedef int32_t int32;
 typedef uint32_t uint32;
 typedef int64_t int64;
 typedef uint64_t uint64;
+#define SIRIKATA_LITTLE_ENDIAN LITTLE_ENDIAN
+#define SIRIKATA_BIG_ENDIAN    BIG_ENDIAN
+#define SIRIKATA_BYTE_ORDER    BYTE_ORDER
 #endif
 typedef float float32;
 typedef double float64;

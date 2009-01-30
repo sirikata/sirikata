@@ -32,14 +32,16 @@
 
 #include "Time.hpp"
 
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 #include <stdlib.h>
 
 #ifdef _WIN32
 #include <windows.h>
 // probably something like this function
 
-Sirikata::Task::AbsTime Sirikata::task::AbsTime::now() {
+Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	ULARGE_INTEGER uli;

@@ -34,13 +34,13 @@
 
 #ifndef __SHA2_H__
 #define __SHA2_H__
-
+#include "util/Platform.hpp"
 namespace Sirikata {
 namespace Util {
 namespace Internal{
-
+#if 0
 #define SHA2_USE_INTTYPES_H
-
+#endif
 /*
  * Import u_intXX_t size_t type definitions from system headers.  You
  * may need to change this, or define these things yourself in this
@@ -72,10 +72,10 @@ namespace Internal{
  * uintXX_t (from inttypes.h), you may need to define things by hand
  * for your system:
  */
-#if 0
-typedef unsigned char u_int8_t;		/* 1-byte  (8-bits)  */
-typedef unsigned int u_int32_t;		/* 4-bytes (32-bits) */
-typedef unsigned long long u_int64_t;	/* 8-bytes (64-bits) */
+#if 1
+typedef uint8 u_int8_t;		/* 1-byte  (8-bits)  */
+typedef uint32 u_int32_t;		/* 4-bytes (32-bits) */
+typedef uint64 u_int64_t;	/* 8-bytes (64-bits) */
 #endif
 /*
  * Most BSD systems already define u_intXX_t types, as does Linux.
