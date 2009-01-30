@@ -285,14 +285,38 @@ SET(TEST_LIBRARIES ${CURL_LIBRARIES})
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
 
-#source file location
-SET(SOURCE_DIR ${TOP_LEVEL}/src)
+#project directory locations
+SET(LIBCORE_DIR ${TOP_LEVEL}/libcore)
+SET(LIBSPACE_DIR ${TOP_LEVEL}/libspace)
+SET(LIBOH_DIR ${TOP_LEVEL}/liboh)
+SET(SPACE_DIR ${TOP_LEVEL}/space)
+SET(CPPOH_DIR ${TOP_LEVEL}/cppoh)
+
+
+#source file locations
+SET(LIBCORE_SOURCE_DIR ${LIBCORE_DIR}/src)
+SET(LIBSPACE_SOURCE_DIR ${LIBSPACE_DIR}/src)
+SET(LIBOH_SOURCE_DIR ${LIBOH_DIR}/src)
+SET(SPACE_SOURCE_DIR ${SPACE_DIR}/src)
+SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
+
 
 #cxx flags
-INCLUDE_DIRECTORIES(BEFORE ${SOURCE_DIR} ${TOP_LEVEL} ${TOP_LEVEL}/src ${TOP_LEVEL}/include ${Boost_INCLUDE_DIRS} ${CURL_INCLUDE_DIRS} ${PROTOCOLBUFFERS_INCLUDE_DIRS} ${CXXTESTRoot})
+# FIXME these include directories should be project specific
+INCLUDE_DIRECTORIES(BEFORE
+  ${LIBCORE_SOURCE_DIR}
+  ${LIBSPACE_SOURCE_DIR}
+  ${LIBOH_SOURCE_DIR}
+  ${SPACE_SOURCE_DIR}
+  ${CPPOH_SOURCE_DIR}
+  ${Boost_INCLUDE_DIRS}
+  ${CURL_INCLUDE_DIRS}
+  ${PROTOCOLBUFFERS_INCLUDE_DIRS}
+  ${CXXTESTRoot}
+)
 
 #protocol buffers preprocessing
-SET(ProtocolBuffersRoot ${TOP_LEVEL}/protocol)
+SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
   FloatVector3
   DoubleVector3
@@ -302,42 +326,42 @@ SET(ProtocolBuffersSources
 SET(SirikataProtocolBuffersSources)
 FOREACH(protosource ${ProtocolBuffersSources})
   SET(SirikataProtocolBuffersSources ${SirikataProtocolBuffersSources}
-                       ${SOURCE_DIR}/${protosource}.pb.cc)
+                       ${LIBCORE_SOURCE_DIR}/${protosource}.pb.cc)
 ENDFOREACH(protosource)
 
-ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SOURCE_DIR})
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${LIBCORE_SOURCE_DIR})
 
 #source files
-SET(SOURCE_DIR ${TOP_LEVEL}/src)
 SET(SIRIKATA_CORE_SOURCES
     ${SirikataProtocolBuffersSources}
-	${SOURCE_DIR}/transfer/HTTPRequest.cpp
-	${SOURCE_DIR}/transfer/DiskCache.cpp
-	${SOURCE_DIR}/task/EventManager.cpp
-	${SOURCE_DIR}/task/Event.cpp
-	${SOURCE_DIR}/task/UniqueId.cpp
-	${SOURCE_DIR}/task/Time.cpp
-   	${SOURCE_DIR}/options/Options.cpp
-	${SOURCE_DIR}/util/internal_sha2.cpp
-	${SOURCE_DIR}/util/Quaternion.cpp
-	${SOURCE_DIR}/util/Sha256.cpp
-	${SOURCE_DIR}/util/ThreadSafeQueue.cpp
-	${SOURCE_DIR}/util/UUID.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/DiskCache.cpp
+	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
+	${LIBCORE_SOURCE_DIR}/task/Event.cpp
+	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
+	${LIBCORE_SOURCE_DIR}/task/Time.cpp
+   	${LIBCORE_SOURCE_DIR}/options/Options.cpp
+	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
+	${LIBCORE_SOURCE_DIR}/util/Quaternion.cpp
+	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
+	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
+	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
 )
 
 
-SET(SIRIKATA_SOURCES ${TOP_LEVEL}/src/main.cpp )
+SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
+SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
 
 #test source files
 SET(CXXTESTSources
-  ${TOP_LEVEL}/test/TransferTest.hpp 
-  ${TOP_LEVEL}/test/AnyTest.hpp
-  ${TOP_LEVEL}/test/AtomicTest.hpp
-  ${TOP_LEVEL}/test/Vector3Test.hpp 
-  ${TOP_LEVEL}/test/Matrix3Test.hpp 
-  ${TOP_LEVEL}/test/QuaternionTest.hpp 
-  ${TOP_LEVEL}/test/EventTest.hpp
-  ${TOP_LEVEL}/test/OptionTest.hpp 
+  ${LIBCORE_DIR}/test/TransferTest.hpp 
+  ${LIBCORE_DIR}/test/AnyTest.hpp
+  ${LIBCORE_DIR}/test/AtomicTest.hpp
+  ${LIBCORE_DIR}/test/Vector3Test.hpp 
+  ${LIBCORE_DIR}/test/Matrix3Test.hpp 
+  ${LIBCORE_DIR}/test/QuaternionTest.hpp 
+  ${LIBCORE_DIR}/test/EventTest.hpp
+  ${LIBCORE_DIR}/test/OptionTest.hpp 
  )
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
@@ -362,11 +386,13 @@ SET(SIRIKATA_CORE_LIBRARIES
 IF (CMAKE_BUILD_TYPE MATCHES "[Rr][Ee][Ll]")
   SET(SIRIKATA_CORE_LIB sirikata-core_r)
   SET(TEST_BINARY tests_r)
-  SET(SIRIKATA_BINARY sirikata_r)
+  SET(SPACE_BINARY space_r)
+  SET(CPPOH_BINARY cppoh_r)
 ELSE()
   SET(SIRIKATA_CORE_LIB sirikata-core)
   SET(TEST_BINARY tests)
-  SET(SIRIKATA_BINARY sirikata)
+  SET(SPACE_BINARY space)
+  SET(CPPOH_BINARY cppoh)
 ENDIF()
 
 
@@ -380,12 +406,15 @@ ENDIF()
 
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} EXCLUDE_FROM_ALL ${TEST_SOURCES})
-ADD_EXECUTABLE(${SIRIKATA_BINARY} ${SIRIKATA_SOURCES})
+ADD_EXECUTABLE(${SPACE_BINARY} ${SPACE_SOURCES})
+ADD_EXECUTABLE(${CPPOH_BINARY} ${CPPOH_SOURCES})
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB} ${TEST_LIBRARIES})
-TARGET_LINK_LIBRARIES(${SIRIKATA_BINARY} ${SIRIKATA_CORE_LIB})
+TARGET_LINK_LIBRARIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB})
+TARGET_LINK_LIBRARIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB})
 IF(sirikata_LDFLAGS)
   SET_TARGET_PROPERTIES(${TEST_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
-  SET_TARGET_PROPERTIES(${SIRIKATA_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
+  SET_TARGET_PROPERTIES(${SPACE_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
+  SET_TARGET_PROPERTIES(${CPPOH_BINARY} PROPERTIES LINK_FLAGS ${sirikata_LDFLAGS})
 ENDIF()
 
 

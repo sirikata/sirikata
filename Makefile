@@ -1,8 +1,10 @@
 all:
 	cd build/cmake;cmake .; $(MAKE) $(*)
-tests:
+test:
 	cd build/cmake;cmake .; $(MAKE) test $(*)
-clean: 
+tests:
+	cd build/cmake;cmake .; $(MAKE) tests $(*)
+clean:
 	cd build/cmake; $(MAKE) clean $(*)
 depends:
 	uname | grep arwin && svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies && tar -jx --directory dependencies --file dependencies/dotnet-protobufs*.bz2 && tar -jx --directory dependencies --file dependencies/FreeImage-*.bz2 && tar -jx --directory dependencies --file dependencies/curl*.bz2 && tar -jx --directory dependencies --file dependencies/boost*.bz2 || echo "Linux system"
