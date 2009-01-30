@@ -29,6 +29,13 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 SET(CMAKE_VERBOSE_MAKEFILE OFF)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
+
+IF(COMMAND CMAKE_POLICY)
+  # Use new policy for absolute path libraries.  We have no reason to depend on the
+  # old version which adds library search paths unnecessarily
+  CMAKE_POLICY(SET CMP0003 NEW)
+ENDIF(COMMAND CMAKE_POLICY)
+
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Default CACHE STRING
       "Build types include: Default Debug Release None RelWithDebInfo." FORCE
@@ -255,19 +262,21 @@ IF(NOT BOOST_ROOT)
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-FIND_PACKAGE(Boost COMPONENTS system program_options thread)
+FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem)
 ELSE(WIN32)
 FIND_PACKAGE(Boost COMPONENTS system)
 #STRING(REPLACE "boost_system" "boost_signals" Boost_SIGNALS_LIBRARY ${Boost_SYSTEM_LIBRARY})
 STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
 STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
+STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY ${Boost_SYSTEM_LIBRARY})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 
 SET(Boost_LIBRARIES
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY})
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY})
 
 #dependency: curl
 IF(NOT CURL_ROOT)
@@ -341,7 +350,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
+	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
+	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
+	${LIBCORE_SOURCE_DIR}/util/PluginManager.cpp
 	${LIBCORE_SOURCE_DIR}/util/Quaternion.cpp
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
@@ -375,9 +387,18 @@ SET(TEST_SOURCES ${CXXTEST_CPP_FILE})
 SET(CMAKE_DEBUG_POSTFIX "_d")
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /usr/local)
 SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local)
+
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+
+IF(WIN32)
+  SET(SYSTEM_DL_LIBRARY)
+ELSE()
+  SET(SYSTEM_DL_LIBRARY "dl")
+ENDIF()
+
 SET(SIRIKATA_CORE_LIBRARIES
-    ${Boost_LIBRARIES})
+    ${Boost_LIBRARIES}
+    ${SYSTEM_DL_LIBRARY})
 
 
 
