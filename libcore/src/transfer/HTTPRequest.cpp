@@ -84,7 +84,7 @@ size_t HTTPRequest::write(const unsigned char *copyFrom, size_t length) {
 	cache_ssize_type startByte = (mOffset - mData->startbyte());
 	if (startByte < 0) {
 		copyFrom -= startByte;
-		length += startByte;
+		length += (size_t)startByte;
 		startByte = 0;
 	}
 	cache_usize_type totalNeeded = startByte + length;
@@ -105,7 +105,7 @@ size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
 	cache_ssize_type startByte = (mOffset - mData->startbyte());
 	cache_usize_type totalNeeded = startByte + length;
 	if (mData->length() < totalNeeded + length) {
-		length = mData->length() - totalNeeded;
+		length = (size_t)(mData->length() - totalNeeded);
 	}
 	const unsigned char *copyFrom = mData->dataAt(mOffset);
 	std::copy(copyFrom, copyFrom + length, copyTo);
@@ -407,7 +407,9 @@ void HTTPRequest::go() {
 	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.uri().c_str()); // safe for life of mURI.
 
 	std::ostringstream orangestring;
+	bool nontrivialRange=false;
 	if (mRequestedRange.startbyte() != 0) {
+		nontrivialRange=true;
 		orangestring << mRequestedRange.startbyte();
 		mOffset = mRequestedRange.startbyte();
 	}
@@ -418,12 +420,14 @@ void HTTPRequest::go() {
 			mCallback(this, DenseDataPtr(new DenseData(mRequestedRange)), true);
 			return;
 		}
+		nontrivialRange=true;
 		orangestring << (mRequestedRange.endbyte()-1);
 	}
-	std::string rangeString = orangestring.str();
-	if (rangeString != "-") {
-		// string leak!
-		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, strdup(rangeString.c_str()));
+	
+	if (nontrivialRange) {
+		assert(mRangeString.length()==0);//make sure this hasn't been called twice because then curl would point to a dangly string
+		mRangeString = orangestring.str();
+		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, mRangeString.c_str());
 	}
 
 	curl_multi_add_handle(curlm, mCurlRequest);

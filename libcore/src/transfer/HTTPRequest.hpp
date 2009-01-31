@@ -54,6 +54,7 @@ public:
 private:
 	const URI mURI; // const because its c_str is passed to curl.
 	Range mRequestedRange;
+	String mRangeString;// Upon go(), its c_str is passed to curl: do not change
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
 

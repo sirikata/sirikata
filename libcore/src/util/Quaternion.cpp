@@ -36,18 +36,18 @@
 #include "Matrix3x3.hpp"
 namespace Sirikata {
 Quaternion::Quaternion(const Vector3<Quaternion::scalar>&axis, Quaternion::scalar angle) {
-        float sinHalfAngle=sin(angle*.5);
+        Quaternion::scalar sinHalfAngle=(Quaternion::scalar)sin(angle*.5);
         x=sinHalfAngle*axis.x;
         y=sinHalfAngle*axis.y;
         z=sinHalfAngle*axis.z;
-        w=cos(angle*.5);
+        w=(Quaternion::scalar)cos(angle*.5);
     }
 
 Vector3<Quaternion::scalar> Quaternion::xAxis(void) const
 {
     //scalar fTx  = 2.0*x;
-    scalar fTy  = 2.0*y;
-    scalar fTz  = 2.0*z;
+    scalar fTy  = 2.0f*y;
+    scalar fTz  = 2.0f*z;
     scalar fTwy = fTy*w;
     scalar fTwz = fTz*w;
     scalar fTxy = fTy*x;
@@ -55,14 +55,14 @@ Vector3<Quaternion::scalar> Quaternion::xAxis(void) const
     scalar fTyy = fTy*y;
     scalar fTzz = fTz*z;
 
-    return Vector3<scalar>(1.0-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);
+    return Vector3<scalar>(1.0f-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);
 }
 
 Vector3<Quaternion::scalar> Quaternion::yAxis(void) const
 {
-    scalar fTx  = 2.0*x;
-    scalar fTy  = 2.0*y;
-    scalar fTz  = 2.0*z;
+    scalar fTx  = 2.0f*x;
+    scalar fTy  = 2.0f*y;
+    scalar fTz  = 2.0f*z;
     scalar fTwx = fTx*w;
     scalar fTwz = fTz*w;
     scalar fTxx = fTx*x;
@@ -70,19 +70,19 @@ Vector3<Quaternion::scalar> Quaternion::yAxis(void) const
     scalar fTyz = fTz*y;
     scalar fTzz = fTz*z;
 
-    return Vector3<scalar>(fTxy-fTwz, 1.0-(fTxx+fTzz), fTyz+fTwx);
+    return Vector3<scalar>(fTxy-fTwz, 1.0f-(fTxx+fTzz), fTyz+fTwx);
 }
 Vector3<Quaternion::scalar> Quaternion::zAxis(void) const {
-        scalar fTx  = 2.0*x;
-        scalar fTy  = 2.0*y;
-        scalar fTz  = 2.0*z;
+        scalar fTx  = 2.0f*x;
+        scalar fTy  = 2.0f*y;
+        scalar fTz  = 2.0f*z;
         scalar fTwx = fTx*w;
         scalar fTwy = fTy*w;
         scalar fTxx = fTx*x;
         scalar fTxz = fTz*x;
         scalar fTyy = fTy*y;
         scalar fTyz = fTz*y;
-        return Vector3<scalar>(fTxz+fTwy, fTyz-fTwx, 1.0-(fTxx+fTyy));
+        return Vector3<scalar>(fTxz+fTwy, fTyz-fTwx, 1.0f-(fTxx+fTyy));
 }
 //-----------------------------------------------------------------------
 void Quaternion::toAngleAxis (Quaternion::scalar& returnAngleRadians,
@@ -90,14 +90,14 @@ void Quaternion::toAngleAxis (Quaternion::scalar& returnAngleRadians,
 {
     scalar fSqrLength = x*x+y*y+z*z;
     scalar tmpw=w;
-    scalar eps=1e-06;
-    if (tmpw>1.0&&tmpw<1.0+eps)
-        tmpw=1.0;
-    if (tmpw<-1.0&&tmpw>-1.0-eps)
-        tmpw=-1.0;
+    scalar eps=(scalar)1e-06;
+    if (tmpw>1.0f&&tmpw<1.0f+eps)
+        tmpw=1.0f;
+    if (tmpw<-1.0&&tmpw>-1.0f-eps)
+        tmpw=-1.0f;
     if ( fSqrLength > 1e-08 && tmpw<=1 && tmpw>=-1)
     {
-        returnAngleRadians = 2.0*acos(tmpw);
+        returnAngleRadians = 2.0f*acos(tmpw);
         scalar length = sqrt(fSqrLength);
         returnAxis.x = x/length;
         returnAxis.y = y/length;
@@ -105,17 +105,17 @@ void Quaternion::toAngleAxis (Quaternion::scalar& returnAngleRadians,
     }
     else
     {
-        returnAngleRadians = 0.0;
-        returnAxis.x = 1.0;
-        returnAxis.y = 0.0;
-        returnAxis.z = 0.0;
+        returnAngleRadians = 0.0f;
+        returnAxis.x = 1.0f;
+        returnAxis.y = 0.0f;
+        returnAxis.z = 0.0f;
     }
 }
 
 static void ToRotationMatrix(const Quaternion &q, Matrix3x3<Quaternion::scalar> kRot) {
-        Quaternion::scalar fTx  = 2.0*q.x;
-        Quaternion::scalar fTy  = 2.0*q.y;
-        Quaternion::scalar fTz  = 2.0*q.z;
+        Quaternion::scalar fTx  = 2.0f*q.x;
+        Quaternion::scalar fTy  = 2.0f*q.y;
+        Quaternion::scalar fTz  = 2.0f*q.z;
         Quaternion::scalar fTwx = fTx*q.w;
         Quaternion::scalar fTwy = fTy*q.w;
         Quaternion::scalar fTwz = fTz*q.w;
@@ -126,15 +126,15 @@ static void ToRotationMatrix(const Quaternion &q, Matrix3x3<Quaternion::scalar> 
         Quaternion::scalar fTyz = fTz*q.y;
         Quaternion::scalar fTzz = fTz*q.z;
 
-        kRot(0,0) = 1.0-(fTyy+fTzz);
+        kRot(0,0) = 1.0f-(fTyy+fTzz);
         kRot(0,1) = fTxy-fTwz;
         kRot(0,2) = fTxz+fTwy;
         kRot(1,0) = fTxy+fTwz;
-        kRot(1,1) = 1.0-(fTxx+fTzz);
+        kRot(1,1) = 1.0f-(fTxx+fTzz);
         kRot(1,2) = fTyz-fTwx;
         kRot(2,0) = fTxz-fTwy;
         kRot(2,1) = fTyz+fTwx;
-        kRot(2,2) = 1.0-(fTxx+fTyy);
+        kRot(2,2) = 1.0f-(fTxx+fTyy);
 }
 void FromRotationMatrix (Quaternion &q, const Matrix3x3<Quaternion::scalar>& kRot) {
     /* Shoemake SIGGRAPH 1987 algorithm */
@@ -143,9 +143,9 @@ void FromRotationMatrix (Quaternion &q, const Matrix3x3<Quaternion::scalar>& kRo
     if ( fTrace > 0.0 )
     {
         // |w| > 1/2, may as well choose w > 1/2
-        fRoot = sqrt(fTrace + 1.0);  // 2w
-        q.w = 0.5*fRoot;
-        fRoot = 0.5/fRoot;  // 1/(4w)
+        fRoot = sqrt(fTrace + 1.0f);  // 2w
+        q.w = 0.5f*fRoot;
+        fRoot = 0.5f/fRoot;  // 1/(4w)
         q.x = (kRot(2,1)-kRot(1,2))*fRoot;
         q.y = (kRot(0,2)-kRot(2,0))*fRoot;
         q.z = (kRot(1,0)-kRot(0,1))*fRoot;
@@ -161,10 +161,10 @@ void FromRotationMatrix (Quaternion &q, const Matrix3x3<Quaternion::scalar>& kRo
             i = 2;
         unsigned int j = s_iNext[i];
         unsigned int k = s_iNext[j];
-        fRoot = sqrt(kRot(i,i)-kRot(j,j)-kRot(k,k) + 1.0);
+        fRoot = sqrt(kRot(i,i)-kRot(j,j)-kRot(k,k) + 1.0f);
         Quaternion::scalar* apkQuat[3] = { &q.x, &q.y, &q.z };
-        *apkQuat[i] = 0.5*fRoot;
-        fRoot = 0.5/fRoot;
+        *apkQuat[i] = 0.5f*fRoot;
+        fRoot = 0.5f/fRoot;
         q.w = (kRot(k,j)-kRot(j,k))*fRoot;
         *apkQuat[j] = (kRot(j,i)+kRot(i,j))*fRoot;
         *apkQuat[k] = (kRot(k,i)+kRot(i,k))*fRoot;

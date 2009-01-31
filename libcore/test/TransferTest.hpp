@@ -137,7 +137,7 @@ public:
 		if (myData) {
 			myData->debugPrint(std::cout);
 			const Transfer::DenseData &densedata = (*myData->begin());
-			TS_ASSERT_EQUALS (SHA256::computeDigest(densedata.data(), densedata.length()), uri.fingerprint());
+			TS_ASSERT_EQUALS (SHA256::computeDigest(densedata.data(), (size_t)densedata.length()), uri.fingerprint());
 		} else {
 			std::cout << "fail!" << std::endl;
 		}
@@ -337,7 +337,7 @@ public:
 				if (!gotData) {
 					break;
 				}
-				bool equal = memcmp(compareData, gotData, len+offset<compare->endbyte() ? len : compare->endbyte()-offset)==0;
+				bool equal = memcmp(compareData, gotData, len+offset<compare->endbyte() ? (size_t)len : (size_t)(compare->endbyte()-offset))==0;
 				TS_ASSERT(equal);
 				if (!equal) {
 					std::cout << std::endl << "WANT =======" << std::endl;
@@ -364,14 +364,14 @@ public:
 		memory->purgeFromCache(exampleComUri.fingerprint());
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
-			memcpy(expect->writableData(), "TML>\r\n", expect->length());
+			memcpy(expect->writableData(), "TML>\r\n", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
 					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
-			memcpy(expect->writableData(), "<HEAD>", expect->length());
+			memcpy(expect->writableData(), "<HEAD>", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
 					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
@@ -379,7 +379,7 @@ public:
 		waitFor(2);
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 12, Transfer::LENGTH)));
-			memcpy(expect->writableData(), "TML>\r\n<HEAD>", expect->length());
+			memcpy(expect->writableData(), "TML>\r\n<HEAD>", (size_t)expect->length());
 			memory->setNext(NULL);
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,

@@ -195,7 +195,7 @@ void DiskCache::workerThread() {
 				continue;
 			}
 			lseek(fd, req->data->startbyte(), SEEK_SET);
-			write(fd, req->data->writableData(), req->data->length());
+			write(fd, req->data->writableData(), (size_t)req->data->length());
 			cache_usize_type diskUsage;
 			{
 				struct stat64 st;
@@ -270,7 +270,7 @@ void DiskCache::workerThread() {
 			// FIXME: may not work with 64-bit files?
 			lseek(fd, req->toRead.startbyte(), SEEK_SET);
 			DenseDataPtr datum(new DenseData(req->toRead));
-			read(fd, datum->writableData(), req->toRead.length());
+			read(fd, datum->writableData(), (size_t)req->toRead.length());
 			close(fd);
 
 			CacheLayer::populateParentCaches(req->fileURI.fingerprint(), datum);
