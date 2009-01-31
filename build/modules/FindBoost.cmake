@@ -105,7 +105,7 @@ if (Boost_FIND_VERSION_EXACT)
   endif (Boost_FIND_VERSION_PATCH)
 else (Boost_FIND_VERSION_EXACT)
   set( _boost_TEST_VERSIONS ${Boost_ADDITIONAL_VERSIONS} 
-    "1.37.1" "1.37.0" "1.36.1" "1.36.0" "1.36" "1.35.1" "1.35.0" "1.35" )
+    "1.37.1" "1.37.0" "1.36.1" "1.36.0" "1.36" "1.35.0" "1.35")
 endif (Boost_FIND_VERSION_EXACT)
 
 # The reason that we failed to find Boost. This will be set to a
@@ -314,7 +314,7 @@ ELSE (_boost_IN_CACHE)
 
     # Look for a standard boost header file.
     FIND_PATH(Boost_INCLUDE_DIR
-      NAMES         boost/config.hpp
+      NAMES         boost/unordered_map.hpp
       PATHS         ${_boost_INCLUDE_SEARCH_DIRS}
       PATH_SUFFIXES ${_boost_PATH_SUFFIXES}
       NO_DEFAULT_PATH

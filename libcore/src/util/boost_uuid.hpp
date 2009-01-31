@@ -53,7 +53,7 @@ namespace boost_ {
 
 class uuid : boost::totally_ordered<uuid>
 {
-    typedef boost::array<uint8_t, 16> data_type;
+    typedef boost::array<boost::uint8_t, 16> data_type;
 
 public:
     typedef data_type::value_type value_type;
@@ -97,7 +97,7 @@ public:
         data_type::iterator i_data = data_.begin();
         size_t i;
         for (i=0; i<16 && first != last; ++i) {
-            *i_data++ = boost::numeric_cast<uint8_t>(*first++);
+            *i_data++ = boost::numeric_cast<boost::uint8_t>(*first++);
         }
         if (i != 16) {
             boost::throw_exception(std::invalid_argument("invalid input iterator pair, must span 16 bytes"));
