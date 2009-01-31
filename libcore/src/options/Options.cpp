@@ -37,6 +37,99 @@
 #include <stdarg.h>
 
 namespace Sirikata {
+class simple_string:public std::string {
+public:
+    simple_string(const std::string&other):std::string(other){
+
+    }
+/*
+    char * data;
+    unsigned int len;
+   
+    simple_string() {
+        data=NULL;
+        len=0;
+    }
+    simple_string(const std::string&s) {
+        if (s.length()) {
+            data=new char[s.length()];
+            len=s.length();
+            memcpy(data,s.data(),s.length());
+        }else {
+            data=NULL;
+            len=0;
+        }
+    }
+    simple_string(const std::vector<char>&other) {
+        if (other.size()) {
+            data= new char(other.size());
+            memcpy(data,&*other.begin(),other.size());
+            len=other.size();
+        }else {
+            len=0;
+            data=NULL;
+        }
+        
+    }
+    simple_string(const simple_string&other) {
+        if (other.len) {
+            data=new char[other.len];
+            len=other.len;
+            memcpy(data,other.data,other.len);        
+        }else {
+            len=0;
+            data=NULL;
+        }
+    }
+    simple_string&operator=(const simple_string&other) {
+        if (other.len) {
+            data=new char[other.len];
+            len=other.len;
+            memcpy(data,other.data,other.len);        
+        }else {
+            len=0;
+            data=NULL;
+        }
+        return *this;
+    }
+    ~simple_string() {
+        delete []data;
+    }
+    operator std::string() {
+        return std::string(data,len);
+    }
+*/
+};
+void validate(boost::any& v, const std::vector<String>& values, Sirikata::simple_string* target_type, int){
+    using namespace boost;
+    using namespace boost::program_options;
+    
+    // no previous instances
+    validators::check_first_occurrence(v);
+    // only one string in values
+    v=any(simple_string(validators::get_single_string(values)));
+}
+}
+/*
+std::basic_ostream<char>& operator<< (std::basic_ostream<char>&is,const Sirikata::simple_string &output) {
+    is<<output//std::string(output.data,output.len);
+    return is;
+}
+
+std::istream &operator >>(std::istream &is,Sirikata::simple_string &output) {
+    std::vector<char> test;
+    while (!is.eof()) {
+        char ch[1024];
+        is.get(ch,1023);
+        std::vector<char>::size_type adv=is.gcount();
+        if (adv)
+            test.insert(test.end(),ch,ch+adv);        
+    }
+    output=Sirikata::simple_string(test);
+    return is;
+}
+*/
+namespace Sirikata {
 namespace {
 //from boost
 	    std::vector<std::string> splice_winmain(const std::string& input)
@@ -114,7 +207,7 @@ public:
              i!=ie;
              ++i) {
             options.add_options()(i->second->mName,
-                                  boost::program_options::value<std::string>()->default_value(i->second->defaultValue()),
+                                  boost::program_options::value<simple_string>()->default_value(simple_string(i->second->defaultValue())),
                                   i->second->description());
         }
     }
@@ -135,7 +228,7 @@ public:
              i!=ie;
              ++i) {
 				 if (options.count(i->first)){
-					 const std::string * s=boost::any_cast<const std::string>(&options[i->first].value());
+                     const simple_string* s=boost::any_cast<simple_string>(&options[i->first].value());
                      assert(s!=NULL);
                      i->second->mValue.newAndDoNotFree(i->second->mParser(*s));
 				 }
