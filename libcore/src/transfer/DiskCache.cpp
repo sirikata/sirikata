@@ -319,74 +319,76 @@ void DiskCache::unserialize() {
 	}
 
 	DIR *mydir = opendir (mPrefix.c_str());
-	dirent *myentry;
-	CacheMap::write_iterator writer (mFiles);
-	while ((myentry = readdir(mydir)) != NULL) {
-		cache_usize_type totalLength;
-		std::string strName (myentry->d_name);
-		std::string pathName (mPrefix + strName);
-		bool isdir = false;
-		if (strName.length() > strlen(RANGES_SUFFIX) &&
-				strName.substr(strName.length()-strlen(RANGES_SUFFIX)) == RANGES_SUFFIX) {
-			continue; // will find range files later.
-		}
-		totalLength = sizeFromDirentry(pathName, myentry, isdir);
-		if (isdir) {
-			continue; // ignore directories (including . and ..)
-		}
+	if(mydir) {
+		dirent *myentry;
+		CacheMap::write_iterator writer (mFiles);
+		while ((myentry = readdir(mydir)) != NULL) {
+			cache_usize_type totalLength;
+			std::string strName (myentry->d_name);
+			std::string pathName (mPrefix + strName);
+			bool isdir = false;
+			if (strName.length() > strlen(RANGES_SUFFIX) &&
+					strName.substr(strName.length()-strlen(RANGES_SUFFIX)) == RANGES_SUFFIX) {
+				continue; // will find range files later.
+			}
+			totalLength = sizeFromDirentry(pathName, myentry, isdir);
+			if (isdir) {
+				continue; // ignore directories (including . and ..)
+			}
 
-		CacheData *cdata = new CacheData();
-		std::string fingerprintName(strName);
-		bool thisispartial = false;
-		if (strName.length() > strlen(PARTIAL_SUFFIX) &&
-				strName.substr(strName.length()-strlen(PARTIAL_SUFFIX)) == PARTIAL_SUFFIX) {
-			thisispartial = true;
-			fingerprintName = strName.substr(0, strName.length()-strlen(PARTIAL_SUFFIX));
+			CacheData *cdata = new CacheData();
+			std::string fingerprintName(strName);
+			bool thisispartial = false;
+			if (strName.length() > strlen(PARTIAL_SUFFIX) &&
+					strName.substr(strName.length()-strlen(PARTIAL_SUFFIX)) == PARTIAL_SUFFIX) {
+				thisispartial = true;
+				fingerprintName = strName.substr(0, strName.length()-strlen(PARTIAL_SUFFIX));
 
-			std::string rangeFile (mPrefix + fingerprintName + RANGES_SUFFIX);
-			std::fstream fp (rangeFile.c_str(), std::ios_base::in);
-			unserializeRanges(cdata->mRanges, fp);
-			if (cdata->mRanges.empty()) {
-				unlink(rangeFile.c_str());
-				unlink(pathName.c_str());
+				std::string rangeFile (mPrefix + fingerprintName + RANGES_SUFFIX);
+				std::fstream fp (rangeFile.c_str(), std::ios_base::in);
+				unserializeRanges(cdata->mRanges, fp);
+				if (cdata->mRanges.empty()) {
+					unlink(rangeFile.c_str());
+					unlink(pathName.c_str());
+					delete cdata;
+					continue; // failed to read ranges file -> ignore.
+				}
+			}
+
+			std::cout << "Cached fingerprint: " << fingerprintName <<
+				"(" << totalLength << ")" << std::endl;
+
+			Fingerprint fprint;
+			try {
+				fprint = SHA256::convertFromHex(fingerprintName);
+			} catch (std::invalid_argument) {
+				// Invalid filename, not a fingerprint.
 				delete cdata;
-				continue; // failed to read ranges file -> ignore.
+				continue;
 			}
-		}
 
-		std::cout << "Cached fingerprint: " << fingerprintName <<
-			"(" << totalLength << ")" << std::endl;
-
-		Fingerprint fprint;
-		try {
-			fprint = SHA256::convertFromHex(fingerprintName);
-		} catch (std::invalid_argument) {
-			// Invalid filename, not a fingerprint.
-			delete cdata;
-			continue;
-		}
-
-		if (!writer.insert(fprint, totalLength)) {
-			delete cdata;
-			cdata = NULL;
-			if (!thisispartial) {
-				/* We earlier found a partial file with its associated
-				  ranges... but now we found the whole file as well.
-				  FIXME: is this case possible? worth worrying about?
-				 */
-				cdata = static_cast<CacheData*>(*writer);
-				cdata->mRanges.clear(); // we found a complete file.
-				// a complete file overrides partial ones.
-				std::string partialName(pathName + PARTIAL_SUFFIX);
-				unlink(partialName.c_str());
+			if (!writer.insert(fprint, totalLength)) {
+				delete cdata;
+				cdata = NULL;
+				if (!thisispartial) {
+					/* We earlier found a partial file with its associated
+					  ranges... but now we found the whole file as well.
+					  FIXME: is this case possible? worth worrying about?
+					 */
+					cdata = static_cast<CacheData*>(*writer);
+					cdata->mRanges.clear(); // we found a complete file.
+					// a complete file overrides partial ones.
+					std::string partialName(pathName + PARTIAL_SUFFIX);
+					unlink(partialName.c_str());
+				}
+				continue;
 			}
-			continue;
+	
+			*writer = cdata; // Finally, set the iterator contents.
 		}
-
-		*writer = cdata; // Finally, set the iterator contents.
+		closedir(mydir);
+		// And we are done reading the directory.
 	}
-	closedir(mydir);
-	// And we are done reading the directory.
 }
 
 }
