@@ -29,6 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "util/Platform.hpp"
 #include "Options.hpp"
 #include "boost/thread.hpp"
 #include "boost/program_options.hpp"
@@ -133,8 +134,11 @@ public:
         for (std::map<std::string,OptionValue*>::iterator i=names.begin(),ie=names.end();
              i!=ie;
              ++i) {
-            if (options.count(i->first))
-                i->second->mValue.newAndDoNotFree(i->second->mParser(options[i->first].as<std::string>()));
+				 if (options.count(i->first)){
+					 const std::string * s=boost::any_cast<const std::string>(&options[i->first].value());
+                     assert(s!=NULL);
+                     i->second->mValue.newAndDoNotFree(i->second->mParser(*s));
+				 }
         }
         return true;
     }
