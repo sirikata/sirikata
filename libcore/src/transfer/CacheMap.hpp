@@ -34,11 +34,10 @@
 #ifndef SIRIKATA_CacheMap_HPP__
 #define SIRIKATA_CacheMap_HPP__
 
-#include <map>
-#include <boost/thread/shared_mutex.hpp>
-
 #include "CachePolicy.hpp"
 #include "CacheLayer.hpp"
+#include <boost/thread.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 namespace Sirikata {
 namespace Transfer {

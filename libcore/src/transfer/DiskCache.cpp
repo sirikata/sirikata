@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Jan 15, 2009 */
-
+#include "util/Platform.hpp"
 #include "DiskCache.hpp"
 
 #include <stdio.h>
@@ -51,7 +51,8 @@
 #endif
 #else
 #include <io.h>
-
+#include <direct.h>
+#include <fcntl.h>
 // Lovely underscores to obscure the beauty of Posix
 #define fstat64 _fstat64
 #define stat64 _stat64
@@ -59,7 +60,15 @@
 #define close _close
 #define read _read
 #define write _write
+#define lseek _lseeki64
 #define seek _seeki64 // by default, not 64-bit seek
+#define mkdir _mkdir
+#define unlink _unlink
+#define O_RDONLY _O_RDONLY 
+#define O_WRONLY _O_WRONLY 
+#define O_CREAT _O_CREAT
+#define _finddata64_t __finddata64_t
+
 #endif
 
 namespace Sirikata {
@@ -106,6 +115,7 @@ struct DIR {
 	struct _finddata64_t winentry;
 	intptr_t handle;
 	struct dirent myentry;
+	bool finished;
 };
 
 DIR *opendir(const char *name) {
@@ -120,7 +130,7 @@ DIR *opendir(const char *name) {
 }
 
 struct dirent *readdir(DIR *mydir) {
-	if (finished) {
+	if (mydir->finished) {
 		return NULL;
 	} else {
 		strcpy(mydir->myentry.d_name, mydir->winentry.name);
@@ -128,9 +138,9 @@ struct dirent *readdir(DIR *mydir) {
 		mydir->myentry.isdir = ((mydir->winentry.attrib & _A_SUBDIR) == _A_SUBDIR);
 	}
 	if (_findnext64(mydir->handle, &mydir->winentry) == -1) {
-		finished = true;
+		mydir->finished = true;
 	}
-	return &myentry;
+	return &mydir->myentry;
 }
 
 void closedir(DIR *mydir) {
@@ -152,9 +162,9 @@ void DiskCache::workerThread() {
 		boost::shared_ptr<DiskRequest> req;
 
 		mRequestQueue.blockingPop(req);
-		if (req->op == DiskRequest::EXIT) {
+		if (req->op == DiskRequest::OPEXIT) {
 			break;
-		} else if (req->op == DiskRequest::WRITE) {
+		} else if (req->op == DiskRequest::OPWRITE) {
 			// Note: TransferLayer::populatePreviousCaches has already been called.
 			std::string fileId = req->fileURI.fingerprint().convertToHexString();
 			bool newFile = true;
@@ -225,7 +235,7 @@ void DiskCache::workerThread() {
 				fclose(fp);
 				rename(rangesTempPath.c_str(), rangesPath.c_str());
 			}
-		} else if (req->op == DiskRequest::READ) {
+		} else if (req->op == DiskRequest::OPREAD) {
 			bool useWholeFile = false;
 			{
 				CacheMap::read_iterator iter(mFiles);
@@ -267,7 +277,7 @@ void DiskCache::workerThread() {
 			SparseData data;
 			data.addValidData(datum);
 			req->finished(&data);
-		} else if (req->op == DiskRequest::DELETE) {
+		} else if (req->op == DiskRequest::OPDELETE) {
 			std::string fileId = req->fileURI.fingerprint().convertToHexString();
 			std::string filePath = mPrefix + fileId;
 			unlink(filePath.c_str());
@@ -299,9 +309,9 @@ void DiskCache::unserialize() {
 			slash = fwdslash<backslash ? fwdslash : backslash;
 		}
 		std::string thisDir = mPrefix.substr(0, slash);
-		mkdir(thisDir.c_str(),
+		mkdir(thisDir.c_str()
 #ifndef _WIN32
-					0755
+					,0755
 #endif
 					);
 

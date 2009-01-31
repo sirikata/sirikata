@@ -35,7 +35,9 @@
 #include "util/ThreadSafeQueue.hpp"
 
 #include <boost/thread.hpp>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 
 #include <curl/curl.h>
@@ -157,7 +159,7 @@ namespace {
 	//static ThreadSafeQueue<HTTPRequest*> requestQueue;
 	struct CurlGlobals {
 		boost::mutex http_lock;
-		boost::thread main_loop;
+		boost::thread *main_loop;
 		volatile bool cleaningUp;
 
 		boost::mutex fd_lock;
@@ -181,7 +183,7 @@ namespace {
 		void destroyWakeupFd() {
 			boost::lock_guard<boost::mutex> change_fd(fd_lock);
 #ifdef _WIN32
-			close(waitFd);
+			closesocket(waitFd);
 #else
 			close(waitFd);
 			close(wakeupFd);
@@ -224,7 +226,8 @@ namespace {
 			cleaningUp = true;
 
 			doWakeup();
-			main_loop.join();
+			main_loop->join();
+			delete main_loop;
 			destroyWakeupFd();
 
 			curl_multi_cleanup(curlm);
@@ -286,14 +289,14 @@ void HTTPRequest::initCurl () {
 	 */
 	curl_global_init(CURL_GLOBAL_ALL);
 	curlm = curl_multi_init();
-
+#ifndef _WIN32
 	curl_multi_setopt(curlm, CURLMOPT_PIPELINING, 0);
 	curl_multi_setopt(curlm, CURLMOPT_MAXCONNECTS, 8); // make higher if a server.
-
+#endif
 	// CURLOPT_PROGRESSFUNCTION may be useful for determining whether to timeout during an active connection.
 	parent_easy_curl = allocDefaultCurl();
 
-	globals.main_loop = boost::thread(&curlLoop);
+	globals.main_loop = new boost::thread(&curlLoop);
 
 }
 

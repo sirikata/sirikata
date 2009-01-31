@@ -33,16 +33,14 @@
 #ifndef SIRIKATA_Range_HPP__
 #define SIRIKATA_Range_HPP__
 
-#include <list>
-#include <iostream>
 #include <sys/types.h>
-#include <stdint.h>
+#include "util/Platform.hpp"
 
 namespace Sirikata {
 namespace Transfer {
 
-typedef uint64_t cache_usize_type;
-typedef int64_t cache_ssize_type;
+typedef uint64 cache_usize_type;
+typedef int64 cache_ssize_type;
 
 enum Initializer { LENGTH, BOUNDS };
 

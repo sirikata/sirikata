@@ -51,7 +51,7 @@ public:
 	DenseData(const Range &range)
 			:Range(range) {
 		if (range.length()) {
-			mData.resize(range.length());
+			mData.resize((std::vector<unsigned char>::size_type)range.length());
 		}
 	}
 
@@ -67,7 +67,7 @@ public:
 		if (offset >= endbyte() || offset < startbyte()) {
 			return NULL;
 		}
-		return &(mData[offset-startbyte()]);
+		return &(mData[(std::vector<unsigned char>::size_type)(offset-startbyte())]);
 	}
 
 	inline void setLength(size_t len, bool is_npos) {

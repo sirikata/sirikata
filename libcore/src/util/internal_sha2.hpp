@@ -35,9 +35,6 @@
 #ifndef __SHA2_H__
 #define __SHA2_H__
 #include "util/Platform.hpp"
-namespace Sirikata {
-namespace Util {
-namespace Internal{
 #if 0
 #define SHA2_USE_INTTYPES_H
 #endif
@@ -53,6 +50,9 @@ namespace Internal{
 #include <inttypes.h>
 
 #endif /* SHA2_USE_INTTYPES_H */
+namespace Sirikata {
+namespace Util {
+namespace Internal{
 
 
 /*** SHA-256/384/512 Various Length Definitions ***********************/
@@ -193,4 +193,5 @@ char* SHA512_Data();
 }
 }
 }
+
 #endif /* __SHA2_H__ */

@@ -295,8 +295,6 @@ private:
 				const EventListener &listener,
 				SubscriptionId removeId);
 
-	int clearListenerList(ListenerList &list);
-
 	bool callAllListeners(EventPtr ev,
 				ListenerList *lili,
 				AbsTime forceCompletionBy);

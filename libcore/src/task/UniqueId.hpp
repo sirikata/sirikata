@@ -179,7 +179,7 @@ public:
 /** A 64-bit number that is always increasing, and never reuses IDs. */
 class IncreasingSubId {
 public:
-	typedef int64_t Type; ///< What primitive storage type this needs
+	typedef int64 Type; ///< What primitive storage type this needs
 private:
 	static Type nextid;
 public:
@@ -214,7 +214,7 @@ struct SubscriptionIdHasher {
 #ifdef __APPLE__
 		return HASH<unsigned int>()(((unsigned int)(sid>>32))^(unsigned int)sid);
 #else
-		return HASH<unsigned int>()(sid);
+		return HASH<SubscriptionId>()(sid);
 #endif
 	}
 };

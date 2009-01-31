@@ -76,7 +76,7 @@ private:
 	std::string mPrefix; // directory or prefix name with trailing slash.
 
 	struct DiskRequest {
-		enum Operation {READ, WRITE, DELETE, EXIT} op;
+		enum Operation {OPREAD, OPWRITE, OPDELETE, OPEXIT} op;
 
 		DiskRequest(Operation op, const URI &myURI, const Range &myRange)
 			:op(op), fileURI(myURI), toRead(myRange) {}
@@ -100,7 +100,7 @@ public:
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		boost::shared_ptr<DiskRequest> req (
-				new DiskRequest(DiskRequest::READ, fileURI, requestedRange));
+				new DiskRequest(DiskRequest::OPREAD, fileURI, requestedRange));
 		req->finished = callback;
 
 		mRequestQueue.push(req);
@@ -146,7 +146,7 @@ public:
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
 		boost::shared_ptr<DiskRequest> req (
-				new DiskRequest(DiskRequest::WRITE, URI(fileId, ""), *data));
+				new DiskRequest(DiskRequest::OPWRITE, URI(fileId, ""), *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
@@ -159,7 +159,7 @@ protected:
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
 			boost::shared_ptr<DiskRequest> req
-				(new DiskRequest(DiskRequest::DELETE, URI(fileId, ""), Range(true)));
+				(new DiskRequest(DiskRequest::OPDELETE, URI(fileId, ""), Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
@@ -184,7 +184,7 @@ public:
 
 	virtual ~DiskCache() {
 		boost::shared_ptr<DiskRequest> req
-			(new DiskRequest(DiskRequest::EXIT, URI(Fingerprint(),""), Range(true)));
+			(new DiskRequest(DiskRequest::OPEXIT, URI(Fingerprint(),""), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.
