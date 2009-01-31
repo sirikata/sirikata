@@ -43,32 +43,32 @@ public:
     {
     }
     void testAtomicIncrement32( void ) {
-        int32_t test=1235918251;
-        AtomicValue<int32_t> a;
+        Sirikata::int32 test=1235918251;
+        AtomicValue<Sirikata::int32> a;
         a=test;
         a++;
         a+=235;
-        int32_t output=a.read();
+        Sirikata::int32 output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
     }
     void testAtomicIncrement32u( void ) {
-        uint32_t test=3235918251U;
-        AtomicValue<uint32_t> a;
+        Sirikata::uint32 test=3235918251U;
+        AtomicValue<Sirikata::uint32> a;
         a=test;
         a++;
         a+=235;
-        uint32_t output=a.read();
+        Sirikata::uint32 output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
     }
     void testAtomicIncrement64( void ) {
-        int64_t test=65535;
+        Sirikata::int64 test=65535;
         test*=65535;
         test*=65535;
-        AtomicValue<int64_t> a;
+        AtomicValue<Sirikata::int64> a;
         a=test;
         a++;
         a+=235;
-        int64_t output=a.read();
+        Sirikata::int64 output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
     }
 };

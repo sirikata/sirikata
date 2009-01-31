@@ -127,6 +127,16 @@
 #include <list>
 #include <set>
 #include <map>
+#ifdef _WIN32
+#define BOOST_ALL_NO_LIB
+//#define BOOST_ALL_DYN_LINK
+#endif
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif 
+#ifndef _SCL_SECURE_NO_WARNINGS
+#define _SCL_SECURE_NO_WARNINGS
+#endif
 #include <boost/tr1/memory.hpp>
 #include <boost/tr1/array.hpp>
 #include <boost/tr1/functional.hpp>

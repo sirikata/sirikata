@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_ATOMIC_TYPES_HPP_
 #define _SIRIKATA_ATOMIC_TYPES_HPP_
 
-#include <stdint.h>
+#include "Platform.hpp"
 #ifdef __APPLE__
 #include <libkern/OSAtomic.h>
 #endif
@@ -47,7 +47,7 @@ template <int size> class SizedAtomicValue {
 template<> class SizedAtomicValue<4> {
 public:
     template<typename T> static T add(volatile T*scalar, T other) {
-        return (T)InterlockedExchangeAdd((volatile LONG*)&scalar,(int32_t) other);
+        return (T)InterlockedExchangeAdd((volatile LONG*)&scalar,(int32) other);
     }
     template<typename T> static T inc(volatile T*scalar) {
         return (T)InterlockedIncrement((volatile LONG*)&scalar);
@@ -76,26 +76,26 @@ template<int size> class SizedAtomicValue {
 template<> class SizedAtomicValue<4> {
 public:
     template <typename T> static T add(volatile T* scalar,T other) {
-        return (T)OSAtomicAdd32((int32_t)other, (int32_t*)scalar);
+        return (T)OSAtomicAdd32((int32)other, (int32*)scalar);
     }
     template <typename T> static T inc(volatile T*scalar) {
-        return (T)OSAtomicIncrement32((int32_t*)scalar);
+        return (T)OSAtomicIncrement32((int32*)scalar);
     }
     template <typename T> static T dec(volatile T*scalar) {
-        return (T)OSAtomicDecrement32((int32_t*)scalar);
+        return (T)OSAtomicDecrement32((int32*)scalar);
     }
 };
 
 template<> class SizedAtomicValue<8> {
 public:
     template <typename T> static T add(volatile T* scalar, T other) {
-        return (T)OSAtomicAdd64((int64_t)other, (int64_t*)scalar);
+        return (T)OSAtomicAdd64((int64)other, (int64*)scalar);
     }
     template <typename T> static T inc(volatile T*scalar) {
-        return (T)OSAtomicIncrement64((int64_t*)scalar);
+        return (T)OSAtomicIncrement64((int64*)scalar);
     }
     template <typename T> static T dec(volatile T*scalar) {
-        return (T)OSAtomicDecrement64((int64_t*)scalar);
+        return (T)OSAtomicDecrement64((int64*)scalar);
     }
 };
 #else
