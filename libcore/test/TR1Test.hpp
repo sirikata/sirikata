@@ -57,12 +57,12 @@ public:
         for (Set::iterator i=colornames.begin();i!=colornames.end();++i) {
             TS_ASSERT(*i=="red"||*i=="white"||*i=="black"||*i=="blue"||*i=="green");
         }
-        TS_ASSERT_EQUALS(colornames.size(),5);
-        TS_ASSERT_EQUALS(colors.size(),5);
-        TS_ASSERT_EQUALS(rcolors.size(),5);
+        TS_ASSERT_EQUALS((int)colornames.size(),5);
+        TS_ASSERT_EQUALS((int)colors.size(),5);
+        TS_ASSERT_EQUALS((int)rcolors.size(),5);
         TS_ASSERT_DIFFERS(colors.find("white"),colors.end());
         colors.erase(colors.find("white"));
         TS_ASSERT_EQUALS(colors.find("white"),colors.end());
-        TS_ASSERT_EQUALS(colors.size(),4);
+        TS_ASSERT_EQUALS((int)colors.size(),4);
     }
 };

@@ -105,7 +105,7 @@ if (Boost_FIND_VERSION_EXACT)
   endif (Boost_FIND_VERSION_PATCH)
 else (Boost_FIND_VERSION_EXACT)
   set( _boost_TEST_VERSIONS ${Boost_ADDITIONAL_VERSIONS} 
-    "1.37.1" "1.37.0" "1.36.1" "1.36.0" "1.36" "1.35.0" "1.35")
+    "1.39.1" "1.39.0" "1.39" "1.38.1" "1.38.0" "1.38" "1.38.1" "1.37.0" "1.37" "1.36.1" "1.36.0" "1.36" "1.35.0" "1.35")
 endif (Boost_FIND_VERSION_EXACT)
 
 # The reason that we failed to find Boost. This will be set to a
@@ -321,7 +321,7 @@ ELSE (_boost_IN_CACHE)
       )
     IF(NOT Boost_INCLUDE_DIR)
       FIND_PATH(Boost_INCLUDE_DIR
-        NAMES         boost/config.hpp
+        NAMES         boost/unordered_map.hpp
         PATHS         ${_boost_INCLUDE_SEARCH_DIRS}
         PATH_SUFFIXES ${_boost_PATH_SUFFIXES}
         )       
@@ -355,7 +355,7 @@ ELSE (_boost_IN_CACHE)
     ENDIF(NOT "${Boost_VERSION}" STREQUAL "0")
   ELSE(Boost_INCLUDE_DIR)
     set(Boost_ERROR_REASON
-      "${Boost_ERROR_REASON}Unable to find the Boost header files. Please set BOOST_ROOT to the root directory containing Boost or BOOST_INCLUDEDIR to the directory containing Boost's headers.")
+      "${Boost_ERROR_REASON}Unable to find the Boost header file: boost/unordered_map.hpp present in boost 1.36 or greater. Please set BOOST_ROOT to the root directory containing Boost 1.36 or newer or BOOST_INCLUDEDIR to the directory containing Boost's 1.36 or newer's headers.")
   ENDIF(Boost_INCLUDE_DIR)
 
   # Setting some more suffixes for the library

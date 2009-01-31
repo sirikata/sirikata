@@ -32,34 +32,9 @@
 
 #ifndef SIRIKATA_HashMap_HPP__
 #define SIRIKATA_HashMap_HPP__
-
-#if defined(HELL_HAS_FROZEN_OVER)
-// C++0x released and supported by modern compilers!
-# include <unordered_map>
-# define HASH std::hash
-# define HashMap std::unordered_map
-
-#elif defined(_MSC_VER)
-// Microsoft hash_map
-# include <hash_map>
-# define HASH stdext::hash
-# define HashMap stdext::hash_map
-
-#else
-# if (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 2))
-// G++ proprietary hash_map -- gives #warning in GCC 4.3
-#  include <ext/hash_map>
-#  define HASH __gnu_cxx::hash
-#  define HashMap __gnu_cxx::hash_map
-
-# else
-// Proposed standard tr1 hash_map (supported in newer compilers)
-#  include <tr1/unordered_map>
+#include "util/Platform.hpp"
 #  define HashMap std::tr1::unordered_map
 #  define HASH std::tr1::hash
-
-# endif
-#endif
 
 
 #endif
