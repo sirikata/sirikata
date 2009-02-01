@@ -37,12 +37,6 @@
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
-#include <string>
-#include <algorithm>
-#include <map>
-#include <list>
-#include <vector>
-#include <set>
 
 #include "util/LockFreeQueue.hpp"
 #include "util/ThreadSafeQueue.hpp"

@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_ATOMIC_TYPES_HPP_
 #define _SIRIKATA_ATOMIC_TYPES_HPP_
 
-#include "Platform.hpp"
 #ifdef __APPLE__
 #include <libkern/OSAtomic.h>
 #endif

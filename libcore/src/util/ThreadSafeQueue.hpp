@@ -33,7 +33,6 @@
 #ifndef SIRIKATA_ThreadSafeQueue_HPP__
 #define SIRIKATA_ThreadSafeQueue_HPP__
 
-#include <queue>
 
 namespace Sirikata {
 namespace ThreadSafeQueueNS{

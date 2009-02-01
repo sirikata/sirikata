@@ -34,9 +34,6 @@
 #define SIRIKATA_UniqueId_HPP__
 
 #include <typeinfo>
-#include <list>
-#include <string>
-#include <string.h>
 #include "HashMap.hpp"
 
 
@@ -73,7 +70,7 @@ public:
 		if (mClassId == NULL || other.mClassId == NULL)
 			return false;
 		// mClassId is not null
-		if (strcmp(mClassId, other.mClassId))
+		if (std::strcmp(mClassId, other.mClassId))
 			return false;
 		return (mUniqueId == other.mUniqueId);
 	}

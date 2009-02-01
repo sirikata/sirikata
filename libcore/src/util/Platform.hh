@@ -1,7 +1,7 @@
 /*  Sirikata -- Platform Dependent Definitions
- *  Platform.hpp
+ *  Platform.hh
  *
- *  Copyright (c) 2008, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PLATFORM_HPP_
-#define _SIRIKATA_PLATFORM_HPP_
+#ifndef _SIRIKATA_PLATFORM_HH_
+#define _SIRIKATA_PLATFORM_HH_
 
 
 #define PLATFORM_WINDOWS 0
@@ -119,24 +119,20 @@
 #  endif
 # endif
 #endif
-
+#include <assert.h>
+#include <cstddef>
+#include <cstring>
+#include <cmath>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <list>
+#include <queue>
 #include <set>
 #include <map>
-//#ifdef _WIN32
-//#define BOOST_ALL_NO_LIB
-//#define BOOST_ALL_DYN_LINK
-//#endif
-//#ifndef _CRT_SECURE_NO_WARNINGS
-//#define _CRT_SECURE_NO_WARNINGS
-//#endif 
-//#ifndef _SCL_SECURE_NO_WARNINGS
-//#define _SCL_SECURE_NO_WARNINGS
-//#endif
+#include <algorithm>
 #include <boost/tr1/memory.hpp>
 #include <boost/tr1/array.hpp>
 #include <boost/tr1/functional.hpp>
@@ -179,5 +175,43 @@ typedef uchar byte;
 typedef std::string String;
 
 } // namespace Sirikata
+#include "Vector3.hpp"
+#include "Vector4.hpp"
+#include "Quaternion.hpp"
+#include "Array.hpp"
+#include "UUID.hpp"
+namespace Sirikata {
+typedef Vector3<float32> Vector3f;
+typedef Vector3<float64> Vector3d;
+typedef Vector4<float32> Vector4f;
+typedef Vector4<float64> Vector4d;
+}
+#if 0
+template class std::tr1::unordered_map<Sirikata::int32, Sirikata::int32>;
+template class std::tr1::unordered_map<Sirikata::uint32, Sirikata::uint32>;
+template class std::tr1::unordered_map<Sirikata::uint64, Sirikata::uint64>;
+template class std::tr1::unordered_map<Sirikata::int64, Sirikata::int64>;
+template class std::tr1::unordered_map<Sirikata::String, Sirikata::String>;
+
+template class std::tr1::unordered_map<Sirikata::int32, void*>;
+template class std::tr1::unordered_map<Sirikata::uint32, void*>;
+template class std::tr1::unordered_map<Sirikata::uint64, void*>;
+template class std::tr1::unordered_map<Sirikata::int64, void*>;
+template class std::tr1::unordered_map<Sirikata::String, void*>;
+template class std::map<Sirikata::int32, Sirikata::int32>;
+template class std::map<Sirikata::uint32, Sirikata::uint32>;
+template class std::map<Sirikata::uint64, Sirikata::uint64>;
+template class std::map<Sirikata::int64, Sirikata::int64>;
+template class std::map<Sirikata::String, Sirikata::String>;
+template class std::map<Sirikata::int32, void*>;
+template class std::map<Sirikata::uint32, void*>;
+template class std::map<Sirikata::uint64, void*>;
+template class std::map<Sirikata::int64, void*>;
+template class std::map<Sirikata::String, void*>;
+template class std::vector<Sirikata::String>;
+template class std::vector<void*>;
+template class std::vector<Sirikata::int8>;
+template class std::vector<Sirikata::uint8>;
+#endif
 
 #endif //_SIRIKATA_PLATFORM_HPP_

@@ -34,7 +34,6 @@
 #define _SIRIKATA_ARRAY_HPP_
 
 #include <cstddef>
-#include <cstring>
 #include <stdexcept>
 
 namespace Sirikata {

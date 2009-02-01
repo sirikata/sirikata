@@ -34,7 +34,6 @@
 #ifndef SIRIKATA_HTTPTransfer_HPP__
 #define SIRIKATA_HTTPTransfer_HPP__
 
-#include <vector>
 #include "CacheLayer.hpp"
 #include "HTTPRequest.hpp"
 

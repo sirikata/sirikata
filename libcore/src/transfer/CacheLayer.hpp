@@ -33,18 +33,11 @@
 
 #ifndef SIRIKATA_CacheLayer_HPP__
 #define SIRIKATA_CacheLayer_HPP__
-
-#include <vector>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/utility.hpp>
-#include <string>
-#include <algorithm>
-#include <map>
-#include <list>
-#include <vector>
 
 #include "TransferData.hpp"
 #include "URI.hpp"

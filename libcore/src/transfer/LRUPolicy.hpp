@@ -34,7 +34,6 @@
 #ifndef SIRIKATA_LRUPolicy_HPP__
 #define SIRIKATA_LRUPolicy_HPP__
 
-#include <vector>
 #include "CachePolicy.hpp"
 
 namespace Sirikata {

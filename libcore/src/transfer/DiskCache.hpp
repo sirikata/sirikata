@@ -34,10 +34,8 @@
 #ifndef SIRIKATA_DiskCache_HPP__
 #define SIRIKATA_DiskCache_HPP__
 
-#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fstream>
 
 #include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"

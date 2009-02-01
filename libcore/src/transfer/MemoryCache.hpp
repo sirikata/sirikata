@@ -34,8 +34,6 @@
 #ifndef SIRIKATA_MemoryCache_HPP__
 #define SIRIKATA_MemoryCache_HPP__
 
-#include <map>
-
 #include "CacheLayer.hpp"
 
 namespace Sirikata {

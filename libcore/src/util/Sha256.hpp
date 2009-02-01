@@ -33,8 +33,6 @@
 #ifndef _SIRIKATA_SHA256_HPP_
 #define _SIRIKATA_SHA256_HPP_
 
-#include "Array.hpp"
-
 #include <string>
 #include <cstdlib>
 #include <cstring>

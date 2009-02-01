@@ -33,7 +33,6 @@
 #ifndef _SIRIKATA_UUID_HPP_
 #define _SIRIKATA_UUID_HPP_
 
-#include "Array.hpp"
 
 namespace boost_{
 class uuid;

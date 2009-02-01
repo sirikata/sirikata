@@ -34,9 +34,6 @@
 #define SIRIKATA_TransferData_HPP__
 
 #include <boost/shared_ptr.hpp>
-#include <vector>
-#include <list>
-#include <iostream>
 #include "Range.hpp"
 
 namespace Sirikata {

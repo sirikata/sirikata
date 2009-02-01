@@ -29,10 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <string>
+#include "Platform.hh"
 #include <sstream>
 #include "Quaternion.hpp"
-#include <cmath>
 #include "Matrix3x3.hpp"
 namespace Sirikata {
 Quaternion::Quaternion(const Vector3<Quaternion::scalar>&axis, Quaternion::scalar angle) {

@@ -34,7 +34,6 @@
 #define _SIRIKATA_PLUGIN_MANAGER_HPP_
 
 #include "util/Plugin.hpp"
-#include <list>
 
 namespace Sirikata {
 

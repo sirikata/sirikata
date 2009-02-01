@@ -34,9 +34,7 @@
 #define _SIRIKATA_OPTIONS_HPP_
 
 #include "util/Any.hpp"
-#include <string>
 #include <boost/function.hpp>
-#include <map>
 namespace Sirikata {
 class OptionSet;
 template <class T> class OptionValueType {public:

@@ -33,8 +33,6 @@
 #ifndef SIRIKATA_Time_HPP__
 #define SIRIKATA_Time_HPP__
 
-#include "util/Platform.hpp"
-
 namespace Sirikata {
 
 /**

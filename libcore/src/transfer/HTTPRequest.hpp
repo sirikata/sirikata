@@ -34,7 +34,6 @@
 #ifndef SIRIKATA_HTTPRequest_HPP__
 #define SIRIKATA_HTTPRequest_HPP__
 
-#include <vector>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/utility.hpp>

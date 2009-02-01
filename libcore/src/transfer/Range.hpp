@@ -33,9 +33,6 @@
 #ifndef SIRIKATA_Range_HPP__
 #define SIRIKATA_Range_HPP__
 
-#include <sys/types.h>
-#include "util/Platform.hpp"
-
 namespace Sirikata {
 namespace Transfer {
 

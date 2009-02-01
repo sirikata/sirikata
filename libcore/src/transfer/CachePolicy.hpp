@@ -34,8 +34,6 @@
 #ifndef SIRIKATA_CachePolicy_HPP__
 #define SIRIKATA_CachePolicy_HPP__
 
-#include <vector>
-
 #include "URI.hpp"
 
 namespace Sirikata {

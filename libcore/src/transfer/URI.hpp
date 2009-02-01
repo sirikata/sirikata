@@ -34,7 +34,6 @@
 #ifndef SIRIKATA_URI_HPP__
 #define SIRIKATA_URI_HPP__
 
-#include <string>
 #include "util/Sha256.hpp"
 #include "Range.hpp" // defines cache_usize_type, cache_ssize_type
 

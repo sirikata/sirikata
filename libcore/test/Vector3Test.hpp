@@ -29,10 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "util/Platform.hh"
 #include <cxxtest/TestSuite.h>
-#include <string>
-#include <sstream>
-#include "util/Vector3.hpp"
 class Vector3Test : public CxxTest::TestSuite
 {
     typedef Sirikata::Vector3<float> Vector3f;

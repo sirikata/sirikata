@@ -32,7 +32,6 @@
 #ifndef _ANY_HPP_
 #define _ANY_HPP_
 #include <typeinfo>
-#include <stdlib.h>
 namespace Sirikata {
 class Any {
     class Holder{

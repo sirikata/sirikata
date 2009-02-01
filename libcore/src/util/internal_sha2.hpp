@@ -34,7 +34,6 @@
 
 #ifndef __SHA2_H__
 #define __SHA2_H__
-#include "util/Platform.hpp"
 #if 0
 #define SHA2_USE_INTTYPES_H
 #endif

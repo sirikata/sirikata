@@ -1,5 +1,5 @@
+#include "util/Platform.hh"
 #include <cxxtest/TestSuite.h>
-#include "util/Platform.hpp"
 class TR1Test : public CxxTest::TestSuite
 {
 public:

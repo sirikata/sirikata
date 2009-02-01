@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include "Platform.hh"
 #include "UUID.hpp"
 #include "boost_uuid.hpp"
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));

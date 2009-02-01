@@ -34,7 +34,6 @@
 #define SIRIKATA_Event_HPP__
 
 #include "HashMap.hpp"
-#include <ostream>
 
 namespace Sirikata {
 
