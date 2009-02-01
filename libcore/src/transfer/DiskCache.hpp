@@ -65,7 +65,7 @@ public:
 private:
 
 	struct DiskRequest;
-	ThreadSafeQueue<boost::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
+	ThreadSafeQueue<std::tr1::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
 	boost::thread mWorkerThread;
 
 	CacheMap mFiles;
@@ -82,7 +82,7 @@ private:
 		URI fileURI;
 		Range toRead;
 		TransferCallback finished;
-		boost::shared_ptr<DenseData> data; // if NULL, read data.
+		std::tr1::shared_ptr<DenseData> data; // if NULL, read data.
 
 	};
 
@@ -97,7 +97,7 @@ public:
 	void readDataFromDisk(const URI &fileURI,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
-		boost::shared_ptr<DiskRequest> req (
+		std::tr1::shared_ptr<DiskRequest> req (
 				new DiskRequest(DiskRequest::OPREAD, fileURI, requestedRange));
 		req->finished = callback;
 
@@ -143,7 +143,7 @@ public:
 
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
-		boost::shared_ptr<DiskRequest> req (
+		std::tr1::shared_ptr<DiskRequest> req (
 				new DiskRequest(DiskRequest::OPWRITE, URI(fileId, ""), *data));
 		req->data = data;
 
@@ -156,7 +156,7 @@ protected:
 		if (!mCleaningUp) {
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
-			boost::shared_ptr<DiskRequest> req
+			std::tr1::shared_ptr<DiskRequest> req
 				(new DiskRequest(DiskRequest::OPDELETE, URI(fileId, ""), Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
@@ -167,7 +167,7 @@ public:
 
 	DiskCache(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
-			mWorkerThread(boost::bind(&DiskCache::workerThread, this)),
+			mWorkerThread(std::tr1::bind(&DiskCache::workerThread, this)),
 			mFiles(this, policy),
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
@@ -181,7 +181,7 @@ public:
 	}
 
 	virtual ~DiskCache() {
-		boost::shared_ptr<DiskRequest> req
+		std::tr1::shared_ptr<DiskRequest> req
 			(new DiskRequest(DiskRequest::OPEXIT, URI(Fingerprint(),""), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);

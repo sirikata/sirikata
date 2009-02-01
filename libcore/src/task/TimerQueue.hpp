@@ -33,11 +33,6 @@
 #ifndef SIRIKATA_TimerQueue_HPP__
 #define SIRIKATA_TimerQueue_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-
 #include "Time.hpp"
 #include "UniqueId.hpp"
 
@@ -54,7 +49,7 @@ namespace Task {
  * again, 0 if the function should be called next frame (ASAP), or
  * negative if it should be removed from the timer queue.
  */
-typedef boost::function0<DeltaTime> TimedEvent;
+typedef std::tr1::function<DeltaTime()> TimedEvent;
 
 
 
@@ -71,7 +66,7 @@ public:
 	 * be rescheduled for that time.
 	 *
 	 * @param nextTime  The absolute time to sechedule ev.
-	 * @param ev        A (usually bound) boost::function to be called at nextTime.
+	 * @param ev        A (usually bound) std::tr1::function to be called at nextTime.
 	 */
 	void schedule(AbsTime nextTime,
 				const TimedEvent &ev);
@@ -84,7 +79,7 @@ public:
 	 * be rescheduled for that time.
 	 *
 	 * @param nextTime  The absolute time to sechedule ev.
-	 * @param ev        A (usually bound) boost::function to be called at nextTime.
+	 * @param ev        A (usually bound) std::tr1::function to be called at nextTime.
 	 * @returns         An id that can be passed to unschedule to prematurely cancel
 	 *                  the timed event from being thrown.
 	 */

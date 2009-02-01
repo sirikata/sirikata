@@ -33,11 +33,6 @@
 
 #ifndef SIRIKATA_CacheLayer_HPP__
 #define SIRIKATA_CacheLayer_HPP__
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-#include <boost/utility.hpp>
 
 #include "TransferData.hpp"
 #include "URI.hpp"
@@ -54,11 +49,11 @@ namespace Transfer {
  *                    SparseDataPtr is guaranteed to contain the requested block,
  *                    but it may be seprated into adjacent DenseData pieces.
  */
-typedef boost::function1<void, const SparseData*> TransferCallback;
+typedef std::tr1::function<void(const SparseData*)> TransferCallback;
 
 /** Base class for cache layer--will try a next cache and respond with the data to
  * any previous cache layers so they can store that data as well. */
-class CacheLayer : boost::noncopyable {
+class CacheLayer : Noncopyable {
 private:
 	CacheLayer *mRespondTo;
 	CacheLayer *mNext;

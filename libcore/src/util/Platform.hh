@@ -178,6 +178,7 @@ typedef std::string String;
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 #include "Quaternion.hpp"
+#include "Noncopyable.hpp"
 #include "Array.hpp"
 #include "UUID.hpp"
 namespace Sirikata {

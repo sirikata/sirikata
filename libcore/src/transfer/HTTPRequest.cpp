@@ -441,7 +441,7 @@ void HTTPRequest::go() {
 
 
 //Task::timer_queue.schedule(Task::AbsTime::now() + RETRY_TIME,
-//	boost::bind(&getData, this, fileId, requestedRange, callback, triesLeft-1));
+//	std::tr1::bind(&getData, this, fileId, requestedRange, callback, triesLeft-1));
 
 }
 }

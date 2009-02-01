@@ -34,9 +34,6 @@
 #ifndef SIRIKATA_HTTPRequest_HPP__
 #define SIRIKATA_HTTPRequest_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/utility.hpp>
 #include "URI.hpp"
 #include "TransferData.hpp"
 
@@ -48,8 +45,8 @@ typedef void CURL;
 /// Downloads the specified file in another thread and calls callback when finished.
 class HTTPRequest {
 public:
-	typedef boost::function3<void, HTTPRequest*,
-			const DenseDataPtr &, bool> CallbackFunc;
+	typedef std::tr1::function<void(HTTPRequest*,
+			const DenseDataPtr &, bool)> CallbackFunc;
 private:
 	const URI mURI; // const because its c_str is passed to curl.
 	Range mRequestedRange;
@@ -135,7 +132,7 @@ public:
 	void go();
 };
 
-//typedef boost::shared_ptr<HTTPRequest> HTTPRequestPtr;
+//typedef std::tr1::shared_ptr<HTTPRequest> HTTPRequestPtr;
 
 }
 }

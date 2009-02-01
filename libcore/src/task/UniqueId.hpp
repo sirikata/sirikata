@@ -42,7 +42,7 @@ namespace Sirikata {
 /**
  * UniqueId.hpp -- Defines a SubscriptionId, as well as macros
  * to ease the creation of a FunctionId to go along with the
- * boost::function objects passed into EventManager and TimerQueue.
+ * std::tr1::function objects passed into EventManager and TimerQueue.
  */
 namespace Task {
 

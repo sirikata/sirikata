@@ -33,7 +33,6 @@
 #ifndef SIRIKATA_TransferData_HPP__
 #define SIRIKATA_TransferData_HPP__
 
-#include <boost/shared_ptr.hpp>
 #include "Range.hpp"
 
 namespace Sirikata {
@@ -41,7 +40,7 @@ namespace Transfer {
 
 
 /// Represents a single block of data, and also knows the range of the file it came from.
-class DenseData : boost::noncopyable, public Range {
+class DenseData : Noncopyable, public Range {
 	std::vector<unsigned char> mData;
 
 public:
@@ -75,7 +74,7 @@ public:
 	}
 };
 
-typedef boost::shared_ptr<DenseData> DenseDataPtr;
+typedef std::tr1::shared_ptr<DenseData> DenseDataPtr;
 
 /// Represents a series of DenseData.  Often you may have adjacent DenseData.
 class SparseData {
@@ -197,7 +196,7 @@ public:
 	}
 
 };
-//typedef boost::shared_ptr<SparseData> SparseDataPtr;
+//typedef std::tr1::shared_ptr<SparseData> SparseDataPtr;
 
 }
 }

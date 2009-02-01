@@ -34,9 +34,6 @@
 #ifndef SIRIKATA_TransferManager_HPP__
 #define SIRIKATA_TransferManager_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
 #include "CacheLayer.hpp"
 
 namespace Sirikata {
@@ -56,7 +53,7 @@ class TransferManager {
 		bool mPending; //pending overlapping requests.
 
 		Range mReqRange;
-		boost::function1<void, const Fingerprint&, const SparseData*> mCallback;
+		std::tr1::function<void(const Fingerprint&, const SparseData*)> mCallback;
 	};
 	typedef std::map<Fingerprint, std::list<RequestInfo> > RequestMap;
 	RequestMap mActiveRequests;
@@ -69,8 +66,8 @@ public:
 	}
 
 	/*
-	void finishedRequest(const URI &name, const boost::function3<void, const URI&,
-			const SparseData*, bool>&callback) {
+	void finishedRequest(const URI &name, const std::tr1::function<void(const URI&,
+			const SparseData*, bool)>&callback) {
 		// TODO: What to do when finished?
 	}
 	*/
@@ -80,12 +77,12 @@ public:
 	}
 
 	bool download(const URI &name,
-				const boost::function1<void, const SparseData*>&callback,
+                  const std::tr1::function<void(const SparseData*)>&callback,
 				Range range) {
 		// check for overlapping requests.
 		// if overlapping, put in "pendingOn"
 		// if not,
-		//bool async = mFirstTransferLayer->getData(name, range, boost::bind(&TransferManager::finishedRequest, this, name, callback));
+		//bool async = mFirstTransferLayer->getData(name, range, std::tr1::bind(&TransferManager::finishedRequest, this, name, callback));
 		bool async = mFirstTransferLayer->getData(name, range, callback);
 		// async can only be used for optimization
 		// it is possible that the request finished by a different thread even if it returned true.

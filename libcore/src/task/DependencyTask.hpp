@@ -33,11 +33,6 @@
 #ifndef SIRIKATA_Scheduler_HPP__
 #define SIRIKATA_Scheduler_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-
 #include "Time.hpp"
 
 namespace Sirikata {

@@ -33,11 +33,6 @@
 #ifndef SIRIKATA_EventManager_HPP__
 #define SIRIKATA_EventManager_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-
 #include "util/LockFreeQueue.hpp"
 #include "util/ThreadSafeQueue.hpp"
 
@@ -45,10 +40,6 @@
 #include "UniqueId.hpp"
 #include "Event.hpp"
 #include "Time.hpp"
-
-namespace boost {
-	class mutex;
-}
 
 /** @namespace Sirikata::Task
  * Sirikata::Task contains the task-oriented functions for communication
@@ -136,16 +127,16 @@ class EventManager {
 	/* TYPEDEFS */
 public:
 	/// A shared_ptr to an Event.
-	typedef boost::shared_ptr<EventBase> EventPtr;
+	typedef std::tr1::shared_ptr<EventBase> EventPtr;
 
 	/**
-	 * A boost::function1 taking an Event and returning a value indicating
+	 * A std::tr1::function1 taking an Event and returning a value indicating
 	 * Whether to cancel the event, remove the event responder, or some
 	 * other values.
 	 *
 	 * @see EventResponse
 	 */
-	typedef boost::function1<EventResponse, EventPtr> EventListener;
+	typedef std::tr1::function<EventResponse(EventPtr)> EventListener;
 
 private:
 
@@ -312,7 +303,7 @@ public:
 	 * returns DELETE_LISTENER after being called for an event.
 	 *
 	 * @param eventId    the specific event to subscribe to
-	 * @param listener   a (usually bound) boost::function taking an EventPtr
+	 * @param listener   a (usually bound) std::tr1::function taking an EventPtr
 	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 *
 	 * @see EventResponse
@@ -329,7 +320,7 @@ public:
 	 * returns DELETE_LISTENER after being called for an event.
 	 *
 	 * @param primaryId  the event type to subscribe to
-	 * @param listener   a (usually bound) boost::function taking an EventPtr
+	 * @param listener   a (usually bound) std::tr1::function taking an EventPtr
 	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 *
 	 * @see EventResponse
@@ -351,7 +342,7 @@ public:
 	 * unsubscribed and superceded by this listener.
 	 *
 	 * @param eventId    the specific event to subscribe to
-	 * @param listener   a (usually bound) boost::function taking an EventPtr
+	 * @param listener   a (usually bound) std::tr1::function taking an EventPtr
 	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 * @returns          a SubscriptionId that can be passed to unsubscribe
 	 *
@@ -373,7 +364,7 @@ public:
 	 * unsubscribed and superceded by this listener.
 	 *
 	 * @param primaryId  the event type to subscribe to
-	 * @param listener   a (usually bound) boost::function taking an EventPtr
+	 * @param listener   a (usually bound) std::tr1::function taking an EventPtr
 	 * @param when       Guarantees a specific ordering. Defaults to MIDDLE.
 	 * @returns          a SubscriptionId that can be passed to unsubscribe
 	 *

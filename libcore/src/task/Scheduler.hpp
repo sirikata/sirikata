@@ -33,11 +33,6 @@
 #ifndef SIRIKATA_Scheduler_HPP__
 #define SIRIKATA_Scheduler_HPP__
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
-
 #include "Time.hpp"
 
 namespace Sirikata {
@@ -45,7 +40,7 @@ namespace Task {
 
 /**
  * TaskFunction represents a runnable task that will is a bound
- * boost::function to some class that needs to be run whenever it
+ * std::tr1::function to some class that needs to be run whenever it
  * needs processing time.  NOTE: Because this interface needs to be fast
  * and should be kept simple,
  *
@@ -53,7 +48,7 @@ namespace Task {
  * @returns        'true' if the task should remain on the ready queue
  *                 (if it needs more time), or false if it should sleep.
  */
-typedef boost::function1<bool, AbsTime> TaskFunction;
+typedef std::tr1::function1<bool(AbsTime)> TaskFunction;
 
 /// Scheduler interface
 class Scheduler {

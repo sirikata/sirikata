@@ -98,7 +98,7 @@ public:
 			--transferIter;
 			thisRequest = &(*transferIter);
 		}
-		thisRequest->setCallback(boost::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
+		thisRequest->setCallback(std::tr1::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
 		// should call callback when it finishes.
 		thisRequest->go();
 		return true;

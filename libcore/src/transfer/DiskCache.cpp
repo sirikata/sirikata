@@ -33,7 +33,6 @@
 #include "util/Platform.hh"
 #include "DiskCache.hpp"
 
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -159,7 +158,7 @@ cache_usize_type sizeFromDirentry(const std::string &name, dirent *ent, bool &is
 
 void DiskCache::workerThread() {
 	while (true) {
-		boost::shared_ptr<DiskRequest> req;
+		std::tr1::shared_ptr<DiskRequest> req;
 
 		mRequestQueue.blockingPop(req);
 		if (req->op == DiskRequest::OPEXIT) {

@@ -46,7 +46,7 @@ namespace Transfer {
  * Handles locking, and also stores a map that can be used
  * both by the CachePolicy, and by the CacheLayer.
  */
-class CacheMap : boost::noncopyable {
+class CacheMap : Noncopyable {
 public:
 	typedef CacheLayer::CacheEntry *CacheData;
 
@@ -179,7 +179,7 @@ public:
 	 * make sure to call the alloc() function that takes a write_iterator
 	 * argument if you already own one.
 	 */
-	class write_iterator : boost::noncopyable {
+	class write_iterator : Noncopyable {
 		CacheMap *mCachemap;
 		boost::unique_lock<boost::shared_mutex> mLock;
 

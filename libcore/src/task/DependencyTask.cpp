@@ -65,10 +65,10 @@ class CallDependencyFailedTask:public Event {
 void DependentTask::go() {
     if (mNumThisWaitingOn==0) {
         if (mFailure) {
-            boost::shared_ptr<Event> ev(new CallDependencyFailedTask(this));
+            std::tr1::shared_ptr<Event> ev(new CallDependencyFailedTask(this));
             gEventManager->fire(ev);
         }else {
-            boost::shared_ptr<Event> ev(new CallDependencyTask(this));
+            std::tr1::shared_ptr<Event> ev(new CallDependencyTask(this));
             gEventManager->fire(ev);
         }
     }
