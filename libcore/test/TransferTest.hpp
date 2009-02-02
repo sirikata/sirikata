@@ -38,8 +38,6 @@
 #include "transfer/TransferData.hpp"
 #include "transfer/LRUPolicy.hpp"
 
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
 
 using namespace Sirikata;
 
@@ -151,7 +149,7 @@ public:
 
 		bool async = transfer->getData(exampleComUri,
 				Transfer::Range(true),
-				boost::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, _1));
+				std::tr1::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, std::tr1::placeholders::_1));
 
 		waitFor(1);
 
@@ -207,9 +205,9 @@ public:
 		Transfer::URI testUri (SHA256::computeDigest("01234"), "http://www.google.com/");
 		Transfer::URI testUri2 (SHA256::computeDigest("56789"), "http://www.google.com/intl/en_ALL/images/logo.gif");
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
-
-		Transfer::TransferCallback simpleCB = boost::bind(&TransferTestSuite::simpleCallback, this, _1);
-		Transfer::TransferCallback checkNullCB = boost::bind(&TransferTestSuite::checkNullCallback, this, _1);
+		using std::tr1::placeholders::_1;
+		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback checkNullCB = std::tr1::bind(&TransferTestSuite::checkNullCallback, this, _1);
 
 		CacheLayer *transfer = createSimpleCache(true, true, true);
 
@@ -226,7 +224,7 @@ public:
 	}
 
 	void testOverlappingRange( void ) {
-		Transfer::TransferCallback simpleCB = boost::bind(&TransferTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, std::tr1::placeholders::_1);
 		int numtests = 0;
 
 		CacheLayer *http = createTransferLayer();
@@ -290,11 +288,11 @@ public:
 				Transfer::Range(2, true),
 				simpleCB);
 		waitFor(numtests+=1);
-
+		using std::tr1::placeholders::_1;
 		memory->setNext(NULL);
 		memory->getData(exampleComUri,
 				Transfer::Range(2, true),
-				boost::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+				std::tr1::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
 		waitFor(numtests+=1);
 
 		// Whole file trumps anything else.
@@ -307,7 +305,7 @@ public:
 		memory->setNext(NULL);
 		memory->getData(exampleComUri,
 				Transfer::Range(2, true),
-				boost::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+				std::tr1::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
 		waitFor(numtests+=1);
 
 		// should be cached
@@ -360,21 +358,21 @@ public:
 		CacheLayer *http = createTransferLayer();
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);
-
+		using std::tr1::placeholders::_1;
 		memory->purgeFromCache(exampleComUri.fingerprint());
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "TML>\r\n", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "<HEAD>", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(2);
 		{
@@ -383,7 +381,7 @@ public:
 			memory->setNext(NULL);
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					boost::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(3);
 	}

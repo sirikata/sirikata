@@ -31,7 +31,7 @@
  */
 #include "util/Platform.hh"
 #include "util/ThreadSafeQueue.hpp"
-#include <boost/shared_ptr.hpp>
+
 class ThreadSafeQueueTest : public CxxTest::TestSuite
 {
     class MyClass {
@@ -49,25 +49,25 @@ class ThreadSafeQueueTest : public CxxTest::TestSuite
             e=-i;
         }
     };
-    LockFreeQueue<boost::shared_ptr<MyClass> > * mQueue;
+    LockFreeQueue<std::tr1::shared_ptr<MyClass> > * mQueue;
 public:
     void setUp( void ) {
-        mQueue= new    LockFreeQueue<boost::shared_ptr<MyClass> >();
+        mQueue= new    LockFreeQueue<std::tr1::shared_ptr<MyClass> >();
     }
     void tearDown (void ) {
         delete mQueue;
         mQueue=NULL;
     }
     void testEnqueue( void ){
-        boost::shared_ptr<MyClass> a(new MyClass(0));
-        boost::shared_ptr<MyClass> b(new MyClass(1));
-        boost::shared_ptr<MyClass> c(new MyClass(2));
-        boost::shared_ptr<MyClass> d(new MyClass(3));
-        boost::shared_ptr<MyClass> e(new MyClass(4));
-        boost::shared_ptr<MyClass> f(new MyClass(5));
-        boost::shared_ptr<MyClass> g(new MyClass(6));
-        boost::shared_ptr<MyClass> h(new MyClass(7));
-        boost::shared_ptr<MyClass> array[8];
+        std::tr1::shared_ptr<MyClass> a(new MyClass(0));
+        std::tr1::shared_ptr<MyClass> b(new MyClass(1));
+        std::tr1::shared_ptr<MyClass> c(new MyClass(2));
+        std::tr1::shared_ptr<MyClass> d(new MyClass(3));
+        std::tr1::shared_ptr<MyClass> e(new MyClass(4));
+        std::tr1::shared_ptr<MyClass> f(new MyClass(5));
+        std::tr1::shared_ptr<MyClass> g(new MyClass(6));
+        std::tr1::shared_ptr<MyClass> h(new MyClass(7));
+        std::tr1::shared_ptr<MyClass> array[8];
         array[0]=a;array[1]=b;array[2]=c;array[3]=d;array[4]=e;array[5]=f;array[6]=g;array[7]=h;
         mQueue->push(a);
         mQueue->push(b);
@@ -76,7 +76,7 @@ public:
         mQueue->push(e);
         mQueue->push(f);
         mQueue->push(g);
-        boost::shared_ptr<MyClass> result;
+        std::tr1::shared_ptr<MyClass> result;
         for (unsigned int i=0;i<8;++i) {
             TS_ASSERT(mQueue->pop(result));
             TS_ASSERT_EQUALS(result,array[i]);

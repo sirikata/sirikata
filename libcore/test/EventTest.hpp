@@ -125,16 +125,17 @@ public:
                                           ? static_cast<Task::Event*>(new EventA(5))
                                           : static_cast<Task::Event*>(new EventE(5)));
         Task::SubscriptionId a_removeId,bid,cid,did,eid;
+		using std::tr1::placeholders::_1;
         mManager->subscribe(a->getId(),
-                            boost::bind(&EventSystemTestSuite::oneShotTest,this,_1));
+                            std::tr1::bind(&EventSystemTestSuite::oneShotTest,this,_1));
         bid=mManager->subscribeId(b->getId(),
-                            boost::bind(&EventSystemTestSuite::doNotCall,this,_1));
+                            std::tr1::bind(&EventSystemTestSuite::doNotCall,this,_1));
         cid=mManager->subscribeId(c->getId(),
-                            boost::bind(&EventSystemTestSuite::doNotCall,this,_1));
+                            std::tr1::bind(&EventSystemTestSuite::doNotCall,this,_1));
         did=mManager->subscribeId(d->getId(),
-                            boost::bind(&EventSystemTestSuite::doNotCall,this,_1));
+                            std::tr1::bind(&EventSystemTestSuite::doNotCall,this,_1));
         eid=mManager->subscribeId(e->getId(),
-                            boost::bind(&EventSystemTestSuite::doNotCall,this,_1));
+                            std::tr1::bind(&EventSystemTestSuite::doNotCall,this,_1));
         //fire the first handler
         mManager->fire(a);
         //this second firing should be a noop
@@ -154,7 +155,7 @@ public:
         mManager->unsubscribe(eid);
         mCount = 0;
         a_removeId = mManager->subscribeId(a->getId(),
-                                                          boost::bind(&EventSystemTestSuite::oneShotTest,this,_1));
+                                                          std::tr1::bind(&EventSystemTestSuite::oneShotTest,this,_1));
         mManager->unsubscribe(a_removeId);
         mManager->fire(a);
         mManager->fire(b);

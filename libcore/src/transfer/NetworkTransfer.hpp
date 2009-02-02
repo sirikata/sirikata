@@ -105,14 +105,9 @@ public:
 			--transferIter;
 			thisRequest = &(*transferIter);
 		}
-
 		thisRequest->setCallback(
-#ifdef _WIN32
-			boost::
-#else
-			std::tr1::
-#endif
-					bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
+
+			std::tr1::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3));
 		//);
 		// should call callback when it finishes.
 		thisRequest->go();
