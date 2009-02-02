@@ -4,6 +4,8 @@ libcore/src/FloatQuaternion.pb.cc
 libcore/src/FloatQuaternion.pb.h
 libcore/src/FloatVector3.pb.cc
 libcore/src/FloatVector3.pb.h
+libcore/src/util/Platform.hh.gch
+diskCache
 build/cmake/test.cc
 
 dependencies

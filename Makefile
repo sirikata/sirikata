@@ -1,5 +1,9 @@
 all:
 	cd build/cmake;cmake .; $(MAKE) $(*)
+release:
+	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Release; $(MAKE) $(*)
+debug:
+	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Debug; $(MAKE) $(*)
 test:
 	cd build/cmake;cmake .; $(MAKE) test $(*)
 tests:
