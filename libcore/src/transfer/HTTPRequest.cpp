@@ -185,6 +185,7 @@ namespace {
 			boost::lock_guard<boost::mutex> change_fd(fd_lock);
 #ifdef _WIN32
 			closesocket(waitFd);
+			closesocket(wakeupFd);
 #else
 			close(waitFd);
 			close(wakeupFd);
@@ -197,7 +198,7 @@ namespace {
 			}
 			woken = true;
 #ifdef _WIN32
-			destroyWakeupFd();
+			closesocket(waitFd);
 #else
 			write(wakeupFd, "", 1);
 #endif
@@ -210,7 +211,7 @@ namespace {
 			}
 			woken = false;
 #ifdef _WIN32
-			initWakeupFd();
+			waitFd = wakeupFd = socket(0, 0, 0);
 #else
 			char c;
 			read(waitFd, &c, 1);
@@ -338,7 +339,7 @@ void HTTPRequest::curlLoop () {
 		}
 
 		fd_set read_fd_set, write_fd_set, exc_fd_set;
-		long timeout_ms;
+		long timeout_ms=0;
 		FD_ZERO(&read_fd_set);
 		FD_ZERO(&write_fd_set);
 		FD_ZERO(&exc_fd_set);
@@ -352,7 +353,13 @@ void HTTPRequest::curlLoop () {
 					&max_fd);
 			curl_multi_timeout(curlm, &timeout_ms);
 		}
+#ifdef _WIN32
+		FD_SET(globals.waitFd, &exc_fd_set);
+		if (timeout_ms<=0)
+			timeout_ms=200;
+#else
 		FD_SET(globals.waitFd, &read_fd_set);
+#endif
 		if (globals.waitFd > max_fd) {
 			max_fd = globals.waitFd;
 		}

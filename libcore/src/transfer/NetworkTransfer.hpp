@@ -47,7 +47,14 @@ class NetworkTransfer : public CacheLayer {
 	volatile bool cleanup;
 	std::list<HTTPRequest> activeTransfers;
 	boost::mutex transferLock; // for abort.
-
+	void staticHttpCallback(NetworkTransfer * nt,
+			std::list<HTTPRequest>::iterator iter,
+			TransferCallback callback,
+			HTTPRequest* httpreq,
+			const DenseDataPtr &recvData,
+			bool success) {
+				nt->httpCallback(iter,callback,httpreq,recvData,success);
+	}
 	void httpCallback(
 			std::list<HTTPRequest>::iterator iter,
 			TransferCallback callback,
@@ -98,7 +105,15 @@ public:
 			--transferIter;
 			thisRequest = &(*transferIter);
 		}
-		thisRequest->setCallback(std::tr1::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
+
+		thisRequest->setCallback(
+#ifdef _WIN32
+			boost::
+#else
+			std::str1::
+#endif
+					bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
+		//);
 		// should call callback when it finishes.
 		thisRequest->go();
 		return true;
