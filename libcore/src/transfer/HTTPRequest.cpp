@@ -355,8 +355,6 @@ void HTTPRequest::curlLoop () {
 		}
 #ifdef _WIN32
 		FD_SET(globals.waitFd, &exc_fd_set);
-		if (timeout_ms<=0)
-			timeout_ms=200;
 #else
 		FD_SET(globals.waitFd, &read_fd_set);
 #endif
