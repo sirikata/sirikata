@@ -110,7 +110,7 @@ public:
 #ifdef _WIN32
 			boost::
 #else
-			std::str1::
+			std::tr1::
 #endif
 					bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
 		//);
