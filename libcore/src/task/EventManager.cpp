@@ -244,6 +244,7 @@ void EventManager<T>::doUnsubscribe(
 				subInfo.secondaryId << std::endl << "\t";
 			typename SecondaryListenerMap::iterator deleteIter =
 				subInfo.secondaryMap->find(subInfo.secondaryId);
+			assert(!(deleteIter==subInfo.secondaryMap->end()));
 			cleanUp(subInfo.secondaryMap, deleteIter);
 		}
 
