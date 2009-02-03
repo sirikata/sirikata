@@ -44,55 +44,135 @@ namespace Transfer {
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 
-/// URI stores both a uri string as well as a Fingerprint to verify it.
-class URI {
-	Fingerprint mHash;
-	std::string mIdentifier;
-public:
-	URI(const Fingerprint &hash, const std::string &url)
-			: mHash(hash), mIdentifier(url) {
+class URIContext {
+	std::string mProto;
+	std::string mHost;
+	std::string mUser;
+	std::string mDirectory; ///< Does not include initial slash, but includes ending slash.
+//	AuthenticationCreds mAuth;
+
+	static inline void resolveParentDirectories(std::string &str) {
+		std::string::size_type slashpos = 0;
+		while (true) {
+			slashpos = str.find('/', slashpos);
+			if (slashpos != std::string::npos) {
+				std::string dir = str.substr(slashpos, slashpos)
+
+			}
+			slashpos++;
+		}
+		/*
+		while (str[0]=='.'&&str[1]=='.'&&str[2]=='/') {
+			str = str.substr(3);
+		}
+		std::string::size_type nextdotdot = 0;
+		while ((nextdotdot = str.find("../", nextdotdot+1)) != std::string::npos) {
+
+		}
+		*/
 	}
 
-	/// accessor for the hashed value
-	inline const Fingerprint &fingerprint() const {
-		return mHash;
+public:
+	URIContext() {
+	}
+
+	URIContext(const URIContext &parent,
+			const std::string *newProto,
+			const std::string *newHost,
+			const std::string *newUser,
+			const std::string *newDirectory)
+		: mProto(newProto?*newProto:parent.proto()),
+		  mHost(newHost?*newHost:parent.host()),
+		  mUser(newUser?*newUser:parent.user()),
+		  mDirectory(newDirectory?*newDirectory:parent.basepath()){
+	}
+	URIContext(const URIContext &parent, const std::string &identifier)
+			: mProto(parent.proto()),
+			  mHost(parent.host()),
+			  mUser(parent.user()),
+			  mDirectory(parent.basepath()) {
+		std::string::size_type colonpos = identifier.find(':');
+		std::string::size_type startpos = 0;
+		if (colonpos != std::string::npos) {
+			/* FIXME: Only accept [a-z0-9] as part of the protocol. We don't want an IPv6 address or
+			  long filename with a colon in it being misinterpreted as a protocol.
+			  Also, port numbers will be preceded by a colon */
+
+			// global path
+			mProto = mIdentifier.substr(0, colonpos);
+			startpos = colonpos+1;
+		}
+
+		if (identifier.length() < startpos+2) {
+			return identifier.substr(startpos);
+		}
+
+		if (identifier[startpos]=='/' && identifier[startpos+1]=='/') {
+			/* FIXME: IPv6 addresses have colons and are surrounded by braces.
+			 * Example: "http://someuser@[2001:5c0:1101:4300::1]:8080/somedir/somefile*/
+
+			// protocol-relative path
+			mUser = std::string(); // clear out user (set to blank if unspecified)
+			//mHost = std::string(); // we actually keep this the same.
+
+			std::string::size_type atpos, slashpos;
+			std::string::size_type beginpos = startpos+2;
+			slashpos = identifier.find('/',beginpos);
+			atpos = identifier.rfind('@', slashpos);
+			// Authenticated URI
+			if (atpos != std::string::npos && atpos > beginpos && atpos < slashpos) {
+				beginpos = atpos+1;
+				mUser = identifier.substr(beginpos, atpos-beginpos);
+			}
+			if (slashpos != beginpos) {
+				if (slashpos == std::string::npos) {
+					mHost = mIdentifier.substr(beginpos);
+				} else {
+					mHost = mIdentifier.substr(beginpos, slashpos-beginpos);
+				}
+			}
+			startpos = slashpos;
+		}
+		if (identifier[startpos]=='/') {
+			// server-relative path
+			std::string::size_type lastdir = identifier.rfind('/');
+			if (lastdir > startpos) {
+				mDirectory = identifier.substr(startpos+1, lastdir-startpos);
+			} else {
+				mDirectory = std::string();
+			}
+		} else {
+			// directory-relative path -- not implemented here
+			std::string::size_type lastdir = identifier.rfind('/');
+			if (lastdir != std::string::npos && lastdir > startpos) {
+				mDirectory += identifier.substr(startpos, lastdir-startpos-1);
+			}
+		}
+
+		resolveParentDirectories(mDirectory);
+
+	}
+};
+
+/// URI stores both a uri string as well as a Fingerprint to verify it.
+class URI {
+	URIContext mContext;
+	std::string mPath;
+public:
+	URI(const URIContext &parentContext, const std::string &url) {
 	}
 
 	/// Returns the protocol used.
-	std::string proto() const {
-		std::string::size_type pos = mIdentifier.find(':');
-		if (pos == std::string::npos) {
-			return std::string();
-		} else {
-			return mIdentifier.substr(0, pos);
-		}
+	const std::string &proto() const {
+		return mContext.proto();
 	}
 
 	/// Returns the hostname (or empty if there is none).
 	std::string host() const {
-		std::string::size_type pos, atpos, slashpos, beginpos;
-		pos = mIdentifier.find("://");
-		if (pos == std::string::npos) {
-			return std::string();
-		} else {
-			slashpos = mIdentifier.find('/', pos+3);
-			atpos = mIdentifier.rfind('@', slashpos);
-			// Authenticated URI
-			if (atpos > pos && atpos < slashpos) {
-				beginpos = atpos+1;
-			} else {
-				beginpos = pos+3;
-			}
-			return mIdentifier.substr(pos, slashpos-beginpos);
-		}
 	}
 
 	/// const accessor for the full string URI
-	inline const std::string &uri() const {
-		return mIdentifier;
-	}
-	/// const accessor for the full str
-	inline std::string &uri() {
+	inline operator const std::string &() const {
 		return mIdentifier;
 	}
 
@@ -115,6 +195,37 @@ inline std::ostream &operator<<(std::ostream &str, const URI &uri) {
 	//" (hash " << uri.fingerprint() << ")" <<
 	return str << uri.uri();
 }
+
+class RemoteFileId {
+	Fingerprint mHash;
+	URI mURI;
+
+public:
+	RemoteFileId(const URI &fingerprinturi)
+			: mURI(fingerprinturi) {
+		const std::string &path = fingerprinturi.path();
+		std::string::size_type lastslash = path.rfind('/');
+		if (lastslash != std::string::npos) {
+			mHash = Fingerprint::fromHex(path.substr(lastslash+1));
+		} else {
+			mHash = Fingerprint::fromHex(path);
+		}
+	}
+
+	/// accessor for the hashed value
+	inline const Fingerprint &fingerprint() const {
+		return mHash;
+	}
+
+	/// const accessor for the full string URI
+	inline const URI &uri() const {
+		return mURI;
+	}
+	/// accessor for the full URI
+	inline URI &uri() {
+		return mURI;
+	}
+};
 
 }
 }
