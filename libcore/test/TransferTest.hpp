@@ -146,10 +146,10 @@ public:
 
 	bool doExampleComTest( CacheLayer *transfer ) {
 		Transfer::URI exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), "http://example.com/");
-
+        using std::tr1::placeholders::_1;
 		bool async = transfer->getData(exampleComUri,
 				Transfer::Range(true),
-				std::tr1::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, std::tr1::placeholders::_1));
+				std::tr1::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, _1));
 
 		waitFor(1);
 
@@ -224,7 +224,8 @@ public:
 	}
 
 	void testOverlappingRange( void ) {
-		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, std::tr1::placeholders::_1);
+        using std::tr1::placeholders::_1;
+		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, _1);
 		int numtests = 0;
 
 		CacheLayer *http = createTransferLayer();
