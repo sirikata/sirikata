@@ -352,9 +352,9 @@ public:
 				TS_ASSERT(equal);
 				if (!equal) {
 					std::cout << std::endl << "WANT =======" << std::endl;
-					std::cout << compareData;
+					std::cout << std::string(compareData, compareData+len);
 					std::cout << std::endl << "GOT: =======" << std::endl;
-					std::cout << gotData;
+					std::cout << std::string(gotData, gotData+len);
 					std::cout << std::endl << "-----------" << std::endl;
 				}
 				offset += len;
