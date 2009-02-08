@@ -63,8 +63,8 @@
 #define seek _seeki64 // by default, not 64-bit seek
 #define mkdir _mkdir
 #define unlink _unlink
-#define O_RDONLY _O_RDONLY 
-#define O_WRONLY _O_WRONLY 
+#define O_RDONLY _O_RDONLY
+#define O_WRONLY _O_WRONLY
 #define O_CREAT _O_CREAT
 #define _finddata64_t __finddata64_t
 
@@ -165,11 +165,11 @@ void DiskCache::workerThread() {
 			break;
 		} else if (req->op == DiskRequest::OPWRITE) {
 			// Note: TransferLayer::populatePreviousCaches has already been called.
-			std::string fileId = req->fileURI.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.fingerprint().convertToHexString();
 			bool newFile = true;
 			{
 				CacheMap::write_iterator writer(mFiles);
-				if (writer.find(req->fileURI.fingerprint())) {
+				if (writer.find(req->fileId.fingerprint())) {
 					CacheData *rlist = static_cast<CacheData*>(*writer);
 					if (rlist->wholeFile() || rlist->contains(*(req->data))) {
 						// this range is already written to disk.
@@ -207,7 +207,7 @@ void DiskCache::workerThread() {
 			{
 				CacheMap::write_iterator writer(mFiles);
 
-				if (writer.insert(req->fileURI.fingerprint(), diskUsage)) {
+				if (writer.insert(req->fileId.fingerprint(), diskUsage)) {
 					*writer = new CacheData;
 					writer.use();
 				} else {
@@ -238,18 +238,18 @@ void DiskCache::workerThread() {
 			bool useWholeFile = false;
 			{
 				CacheMap::read_iterator iter(mFiles);
-				if (iter.find(req->fileURI.fingerprint())) {
+				if (iter.find(req->fileId.fingerprint())) {
 					CacheData *rlist = static_cast<CacheData*>(*iter);
 					if (rlist->wholeFile()) {
 						useWholeFile = true;
 					} else if (!rlist->contains(req->toRead)) {
 						// this range is already written to disk.
-						CacheLayer::getData(req->fileURI, req->toRead, req->finished);
+						CacheLayer::getData(req->fileId, req->toRead, req->finished);
 						continue;
 					}
 				}
 			}
-			std::string fileId = req->fileURI.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.fingerprint().convertToHexString();
 			std::string filePath = mPrefix + fileId;
 			if (!useWholeFile) {
 				filePath += PARTIAL_SUFFIX;
@@ -258,7 +258,7 @@ void DiskCache::workerThread() {
 			if (fd < 0) {
 				std::cerr << "Failed to open " << fileId <<
 					"for reading; reason: " << errno << std::endl;
-				CacheLayer::getData(req->fileURI, req->toRead, req->finished);
+				CacheLayer::getData(req->fileId, req->toRead, req->finished);
 				continue;
 			}
 			if (req->toRead.goesToEndOfFile()) {
@@ -272,12 +272,12 @@ void DiskCache::workerThread() {
 			read(fd, datum->writableData(), (size_t)req->toRead.length());
 			close(fd);
 
-			CacheLayer::populateParentCaches(req->fileURI.fingerprint(), datum);
+			CacheLayer::populateParentCaches(req->fileId.fingerprint(), datum);
 			SparseData data;
 			data.addValidData(datum);
 			req->finished(&data);
 		} else if (req->op == DiskRequest::OPDELETE) {
-			std::string fileId = req->fileURI.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.fingerprint().convertToHexString();
 			std::string filePath = mPrefix + fileId;
 			unlink(filePath.c_str());
 			std::string rangesPath = filePath + RANGES_SUFFIX;
@@ -382,7 +382,7 @@ void DiskCache::unserialize() {
 				}
 				continue;
 			}
-	
+
 			*writer = cdata; // Finally, set the iterator contents.
 		}
 		closedir(mydir);

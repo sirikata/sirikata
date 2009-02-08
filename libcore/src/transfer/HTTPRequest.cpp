@@ -142,7 +142,7 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
 			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
-			std::cout << "DOWNLOADING FILE RANGE " << (Range)(*mData) << std::endl;
+			std::cout << "DOWNLOADING FILE RANGE " << (Range)(*mData) << " FROM "<<mURI << std::endl;
 		}
 	}
 	//std::cout << "Got header [" << headername << "] = " << headervalue << std::endl;
@@ -307,7 +307,7 @@ void HTTPRequest::curlLoop () {
 		int numevents;
 
 		while (true) {
-			boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
+			boost::unique_lock<boost::mutex> access_curl_handle(globals.http_lock);
 			CURLMsg *transferMsg = curl_multi_info_read(curlm, &numevents);
 			if (transferMsg == NULL) {
 				break;
@@ -329,12 +329,17 @@ void HTTPRequest::curlLoop () {
 					success = false;
 				}
 				curl_easy_cleanup(handle);
+				access_curl_handle.unlock(); // the callback may start a new HTTP transfer.
 
 				CallbackFunc temp (request->mCallback);
+				DenseDataPtr finishedData(request->getData());
 				request->mCallback = nullCallback;
 				request->mCurlRequest = NULL;
 				// may delete request.
-				temp(request, request->getData(), success);
+				temp(request, finishedData, success);
+				request->mPreventDeletion.reset(); // may delete this.
+
+				//access_curl_handle.lock();
 			}
 		}
 
@@ -385,19 +390,21 @@ void HTTPRequest::curlLoop () {
 }
 
 void HTTPRequest::abort() {
-	boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
-
 	if (mCurlRequest) {
+		boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
+
 		curl_multi_remove_handle(curlm, mCurlRequest);
 		curl_easy_cleanup(mCurlRequest);
 		mCurlRequest = NULL;
 	}
 	CallbackFunc temp (mCallback);
 	mCallback = nullCallback;
-	temp(this, getData(), false); // should delete this.
+	mPreventDeletion.reset(); // may delete this.
+
+	temp(this, getData(), false);
 }
 
-void HTTPRequest::go() {
+void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
 
 	boost::call_once(&initCurl, flag);
@@ -410,7 +417,7 @@ void HTTPRequest::go() {
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
 	// c_str is guaranteed to remain valid because mURI is const.
-	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.uri().c_str()); // safe for life of mURI.
+	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.toString().c_str()); // safe for life of mURI.
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;
@@ -429,7 +436,7 @@ void HTTPRequest::go() {
 		nontrivialRange=true;
 		orangestring << (mRequestedRange.endbyte()-1);
 	}
-	
+
 	if (nontrivialRange) {
 		assert(mRangeString.length()==0);//make sure this hasn't been called twice because then curl would point to a dangly string
 		mRangeString = orangestring.str();
@@ -437,6 +444,7 @@ void HTTPRequest::go() {
 	}
 
 	curl_multi_add_handle(curlm, mCurlRequest);
+	mPreventDeletion = HTTPRequestPtr(holdReference);
 
 	globals.doWakeup();
 

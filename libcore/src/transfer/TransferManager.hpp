@@ -76,22 +76,14 @@ public:
 		mFirstTransferLayer->purgeFromCache(fprint);
 	}
 
-	bool download(const URI &name,
+	void download(const RemoteFileId &name,
                   const std::tr1::function<void(const SparseData*)>&callback,
 				Range range) {
 		// check for overlapping requests.
 		// if overlapping, put in "pendingOn"
 		// if not,
-		//bool async = mFirstTransferLayer->getData(name, range, std::tr1::bind(&TransferManager::finishedRequest, this, name, callback));
-		bool async = mFirstTransferLayer->getData(name, range, callback);
-		// async can only be used for optimization
-		// it is possible that the request finished by a different thread even if it returned true.
-		/*
-		if (async) {
-			// not instantaneous--we must add it to our mActiveRequests
-		}
-		*/
-		return async;
+		//mFirstTransferLayer->getData(name, range, std::tr1::bind(&TransferManager::finishedRequest, this, name, callback));
+		mFirstTransferLayer->getData(name, range, callback);
 	}
 };
 

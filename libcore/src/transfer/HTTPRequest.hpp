@@ -42,12 +42,17 @@ namespace Transfer {
 
 typedef void CURL;
 
+typedef std::tr1::shared_ptr<class HTTPRequest> HTTPRequestPtr;
+
 /// Downloads the specified file in another thread and calls callback when finished.
 class HTTPRequest {
 public:
+
 	typedef std::tr1::function<void(HTTPRequest*,
 			const DenseDataPtr &, bool)> CallbackFunc;
 private:
+	HTTPRequestPtr mPreventDeletion; ///< set to shared_from_this while cURL owns a reference.
+
 	const URI mURI; // const because its c_str is passed to curl.
 	Range mRequestedRange;
 	String mRangeString;// Upon go(), its c_str is passed to curl: do not change
@@ -124,15 +129,14 @@ public:
 	}
 
 	/**
-	 *  Executes the query.  The 'this' pointer must be on the heap and
-	 *  must not be subsequently referenced.  It will be placed in this
-	 *  thread's work queue.
+	 *  Executes the query. If this object was constructed with a shared_ptr,
+	 *  which it should have been, pass that pointer into holdReference.
+	 *  If you intend to manage memory yourself (this is dangerous), it
+	 *  is safe to pass NULL here.
 	 */
 
-	void go();
+	void go(const HTTPRequestPtr &holdReference);
 };
-
-//typedef std::tr1::shared_ptr<HTTPRequest> HTTPRequestPtr;
 
 }
 }

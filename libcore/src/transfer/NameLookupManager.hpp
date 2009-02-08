@@ -102,52 +102,6 @@ public:
 	}
 };
 
-}}
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-namespace Sirikata {
-namespace Transfer {
-
-
-class CachedNameLookupManager : public NameLookupManager {
-	typedef std::map<URI, RemoteFileId > NameMap;
-	NameMap mLookupCache;
-	boost::shared_mutex mMut;
-
-protected:
-	virtual void addToCache(const URI &origNamedUri, const RemoteFileId &toFetch) {
-		boost::unique_lock<boost::shared_mutex> updatecache(mMut);
-		mLookupCache.insert(NameMap::value_type(origNamedUri, toFetch));
-	}
-
-	virtual void unserialize() {
-		// ...
-	}
-	virtual void serialize() {
-		// ...
-	}
-
-public:
-	CachedNameLookupManager(ServiceLookup *serviceLookup, ProtocolRegistry<NameLookupHandler> *nameProtocols)
-		: NameLookupManager(serviceLookup, nameProtocols) {
-	}
-
-	virtual void lookupHash(const URI &namedUri, const Callback &cb) {
-		{
-			boost::shared_lock<boost::shared_mutex> lookuplock(mMut);
-			NameMap::const_iterator iter = mLookupCache.find(namedUri);
-			if (iter != mLookupCache.end()) {
-				RemoteFileId rfid ((*iter).second); // copy, because the map could change.
-				lookuplock.unlock();
-
-				cb(&rfid);
-				return;
-			}
-		}
-		NameLookupManager::lookupHash(namedUri, cb);
-	}
-};
-
 }
 }
 

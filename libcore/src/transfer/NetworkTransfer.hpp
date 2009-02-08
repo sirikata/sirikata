@@ -35,7 +35,10 @@
 #define SIRIKATA_HTTPTransfer_HPP__
 
 #include "CacheLayer.hpp"
-#include "HTTPRequest.hpp"
+#include "ServiceLookup.hpp"
+#include "ProtocolRegistry.hpp"
+
+#include <boost/thread/mutex.hpp>
 
 namespace Sirikata {
 /** CacheLayer.hpp -- Class dealing with HTTP downloads. */
@@ -44,77 +47,114 @@ namespace Transfer {
 
 /** Not really a cache layer, but implements the interface.*/
 class NetworkTransfer : public CacheLayer {
+	struct RequestInfo {
+		DownloadHandler::TransferDataPtr httpreq;
+		TransferCallback callback;
+		RemoteFileId fileId;
+		Range range;
+		ListOfServicesPtr services;
+
+		RequestInfo(const RemoteFileId &fileId, const Range &range, TransferCallback cb)
+			: callback(cb), fileId(fileId), range(range) {
+		}
+	};
+
 	volatile bool cleanup;
-	std::list<HTTPRequest> activeTransfers;
-	boost::mutex transferLock; // for abort.
-	void staticHttpCallback(NetworkTransfer * nt,
-			std::list<HTTPRequest>::iterator iter,
-			TransferCallback callback,
-			HTTPRequest* httpreq,
-			const DenseDataPtr &recvData,
-			bool success) {
-				nt->httpCallback(iter,callback,httpreq,recvData,success);
-	}
+	std::list<RequestInfo> mActiveTransfers;
+	ServiceLookup *mServicesLookup;
+	ProtocolRegistry<DownloadHandler> *mProtoReg;
+	boost::mutex mActiveTransferLock; ///< for abort.
+
 	void httpCallback(
-			std::list<HTTPRequest>::iterator iter,
-			TransferCallback callback,
-			HTTPRequest* httpreq,
-			const DenseDataPtr &recvData,
+			std::list<RequestInfo>::iterator iter,
+			unsigned int whichService,
+			DenseDataPtr recvData,
 			bool success) {
+		const RequestInfo &info = *iter;
 		if (recvData && success) {
 			// Now go back through the chain!
-			CacheLayer::populateParentCaches(httpreq->getURI().fingerprint(), recvData);
+			CacheLayer::populateParentCaches(info.fileId.fingerprint(), recvData);
 			SparseData data;
 			data.addValidData(recvData);
-			callback(&data);
-		} else {
-			CacheLayer::getData(httpreq->getURI(), httpreq->getRange(), callback);
-		}
-		if (!cleanup) {
-			boost::unique_lock<boost::mutex> transfer_lock(transferLock);
-			activeTransfers.erase(iter);
+			info.callback(&data);
+			if (!cleanup) {
+				boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+				mActiveTransfers.erase(iter);
+			}
+		} else if (!cleanup) {
+			// don't want to make new queries in this case.
+			doFetch(iter, whichService+1);
 		}
 	}
 
+	void doFetch(
+			std::list<RequestInfo>::iterator iter,
+			unsigned int whichService) {
+		/* FIXME: this does not acquire a lock--which will cause a problem
+		 * if this class is destructed while we are executing doFetch.
+		 */
+		RequestInfo &info = *iter;
+		if (whichService >= info.services->size()) {
+			std::cerr << "None of the " << whichService << " download URIContexts registered for " <<
+					info.fileId.uri() << " were successful." << std::endl;
+			CacheLayer::getData(info.fileId, info.range, info.callback);
+			if (!cleanup) {
+				boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+				mActiveTransfers.erase(iter);
+			}
+			return;
+		}
+		URI lookupUri ((*info.services)[whichService], info.fileId.uri().filename());
+		std::tr1::shared_ptr<DownloadHandler> handler = mProtoReg->lookup(lookupUri.proto());
+		if (handler) {
+			info.httpreq = handler->download(lookupUri, info.range,
+					std::tr1::bind(&NetworkTransfer::httpCallback, this, iter, whichService, _1, _2));
+		} else {
+			doFetch(iter, whichService+1);
+		}
+	}
+
+	void gotServices(std::list<RequestInfo>::iterator iter, const ListOfServicesPtr &services) {
+		(*iter).services = services;
+		doFetch(iter, 0);
+	}
+
 public:
-	NetworkTransfer(CacheLayer *next)
-			:CacheLayer(next) {
+	NetworkTransfer(CacheLayer *next, ServiceLookup *services, ProtocolRegistry<DownloadHandler> *protoReg)
+			:CacheLayer(next), mServicesLookup(services), mProtoReg(protoReg) {
 		cleanup = false;
 	}
 
 	virtual ~NetworkTransfer() {
-		boost::unique_lock<boost::mutex> transfer_lock(transferLock);
+		boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
 		cleanup = true;
-		for (std::list<HTTPRequest>::iterator iter = activeTransfers.begin();
-				iter != activeTransfers.end();
+		for (std::list<RequestInfo>::iterator iter = mActiveTransfers.begin();
+				iter != mActiveTransfers.end();
 				++iter) {
-			(*iter).abort();
+			(*iter).httpreq->abort();
 		}
-		activeTransfers.clear();
+		mActiveTransfers.clear();
 	}
 
-	virtual bool getData(const URI &downloadURI,
+	virtual void getData(const RemoteFileId &downloadFileId,
 			const Range &requestedRange,
 			const TransferCallback &callback) {
-		HTTPRequest *thisRequest;
-		std::list<HTTPRequest>::iterator transferIter;
-		{
-			boost::unique_lock<boost::mutex> access_activeTransfers(transferLock);
-			activeTransfers.push_back(HTTPRequest(downloadURI, requestedRange));
-			transferIter = activeTransfers.end();
-			--transferIter;
-			thisRequest = &(*transferIter);
-		}
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-        using std::tr1::placeholders::_3;
-		thisRequest->setCallback(
 
-			std::tr1::bind(&NetworkTransfer::httpCallback, this, transferIter, callback, _1, _2, _3));
-		//);
-		// should call callback when it finishes.
-		thisRequest->go();
-		return true;
+		RequestInfo info(downloadFileId, requestedRange, callback);
+		std::list<RequestInfo>::iterator infoIter;
+		{
+			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+			infoIter = mActiveTransfers.insert(mActiveTransfers.end(), info);
+		}
+
+		if (mServicesLookup == NULL) {
+			ListOfServicesPtr services(new ListOfServices);
+			services->push_back(downloadFileId.uri().context());
+			gotServices(infoIter, services);
+		} else {
+			mServicesLookup->lookupService(downloadFileId.uri().context(),
+					std::tr1::bind(&NetworkTransfer::gotServices, this, infoIter, _1));
+		}
 	}
 };
 

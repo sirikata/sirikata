@@ -143,14 +143,13 @@ public:
 	 * @param callback       To be called with the data if successful, or NULL if failed.
 	 * @return          false, if the callback happened synchronously (i.e. in memory cache)
 	 */
-	virtual bool getData(const URI &uri, const Range &requestedRange,
+	virtual void getData(const RemoteFileId &fid, const Range &requestedRange,
 			const TransferCallback&callback) {
 		if (mNext) {
-			return mNext->getData(uri, requestedRange, callback);
+			mNext->getData(fid, requestedRange, callback);
 		} else {
 			// need some way to signal error
 			callback(NULL);
-			return false;
 		}
 	}
 

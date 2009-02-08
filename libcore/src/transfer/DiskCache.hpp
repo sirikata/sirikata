@@ -76,10 +76,10 @@ private:
 	struct DiskRequest {
 		enum Operation {OPREAD, OPWRITE, OPDELETE, OPEXIT} op;
 
-		DiskRequest(Operation op, const URI &myURI, const Range &myRange)
-			:op(op), fileURI(myURI), toRead(myRange) {}
+		DiskRequest(Operation op, const RemoteFileId &myURI, const Range &myRange)
+			:op(op), fileId(myURI), toRead(myRange) {}
 
-		URI fileURI;
+		RemoteFileId fileId;
 		Range toRead;
 		TransferCallback finished;
 		std::tr1::shared_ptr<DenseData> data; // if NULL, read data.
@@ -94,7 +94,7 @@ public:
 	void workerThread(); // defined in DiskCache.cpp
 	void unserialize(); // defined in DiskCache.cpp
 
-	void readDataFromDisk(const URI &fileURI,
+	void readDataFromDisk(const RemoteFileId &fileURI,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		std::tr1::shared_ptr<DiskRequest> req (
@@ -144,12 +144,12 @@ public:
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
 		std::tr1::shared_ptr<DiskRequest> req (
-				new DiskRequest(DiskRequest::OPWRITE, URI(fileId, ""), *data));
+				new DiskRequest(DiskRequest::OPWRITE, RemoteFileId(fileId, URI(URIContext(),"")), *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
 
-		CacheLayer::populateParentCaches(req->fileURI.fingerprint(), data);
+		CacheLayer::populateParentCaches(req->fileId.fingerprint(), data);
 	}
 
 	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
@@ -157,7 +157,7 @@ protected:
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
 			std::tr1::shared_ptr<DiskRequest> req
-				(new DiskRequest(DiskRequest::OPDELETE, URI(fileId, ""), Range(true)));
+				(new DiskRequest(DiskRequest::OPDELETE, RemoteFileId(fileId, URI(URIContext(),"")), Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
@@ -182,7 +182,7 @@ public:
 
 	virtual ~DiskCache() {
 		std::tr1::shared_ptr<DiskRequest> req
-			(new DiskRequest(DiskRequest::OPEXIT, URI(Fingerprint(),""), Range(true)));
+			(new DiskRequest(DiskRequest::OPEXIT, RemoteFileId(Fingerprint(), URI(URIContext(),"")), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.
@@ -199,7 +199,7 @@ public:
 		CacheLayer::purgeFromCache(fileId);
 	}
 
-	virtual bool getData(const URI &fileId,
+	virtual void getData(const RemoteFileId &fileId,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveRange = false;
@@ -216,9 +216,8 @@ public:
 		}
 		if (haveRange) {
 			readDataFromDisk(fileId, requestedRange, callback);
-			return true;
 		} else {
-			return CacheLayer::getData(fileId, requestedRange, callback);
+			CacheLayer::getData(fileId, requestedRange, callback);
 		}
 	}
 };

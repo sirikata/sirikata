@@ -103,7 +103,7 @@ public:
 		CacheLayer::purgeFromCache(fileId);
 	}
 
-	virtual bool getData(const URI &uri, const Range &requestedRange,
+	virtual void getData(const RemoteFileId &uri, const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveData = false;
 		SparseData foundData;
@@ -126,9 +126,8 @@ public:
 				CacheLayer::populateParentCaches(uri.fingerprint(), iter.getPtr());
 			}
 			callback(&foundData);
-			return false;
 		} else {
-			return CacheLayer::getData(uri, requestedRange, callback);
+			CacheLayer::getData(uri, requestedRange, callback);
 		}
 	}
 };
