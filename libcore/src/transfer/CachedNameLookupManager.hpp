@@ -42,6 +42,10 @@
 namespace Sirikata {
 namespace Transfer {
 
+/** A subclass of NameLookupManager to handle caching of name lookup requests.
+ * Note that this also intends to handle serializing to disk for offline access
+ * to a space, However this part is not written yet. Perhaps it is more
+ * appropriately handled by a subclass. */
 class CachedNameLookupManager : public NameLookupManager {
 	typedef std::map<URI, RemoteFileId > NameMap;
 	NameMap mLookupCache;
@@ -53,9 +57,11 @@ protected:
 		mLookupCache.insert(NameMap::value_type(origNamedUri, toFetch));
 	}
 
+	/// Unimplemented.
 	virtual void unserialize() {
 		// ...
 	}
+	/// Unimplemented.
 	virtual void serialize() {
 		// ...
 	}

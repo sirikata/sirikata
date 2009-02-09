@@ -80,6 +80,11 @@ protected:
 	struct CacheEntry {
 	};
 
+	/** Called after a cache entry has been destroyed--
+	 * Does not remove the item from other caches in the chain.
+	 *
+	 * Should be called only from CacheMap.
+	 */
 	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
 	}
 
@@ -118,6 +123,10 @@ public:
 		mRespondTo = newRespond;
 	}
 
+	/** If you want to change the ordering of the cache layers.
+	 * This may be safe, but it's probably not smart to use except when
+	 * constructing or destroying a CacheLayer.
+	 */
 	void setNext(CacheLayer *newNext) {
 		if (mNext) {
 			mNext->setResponder(NULL);
@@ -128,6 +137,14 @@ public:
 		}
 	}
 
+	/**
+	 * Purges this hash from all subsequent caches. In general, it is not
+	 * useful to do this manually, since the CachePolicy handles freeing
+	 * extra data, and it is usually assumed that the cache is correct.
+	 *
+	 * Validity checking should probably be added elsewhere--though it is
+	 * not really feasable for incomplete downloads if we used a range.
+	 */
 	virtual void purgeFromCache(const Fingerprint &fileId) {
 		if (mNext) {
 			mNext->purgeFromCache(fileId);

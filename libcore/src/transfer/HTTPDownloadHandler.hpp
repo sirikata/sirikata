@@ -40,8 +40,10 @@
 namespace Sirikata {
 namespace Transfer {
 
-
-// Should keep track of ongoing downloads and provide an abort function.
+/** A very simple subclass of DownloadHandler that wraps around the HTTPRequest
+ * curl interface. It also provides a subclass of NameLookupHandler that reads
+ * the fingerprint URI from a HTTP uri.
+ * */
 class HTTPDownloadHandler : public DownloadHandler, public NameLookupHandler {
 
 	class HTTPTransferData : public TransferData {
@@ -93,7 +95,12 @@ class HTTPDownloadHandler : public DownloadHandler, public NameLookupHandler {
 	}
 
 public:
-	virtual TransferDataPtr download(const URI &uri, const Range &bytes, const DownloadHandler::Callback &cb) {
+	/** Simple wrapper around HTTPRequest to download a URL.
+	 * The returned TransferDataPtr contains a shared reference to the HTTPRequest.
+	 * If you hold onto it, you can abort the download. */
+	virtual TransferDataPtr download(const URI &uri,
+			const Range &bytes,
+			const DownloadHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, bytes));
 //		using std::tr1::placeholders::_1;
 //		using std::tr1::placeholders::_2;
@@ -105,6 +112,23 @@ public:
 		return TransferDataPtr(new HTTPTransferData(shared_from_this(), req));
 	}
 
+	/// FIXME: Unimplemented -- needs a better interface from HTTPRequest to work.
+	virtual TransferDataPtr stream(const URI &uri, const Range &bytes, const DownloadHandler::Callback &cb) {
+		// Does not work yet.
+		cb(DenseDataPtr(), false);
+		return TransferDataPtr();
+	}
+
+	/// HTTP (as with most TCP protocols) returns packets in order.
+	virtual bool inOrderStream() const {
+		return true;
+	}
+
+	/** Provides a simple nameLookup service using HTTP. It expects a request
+	 * that responds with a URI string and nothing else in the body (do not use
+	 * a 302 HTTP code to do this, as curl will silently redirect).
+	 * Also strips ASCII spaces/newlines from the body.
+	 */
 	virtual void nameLookup(const URI &uri, const NameLookupHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, Range(true)));
 		req->setCallback(

@@ -58,45 +58,66 @@ private:
 
 public:
 
+	/// Pass in true for the whole file, and false for an empty range.
 	explicit Range(bool wholeFile)
 		: mStart(0), mLength(0), mWholeFile(wholeFile) {
 	}
 
+	/// Goes from a start byte for the rest of the file--false means an empty range.
 	Range(base_type start, bool wholeFile)
 		: mStart(start), mLength(0), mWholeFile(wholeFile) {
 	}
 
+	/** Generic constructor for a partial range.
+	 * If type==LENGTH, specifies the start byte and the length.
+	 * If type==BOUNDS, specifies the starting and the ending byte.
+	 * Generally, the wholeFile flag will be false here.
+	 */
 	Range(base_type start, base_type length,
 			Initializer type, bool wholeFile=false)
 		: mStart(start), mLength(type==LENGTH?length:length-start), mWholeFile(wholeFile) {
 	}
 
+	/// Copy constructor
 	Range(const Range &other)
 		: mStart(other.mStart), mLength(other.mLength), mWholeFile(other.mWholeFile) {
 	}
 
+	/** Ranges contain an additional boolean whether they extend
+	 * throughout the file.  This is not related to endbyte(), but
+	 * endbyte() is often set to 0 if the length is unknown.
+	 */
 	inline bool goesToEndOfFile() const {
 		return mWholeFile;
 	}
 
+	/// Returns the initial byte--will be 0 if this references the whole file.
 	inline base_type startbyte() const {
 		return mStart;
 	}
+	/** The length -- may not be accurate in the case that goesToEndOfFile() returns
+	 * true. In the case of DenseData, this should be equal to the number of bytes
+	 * in the DenseData.
+	 */
 	inline length_type length() const {
 		return mLength;
 	}
+	/** The ending byte--again, when goesToEndOfFile() is true, this may be undefined. */
 	inline base_type endbyte() const {
 		return mStart + mLength;
 	}
 
+	/// Sets the length of the range.
 	inline void setLength(length_type l, bool wholeFile) {
 		mLength = l;
 		mWholeFile = wholeFile;
 	}
+	/// setter for startbyte().
 	inline void setBase(base_type s) {
 		mStart = s;
 	}
 
+	/// Ordering comparator.
 	inline bool operator< (const Range &other) const {
 		if (mLength == other.mLength) {
 			if (mStart == other.mStart && (mWholeFile || other.mWholeFile)) {
@@ -107,6 +128,12 @@ public:
 		return mLength < other.mLength;
 	}
 
+	/** Printing a range. The format is:
+	 * "[1)" for empty,
+	 * "[8,10)" for a two-byte-long range, and
+	 * "[8,10 => eof)" for data with two bytes but will extend for the whole file.
+	 * "[0 => eof)" for the whole file.
+	 */
 	friend inline std::ostream &operator << (std::ostream &os, const Range &range) {
 		os << "[" << range.startbyte();
 		if (range.mLength) {
@@ -119,6 +146,8 @@ public:
 		return os;
 	}
 
+	/** Checks if one range is inside a list of ranges (or any class with
+	 * begin() and end() whose elements are ranges.--such as SparseData) */
 	template <class ListType>
 	bool isContainedBy(const ListType &list) const {
 
@@ -227,6 +256,7 @@ public:
 	}
 };
 
+/// Simple list of ranges (to be used by Range::isContainedBy and Range::addToList)
 typedef std::list<Range> RangeList;
 
 }

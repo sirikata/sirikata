@@ -81,6 +81,7 @@ private:
 
 public:
 
+	/// You may copy a request before starting it... not very useful.
 	inline HTTPRequest(const HTTPRequest &other)
 		: mURI(other.mURI), mRequestedRange(other.mRequestedRange),
 		mCallback(other.mCallback), mCurlRequest(NULL),
@@ -89,14 +90,27 @@ public:
 		assert(!other.mCurlRequest);
 	}
 
+	/** Do not ever use this--it is not thread safe, and the DenseDataPtr
+	 is passed to the callback anyway. May be made private */
 	inline const DenseDataPtr &getData() {
 		return mData;
 	}
 
+	/** Gets the current transfer offset--useful for a progress indicator.
+	 * You can pair this up with getRange().endbyte() to get a percentage.
+	 *
+	 * @returns the last (absolute) byte written;
+	 *          subtract getData().startbyte() to get the relative byte.
+	 */
 	inline Range::base_type getOffset() const {
 		return mOffset;
 	}
 
+	/** Changes the location in the DenseData that we write
+	 * to when we get data. Do not call this except from a callback
+	 * when streaming. In most cases it will be unnecessary,
+	 * as the denseData should be cleared after each packet.
+	 */
 	inline void seek(Range::base_type offset) {
 		if (offset >= mRequestedRange.startbyte() &&
 				offset < mRequestedRange.endbyte()) {
@@ -121,6 +135,10 @@ public:
 	/// Range getter
 	inline const Range &getRange() const {return mRequestedRange;}
 
+	/** Aborts an active transfer. Necessary for some streaming applications.
+	 * Acts as if the transfer failed--calls callback and removes the
+	 * self-reference so this class can be free'd.
+	 */
 	void abort();
 
 	/// Setter for the response function.
@@ -129,12 +147,13 @@ public:
 	}
 
 	/**
-	 *  Executes the query. If this object was constructed with a shared_ptr,
-	 *  which it should have been, pass that pointer into holdReference.
-	 *  If you intend to manage memory yourself (this is dangerous), it
-	 *  is safe to pass NULL here.
+	 *  Executes the query.
+	 *
+	 *  @param holdreference If this object was constructed with a shared_ptr,
+	 *      which it should have been, pass that pointer into holdReference.
+	 *      If you intend to manage memory yourself (this is dangerous), it
+	 *      is wise to pass NULL here.
 	 */
-
 	void go(const HTTPRequestPtr &holdReference);
 };
 

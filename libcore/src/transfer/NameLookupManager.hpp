@@ -41,13 +41,18 @@ namespace Sirikata {
 namespace Transfer {
 
 
+/** The NameLookupManager handles the conversion from a named URI (filename) to
+ * a hash and a URI to download, possibly from a "cloud". Note that NameLookupHandler
+ * is generally a simple UDP-based protocol intended for small transfers. */
 class NameLookupManager {
 	ServiceLookup *mServiceLookup;
 	ProtocolRegistry<NameLookupHandler> *mHandlers;
 
 public:
+	/** Called with a temporary pointer to a fingerprint, or NULL if the lookup failed. */
 	typedef std::tr1::function<void(const RemoteFileId *fingerprint)> Callback;
 
+private:
 	void gotNameLookup(Callback cb, URI origNamedUri, unsigned int which, ListOfServicesPtr services,
 			const Fingerprint &hash, const std::string &str, bool success) {
 		if (!success) {
@@ -78,19 +83,39 @@ public:
 	}
 
 protected:
+	/** To be overridden for any child class that intends to cache name lookups.
+	 * Note that origNamedUri is the URI from before the service lookup step. */
 	virtual void addToCache(const URI &origNamedUri, const RemoteFileId &toFetch) {
 	}
 
+	/** FIXME: Should these be overridden by a subclass. */
 	virtual void unserialize() {
 	}
+	/** Called by the virtual destructor of this class. Should also be called periodically?
+	 * FIXME: Not used yet. */
 	virtual void serialize() {
 	}
 
 public:
+	/** NameLookupManager constructor.
+	 *
+	 * @param serviceLookup  If NULL, no service lookup will be done, and you are expected to
+	 *                       pass in resolved URIs into lookupHash().
+	 * @param nameProtocols  The NameLookupHandler protocol registry to be used.
+	 */
 	NameLookupManager(ServiceLookup *serviceLookup, ProtocolRegistry<NameLookupHandler> *nameProtocols)
-		: mServiceLookup(serviceLookup), mHandlers(nameProtocols) {
+			: mServiceLookup(serviceLookup), mHandlers(nameProtocols) {
 	}
 
+	/// Virtual destructor. Calls serialize().
+	virtual ~NameLookupManager() {
+		serialize();
+	}
+
+	/** Takes a URI, and tries to lookup the hash and download URI from it.
+	 *
+	 * @param namedUri A ServiceURI or a regular URI (depending on if serviceLookup is NULL)
+	 * @param cb       The Callback to be called either on success or failure. */
 	void lookupHash(const URI &namedUri, const Callback &cb) {
 		if (mServiceLookup) {
 			mServiceLookup->lookupService(namedUri.context(), std::tr1::bind(&NameLookupManager::doNameLookup, this, cb, namedUri, 0, _1));

@@ -41,6 +41,11 @@
 namespace Sirikata {
 namespace Transfer {
 
+/** A ServiceLookup that keeps a local cache. This cache might not be
+ * written to disk--it makes more sense to be in the options system.
+ *
+ * Currently, you can use addToCache to fill the cache.
+ */
 class CachedServiceLookup : public ServiceLookup {
 	typedef std::map<URIContext, ListOfServicesPtr> ServiceMap;
 	ServiceMap mLookupCache;

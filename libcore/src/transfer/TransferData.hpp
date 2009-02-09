@@ -44,6 +44,7 @@ class DenseData : Noncopyable, public Range {
 	std::vector<unsigned char> mData;
 
 public:
+	/// The only constructor--the length can be changed later with setLength().
 	DenseData(const Range &range)
 			:Range(range) {
 		if (range.length()) {
@@ -51,14 +52,20 @@ public:
 		}
 	}
 
+	/// equals dataAt(startbyte()).
 	inline const unsigned char *data() const {
 		return &(mData[0]);
 	}
 
+	/// Returns a non-const data, starting at startbyte().
 	inline unsigned char *writableData() {
 		return &(mData[0]);
 	}
 
+	/** Returns a char* to data at a cetain offset. Does not return the corresponding
+	 * Length, but it is your responsibility to compare to endbyte().
+	 * Note that it will also return NULL if startbyte() > offset.
+	 */
 	inline const unsigned char *dataAt(base_type offset) const {
 		if (offset >= endbyte() || offset < startbyte()) {
 			return NULL;
@@ -66,6 +73,7 @@ public:
 		return &(mData[(std::vector<unsigned char>::size_type)(offset-startbyte())]);
 	}
 
+	/// Sets the length of the range, as well as allocates more space in the data vector.
 	inline void setLength(size_t len, bool is_npos) {
 		Range::setLength(len, is_npos);
 		mData.resize(len);
@@ -83,6 +91,7 @@ class SparseData {
 	///sorted vector of Range/vector pairs
 	ListType mSparseData;
 public:
+	/// Acts like a STL container.
 	typedef DenseDataPtr value_type;
 
 	/// Simple stub iterator class for use by Range::isContainedBy()
@@ -100,9 +109,11 @@ public:
 		}
 	};
 
+	/// Simple iteration functions, to keep compatibility with RangeList.
 	inline iterator begin() {
 		return mSparseData.begin();
 	}
+	/// Simple iteration functions, to keep compatibility with RangeList.
 	inline iterator end() {
 		return mSparseData.end();
 	}
@@ -120,21 +131,26 @@ public:
 			return *(this->ListType::const_iterator::operator*());
 		}
 	};
+	/// Simple iteration functions, to keep compatibility with RangeList.
 	inline const_iterator begin() const {
 		return mSparseData.begin();
 	}
+	/// Simple iteration functions, to keep compatibility with RangeList.
 	inline const_iterator end() const {
 		return mSparseData.end();
 	}
 
+	/// insert into the internal std::list.
 	inline iterator insert(const iterator &iter, const value_type &dd) {
 		return mSparseData.insert(iter, dd);
 	}
 
+	/// delete from the internal std::list.
 	inline void erase(const iterator &iter) {
 		mSparseData.erase(iter);
 	}
 
+	/// Clear all data.
 	inline void clear() {
 		return mSparseData.clear();
 	}
@@ -154,6 +170,9 @@ public:
 		return length;
 	}
 
+	/** Would be a << operator, but it's inefficient, and should only be
+	 * used for debugging/testing purposes, so it's safer as a different function.
+	 */
 	void debugPrint(std::ostream &os) const {
 		Range::base_type position = 0, len;
 		do {

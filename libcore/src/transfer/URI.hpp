@@ -44,6 +44,13 @@ namespace Transfer {
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 
+/** Contains the current directory, hostname, protocol and user.
+ * The idea is that you can pass this along with a string into the
+ * URI constructor, and it will compute a new URI based on relative
+ * or absolute paths.
+ *
+ * Does not handle query strings (?param1&param2...) or anchors (#someanchor)
+ * although, those would also be forms of relative URIs.*/
 class URIContext {
 	std::string mProto;
 	std::string mHost;
@@ -51,6 +58,7 @@ class URIContext {
 	std::string mDirectory; ///< Does not include initial slash, but includes ending slash.
 //	AuthenticationCreds mAuth;
 
+	/** Should handle resolving ".." and "." inside of a path. */
 	static inline void resolveParentDirectories(std::string &str) {
 		// Do nothing for now.
 		/*
@@ -76,6 +84,7 @@ class URIContext {
 	}
 
 public:
+	/// Default constructor (://@/) -- use this along with an absolute URI.
 	URIContext() {
 	}
 
@@ -96,6 +105,9 @@ public:
 		  mUser(newUser),
 		  mDirectory(parent.basepath()){
 	}
+	/** These constructors are not very useful, but can be used for a
+	 * couple of specific situations where the string-based one doesn't work.
+	 */
 	URIContext(const URIContext &parent,
 			const std::string newProto,
 			const std::string &newHost,
@@ -106,6 +118,10 @@ public:
 		  mUser(newUser),
 		  mDirectory(newDirectory){
 	}
+
+	/** Acts like the string-parsing constructor, NULL strings mean
+	 * inherit from the old context, however it's tricky to pass in
+	 * string pointers if you constructed them on the fly. */
 	URIContext(const URIContext &parent,
 			const std::string *newProto,
 			const std::string *newHost,
@@ -116,14 +132,20 @@ public:
 		  mUser(newUser?*newUser:parent.username()),
 		  mDirectory(newDirectory?*newDirectory:parent.basepath()){
 	}
+
+	/** The most useful constructor -- parses a URI string, and
+	 * tries to follow rules regarding relative paths and hostnames.
+	 */
 	URIContext(const URIContext &parent, const std::string &identifier)
 			: mProto(parent.proto()),
 			  mHost(parent.host()),
 			  mUser(parent.username()),
 			  mDirectory(parent.basepath()) {
 		std::string::size_type colonpos = identifier.find(':');
+		std::string::size_type firstslashpos = identifier.find('/');
 		std::string::size_type startpos = 0;
-		if (colonpos != std::string::npos) {
+		if (colonpos != std::string::npos &&
+				(firstslashpos == std::string::npos || colonpos < firstslashpos)) {
 			/* FIXME: Only accept [a-z0-9] as part of the protocol. We don't want an IPv6 address or
 			  long filename with a colon in it being misinterpreted as a protocol.
 			  Also, port numbers will be preceded by a colon */
@@ -173,13 +195,18 @@ public:
 			// directory-relative path -- not implemented here
 			std::string::size_type lastdir = identifier.rfind('/');
 			if (lastdir != std::string::npos && lastdir > startpos) {
-				mDirectory += identifier.substr(startpos, lastdir-startpos);
+				if (mDirectory.empty()) {
+					mDirectory = identifier.substr(startpos, lastdir-startpos);
+				} else {
+					mDirectory += '/' + identifier.substr(startpos, lastdir-startpos);
+				}
 			}
 		}
 
 		resolveParentDirectories(mDirectory);
 
 	}
+	/// Absolute URI constructor.
 	URIContext(const std::string newProto,
 			const std::string &newHost,
 			const std::string &newUser,
@@ -190,24 +217,39 @@ public:
 		  mDirectory(newDirectory){
 	}
 
+	/// protocol getter (without a ':'), like "http".
 	inline const std::string &proto() const {
 		return mProto;
 	}
+	/** username getter--may be empty for no username.
+	 * Try not to store passwords in here, but if there is a password,
+	 * it will be of the form "username:password".
+	 */
 	inline const std::string &username() const {
 		return mUser;
 	}
+	/** hostname getter--includes port, if any, as well
+	 * as has brackets around IPv6 addresses. Examples:
+	 * www.example.com
+	 * www.example.com:80
+	 * [fe80::202:b3ff:fe00:0102]:8080
+	 */
 	inline const std::string &host() const {
 		return mHost;
 	}
+	/* The directory, excluding both initial slash and ending slash.
+	 * Often, this may just be the empty string, but depends on protocol. */
 	inline const std::string &basepath() const {
 		return mDirectory;
 	}
 
+	/// Constructs a URI... will exclude an empty username.
 	inline std::string toString() const {
 		return mProto + "://" + (mUser.empty() ? std::string() : (mUser + "@")) +
 			mHost + (mDirectory.empty() ? "/" : ("/" + mDirectory + "/"));
 	}
 
+	/// ordering comparison -- more accurate than ordering based on toString().
 	inline bool operator< (const URIContext &other) const {
 		/* Note: I am testing user before hostname to keep this ordering
 		 * the same as if you used a string version of the URI.
@@ -224,6 +266,7 @@ public:
 		return mProto < other.mProto;
 	}
 
+	/// equality comparison
 	inline bool operator==(const URIContext &other) const {
 		return mDirectory == other.mDirectory &&
 			mUser == other.mUser &&
@@ -242,9 +285,16 @@ class URI {
 	URIContext mContext;
 	std::string mPath; // should have no slashes.
 public:
+	/// Default constructor--calls default constructor for URIContext as well.
 	URI() {
 	}
 
+	/** Constructs a new URI based on an old context.
+	 *
+	 * @param parentContext  A URIContext to base relative paths from--
+	 *           this may be the default constructor.
+	 * @param uri   A relative or absolute URI.
+	 */
 	URI(const URIContext &parentContext, const std::string &url)
 			: mContext(parentContext, url) {
 		std::string::size_type slash = url.rfind('/');
@@ -262,32 +312,42 @@ public:
 		}
 	}
 
+	/** Gets the corresponding context, from which you can construct
+	 * another relative URI.
+	 */
 	inline const URIContext &context() const {
 		return mContext;
 	}
 
-	/// Returns the protocol used.
+	/// Returns the protocol used (== context().proto())
 	inline const std::string &proto() const {
 		return mContext.proto();
 	}
 
-	/// Returns the hostname (or empty if there is none).
+	/// Returns the hostname (or empty if there is none, same as context)
 	inline const std::string &host() const {
 		return mContext.host();
 	}
 
+	/// Returns the username (or empty if there is none, same as context)
 	inline const std::string &username() const {
 		return mContext.username();
 	}
 
+	/// Returns the path without slashes on either end.
 	inline const std::string &basepath() const {
 		return mContext.basepath();
 	}
 
+	/// Returns just the filename withot slashes.
 	inline const std::string &filename() const {
 		return mPath;
 	}
 
+	/** Returns an absolute path that represents this file, including
+	 * a slash at the beginning, and will include a slash at the end
+	 * only if filename() returns the empty string.
+	 */
 	inline std::string fullpath() const {
 		if (mContext.basepath().empty()) {
 			return '/' + mPath;
@@ -296,7 +356,9 @@ public:
 		}
 	}
 
-	/// const accessor for the full string URI
+	/** const accessor for the full string URI
+	 * Note that URIContext::toString does include the ending slash.
+	 */
 	inline std::string toString () const {
 		return mContext.toString() + mPath;
 	}
@@ -323,6 +385,9 @@ inline std::ostream &operator<<(std::ostream &str, const URI &uri) {
 	return str << uri.toString();
 }
 
+/** Container for both a fingerprint and a download URI, as is most
+ * commonly be used in CacheLayer for file downloads.
+ */
 class RemoteFileId {
 	Fingerprint mHash;
 	URI mURI;
