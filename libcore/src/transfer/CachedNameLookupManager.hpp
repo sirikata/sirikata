@@ -35,6 +35,7 @@
 #define SIRIKATA_CachedNameLookupManager_HPP__
 
 #include <boost/thread.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include "NameLookupManager.hpp"

@@ -39,6 +39,7 @@
 #include "ProtocolRegistry.hpp"
 
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 namespace Sirikata {
 /** CacheLayer.hpp -- Class dealing with HTTP downloads. */
