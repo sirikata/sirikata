@@ -516,6 +516,33 @@ ENDIF()
 #precompiled headers
 
 
+#installation information
+INSTALL(TARGETS 
+          ${SIRIKATA_CORE_LIB}
+          ${SIRIKATA_SPACE_LIB}
+          ${SIRIKATA_OH_LIB}
+          ${SPACE_BINARY}
+          ${CPPOH_BINARY}
+        RUNTIME
+          DESTINATION bin
+        LIBRARY
+          DESTINATION lib
+        ARCHIVE
+          DESTINATION lib
+)
+
+
+INSTALL(DIRECTORY
+          # note: the trailing slashes avoid prepending the directory name
+          # itself to the installed files
+          ${LIBCORE_SOURCE_DIR}/
+          ${LIBSPACE_INCLUDE_DIR}/
+          ${LIBOH_INCLUDE_DIR}/
+        DESTINATION include/sirikata
+        PATTERN "*.cpp" EXCLUDE
+        PATTERN "*.cc" EXCLUDE
+)
+
 # get the name of the binaries for running tests
 IF(WIN32)
   GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
