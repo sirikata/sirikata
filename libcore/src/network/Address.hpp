@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Sirikata {
+namespace Sirikata { namespace Network {
 /**
  * Provides a protocol-independent address layer for connecting to a target
  * Takes a name and a service (for TCP that would be computer ip address and numeric port
@@ -51,4 +51,4 @@ public:
         mService=service;
     }
 };
-}
+} }

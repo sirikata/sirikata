@@ -129,7 +129,7 @@ public:
 		notifyOne();
 	}
 	void testNameLookup() {
-		http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
+		//  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::simpleLookupCB, this,
 						Fingerprint::convertFromHex("6934b2638e79135f87d36a3d4f4b53f41f349132172f3248c7c7091b59497551"), _1));
@@ -164,7 +164,7 @@ public:
 		}
 	}
 	void testDownload() {
-		http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
+        //  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::doTransferAndVerifyCB, this, _1));
 

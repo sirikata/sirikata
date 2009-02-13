@@ -56,7 +56,6 @@ class Stream {
 protected:
     Stream(){}
 public:
-    class Callbacks;
     class StreamID{
         unsigned int mID;
     public:
@@ -100,33 +99,30 @@ public:
         ReliableUnordered,
         Reliable
     };
-    static Callbacks*ignoreSubstreamCallback(Stream * stream);
+    class SetCallbacks;
+    typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
+    typedef std::tr1::function<void(Stream*,SetCallbacks&)> SubstreamCallback;
+    typedef std::tr1::function<void(const Chunk&)> BytesReceivedCallback;
+    ///The substreamCallback must call SetCallbacks' operator() to activate the stream
+    class SetCallbacks{
+    public:
+        virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
+                                const Stream::SubstreamCallback &substreamCallback,
+                                const Stream::BytesReceivedCallback &bytesReceivedCallback)=0;
+    };
+    static void ignoreSubstreamCallback(Stream * stream, SetCallbacks&);
     static void ignoreConnectionStatus(ConnectionStatus status,const std::string&reason);
     static void ignoreBytesReceived(const Chunk&);
-    typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
-    ///The SubstreamCallback must return a new pointer to a set of callback function. These callback functions will live until the Stream is deleted and the Callbacks* returned
-    ///might live longer
-    typedef std::tr1::function<Callbacks*(Stream*)> SubstreamCallback;
-    typedef std::tr1::function<void(const Chunk&)> BytesReceivedCallback;
-    class Callbacks:public Noncopyable {        
-    public:
-        Stream::ConnectionCallback mConnectionCallback;
-        Stream::SubstreamCallback mSubstreamCallback;
-        Stream::BytesReceivedCallback mBytesReceivedCallback;
-        Callbacks(const Stream::ConnectionCallback &connectionCallback,
-                  const Stream::SubstreamCallback &substreamCallback,
-                  const Stream::BytesReceivedCallback &bytesReceivedCallback):
-            mConnectionCallback(connectionCallback),mSubstreamCallback(substreamCallback),mBytesReceivedCallback(bytesReceivedCallback){
-        }
-    };
     ///subclasses will expose these methods with similar arguments + protocol specific args
     virtual void connect(
         const Address& addy,
         const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback)=0;
-    ///Creates a new substream on this connection
-    virtual Stream*clone(
+    ///Creates a stream of the same type as this stream
+    virtual Stream*factory()=0;
+    ///Makes this stream a clone of stream "s" if they are of the same type
+    virtual bool cloneFrom(Stream*s,
         const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback)=0;

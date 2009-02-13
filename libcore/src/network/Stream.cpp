@@ -1,9 +1,8 @@
 #include "util/Platform.hh"
 #include "Stream.hpp"
 namespace Sirikata { namespace Network {
-Stream::Callbacks*Stream::ignoreSubstreamCallback(Stream * stream) {
+void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
     delete stream;
-    return NULL;
 }
 void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::string&) {
 }

@@ -1,5 +1,4 @@
 #include "util/Platform.hh"
-#include <boost/asio.hpp>
 #include "TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
@@ -11,7 +10,7 @@ TCPStreamListener::TCPStreamListener(IOService&io) {
     mIOService=&io;
     mTCPAcceptor=NULL;
 }
-bool newAcceptPhase(TCPListener*listen, IOService* io);
+bool newAcceptPhase(TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb);
 void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb,const boost::system::error_code& error){
     if(error) {
 		boost::system::system_error se(error);
@@ -20,7 +19,7 @@ void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Strea
         //FIXME: attempt more?
     }else {
         beginNewStream(socket,cb);
-        newAcceptPhase(listen,io);
+        newAcceptPhase(listen,io,cb);
     }
 }
 bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
@@ -51,6 +50,9 @@ Address TCPStreamListener::listenAddress() const {
     return Address(mTCPAcceptor->local_endpoint().address().to_string(),
                    port.str());
 }
-
+void TCPStreamListener::close(){
+    delete mTCPAcceptor;
+    mTCPAcceptor=NULL;
+}
 
 } }

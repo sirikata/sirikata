@@ -32,17 +32,35 @@
 #ifndef SIRIKATA_TCPStream_HPP__
 #define SIRIKATA_TCPStream_HPP__
 #include "Stream.hpp"
+#include "util/AtomicTypes.hpp"
 namespace Sirikata { namespace Network {
 class MultiplexedSocket;
 class TCPStreamBuilder;
 class TCPStream:public Stream {
+public:
+    class Callbacks;
+private:
     friend class MultiplexedSocket;
     friend class TCPStreamBuilder;
     std::tr1::shared_ptr<MultiplexedSocket> mSocket;
     void addCallbacks(Callbacks*);
     StreamID mID;
-    StreamID getID()const {return mID;}
+    static const int SendStatusClosing;
+    ///incremented while sending: or'd in SendStatusClosing when close function triggered so no further packets will be sent using old ID.
+    AtomicValue<int>mSendStatus;
 public:
+    StreamID getID()const {return mID;}
+    class Callbacks:public Noncopyable {        
+    public:
+        Stream::ConnectionCallback mConnectionCallback;
+        Stream::SubstreamCallback mSubstreamCallback;
+        Stream::BytesReceivedCallback mBytesReceivedCallback;
+        Callbacks(const Stream::ConnectionCallback &connectionCallback,
+                  const Stream::SubstreamCallback &substreamCallback,
+                  const Stream::BytesReceivedCallback &bytesReceivedCallback):
+            mConnectionCallback(connectionCallback),mSubstreamCallback(substreamCallback),mBytesReceivedCallback(bytesReceivedCallback){
+        }
+    };
     TCPStream(IOService&);
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket);
 public:
@@ -52,8 +70,10 @@ public:
         const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback);
+    ///Creates a stream of the same type as this stream, with the same IO factory
+    Stream* factory();
     ///Creates a new substream on this connection
-    virtual Stream*clone(
+    virtual bool cloneFrom(Stream*,
         const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback);
