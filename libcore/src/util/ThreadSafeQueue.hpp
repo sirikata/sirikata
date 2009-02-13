@@ -223,6 +223,9 @@ public:
 	void blockingPop(T&retval) {
         ThreadSafeQueueNS::wait(mLock,mCond, &ThreadSafeQueue<T>::waitCheck,this,&retval);
     }
+    bool probablyEmpty() {
+        return mList.empty();
+    }
 };
 
 }

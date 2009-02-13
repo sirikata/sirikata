@@ -130,6 +130,7 @@
 #include <vector>
 #include <list>
 #include <queue>
+#include <deque>
 #include <set>
 #include <map>
 #include <algorithm>
@@ -178,6 +179,7 @@ typedef std::string String;
 #include "Vector3.hpp"
 #include "Vector4.hpp"
 #include "Quaternion.hpp"
+#include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
 #include "UUID.hpp"

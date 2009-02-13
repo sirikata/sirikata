@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  UUID.hpp
+/*  Sirikata Network Utilities
+ *  Address.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,57 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_UUID_HPP_
-#define _SIRIKATA_UUID_HPP_
-
-
-namespace boost_{
-class uuid;
-}
-
 namespace Sirikata {
-class UUID {
+/**
+ * Provides a protocol-independent address layer for connecting to a target
+ * Takes a name and a service (for TCP that would be computer ip address and numeric port
+ */
+class Address {
+    String mName;
+    String mService;
 public:
-    enum {static_size=16};
-    typedef unsigned char byte;
-    typedef Array<byte,static_size,true> Data;
-    typedef Data::iterator iterator;
-    typedef Data::const_iterator const_iterator;
-private:
-    Data mData;
-public:
-    UUID(const boost_::uuid&);
-    UUID() {}
-    UUID (const byte *data,
-          unsigned int length){
-        mData.memcpy(data,length);
+    const String &getHostName()const {
+        return mName;
     }
-    UUID(const Data data):mData(data) {
+    const String &getService()const {
+        return mService;
     }
-    /**
-     * Interprets the human readable UUID string using boost functions
-     */
-    UUID(const std::string&);
-    class Random{};
-    UUID(Random);
-    static UUID random();
-    const Data& getArray()const{return mData;}
-    UUID & operator=(const UUID & other) { mData = other.mData; return *this; }
-    UUID & operator=(const Data & other) { mData = other; return *this; }
-    bool operator<(const UUID &other)const {return mData < other.mData;}
-    bool operator==(const UUID &other)const {return mData == other.mData;}
-    bool isNil()const{return mData==Data::nil();}
-    static const UUID& nil(){
-        static UUID retval(Data::nil());
-        return retval;
+    Address(const String& name, 
+            const String& service) {
+        mName=name;
+        mService=service;
     }
-    unsigned int hash() const;
-    std::string rawHexData()const;
-    std::string readableHexData()const;
 };
-
 }
-std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
-std::ostream & operator<<(std::ostream & os, const Sirikata::UUID & uuid);
-
-#endif //_SIRIKATA_UUID_HPP_

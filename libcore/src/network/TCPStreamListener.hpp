@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  UUID.hpp
+/*  Sirikata Network Utilities
+ *  Stream.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,57 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_UUID_HPP_
-#define _SIRIKATA_UUID_HPP_
+#ifndef SIRIKATA_TCPStreamListener_HPP__
+#define SIRIKATA_TCPStreamListener_HPP__
+#include "StreamListener.hpp"
+namespace Sirikata { namespace Network {
+/**
+ * Begins a new stream based on a TCPSocket connection acception with the following substream callback for stream creation
+ * Only creates the stream if the handshake is complete and it has all the resources (udp, tcp sockets, etc) necessary at the time
+ * Defined in TCPStream.cpp
+ */
+void beginNewStream(TCPSocket *socket,const Stream::SubstreamCallback&);
+/**
+ * This class waits on a service and listens for incoming connections
+ * It calls the callback whenever such connections are encountered
+ */
+class TCPStreamListener:public StreamListener{
 
-
-namespace boost_{
-class uuid;
-}
-
-namespace Sirikata {
-class UUID {
 public:
-    enum {static_size=16};
-    typedef unsigned char byte;
-    typedef Array<byte,static_size,true> Data;
-    typedef Data::iterator iterator;
-    typedef Data::const_iterator const_iterator;
-private:
-    Data mData;
-public:
-    UUID(const boost_::uuid&);
-    UUID() {}
-    UUID (const byte *data,
-          unsigned int length){
-        mData.memcpy(data,length);
-    }
-    UUID(const Data data):mData(data) {
-    }
-    /**
-     * Interprets the human readable UUID string using boost functions
-     */
-    UUID(const std::string&);
-    class Random{};
-    UUID(Random);
-    static UUID random();
-    const Data& getArray()const{return mData;}
-    UUID & operator=(const UUID & other) { mData = other.mData; return *this; }
-    UUID & operator=(const Data & other) { mData = other; return *this; }
-    bool operator<(const UUID &other)const {return mData < other.mData;}
-    bool operator==(const UUID &other)const {return mData == other.mData;}
-    bool isNil()const{return mData==Data::nil();}
-    static const UUID& nil(){
-        static UUID retval(Data::nil());
-        return retval;
-    }
-    unsigned int hash() const;
-    std::string rawHexData()const;
-    std::string readableHexData()const;
+    TCPStreamListener(IOService&);
+    ///subclasses will expose these methods with similar arguments + protocol specific args
+    virtual bool listen(
+        const Address&addy,
+        const Stream::SubstreamCallback&newStreamCallback);
+    ///returns the name of the computer followed by a colon and then the service being listened on
+    virtual String listenAddressName()const;
+    ///returns the name of the computer followed by a colon and then the service being listened on
+    virtual Address listenAddress()const;
+    ///stops listening
+    virtual void close();   
+    virtual ~TCPStreamListener();
+    IOService * mIOService;
+    TCPListener *mTCPAcceptor;
 };
-
-}
-std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
-std::ostream & operator<<(std::ostream & os, const Sirikata::UUID & uuid);
-
-#endif //_SIRIKATA_UUID_HPP_
+} }
+#endif

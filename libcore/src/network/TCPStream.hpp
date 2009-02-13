@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  UUID.hpp
+/*  Sirikata Network Utilities
+ *  TCPStream.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,58 +29,36 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _SIRIKATA_UUID_HPP_
-#define _SIRIKATA_UUID_HPP_
-
-
-namespace boost_{
-class uuid;
-}
-
-namespace Sirikata {
-class UUID {
+#ifndef SIRIKATA_TCPStream_HPP__
+#define SIRIKATA_TCPStream_HPP__
+#include "Stream.hpp"
+namespace Sirikata { namespace Network {
+class MultiplexedSocket;
+class TCPStreamBuilder;
+class TCPStream:public Stream {
+    friend class MultiplexedSocket;
+    friend class TCPStreamBuilder;
+    std::tr1::shared_ptr<MultiplexedSocket> mSocket;
+    void addCallbacks(Callbacks*);
+    StreamID mID;
+    StreamID getID()const {return mID;}
 public:
-    enum {static_size=16};
-    typedef unsigned char byte;
-    typedef Array<byte,static_size,true> Data;
-    typedef Data::iterator iterator;
-    typedef Data::const_iterator const_iterator;
-private:
-    Data mData;
+    TCPStream(IOService&);
+    TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket);
 public:
-    UUID(const boost_::uuid&);
-    UUID() {}
-    UUID (const byte *data,
-          unsigned int length){
-        mData.memcpy(data,length);
-    }
-    UUID(const Data data):mData(data) {
-    }
-    /**
-     * Interprets the human readable UUID string using boost functions
-     */
-    UUID(const std::string&);
-    class Random{};
-    UUID(Random);
-    static UUID random();
-    const Data& getArray()const{return mData;}
-    UUID & operator=(const UUID & other) { mData = other.mData; return *this; }
-    UUID & operator=(const Data & other) { mData = other; return *this; }
-    bool operator<(const UUID &other)const {return mData < other.mData;}
-    bool operator==(const UUID &other)const {return mData == other.mData;}
-    bool isNil()const{return mData==Data::nil();}
-    static const UUID& nil(){
-        static UUID retval(Data::nil());
-        return retval;
-    }
-    unsigned int hash() const;
-    std::string rawHexData()const;
-    std::string readableHexData()const;
+    virtual void send(const Chunk&data,Reliability);
+    virtual void connect(
+        const Address& addy,
+        const ConnectionCallback &connectionCallback,
+        const SubstreamCallback &substreamCallback,
+        const BytesReceivedCallback&chunkReceivedCallback);
+    ///Creates a new substream on this connection
+    virtual Stream*clone(
+        const ConnectionCallback &connectionCallback,
+        const SubstreamCallback &substreamCallback,
+        const BytesReceivedCallback&chunkReceivedCallback);
+
+    virtual void close();
 };
-
-}
-std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
-std::ostream & operator<<(std::ostream & os, const Sirikata::UUID & uuid);
-
-#endif //_SIRIKATA_UUID_HPP_
+} }
+#endif
