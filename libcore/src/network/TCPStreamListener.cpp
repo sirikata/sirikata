@@ -1,4 +1,4 @@
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 #include "TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
@@ -23,7 +23,7 @@ void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Strea
     }
 }
 bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
-    TCPSocket*socket=new TCPSocket(*io);    
+    TCPSocket*socket=new TCPSocket(*io);
     //need to use boost bind to avoid TR1 errors about compatibility with boost::asio::placeholders
     listen->async_accept(*socket,
                          boost::bind(&handleAccept,socket,listen,io,cb,boost::asio::placeholders::error));

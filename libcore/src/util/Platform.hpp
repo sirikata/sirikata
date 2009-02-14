@@ -1,5 +1,5 @@
 /*  Sirikata -- Platform Dependent Definitions
- *  Platform.hh
+ *  Platform.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PLATFORM_HH_
-#define _SIRIKATA_PLATFORM_HH_
+#ifndef _SIRIKATA_PLATFORM_HPP_
+#define _SIRIKATA_PLATFORM_HPP_
 
 
 #define PLATFORM_WINDOWS 0
@@ -86,8 +86,8 @@
 #  define SIRIKATA_LITTLE_ENDIAN LITTLE_ENDIAN
 #  define SIRIKATA_BIG_ENDIAN    BIG_ENDIAN
 #  define SIRIKATA_BYTE_ORDER    BYTE_ORDER
-# else 
-#  error "MACINTOSH DOES NOT DEFINE ENDIANNESS"    
+# else
+#  error "MACINTOSH DOES NOT DEFINE ENDIANNESS"
 # endif
 #else
 # define SIRIKATA_LITTLE_ENDIAN 1234

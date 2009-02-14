@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Jan 15, 2009 */
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 #include "DiskCache.hpp"
 
 #include <sys/types.h>

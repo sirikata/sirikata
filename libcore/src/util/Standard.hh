@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  ObjectHost.hpp
+/*  Sirikata -- Standard Includes Precompiled Header
+ *  Standard.hh
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OBJECT_HOST_HPP_
-#define _SIRIKATA_OBJECT_HOST_HPP_
+#ifndef _SIRIKATA_STANDARD_HH_
+#define _SIRIKATA_STANDARD_HH_
 
-#include <util/Platform.hpp>
+#include "Platform.hpp"
 
-namespace Sirikata {
-
-SIRIKATA_EXPORT class ObjectHost {
-public:
-    ObjectHost();
-    ~ObjectHost();
-}; // class ObjectHost
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_OBJECT_HOST_HPP
+#endif //_SIRIKATA_STANDARD_HH_

@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_SPACE_HPP_
 #define _SIRIKATA_SPACE_HPP_
 
+#include <util/Platform.hpp>
+
 namespace Sirikata {
 
 SIRIKATA_EXPORT class Space {

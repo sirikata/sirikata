@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*  Created on: Dec 31, 2008 */
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 #include "HTTPRequest.hpp"
 #include "TransferData.hpp"
 #include "util/ThreadSafeQueue.hpp"

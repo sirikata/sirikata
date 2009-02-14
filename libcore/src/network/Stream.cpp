@@ -1,4 +1,4 @@
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 #include "Stream.hpp"
 namespace Sirikata { namespace Network {
 void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
@@ -19,7 +19,7 @@ unsigned int Stream::StreamID::serialize(uint8 *destination, unsigned int maxsiz
         destination[0]=(mID/256)+128;
         return 2;
     }else {
-        if (maxsize<6) return 6; 
+        if (maxsize<6) return 6;
         destination[0]=255;
         destination[1]=255;
         destination[5]=mID%256;

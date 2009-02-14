@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Platform.hh"
-#include "options/Options.hpp"
+
+#include <util/Platform.hpp>
+#include <options/Options.hpp>
+
 namespace Sirikata {
 //InitializeOptions main_options("verbose",
 

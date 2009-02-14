@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 #include "Options.hpp"
 #include "boost/thread.hpp"
 #include "boost/program_options.hpp"
@@ -45,7 +45,7 @@ public:
 /*
     char * data;
     unsigned int len;
-   
+
     simple_string() {
         data=NULL;
         len=0;
@@ -69,13 +69,13 @@ public:
             len=0;
             data=NULL;
         }
-        
+
     }
     simple_string(const simple_string&other) {
         if (other.len) {
             data=new char[other.len];
             len=other.len;
-            memcpy(data,other.data,other.len);        
+            memcpy(data,other.data,other.len);
         }else {
             len=0;
             data=NULL;
@@ -85,7 +85,7 @@ public:
         if (other.len) {
             data=new char[other.len];
             len=other.len;
-            memcpy(data,other.data,other.len);        
+            memcpy(data,other.data,other.len);
         }else {
             len=0;
             data=NULL;
@@ -103,7 +103,7 @@ public:
 void validate(boost::any& v, const std::vector<String>& values, Sirikata::simple_string* target_type, int){
     using namespace boost;
     using namespace boost::program_options;
-    
+
     // no previous instances
     validators::check_first_occurrence(v);
     // only one string in values
@@ -123,7 +123,7 @@ std::istream &operator >>(std::istream &is,Sirikata::simple_string &output) {
         is.get(ch,1023);
         std::vector<char>::size_type adv=is.gcount();
         if (adv)
-            test.insert(test.end(),ch,ch+adv);        
+            test.insert(test.end(),ch,ch+adv);
     }
     output=Sirikata::simple_string(test);
     return is;
