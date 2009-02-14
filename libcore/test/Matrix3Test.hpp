@@ -1,5 +1,5 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  Matrix3x3Test.hpp
+ *  Matrix3Test.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

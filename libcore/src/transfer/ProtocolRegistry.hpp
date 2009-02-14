@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  ProtocolHandler.hpp
+ *  ProtocolRegistry.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.

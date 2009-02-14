@@ -1,5 +1,5 @@
 /*
- * FILE:	sha2.c
+ * FILE:	sha2.cpp
  * AUTHOR:	Aaron D. Gifford - http://www.aarongifford.com/
  *
  * Copyright (c) 2000-2001, Aaron D. Gifford

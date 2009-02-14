@@ -1,3 +1,6 @@
+#Sirikata Build Script
+#CMakeLists.txt
+#
 #Copyright (c) 2008, Patrick Reiter Horn
 #All rights reserved.
 #

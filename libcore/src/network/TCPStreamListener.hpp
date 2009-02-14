@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  Stream.hpp
+ *  TCPStreamListener.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -57,7 +57,7 @@ public:
     ///returns the name of the computer followed by a colon and then the service being listened on
     virtual Address listenAddress()const;
     ///stops listening
-    virtual void close();   
+    virtual void close();
     virtual ~TCPStreamListener();
     IOService * mIOService;
     TCPListener *mTCPAcceptor;

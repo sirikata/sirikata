@@ -1,5 +1,5 @@
 /*  Sirikata
- *  main.hpp
+ *  main.cpp
  *
  *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.

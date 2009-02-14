@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  NameLookup.hpp
+ *  NameLookupManager.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.

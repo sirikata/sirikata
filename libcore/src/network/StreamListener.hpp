@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  Stream.hpp
+ *  StreamListener.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -50,7 +50,7 @@ public:
     ///returns thea name of the computer followed by a colon and then the service being listened on
     virtual Address listenAddress()const=0;
     ///stops listening
-    virtual void close()=0;   
+    virtual void close()=0;
     virtual ~StreamListener(){};
 };
 } }
