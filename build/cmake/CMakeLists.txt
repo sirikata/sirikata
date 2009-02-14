@@ -5,16 +5,16 @@
 #All rights reserved.
 #
 #Redistribution and use in source and binary forms, with or without
-#modification, are permitted provided that the following conditions are met: 
+#modification, are permitted provided that the following conditions are met:
 #
 #    * Redistributions of source code must retain the above copyright notice,
-#      this list of conditions and the following disclaimer. 
+#      this list of conditions and the following disclaimer.
 #    * Redistributions in binary form must reproduce the above copyright notice,
 #      this list of conditions and the following disclaimer in the documentation
-#      and/or other materials provided with the distribution. 
+#      and/or other materials provided with the distribution.
 #    * Neither the name of the Sirikata nor the names of its contributors
 #      may be used to endorse or promote products derived from this software
-#      without specific prior written permission. 
+#      without specific prior written permission.
 #
 #THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 #ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -225,7 +225,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
     FIND_PACKAGE(PythonInterp)
     IF(PYTHON_EXECUTABLE)
       SET(CXXTEST_COMPILER ${PYTHON_EXECUTABLE})
-      SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)    
+      SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)
     ELSE()
       MESSAGE("!!! Cannot locate python or perl -- tests will not be compiled.")
     ENDIF()
@@ -263,10 +263,10 @@ ENDIF()
 #libraries
 
 #dependency: protocolbuffers
-IF(APPLE)
-SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS})
+IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs)
+  SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/installed-protobufs)
 ELSE()
-SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/protobufs)
+  SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS})
 ENDIF()
 FIND_PACKAGE(ProtocolBuffers)
 IF(NOT PROTOCOLBUFFERS_FOUND)
@@ -276,23 +276,24 @@ ENDIF()
 
 #dependency: boost > 1.35
 IF(NOT BOOST_ROOT)
-  IF(WIN32)
-    SET(BOOST_ROOT ${PLATFORM_LIBS})
-#    SET(Boost_USE_STATIC_LIBS ON)
-  ENDIF()
-  IF(APPLE)
+  # IF(WIN32)
+  #   SET(Boost_USE_STATIC_LIBS ON)
+  # ENDIF()
+  IF(EXISTS ${PLATFORM_LIBS}/installed-boost)
+    SET(BOOST_ROOT ${PLATFORM_LIBS}/installed-boost)
+  ELSE()
     SET(BOOST_ROOT ${PLATFORM_LIBS})
   ENDIF()
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem)
+  FIND_PACKAGE(Boost COMPONENTS system program_options thread filesystem)
 ELSE(WIN32)
-FIND_PACKAGE(Boost COMPONENTS system)
-#STRING(REPLACE "boost_system" "boost_signals" Boost_SIGNALS_LIBRARY ${Boost_SYSTEM_LIBRARY})
-STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
-STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
-STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  FIND_PACKAGE(Boost COMPONENTS system)
+  #STRING(REPLACE "boost_system" "boost_signals" Boost_SIGNALS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY ${Boost_SYSTEM_LIBRARY})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 
@@ -310,7 +311,9 @@ IF(NOT CURL_ROOT)
     IF(NOT CURL_ROOT)
       SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
     ENDIF()
-  ELSEIF(APPLE)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/installed-curl)
+    SET(CURL_ROOT ${PLATFORM_LIBS}/installed-curl)
+  ELSE()
     SET(CURL_ROOT ${PLATFORM_LIBS})
   ENDIF()
 ENDIF()
@@ -403,7 +406,7 @@ SET(SIRIKATA_CORE_SOURCES
 )
 #precompiled header
 IF(NOT WIN32)
-  SET(SIRIKATA_CORE_SOURCES	
+  SET(SIRIKATA_CORE_SOURCES
      ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
     ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch)
@@ -436,9 +439,9 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/TR1Test.hpp
   ${LIBCORE_DIR}/test/AnyTest.hpp
   ${LIBCORE_DIR}/test/AtomicTest.hpp
-  ${LIBCORE_DIR}/test/Vector3Test.hpp 
-  ${LIBCORE_DIR}/test/Matrix3Test.hpp 
-  ${LIBCORE_DIR}/test/QuaternionTest.hpp 
+  ${LIBCORE_DIR}/test/Vector3Test.hpp
+  ${LIBCORE_DIR}/test/Matrix3Test.hpp
+  ${LIBCORE_DIR}/test/QuaternionTest.hpp
   ${LIBCORE_DIR}/test/EventTest.hpp
   ${LIBCORE_DIR}/test/OptionTest.hpp
   ${LIBCORE_DIR}/test/NameLookupTest.hpp
@@ -505,10 +508,10 @@ ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_OH_LIB})
 
 SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} ${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY}
-                      PROPERTIES 
-                      DEBUG_POSTFIX "_d"  
+                      PROPERTIES
                       DEBUG_POSTFIX "_d"
-                      DEBUG_POSTFIX "_d"  
+                      DEBUG_POSTFIX "_d"
+                      DEBUG_POSTFIX "_d"
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB} ${TEST_LIBRARIES})
 TARGET_LINK_LIBRARIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
@@ -524,7 +527,7 @@ ENDIF()
 
 
 #installation information
-INSTALL(TARGETS 
+INSTALL(TARGETS
           ${SIRIKATA_CORE_LIB}
           ${SIRIKATA_SPACE_LIB}
           ${SIRIKATA_OH_LIB}
@@ -564,5 +567,5 @@ ELSE()
 ENDIF()
 
 ADD_CUSTOM_TARGET(test
-	DEPENDS tests
-	COMMAND ${TEST_RUNABLE})
+  DEPENDS tests
+  COMMAND ${TEST_RUNABLE})
