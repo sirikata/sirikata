@@ -31,7 +31,7 @@
  */
 /*  Created on: Feb 7, 2009 */
 
-#include "util/Platform.hh"
+
 #include <cxxtest/TestSuite.h>
 #include "transfer/NetworkTransfer.hpp"
 #include "transfer/HTTPRequest.hpp"

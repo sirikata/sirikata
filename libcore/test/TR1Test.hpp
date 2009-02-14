@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hh"
 #include <cxxtest/TestSuite.h>
 class TR1Test : public CxxTest::TestSuite
 {

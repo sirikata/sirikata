@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Platform.hh"
+#include "util/Standard.hh"
 
 #include "network/TCPDefinitions.hpp"
 #include "network/TCPStream.hpp"

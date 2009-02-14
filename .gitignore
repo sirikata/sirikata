@@ -4,7 +4,7 @@ libcore/src/FloatQuaternion.pb.cc
 libcore/src/FloatQuaternion.pb.h
 libcore/src/FloatVector3.pb.cc
 libcore/src/FloatVector3.pb.h
-libcore/src/util/Platform.hh.gch
+libcore/src/util/Standard.hh.gch
 diskCache
 build/cmake/test.cc
 
@@ -24,6 +24,13 @@ build/cmake/sirikata_r
 build/cmake/tests
 build/cmake/tests_d
 build/cmake/tests_r
+build/cmake/libsirikata-oh_d.a
+build/cmake/libsirikata-space_d.a
+build/cmake/libsirikata-oh_r.a
+build/cmake/libsirikata-space_r.a
+build/cmake/libsirikata-oh.a
+build/cmake/libsirikata-space.a
+
 build/cmake/cppoh_r
 build/cmake/cppoh_d
 build/cmake/cppoh
