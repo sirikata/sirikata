@@ -4,7 +4,7 @@
 #include "TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
-
+#include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 const int TCPStream::SendStatusClosing=(1<<30);
 #define SIRIKATA_TCP_STREAM_HEADER "SSTTCP"
@@ -405,7 +405,7 @@ public:
                     readIntoChunk(thus);
                 }
             }
-        }catch(std::tr1::bad_weak_ptr&bad_pointer) {
+        }catch(std::tr1::bad_weak_ptr&) {
             delete this;
         }
     }
@@ -418,12 +418,11 @@ public:
             }else {
                 translateBuffer(thus);
             }
-        }catch (std::tr1::bad_weak_ptr&bad_pointer) {
+        }catch (std::tr1::bad_weak_ptr&) {
             delete this;// the socket is deleted
         }
     }
 };
-
 class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     boost::asio::ip::tcp::resolver mResolver;
     std::vector<ASIOSocketWrapper> mSockets;
@@ -431,16 +430,28 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     static boost::mutex sConnectingMutex;
     std::deque<RawRequest> mNewRequests;
     typedef std::tr1::unordered_map<Stream::StreamID,TCPStream::Callbacks*,Stream::StreamID::Hasher> CallbackMap;
-    std::deque<CallbackMap::value_type> mCallbackRegistration;
+	///Workaround for VC8 bug that does not define std::pair<Stream::StreamID,Callbacks*>::operator=
+    class StreamIDCallbackPair{
+    public:
+        Stream::StreamID mID;
+        TCPStream::Callbacks* mCallback;
+        StreamIDCallbackPair(Stream::StreamID id,TCPStream::Callbacks* cb):mID(id) {
+            mCallback=cb;
+        }
+        std::pair<Stream::StreamID,TCPStream::Callbacks*> pair() const{
+           return std::pair<Stream::StreamID,TCPStream::Callbacks*>(mID,mCallback);
+        }
+    };
+    std::deque<StreamIDCallbackPair> mCallbackRegistration;
     volatile enum SocketConnectionPhase{
         PRECONNECTION,
         CONNECTED,
         DISCONNECTED
     }mSocketConnectionPhase;
     ///Copies items from CallbackRegistration to mCallbacks Assumes sConnectingMutex is taken
-    void ioReactorThreadCommitCallback(CallbackMap::value_type& newcallback) {
-            if (newcallback.second==NULL) {
-                CallbackMap::iterator where=mCallbacks.find(newcallback.first);
+    void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback) {
+            if (newcallback.mCallback==NULL) {
+                CallbackMap::iterator where=mCallbacks.find(newcallback.mID);
                 if (where!=mCallbacks.end()) {
                     delete where->second;
                     mCallbacks.erase(where);
@@ -448,10 +459,10 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
                     assert("ERROR in finding callback to erase for stream ID"&&false);
                 }
             }else {
-                mCallbacks.insert(newcallback);
+                mCallbacks.insert(newcallback.pair());
             }
     }
-    bool CommitCallbacks(std::deque<CallbackMap::value_type> &registration, SocketConnectionPhase status, bool setConnectedStatus=false) {
+    bool CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus=false) {
         bool statusChanged;
         if (setConnectedStatus||!mCallbackRegistration.empty()) {
 			boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
@@ -517,7 +528,7 @@ public:
      */
     void addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb) {
         boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
-        mCallbackRegistration.push_back(CallbackMap::value_type(sid,cb));
+        mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
     }
     AtomicValue<uint32> mHighestStreamID;
     ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
@@ -568,7 +579,7 @@ public:
         }
         boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
         while (!mCallbackRegistration.empty()){
-            delete mCallbackRegistration.front().second;
+            delete mCallbackRegistration.front().mCallback;
             mCallbackRegistration.pop_front();
         }
         while (!mNewRequests.empty()) {
@@ -613,7 +624,7 @@ public:
                                 mAckedClosingStreams[id]=1;
                             }
                             if (controlCode==TCPStreamCloseStream){
-                                std::deque<CallbackMap::value_type> registrations;
+                                std::deque<StreamIDCallbackPair> registrations;
                                 CommitCallbacks(registrations,CONNECTED,false);
                                 CallbackMap::iterator where=mCallbacks.find(id);
                                 if (where!=mCallbacks.end()) {
@@ -638,7 +649,7 @@ public:
                 }
             }
         }else {
-            std::deque<CallbackMap::value_type> registrations;
+            std::deque<StreamIDCallbackPair> registrations;
             CommitCallbacks(registrations,CONNECTED,false);
             CallbackMap::iterator where=mCallbacks.find(id);
             if (where!=mCallbacks.end()) {
@@ -672,7 +683,7 @@ public:
      */
     void connectionFailureOrSuccessCallback(SocketConnectionPhase status, const std::string&error_code=std::string()) {
         Stream::ConnectionStatus stat=(status==CONNECTED?Stream::Connected:Stream::Disconnected);
-        std::deque<CallbackMap::value_type> registrations;
+        std::deque<StreamIDCallbackPair> registrations;
         bool actuallyDoSend=CommitCallbacks(registrations,status,true);
         if (actuallyDoSend) {
             for (CallbackMap::iterator i=mCallbacks.begin(),ie=mCallbacks.end();i!=ie;++i) {

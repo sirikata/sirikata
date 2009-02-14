@@ -72,6 +72,13 @@ public:
         StreamID(unsigned int id){
             mID=id;
         }
+		StreamID&operator=(const StreamID&other) {
+           this->mID=other.mID;
+		   return *this;
+		}
+		StreamID(const StreamID&other) {
+           this->mID=other.mID;
+		}
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
 			size_t operator() (const StreamID &id) const{

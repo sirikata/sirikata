@@ -4,6 +4,7 @@
 #include "network/TCPStream.hpp"
 #include "network/TCPStreamListener.hpp"
 #include <cxxtest/TestSuite.h>
+#include <boost/thread.hpp>
 using namespace Sirikata::Network;
 class SstTest : public CxxTest::TestSuite
 {
