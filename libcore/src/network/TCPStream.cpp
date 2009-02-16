@@ -809,7 +809,7 @@ public:
     * The buffer passed in will be deleted by this function
     */
 
-    void connectToIPAddress(unsigned int whichSocket,const std::tr1::shared_ptr<HeaderCheck>&headerCheck,tcp::resolver::iterator it,const boost::system::error_code &error) {
+    void connectToIPAddress(unsigned int whichSocket,const std::tr1::shared_ptr<HeaderCheck>&headerCheck,const tcp::resolver::iterator &it,const boost::system::error_code &error) {
         if (error) {
             if (it == tcp::resolver::iterator()) {
                 if (headerCheck->first.first>=1) {
@@ -818,13 +818,15 @@ public:
                     connectionFailedCallback(whichSocket,error);
                 }else headerCheck->first.first-=1;
             }else {
+                tcp::resolver::iterator nextIterator=it;
+                ++nextIterator;
                 //need to use boost::bind instead of TR1::bind to remain compatible with boost::asio::placeholders
                 mSockets[whichSocket].mSocket->async_connect(*it,
                                                              boost::bind(&MultiplexedSocket::connectToIPAddress,
                                                                          getSharedPtr(),
                                                                          whichSocket,
                                                                          headerCheck,
-                                                                         ++it,
+                                                                         nextIterator,
                                                                          boost::asio::placeholders::error));
             }
         }else {

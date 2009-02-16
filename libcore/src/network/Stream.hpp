@@ -113,6 +113,7 @@ public:
     ///The substreamCallback must call SetCallbacks' operator() to activate the stream
     class SetCallbacks{
     public:
+        virtual ~SetCallbacks(){}
         virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
                                 const Stream::SubstreamCallback &substreamCallback,
                                 const Stream::BytesReceivedCallback &bytesReceivedCallback)=0;

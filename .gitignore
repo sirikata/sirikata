@@ -12,3 +12,4 @@ diskCache
 
 build/cmake/*
 !build/cmake/CMakeLists.txt
+.DS_Store

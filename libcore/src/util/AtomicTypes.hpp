@@ -120,12 +120,12 @@ template <typename T>
 class AtomicValue {
 private:
     volatile char mMemory[sizeof(T)+(sizeof(T)==4?4:(sizeof(T)==2?2:(sizeof(T)==8?8:16)))];
-    static volatile T*ALIGN(volatile char* data) {
+    static volatile T*getThisAlignedAddress(volatile char* data) {
         size_t bitandammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
         size_t notbitandammt=~bitandammt;
         return (volatile T*)((((size_t)data)+bitandammt)&notbitandammt);
     }
-    static volatile const T*ALIGN(volatile const char* data) {
+    static volatile const T*getThisAlignedAddress(volatile const char* data) {
         size_t bitandammt=sizeof(T)==4?3:(sizeof(T)==2?1:(sizeof(T)==8?7:15));
         size_t notbitandammt=~bitandammt;
         return (volatile const T*)((((size_t)data)+bitandammt)&notbitandammt);
@@ -134,42 +134,42 @@ public:
     AtomicValue() {
     }
     explicit AtomicValue (T other) {
-        *(T*)ALIGN(mMemory)=other;
+        *(T*)getThisAlignedAddress(mMemory)=other;
     }
     AtomicValue(const AtomicValue&other) {
-        *(T*)ALIGN(mMemory)=*(T*)ALIGN(other.mMemory);
+        *(T*)getThisAlignedAddress(mMemory)=*(T*)getThisAlignedAddress(other.mMemory);
     }
     const AtomicValue<T>& operator =(T other) {
-        *(T*)ALIGN(mMemory)=other;
+        *(T*)getThisAlignedAddress(mMemory)=other;
         return *this;
     }
     const AtomicValue& operator =(const AtomicValue& other) {
-        *(T*)ALIGN(mMemory)=*(T*)ALIGN(other.mMemory);
+        *(T*)getThisAlignedAddress(mMemory)=*(T*)getThisAlignedAddress(other.mMemory);
         return *this;
     }
     bool operator ==(T other) const{
-        return *(T*)ALIGN(mMemory)==other;
+        return *(T*)getThisAlignedAddress(mMemory)==other;
     }
     bool operator ==(const AtomicValue& other) const{
-        return *(T*)ALIGN(mMemory)==*(T*)ALIGN(other.mMemory);
+        return *(T*)getThisAlignedAddress(mMemory)==*(T*)getThisAlignedAddress(other.mMemory);
     }
     operator T ()const {
-        return *(T*)ALIGN(mMemory);
+        return *(T*)getThisAlignedAddress(mMemory);
     }
     T read() const {
-        return *(T*)ALIGN(mMemory);
+        return *(T*)getThisAlignedAddress(mMemory);
     }
     T operator +=(const T&other) {
-        return SizedAtomicValue<sizeof(T)>::add(ALIGN(mMemory),other);
+        return SizedAtomicValue<sizeof(T)>::add(getThisAlignedAddress(mMemory),other);
     }
     T operator -=(const T&other) {
         return *this+=-other;
     }
     T operator ++() {
-        return (T)SizedAtomicValue<sizeof(T)>::inc(ALIGN(mMemory));
+        return (T)SizedAtomicValue<sizeof(T)>::inc(getThisAlignedAddress(mMemory));
     }
     T operator --() {
-        return (T)SizedAtomicValue<sizeof(T)>::dec(ALIGN(mMemory));
+        return (T)SizedAtomicValue<sizeof(T)>::dec(getThisAlignedAddress(mMemory));
     }
     T operator++(int) {
         return (++*this)-(T)1;
