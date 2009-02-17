@@ -72,7 +72,7 @@ public:
         ++newid;
         runRoutine(newStream);
     }
-    void awesomeThread(){
+    void ioThread(){
         TCPStreamListener s(mIO);
         s.listen(Address("127.0.0.1",mPort),boost::bind(&SstTest::newStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
@@ -140,7 +140,7 @@ public:
     }
     SstTest():mCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
-        mThread= new boost::thread(boost::bind(&SstTest::awesomeThread,this));
+        mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         mMessagesToSend.push_back("U:0");
         mMessagesToSend.push_back("U:1");
         mMessagesToSend.push_back("U:2");
@@ -209,6 +209,13 @@ public:
         mMessagesToSend.push_back("U:Q");
 
     }
+    static SstTest*createSuite() {
+        return new SstTest;
+    }
+    static void destroySuite(SstTest*sst) {
+        delete sst;
+    }
+    
     ~SstTest() {
         for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
             delete *i;
@@ -227,7 +234,6 @@ public:
     }
     void testConnectSend (void )
     {
-        return;//FIXME this test does not yet function
         Stream*z;
         {
             TCPStream r(mIO);

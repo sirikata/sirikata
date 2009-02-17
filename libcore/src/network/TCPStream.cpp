@@ -283,15 +283,15 @@ class ASIOSocketWrapper {
         }
     }
 public:
-    ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket){
+    ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket),mSendingStatus(0){
     }
-    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket){
+    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0){
     }
     ASIOSocketWrapper&operator=(const ASIOSocketWrapper& socket){
         mSocket=socket.mSocket;
         return *this;
     }
-    ASIOSocketWrapper() :mSocket(NULL){
+    ASIOSocketWrapper() :mSocket(NULL),mSendingStatus(0){
     }
     TCPSocket&getSocket() {return *mSocket;}
     const TCPSocket&getSocket()const {return *mSocket;}
