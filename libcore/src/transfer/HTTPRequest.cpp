@@ -315,9 +315,9 @@ void HTTPRequest::curlLoop () {
 			CURL *handle = transferMsg->easy_handle;
 			void *dataptr;
 			curl_easy_getinfo(handle, CURLINFO_PRIVATE, &dataptr);
-			HTTPRequest *request = (HTTPRequest*)dataptr;
 
 			if (transferMsg->msg == CURLMSG_DONE) {
+				HTTPRequest *request = (HTTPRequest*)dataptr;
 				bool success;
 				if (transferMsg->data.result == 0) {
 					success = true;
@@ -335,10 +335,13 @@ void HTTPRequest::curlLoop () {
 				DenseDataPtr finishedData(request->getData());
 				request->mCallback = nullCallback;
 				request->mCurlRequest = NULL;
-				// may delete request.
-				temp(request, finishedData, success);
-				request->mPreventDeletion.reset(); // may delete this.
 
+				boost::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
+				request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
+
+				temp(request, finishedData, success); // may delete request.
+
+				// now tempPtr is allowed to free request.
 				//access_curl_handle.lock();
 			}
 		}

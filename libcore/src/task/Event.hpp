@@ -124,7 +124,7 @@ public:
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
 			size_t operator() (const Secondary &sec) const{
-				return HASH<const char *>()(sec.mStrValue.c_str()) * 37 +
+				return HASH<std::string>()(sec.mStrValue) * 37 +
 					HASH<intptr_t>()(sec.mIntValue) * 31;
 			}
 		};
