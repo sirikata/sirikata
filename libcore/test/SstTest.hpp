@@ -30,8 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "util/Standard.hh"
-
 #include "network/TCPDefinitions.hpp"
 #include "network/TCPStream.hpp"
 #include "network/TCPStreamListener.hpp"

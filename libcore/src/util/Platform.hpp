@@ -119,6 +119,13 @@
 #  endif
 # endif
 #endif
+
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <assert.h>
 #include <cstddef>
 #include <cstring>
