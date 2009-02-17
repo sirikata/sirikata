@@ -41,7 +41,7 @@ ENDIF(COMMAND CMAKE_POLICY)
 
 
 IF(WIN32)
-ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK -Ycutil/Standard.hh)
+ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0500 -D_SCL_SECURE_NO_WARNINGS -EHsc -DBOOST_ALL_DYN_LINK -Ycutil/Standard.hh)
 SET(CMAKE_CXX_FLAGS "-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -Ycutil/Standard.hh")
 #-fno-rtti
 SET(CMAKE_CXX_FLAGS_DEFAULT "-g -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -Ycutil/Standard.hh" CACHE STRING
@@ -213,7 +213,7 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
   SET(CXXTEST_TEST_FILES)
   SET(CXXTEST_H_FILES)
 
-  SET(CXXTEST_OPTIONS --runner=StdioPrinter)
+  SET(CXXTEST_OPTIONS --runner=StdioPrinter --include=util/Standard.hh)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
@@ -265,6 +265,8 @@ ENDIF()
 #dependency: protocolbuffers
 IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs)
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/installed-protobufs)
+ELSEIF(EXISTS ${PLATFORM_LIBS}/protobufs)
+  SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/protobufs)
 ELSE()
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS})
 ENDIF()
@@ -281,6 +283,8 @@ IF(NOT BOOST_ROOT)
   # ENDIF()
   IF(EXISTS ${PLATFORM_LIBS}/installed-boost)
     SET(BOOST_ROOT ${PLATFORM_LIBS}/installed-boost)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/boost_1_35_0)
+    SET(BOOST_ROOT ${PLATFORM_LIBS}/boost_1_35_0)
   ELSE()
     SET(BOOST_ROOT ${PLATFORM_LIBS})
   ENDIF()
@@ -305,16 +309,18 @@ SET(Boost_LIBRARIES
 
 #dependency: curl
 IF(NOT CURL_ROOT)
-  IF(WIN32)
-    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_18_0)
-    GET_FILENAME_COMPONENT(CURL_ROOT ${CURL_ROOT} ABSOLUTE)
-    IF(NOT CURL_ROOT)
-      SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
-    ENDIF()
-  ELSEIF(EXISTS ${PLATFORM_LIBS}/installed-curl)
+  IF(EXISTS ${PLATFORM_LIBS}/installed-curl)
     SET(CURL_ROOT ${PLATFORM_LIBS}/installed-curl)
-  ELSE()
-    SET(CURL_ROOT ${PLATFORM_LIBS})
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_18_0)
+    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_18_0)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/libcurl_7_15_5)
+    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
+  ENDIF()
+  IF(WIN32)
+    GET_FILENAME_COMPONENT(CURL_ROOT ${CURL_ROOT} ABSOLUTE)
+  ENDIF()
+  IF(NOT CURL_ROOT)
+    SET(CURL_ROOT ${PLATFORM_LIBS}/libcurl_7_15_5)
   ENDIF()
 ENDIF()
 
@@ -373,18 +379,40 @@ SET(ProtocolBuffersSources
   FloatQuaternion
 )
 
+SET(SirikataProtobufFile ${LIBCORE_SOURCE_DIR}/protobuf.cc)
+SET(SirikataProtobufGenFile ${CMAKE_CURRENT_BINARY_DIR}/protobuf_include.txt)
+file(WRITE ${SirikataProtobufGenFile}
+           "#include \"util/Standard.hh\"\n")
+
 SET(SirikataProtocolBuffersSources)
 FOREACH(protosource ${ProtocolBuffersSources})
+  file(APPEND ${SirikataProtobufGenFile}
+              "#include \"${LIBCORE_SOURCE_DIR}/${protosource}.pb.cc\"\n")
   SET(SirikataProtocolBuffersSources ${SirikataProtocolBuffersSources}
                        ${LIBCORE_SOURCE_DIR}/${protosource}.pb.cc)
 ENDFOREACH(protosource)
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${LIBCORE_SOURCE_DIR})
 
+FILE(TO_NATIVE_PATH ${SirikataProtobufGenFile} src)
+FILE(TO_NATIVE_PATH ${SirikataProtobufFile} dst)
+IF(WIN32)
+  SET(COPYCOMMAND cmd /c type "${src}" ">" "${dst}")
+ELSE()
+  SET(COPYCOMMAND cp "${src}" "${dst}")
+ENDIF()
+
+ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtobufFile}
+                   COMMAND ${COPYCOMMAND}
+                   DEPENDS ${SirikataProtocolBuffersSources}
+#		   	   ${SirikataProtobufGenFile}
+                   COMMENT "Creating protocol buffers cpp file")
+
 #source files
 
 SET(SIRIKATA_CORE_SOURCES
-    ${SirikataProtocolBuffersSources}
+	${SirikataProtobufFile}
+#    ${SirikataProtocolBuffersSources}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCache.cpp
 	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
@@ -404,6 +432,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
 )
+
 #precompiled header
 IF(NOT WIN32)
   SET(SIRIKATA_CORE_SOURCES

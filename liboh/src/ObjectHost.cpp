@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <util/Standard.hh>
 #include <oh/ObjectHost.hpp>
 
 namespace Sirikata {
