@@ -713,8 +713,8 @@ public:
      * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
      * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
      */
-    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, const std::string&error_code=std::string()) {
-        Stream::ConnectionStatus stat=(status==CONNECTED?Stream::Connected:Stream::Disconnected);
+    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&error_code=std::string()) {
+        Stream::ConnectionStatus stat=reportedProblem;
         std::deque<StreamIDCallbackPair> registrations;
         bool actuallyDoSend=CommitCallbacks(registrations,status,true);
         if (actuallyDoSend) {
@@ -731,7 +731,7 @@ public:
     */
     void connectionFailedCallback(const std::string& error) {
 
-        connectionFailureOrSuccessCallback(DISCONNECTED,error);
+        connectionFailureOrSuccessCallback(DISCONNECTED,Stream::ConnectionFailed,error);
     }
    /**
     * The a particular socket's connection failed
@@ -760,12 +760,51 @@ public:
         }
         connectionFailedCallback(which==mSockets.size()?0:which,error.message());
     }
+
+
+   /**
+    * The connection failed before any sockets were established (or as a helper function after they have been cleaned)
+    * This function will call all substreams disconnected methods
+    */
+    void hostDisconnectedCallback(const std::string& error) {
+
+        connectionFailureOrSuccessCallback(DISCONNECTED,Stream::Disconnected,error);
+    }
+   /**
+    * The a particular socket's connection failed
+    * This function will call all substreams disconnected methods
+    */
+    void hostDisconnectedCallback(unsigned int whichSocket, const std::string& error) {
+        connectionFailedCallback(error);
+        //FIXME do something with the socket specifically that failed.
+    }
+   /**
+    * The a particular socket's connection failed
+    * This function will call all substreams disconnected methods
+    */
+    void hostDisconnectedCallback(unsigned int whichSocket, const boost::system::error_code& error) {
+        connectionFailedCallback(whichSocket,error.message());
+    }
+   /**
+    * The a particular socket's connection failed
+    * This function will call all substreams disconnected methods
+    */
+    void hostDisconnectedCallback(const ASIOSocketWrapper* whichSocket, const boost::system::error_code &error) {
+        unsigned int which=0;
+        for (std::vector<ASIOSocketWrapper>::iterator i=mSockets.begin(),ie=mSockets.end();i!=ie;++i,++which) {
+            if (&*i==whichSocket)
+                break;
+        }
+        connectionFailedCallback(which==mSockets.size()?0:which,error.message());
+    }
+
+
    /**
     * The a particular established a connection:
     * This function will call all substreams connected methods
     */
     void connectedCallback() {
-        connectionFailureOrSuccessCallback(CONNECTED);
+        connectionFailureOrSuccessCallback(CONNECTED,Stream::Connected);
     }
    /**
     * This function checks a particular sockets initial handshake header.
@@ -862,7 +901,7 @@ public:
         mSockets.resize(numSockets);
         std::tr1::shared_ptr<HeaderCheck> headerCheck(new HeaderCheck(std::pair<int,UUID>(numSockets,UUID::random()),Array<uint8,TcpSstHeaderSize>()));
 
-        tcp::resolver::query query(tcp::v4(), address.getHostName(), atoi(address.getService().c_str()));
+        tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
         mResolver.async_resolve(query,
                                 boost::bind(&MultiplexedSocket::handleResolve, getSharedPtr(),
                                             headerCheck,
@@ -888,7 +927,7 @@ void TCPSetCallbacks::operator()(const Stream::ConnectionCallback &connectionCal
 }
 
 void TCPReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
-    parentSocket->connectionFailedCallback(mWhichBuffer,error);
+    parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
 }
 void TCPReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, const Chunk&newChunk){
     parentSocket->receiveFullChunk(whichSocket,id,newChunk);
@@ -910,7 +949,7 @@ void TCPReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> 
                                    boost::asio::placeholders::bytes_transferred));
 }
 void triggerMultiplexedConnectionError(MultiplexedSocket*socket,ASIOSocketWrapper*wrapper,const boost::system::error_code &error){
-    socket->connectionFailedCallback(wrapper,error);
+    socket->hostDisconnectedCallback(wrapper,error);
 }
 TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket):mSocket(shared_socket),mSendStatus(0) {
 }
