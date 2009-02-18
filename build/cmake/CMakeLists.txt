@@ -464,7 +464,6 @@ SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
 
 #test source files
 SET(CXXTESTSources
-  ${LIBCORE_DIR}/test/SstTest.hpp
   ${LIBCORE_DIR}/test/TR1Test.hpp
   ${LIBCORE_DIR}/test/AnyTest.hpp
   ${LIBCORE_DIR}/test/AtomicTest.hpp
@@ -475,6 +474,7 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/OptionTest.hpp
   ${LIBCORE_DIR}/test/NameLookupTest.hpp
   ${LIBCORE_DIR}/test/CacheLayerTest.hpp
+#  ${LIBCORE_DIR}/test/SstTest.hpp
  )
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}

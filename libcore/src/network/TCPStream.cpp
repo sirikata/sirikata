@@ -963,11 +963,11 @@ public:
     typedef std::map<UUID,IncompleteStreamState> IncompleteStreamMap;
     static std::deque<UUID> sStaleUUIDs;
     static IncompleteStreamMap sIncompleteStreams;
-    unsigned char buffer[TcpSstHeaderSize];
+    std::tr1::shared_ptr<Array<uint8,SIRIKATA_TCP_STREAM_HEADER_LENGTH> > mBuffer;
     unsigned int mOffset;
     TCPSocket *mSocket;
     Stream::SubstreamCallback mCallback;
-    TCPStreamBuilder(TCPSocket *socket, const Stream::SubstreamCallback& cb):mSocket(socket),mCallback(cb){
+    TCPStreamBuilder(TCPSocket *socket, const Stream::SubstreamCallback& cb):mBuffer(new Array<uint8,SIRIKATA_TCP_STREAM_HEADER_LENGTH>),mSocket(socket),mCallback(cb){
         mOffset=0;
     }
     ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
@@ -976,13 +976,13 @@ public:
         //FIXME: cleanup stale UUIDs
         mOffset+=(unsigned int)bytes_transferred;
         assert ((unsigned int)mOffset<=(unsigned int)TcpSstHeaderSize);
-        if (error || std::memcmp(buffer,SIRIKATA_TCP_STREAM_HEADER,SIRIKATA_TCP_STREAM_HEADER_LENGTH)!=0) {
+        if (error || std::memcmp(mBuffer->begin(),SIRIKATA_TCP_STREAM_HEADER,SIRIKATA_TCP_STREAM_HEADER_LENGTH)!=0) {
             std::cerr<< "Connection received with incomprehensible header";
-            delete this;
+            //done
         }else {
-            UUID context=UUID(&buffer[TcpSstHeaderSize-16],16);
+            UUID context=UUID(mBuffer->begin()+(TcpSstHeaderSize-16),16);
             IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
-            unsigned int numConnections=((buffer[SIRIKATA_TCP_STREAM_HEADER_LENGTH]-'0')%10)*10+((buffer[SIRIKATA_TCP_STREAM_HEADER_LENGTH+1]-'0')%10);
+            unsigned int numConnections=(((*mBuffer)[SIRIKATA_TCP_STREAM_HEADER_LENGTH]-'0')%10)*10+(((*mBuffer)[SIRIKATA_TCP_STREAM_HEADER_LENGTH+1]-'0')%10);
             if (numConnections>99) numConnections=99;//FIXME: some option in options
             if (where==sIncompleteStreams.end()){
                 sIncompleteStreams[context].mNumSockets=numConnections;
@@ -1011,7 +1011,7 @@ public:
                     sStaleUUIDs.push_back(context);
                 }
             }
-            delete this;
+            //done
         }
     }
 };
@@ -1098,11 +1098,11 @@ bool TCPStream::cloneFrom(Stream*otherStream,
 }
 
 void beginNewStream(TCPSocket * socket, const Stream::SubstreamCallback& cb) {
-    TCPStreamBuilder * tsb=new TCPStreamBuilder(socket,cb);
+    TCPStreamBuilder tcb(socket,cb);
     boost::asio::async_read(*socket,
-                            boost::asio::buffer(&tsb->buffer[0],TcpSstHeaderSize),
+                            boost::asio::buffer(tcb.mBuffer->begin(),TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TcpSstHeaderSize),
-                            *tsb);
+                            tcb);
 }
 
 }  }

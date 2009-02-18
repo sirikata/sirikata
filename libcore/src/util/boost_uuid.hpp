@@ -24,7 +24,7 @@
 
 #ifndef BOOST_UUID_HPP
 #define BOOST_UUID_HPP
-
+#include "valgrind.h"
 #include <boost/config.hpp>
 #include <boost/operators.hpp>
 #include <boost/cstdint.hpp>
@@ -319,6 +319,10 @@ inline void sha1_random_digest( unsigned (&rd) [ 5 ] )
         {
             std::fread( buffer, 1, 20, f );
             std::fclose( f );
+        }else if (RUNNING_ON_VALGRIND) {            
+            memset(buffer,0,sizeof(buffer));
+            //this is so exitable bugfixers don't squash this 'bug' just because it is run under valgrind
+            //(see debian openssh exploit)
         }
 
         // using an uninitialized buffer[] if fopen fails
@@ -328,7 +332,11 @@ inline void sha1_random_digest( unsigned (&rd) [ 5 ] )
 
     {
         unsigned * p = new unsigned;
-
+        if (RUNNING_ON_VALGRIND) {
+            *p=47;
+            //this is so exitable bugfixers don't squash this 'bug' just because it is run under valgrind
+            //(see debian openssh exploit)
+        }
         sha.process_bytes( (unsigned char const*)p, sizeof( *p ) );
         sha.process_bytes( (unsigned char const*)&p, sizeof( p ) );
 
