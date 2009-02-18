@@ -31,17 +31,17 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#ifndef SIRIKATA_MemoryCache_HPP__
-#define SIRIKATA_MemoryCache_HPP__
+#ifndef SIRIKATA_MemoryCacheLayer_HPP__
+#define SIRIKATA_MemoryCacheLayer_HPP__
 
 #include "CacheLayer.hpp"
 
 namespace Sirikata {
-/** MemoryCache.hpp -- MemoryCache -- the first layer of transfer cache. */
+/** MemoryCacheLayer.hpp -- MemoryCacheLayer -- the first layer of transfer cache. */
 namespace Transfer {
 
-/// MemoryCache is usually the first layer in the cache--simple map from FileId to SparseData.
-class MemoryCache : public CacheLayer {
+/// MemoryCacheLayer is usually the first layer in the cache--simple map from FileId to SparseData.
+class MemoryCacheLayer : public CacheLayer {
 public:
 	struct CacheData : public CacheEntry {
 		SparseData mSparse;
@@ -90,7 +90,7 @@ protected:
 	}
 
 public:
-	MemoryCache(CachePolicy *policy, CacheLayer *tryNext)
+	MemoryCacheLayer(CachePolicy *policy, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
 			mData(this, policy) {
 	}

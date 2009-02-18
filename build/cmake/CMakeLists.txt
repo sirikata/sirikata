@@ -414,7 +414,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${SirikataProtobufFile}
 #    ${SirikataProtocolBuffersSources}
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
-	${LIBCORE_SOURCE_DIR}/transfer/DiskCache.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
 	${LIBCORE_SOURCE_DIR}/task/Event.cpp
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp

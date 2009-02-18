@@ -31,8 +31,8 @@
  */
 /*  Created on: Dec 31, 2008 */
 
-#ifndef SIRIKATA_HTTPTransfer_HPP__
-#define SIRIKATA_HTTPTransfer_HPP__
+#ifndef SIRIKATA_NetworkCacheLayer_HPP__
+#define SIRIKATA_NetworkCacheLayer_HPP__
 
 #include "CacheLayer.hpp"
 #include "ServiceLookup.hpp"
@@ -42,12 +42,12 @@
 #include <boost/thread/shared_mutex.hpp>
 
 namespace Sirikata {
-/** CacheLayer.hpp -- Class dealing with HTTP downloads. */
+/** NetworkCacheLayer.hpp -- Class dealing with HTTP downloads. */
 namespace Transfer {
 
 
-/** Not really a cache layer, but implements the interface.*/
-class NetworkTransfer : public CacheLayer {
+/** Does no caching, but interfaces with DownloadHandler, then sends data back up the chain.*/
+class NetworkCacheLayer : public CacheLayer {
 	struct RequestInfo {
 		DownloadHandler::TransferDataPtr httpreq;
 		TransferCallback callback;
@@ -111,7 +111,7 @@ class NetworkTransfer : public CacheLayer {
 			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!
 			info.httpreq = DownloadHandler::TransferDataPtr();
 			handler->download(&info.httpreq, lookupUri, info.range,
-					std::tr1::bind(&NetworkTransfer::httpCallback, this, iter, whichService, _1, _2));
+					std::tr1::bind(&NetworkCacheLayer::httpCallback, this, iter, whichService, _1, _2));
 			// info may be deleted by now (not so unlikely as it sounds -- it happens if you connect to localhost)
 		} else {
 			doFetch(iter, whichService+1);
@@ -124,12 +124,12 @@ class NetworkTransfer : public CacheLayer {
 	}
 
 public:
-	NetworkTransfer(CacheLayer *next, ServiceLookup *services, ProtocolRegistry<DownloadHandler> *protoReg)
+	NetworkCacheLayer(CacheLayer *next, ServiceLookup *services, ProtocolRegistry<DownloadHandler> *protoReg)
 			:CacheLayer(next), mServicesLookup(services), mProtoReg(protoReg) {
 		cleanup = false;
 	}
 
-	virtual ~NetworkTransfer() {
+	virtual ~NetworkCacheLayer() {
 		cleanup = true; // Prevents doFetch (callback for NameLookup) from starting a new download.
 		std::list<DownloadHandler::TransferDataPtr> pendingDelete;
 		{
@@ -173,7 +173,7 @@ public:
 			gotServices(infoIter, services);
 		} else {
 			mServicesLookup->lookupService(downloadFileId.uri().context(),
-					std::tr1::bind(&NetworkTransfer::gotServices, this, infoIter, _1));
+					std::tr1::bind(&NetworkCacheLayer::gotServices, this, infoIter, _1));
 		}
 	}
 };

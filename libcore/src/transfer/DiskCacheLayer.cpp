@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Transfer management system
- *  DiskCache.cpp
+ *  DiskCacheLayer.cpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
@@ -31,7 +31,7 @@
  */
 /*  Created on: Jan 15, 2009 */
 #include "util/Standard.hh"
-#include "DiskCache.hpp"
+#include "DiskCacheLayer.hpp"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -156,7 +156,7 @@ cache_usize_type sizeFromDirentry(const std::string &name, dirent *ent, bool &is
 
 } // anon namespace.
 
-void DiskCache::workerThread() {
+void DiskCacheLayer::workerThread() {
 	while (true) {
 		std::tr1::shared_ptr<DiskRequest> req;
 
@@ -292,7 +292,7 @@ void DiskCache::workerThread() {
 	}
 }
 
-void DiskCache::unserialize() {
+void DiskCacheLayer::unserialize() {
 	std::string::size_type slash=0;
 	while (true) {
 		std::string::size_type fwdslash = mPrefix.find('/', slash);

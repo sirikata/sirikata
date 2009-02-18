@@ -31,9 +31,9 @@
  */
 
 #include <cxxtest/TestSuite.h>
-#include "transfer/DiskCache.hpp"
-#include "transfer/MemoryCache.hpp"
-#include "transfer/NetworkTransfer.hpp"
+#include "transfer/DiskCacheLayer.hpp"
+#include "transfer/MemoryCacheLayer.hpp"
+#include "transfer/NetworkCacheLayer.hpp"
 #include "transfer/TransferData.hpp"
 #include "transfer/LRUPolicy.hpp"
 
@@ -74,14 +74,14 @@ public:
 
 	CacheLayer *createTransferLayer(CacheLayer *next=NULL) {
 		// NULL service lookup--we are using a simple http URL.
-		CacheLayer *layer = new Transfer::NetworkTransfer(next, NULL, mProtoReg);
+		CacheLayer *layer = new Transfer::NetworkCacheLayer(next, NULL, mProtoReg);
 		mCacheLayers.push_back(layer);
 		return layer;
 	}
 	CacheLayer *createDiskCache(CacheLayer *next = NULL,
 				int size=32000,
 				std::string dir="diskCache") {
-		CacheLayer *layer = new Transfer::DiskCache(
+		CacheLayer *layer = new Transfer::DiskCacheLayer(
 							new Transfer::LRUPolicy(size),
 							dir,
 							next);
@@ -90,7 +90,7 @@ public:
 	}
 	CacheLayer *createMemoryCache(CacheLayer *next = NULL,
 				int size=3200) {
-		CacheLayer *layer = new Transfer::MemoryCache(
+		CacheLayer *layer = new Transfer::MemoryCacheLayer(
 							new Transfer::LRUPolicy(size),
 							next);
 		mCacheLayers.push_back(layer);

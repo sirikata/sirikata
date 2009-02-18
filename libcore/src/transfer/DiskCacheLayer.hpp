@@ -31,8 +31,8 @@
  */
 /*  Created on: Jan 1, 2009 */
 
-#ifndef SIRIKATA_DiskCache_HPP__
-#define SIRIKATA_DiskCache_HPP__
+#ifndef SIRIKATA_DiskCacheLayer_HPP__
+#define SIRIKATA_DiskCacheLayer_HPP__
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -47,7 +47,7 @@ namespace Transfer {
 //#define NUM_WORKER_THREADS 10
 
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
-class DiskCache : public CacheLayer {
+class DiskCacheLayer : public CacheLayer {
 public:
 	struct CacheData : public CacheEntry {
 		RangeList mRanges;
@@ -165,9 +165,9 @@ protected:
 
 public:
 
-	DiskCache(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
+	DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
-			mWorkerThread(std::tr1::bind(&DiskCache::workerThread, this)),
+			mWorkerThread(std::tr1::bind(&DiskCacheLayer::workerThread, this)),
 			mFiles(this, policy),
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
@@ -180,7 +180,7 @@ public:
 		}
 	}
 
-	virtual ~DiskCache() {
+	virtual ~DiskCacheLayer() {
 		std::tr1::shared_ptr<DiskRequest> req
 			(new DiskRequest(DiskRequest::OPEXIT, RemoteFileId(Fingerprint(), URI(URIContext(),"")), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);

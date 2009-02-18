@@ -33,7 +33,7 @@
 
 
 #include <cxxtest/TestSuite.h>
-#include "transfer/NetworkTransfer.hpp"
+#include "transfer/NetworkCacheLayer.hpp"
 #include "transfer/HTTPRequest.hpp"
 #include "transfer/ProtocolRegistry.hpp"
 #include "transfer/HTTPDownloadHandler.hpp"
@@ -92,7 +92,7 @@ public:
 
 		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
 		mDownloadReg->setHandler("http", httpHandler);
-		mTransferLayer = new Transfer::NetworkTransfer(NULL, mService, mDownloadReg);
+		mTransferLayer = new Transfer::NetworkCacheLayer(NULL, mService, mDownloadReg);
 
 		finishedTest = 0;
 	}
