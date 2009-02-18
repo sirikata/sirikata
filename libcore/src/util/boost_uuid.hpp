@@ -372,6 +372,13 @@ inline unsigned long random_number(Engine& engine)
 inline uuid uuid::create()
 {
     unsigned int rd[5]; //seed
+    if (RUNNING_ON_VALGRIND) {            
+        rd[0]=rand();
+        rd[1]=rand();
+        rd[2]=rand();
+        rd[3]=rand();
+        rd[4]=rand();
+    }
     detail::sha1_random_digest(rd);
     boost::mt19937 engine(static_cast<boost::mt19937::result_type>(rd[0]));
     return create(engine);
