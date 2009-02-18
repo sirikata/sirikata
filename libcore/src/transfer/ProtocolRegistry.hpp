@@ -90,9 +90,8 @@ public:
 	 * @param cb       The callback to be called when the download has completed.
 	 *                 FIXME: 'data' may be non-null even if 'success' is false.
 	 */
-	virtual TransferDataPtr download(const URI &uri, const Range &bytes, const Callback &cb) {
+	virtual void download(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback &cb) {
 		cb(DenseDataPtr(), false);
-		return TransferDataPtr();
 	}
 
 	/** Downloads the given range of a file, and calls streamCB for each packet
@@ -108,9 +107,8 @@ public:
 	 * @param streamCB The callback to be called for each packet. If 'success' is
 	 *                 false, it indicates either EOF or failed connection.
 	 */
-	virtual TransferDataPtr stream(const URI &uri, const Range &bytes, const Callback streamCB) {
+	virtual void stream(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback streamCB) {
 		streamCB(DenseDataPtr(), false);
-		return TransferDataPtr();
 	}
 
 	/** Returns true if stream() will receive data in order (such as in HTTP or FTP)

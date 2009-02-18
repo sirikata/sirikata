@@ -312,6 +312,28 @@ public:
 		}
 	}
 
+	/** Constructs an absolute URI. To be used when the security
+	 * implications of relative URIs are not clear.
+	 *
+	 * @param uri   An absolute URI.
+	 */
+	URI(const std::string &url)
+			: mContext(URIContext(), url) {
+		std::string::size_type slash = url.rfind('/');
+		if (slash != std::string::npos) {
+			// FIXME: handle incomplete URIs correctly
+			if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
+				// this is actually a hostname section... don't copy it into the filename.
+				// unless there were three slashes in a row.
+				mPath = std::string();
+			} else {
+				mPath = url.substr(slash+1);
+			}
+		} else{
+			mPath = url;
+		}
+	}
+
 	/** Gets the corresponding context, from which you can construct
 	 * another relative URI.
 	 */

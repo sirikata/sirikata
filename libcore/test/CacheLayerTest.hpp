@@ -34,7 +34,6 @@
 #include "transfer/DiskCache.hpp"
 #include "transfer/MemoryCache.hpp"
 #include "transfer/NetworkTransfer.hpp"
-#include "transfer/TransferManager.hpp"
 #include "transfer/TransferData.hpp"
 #include "transfer/LRUPolicy.hpp"
 
@@ -48,7 +47,7 @@ using namespace Sirikata;
 
 #define EXAMPLE_HASH "55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80"
 
-class TransferTestSuite : public CxxTest::TestSuite
+class CacheLayerTestSuite : public CxxTest::TestSuite
 {
 	//typedef Transfer::RemoteFileId RemoteFileId;
 	typedef Transfer::URI URI;
@@ -62,7 +61,7 @@ class TransferTestSuite : public CxxTest::TestSuite
 	boost::mutex wakeMutex;
 	boost::condition_variable wakeCV;
 public:
-	TransferTestSuite () {
+	CacheLayerTestSuite () {
 	}
 
 	virtual void setUp() {
@@ -124,10 +123,10 @@ public:
 		delete mProtoReg;
 	}
 
-	static TransferTestSuite * createSuite( void ) {
-		return new TransferTestSuite();
+	static CacheLayerTestSuite * createSuite( void ) {
+		return new CacheLayerTestSuite();
 	}
-	static void destroySuite(TransferTestSuite * k) {
+	static void destroySuite(CacheLayerTestSuite * k) {
 		delete k;
 	}
 
@@ -158,15 +157,15 @@ public:
 	}
 
 	void doExampleComTest( CacheLayer *transfer ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
         using std::tr1::placeholders::_1;
 		transfer->getData(exampleComUri,
 				Transfer::Range(true),
-				std::tr1::bind(&TransferTestSuite::callbackExampleCom, this, exampleComUri, _1));
+				std::tr1::bind(&CacheLayerTestSuite::callbackExampleCom, this, exampleComUri, _1));
 
 		waitFor(1);
 
-		std::cout << "Finished example.com test" << std::endl;
+		std::cout << "Finished localhost test" << std::endl;
 	}
 
 	void testDiskCache_exampleCom( void ) {
@@ -216,10 +215,10 @@ public:
 	void testCleanup( void ) {
 		Transfer::RemoteFileId testUri (SHA256::computeDigest("01234"), URI(URIContext(), "http://www.google.com/"));
 		Transfer::RemoteFileId testUri2 (SHA256::computeDigest("56789"), URI(URIContext(), "http://www.google.com/intl/en_ALL/images/logo.gif"));
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
 		using std::tr1::placeholders::_1;
-		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, _1);
-		Transfer::TransferCallback checkNullCB = std::tr1::bind(&TransferTestSuite::checkNullCallback, this, _1);
+		Transfer::TransferCallback simpleCB = std::tr1::bind(&CacheLayerTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback checkNullCB = std::tr1::bind(&CacheLayerTestSuite::checkNullCallback, this, _1);
 
 		CacheLayer *transfer = createSimpleCache(true, true, true);
 
@@ -228,7 +227,7 @@ public:
 		transfer->getData(testUri, Transfer::Range(true), checkNullCB);
 		transfer->getData(testUri2, Transfer::Range(true), checkNullCB);
 
-		// example.com should be in disk cache--make sure it waits for the request.
+		// localhost should be in disk cache--make sure it waits for the request.
 		// disk cache is required to finish all pending requests before cleaning up.
 		transfer->getData(exampleComUri, Transfer::Range(true), simpleCB);
 
@@ -237,14 +236,14 @@ public:
 
 	void testOverlappingRange( void ) {
         using std::tr1::placeholders::_1;
-		Transfer::TransferCallback simpleCB = std::tr1::bind(&TransferTestSuite::simpleCallback, this, _1);
+		Transfer::TransferCallback simpleCB = std::tr1::bind(&CacheLayerTestSuite::simpleCallback, this, _1);
 		int numtests = 0;
 
 		CacheLayer *http = createTransferLayer();
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);
 
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
 		memory->purgeFromCache(exampleComUri.fingerprint());
 
 		std::string diskFile = "diskCache/" + exampleComUri.fingerprint().convertToHexString() + ".part";
@@ -305,7 +304,7 @@ public:
 		memory->setNext(NULL);
 		memory->getData(exampleComUri,
 				Transfer::Range(2, true),
-				std::tr1::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+				std::tr1::bind(&CacheLayerTestSuite::checkOneDenseDataCallback, this, _1));
 		waitFor(numtests+=1);
 
 		// Whole file trumps anything else.
@@ -318,7 +317,7 @@ public:
 		memory->setNext(NULL);
 		memory->getData(exampleComUri,
 				Transfer::Range(2, true),
-				std::tr1::bind(&TransferTestSuite::checkOneDenseDataCallback, this, _1));
+				std::tr1::bind(&CacheLayerTestSuite::checkOneDenseDataCallback, this, _1));
 		waitFor(numtests+=1);
 
 		// should be cached
@@ -367,7 +366,7 @@ public:
 	}
 
 	void testRange( void ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
 		CacheLayer *http = createTransferLayer();
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);
@@ -378,14 +377,14 @@ public:
 			memcpy(expect->writableData(), "TML>\r\n", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&CacheLayerTestSuite::compareCallback, this, expect, _1));
 		}
 		{
 			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "<HEAD>", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&CacheLayerTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(2);
 		{
@@ -394,7 +393,7 @@ public:
 			memory->setNext(NULL);
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
-					std::tr1::bind(&TransferTestSuite::compareCallback, this, expect, _1));
+					std::tr1::bind(&CacheLayerTestSuite::compareCallback, this, expect, _1));
 		}
 		waitFor(3);
 	}

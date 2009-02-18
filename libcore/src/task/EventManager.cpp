@@ -332,6 +332,12 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	AbsTime startTime = AbsTime::now();
 	std::cout << " >>> Processing events." << std::endl;
 
+	// swaps to allow people to keep adding new events
+	typename EventList::NodeIterator processingList(mUnprocessed);
+
+	// The events are swapped first to guarantee that listeners are at least as up-to-date as events.
+	// Events can be delayed, but we cannot allow any lost subscriptions/unsubscriptions.
+
 	{
 		typename ListenerRequestList::NodeIterator procListeners(mListenerRequests);
 
@@ -350,9 +356,6 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			}
 		}
 	}
-
-	// allow people to keep adding new events
-	typename EventList::NodeIterator processingList(mUnprocessed);
 
 	EventPtr *evTemp;
 

@@ -98,7 +98,8 @@ public:
 	/** Simple wrapper around HTTPRequest to download a URL.
 	 * The returned TransferDataPtr contains a shared reference to the HTTPRequest.
 	 * If you hold onto it, you can abort the download. */
-	virtual TransferDataPtr download(const URI &uri,
+	virtual void download(TransferDataPtr *ptrRef,
+			const URI &uri,
 			const Range &bytes,
 			const DownloadHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, bytes));
@@ -108,15 +109,25 @@ public:
 		req->setCallback(
 			std::tr1::bind(&HTTPDownloadHandler::httpCallback, cb, _1, _2, _3));
 		// should call callback when it finishes.
+		if (ptrRef) {
+			/*
+			 * Must set this before calling req->go() or else
+			 * it is possible for the HTTPRequest to call cb() before go() returns,
+			 * which will cause the object owning *ptrRef to be deleted.
+			 */
+			*ptrRef = TransferDataPtr(new HTTPTransferData(shared_from_this(), req));
+		}
+
 		req->go(req);
-		return TransferDataPtr(new HTTPTransferData(shared_from_this(), req));
 	}
 
 	/// FIXME: Unimplemented -- needs a better interface from HTTPRequest to work.
-	virtual TransferDataPtr stream(const URI &uri, const Range &bytes, const DownloadHandler::Callback &cb) {
+	virtual void stream(TransferDataPtr *ptrRef,
+			const URI &uri,
+			const Range &bytes,
+			const DownloadHandler::Callback &cb) {
 		// Does not work yet.
 		cb(DenseDataPtr(), false);
-		return TransferDataPtr();
 	}
 
 	/// HTTP (as with most TCP protocols) returns packets in order.

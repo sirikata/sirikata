@@ -65,6 +65,7 @@ class NetworkTransfer : public CacheLayer {
 	ServiceLookup *mServicesLookup;
 	ProtocolRegistry<DownloadHandler> *mProtoReg;
 	boost::mutex mActiveTransferLock; ///< for abort.
+	boost::condition_variable mCleanupCV;
 
 	void httpCallback(
 			std::list<RequestInfo>::iterator iter,
@@ -78,11 +79,11 @@ class NetworkTransfer : public CacheLayer {
 			SparseData data;
 			data.addValidData(recvData);
 			info.callback(&data);
-			if (!cleanup) {
-				boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
-				mActiveTransfers.erase(iter);
-			}
-		} else if (!cleanup) {
+
+			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+			mActiveTransfers.erase(iter);
+			mCleanupCV.notify_one();
+		} else {
 			// don't want to make new queries in this case.
 			doFetch(iter, whichService+1);
 		}
@@ -95,21 +96,23 @@ class NetworkTransfer : public CacheLayer {
 		 * if this class is destructed while we are executing doFetch.
 		 */
 		RequestInfo &info = *iter;
-		if (whichService >= info.services->size()) {
+		if (cleanup || whichService >= info.services->size()) {
 			std::cerr << "None of the " << whichService << " download URIContexts registered for " <<
 					info.fileId.uri() << " were successful." << std::endl;
 			CacheLayer::getData(info.fileId, info.range, info.callback);
-			if (!cleanup) {
-				boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
-				mActiveTransfers.erase(iter);
-			}
+			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+			mActiveTransfers.erase(iter);
+			mCleanupCV.notify_one();
 			return;
 		}
 		URI lookupUri ((*info.services)[whichService], info.fileId.uri().filename());
 		std::tr1::shared_ptr<DownloadHandler> handler = mProtoReg->lookup(lookupUri.proto());
 		if (handler) {
-			info.httpreq = handler->download(lookupUri, info.range,
+			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!
+			info.httpreq = DownloadHandler::TransferDataPtr();
+			handler->download(&info.httpreq, lookupUri, info.range,
 					std::tr1::bind(&NetworkTransfer::httpCallback, this, iter, whichService, _1, _2));
+			// info may be deleted by now (not so unlikely as it sounds -- it happens if you connect to localhost)
 		} else {
 			doFetch(iter, whichService+1);
 		}
@@ -127,14 +130,30 @@ public:
 	}
 
 	virtual ~NetworkTransfer() {
-		boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
-		cleanup = true;
-		for (std::list<RequestInfo>::iterator iter = mActiveTransfers.begin();
-				iter != mActiveTransfers.end();
-				++iter) {
-			(*iter).httpreq->abort();
+		cleanup = true; // Prevents doFetch (callback for NameLookup) from starting a new download.
+		std::list<DownloadHandler::TransferDataPtr> pendingDelete;
+		{
+			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+			for (std::list<RequestInfo>::iterator iter = mActiveTransfers.begin();
+					iter != mActiveTransfers.end();
+					++iter) {
+				if ((*iter).httpreq) {
+					pendingDelete.push_back((*iter).httpreq);
+				}
+			}
 		}
-		mActiveTransfers.clear();
+		std::list<DownloadHandler::TransferDataPtr>::iterator iter;
+		for (iter = pendingDelete.begin();
+				iter != pendingDelete.end();
+				++iter) {
+			(*iter)->abort();
+		}
+		{
+			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
+			while (!mActiveTransfers.empty()) {
+				mCleanupCV.wait(transfer_lock);
+			}
+		}
 	}
 
 	virtual void getData(const RemoteFileId &downloadFileId,

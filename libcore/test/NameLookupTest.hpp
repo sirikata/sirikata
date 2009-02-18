@@ -38,7 +38,6 @@
 #include "transfer/ProtocolRegistry.hpp"
 #include "transfer/HTTPDownloadHandler.hpp"
 #include "transfer/CachedServiceLookup.hpp"
-#include "transfer/TransferManager.hpp"
 #include "transfer/NameLookupManager.hpp"
 #include "transfer/CachedNameLookupManager.hpp"
 

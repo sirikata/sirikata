@@ -474,7 +474,7 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/EventTest.hpp
   ${LIBCORE_DIR}/test/OptionTest.hpp
   ${LIBCORE_DIR}/test/NameLookupTest.hpp
-  ${LIBCORE_DIR}/test/TransferTest.hpp
+  ${LIBCORE_DIR}/test/CacheLayerTest.hpp
  )
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
