@@ -39,8 +39,8 @@
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 const int TCPStream::SendStatusClosing=(1<<30);
-#define SIRIKATA_TCP_STREAM_HEADER "SSTTCP"
-#define SIRIKATA_TCP_STREAM_HEADER_LENGTH 6
+#define SIRIKATA_TCP_STREAM_STRING_PREFIX "SSTTCP"
+#define SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH 6
 class TCPSetCallbacks:public Stream::SetCallbacks {
 public:
     TCPStream::Callbacks* mCallbacks;
@@ -61,10 +61,10 @@ enum TCPStreamControlCodes {
 };
 static const int TcpSstHeaderSize=24;
 void copyHeader(void * destination, const UUID&key, unsigned int num) {
-    std::memcpy(destination,SIRIKATA_TCP_STREAM_HEADER,SIRIKATA_TCP_STREAM_HEADER_LENGTH);
-    ((char*)destination)[SIRIKATA_TCP_STREAM_HEADER_LENGTH]='0'+(num/10)%10;
-    ((char*)destination)[SIRIKATA_TCP_STREAM_HEADER_LENGTH+1]='0'+(num%10);
-    std::memcpy(((char*)destination)+SIRIKATA_TCP_STREAM_HEADER_LENGTH+2,
+    std::memcpy(destination,SIRIKATA_TCP_STREAM_STRING_PREFIX,SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH);
+    ((char*)destination)[SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH]='0'+(num/10)%10;
+    ((char*)destination)[SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH+1]='0'+(num%10);
+    std::memcpy(((char*)destination)+SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH+2,
                 key.getArray().begin(),
                 UUID::static_size);
 }
@@ -696,8 +696,7 @@ public:
                     where=mCallbacks.begin();
                 }
                 if (where!=mCallbacks.end()) {
-                    TCPStream*newStream=new TCPStream(getSharedPtr());
-                    newStream->mID=id;
+                    TCPStream*newStream=new TCPStream(getSharedPtr(),id);
                     TCPSetCallbacks setCallbackFunctor(this,newStream);
                     where->second->mSubstreamCallback(newStream,setCallbackFunctor);
                     if (setCallbackFunctor.mCallbacks != NULL) {
@@ -951,38 +950,30 @@ void TCPReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> 
 void triggerMultiplexedConnectionError(MultiplexedSocket*socket,ASIOSocketWrapper*wrapper,const boost::system::error_code &error){
     socket->hostDisconnectedCallback(wrapper,error);
 }
-TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket):mSocket(shared_socket),mSendStatus(0) {
+TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(0) {
+
 }
-class TCPStreamBuilder{
-public:
+namespace TCPStreamBuilder{
     class IncompleteStreamState {
     public:
         int mNumSockets;
         std::vector<TCPSocket*>mSockets;
     };
     typedef std::map<UUID,IncompleteStreamState> IncompleteStreamMap;
-    static std::deque<UUID> sStaleUUIDs;
-    static IncompleteStreamMap sIncompleteStreams;
-    std::tr1::shared_ptr<Array<uint8,SIRIKATA_TCP_STREAM_HEADER_LENGTH> > mBuffer;
-    unsigned int mOffset;
-    TCPSocket *mSocket;
-    Stream::SubstreamCallback mCallback;
-    TCPStreamBuilder(TCPSocket *socket, const Stream::SubstreamCallback& cb):mBuffer(new Array<uint8,SIRIKATA_TCP_STREAM_HEADER_LENGTH>),mSocket(socket),mCallback(cb){
-        mOffset=0;
-    }
+    std::deque<UUID> sStaleUUIDs;
+    IncompleteStreamMap sIncompleteStreams;
     ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
-    void operator() (const boost::system::error_code &error,
-                     std::size_t bytes_transferred) {
-        //FIXME: cleanup stale UUIDs
-        mOffset+=(unsigned int)bytes_transferred;
-        assert ((unsigned int)mOffset<=(unsigned int)TcpSstHeaderSize);
-        if (error || std::memcmp(mBuffer->begin(),SIRIKATA_TCP_STREAM_HEADER,SIRIKATA_TCP_STREAM_HEADER_LENGTH)!=0) {
+void buildStream(Array<uint8,TcpSstHeaderSize> *buffer,
+                 TCPSocket *socket,
+                 Stream::SubstreamCallback callback,
+                 const boost::system::error_code &error,
+                 std::size_t bytes_transferred) {
+        if (error || std::memcmp(buffer->begin(),SIRIKATA_TCP_STREAM_STRING_PREFIX,SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH)!=0) {
             std::cerr<< "Connection received with incomprehensible header";
-            //done
         }else {
-            UUID context=UUID(mBuffer->begin()+(TcpSstHeaderSize-16),16);
+            UUID context=UUID(buffer->begin()+(TcpSstHeaderSize-16),16);
             IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
-            unsigned int numConnections=(((*mBuffer)[SIRIKATA_TCP_STREAM_HEADER_LENGTH]-'0')%10)*10+(((*mBuffer)[SIRIKATA_TCP_STREAM_HEADER_LENGTH+1]-'0')%10);
+            unsigned int numConnections=(((*buffer)[SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH]-'0')%10)*10+(((*buffer)[SIRIKATA_TCP_STREAM_STRING_PREFIX_LENGTH+1]-'0')%10);
             if (numConnections>99) numConnections=99;//FIXME: some option in options
             if (where==sIncompleteStreams.end()){
                 sIncompleteStreams[context].mNumSockets=numConnections;
@@ -993,16 +984,16 @@ public:
                 std::cerr<< "Single client disagrees on number of connections to establish";
                 sIncompleteStreams.erase(where);
             }else {
-                where->second.mSockets.push_back(mSocket);
+                where->second.mSockets.push_back(socket);
                 if (numConnections==(unsigned int)where->second.mSockets.size()) {
                     std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(context,where->second.mSockets));
                     MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                     sIncompleteStreams.erase(where);
+                    Stream::StreamID newID=Stream::StreamID(1);
+                    TCPStream * strm=new TCPStream(shared_socket,newID);
 
-                    TCPStream * strm=new TCPStream(shared_socket);
-                    Stream::StreamID newID=strm->mID=Stream::StreamID(1);
                     TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
-                    mCallback(strm,setCallbackFunctor);
+                    callback(strm,setCallbackFunctor);
                     if (setCallbackFunctor.mCallbacks==NULL) {
                         std::cerr<<"Forgot to set listener on socket\n";
                         shared_socket->closeStream(shared_socket,newID);
@@ -1011,8 +1002,8 @@ public:
                     sStaleUUIDs.push_back(context);
                 }
             }
-            //done
         }
+        delete buffer;
     }
 };
 void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
@@ -1063,8 +1054,6 @@ void TCPStream::close() {
     mSocket->addCallbacks(getID(),NULL);
     MultiplexedSocket::closeStream(mSocket,getID());
 }
-TCPStreamBuilder::IncompleteStreamMap TCPStreamBuilder::sIncompleteStreams;
-std::deque<UUID> TCPStreamBuilder::sStaleUUIDs;
 TCPStream::TCPStream(IOService&io):mSocket(MultiplexedSocket::construct(&io)),mSendStatus(0) {
 }
 void TCPStream::connect(const Address&addy,
@@ -1098,11 +1087,11 @@ bool TCPStream::cloneFrom(Stream*otherStream,
 }
 
 void beginNewStream(TCPSocket * socket, const Stream::SubstreamCallback& cb) {
-    TCPStreamBuilder tcb(socket,cb);
+    Array<uint8,TcpSstHeaderSize> *buffer=new Array<uint8,TcpSstHeaderSize>;
     boost::asio::async_read(*socket,
-                            boost::asio::buffer(tcb.mBuffer->begin(),TcpSstHeaderSize),
+                            boost::asio::buffer(buffer->begin(),TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TcpSstHeaderSize),
-                            tcb);
+                            std::tr1::bind(&TCPStreamBuilder::buildStream,buffer,socket,cb,_1,_2));
 }
 
 }  }

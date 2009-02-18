@@ -35,13 +35,13 @@
 #include "util/AtomicTypes.hpp"
 namespace Sirikata { namespace Network {
 class MultiplexedSocket;
-class TCPStreamBuilder;
+
 class TCPStream:public Stream {
 public:
     class Callbacks;
 private:
     friend class MultiplexedSocket;
-    friend class TCPStreamBuilder;
+
     std::tr1::shared_ptr<MultiplexedSocket> mSocket;
     void addCallbacks(Callbacks*);
     StreamID mID;
@@ -62,7 +62,7 @@ public:
         }
     };
     TCPStream(IOService&);
-    TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket);
+    TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
 public:
     virtual void send(const Chunk&data,Reliability);
     virtual void connect(
