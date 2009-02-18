@@ -57,8 +57,9 @@ void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Strea
 bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
     TCPSocket*socket=new TCPSocket(*io);
     //need to use boost bind to avoid TR1 errors about compatibility with boost::asio::placeholders
+    using std::tr1::placeholders::_1;
     listen->async_accept(*socket,
-                         std::tr1::bind(&handleAccept,socket,listen,io,cb,std::tr1::placeholders::_1));
+                         std::tr1::bind(&handleAccept,socket,listen,io,cb,_1));
     return true;
 }
 bool TCPStreamListener::listen (const Address&address,
