@@ -46,9 +46,7 @@ public:
     TCPStream::Callbacks* mCallbacks;
     TCPStream*mStream;
     MultiplexedSocket*mMultiSocket;
-    TCPSetCallbacks(MultiplexedSocket*ms,TCPStream *strm) {
-        mCallbacks=NULL;
-        mStream=strm;
+    TCPSetCallbacks(MultiplexedSocket*ms,TCPStream *strm):mCallbacks(NULL),mStream(strm),mMultiSocket(ms) {
     }
     virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
                             const Stream::SubstreamCallback &substreamCallback,
@@ -259,11 +257,11 @@ class ASIOSocketWrapper {
                 assert(queue_check==false);//no one should check the queue without being willing to send
                 current_status=++mSendingStatus;
                 if (current_status==1) {
-                    current_status+=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG-1);
+                    mSendingStatus+=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG-1);
                     std::deque<Chunk*>toSend;
                     mSendQueue.swap(toSend);
                     if (toSend.empty()) {//the chunk that we put on the queue must have been sent by someone else
-                        current_status-=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG);
+                        mSendingStatus-=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG);
                         return;
                     }else {//the chunk may be on this queue, but we should promise folks to send it
                         current_status-=QUEUE_CHECK_FLAG;
@@ -310,7 +308,7 @@ public:
             //may have missed the send
             retryQueuedSend(parentMultiSocket,current_status);
         }else if (current_status==1) {
-            current_status+=(ASYNCHRONOUS_SEND_FLAG-1);//committed to be the sender thread
+            mSendingStatus+=(ASYNCHRONOUS_SEND_FLAG-1);//committed to be the sender thread
             sendToWire(parentMultiSocket, chunk);
         }
     }
