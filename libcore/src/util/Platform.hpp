@@ -62,11 +62,14 @@
 #       define SIRIKATA_EXPORT __declspec(dllimport)
 #     endif
 #   endif
+#   define SIRIKATA_PLUGIN_EXPORT __declspec(dllexport)
 # else
-#   if defined(__GNUC__) && defined(GCC_HASVISIBILITY)
+#   if defined(__GNUC__) && __GNUC__ >= 4
 #     define SIRIKATA_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_PLUGIN_EXPORT __attribute__ ((visibility("default")))
 #   else
 #     define SIRIKATA_EXPORT
+#     define SIRIKATA_PLUGIN_EXPORT
 #   endif
 # endif
 #endif
@@ -74,6 +77,11 @@
 #ifndef SIRIKATA_EXPORT_C
 # define SIRIKATA_EXPORT_C extern "C" SIRIKATA_EXPORT
 #endif
+
+#ifndef SIRIKATA_PLUGIN_EXPORT_C
+# define SIRIKATA_PLUGIN_EXPORT_C extern "C" SIRIKATA_PLUGIN_EXPORT
+#endif
+
 
 #ifdef __GLIBC__
 # include <endian.h>

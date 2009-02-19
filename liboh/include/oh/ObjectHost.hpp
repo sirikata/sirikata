@@ -33,11 +33,11 @@
 #ifndef _SIRIKATA_OBJECT_HOST_HPP_
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
-#include <util/Platform.hpp>
+#include <oh/Platform.hpp>
 
 namespace Sirikata {
 
-SIRIKATA_EXPORT class ObjectHost {
+class SIRIKATA_OH_EXPORT ObjectHost {
 public:
     ObjectHost();
     ~ObjectHost();

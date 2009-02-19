@@ -1,7 +1,7 @@
-/*  Sirikata Utilities -- Plugin Manager
- *  PluginManager.hpp
+/*  Sirikata Space -- Platform Dependent Definitions
+ *  Platform.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,43 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PLUGIN_MANAGER_HPP_
-#define _SIRIKATA_PLUGIN_MANAGER_HPP_
+#ifndef _SIRIKATA_SPACE_PLATFORM_HPP_
+#define _SIRIKATA_SPACE_PLATFORM_HPP_
 
-#include "util/Plugin.hpp"
+#include <util/Platform.hpp>
 
-namespace Sirikata {
+#ifndef SIRIKATA_SPACE_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_SPACE_EXPORT
+#   else
+#     if defined(SIRIKATA_SPACE_BUILD)
+#       define SIRIKATA_SPACE_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_SPACE_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_SPACE_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_SPACE_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_SPACE_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_SPACE_EXPORT
+#     define SIRIKATA_SPACE_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
 
-/** PluginManager handles loading and unloading plugins, directory searching,
- *  and reference counts.
- */
-class SIRIKATA_EXPORT PluginManager {
-public:
-    PluginManager();
-    ~PluginManager();
+#ifndef SIRIKATA_SPACE_EXPORT_C
+# define SIRIKATA_SPACE_EXPORT_C extern "C" SIRIKATA_SPACE_EXPORT
+#endif
 
-    /** Search the given path for new plugins, automatically loading and
-     *  initializing them. */
-    void searchPath(const String& path);
+#ifndef SIRIKATA_SPACE_PLUGIN_EXPORT_C
+# define SIRIKATA_SPACE_PLUGIN_EXPORT_C extern "C" SIRIKATA_SPACE_PLUGIN_EXPORT
+#endif
 
-    /** Load a specific plugin from the specified file. */
-    void load(const String& filename);
-
-    /** Perform garbage collection on plugins, unloading any currently unused
-     *  plugins.  */
-    void gc();
-
-private:
-    struct PluginInfo {
-        String filename; // filename to load from
-        String name; // name derived from filename, for easier, platform neutral reference
-        Plugin* plugin;
-    };
-
-    typedef std::list<PluginInfo*> PluginInfoList;
-    PluginInfoList mPlugins;
-}; // class PluginManager
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_PLUGIN_MANAGER_HPP_
+#endif //_SIRIKATA_SPACE_PLATFORM_HPP_

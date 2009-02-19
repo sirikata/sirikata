@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Plugin Manager
- *  PluginManager.hpp
+/*  Sirikata Skeleton Plugin
+ *  PluginInterface.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,43 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PLUGIN_MANAGER_HPP_
-#define _SIRIKATA_PLUGIN_MANAGER_HPP_
+#include <util/Platform.hpp>
 
-#include "util/Plugin.hpp"
+static int core_plugin_refcount = 0;
 
-namespace Sirikata {
+SIRIKATA_PLUGIN_EXPORT_C void init() {
+    core_plugin_refcount++;
+}
 
-/** PluginManager handles loading and unloading plugins, directory searching,
- *  and reference counts.
- */
-class SIRIKATA_EXPORT PluginManager {
-public:
-    PluginManager();
-    ~PluginManager();
+SIRIKATA_PLUGIN_EXPORT_C void destroy() {
+    core_plugin_refcount--;
+}
 
-    /** Search the given path for new plugins, automatically loading and
-     *  initializing them. */
-    void searchPath(const String& path);
+SIRIKATA_PLUGIN_EXPORT_C const char* name() {
+    return "skeleton";
+}
 
-    /** Load a specific plugin from the specified file. */
-    void load(const String& filename);
-
-    /** Perform garbage collection on plugins, unloading any currently unused
-     *  plugins.  */
-    void gc();
-
-private:
-    struct PluginInfo {
-        String filename; // filename to load from
-        String name; // name derived from filename, for easier, platform neutral reference
-        Plugin* plugin;
-    };
-
-    typedef std::list<PluginInfo*> PluginInfoList;
-    PluginInfoList mPlugins;
-}; // class PluginManager
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_PLUGIN_MANAGER_HPP_
+SIRIKATA_PLUGIN_EXPORT_C int refcount() {
+    return core_plugin_refcount;
+}
