@@ -399,8 +399,8 @@ public:
                 }else {
                     mBufferPos-=chunkPos;
                     mBufferPos-=4;
-                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+4,packetLength,mBufferPos,mNewChunk);
                     assert(mNewChunk.size()==0);
+                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+4,packetLength,mBufferPos,mNewChunk);
                     readIntoChunk(thus);
                     return;
                 }
@@ -1021,10 +1021,11 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
         break;
     }
     toBeSent.originStream=getID();
-    uint8 serializedStreamId[8];
+    uint8 serializedStreamId[8];//={255,255,255,255,255,255,255,255};
     unsigned int streamIdLength=8;
-    bool success=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
-    assert(success);
+    unsigned int successLengthNeeded=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
+    assert(successLengthNeeded<=streamIdLength);
+    streamIdLength=successLengthNeeded;
     size_t totalSize=data.size();
     totalSize+=streamIdLength;
     toBeSent.data=new Chunk(totalSize+4);
