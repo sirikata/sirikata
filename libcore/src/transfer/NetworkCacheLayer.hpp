@@ -38,9 +38,7 @@
 #include "ServiceLookup.hpp"
 #include "ProtocolRegistry.hpp"
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/shared_mutex.hpp>
-
+#include <boost/thread.hpp>
 namespace Sirikata {
 /** NetworkCacheLayer.hpp -- Class dealing with HTTP downloads. */
 namespace Transfer {

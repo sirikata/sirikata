@@ -24,7 +24,11 @@
 
 #ifndef BOOST_UUID_HPP
 #define BOOST_UUID_HPP
+#ifdef _WIN32
+#define RUNNING_ON_VALGRIND 0
+#else
 #include "valgrind.h"
+#endif
 #include <boost/config.hpp>
 #include <boost/operators.hpp>
 #include <boost/cstdint.hpp>
