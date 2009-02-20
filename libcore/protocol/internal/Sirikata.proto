@@ -1,0 +1,108 @@
+//Types mapping directly to protocol buffers with no restrictions
+message Vector2f {
+    required float x = 1;
+    required float y = 2;
+}
+
+message Vector2d {
+    required float x = 1;
+    required float y = 2;
+}
+
+message Vector3f {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+}
+
+message Vector3d {
+    required double x = 1;
+    required double y = 2;
+    required double z = 3;
+}
+
+message Vector4f {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+    required float w = 4;
+}
+
+message Vector4d {
+    required double x = 1;
+    required double y = 2;
+    required double z = 3;
+    required double w = 4;
+}
+
+//Types mapping directly to protocol buffers with some restrictions (radius>=0,length[xyz]>=0)
+message BoundingSphere3f {
+    required float x=1;
+    required float y=2;
+    required float z=3;
+    required float radius=4;
+}
+
+message BoundingSphere3d {
+    required double x=1;
+    required double y=2;
+    required double z=3;
+    required float radius=4;
+}
+
+message BoundingBox3f3f {
+    required float minx=1;
+    required float miny=2;
+    required float minz=3;
+    required float lengthx=4;
+    required float lengthy=5;
+    required float lengthz=6;
+}
+
+message BoundingBox3d3f {
+    required double minx=1;
+    required double miny=2;
+    required double minz=3;
+    required float lengthx=4;
+    required float lengthy=5;
+    required float lengthz=6;
+}
+
+//Types aliasing other known types with some restrictions
+message Normal {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+}
+
+message Quaternion {
+    required float x = 1;
+    required float y = 2;
+    required float z = 3;
+    required float w = 4;
+}
+
+message UUID {
+    required bytes uuid = 1;
+}
+
+message Angle {
+    required float angle =1;
+}
+
+message Time {
+    required fixed64 time = 1;
+}
+
+message Duration {
+    required fixed64 duration = 1;
+}
+
+message Flags32 {
+    required fixed32 flags = 1;
+}
+
+message Flags64 {
+    required fixed64 flags = 1;   
+}
+

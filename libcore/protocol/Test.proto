@@ -1,0 +1,36 @@
+package Sirikata.PB;
+import "Sirikata.proto";
+
+message TestMessage {
+  optional Normal n=1;
+  optional Vector2f v2f=2;
+  optional Vector2d v2d=3;
+  optional Vector3f v3f=4;
+  optional Vector3d v3d=5;
+  optional Vector4f v4f=6;
+  optional Vector4d v4d=7;
+  optional Quaternion q=8;
+  optional UUID uuid=9; 
+  optional Angle a=10;
+  optional Time t=11;
+  optional Duration d=12;
+  enum Flagsf32 {
+    UNIVERSA = 0;
+    WE = 1;
+    IMAGE = 2;
+    LOCA = 3;
+  }
+  optional Flags32 f32=13;
+  enum Flagsf64 {
+    UNIVERSAL = 0;
+    WEB = 1;
+    IMAGES = 2;
+    LOCAL = 3;
+  }
+  optional Flags64 f64=14;
+  optional BoundingSphere3f bsf=15;
+  optional BoundingSphere3d bsd=16;
+  optional BoundingBox3f3f bbf=17;
+  optional BoundingBox3d3f bbd=18;
+
+}
