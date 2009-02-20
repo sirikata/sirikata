@@ -391,7 +391,7 @@ public:
         unsigned int chunkPos=0;
         while (mBufferPos-chunkPos>4) {
             uint32 packetLength;
-            std::memcpy(&packetLength,mBuffer+mBufferPos,4);
+            std::memcpy(&packetLength,mBuffer+chunkPos,4);
             packetLength=ntohl(packetLength);
             if (mBufferPos-chunkPos<packetLength+4) {
                 if (mBufferPos-chunkPos<mLowWaterMark) {
@@ -439,7 +439,7 @@ public:
             delete this;
         }
     }
-    void operator()(const boost::system::error_code&error,std::size_t bytes_read){
+    void asioReadIntoFixedBuffer(const boost::system::error_code&error,std::size_t bytes_read){
         mBufferPos+=bytes_read;
         try {
             std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
@@ -933,7 +933,10 @@ void TCPReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSo
     parentSocket
         ->getSocket(mWhichBuffer)
         .async_receive(boost::asio::buffer(mBuffer,mBufferLength),
-                       *this);
+                       boost::bind(&TCPReadBuffer::asioReadIntoFixedBuffer,
+                                   this,
+                                   boost::asio::placeholders::error,
+                                   boost::asio::placeholders::bytes_transferred));
 }
 void TCPReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
@@ -1029,12 +1032,10 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
     size_t totalSize=data.size();
     totalSize+=streamIdLength;
     toBeSent.data=new Chunk(totalSize+4);
-    uint8 length[4]={(totalSize/256/256/256)%256,
-                     (totalSize/256/256)%256,
-                     (totalSize/256)%256,
-                     (totalSize)%256};
+    uint32 networklength=htonl(totalSize);
+    
     uint8 *outputBuffer=&(*toBeSent.data)[0];
-    std::memcpy(outputBuffer,length,4);
+    std::memcpy(outputBuffer,&networklength,4);
     std::memcpy(outputBuffer+4,serializedStreamId,streamIdLength);
     if (data.size())
         std::memcpy(&outputBuffer[4+streamIdLength],
