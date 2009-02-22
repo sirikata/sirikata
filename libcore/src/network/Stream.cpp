@@ -48,52 +48,49 @@ void Stream::ignoreBytesReceived(const Chunk&c) {
 #endif
 }
 unsigned int Stream::StreamID::serialize(uint8 *destination, unsigned int maxsize) const{
-    if (mID<128){
-        if (maxsize<1) return 1;
-        destination[0]=mID;
+    assert (maxsize>=MAX_SERIALIZED_LENGTH);
+    assert (mID< (1 <<30));
+    uint32 temp=mID;
+    if (temp<128){
+        destination[0]=temp;
         return 1;
-    }else if (mID<127*256+255) {
-        if (maxsize<2) return 2;
-        destination[1]=mID%256;
-        destination[0]=(mID/256)+128;
-        return 2;
-    }else {
-        if (maxsize<6) return 6;
-        destination[0]=255;
-        destination[1]=255;
-        destination[5]=mID%256;
-        destination[4]=(mID/256)%256;
-        destination[3]=(mID/256/256)%256;
-        destination[2]=(mID/256/256/256)%256;
-        return 6;
     }
+    if (temp<16384){
+        destination[0]=(uint8)((temp&127)|128);
+        destination[1]=(uint8)(temp/128);
+        return 2;
+    }
+    
+    destination[0]=((temp&127)|128);
+    destination[1]=(((temp/128)&127)|128);
+    temp/=16384;
+    destination[2]=(temp&255);
+    destination[3]=((temp/256)&255);
+    return 4;
 }
 bool Stream::StreamID::unserialize(const uint8* data, unsigned int &size) {
     if (size==0) return false;
     unsigned int tempvalue=data[0];
     if (tempvalue>=128) {
         if (size<2) return false;
-        tempvalue-=128;
-        tempvalue*=256;
-        tempvalue+=data[1];
-        if (tempvalue==127*256+255) {
-            if (size<6) return false;
-            size=6;
-            tempvalue=data[2];
-            tempvalue*=256;
-            tempvalue+=data[3];
-            tempvalue*=256;
-            tempvalue+=data[4];
-            tempvalue*=256;
-            tempvalue+=data[5];
+        tempvalue&=127;
+        unsigned int tempvalue1=data[1];
+        if (tempvalue1>=128) {
+            if (size<4) return false;
+            size=4;
+            tempvalue+=(tempvalue1&127)*128;
+            tempvalue1=data[2];
+            tempvalue+=(tempvalue1*16384);
+            tempvalue1=data[3];
+            tempvalue+=(tempvalue1*16384*256);
             mID=tempvalue;
-        }else{
+        }else {
             size=2;
-            mID=tempvalue;
+            mID=tempvalue|(tempvalue1*128);
         }
     }else {
-        mID=tempvalue;
         size=1;
+        mID=tempvalue;
     }
     return true;
 }
