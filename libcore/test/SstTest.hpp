@@ -57,7 +57,11 @@ public:
             mAbortTest=true;
             TS_FAIL(reason);
         }
+/*
         mDataMap[id].push_back(connectionReason);
+        if (stat!=Stream::Connected)
+            ++mDisconCount;
+*/
     }
     void dataRecvCallback(Stream *s,int id, const Chunk&data) {
         mDataMap[id].push_back(data);
@@ -103,6 +107,7 @@ public:
     std::vector<Stream*> mStreams;
     std::vector<std::string> mMessagesToSend;
     Sirikata::AtomicValue<int> mCount;
+    Sirikata::AtomicValue<int> mDisconCount;
     typedef Sirikata::uint8 uint8;
     std::map<unsigned int, std::vector<Sirikata::Network::Chunk> > mDataMap;
     const char * ENDSTRING;
@@ -157,7 +162,7 @@ public:
         validateSameness(orderedNetData,orderedKeyData);
         validateSameness(unorderedNetData,unorderedKeyData);
     }
-    SstTest():mCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+    SstTest():mCount(0),mDisconCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=false;
@@ -267,6 +272,11 @@ public:
         }
         mStreams.resize(0);
         mIO.stop();
+        /*
+        while(mDisconCount.read()<6){
+            printf("%d\n",mDisconCount.read());
+        }
+        */
         delete mThread;
     }
     void simpleConnect(Stream*s, const Address&addy) {
