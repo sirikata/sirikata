@@ -49,7 +49,6 @@ public:
     TCPSetCallbacks(MultiplexedSocket*ms,TCPStream *strm):mCallbacks(NULL),mStream(strm),mMultiSocket(ms) {
     }
     virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
-                            const Stream::SubstreamCallback &substreamCallback,
                             const Stream::BytesReceivedCallback &bytesReceivedCallback);
 
 };
@@ -519,6 +518,7 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
 /// these items are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
     static boost::mutex sConnectingMutex;
     std::vector<RawRequest> mNewRequests;
+    Stream::SubstreamCallback mNewSubstreamCallback;
     typedef std::tr1::unordered_map<Stream::StreamID,TCPStream::Callbacks*,Stream::StreamID::Hasher> CallbackMap;
 	///Workaround for VC8 bug that does not define std::pair<Stream::StreamID,Callbacks*>::operator=
     class StreamIDCallbackPair{
@@ -691,11 +691,12 @@ public:
         assert(retval>1);
         return Stream::StreamID(retval);
     }
-    MultiplexedSocket(IOService*io):mResolver(*io),mHighestStreamID(1) {
+    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):mResolver(*io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
         mSocketConnectionPhase=PRECONNECTION;
     }
-    MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets)
+    MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
         : mResolver(sockets[0]->io_service()),
+          mNewSubstreamCallback(substreamCallback),
           mHighestStreamID(0) {
         mSocketConnectionPhase=PRECONNECTION;
         for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
@@ -718,15 +719,37 @@ public:
         thus->mNewRequests.clear();
     }
     ///erase all sockets and callbacks since the refcount is now zero;
-    ~MultiplexedSocket() {
+    ~MultiplexedSocket() {        
+        Stream::SubstreamCallback callbackToBeDeleted=mNewSubstreamCallback;
+        mNewSubstreamCallback=&Stream::ignoreSubstreamCallback;
+        TCPSetCallbacks setCallbackFunctor(this,NULL);        
+        callbackToBeDeleted(NULL,setCallbackFunctor);
+        for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
+            try {
+                mSockets[i].mSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+            }catch (boost::system::system_error&err) {
+                std::cerr<< "Error shutting down socket "<<err.what()<<std::endl;
+            }
+        }
+        
+        for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
+            try {
+                mSockets[i].mSocket->close();
+            }catch (boost::system::system_error&err) {
+                std::cerr<< "Error closing down socket"<<std::endl;
+            }
+        }
+        boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
+        
         for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
             delete mSockets[i].mSocket;
         }
-        boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
+        mSockets.clear();
+        
         while (!mCallbackRegistration.empty()){
             delete mCallbackRegistration.front().mCallback;
             mCallbackRegistration.pop_front();
-        }
+            }
         for (size_t i=0;i<mNewRequests.size();++i) {
             delete mNewRequests[i].data;
         }
@@ -734,7 +757,7 @@ public:
         while(!mCallbacks.empty()) {
             delete mCallbacks.begin()->second;
             mCallbacks.erase(mCallbacks.begin());
-        }
+        }    
     }
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID
     void shutDownClosedStream(unsigned int controlCode,const Stream::StreamID &id) {
@@ -812,23 +835,14 @@ public:
                 where->second->mBytesReceivedCallback(newChunk);
             }else if (mOneSidedClosingStreams.find(id)==mOneSidedClosingStreams.end()) {
                 //new substream
-                //FIXME dont know which callback to call for substream creation
-                where=mCallbacks.find(Stream::StreamID(1));
-                if (where==mCallbacks.end())
-                    where=mCallbacks.find(Stream::StreamID(2));
-                if (where==mCallbacks.end()&&!mCallbacks.empty()) {
-                    where=mCallbacks.begin();
-                }
-                if (where!=mCallbacks.end()) {
-                    TCPStream*newStream=new TCPStream(getSharedPtr(),id);
-                    TCPSetCallbacks setCallbackFunctor(this,newStream);
-                    where->second->mSubstreamCallback(newStream,setCallbackFunctor);
-                    if (setCallbackFunctor.mCallbacks != NULL) {
-                        CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
-                        setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
-                    }else {
-                        closeStream(getSharedPtr(),id);
-                    }
+                TCPStream*newStream=new TCPStream(getSharedPtr(),id);
+                TCPSetCallbacks setCallbackFunctor(this,newStream);
+                mNewSubstreamCallback(newStream,setCallbackFunctor);
+                if (setCallbackFunctor.mCallbacks != NULL) {
+                    CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
+                    setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
+                }else {
+                    closeStream(getSharedPtr(),id);
                 }
             }else {
                 //IGNORED MESSAGE
@@ -1044,10 +1058,8 @@ public:
 };
 boost::mutex MultiplexedSocket::sConnectingMutex;
 void TCPSetCallbacks::operator()(const Stream::ConnectionCallback &connectionCallback,
-                                         const Stream::SubstreamCallback &substreamCallback,
                                          const Stream::BytesReceivedCallback &bytesReceivedCallback){
     mCallbacks=new TCPStream::Callbacks(connectionCallback,
-                                        substreamCallback,
                                         bytesReceivedCallback);
     mMultiSocket->addCallbacks(mStream->getID(),mCallbacks);
 }
@@ -1118,7 +1130,7 @@ void buildStream(Array<uint8,TcpSstHeaderSize> *buffer,
             }else {
                 where->second.mSockets.push_back(socket);
                 if (numConnections==(unsigned int)where->second.mSockets.size()) {
-                    std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(context,where->second.mSockets));
+                    std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(context,where->second.mSockets,callback));
                     MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                     sIncompleteStreams.erase(where);
                     Stream::StreamID newID=Stream::StreamID(1);
@@ -1187,25 +1199,24 @@ void TCPStream::close() {
     mSocket->addCallbacks(getID(),NULL);
     MultiplexedSocket::closeStream(mSocket,getID());
 }
-TCPStream::TCPStream(IOService&io):mSocket(MultiplexedSocket::construct(&io)),mSendStatus(0) {
+TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(0) {
 }
 void TCPStream::connect(const Address&addy,
-                        const ConnectionCallback &connectionCallback,
                         const SubstreamCallback &substreamCallback,
+                        const ConnectionCallback &connectionCallback,
                         const BytesReceivedCallback&bytesReceivedCallback) {
+    mSocket=MultiplexedSocket::construct(mIO,substreamCallback);
     mSendStatus=0;
     mID=StreamID(1);
     mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
-                                                substreamCallback,
                                                 bytesReceivedCallback));
     mSocket->connect(addy,3);
 }
 Stream* TCPStream::factory() {
-    return new TCPStream(mSocket->getASIOService());
+    return new TCPStream(*mIO);
 }
 bool TCPStream::cloneFrom(Stream*otherStream,
                           const ConnectionCallback &connectionCallback,
-                          const SubstreamCallback &substreamCallback,
                           const BytesReceivedCallback&bytesReceivedCallback) {
     TCPStream * toBeCloned=dynamic_cast<TCPStream*>(otherStream);
     if (NULL==toBeCloned)
@@ -1214,7 +1225,6 @@ bool TCPStream::cloneFrom(Stream*otherStream,
     StreamID newID=mSocket->getNewID();
     mID=newID;
     mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
-                                              substreamCallback,
                                               bytesReceivedCallback));
     return true;
 }

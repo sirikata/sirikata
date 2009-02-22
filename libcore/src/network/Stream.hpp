@@ -114,33 +114,33 @@ public:
         ReliableUnordered,
         Reliable
     };
-    class SetCallbacks;
     typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
-    typedef std::tr1::function<void(Stream*,SetCallbacks&)> SubstreamCallback;
     typedef std::tr1::function<void(const Chunk&)> BytesReceivedCallback;
-    ///The substreamCallback must call SetCallbacks' operator() to activate the stream
     class SetCallbacks{
     public:
         virtual ~SetCallbacks(){}
         virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
-                                const Stream::SubstreamCallback &substreamCallback,
                                 const Stream::BytesReceivedCallback &bytesReceivedCallback)=0;
     };
+    /**
+     * The substreamCallback must call SetCallbacks' operator() to activate the stream
+     * it will get called with NULL as the last stream shuts down
+     */
+    typedef std::tr1::function<void(Stream*,SetCallbacks&)> SubstreamCallback;
     static void ignoreSubstreamCallback(Stream * stream, SetCallbacks&);
     static void ignoreConnectionStatus(ConnectionStatus status,const std::string&reason);
     static void ignoreBytesReceived(const Chunk&);
     ///subclasses will expose these methods with similar arguments + protocol specific args
     virtual void connect(
         const Address& addy,
-        const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
+        const ConnectionCallback &connectionCallback,
         const BytesReceivedCallback&chunkReceivedCallback)=0;
     ///Creates a stream of the same type as this stream
     virtual Stream*factory()=0;
     ///Makes this stream a clone of stream "s" if they are of the same type
     virtual bool cloneFrom(Stream*s,
         const ConnectionCallback &connectionCallback,
-        const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback)=0;
     
     

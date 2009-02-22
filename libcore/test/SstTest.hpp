@@ -74,26 +74,30 @@ public:
         dataRecvCallback(s,id,data);
     }
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
-        static int newid=0;
-        mStreams.push_back(newStream);
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-        setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::connectorNewStreamCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1));
-        ++newid;
-        runRoutine(newStream);
+        if (newStream) {
+            static int newid=0;
+            mStreams.push_back(newStream);
+            using std::tr1::placeholders::_1;
+            using std::tr1::placeholders::_2;
+            setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
+                         std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1));
+            ++newid;
+            runRoutine(newStream);
+        }else {
+            ++mDisconCount;
+        }
     }
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
-        static int newid=0;
-        mStreams.push_back(newStream);
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-        setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::listenerNewStreamCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1));
-        ++newid;
-        runRoutine(newStream);
+        if (newStream) {
+            static int newid=0;
+            mStreams.push_back(newStream);
+            using std::tr1::placeholders::_1;
+            using std::tr1::placeholders::_2;
+            setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
+                         std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1));
+            ++newid;
+            runRoutine(newStream);
+        }
     }
     void ioThread(){
         TCPStreamListener s(mIO);
@@ -316,8 +320,8 @@ public:
     void simpleConnect(Stream*s, const Address&addy) {
         static int id=-1;
         s->connect(addy,
-                  std::tr1::bind(&SstTest::connectionCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
+                   std::tr1::bind(&SstTest::connectionCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1));
         --id;
     }
@@ -409,7 +413,6 @@ public:
                     Stream*zz=r.factory();        
                     zz->cloneFrom(&r,
                                   std::tr1::bind(&SstTest::connectionCallback,this,-1999999999,_1,_2),
-                                  &Stream::ignoreSubstreamCallback,
                                   &Stream::ignoreBytesReceived);
                     runRoutine(zz);
                     zz->close();
@@ -419,7 +422,6 @@ public:
                 z=r.factory();
                 z->cloneFrom(&r,
                              std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-                             std::tr1::bind(&SstTest::connectorNewStreamCallback,this,-2000000000,_1,_2),
                              std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1));
                 runRoutine(z);
             }
@@ -452,6 +454,14 @@ public:
             }
 
             delete z;
+        }
+        time_t last_time=time(NULL);
+        while(mDisconCount.read()<4){//checking for that final call to newSubstream
+            time_t this_time=time(NULL);
+            if (this_time>last_time+5) {
+                std::cerr<<"Message Receive Count == "<<mDisconCount.read()<<'\n';
+                last_time=this_time;
+            }
         }
     }
 };

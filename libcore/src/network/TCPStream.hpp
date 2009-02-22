@@ -41,7 +41,7 @@ public:
     class Callbacks;
 private:
     friend class MultiplexedSocket;
-
+    IOService* mIO;
     std::tr1::shared_ptr<MultiplexedSocket> mSocket;
     void addCallbacks(Callbacks*);
     StreamID mID;
@@ -53,12 +53,10 @@ public:
     class Callbacks:public Noncopyable {        
     public:
         Stream::ConnectionCallback mConnectionCallback;
-        Stream::SubstreamCallback mSubstreamCallback;
         Stream::BytesReceivedCallback mBytesReceivedCallback;
         Callbacks(const Stream::ConnectionCallback &connectionCallback,
-                  const Stream::SubstreamCallback &substreamCallback,
                   const Stream::BytesReceivedCallback &bytesReceivedCallback):
-            mConnectionCallback(connectionCallback),mSubstreamCallback(substreamCallback),mBytesReceivedCallback(bytesReceivedCallback){
+            mConnectionCallback(connectionCallback),mBytesReceivedCallback(bytesReceivedCallback){
         }
     };
     TCPStream(IOService&);
@@ -67,15 +65,14 @@ public:
     virtual void send(const Chunk&data,Reliability);
     virtual void connect(
         const Address& addy,
-        const ConnectionCallback &connectionCallback,
         const SubstreamCallback &substreamCallback,
+        const ConnectionCallback &connectionCallback,
         const BytesReceivedCallback&chunkReceivedCallback);
     ///Creates a stream of the same type as this stream, with the same IO factory
     Stream* factory();
     ///Creates a new substream on this connection
     virtual bool cloneFrom(Stream*,
         const ConnectionCallback &connectionCallback,
-        const SubstreamCallback &substreamCallback,
         const BytesReceivedCallback&chunkReceivedCallback);
 
     virtual void close();
