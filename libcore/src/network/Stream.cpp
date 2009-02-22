@@ -71,7 +71,7 @@ unsigned int Stream::StreamID::serialize(uint8 *destination, unsigned int maxsiz
 bool Stream::StreamID::unserialize(const uint8* data, unsigned int &size) {
     if (size==0) return false;
     unsigned int tempvalue=data[0];
-    if (tempvalue>128) {
+    if (tempvalue>=128) {
         if (size<2) return false;
         tempvalue-=128;
         tempvalue*=256;

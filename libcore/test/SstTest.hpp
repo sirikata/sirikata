@@ -205,6 +205,7 @@ public:
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
         bool doShortTest=false;
+
         if (doUnorderedTest){
             mMessagesToSend.push_back("U:0");
             mMessagesToSend.push_back("U:1");
@@ -235,7 +236,7 @@ public:
         test[0]='U';
         mMessagesToSend.push_back(test);
 }
-        for (unsigned int i=0;i<4096*4096;++i) {
+        for (unsigned int i=0;i<256*1024;++i) {
             test+=(char)((rand())%256);
         }
         if (doUnorderedTest){
@@ -319,6 +320,80 @@ public:
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1));
         --id;
+    }
+    void testInt30Serialization(void) {
+        Sirikata::Network::Stream::uint30 a(10),b(129),c(257),d(384),e(16300),f(16385),g(32767),h(32768),i(65535),j(131073),guinea;
+        uint8 buffer[Sirikata::Network::Stream::uint30::MAX_SERIALIZED_LENGTH];
+        unsigned int maxlen=Sirikata::Network::Stream::uint30::MAX_SERIALIZED_LENGTH;
+        unsigned int curlen;
+        curlen=a.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(a,guinea);
+
+        curlen=b.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(b,guinea);
+
+        curlen=c.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(c,guinea);
+
+        curlen=d.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(d,guinea);
+
+        curlen=e.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(e,guinea);
+
+        curlen=f.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(f,guinea);
+
+        curlen=g.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(g,guinea);
+
+        curlen=h.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(h,guinea);
+
+        curlen=i.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(i,guinea);
+
+        curlen=j.serialize(buffer,maxlen);
+        TS_ASSERT(guinea.unserialize(buffer,curlen));
+        TS_ASSERT_EQUALS(j,guinea);
+
+        for (unsigned int iter=1;iter<(1<<30);iter*=2) {
+            Sirikata::Network::Stream::uint30 vartest(iter);
+            curlen=vartest.serialize(buffer,maxlen);
+            TS_ASSERT(guinea.unserialize(buffer,curlen));
+            TS_ASSERT_EQUALS(vartest,guinea);
+            {
+                Sirikata::Network::Stream::uint30 vartest(iter+iter-1);
+                curlen=vartest.serialize(buffer,maxlen);
+                TS_ASSERT(guinea.unserialize(buffer,curlen));
+                TS_ASSERT_EQUALS(vartest,guinea);
+
+            }            
+            {
+                Sirikata::Network::Stream::uint30 vartest(iter+iter/2);
+                curlen=vartest.serialize(buffer,maxlen);
+                TS_ASSERT(guinea.unserialize(buffer,curlen));
+                TS_ASSERT_EQUALS(vartest,guinea);
+
+            }            
+            for (int i=0;i<10;++i) {
+                Sirikata::Network::Stream::uint30 vartest(iter+i);
+                curlen=vartest.serialize(buffer,maxlen);
+                TS_ASSERT(guinea.unserialize(buffer,curlen));
+                TS_ASSERT_EQUALS(vartest,guinea);
+
+            }            
+        }
+        
     }
     void testConnectSend (void )
     {
