@@ -41,6 +41,8 @@ class SstTest : public CxxTest::TestSuite
 {
 public:
     void runRoutine(Stream* s) {
+        static boost::mutex test;
+        boost::lock_guard<boost::mutex> connectingMutex(test);
         for (unsigned int i=0;i<mMessagesToSend.size();++i) {
             s->send(Chunk(mMessagesToSend[i].begin(),mMessagesToSend[i].end()),
                     mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?Stream::ReliableUnordered:(mMessagesToSend[i][0]=='X'?Stream::Unreliable:Stream::Reliable)):Stream::Reliable);
@@ -61,20 +63,37 @@ public:
         mDataMap[id].push_back(data);
         ++mCount;
     }
-    void newStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
+    void connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
+        dataRecvCallback(s,id,data);
+    }
+    void listenerDataRecvCallback(Stream *s,int id, const Chunk&data) {
+        dataRecvCallback(s,id,data);
+    }
+    void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         static int newid=0;
         mStreams.push_back(newStream);
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::newStreamCallback,this,newid,_1,_2),
-                     std::tr1::bind(&SstTest::dataRecvCallback,this,newStream,newid,_1));
+                     std::tr1::bind(&SstTest::connectorNewStreamCallback,this,newid,_1,_2),
+                     std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1));
+        ++newid;
+        runRoutine(newStream);
+    }
+    void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
+        static int newid=0;
+        mStreams.push_back(newStream);
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
+                     std::tr1::bind(&SstTest::listenerNewStreamCallback,this,newid,_1,_2),
+                     std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1));
         ++newid;
         runRoutine(newStream);
     }
     void ioThread(){
         TCPStreamListener s(mIO);
-        s.listen(Address("127.0.0.1",mPort),boost::bind(&SstTest::newStreamCallback,this,0,_1,_2));
+        s.listen(Address("127.0.0.1",mPort),boost::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
         mIO.run();
     }
@@ -141,72 +160,98 @@ public:
     SstTest():mCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
-        mMessagesToSend.push_back("U:0");
-        mMessagesToSend.push_back("U:1");
-        mMessagesToSend.push_back("U:2");
+        bool doUnorderedTest=false;
+        bool doShortTest=true;
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:0");
+            mMessagesToSend.push_back("U:1");
+            mMessagesToSend.push_back("U:2");
+        }
         mMessagesToSend.push_back("T0th");
         mMessagesToSend.push_back("T1st");
         mMessagesToSend.push_back("T2nd");
         mMessagesToSend.push_back("T3rd");
+        if (!doShortTest) {
         mMessagesToSend.push_back("T4th");
         mMessagesToSend.push_back("T5th");
-        mMessagesToSend.push_back("U:3");
-        mMessagesToSend.push_back("U:4");
-        mMessagesToSend.push_back("U:5");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:3");
+            mMessagesToSend.push_back("U:4");
+            mMessagesToSend.push_back("U:5");
+        }
         mMessagesToSend.push_back("T6th");
         mMessagesToSend.push_back("T7th");
         mMessagesToSend.push_back("T8th");
         mMessagesToSend.push_back("T9th");
+/*
         std::string test("T");
         for (unsigned int i=0;i<16385;++i) {
             test+=(char)((i+5)%128);
         }
         mMessagesToSend.push_back(test);
+        if (doUnorderedTest){
         test[0]='U';
         mMessagesToSend.push_back(test);
+}
         for (unsigned int i=0;i<4096*4096;++i) {
             test+=(char)((rand())%256);
         }
+        if (doUnorderedTest){
         mMessagesToSend.push_back(test);
+}
         test[0]='T';
         mMessagesToSend.push_back(test);
+*/
         mMessagesToSend.push_back("T_0th");
         mMessagesToSend.push_back("T_1st");
         mMessagesToSend.push_back("T_2nd");
         mMessagesToSend.push_back("T_3rd");
         mMessagesToSend.push_back("T_4th");
         mMessagesToSend.push_back("T_5th");
-        mMessagesToSend.push_back("U:6");
-        mMessagesToSend.push_back("U:7");
-        mMessagesToSend.push_back("U:8");
-        mMessagesToSend.push_back("U:9");
-        mMessagesToSend.push_back("U:A");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:6");
+            mMessagesToSend.push_back("U:7");
+            mMessagesToSend.push_back("U:8");
+            mMessagesToSend.push_back("U:9");
+            mMessagesToSend.push_back("U:A");
+        }
         mMessagesToSend.push_back("T_6th");
         mMessagesToSend.push_back("T_7th");
-        mMessagesToSend.push_back("U:B");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:B");
+        }
         mMessagesToSend.push_back("T_8th");
-        mMessagesToSend.push_back("U:C");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:C");
+        }
         mMessagesToSend.push_back("T_9th");
-        mMessagesToSend.push_back("U:D");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:D");
+        }
         mMessagesToSend.push_back("The green grasshopper fetched.");
-        mMessagesToSend.push_back("U:E");
-        mMessagesToSend.push_back("U:F");
-        mMessagesToSend.push_back("U:G");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:E");
+            mMessagesToSend.push_back("U:F");
+            mMessagesToSend.push_back("U:G");
+        }
         mMessagesToSend.push_back("T A blade of grass.");
         mMessagesToSend.push_back("T From the playground .");
-        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities");
-        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite");
+//        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities");
+//        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite");
+        if (doUnorderedTest){
+            mMessagesToSend.push_back("U:H");
+            mMessagesToSend.push_back("U:I");
+            mMessagesToSend.push_back("U:J");
+            mMessagesToSend.push_back("U:K");
+            mMessagesToSend.push_back("U:L");
+            mMessagesToSend.push_back("U:M");
+            mMessagesToSend.push_back("U:N");
+            mMessagesToSend.push_back("U:O");
+            mMessagesToSend.push_back("U:P");
+            mMessagesToSend.push_back("U:Q");
+        }
+        }
         mMessagesToSend.push_back(ENDSTRING);
-        mMessagesToSend.push_back("U:H");
-        mMessagesToSend.push_back("U:I");
-        mMessagesToSend.push_back("U:J");
-        mMessagesToSend.push_back("U:K");
-        mMessagesToSend.push_back("U:L");
-        mMessagesToSend.push_back("U:M");
-        mMessagesToSend.push_back("U:N");
-        mMessagesToSend.push_back("U:O");
-        mMessagesToSend.push_back("U:P");
-        mMessagesToSend.push_back("U:Q");
 
     }
     static SstTest*createSuite() {
@@ -228,36 +273,41 @@ public:
         static int id=-1;
         s->connect(addy,
                   std::tr1::bind(&SstTest::connectionCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::newStreamCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::dataRecvCallback,this,s,id,_1));
+                   std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
+                   std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1));
         --id;
     }
     void testConnectSend (void )
     {
-        Stream*z;
+        Stream*z=NULL;
+        bool doSubstreams=false;
         {
             TCPStream r(mIO);
             while (!mReadyToConnect);
             simpleConnect(&r,Address("127.0.0.1",mPort));
             runRoutine(&r);
-            {
-                Stream*zz=r.factory();        
-                zz->cloneFrom(&r,
-                    &Stream::ignoreConnectionStatus,
-                    &Stream::ignoreSubstreamCallback,
-                    &Stream::ignoreBytesReceived);
-                runRoutine(zz);
-                delete zz;
+
+                {
+                    Stream*zz=r.factory();        
+                    zz->cloneFrom(&r,
+                                  std::tr1::bind(&SstTest::connectionCallback,this,-100,_1,_2),
+                                  &Stream::ignoreSubstreamCallback,
+                                  &Stream::ignoreBytesReceived);
+                    runRoutine(zz);
+                    zz->close();
+                    delete zz;
+                }
+            if (doSubstreams) {
+                z=r.factory();
+                z->cloneFrom(&r,
+                             std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
+                             std::tr1::bind(&SstTest::connectorNewStreamCallback,this,-2000000000,_1,_2),
+                             std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1));
+                runRoutine(z);
             }
-            z=r.factory();
-            z->cloneFrom(&r,
-                std::tr1::bind(&SstTest::connectionCallback,this,-100,_1,_2),
-                std::tr1::bind(&SstTest::newStreamCallback,this,-100,_1,_2),
-                std::tr1::bind(&SstTest::dataRecvCallback,this,z,-100,_1));
-            runRoutine(z);
             //wait until done
             time_t last_time=0;
-            while(mCount<(int)(mMessagesToSend.size()*5)&&!mAbortTest) {
+            while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:3))&&!mAbortTest) {
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Message Receive Count == "<<mCount.read()<<'\n';
@@ -270,7 +320,11 @@ public:
                  ++datamapiter) {
                 validateVector(datamapiter->second,mMessagesToSend);
             }
+            r.close();
         }
-        delete z;
+        if( doSubstreams){
+            z->close();
+            delete z;
+        }
     }
 };

@@ -38,7 +38,14 @@ void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
 }
 void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::string&) {
 }
-void Stream::ignoreBytesReceived(const Chunk&) {
+void Stream::ignoreBytesReceived(const Chunk&c) {
+#if 0
+    fprintf( stderr, "ignoring: ");
+    for (size_t i=0;i<c.size();++i) {
+        fprintf(stderr,"%c",c[i]);
+    }
+    fprintf(stderr,"\n");
+#endif
 }
 unsigned int Stream::StreamID::serialize(uint8 *destination, unsigned int maxsize) const{
     if (mID<128){

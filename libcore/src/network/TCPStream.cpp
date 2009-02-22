@@ -117,6 +117,7 @@ class ASIOSocketWrapper {
         }else if (bytes_sent+originalOffset!=toSend->size()) {
             sendToWire(parentMultiSocket,toSend,originalOffset+bytes_sent);
         }else {
+            delete toSend;
             finishAsyncSend(parentMultiSocket);
         }
     }
@@ -126,15 +127,17 @@ class ASIOSocketWrapper {
      * If the whole large Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
-    void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, std::deque<Chunk*> toSend, size_t originalOffset, const boost::system::error_code &error, std::size_t bytes_sent) {
+    void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const boost::system::error_code &error, std::size_t bytes_sent) {
         if (error )   {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
-        } else if (bytes_sent+originalOffset!=toSend.front()->size()) {
-            sendToWire(parentMultiSocket,toSend,originalOffset+bytes_sent);
-        }else if (toSend.size()<2) {
+        } else if (bytes_sent+originalOffset!=const_toSend.front()->size()) {
+            sendToWire(parentMultiSocket,const_toSend,originalOffset+bytes_sent);
+        }else if (const_toSend.size()<2) {
+            delete const_toSend.front();
             finishAsyncSend(parentMultiSocket);
         }else {
+            std::deque<Chunk*> toSend=const_toSend;
             delete toSend.front();
             toSend.pop_front();
             if (toSend.size()==1) {
@@ -183,6 +186,14 @@ class ASIOSocketWrapper {
  * When there's a single packet to be sent to the network, mSocket->async_send is simply called upon the Chunk to be sent
  */
     void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent=0) {
+#ifdef TCPSSTLOG
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(&*toSend->begin()+bytesSent,toSend->size()-bytesSent,1,fp);
+            fclose(fp);
+#endif
+
             mSocket->async_send(boost::asio::buffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
                                 boost::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                             this,
@@ -201,6 +212,13 @@ class ASIOSocketWrapper {
  */
     void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent=0){
         if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
+#ifdef TCPSSTLOG
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent,1,fp);
+            fclose(fp);
+#endif
             mSocket->async_send(boost::asio::buffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
                                 boost::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                             this,
@@ -228,6 +246,13 @@ class ASIOSocketWrapper {
                     toSend.pop_front();
                 }
             }
+#ifdef TCPSSTLOG
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(mBuffer,bufferLocation,1,fp);
+            fclose(fp);
+#endif
             mSocket->async_send(boost::asio::buffer(mBuffer,bufferLocation),
                                 boost::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                             this,
@@ -299,6 +324,16 @@ public:
      * \param chunk is the exact bytes to put on the network (including streamID and framing data)
      */
     void rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk) {
+#ifdef TCPSSTLOG
+        FILE * fp=fopen("RAWSENT","a");
+        fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
+        fputc(':',fp);
+        for (size_t i=0;i<chunk->size();++i) {
+            fputc((*chunk)[i],fp);
+        }
+        fputc('\n',fp);
+        fclose(fp);
+#endif
         uint32 current_status=++mSendingStatus;
         //if someone else is currently sending a packet
         if (current_status&ASYNCHRONOUS_SEND_FLAG) {
@@ -312,22 +347,25 @@ public:
             sendToWire(parentMultiSocket, chunk);
         }
     }
-/**
- *  Sends a streamID #0 packet with further control data on it. To start with only stream disconnect and the ack thereof are allowed
- */
-    void sendControlPacket(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, TCPStreamControlCodes code,const Stream::StreamID&sid) {
+    static Chunk*constructControlPacket(TCPStreamControlCodes code,const Stream::StreamID&sid){
         const unsigned int max_size=16;
         uint8 dataStream[max_size];
         unsigned int size=max_size;
         Stream::StreamID controlStream;//control packet
-        controlStream.serialize(dataStream,size);
+        size=controlStream.serialize(dataStream,size);
         assert(size<max_size);
         dataStream[size++]=code;
         unsigned int cur=size;
         size=max_size-size;
-        sid.serialize(&dataStream[cur],size);
-        assert(size+cur<=max_size);
-        rawSend(parentMultiSocket,new Chunk(dataStream,dataStream+size+cur));
+        size=sid.serialize(&dataStream[cur],size);
+        assert(size+cur<=max_size);        
+        return new Chunk(dataStream,dataStream+size+cur);
+    }
+/**
+ *  Sends a streamID #0 packet with further control data on it. To start with only stream disconnect and the ack thereof are allowed
+ */
+    void sendControlPacket(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, TCPStreamControlCodes code,const Stream::StreamID&sid) {
+        rawSend(parentMultiSocket,constructControlPacket(code,sid));
     }
 /**
  * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
@@ -353,9 +391,9 @@ public:
     Chunk * data;
 };
 class TCPReadBuffer {
-    static const unsigned int mBufferLength=1440;
+    static const unsigned int sBufferLength=1440;
     static const unsigned int mLowWaterMark=256;
-    uint8 mBuffer[mBufferLength];
+    uint8 mBuffer[sBufferLength];
     unsigned int mBufferPos;
     unsigned int mWhichBuffer;
     Chunk mNewChunk;
@@ -419,9 +457,16 @@ public:
         readIntoFixedBuffer(thus);
     }
     void asioReadIntoChunk(const boost::system::error_code&error,std::size_t bytes_read){
+#ifdef TCPSSTLOG
+        char TESTs[1024];
+        sprintf(TESTs,"%d.socket",(int)(size_t)this);
+        FILE * fp=fopen(TESTs,"a");
+        fwrite(&mNewChunk[mBufferPos],bytes_read,1,fp);
+        fclose(fp);
+#endif
         mBufferPos+=bytes_read;
-        try {
-            std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+        std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+        if (thus) {
             if (error){
                 processError(&*thus,error);
             }else {
@@ -435,20 +480,27 @@ public:
                     readIntoChunk(thus);
                 }
             }
-        }catch(std::tr1::bad_weak_ptr&) {
+        }else {
             delete this;
         }
     }
     void asioReadIntoFixedBuffer(const boost::system::error_code&error,std::size_t bytes_read){
+#ifdef TCPSSTLOG
+        char TESTs[1024];
+        sprintf(TESTs,"%d.socket",(int)(size_t)this);
+        FILE * fp=fopen(TESTs,"a");
+        fwrite(&mBuffer[mBufferPos],bytes_read,1,fp);
+        fclose(fp);
+#endif
         mBufferPos+=bytes_read;
-        try {
-            std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+        std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+        if (thus) {
             if (error){
-                processError(&*thus,error);
+                    processError(&*thus,error);
             }else {
-                translateBuffer(thus);
+                    translateBuffer(thus);
             }
-        }catch (std::tr1::bad_weak_ptr&) {
+        }else {
             delete this;// the socket is deleted
         }
     }
@@ -458,7 +510,7 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     std::vector<ASIOSocketWrapper> mSockets;
 /// these items are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
     static boost::mutex sConnectingMutex;
-    std::deque<RawRequest> mNewRequests;
+    std::vector<RawRequest> mNewRequests;
     typedef std::tr1::unordered_map<Stream::StreamID,TCPStream::Callbacks*,Stream::StreamID::Hasher> CallbackMap;
 	///Workaround for VC8 bug that does not define std::pair<Stream::StreamID,Callbacks*>::operator=
     class StreamIDCallbackPair{
@@ -481,6 +533,9 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     ///Copies items from CallbackRegistration to mCallbacks Assumes sConnectingMutex is taken
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback) {
             if (newcallback.mCallback==NULL) {
+                //make sure that a new substream callback won't be sent for outstanding closing streams
+                if (mAckedClosingStreams.find(newcallback.mID)==mAckedClosingStreams.end())
+                    mAckedClosingStreams[newcallback.mID]=0;
                 CallbackMap::iterator where=mCallbacks.find(newcallback.mID);
                 if (where!=mCallbacks.end()) {
                     delete where->second;
@@ -493,16 +548,23 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
             }
     }
     bool CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus=false) {
-        bool statusChanged;
+        static boost::thread::id reactorThread=boost::this_thread::get_id();
+        assert(boost::this_thread::get_id()==reactorThread);//this function must happen from the IO reactor so it can copy over registrations without a lock
+        bool statusChanged=false;
         if (setConnectedStatus||!mCallbackRegistration.empty()) {
 			boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
             statusChanged=(status!=mSocketConnectionPhase);
             if (setConnectedStatus) {
                 mSocketConnectionPhase=status;
+                if (status==CONNECTED) {
+                    for (size_t i=0,ie=mNewRequests.size();i<ie;++i) {
+                        sendBytesNow(getSharedPtr(),mNewRequests[i]);
+                    }
+                    mNewRequests.clear();
+                }
             }
-            mCallbackRegistration.swap(registration);
             bool other_registrations=registration.empty();
-            assert(other_registrations==false);
+            mCallbackRegistration.swap(registration);
         }
         while (!registration.empty()) {
             ioReactorThreadCommitCallback(registration.front());
@@ -519,17 +581,38 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     }
     static void sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
         static Stream::StreamID::Hasher hasher;
-        size_t whichStream=data.unordered?thus->leastBusyStream():hasher(data.originStream)%thus->mSockets.size();
-        if (data.unreliable==false||rand()/(float)RAND_MAX>thus->dropChance(data.data,whichStream)) {
-            thus->mSockets[whichStream].rawSend(thus,data.data);
+        if (data.originStream==Stream::StreamID()) {
+            unsigned int socket_size=(unsigned int)thus->mSockets.size();
+            for(unsigned int i=1;i<socket_size;++i) {                
+                thus->mSockets[i].rawSend(thus,new Chunk(*data.data));
+            }
+            thus->mSockets[0].rawSend(thus,data.data);
+        }else {
+            size_t whichStream=data.unordered?thus->leastBusyStream():hasher(data.originStream)%thus->mSockets.size();
+            //if (data.unreliable==false||rand()/(float)RAND_MAX>thus->dropChance(data.data,whichStream)) {
+                thus->mSockets[whichStream].rawSend(thus,data.data);
+                //}
         }
+#ifdef TCPSSTLOG
+        FILE * fp=fopen("SENTBYTESNOW.sack","a");
+        fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
+        fputc(':',fp);
+        for (size_t i=0;i<data.data->size();++i) {
+            fputc((*data.data)[i],fp);
+        }
+        fputc('\n',fp);
+        fclose(fp);
+#endif
     }
 public:
     IOService&getASIOService(){return mResolver.io_service();}
     static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid) {
-        for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
-            i->sendControlPacket(thus,TCPStreamCloseStream,sid);
-        }
+        RawRequest closeRequest;
+        closeRequest.originStream=Stream::StreamID();//control packet
+        closeRequest.unordered=false;
+        closeRequest.unreliable=false;
+        closeRequest.data=ASIOSocketWrapper::constructControlPacket(TCPStreamCloseStream,sid);
+        sendBytes(thus,closeRequest);
     }
     static void sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
         if (thus->mSocketConnectionPhase==CONNECTED) {
@@ -543,8 +626,28 @@ public:
                 }else if(thus->mSocketConnectionPhase==DISCONNECTED) {
                     //retval=false;
                     //FIXME is this the correct thing to do?
+#ifdef TCPSSTLOG
+                    FILE * fp=fopen("SENTBYTESNEVER.sack","a");
+                    fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
+                    fputc(':',fp);
+                    for (size_t i=0;i<data.data->size();++i) {
+                        fputc((*data.data)[i],fp);
+                    }
+                    fputc('\n',fp);
+                    fclose(fp);
+#endif
                     thus->mNewRequests.push_back(data);
                 }else {
+#ifdef TCPSSTLOG
+                    FILE * fp=fopen("SENTBYTESLATER.sack","a");
+                    fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
+                    fputc(':',fp);
+                    for (size_t i=0;i<data.data->size();++i) {
+                        fputc((*data.data)[i],fp);
+                    }
+                    fputc('\n',fp);
+                    fclose(fp);
+#endif
                     thus->mNewRequests.push_back(data);
                 }
             }
@@ -601,6 +704,10 @@ public:
         for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
             new TCPReadBuffer(thus,i);
         }
+        for (size_t i=0,ie=thus->mNewRequests.size();i<ie;++i) {
+            sendBytesNow(thus,thus->mNewRequests[i]);
+        }
+        thus->mNewRequests.clear();
     }
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket() {
@@ -612,10 +719,10 @@ public:
             delete mCallbackRegistration.front().mCallback;
             mCallbackRegistration.pop_front();
         }
-        while (!mNewRequests.empty()) {
-            delete mNewRequests.front().data;
-            mNewRequests.pop_front();
+        for (size_t i=0;i<mNewRequests.size();++i) {
+            delete mNewRequests[i].data;
         }
+        mNewRequests.clear();
         while(!mCallbacks.empty()) {
             delete mCallbacks.begin()->second;
             mCallbacks.erase(mCallbacks.begin());
@@ -684,7 +791,7 @@ public:
             CallbackMap::iterator where=mCallbacks.find(id);
             if (where!=mCallbacks.end()) {
                 where->second->mBytesReceivedCallback(newChunk);
-            }else {
+            }else if (mAckedClosingStreams.find(id)==mAckedClosingStreams.end()) {
                 //new substream
                 //FIXME dont know which callback to call for substream creation
                 where=mCallbacks.find(Stream::StreamID(1));
@@ -698,6 +805,7 @@ public:
                     TCPSetCallbacks setCallbackFunctor(this,newStream);
                     where->second->mSubstreamCallback(newStream,setCallbackFunctor);
                     if (setCallbackFunctor.mCallbacks != NULL) {
+                        CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
                         setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
                     }else {
                         closeStream(getSharedPtr(),id);
@@ -932,7 +1040,7 @@ void TCPReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocke
 void TCPReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
     parentSocket
         ->getSocket(mWhichBuffer)
-        .async_receive(boost::asio::buffer(mBuffer,mBufferLength),
+        .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),
                        boost::bind(&TCPReadBuffer::asioReadIntoFixedBuffer,
                                    this,
                                    boost::asio::placeholders::error,
@@ -940,9 +1048,10 @@ void TCPReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSo
 }
 void TCPReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
+    assert(mBufferPos<mNewChunk.size());
     parentSocket
         ->getSocket(mWhichBuffer)
-        .async_receive(boost::asio::buffer(&*mNewChunk.begin(),mNewChunk.size()),
+        .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),
                        boost::bind(&TCPReadBuffer::asioReadIntoChunk,
                                    this,
                                    boost::asio::placeholders::error,
