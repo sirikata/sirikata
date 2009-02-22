@@ -113,8 +113,10 @@ public:
     const char * ENDSTRING;
     volatile bool mAbortTest;
     volatile bool mReadyToConnect;
-    void validateSameness(const std::vector<std::vector<uint8> >&netData,
-                          const std::vector<std::vector<uint8> >&keyData) {
+    void validateSameness(
+        int id,
+        const std::vector<std::vector<uint8> >&netData,
+        const std::vector<std::vector<uint8> >&keyData) {
         size_t i,j;
         for (i=0,j=0;i<netData.size()&&j<keyData.size();) {
             if (netData[i].size()&&netData[i][0]=='C') {
@@ -135,9 +137,11 @@ public:
                 TS_FAIL("Stray Empty packets");
             }
         }
-        TS_ASSERT_EQUALS(j,keyData.size());
+        if (id!=-1999999999) {//this is the socket that ignored returning bytes
+            TS_ASSERT_EQUALS(j,keyData.size());
+        }
     }
-    void validateVector(const std::vector<Sirikata::Network::Chunk>&netData,
+    void validateVector(int id, const std::vector<Sirikata::Network::Chunk>&netData,
         const std::vector<std::string>&keyData) {
         std::vector<std::vector<uint8> > orderedNetData;
         std::vector<std::vector<uint8> > unorderedNetData;
@@ -159,8 +163,8 @@ public:
         }
         std::sort(unorderedNetData.begin(),unorderedNetData.end());
         std::sort(unorderedKeyData.begin(),unorderedKeyData.end());
-        validateSameness(orderedNetData,orderedKeyData);
-        validateSameness(unorderedNetData,unorderedKeyData);
+        validateSameness(id,orderedNetData,orderedKeyData);
+        validateSameness(id,unorderedNetData,unorderedKeyData);
     }
     SstTest():mCount(0),mDisconCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
@@ -188,7 +192,7 @@ public:
         mMessagesToSend.push_back("T7th");
         mMessagesToSend.push_back("T8th");
         mMessagesToSend.push_back("T9th");
-/*
+
         std::string test("T");
         for (unsigned int i=0;i<16385;++i) {
             test+=(char)((i+5)%128);
@@ -206,7 +210,7 @@ public:
 }
         test[0]='T';
         mMessagesToSend.push_back(test);
-*/
+
         mMessagesToSend.push_back("T_0th");
         mMessagesToSend.push_back("T_1st");
         mMessagesToSend.push_back("T_2nd");
@@ -241,8 +245,8 @@ public:
         }
         mMessagesToSend.push_back("T A blade of grass.");
         mMessagesToSend.push_back("T From the playground .");
-//        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities");
-//        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite");
+        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite long enough to trigger the high water mark--well now it is I believe to the best of my abilities");
+        mMessagesToSend.push_back("T Grounds test test test this is a test test test this is a test test test this is a test test test test and the test is proceeding until it reaches signific length with a string that long however. this is not quite");
         if (doUnorderedTest){
             mMessagesToSend.push_back("U:H");
             mMessagesToSend.push_back("U:I");
@@ -297,7 +301,7 @@ public:
                 {
                     Stream*zz=r.factory();        
                     zz->cloneFrom(&r,
-                                  std::tr1::bind(&SstTest::connectionCallback,this,-100,_1,_2),
+                                  std::tr1::bind(&SstTest::connectionCallback,this,-1999999999,_1,_2),
                                   &Stream::ignoreSubstreamCallback,
                                   &Stream::ignoreBytesReceived);
                     runRoutine(zz);
@@ -325,7 +329,7 @@ public:
             for (std::map<unsigned int,std::vector<Sirikata::Network::Chunk> >::iterator datamapiter=mDataMap.begin();
                  datamapiter!=mDataMap.end();
                  ++datamapiter) {
-                validateVector(datamapiter->second,mMessagesToSend);
+                validateVector(datamapiter->first,datamapiter->second,mMessagesToSend);
             }
             r.close();
         }
