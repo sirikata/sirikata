@@ -350,7 +350,7 @@ public:
     }
     static Chunk*constructControlPacket(TCPStreamControlCodes code,const Stream::StreamID&sid){
         const unsigned int max_size=16;
-        uint8 dataStream[max_size];
+        uint8 dataStream[max_size+2*Stream::uint30::MAX_SERIALIZED_LENGTH];
         unsigned int size=max_size;
         Stream::StreamID controlStream;//control packet
         size=controlStream.serialize(&dataStream[Stream::uint30::MAX_SERIALIZED_LENGTH],size);
@@ -363,7 +363,7 @@ public:
         Stream::uint30 streamSize=Stream::uint30(size+cur-Stream::uint30::MAX_SERIALIZED_LENGTH);
         unsigned int actualHeaderLength=streamSize.serialize(dataStream,Stream::uint30::MAX_SERIALIZED_LENGTH);
         if (actualHeaderLength!=Stream::uint30::MAX_SERIALIZED_LENGTH) {
-            unsigned int retval=streamSize.serialize(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,actualHeaderLength);
+            unsigned int retval=streamSize.serialize(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,Stream::uint30::MAX_SERIALIZED_LENGTH);
             assert(retval==actualHeaderLength);
         }
         return new Chunk(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
