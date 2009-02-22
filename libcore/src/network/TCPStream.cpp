@@ -880,7 +880,7 @@ public:
     * This function will call all substreams disconnected methods
     */
     void hostDisconnectedCallback(unsigned int whichSocket, const std::string& error) {
-        connectionFailedCallback(error);
+        hostDisconnectedCallback(error);
         //FIXME do something with the socket specifically that failed.
     }
    /**
@@ -888,7 +888,7 @@ public:
     * This function will call all substreams disconnected methods
     */
     void hostDisconnectedCallback(unsigned int whichSocket, const boost::system::error_code& error) {
-        connectionFailedCallback(whichSocket,error.message());
+        hostDisconnectedCallback(whichSocket,error.message());
     }
    /**
     * The a particular socket's connection failed
