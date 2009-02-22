@@ -306,7 +306,6 @@ class ASIOSocketWrapper {
         }
     }
 public:
-    static const unsigned int sPacketHeaderLength=4;
 
     ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket),mSendingStatus(0){
     }
@@ -354,17 +353,20 @@ public:
         uint8 dataStream[max_size];
         unsigned int size=max_size;
         Stream::StreamID controlStream;//control packet
-        size=controlStream.serialize(&dataStream[sPacketHeaderLength],size);
+        size=controlStream.serialize(&dataStream[Stream::uint30::MAX_SERIALIZED_LENGTH],size);
         assert(size<max_size);
-        dataStream[sPacketHeaderLength+size++]=code;
-        unsigned int cur=sPacketHeaderLength+size;
+        dataStream[Stream::uint30::MAX_SERIALIZED_LENGTH+size++]=code;
+        unsigned int cur=Stream::uint30::MAX_SERIALIZED_LENGTH+size;
         size=max_size-cur;
         size=sid.serialize(&dataStream[cur],size);
         assert(size+cur<=max_size);   
-        uint32 streamSize=size+cur-sPacketHeaderLength;
-        streamSize=htonl(streamSize);
-        memcpy(dataStream,&streamSize,sPacketHeaderLength);
-        return new Chunk(dataStream,dataStream+size+cur);
+        Stream::uint30 streamSize=Stream::uint30(size+cur-Stream::uint30::MAX_SERIALIZED_LENGTH);
+        unsigned int actualHeaderLength=streamSize.serialize(dataStream,Stream::uint30::MAX_SERIALIZED_LENGTH);
+        if (actualHeaderLength!=Stream::uint30::MAX_SERIALIZED_LENGTH) {
+            unsigned int retval=streamSize.serialize(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,actualHeaderLength);
+            assert(retval==actualHeaderLength);
+        }
+        return new Chunk(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
     }
 /**
  *  Sends a streamID #0 packet with further control data on it. To start with only stream disconnect and the ack thereof are allowed
@@ -432,27 +434,26 @@ public:
     }
     void translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus) {
         unsigned int chunkPos=0;
-        while (mBufferPos-chunkPos>ASIOSocketWrapper::sPacketHeaderLength) {
-            uint32 packetLength;
-            std::memcpy(&packetLength,mBuffer+chunkPos,ASIOSocketWrapper::sPacketHeaderLength);
-            packetLength=ntohl(packetLength);
-            if (mBufferPos-chunkPos<packetLength+ASIOSocketWrapper::sPacketHeaderLength) {
+        unsigned int packetHeaderLength;
+        Stream::uint30 packetLength;
+        while ((packetHeaderLength=mBufferPos-chunkPos)!=0&&packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {
+            if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
                 if (mBufferPos-chunkPos<mLowWaterMark) {
                     break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
                 }else {
                     mBufferPos-=chunkPos;
-                    mBufferPos-=ASIOSocketWrapper::sPacketHeaderLength;
+                    mBufferPos-=packetHeaderLength;
                     assert(mNewChunk.size()==0);
-                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+ASIOSocketWrapper::sPacketHeaderLength,packetLength,mBufferPos,mNewChunk);
+                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),mBufferPos,mNewChunk);
                     readIntoChunk(thus);
                     return;
                 }
             }else {
-                uint32 chunkLength=packetLength;
+                uint32 chunkLength=packetLength.read();
                 Chunk resultChunk;
-                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+ASIOSocketWrapper::sPacketHeaderLength,packetLength,chunkLength,resultChunk);
+                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
                 processFullChunk(thus,mWhichBuffer,resultID,resultChunk);
-                chunkPos+=ASIOSocketWrapper::sPacketHeaderLength+packetLength;
+                chunkPos+=packetHeaderLength+packetLength.read();
             }
         }
         if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
@@ -1154,21 +1155,23 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
         break;
     }
     toBeSent.originStream=getID();
-    uint8 serializedStreamId[8];//={255,255,255,255,255,255,255,255};
-    unsigned int streamIdLength=8;
+    uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];//={255,255,255,255,255,255,255,255};
+    unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
     unsigned int successLengthNeeded=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
     assert(successLengthNeeded<=streamIdLength);
     streamIdLength=successLengthNeeded;
     size_t totalSize=data.size();
     totalSize+=streamIdLength;
-    toBeSent.data=new Chunk(totalSize+ASIOSocketWrapper::sPacketHeaderLength);
-    uint32 networklength=htonl(totalSize);
+    uint30 packetLength=uint30(totalSize);
+    uint8 packetLengthSerialized[uint30::MAX_SERIALIZED_LENGTH];
+    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,uint30::MAX_SERIALIZED_LENGTH);
+    toBeSent.data=new Chunk(totalSize+packetHeaderLength);
     
     uint8 *outputBuffer=&(*toBeSent.data)[0];
-    std::memcpy(outputBuffer,&networklength,ASIOSocketWrapper::sPacketHeaderLength);
-    std::memcpy(outputBuffer+ASIOSocketWrapper::sPacketHeaderLength,serializedStreamId,streamIdLength);
+    std::memcpy(outputBuffer,packetLengthSerialized,packetHeaderLength);
+    std::memcpy(outputBuffer+packetHeaderLength,serializedStreamId,streamIdLength);
     if (data.size())
-        std::memcpy(&outputBuffer[ASIOSocketWrapper::sPacketHeaderLength+streamIdLength],
+        std::memcpy(&outputBuffer[packetHeaderLength+streamIdLength],
                     &data[0],
                     data.size());
     unsigned int sendStatus=++mSendStatus;

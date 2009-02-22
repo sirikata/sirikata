@@ -59,6 +59,9 @@ public:
     class uint30{
         uint32 mID;
     public:
+        enum MaxSerializedLengthConstants{
+            MAX_SERIALIZED_LENGTH=6
+        };
         bool odd() const{
             return (mID&1);
         }
