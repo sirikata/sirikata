@@ -1053,6 +1053,7 @@ void TCPSetCallbacks::operator()(const Stream::ConnectionCallback &connectionCal
 
 void TCPReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
     parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
+    delete this;
 }
 void TCPReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, const Chunk&newChunk){
     parentSocket->receiveFullChunk(whichSocket,id,newChunk);

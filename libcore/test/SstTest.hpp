@@ -57,11 +57,11 @@ public:
             mAbortTest=true;
             TS_FAIL(reason);
         }
-/*
+
         mDataMap[id].push_back(connectionReason);
         if (stat!=Stream::Connected)
             ++mDisconCount;
-*/
+
     }
     void dataRecvCallback(Stream *s,int id, const Chunk&data) {
         mDataMap[id].push_back(data);
@@ -272,11 +272,8 @@ public:
         }
         mStreams.resize(0);
         mIO.stop();
-        /*
-        while(mDisconCount.read()<3){
-            printf("%d\n",mDisconCount.read());
-        }
-        */
+        
+        
         delete mThread;
     }
     void simpleConnect(Stream*s, const Address&addy) {
@@ -334,6 +331,15 @@ public:
         }
         if( doSubstreams){
             z->close();
+            time_t last_time=time(NULL);
+            while(mDisconCount.read()<3){
+                time_t this_time=time(NULL);
+                if (this_time>last_time+5) {
+                    std::cerr<<"Message Receive Count == "<<mDisconCount.read()<<'\n';
+                    last_time=this_time;
+                }
+            }
+
             delete z;
         }
     }
