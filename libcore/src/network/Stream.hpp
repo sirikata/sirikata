@@ -56,46 +56,50 @@ class Stream {
 protected:
     Stream(){}
 public:
-    class StreamID{
-        unsigned int mID;
+    class uint30{
+        uint32 mID;
     public:
         bool odd() const{
             return (mID&1);
+        }
+        uint32 read() const{
+            return mID;
         }
         //unserializes a streamID into a buffer of size at least 8. Caller should check return value to see if size is too small
         unsigned int serialize(uint8 *destination, unsigned int maxsize)const;
         //unserializes a streamID into a buffer where the size is at least size...puts bytes consumed into size variable
         bool unserialize(const uint8 *src, unsigned int &size);
-        StreamID(){//control packet
+        uint30(){//control packet
             mID=0;
         }
-        StreamID(unsigned int id){
+        uint30(unsigned int id){
             mID=id;
         }
-		StreamID&operator=(const StreamID&other) {
+		uint30&operator=(const uint30&other) {
            this->mID=other.mID;
 		   return *this;
 		}
-		StreamID(const StreamID&other) {
+		uint30(const uint30&other) {
            this->mID=other.mID;
 		}
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
-			size_t operator() (const StreamID &id) const{
-				return std::tr1::hash<unsigned int>()(id.mID);
+			size_t operator() (const uint30 &id) const{
+				return id.mID;//std::tr1::hash<unsigned int>()(id.mID);
 			}
 		};
 
-        bool operator == (const StreamID&other)const {
+        bool operator == (const uint30&other)const {
             return mID==other.mID;
         }
-        bool operator != (const StreamID&other)const {
+        bool operator != (const uint30&other)const {
             return mID!=other.mID;
         }
-        bool operator < (const StreamID&other)const {
+        bool operator < (const uint30&other)const {
             return mID<other.mID;
         }
     };
+    typedef uint30 StreamID ;
     enum ConnectionStatus {
         Connected,
         ConnectionFailed,

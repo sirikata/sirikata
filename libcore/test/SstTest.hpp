@@ -41,8 +41,8 @@ class SstTest : public CxxTest::TestSuite
 {
 public:
     void runRoutine(Stream* s) {
-        static boost::mutex test;
-        boost::lock_guard<boost::mutex> connectingMutex(test);
+        //static boost::mutex test;
+        //boost::lock_guard<boost::mutex> connectingMutex(test);
         for (unsigned int i=0;i<mMessagesToSend.size();++i) {
             s->send(Chunk(mMessagesToSend[i].begin(),mMessagesToSend[i].end()),
                     mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?Stream::ReliableUnordered:(mMessagesToSend[i][0]=='X'?Stream::Unreliable:Stream::Reliable)):Stream::Reliable);
@@ -165,8 +165,8 @@ public:
     SstTest():mCount(0),mDisconCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
-        bool doUnorderedTest=false;
-        bool doShortTest=true;
+        bool doUnorderedTest=true;
+        bool doShortTest=false;
         if (doUnorderedTest){
             mMessagesToSend.push_back("U:0");
             mMessagesToSend.push_back("U:1");
@@ -273,7 +273,7 @@ public:
         mStreams.resize(0);
         mIO.stop();
         /*
-        while(mDisconCount.read()<6){
+        while(mDisconCount.read()<3){
             printf("%d\n",mDisconCount.read());
         }
         */
@@ -290,7 +290,7 @@ public:
     void testConnectSend (void )
     {
         Stream*z=NULL;
-        bool doSubstreams=false;
+        bool doSubstreams=true;
         {
             TCPStream r(mIO);
             while (!mReadyToConnect);
@@ -316,7 +316,7 @@ public:
                 runRoutine(z);
             }
             //wait until done
-            time_t last_time=0;
+            time_t last_time=time(NULL);
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:3))&&!mAbortTest) {
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {

@@ -306,6 +306,8 @@ class ASIOSocketWrapper {
         }
     }
 public:
+    static const unsigned int sPacketHeaderLength=4;
+
     ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket),mSendingStatus(0){
     }
     ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0){
@@ -352,13 +354,16 @@ public:
         uint8 dataStream[max_size];
         unsigned int size=max_size;
         Stream::StreamID controlStream;//control packet
-        size=controlStream.serialize(dataStream,size);
+        size=controlStream.serialize(&dataStream[sPacketHeaderLength],size);
         assert(size<max_size);
-        dataStream[size++]=code;
-        unsigned int cur=size;
-        size=max_size-size;
+        dataStream[sPacketHeaderLength+size++]=code;
+        unsigned int cur=sPacketHeaderLength+size;
+        size=max_size-cur;
         size=sid.serialize(&dataStream[cur],size);
-        assert(size+cur<=max_size);        
+        assert(size+cur<=max_size);   
+        uint32 streamSize=size+cur-sPacketHeaderLength;
+        streamSize=htonl(streamSize);
+        memcpy(dataStream,&streamSize,sPacketHeaderLength);
         return new Chunk(dataStream,dataStream+size+cur);
     }
 /**
@@ -427,27 +432,27 @@ public:
     }
     void translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus) {
         unsigned int chunkPos=0;
-        while (mBufferPos-chunkPos>4) {
+        while (mBufferPos-chunkPos>ASIOSocketWrapper::sPacketHeaderLength) {
             uint32 packetLength;
-            std::memcpy(&packetLength,mBuffer+chunkPos,4);
+            std::memcpy(&packetLength,mBuffer+chunkPos,ASIOSocketWrapper::sPacketHeaderLength);
             packetLength=ntohl(packetLength);
-            if (mBufferPos-chunkPos<packetLength+4) {
+            if (mBufferPos-chunkPos<packetLength+ASIOSocketWrapper::sPacketHeaderLength) {
                 if (mBufferPos-chunkPos<mLowWaterMark) {
                     break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
                 }else {
                     mBufferPos-=chunkPos;
-                    mBufferPos-=4;
+                    mBufferPos-=ASIOSocketWrapper::sPacketHeaderLength;
                     assert(mNewChunk.size()==0);
-                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+4,packetLength,mBufferPos,mNewChunk);
+                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+ASIOSocketWrapper::sPacketHeaderLength,packetLength,mBufferPos,mNewChunk);
                     readIntoChunk(thus);
                     return;
                 }
             }else {
                 uint32 chunkLength=packetLength;
                 Chunk resultChunk;
-                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+4,packetLength,chunkLength,resultChunk);
+                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+ASIOSocketWrapper::sPacketHeaderLength,packetLength,chunkLength,resultChunk);
                 processFullChunk(thus,mWhichBuffer,resultID,resultChunk);
-                chunkPos+=4+packetLength;
+                chunkPos+=ASIOSocketWrapper::sPacketHeaderLength+packetLength;
             }
         }
         if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
@@ -466,6 +471,7 @@ public:
 #endif
         mBufferPos+=bytes_read;
         std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+
         if (thus) {
             if (error){
                 processError(&*thus,error);
@@ -494,6 +500,7 @@ public:
 #endif
         mBufferPos+=bytes_read;
         std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+
         if (thus) {
             if (error){
                     processError(&*thus,error);
@@ -534,8 +541,7 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback) {
             if (newcallback.mCallback==NULL) {
                 //make sure that a new substream callback won't be sent for outstanding closing streams
-                if (mAckedClosingStreams.find(newcallback.mID)==mAckedClosingStreams.end())
-                    mAckedClosingStreams[newcallback.mID]=0;
+                mOneSidedClosingStreams.insert(newcallback.mID);
                 CallbackMap::iterator where=mCallbacks.find(newcallback.mID);
                 if (where!=mCallbacks.end()) {
                     delete where->second;
@@ -580,6 +586,16 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
         return .25;
     }
     static void sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
+#ifdef TCPSSTLOG
+        FILE * fp=fopen("SENTBYTESNOW.sack","a");
+        fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
+        fputc(':',fp);
+        for (size_t i=0;i<data.data->size();++i) {
+            fputc((*data.data)[i],fp);
+        }
+        fputc('\n',fp);
+        fclose(fp);
+#endif
         static Stream::StreamID::Hasher hasher;
         if (data.originStream==Stream::StreamID()) {
             unsigned int socket_size=(unsigned int)thus->mSockets.size();
@@ -593,16 +609,6 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
                 thus->mSockets[whichStream].rawSend(thus,data.data);
                 //}
         }
-#ifdef TCPSSTLOG
-        FILE * fp=fopen("SENTBYTESNOW.sack","a");
-        fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
-        fputc(':',fp);
-        for (size_t i=0;i<data.data->size();++i) {
-            fputc((*data.data)[i],fp);
-        }
-        fputc('\n',fp);
-        fclose(fp);
-#endif
     }
 public:
     IOService&getASIOService(){return mResolver.io_service();}
@@ -666,6 +672,7 @@ public:
     AtomicValue<uint32> mHighestStreamID;
     ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
     std::tr1::unordered_map<Stream::StreamID,unsigned int,Stream::StreamID::Hasher>mAckedClosingStreams;
+    std::tr1::unordered_set<Stream::StreamID,Stream::StreamID::Hasher>mOneSidedClosingStreams;
 #define ThreadSafeStack ThreadSafeQueue //FIXME this can be way more efficient
     ///actually free stream IDs
     ThreadSafeStack<Stream::StreamID>mFreeStreamIDs;
@@ -674,7 +681,7 @@ public:
 ///a pair of the number sockets - num positive checks (or -n for n sockets of which at least 1 failed) and an example header that passes if the first int is >1
     typedef std::pair<std::pair<int,UUID>,Array<uint8,TcpSstHeaderSize> > HeaderCheck;
     Stream::StreamID getNewID() {
-        if (!mFreeStreamIDs.probablyEmpty()) {
+        if (false&&!mFreeStreamIDs.probablyEmpty()) {
             Stream::StreamID retval;
             if (mFreeStreamIDs.pop(retval))
                 return retval;
@@ -728,6 +735,28 @@ public:
             mCallbacks.erase(mCallbacks.begin());
         }
     }
+    ///a stream that has been closed and the other side has agreed not to send any more packets using that ID
+    void shutDownClosedStream(unsigned int controlCode,const Stream::StreamID &id) {
+        if (controlCode==TCPStreamCloseStream){
+            std::deque<StreamIDCallbackPair> registrations;
+            CommitCallbacks(registrations,CONNECTED,false);
+            CallbackMap::iterator where=mCallbacks.find(id);
+            if (where!=mCallbacks.end()) {
+                where->second->mConnectionCallback(Stream::Disconnected,"Remote Host Disconnected");
+                CommitCallbacks(registrations,CONNECTED,false);//just in case stream committed new callbacks during callback
+                where=mCallbacks.find(id);
+                delete where->second;
+                mCallbacks.erase(where);
+            }                                    
+        }
+        std::tr1::unordered_set<Stream::StreamID>::iterator where=mOneSidedClosingStreams.find(id);
+        if (where!=mOneSidedClosingStreams.end()) {
+            mOneSidedClosingStreams.erase(where);
+        }
+        if (id.odd()==((mHighestStreamID.read()&1)?true:false)) {
+            mFreeStreamIDs.push(id);
+        }
+    }
     void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk){
         if (id==Stream::StreamID()) {//control packet
             if(newChunk.size()) {
@@ -738,7 +767,7 @@ public:
                     if (newChunk.size()>1) {
                         unsigned int avail_len=newChunk.size()-1;
                         id.unserialize((const uint8*)&(newChunk[1]),avail_len);
-                        if (avail_len>=newChunk.size()-1) {
+                        if (avail_len+1>newChunk.size()) {
                             std::cerr<<"Control Chunk too short\n";
                         }
                     }
@@ -746,27 +775,16 @@ public:
                         std::tr1::unordered_map<Stream::StreamID,unsigned int>::iterator where=mAckedClosingStreams.find(id);
                         if (where!=mAckedClosingStreams.end()){
                             where->second++;
-                            if (where->second==mSockets.size()*2) {
-                                mAckedClosingStreams.erase(where);
-                                if (id.odd()==((mHighestStreamID.read()&1)?true:false)) {
-                                    mFreeStreamIDs.push(id);
-                                }
+                            int how_much=where->second;
+                            if (where->second==mSockets.size()) {
+                                mAckedClosingStreams.erase(where);        
+                                shutDownClosedStream(controlCode,id);
                             }
                         }else{
-                            if (mSockets.size()*2/*impossible*/==1) {
-                                if (id.odd()==((mHighestStreamID.read()&1)?true:false)) {
-                                    mFreeStreamIDs.push(id);
-                                }
+                            if (mSockets.size()==1) {
+                                shutDownClosedStream(controlCode,id);
                             }else {
                                 mAckedClosingStreams[id]=1;
-                            }
-                            if (controlCode==TCPStreamCloseStream){
-                                std::deque<StreamIDCallbackPair> registrations;
-                                CommitCallbacks(registrations,CONNECTED,false);
-                                CallbackMap::iterator where=mCallbacks.find(id);
-                                if (where!=mCallbacks.end()) {
-                                    where->second->mConnectionCallback(Stream::Disconnected,"Remote Host Disconnected");
-                                }
                             }
                         }
                     }
@@ -791,7 +809,7 @@ public:
             CallbackMap::iterator where=mCallbacks.find(id);
             if (where!=mCallbacks.end()) {
                 where->second->mBytesReceivedCallback(newChunk);
-            }else if (mAckedClosingStreams.find(id)==mAckedClosingStreams.end()) {
+            }else if (mOneSidedClosingStreams.find(id)==mOneSidedClosingStreams.end()) {
                 //new substream
                 //FIXME dont know which callback to call for substream creation
                 where=mCallbacks.find(Stream::StreamID(1));
@@ -811,6 +829,8 @@ public:
                         closeStream(getSharedPtr(),id);
                     }
                 }
+            }else {
+                //IGNORED MESSAGE
             }
         }
     }
@@ -827,7 +847,7 @@ public:
                 i->second->mConnectionCallback(stat,error_code);
             }
         }else {
-            std::cerr<< "Did not call callbacks because callback message already sent for "<<error_code<<'\n';
+            //std::cerr<< "Did not call callbacks because callback message already sent for "<<error_code<<'\n';
         }
     }
    /**
@@ -923,8 +943,8 @@ public:
 
         if (headerCheck->first.first==(int)mSockets.size()) {
             headerCheck->second=*buffer;
-            headerCheck->first.first--;
-        }else if (headerCheck->first.first>=1) {
+        }
+        if (headerCheck->first.first>=1) {
             if (headerCheck->second!=*buffer) {
                 connectionFailedCallback(whichSocket,"Bad header comparison "
                                          +std::string((char*)buffer->begin(),TcpSstHeaderSize)
@@ -1140,14 +1160,14 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
     streamIdLength=successLengthNeeded;
     size_t totalSize=data.size();
     totalSize+=streamIdLength;
-    toBeSent.data=new Chunk(totalSize+4);
+    toBeSent.data=new Chunk(totalSize+ASIOSocketWrapper::sPacketHeaderLength);
     uint32 networklength=htonl(totalSize);
     
     uint8 *outputBuffer=&(*toBeSent.data)[0];
-    std::memcpy(outputBuffer,&networklength,4);
-    std::memcpy(outputBuffer+4,serializedStreamId,streamIdLength);
+    std::memcpy(outputBuffer,&networklength,ASIOSocketWrapper::sPacketHeaderLength);
+    std::memcpy(outputBuffer+ASIOSocketWrapper::sPacketHeaderLength,serializedStreamId,streamIdLength);
     if (data.size())
-        std::memcpy(&outputBuffer[4+streamIdLength],
+        std::memcpy(&outputBuffer[ASIOSocketWrapper::sPacketHeaderLength+streamIdLength],
                     &data[0],
                     data.size());
     unsigned int sendStatus=++mSendStatus;
