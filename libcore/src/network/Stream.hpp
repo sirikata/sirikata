@@ -73,6 +73,7 @@ public:
             mID=0;
         }
         uint30(unsigned int id){
+            assert(id<(1<<30));
             mID=id;
         }
 		uint30&operator=(const uint30&other) {
@@ -85,7 +86,7 @@ public:
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
 			size_t operator() (const uint30 &id) const{
-				return id.mID;//std::tr1::hash<unsigned int>()(id.mID);
+				return std::tr1::hash<unsigned int>()(id.mID);
 			}
 		};
 

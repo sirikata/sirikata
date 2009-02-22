@@ -681,7 +681,7 @@ public:
 ///a pair of the number sockets - num positive checks (or -n for n sockets of which at least 1 failed) and an example header that passes if the first int is >1
     typedef std::pair<std::pair<int,UUID>,Array<uint8,TcpSstHeaderSize> > HeaderCheck;
     Stream::StreamID getNewID() {
-        if (false&&!mFreeStreamIDs.probablyEmpty()) {
+        if (!mFreeStreamIDs.probablyEmpty()) {
             Stream::StreamID retval;
             if (mFreeStreamIDs.pop(retval))
                 return retval;

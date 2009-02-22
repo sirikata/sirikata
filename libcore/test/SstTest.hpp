@@ -115,24 +115,24 @@ public:
     volatile bool mReadyToConnect;
     void validateSameness(
         int id,
-        const std::vector<std::vector<uint8> >&netData,
-        const std::vector<std::vector<uint8> >&keyData) {
+        const std::vector<const Sirikata::Network::Chunk* >&netData,
+        const std::vector<const std::string* >&keyData) {
         size_t i,j;
         for (i=0,j=0;i<netData.size()&&j<keyData.size();) {
-            if (netData[i].size()&&netData[i][0]=='C') {
+            if (netData[i]->size()&&(*netData[i])[0]=='C') {
                 ++i;
                 continue;
             }
-            TS_ASSERT_EQUALS(netData[i].size(),keyData[j].size());
-            if (!netData[i].empty()) {
-                TS_ASSERT_SAME_DATA(&*netData[i].begin(),&*keyData[j].begin(),netData[i].size()*sizeof(netData[i][0]));
+            TS_ASSERT_EQUALS(netData[i]->size(),keyData[j]->size());
+            if (!netData[i]->empty()) {
+                TS_ASSERT_SAME_DATA(&*netData[i]->begin(),&*keyData[j]->begin(),netData[i]->size()*sizeof((*netData[i])[0]));
             }
             ++i;
             ++j;
         }
         for (;i<netData.size();++i) {
-            if (netData[i].size()) {
-                TS_ASSERT_EQUALS(netData[i][0],'C');
+            if (netData[i]->size()) {
+                TS_ASSERT_EQUALS((*netData[i])[0],'C');
             }else {
                 TS_FAIL("Stray Empty packets");
             }
@@ -141,28 +141,62 @@ public:
             TS_ASSERT_EQUALS(j,keyData.size());
         }
     }
+    class Comparator {
+    public:
+        bool operator() (const Sirikata::Network::Chunk*a, const Sirikata::Network::Chunk*b) {
+            size_t i=0;
+            size_t ilim=a->size();
+            if( b->size()<ilim)
+                ilim=b->size();
+            Sirikata::Network::Chunk::const_iterator aiter=a->begin();
+            Sirikata::Network::Chunk::const_iterator biter=b->begin();
+            for(;i<ilim;++i,++aiter,++biter) {
+                
+                if ((*aiter)<(*biter)) {
+                    return true;
+                }
+                if ((*aiter)>(*biter)) {
+                    return false;
+                }
+            }
+            if (a->size()<b->size())
+                return true;
+            return false;
+        }
+        bool operator() (const std::string*a, const std::string*b) {
+            return *a<*b;
+        }
+        bool ascmp (const Sirikata::Network::Chunk*a, const Sirikata::Network::Chunk*b) {        
+            return (*this)(a,b);
+        }
+        bool acmp (const Sirikata::Network::Chunk&a, const Sirikata::Network::Chunk&b) {        
+            return (*this)(&a,&b);
+        }
+    };
     void validateVector(int id, const std::vector<Sirikata::Network::Chunk>&netData,
         const std::vector<std::string>&keyData) {
-        std::vector<std::vector<uint8> > orderedNetData;
-        std::vector<std::vector<uint8> > unorderedNetData;
-        std::vector<std::vector<uint8> > orderedKeyData;
-        std::vector<std::vector<uint8> > unorderedKeyData;
+        std::vector<const Sirikata::Network::Chunk* > orderedNetData;
+        std::vector<const Sirikata::Network::Chunk* > unorderedNetData;
+        std::vector<const std::string* > orderedKeyData;
+        std::vector<const std::string* > unorderedKeyData;
         for (size_t i=0;i<netData.size();++i) {
             if (netData[i].size()==0||netData[i][0]=='T') {
-                orderedNetData.push_back(std::vector<uint8>(netData[i].begin(),netData[i].end()));
+                orderedNetData.push_back(&netData[i]);
             }else {
-                unorderedNetData.push_back(std::vector<uint8>(netData[i].begin(),netData[i].end()));
+                unorderedNetData.push_back(&netData[i]);
             }            
         }
         for (size_t i=0;i<keyData.size();++i) {
             if (keyData[i].size()==0||keyData[i][0]=='T') {
-                orderedKeyData.push_back(std::vector<uint8>(keyData[i].begin(),keyData[i].end()));
+                orderedKeyData.push_back(&keyData[i]);
             }else {
-                unorderedKeyData.push_back(std::vector<uint8>(keyData[i].begin(),keyData[i].end()));
+                unorderedKeyData.push_back(&keyData[i]);
             }            
         }
-        std::sort(unorderedNetData.begin(),unorderedNetData.end());
-        std::sort(unorderedKeyData.begin(),unorderedKeyData.end());
+        Comparator c;
+        std::sort(unorderedNetData.begin(),unorderedNetData.end(),c);
+        std::sort(unorderedKeyData.begin(),unorderedKeyData.end(),c);
+        validateSameness(id,unorderedNetData,unorderedKeyData);
         validateSameness(id,orderedNetData,orderedKeyData);
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
@@ -192,7 +226,6 @@ public:
         mMessagesToSend.push_back("T7th");
         mMessagesToSend.push_back("T8th");
         mMessagesToSend.push_back("T9th");
-
         std::string test("T");
         for (unsigned int i=0;i<16385;++i) {
             test+=(char)((i+5)%128);
@@ -210,7 +243,6 @@ public:
 }
         test[0]='T';
         mMessagesToSend.push_back(test);
-
         mMessagesToSend.push_back("T_0th");
         mMessagesToSend.push_back("T_1st");
         mMessagesToSend.push_back("T_2nd");
