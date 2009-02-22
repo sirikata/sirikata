@@ -197,6 +197,11 @@ public:
 		return found;
 	}
 
+	bool isContainedBy(const Range &other) const {
+		return (this->startbyte() >= other.startbyte()) &&
+			(this->endbyte() <= other.endbyte());
+	}
+
 	/// Removes overlapping ranges if possible (assumes a list ordered by starting byte).
 	template <class ListType>
 	void addToList(const typename ListType::value_type &data, ListType &list) const {
@@ -246,6 +251,33 @@ public:
 
 			iter = nextIter;
 		}
+	}
+
+	template <class ListType>
+	static std::ostream &printRangeList(
+				std::ostream &os,
+				const ListType &cdata,
+				Range checkFor=Range(false),
+				bool exact=false) {
+		bool start = true;
+		typename ListType::const_iterator iter = cdata.begin(),
+			enditer = cdata.end();
+		for (;
+				iter != enditer;
+				++iter) {
+			os << (start?'{':',') << (*iter);
+			start = false;
+			if ((Range)(*iter) == checkFor) {
+				os << "**";
+			}
+			else if (!exact) {
+				if (((Range)(*iter)).isContainedBy(checkFor)) {
+					os << "++";
+				}
+			}
+		}
+		os << '}';
+		return os;
 	}
 
 	/// equality comparision

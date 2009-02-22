@@ -56,7 +56,7 @@ namespace Task {
 class FunctionId {
 private:
 	void *mThisPtr; ///< do not dereference
-	const char *mClassId; ///< A compile-time constant, usually a class name or file or module name.
+	std::string mClassId; ///< A compile-time constant, usually a class name or file or module name.
 	std::string mUniqueId; ///< usually contains class or function name, and other arguments.
 
 public:
@@ -65,28 +65,17 @@ public:
 	inline bool operator== (const FunctionId &other) const {
 		if (mThisPtr != other.mThisPtr)
 			return false;
-		if (mClassId == NULL && other.mClassId == NULL)
-			return (mUniqueId == other.mUniqueId);
-		if (mClassId == NULL || other.mClassId == NULL)
-			return false;
-		// mClassId is not null
-		if (std::strcmp(mClassId, other.mClassId))
+		if (mClassId == other.mClassId)
 			return false;
 		return (mUniqueId == other.mUniqueId);
 	}
 	/// Ordering comparison
 	inline bool operator< (const FunctionId &other) const {
 		if (mThisPtr == other.mThisPtr) {
-			if (mClassId == NULL && other.mClassId != NULL)
-				return true;
-			if (mClassId == NULL || other.mClassId == NULL)
-				return false;
-			// mClassId is not null
-			int cmp = strcmp(mClassId, other.mClassId);
-			if (cmp == 0) {
+			if (mClassId == other.mClassId) {
 				return (mUniqueId < other.mUniqueId);
 			} else {
-				return cmp < 0;
+				return (mClassId < other.mClassId);
 			}
 		} else {
 			return (mThisPtr < other.mThisPtr);
@@ -104,7 +93,7 @@ public:
 	 *                  the same as the corresponding SecondaryId.
 	 */
 	FunctionId(void *thisPtr,
-				const char *classId,
+				const std::string &classId,
 				const std::string &uniqueId)
 		: mThisPtr(thisPtr), mClassId(classId), mUniqueId(uniqueId) {
 	}
@@ -115,15 +104,15 @@ public:
 	 * or removing event listeners)
 	 */
 	static inline FunctionId null() {
-		return FunctionId(NULL, NULL, std::string());
+		return FunctionId(NULL, std::string(), std::string());
 	}
 
 	/// Hasher functor to be used in a hash_map.
 	struct Hasher {
 		std::size_t operator() (const FunctionId &sid) const{
 			return HASH<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
-				HASH<const char *>() (sid.mClassId) * 41 +
-				HASH<const char *>() (sid.mUniqueId.c_str());
+				HASH<std::string>() (sid.mClassId) * 41 +
+				HASH<std::string>() (sid.mUniqueId.c_str());
 		}
 	};
 };

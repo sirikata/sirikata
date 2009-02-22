@@ -79,7 +79,7 @@ public:
 		 * string is equal to Secondary(0) or Secondary::null(). */
 
 		Secondary(const std::string &str) :
-				mIntValue(str.empty() ? 0 : HASH<const char *>()(str.c_str())),
+				mIntValue(str.empty() ? 0 : HASH<std::string>()(str)),
 				mStrValue(str) {}
 
 		/**
@@ -90,7 +90,11 @@ public:
 				std::ostream &os,
 				const Secondary &id) {
 			if (id.mStrValue.empty()) {
-				os << id.mIntValue;
+				if (id.mIntValue == 0) {
+					os << "null";
+				} else {
+					os << id.mIntValue;
+				}
 			} else {
 				if (id.mStrValue.size() > 60) {
 					os << '\"' << id.mStrValue.substr(57) << "\"...";
@@ -124,8 +128,10 @@ public:
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
 			size_t operator() (const Secondary &sec) const{
-				return HASH<std::string>()(sec.mStrValue) * 37 +
-					HASH<intptr_t>()(sec.mIntValue) * 31;
+				return HASH<intptr_t>()(sec.mIntValue); // mIntValue is already hashed.
+
+				/*return HASH<std::string>()(sec.mStrValue) * 37 +
+					HASH<intptr_t>()(sec.mIntValue) * 31;*/
 			}
 		};
 	};
@@ -144,6 +150,7 @@ public:
 		/** Lookup the eventName in the internal static map (and create
 		 * an entry if one does not yet exist) */
 		Primary(const std::string &eventName);
+		Primary(const char *eventName);
 
 		/// Currently only displays the integer version of primary ID.
 		inline friend std::ostream& operator << (
@@ -249,6 +256,7 @@ public:
 		return mId;
 	}
 };
+typedef std::tr1::shared_ptr<Event> EventPtr;
 
 }
 }

@@ -121,7 +121,7 @@ class EventOrderException : std::exception {};
 
 /** Some EventManagers may require a different base class which
  * inherits from Event but have additional properties. */
-template <class EventBase>
+template <class EventBase=Event>
 class EventManager {
 
 	/* TYPEDEFS */
@@ -257,6 +257,13 @@ private:
 	/// These listeners need to be called with NULL argument.
 	//std::list<EventListener> mRemovedListeners;
 
+	/// Used for to wake sleep_processEventQueue function.
+	volatile void *mEventCV;
+	/// Used in the sleep_processEventQueue function
+	volatile void *mEventLock;
+	/// Used to notify an event loop that there are no events left to be processed.
+	volatile bool mCleanup;
+
 	/* PRIVATE FUNCTIONS */
 
 	PrimaryListenerInfo *insertPriId(const IdPair::Primary &pri);
@@ -289,6 +296,18 @@ private:
 			SubscriptionId removeId,
 			bool notifyListener);
 public:
+
+	EventManager(bool useConditionVariable=false);
+
+	~EventManager();
+
+	/** Sits around and processes events forever; returns when EventManager is destroyed.
+	 * (Useful for tests and utility programs--that is, ones without a main loop)
+	 *
+	 * Requires that true was passed into the EventManager constructor.
+	 * Does not allow waiting on multiple event managers, and has no time constraints.
+	 */
+	void sleep_processEventQueue();
 
 	/* PUBLIC FUNCTIONS */
 	/// FIXME: This is for testing purposes only--do not make public.

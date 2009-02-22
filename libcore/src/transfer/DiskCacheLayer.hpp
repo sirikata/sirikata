@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "CacheLayer.hpp"
 #include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"
 

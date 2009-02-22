@@ -284,6 +284,22 @@ inline std::ostream &operator<<(std::ostream &str, const URIContext &urictx) {
 class URI {
 	URIContext mContext;
 	std::string mPath; // should have no slashes.
+
+	void findSlash(const std::string &url) {
+		std::string::size_type slash = url.rfind('/');
+		if (slash != std::string::npos) {
+			// FIXME: handle incomplete URIs correctly
+			if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
+				// this is actually a hostname section... don't copy it into the filename.
+				// unless there were three slashes in a row.
+				mPath = std::string();
+			} else {
+				mPath = url.substr(slash+1);
+			}
+		} else{
+			mPath = url;
+		}
+	}
 public:
 	/// Default constructor--calls default constructor for URIContext as well.
 	URI() {
@@ -297,19 +313,17 @@ public:
 	 */
 	URI(const URIContext &parentContext, const std::string &url)
 			: mContext(parentContext, url) {
-		std::string::size_type slash = url.rfind('/');
-		if (slash != std::string::npos) {
-			// FIXME: handle incomplete URIs correctly
-			if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
-				// this is actually a hostname section... don't copy it into the filename.
-				// unless there were three slashes in a row.
-				mPath = std::string();
-			} else {
-				mPath = url.substr(slash+1);
-			}
-		} else{
-			mPath = url;
-		}
+		findSlash(url);
+	}
+
+	/** Constructs an absolute URI. To be used when the security
+	 * implications of relative URIs are not clear.
+	 *
+	 * @param uri   An absolute URI.
+	 */
+	URI(const char *url)
+			: mContext(URIContext(), url) {
+		findSlash(url);
 	}
 
 	/** Constructs an absolute URI. To be used when the security
@@ -319,19 +333,7 @@ public:
 	 */
 	URI(const std::string &url)
 			: mContext(URIContext(), url) {
-		std::string::size_type slash = url.rfind('/');
-		if (slash != std::string::npos) {
-			// FIXME: handle incomplete URIs correctly
-			if (slash > 0 && url[slash-1] == '/' && !(slash > 1 && url[slash-2] == '/')) {
-				// this is actually a hostname section... don't copy it into the filename.
-				// unless there were three slashes in a row.
-				mPath = std::string();
-			} else {
-				mPath = url.substr(slash+1);
-			}
-		} else{
-			mPath = url;
-		}
+		findSlash(url);
 	}
 
 	/** Gets the corresponding context, from which you can construct

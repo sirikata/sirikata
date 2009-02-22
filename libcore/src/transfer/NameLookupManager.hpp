@@ -36,6 +36,7 @@
 
 #include "URI.hpp"
 #include "ServiceLookup.hpp"
+#include "ProtocolRegistry.hpp"
 
 namespace Sirikata {
 namespace Transfer {

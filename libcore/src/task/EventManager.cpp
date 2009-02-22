@@ -38,6 +38,9 @@
 
 #include <iostream>
 
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+
 namespace Sirikata {
 
 /**
@@ -48,6 +51,42 @@ namespace Sirikata {
 
 
 namespace Task {
+
+template <class T>
+EventManager<T>::EventManager(bool useCV)
+		: mEventCV(NULL), mEventLock(NULL), mCleanup(false) {
+	if (useCV) {
+		mEventCV = new boost::condition_variable;
+		mEventLock = new boost::mutex;
+	}
+}
+
+template <class T>
+EventManager<T>::~EventManager() {
+	if (mEventCV && mEventLock) {
+		boost::mutex *lock = (boost::mutex *)mEventLock;
+		boost::condition_variable *cv = (boost::condition_variable *)mEventCV;
+
+		boost::mutex destroyMutex;
+		boost::condition_variable destroyCV;
+
+		{
+			boost::unique_lock<boost::mutex> destroylock(destroyMutex);
+			mCleanup = true;
+
+			mEventCV = &destroyCV;
+			mEventLock = &destroyMutex;
+
+			cv->notify_one();
+
+			destroyCV.wait(destroylock);
+		}
+
+		delete lock;
+		delete cv;
+	}
+}
+
 
 
 // ============= SUBSCRIPTION FUNCTIONS ==============
@@ -96,6 +135,7 @@ void EventManager<T>::subscribe(const IdPair &eventId,
 	mListenerRequests.push(ListenerRequest(
 			SubscriptionIdClass::null(),
 			eventId, listener, whichOrder));
+
 }
 
 template <class T>
@@ -109,7 +149,7 @@ void EventManager<T>::subscribe(const IdPair::Primary & primaryId,
 
 	mListenerRequests.push(ListenerRequest(
 			SubscriptionIdClass::null(),
-			IdPair(primaryId), listener, whichOrder));
+			primaryId, listener, whichOrder));
 }
 
 template <class T>
@@ -144,7 +184,7 @@ SubscriptionId EventManager<T>::subscribeId(
 
 	mListenerRequests.push(ListenerRequest(
 			removeId,
-			IdPair(priId), listener, whichOrder));
+			priId, listener, whichOrder));
 
 	return removeId;
 }
@@ -231,7 +271,7 @@ void EventManager<T>::doUnsubscribe(
 	typename RemoveMap::iterator iter = mRemoveById.find(removeId);
 	if (iter == mRemoveById.end()) {
 		std::cerr << "!!! Unsubscribe for removeId " << removeId <<
-			" -- usually this is from a double-unsubscribe. ";
+			" -- usually this is from a double-unsubscribe. " << std::endl;
 	} else {
 		EventSubscriptionInfo &subInfo = (*iter).second;
 		std::cout << "**** Unsubscribe " << removeId;
@@ -279,6 +319,11 @@ void EventManager<T>::fire(EventPtr ev) {
 	std::cout << "**** Firing event " << (void*)(&(*ev)) <<
 		" with " << ev->getId() << std::endl;
 	mUnprocessed.push(ev);
+
+	if (mEventCV && !mCleanup) {
+		boost::condition_variable *cv = (boost::condition_variable *)mEventCV;
+		cv->notify_one();
+	}
 };
 
 
@@ -299,6 +344,8 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 	 * The reason for this is 'iter' or 'next' may end up getting
 	 * deleted in the process.
 	 */
+	std::cout << " >>>\tHas " << lili->size() <<
+		" Listeners registered." << std::endl;
 	while (iter!=lili->end()) {
 		typename ListenerList::iterator next = iter;
 		++next;
@@ -355,6 +402,47 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 				doUnsubscribe(req->listenerId, req->notifyListener);
 			}
 		}
+	}
+
+	{
+		std::cout << "==== All Event Subscribers for " << (intptr_t)this << " ====" << std::endl;
+		typename PrimaryListenerMap::const_iterator priIter =
+			mListeners.begin();
+		while (priIter != mListeners.end()) {
+			std::cout << "  ID " << (*priIter).first << ":" << std::endl;
+			PartiallyOrderedListenerList *primaryLists =
+				&((*priIter).second->first);
+			SecondaryListenerMap *secondaryMap =
+				&((*priIter).second->second);
+
+			for (int i = 0; i < NUM_EVENTORDER; i++) {
+				ListenerList *currentList = &(primaryLists->get(i));
+				for (typename ListenerList::const_iterator iter = currentList->begin();
+						iter != currentList->end(); ++iter) {
+					std::cout << " \t"
+						"[" << (i==MIDDLE?'=':i<MIDDLE?'*':'/') << "] " <<
+						(*iter).second << std::endl;
+				}
+			}
+
+			typename SecondaryListenerMap::const_iterator secIter;
+			secIter = secondaryMap->begin();
+			while (secIter != secondaryMap->end()) {
+				std::cout << "\tSec ID " << (*secIter).first << ":" << std::endl;
+				for (int i = 0; i < NUM_EVENTORDER; i++) {
+					ListenerList *currentList = &((*secIter).second->get(i));
+					for (typename ListenerList::const_iterator iter = currentList->begin();
+							iter != currentList->end(); ++iter) {
+						std::cout << " \t\t"
+							"[" << (i==MIDDLE?'=':i<MIDDLE?'*':'/') << "] " <<
+							(*iter).second << std::endl;
+					}
+				}
+				++secIter;
+			}
+			++priIter;
+		}
+		std::cout << "==== ---------------------------------- ====" << std::endl;
 	}
 
 	EventPtr *evTemp;
@@ -423,6 +511,29 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	std::cout << "**** Done processing events this round. " <<
 		"Took " << (float)(finishTime-startTime) <<
 		" seconds." << std::endl;
+}
+
+template <class T>
+void EventManager<T>::sleep_processEventQueue() {
+	boost::mutex *lock = (boost::mutex *)mEventLock;
+	boost::condition_variable *cv = (boost::condition_variable *)mEventCV;
+
+	{
+		boost::unique_lock<boost::mutex> waitforevent (*lock);
+		while (!mCleanup) {
+			cv->wait(waitforevent);
+			temporary_processEventQueue(AbsTime::null());
+		}
+	}
+	{
+		boost::mutex *destroylock = (boost::mutex *)mEventLock;
+		boost::condition_variable *destroycv = (boost::condition_variable *)mEventCV;
+
+		boost::unique_lock<boost::mutex> destroyhaslock(*destroylock);
+
+		destroycv->notify_one(); // notify destructor that I am returning.
+		return;
+	}
 }
 
 // instantiate any versions of this queue.

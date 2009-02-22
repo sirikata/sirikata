@@ -44,6 +44,17 @@ public:
 private:
     Array<unsigned char,static_size> mData;
 public:
+	/** Take the first sizeof(size_t) bytes of the SHA256
+	 * as a valid hash for an unordered_map.
+	 *
+	 * Note: does not pay attention to endianness.
+	 */
+	struct Hasher {
+		size_t operator() (const SHA256 &hash) const{
+			return *((size_t*)(hash.rawData().data()));
+		}
+	};
+
     unsigned int size()const{
         return static_size;
     }

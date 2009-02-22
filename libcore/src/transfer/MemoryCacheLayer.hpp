@@ -35,6 +35,7 @@
 #define SIRIKATA_MemoryCacheLayer_HPP__
 
 #include "CacheLayer.hpp"
+#include "CacheMap.hpp"
 
 namespace Sirikata {
 /** MemoryCacheLayer.hpp -- MemoryCacheLayer -- the first layer of transfer cache. */
@@ -66,15 +67,8 @@ protected:
 				} else {
 					CacheData *cdata = static_cast<CacheData*>(*writer);
 					cdata->mSparse.addValidData(respondData);
-					std::cout << fileId << " already exists";
-					for (SparseData::const_iterator iter = cdata->mSparse.begin();
-							iter != cdata->mSparse.end();
-							++iter) {
-						std::cout << ',' << (*iter);
-						if ((Range)(*iter) == (Range)(*respondData)) {
-							std::cout << '*';
-						}
-					}
+					std::cout << fileId << " already exists: ";
+					Range::printRangeList(std::cout, cdata->mSparse, (Range)(*respondData));
 					std::cout << std::endl;
 					writer.update(cdata->mSparse.getSpaceUsed());
 				}

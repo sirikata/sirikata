@@ -34,10 +34,15 @@
 #ifndef SIRIKATA_TransferManager_HPP__
 #define SIRIKATA_TransferManager_HPP__
 
-#include "CacheLayer.hpp"
+#include "task/Event.hpp"
+#include "URI.hpp"
+#include "TransferData.hpp"
+#include "task/EventManager.hpp" // for EventListener
 
 namespace Sirikata {
 namespace Transfer {
+
+static const char *DownloadEventId = "DownloadFinished";
 
 /** Manages requests going into the cache.
  *
@@ -46,46 +51,63 @@ namespace Transfer {
  * @see CacheLayer
  */
 class TransferManager {
-	CacheLayer *mFirstTransferLayer;
+public:
+	typedef Task::GenEventManager::EventListener EventListener;
 
-	/*
-	struct RequestInfo {
-		bool mPending; //pending overlapping requests.
+	enum Status {SUCCESS, FAIL_UNIMPLEMENTED, FAIL_NAMELOOKUP, FAIL_DOWNLOAD};
 
-		Range mReqRange;
-		std::tr1::function<void(const Fingerprint&, const SparseData*)> mCallback;
+	struct DownloadEvent : public Task::Event {
+
+		const RemoteFileId mFileId;
+		const SparseData mData;
+		const Status mStatus;
+
+		static Task::IdPair getIdPair(const RemoteFileId &fileId) {
+			return Task::IdPair(DownloadEventId, fileId.fingerprint().convertToHexString());
+		}
+		DownloadEvent(Status stat, const RemoteFileId &fileId, const SparseData *data)
+			: Task::Event(getIdPair(fileId)),
+				mFileId(fileId), mData(data?(*data):SparseData()), mStatus(stat) {
+		}
+
+		const Fingerprint &fingerprint() const {
+			return mFileId.fingerprint();
+		}
+		const URI &uri() const {
+			return mFileId.uri();
+		}
+		const SparseData &data() const {
+			return mData;
+		}
+		bool success() const {
+			return mStatus == SUCCESS;
+		}
 	};
-	typedef std::map<Fingerprint, std::list<RequestInfo> > RequestMap;
-	RequestMap mActiveRequests;
-	 */
-	//boost::mutex mLock;
+	typedef boost::shared_ptr<DownloadEvent> DownloadEventPtr;
+
 public:
 
-	TransferManager(CacheLayer *firstLayer)
-			: mFirstTransferLayer(firstLayer) {
+	// TODO: Handle multiple name lookups at the same time to the same filename. Is this possible? worth doing?
+
+	virtual void purgeFromCache(const Fingerprint &fprint) {
 	}
 
-	/*
-	void finishedRequest(const URI &name, const std::tr1::function<void(const URI&,
-			const SparseData*, bool)>&callback) {
-		// TODO: What to do when finished?
-	}
-	*/
-
-	inline void purgeFromCache(const Fingerprint &fprint) {
-		mFirstTransferLayer->purgeFromCache(fprint);
+	virtual void download(const URI &name, const EventListener &listener, const Range &range) {
+		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, RemoteFileId(), NULL)));
 	}
 
-	void download(const RemoteFileId &name,
-                  const std::tr1::function<void(const SparseData*)>&callback,
-				Range range) {
-		// check for overlapping requests.
-		// if overlapping, put in "pendingOn"
-		// if not,
-		//mFirstTransferLayer->getData(name, range, std::tr1::bind(&TransferManager::finishedRequest, this, name, callback));
-		mFirstTransferLayer->getData(name, range, callback);
+	virtual void downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
+		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, RemoteFileId(), NULL)));
+	}
+
+	/// Not yet implemented -- may be moved outside of TransferManager.
+	virtual bool upload(const URI &name, const SparseData &toUpload) {
+		return false;
 	}
 };
+
+typedef TransferManager::DownloadEvent DownloadEvent;
+typedef TransferManager::DownloadEventPtr DownloadEventPtr;
 
 }
 }
