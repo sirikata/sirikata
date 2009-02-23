@@ -69,6 +69,11 @@ public:
      */
     static String filename(const String& name);
 private:
+    /** Returns true if the library's filename matches the pattern required
+     *  for shared libraries on this platform.
+     */
+    bool isValidLibraryFilename() const;
+
     String mPath;
     DL_HANDLE mHandle;
 }; // class DynamicLibrary

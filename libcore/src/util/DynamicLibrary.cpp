@@ -31,6 +31,7 @@
  */
 #include "util/Standard.hh"
 #include "util/DynamicLibrary.hpp"
+#include <boost/filesystem.hpp>
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 #  define WIN32_LEAN_AND_MEAN
@@ -55,6 +56,9 @@ DynamicLibrary::~DynamicLibrary() {
 bool DynamicLibrary::load() {
     if (mHandle != NULL)
         return true;
+
+    if (!isValidLibraryFilename())
+        return false;
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     mHandle = LoadLibrary(mPath.c_str());
@@ -123,6 +127,27 @@ String DynamicLibrary::filename(const String& path, const String& name) {
     result += filename(name);
 
     return result;
+}
+
+bool DynamicLibrary::isValidLibraryFilename() const {
+    using namespace boost::filesystem;
+
+    String pref = prefix();
+    String ext = extension();
+
+    path bfs_path = mPath;
+    // FIXME this should be bfs_path.leaf() in 1.35, bfs_path.filename() in
+    // 1.37.  Instead, just do this manually.
+    String libfilename = bfs_path.empty() ? String() : *--bfs_path.end();
+
+    if (libfilename.substr(0, pref.size()) != pref)
+        return false;
+
+    if (libfilename.size() < ext.size() ||
+        libfilename.substr(libfilename.size() - ext.size()) != ext )
+        return false;
+
+    return true;
 }
 
 } // namespace Sirikata
