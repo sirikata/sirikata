@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPDefinitions.hpp
+ *  TCPSetCallbacks.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,18 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _TCPDefinitions_HPP_
-#define _TCPDefinitions_HPP_
-
-#include <boost/asio.hpp>
-#include <boost/system/system_error.hpp>
-#include <boost/thread/shared_mutex.hpp>
 namespace Sirikata { namespace Network {
-typedef boost::asio::io_service IOService;
-typedef boost::asio::ip::tcp::acceptor TCPListener;
-typedef boost::asio::ip::tcp::socket TCPSocket;
-class MultiplexedSocket;
-void MakeTCPReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
-
+class TCPSetCallbacks:public Stream::SetCallbacks {
+public:
+    TCPStream::Callbacks* mCallbacks;
+    TCPStream*mStream;
+    MultiplexedSocket*mMultiSocket;
+    TCPSetCallbacks(MultiplexedSocket*ms,TCPStream *strm):mCallbacks(NULL),mStream(strm),mMultiSocket(ms) {
+    }
+    virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
+                            const Stream::BytesReceivedCallback &bytesReceivedCallback){
+        mCallbacks=new TCPStream::Callbacks(connectionCallback,
+                                            bytesReceivedCallback);
+        mMultiSocket->addCallbacks(mStream->getID(),mCallbacks);
+    }
+};
 } }
-#endif

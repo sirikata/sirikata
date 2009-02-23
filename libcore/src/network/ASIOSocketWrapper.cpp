@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPDefinitions.hpp
+ *  ASIOSocketWrapper.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,18 +30,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _TCPDefinitions_HPP_
-#define _TCPDefinitions_HPP_
 
-#include <boost/asio.hpp>
-#include <boost/system/system_error.hpp>
-#include <boost/thread/shared_mutex.hpp>
+#include "util/Standard.hh"
+#include "TCPDefinitions.hpp"
+#include "TCPStream.hpp"
+#include "util/ThreadSafeQueue.hpp"
+#include "ASIOSocketWrapper.hpp"
+#include "MultiplexedSocket.hpp"
+
 namespace Sirikata { namespace Network {
-typedef boost::asio::io_service IOService;
-typedef boost::asio::ip::tcp::acceptor TCPListener;
-typedef boost::asio::ip::tcp::socket TCPSocket;
-class MultiplexedSocket;
-void MakeTCPReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
+const uint32 ASIOSocketWrapper::ASYNCHRONOUS_SEND_FLAG;
+const uint32 ASIOSocketWrapper::QUEUE_CHECK_FLAG;
+const size_t ASIOSocketWrapper::PACKET_BUFFER_SIZE;
+void copyHeader(void * destination, const UUID&key, unsigned int num) {
+    std::memcpy(destination,TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH);
+    ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH]='0'+(num/10)%10;
+    ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH+1]='0'+(num%10);
+    std::memcpy(((char*)destination)+TCPStream::STRING_PREFIX_LENGTH+2,
+                key.getArray().begin(),
+                UUID::static_size);
+}
+
+void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections) {
+    UUID return_value=UUID::random();
+    
+    Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
+    copyHeader(&*headerData->begin(),value,numConnections);
+    rawSend(parentMultiSocket,headerData);
+}
 
 } }
-#endif

@@ -85,6 +85,17 @@ class MultiplexedSocket;
 class TCPStream:public Stream {
 public:
     class Callbacks;
+    static const char * STRING_PREFIX() {
+        return "SSTTCP";
+    }
+    enum HeaderSizeEnumerant {
+        STRING_PREFIX_LENGTH=6,
+        TcpSstHeaderSize=24
+    };
+    enum TCPStreamControlCodes {
+        TCPStreamCloseStream=1,
+        TCPStreamAckCloseStream=2
+    };
 private:
     friend class MultiplexedSocket;
     ///The low level boost::asio io service handle

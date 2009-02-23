@@ -442,8 +442,12 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
+	${LIBCORE_SOURCE_DIR}/network/ASIOConnectAndHandshake.cpp
+	${LIBCORE_SOURCE_DIR}/network/ASIOSocketWrapper.cpp
+	${LIBCORE_SOURCE_DIR}/network/MultiplexedSocket.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp
 	${LIBCORE_SOURCE_DIR}/network/TCPStream.cpp
+	${LIBCORE_SOURCE_DIR}/network/TCPReadBuffer.cpp
 	${LIBCORE_SOURCE_DIR}/network/TCPStreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
