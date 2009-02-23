@@ -82,7 +82,6 @@ class ASIOSocketWrapper {
     static const uint32 QUEUE_CHECK_FLAG=(1<<30);
     static const size_t PACKET_BUFFER_SIZE=1400;
     uint8 mBuffer[PACKET_BUFFER_SIZE];
-    friend class MultiplexedSocket;
     typedef boost::system::error_code ErrorCode;
 /**
  * This function sets the QUEUE_CHECK_FLAG and checks the sendQueue for additional packets to send out.
@@ -318,7 +317,25 @@ public:
     }
     TCPSocket&getSocket() {return *mSocket;}
     const TCPSocket&getSocket()const {return *mSocket;}
-
+    void shutdownAndClose() {
+            try {
+                mSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+            }catch (boost::system::system_error&err) {
+                std::cerr<< "Error shutting down socket "<<err.what()<<std::endl;
+            }
+            try {
+                mSocket->close();
+            }catch (boost::system::system_error&err) {                
+                std::cerr<< "Error closing socket "<<err.what()<<std::endl;
+            }
+    }
+    void createSocket(IOService&io) {
+        mSocket=new TCPSocket(io);
+    }
+    void destroySocket() {
+        delete mSocket;
+        mSocket=NULL;
+    }
     /**
      * Sends the exact bytes contained within the typedeffed vector
      * \param chunk is the exact bytes to put on the network (including streamID and framing data)
@@ -777,24 +794,11 @@ public:
         TCPSetCallbacks setCallbackFunctor(this,NULL);        
         callbackToBeDeleted(NULL,setCallbackFunctor);
         for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
-            try {
-                mSockets[i].mSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            }catch (boost::system::system_error&err) {
-                std::cerr<< "Error shutting down socket "<<err.what()<<std::endl;
-            }
-        }
-        
+            mSockets[i].shutdownAndClose();
+        }        
+        boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);        
         for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
-            try {
-                mSockets[i].mSocket->close();
-            }catch (boost::system::system_error&err) {
-                std::cerr<< "Error closing down socket"<<std::endl;
-            }
-        }
-        boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
-        
-        for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
-            delete mSockets[i].mSocket;
+            mSockets[i].destroySocket();
         }
         mSockets.clear();
         
@@ -1003,7 +1007,7 @@ public:
         mSocketConnectionPhase=PRECONNECTION;
         mSockets.resize(numSockets);
         for (unsigned int i=0;i<numSockets;++i) {
-            mSockets[i].mSocket=new TCPSocket(getASIOService());
+            mSockets[i].createSocket(getASIOService());
         }
         std::tr1::shared_ptr<ASIOConnectAndHandshake> 
             headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
