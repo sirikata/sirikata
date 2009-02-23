@@ -38,6 +38,7 @@
 #include "CacheLayer.hpp"
 #include "NameLookupManager.hpp"
 #include "TransferManager.hpp"
+#include "util/AtomicTypes.hpp"
 
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
@@ -52,20 +53,25 @@ class EventTransferManager : public TransferManager {
 	CacheLayer *mFirstTransferLayer;
 	NameLookupManager *mNameLookup;
 	Task::GenEventManager *mEventSystem;
+	volatile bool mCleanup;
+	AtomicValue<int> mPendingCleanup;
+	boost::condition_variable mCleanupCV;
 
 	typedef std::tr1::unordered_multimap<Fingerprint, Range, Fingerprint::Hasher> DownloadRangeMap;
 	DownloadRangeMap mActiveTransfers;
 
 	boost::mutex mMutex;
 
-	void downloadFinished(const RemoteFileId &remoteid, const SparseData *downloadedData) {
+	void downloadFinished(const RemoteFileId &remoteid, const Range &range, const SparseData *downloadedData) {
 		bool found = true;
 		{
 			boost::unique_lock<boost::mutex> l(mMutex);
 			DownloadRangeMap::const_iterator iter =
 				mActiveTransfers.find(remoteid.fingerprint());
 			while (iter != mActiveTransfers.end() && (*iter).first == remoteid.fingerprint()) {
-				if ((*iter).second.isContainedBy(*downloadedData)) {
+				if (downloadedData ?
+						((*iter).second.isContainedBy(*downloadedData)) :
+						((*iter).second == range)) {
 					// Return value is the iterator immediately following q prior to the erasure.
 					iter = mActiveTransfers.erase(iter);
 					found = true;
@@ -91,32 +97,58 @@ class EventTransferManager : public TransferManager {
 	void downloadNameLookupSuccess(const EventListener &listener, const Range &range, const RemoteFileId *remoteid) {
 		if (!remoteid) {
 			listener(DownloadEventPtr(new DownloadEvent(FAIL_NAMELOOKUP, RemoteFileId(), NULL)));
-			return;
-		}
-
-		{
+		} else {
 			boost::unique_lock<boost::mutex> l(mMutex);
+
+			if (mCleanup) {
+				listener(DownloadEventPtr(new DownloadEvent(FAIL_SHUTDOWN, *remoteid, NULL)));
+				if (--mPendingCleanup == 0) {
+					if (mCleanup) {
+						mCleanupCV.notify_one(); // We are the last one to finish.
+					}
+				}
+				return;
+			}
 
 			DownloadRangeMap::const_iterator iter =
 				mActiveTransfers.find(remoteid->fingerprint());
 			bool found = false;
 			while (iter != mActiveTransfers.end() && (*iter).first == remoteid->fingerprint()) {
 				if (range.isContainedBy((*iter).second)) {
+					std::cout << "ISContained " << range << " " << (*iter).second << std::endl;
 					found = true;
 					break;
 				}
 				++iter;
 			}
+			std::cout << "Getting " << range << " (found = " << found << ")" << std::endl;
+			mEventSystem->subscribe(DownloadEvent::getIdPair(*remoteid), listener);
 			if (!found) {
 				mActiveTransfers.insert(
 					DownloadRangeMap::value_type(remoteid->fingerprint(), range));
-				mFirstTransferLayer->getData(*remoteid, range,
-					std::tr1::bind(&EventTransferManager::downloadFinished, this, *remoteid, _1));
+				CacheLayer * theCacheLayer = mFirstTransferLayer;
+				// release lock after subscribing to ensure that event does not fire until now.
+				l.unlock();
+
+				/* Don't want to own a lock here, but also need to make sure
+				 * nobody deletes mFirstTransferLayer while we are in the call.
+				 * For any asynchronous callbacks, CacheLayer will handle cleanup,
+				 * but for synchronous callbacks it is our responsibility.
+				 */
+
+				// FIXME: mFirstTransferLayer may be destroyed if cleanup is called after previous check.
+				theCacheLayer->getData(*remoteid, range,
+					std::tr1::bind(&EventTransferManager::downloadFinished, this, *remoteid, range, _1));
+
 			}
 
-			mEventSystem->subscribe(DownloadEvent::getIdPair(*remoteid), listener);
 		}
-		// release lock after subscribing to ensure that event does not fire yet.
+
+		if (--mPendingCleanup == 0) {
+			if (mCleanup) {
+				mCleanupCV.notify_one(); // We are the last one to finish.
+			}
+		}
 	}
 
 	/*
@@ -133,20 +165,46 @@ class EventTransferManager : public TransferManager {
 public:
 
 	EventTransferManager(CacheLayer *download, NameLookupManager *nameLookup, Task::GenEventManager *eventSystem)
-			: mFirstTransferLayer(download), mNameLookup(nameLookup), mEventSystem(eventSystem) {
+			: mFirstTransferLayer(download), mNameLookup(nameLookup), mEventSystem(eventSystem),
+			mCleanup(false), mPendingCleanup(0) {
 	}
 
-	/// For debugging only
+	virtual void cleanup() {
+		{
+			boost::unique_lock<boost::mutex> cleanuplock(mMutex);
+
+			// mEventSystem is still used to send out last-minute notifications of aborted transfers.
+			// But delete the rest:
+			mCleanup = true;
+			mNameLookup = NULL;
+			mFirstTransferLayer = NULL;
+
+			while (mPendingCleanup.read() != 0) {
+				// Wait for any downloadNameLookupSuccess callbacks to return.
+				mCleanupCV.wait(cleanuplock);
+			}
+		}
+
+	}
+
+	virtual ~EventTransferManager() {
+		boost::unique_lock<boost::mutex> cleanuplock(mMutex);
+		//mEventSystem->fire(DownloadEventPtr(new DownloadEvent(FAIL_SHUTDOWN, RemoteFileId(), NULL)));
+	}
+
 	virtual void purgeFromCache(const Fingerprint &fprint) {
 		mFirstTransferLayer->purgeFromCache(fprint);
 	}
 
 	virtual void download(const URI &name, const EventListener &listener, const Range &range) {
+		// TODO: Handle multiple name lookups at the same time to the same filename. Is this possible? worth doing?
+		++mPendingCleanup;
 		mNameLookup->lookupHash(name, std::tr1::bind(&EventTransferManager::downloadNameLookupSuccess, this, listener, range, _1));
 	}
 
 	virtual void downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
 		// This is the same as if the download() function got a cached name lookup response.
+		++mPendingCleanup;
 		downloadNameLookupSuccess(listener, range, &name);
 	}
 

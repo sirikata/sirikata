@@ -197,14 +197,30 @@ public:
 		return found;
 	}
 
-	bool isContainedBy(const Range &other) const {
-		return (this->startbyte() >= other.startbyte()) &&
-			(this->endbyte() <= other.endbyte());
+	inline bool contains(const Range &other) const {
+		if (this->goesToEndOfFile()) {
+			// endbyte infinitely long -- can contain anything.
+			return (other.startbyte() >= this->startbyte());
+		} else if (!this->goesToEndOfFile() && other.goesToEndOfFile()) {
+			// endbyte is not infinite.
+			return false;
+		} else {
+			return (other.startbyte() >= this->startbyte()) &&
+				(other.endbyte() <= this->endbyte());
+		}
+	}
+
+	inline bool isContainedBy(const Range &other) const {
+		return other.contains(*this);
 	}
 
 	/// Removes overlapping ranges if possible (assumes a list ordered by starting byte).
 	template <class ListType>
 	void addToList(const typename ListType::value_type &data, ListType &list) const {
+		if (length()<=0) {
+			// Ensure that no dummy data will get added. Shouldn't get here.
+			return;
+		}
 		if (startbyte()==0 && goesToEndOfFile()) {
 			// favor a single chunk covering the whole file.
 			list.clear();

@@ -155,6 +155,11 @@ public:
 		return mSparseData.clear();
 	}
 
+	/// Is there any data.
+	inline bool empty() const {
+		return mSparseData.empty();
+	}
+
 	///adds a range of valid data to the SparseData set.
 	void addValidData(const DenseDataPtr &data) {
 		data->addToList(data, *this);

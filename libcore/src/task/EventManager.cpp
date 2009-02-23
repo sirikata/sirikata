@@ -72,12 +72,15 @@ EventManager<T>::~EventManager() {
 
 		{
 			boost::unique_lock<boost::mutex> destroylock(destroyMutex);
-			mCleanup = true;
 
 			mEventCV = &destroyCV;
 			mEventLock = &destroyMutex;
 
-			cv->notify_one();
+			{
+				boost::unique_lock<boost::mutex> templock(*lock);
+				mCleanup = true;
+				cv->notify_one();
+			}
 
 			destroyCV.wait(destroylock);
 		}

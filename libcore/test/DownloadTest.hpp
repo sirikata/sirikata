@@ -124,15 +124,22 @@ public:
 		finishedTest = 0;
 	}
 	void tearDown() {
-		delete mTransferManager;
-		delete mNetworkCache;
-		delete mMemoryCache;
-		delete mCachedNetworkCache;
-		delete mDownloadReg;
+		// Deletion order:
+		mTransferManager->cleanup();
+		// First delete name lookups
 		delete mNameLookup;
 		delete mCachedNameLookup;
 		delete mNameLookupReg;
+
+		// First delete data transfer -- this will cause all
+		// delete non-cached CacheLayer
+		delete mNetworkCache;
+			// also the cached CacheLayer
+		delete mMemoryCache;
+		delete mCachedNetworkCache; // CacheLayer's deleted from first to last.
+		delete mDownloadReg; // Download registry must be deleted after the NetworkCacheLayer.
 		delete mService;
+		delete mTransferManager;
 		delete mEventSystem;
 		delete mEventProcessThread;
 
@@ -168,13 +175,31 @@ public:
 		waitFor(2);
 	}
 
-	void brokentestCombiningRangedFileDownload() {
+	Task::EventResponse downloadCheckRange(const Range &toCheck, Task::EventPtr evbase) {
+		Transfer::DownloadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent> (evbase);
+		std::cout << toCheck << std::endl;
+		if (ev->data().empty()) {
+			std::stringstream msg;
+			msg << "Got empty data for " << toCheck << "!";
+			TS_FAIL(msg.str());
+			notifyOne();
+			return Task::EventResponse::del();
+		} else if (toCheck.isContainedBy(ev->data())) {
+			TS_ASSERT_EQUALS(ev->getStatus(), Transfer::TransferManager::SUCCESS);
+			notifyOne();
+			return Task::EventResponse::del();
+		} else {
+			return Task::EventResponse::nop();
+		}
+	}
+
+	void testCombiningRangedFileDownload() {
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadFinished, this, _1), Range(0,3, Transfer::BOUNDS));
+			boost::bind(&DownloadTest::downloadCheckRange, this, Range(0,3, Transfer::BOUNDS), _1), Range(0,3, Transfer::BOUNDS));
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+			boost::bind(&DownloadTest::downloadCheckRange, this, Range(true), _1), Range(true));
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadFinished, this, _1), Range(2));
-		waitFor(2);
+			boost::bind(&DownloadTest::downloadCheckRange, this, Range(2, true), _1), Range(2, true));
+		waitFor(3);
 	}
 };

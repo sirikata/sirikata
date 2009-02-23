@@ -129,7 +129,7 @@ public:
     /**
      * Fills the SHA256 with array of entirely 0's.
      */
-    const SHA256&nil(){
+    static const SHA256&nil(){
         static SHA256 nil;
         static char empty_array[static_size]={0};
         static void* result=std::memcpy(nil.mData.data(),empty_array,static_size);
@@ -138,7 +138,7 @@ public:
     /**
      * Computes the digest of an empty file and returns that digest
      */
-    const SHA256&emptyDigest() {
+    static const SHA256&emptyDigest() {
         static SHA256 empty=computeDigest(NULL,0);
         return empty;
     }

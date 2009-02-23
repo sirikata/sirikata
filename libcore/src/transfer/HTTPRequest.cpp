@@ -440,7 +440,7 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 			return;
 		}
 		nontrivialRange=true;
-		orangestring << (mRequestedRange.endbyte()-1);
+		orangestring << (mRequestedRange.endbyte());
 	}
 
 	if (nontrivialRange) {

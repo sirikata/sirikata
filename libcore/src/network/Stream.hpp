@@ -33,7 +33,9 @@
 #ifndef SIRIKATA_Stream_HPP__
 #define SIRIKATA_Stream_HPP__
 #include "Address.hpp"
-namespace Sirikata { namespace Network {
+namespace Sirikata {
+/// Network contains Stream and TCPStream.
+namespace Network {
 typedef std::vector<uint8> Chunk;
 /**
  * This is the stream interface by which applications will send packets to the world
