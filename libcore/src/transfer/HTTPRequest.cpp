@@ -329,16 +329,16 @@ void HTTPRequest::curlLoop () {
 					success = false;
 				}
 				curl_easy_cleanup(handle);
-				access_curl_handle.unlock(); // the callback may start a new HTTP transfer.
+				request->mCurlRequest = NULL; // handle is freed.
 
 				CallbackFunc temp (request->mCallback);
 				DenseDataPtr finishedData(request->getData());
 				request->mCallback = nullCallback;
-				request->mCurlRequest = NULL;
 
 				boost::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
 				request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
 
+				access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.
 				temp(request, finishedData, success); // may delete request.
 
 				// now tempPtr is allowed to free request.
@@ -395,16 +395,19 @@ void HTTPRequest::curlLoop () {
 void HTTPRequest::abort() {
 	if (mCurlRequest) {
 		boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
-
-		curl_multi_remove_handle(curlm, mCurlRequest);
-		curl_easy_cleanup(mCurlRequest);
-		mCurlRequest = NULL;
+		if (mCurlRequest) {
+			curl_multi_remove_handle(curlm, mCurlRequest);
+			curl_easy_cleanup(mCurlRequest);
+			mCurlRequest = NULL;
+		}
 	}
 	CallbackFunc temp (mCallback);
 	mCallback = nullCallback;
+	HTTPRequestPtr ptr = mPreventDeletion;
 	mPreventDeletion.reset(); // may delete this.
 
 	temp(this, getData(), false);
+	// ptr will now be deallocated.
 }
 
 void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
