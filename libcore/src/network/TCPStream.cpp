@@ -83,7 +83,7 @@ class ASIOSocketWrapper {
     static const size_t PACKET_BUFFER_SIZE=1400;
     uint8 mBuffer[PACKET_BUFFER_SIZE];
     friend class MultiplexedSocket;
-
+    typedef boost::system::error_code ErrorCode;
 /**
  * This function sets the QUEUE_CHECK_FLAG and checks the sendQueue for additional packets to send out.
  * If nothing is in the queue then it unsets the ASYNCHRONOUS_SEND_FLAG and QUEUE_CHECK_FLAGS
@@ -109,7 +109,7 @@ class ASIOSocketWrapper {
      * If the whole Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the finishAsyncSend function is called
      */
-    void sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const boost::system::error_code &error, std::size_t bytes_sent) {
+    void sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
         if (error)  {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
@@ -126,7 +126,7 @@ class ASIOSocketWrapper {
      * If the whole large Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
-    void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const boost::system::error_code &error, std::size_t bytes_sent) {
+    void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
         if (error )   {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
@@ -153,7 +153,7 @@ class ASIOSocketWrapper {
      * in one go.
      * If the whole buffer was shipped off, the sendToWire function is called with the rest of the queue unless it is empty
      */
-    void sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const boost::system::error_code &error, std::size_t bytes_sent) {
+    void sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
         if ( error ) {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
@@ -405,13 +405,14 @@ class TCPReadBuffer {
     Chunk mNewChunk;
     Stream::StreamID mNewChunkID;
     std::tr1::weak_ptr<MultiplexedSocket> mParentSocket;
+    typedef boost::system::error_code ErrorCode;
 public:
     TCPReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
         mBufferPos=0;
         mWhichBuffer=whichSocket;
         readIntoFixedBuffer(parentSocket);
     }
-    void processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error);
+    void processError(MultiplexedSocket*parentSocket, const ErrorCode &error);
     void processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,
                           unsigned int whichSocket,
                           const Stream::StreamID&,
@@ -461,7 +462,7 @@ public:
         mBufferPos-=chunkPos;
         readIntoFixedBuffer(thus);
     }
-    void asioReadIntoChunk(const boost::system::error_code&error,std::size_t bytes_read){
+    void asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read){
 #ifdef TCPSSTLOG
         char TESTs[1024];
         sprintf(TESTs,"%d.socket",(int)(size_t)this);
@@ -490,7 +491,7 @@ public:
             delete this;
         }
     }
-    void asioReadIntoFixedBuffer(const boost::system::error_code&error,std::size_t bytes_read){
+    void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read){
 #ifdef TCPSSTLOG
         char TESTs[1024];
         sprintf(TESTs,"%d.socket",(int)(size_t)this);
@@ -512,8 +513,60 @@ public:
         }
     }
 };
-class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
+
+class ASIOConnectAndHandshake{
     boost::asio::ip::tcp::resolver mResolver;
+    std::tr1::weak_ptr<MultiplexedSocket> mConnection;
+    ///num positive checks remaining (or -n for n sockets of which at least 1 failed)
+    int mFinishedCheckCount;
+    UUID mHeaderUUID;
+    Array<uint8,TcpSstHeaderSize> mFirstReceivedHeader;
+    typedef boost::system::error_code ErrorCode;
+public:
+    ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
+                            const UUID&sharedUuid);
+                            
+   /**
+    * This function checks a particular sockets initial handshake header.
+    * If this is the first header read, it will save it for comparison
+    * If this is the nth header read and everythign is successful it will decrement the first header check integer
+    * If anything goes wrong and it is the first time, it will decrement the first header check integer below zero to indiate error and call connectionFailed
+    * If anything goes wrong and the first header check integer is already below zero it will decline to take action
+    * The buffer passed in will be deleted by this function
+    */
+    void checkHeaderContents(unsigned int whichSocket, 
+                             Array<uint8,TcpSstHeaderSize>* buffer, 
+                             const ErrorCode&error,
+                             std::size_t bytes_received);
+    
+    static void checkHeader(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus, 
+                            unsigned int whichSocket, 
+                            Array<uint8,TcpSstHeaderSize>* buffer, 
+                            const ErrorCode&error,
+                            std::size_t bytes_received) {
+        thus->checkHeaderContents(whichSocket,buffer,error,bytes_received);
+    }
+
+   /**
+    * This function checks if a particular sockets has connected to its destination IP address
+    * If everything is successful it will decrement the first header check integer
+    * If the last resolver fails and it is the first time, it will decrement the first header check integer below zero to indiate error and call connectionFailed
+    * If anything goes wrong and the first header check integer is already below zero it will decline to take action
+    * The buffer passed in will be deleted by this function
+    */
+    static void connectToIPAddress(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+                                   unsigned int whichSocket,
+                                   const tcp::resolver::iterator &it,
+                                   const ErrorCode &error);
+    static void handleResolve(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+                              const boost::system::error_code &error,
+                              tcp::resolver::iterator it);
+    static void connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
+                        const Address&address);
+};
+typedef std::pair<std::pair<int,UUID>,Array<uint8,TcpSstHeaderSize> > HeaderCheck;
+class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
+    IOService*mIO;
     std::vector<ASIOSocketWrapper> mSockets;
 /// these items are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
     static boost::mutex sConnectingMutex;
@@ -612,7 +665,7 @@ class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
         }
     }
 public:
-    IOService&getASIOService(){return mResolver.io_service();}
+    IOService&getASIOService(){return *mIO;}
     static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid) {
         RawRequest closeRequest;
         closeRequest.originStream=Stream::StreamID();//control packet
@@ -679,8 +732,7 @@ public:
     ThreadSafeStack<Stream::StreamID>mFreeStreamIDs;
 #undef ThreadSafeStack
     CallbackMap mCallbacks;
-///a pair of the number sockets - num positive checks (or -n for n sockets of which at least 1 failed) and an example header that passes if the first int is >1
-    typedef std::pair<std::pair<int,UUID>,Array<uint8,TcpSstHeaderSize> > HeaderCheck;
+
     Stream::StreamID getNewID() {
         if (!mFreeStreamIDs.probablyEmpty()) {
             Stream::StreamID retval;
@@ -691,11 +743,11 @@ public:
         assert(retval>1);
         return Stream::StreamID(retval);
     }
-    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):mResolver(*io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
+    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
         mSocketConnectionPhase=PRECONNECTION;
     }
     MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
-        : mResolver(sockets[0]->io_service()),
+        : mIO(&sockets[0]->io_service()),
           mNewSubstreamCallback(substreamCallback),
           mHighestStreamID(0) {
         mSocketConnectionPhase=PRECONNECTION;
@@ -853,16 +905,16 @@ public:
      * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
      * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
      */
-    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&error_code=std::string()) {
+    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage=std::string()) {
         Stream::ConnectionStatus stat=reportedProblem;
         std::deque<StreamIDCallbackPair> registrations;
         bool actuallyDoSend=CommitCallbacks(registrations,status,true);
         if (actuallyDoSend) {
             for (CallbackMap::iterator i=mCallbacks.begin(),ie=mCallbacks.end();i!=ie;++i) {
-                i->second->mConnectionCallback(stat,error_code);
+                i->second->mConnectionCallback(stat,errorMessage);
             }
         }else {
-            //std::cerr<< "Did not call callbacks because callback message already sent for "<<error_code<<'\n';
+            //std::cerr<< "Did not call callbacks because callback message already sent for "<<errorMessage<<'\n';
         }
     }
    /**
@@ -885,14 +937,14 @@ public:
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
     */
-    void connectionFailedCallback(unsigned int whichSocket, const boost::system::error_code& error) {
+    template <class ErrorCode> void connectionFailedCallback(unsigned int whichSocket, const ErrorCode& error) {
         connectionFailedCallback(whichSocket,error.message());
     }
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
     */
-    void connectionFailedCallback(const ASIOSocketWrapper* whichSocket, const boost::system::error_code &error) {
+    template <class ErrorCode> void connectionFailedCallback(const ASIOSocketWrapper* whichSocket, const ErrorCode &error) {
         unsigned int which=0;
         for (std::vector<ASIOSocketWrapper>::iterator i=mSockets.begin(),ie=mSockets.end();i!=ie;++i,++which) {
             if (&*i==whichSocket)
@@ -922,20 +974,20 @@ public:
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
     */
-    void hostDisconnectedCallback(unsigned int whichSocket, const boost::system::error_code& error) {
+    template <class ErrorCode> void hostDisconnectedCallback(unsigned int whichSocket, const ErrorCode& error) {
         hostDisconnectedCallback(whichSocket,error.message());
     }
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
     */
-    void hostDisconnectedCallback(const ASIOSocketWrapper* whichSocket, const boost::system::error_code &error) {
+    template <class ErrorCode> void hostDisconnectedCallback(const ASIOSocketWrapper* whichSocket, const ErrorCode &error) {
         unsigned int which=0;
         for (std::vector<ASIOSocketWrapper>::iterator i=mSockets.begin(),ie=mSockets.end();i!=ie;++i,++which) {
             if (&*i==whichSocket)
                 break;
         }
-        connectionFailedCallback(which==mSockets.size()?0:which,error.message());
+        hostDisconnectedCallback(which==mSockets.size()?0:which,error.message());
     }
 
 
@@ -946,117 +998,153 @@ public:
     void connectedCallback() {
         connectionFailureOrSuccessCallback(CONNECTED,Stream::Connected);
     }
-   /**
-    * This function checks a particular sockets initial handshake header.
-    * If this is the first header read, it will save it for comparison
-    * If this is the nth header read and everythign is successful it will decrement the first header check integer
-    * If anything goes wrong and it is the first time, it will decrement the first header check integer below zero to indiate error and call connectionFailed
-    * If anything goes wrong and the first header check integer is already below zero it will decline to take action
-    * The buffer passed in will be deleted by this function
-    */
-    void checkHeader(unsigned int whichSocket,const std::tr1::shared_ptr<HeaderCheck>&headerCheck, Array<uint8,TcpSstHeaderSize>* buffer, const boost::system::error_code &error, std::size_t bytes_received) {
 
-        if (headerCheck->first.first==(int)mSockets.size()) {
-            headerCheck->second=*buffer;
-        }
-        if (headerCheck->first.first>=1) {
-            if (headerCheck->second!=*buffer) {
-                connectionFailedCallback(whichSocket,"Bad header comparison "
-                                         +std::string((char*)buffer->begin(),TcpSstHeaderSize)
-                                         +" does not match "
-                                         +std::string((char*)headerCheck->second.begin(),TcpSstHeaderSize));
-                headerCheck->first.first-=mSockets.size();
-                headerCheck->first.first-=1;
-            }else {
-                headerCheck->first.first--;
-                if (headerCheck->first.first==0) {
-                    connectedCallback();
-                }
-                new TCPReadBuffer(getSharedPtr(),whichSocket);
-            }
-        }else {
-            headerCheck->first.first-=1;
-        }
-        delete buffer;
-
-    }
-   /**
-    * This function checks if a particular sockets has connected to its destination IP address
-    * If everything is successful it will decrement the first header check integer
-    * If the last resolver fails and it is the first time, it will decrement the first header check integer below zero to indiate error and call connectionFailed
-    * If anything goes wrong and the first header check integer is already below zero it will decline to take action
-    * The buffer passed in will be deleted by this function
-    */
-
-    void connectToIPAddress(unsigned int whichSocket,const std::tr1::shared_ptr<HeaderCheck>&headerCheck,const tcp::resolver::iterator &it,const boost::system::error_code &error) {
-        if (error) {
-            if (it == tcp::resolver::iterator()) {
-                if (headerCheck->first.first>=1) {
-                    headerCheck->first.first-=mSockets.size();
-                    headerCheck->first.first-=1;
-                    connectionFailedCallback(whichSocket,error);
-                }else headerCheck->first.first-=1;
-            }else {
-                tcp::resolver::iterator nextIterator=it;
-                ++nextIterator;
-                //need to use boost::bind instead of TR1::bind to remain compatible with boost::asio::placeholders
-                mSockets[whichSocket].mSocket->async_connect(*it,
-                                                             boost::bind(&MultiplexedSocket::connectToIPAddress,
-                                                                         getSharedPtr(),
-                                                                         whichSocket,
-                                                                         headerCheck,
-                                                                         nextIterator,
-                                                                         boost::asio::placeholders::error));
-            }
-        }else {
-            mSockets[whichSocket].mSocket->set_option(tcp::no_delay(true));
-            mSockets[whichSocket].sendProtocolHeader(getSharedPtr(),headerCheck->first.second,headerCheck->first.first);
-            Array<uint8,TcpSstHeaderSize> *header=new Array<uint8,TcpSstHeaderSize>;
-            //need to use boost::bind instead of tr1::bind to remain compatible with boost::asio::placeholders
-            boost::asio::async_read(*mSockets[whichSocket].mSocket,
-                                    boost::asio::buffer(header->begin(),TcpSstHeaderSize),
-                                    boost::asio::transfer_at_least(TcpSstHeaderSize),
-                                    boost::bind(&MultiplexedSocket::checkHeader,
-                                                getSharedPtr(),
-                                                whichSocket,
-                                                headerCheck,
-                                                header,
-                                                boost::asio::placeholders::error,
-                                                boost::asio::placeholders::bytes_transferred));
-        }
-    }
-    void handleResolve(const std::tr1::shared_ptr<HeaderCheck>&headerCheck,const boost::system::error_code &error, tcp::resolver::iterator it) {
-        if (error) {
-            connectionFailedCallback(error.message());
-        }else {
-            for (unsigned int whichSocket=0;whichSocket<(unsigned int)mSockets.size();++whichSocket) {
-                mSockets[whichSocket].mSocket=new TCPSocket(getASIOService());
-                connectToIPAddress(whichSocket,headerCheck,it,boost::asio::error::host_not_found);
-            }
-        }
-
-    }
     void connect(const Address&address, unsigned int numSockets){
         mSocketConnectionPhase=PRECONNECTION;
         mSockets.resize(numSockets);
-        std::tr1::shared_ptr<HeaderCheck> headerCheck(new HeaderCheck(std::pair<int,UUID>(numSockets,UUID::random()),Array<uint8,TcpSstHeaderSize>()));
-
-        tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
-        mResolver.async_resolve(query,
-                                boost::bind(&MultiplexedSocket::handleResolve, getSharedPtr(),
-                                            headerCheck,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::iterator));
-
+        for (unsigned int i=0;i<numSockets;++i) {
+            mSockets[i].mSocket=new TCPSocket(getASIOService());
+        }
+        std::tr1::shared_ptr<ASIOConnectAndHandshake> 
+            headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
+                                                    UUID::random()));
+        //will notify connectionFailureOrSuccessCallback when resolved
+        ASIOConnectAndHandshake::connect(headerCheck,address);
+        
     }
-    TCPSocket&getSocket(unsigned int whichSocket){
-        return mSockets[whichSocket].getSocket();
+
+    unsigned int numSockets() const {
+        return mSockets.size();
     }
-    const TCPSocket&getSocket(unsigned int whichSocket)const{
-        return mSockets[whichSocket].getSocket();
+    ASIOSocketWrapper&getASIOSocketWrapper(unsigned int whichSocket){
+        return mSockets[whichSocket];
+    }
+    const ASIOSocketWrapper&getASIOSocketWrapper(unsigned int whichSocket)const{
+        return mSockets[whichSocket];
     }
 };
 boost::mutex MultiplexedSocket::sConnectingMutex;
+
+
+ASIOConnectAndHandshake::ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
+                                                 const UUID&sharedUuid):
+    mResolver(connection->getASIOService()),
+        mConnection(connection),
+        mFinishedCheckCount(connection->numSockets()),
+        mHeaderUUID(sharedUuid) {
+}
+void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket, 
+                                                  Array<uint8,TcpSstHeaderSize>* buffer, 
+                                                  const ErrorCode&error,
+                                                  std::size_t bytes_received) {
+    std::tr1::shared_ptr<MultiplexedSocket> connection=mConnection.lock();
+    if (connection) {
+        if (mFinishedCheckCount==(int)connection->numSockets()) {
+            mFirstReceivedHeader=*buffer;
+        }
+        if (mFinishedCheckCount>=1) {
+            if (mFirstReceivedHeader!=*buffer) {
+                connection->connectionFailedCallback(whichSocket,"Bad header comparison "
+                                                     +std::string((char*)buffer->begin(),TcpSstHeaderSize)
+                                                     +" does not match "
+                                                     +std::string((char*)mFirstReceivedHeader.begin(),TcpSstHeaderSize));
+                mFinishedCheckCount-=connection->numSockets();
+                mFinishedCheckCount-=1;
+            }else {
+                mFinishedCheckCount--;
+                if (mFinishedCheckCount==0) {
+                    connection->connectedCallback();
+                }
+                new TCPReadBuffer(connection,whichSocket);
+            }
+        }else {
+            mFinishedCheckCount-=1;
+        }
+    }
+    delete buffer;
+}
+void ASIOConnectAndHandshake::connectToIPAddress(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+                                                 unsigned int whichSocket,
+                                                 const tcp::resolver::iterator &it,
+                                                 const ErrorCode &error) {
+    std::tr1::shared_ptr<MultiplexedSocket> connection=thus->mConnection.lock();
+    if (!connection) {
+        return;
+    }
+    if (error) {
+        if (it == tcp::resolver::iterator()) {
+            //this checks if anyone else has failed
+            if (thus->mFinishedCheckCount>=1) {
+                //We're the first to fail, decrement until negative
+                thus->mFinishedCheckCount-=connection->numSockets();
+                thus->mFinishedCheckCount-=1;
+                connection->connectionFailedCallback(whichSocket,error);
+            }else {
+                //keep it negative, indicate one further failure
+                thus->mFinishedCheckCount-=1;
+            }
+        }else {
+            tcp::resolver::iterator nextIterator=it;
+            ++nextIterator;
+            connection->getASIOSocketWrapper(whichSocket).getSocket()
+                .async_connect(*it,
+                               boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
+                                           thus,
+                                           whichSocket,
+                                           nextIterator,
+                                           boost::asio::placeholders::error));
+        }
+    } else {
+        connection->getASIOSocketWrapper(whichSocket).getSocket()
+            .set_option(tcp::no_delay(true));
+        connection->getASIOSocketWrapper(whichSocket)
+            .sendProtocolHeader(connection,
+                                thus->mHeaderUUID,
+                                connection->numSockets());
+        Array<uint8,TcpSstHeaderSize> *header=new Array<uint8,TcpSstHeaderSize>;
+        boost::asio::async_read(connection->getASIOSocketWrapper(whichSocket).getSocket(),
+                                boost::asio::buffer(header->begin(),TcpSstHeaderSize),
+                                boost::asio::transfer_at_least(TcpSstHeaderSize),
+                                boost::bind(&ASIOConnectAndHandshake::checkHeader,
+                                            thus,
+                                            whichSocket,
+                                            header,
+                                            boost::asio::placeholders::error,
+                                            boost::asio::placeholders::bytes_transferred));
+    }
+}
+void ASIOConnectAndHandshake::handleResolve(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+                                            const boost::system::error_code &error,
+                                            tcp::resolver::iterator it) {
+    std::tr1::shared_ptr<MultiplexedSocket> connection=thus->mConnection.lock();
+    if (!connection) {
+        return;
+    }
+    if (error) {
+        connection->connectionFailedCallback(error.message());
+    }else {
+        unsigned int numSockets=connection->numSockets();
+        for (unsigned int whichSocket=0;whichSocket<numSockets;++whichSocket) {
+            connectToIPAddress(thus,
+                               whichSocket,
+                               it,
+                               boost::asio::error::host_not_found);
+        }
+    }
+    
+}
+void ASIOConnectAndHandshake::connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
+                                      const Address&address){
+    tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
+    thus->mResolver.async_resolve(query,
+                                  boost::bind(&ASIOConnectAndHandshake::handleResolve,
+                                              thus,
+                                              boost::asio::placeholders::error,
+                                              boost::asio::placeholders::iterator));
+    
+}
+
+
 void TCPSetCallbacks::operator()(const Stream::ConnectionCallback &connectionCallback,
                                          const Stream::BytesReceivedCallback &bytesReceivedCallback){
     mCallbacks=new TCPStream::Callbacks(connectionCallback,
@@ -1073,7 +1161,7 @@ void TCPReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocke
 }
 void TCPReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
     parentSocket
-        ->getSocket(mWhichBuffer)
+        ->getASIOSocketWrapper(mWhichBuffer).getSocket()
         .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),
                        boost::bind(&TCPReadBuffer::asioReadIntoFixedBuffer,
                                    this,
@@ -1084,7 +1172,7 @@ void TCPReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> 
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
     assert(mBufferPos<mNewChunk.size());
     parentSocket
-        ->getSocket(mWhichBuffer)
+        ->getASIOSocketWrapper(mWhichBuffer).getSocket()
         .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),
                        boost::bind(&TCPReadBuffer::asioReadIntoChunk,
                                    this,
