@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPStreamListener.hpp
+ *  TCPStreamBuilder.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,31 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SIRIKATA_TCPStreamListener_HPP__
-#define SIRIKATA_TCPStreamListener_HPP__
-#include "StreamListener.hpp"
-namespace Sirikata { namespace Network {
+namespace Sirikata { namespace Network { namespace TCPStreamBuilder {
 /**
- * This class waits on a service and listens for incoming connections
- * It calls the callback whenever such connections are encountered
+ * Begins a new stream based on a TCPSocket connection acception with the following substream callback for stream creation
+ * Only creates the stream if the handshake is complete and it has all the resources (udp, tcp sockets, etc) necessary at the time
  */
-class TCPStreamListener:public StreamListener{
+void beginNewStream(TCPSocket *socket,const Stream::SubstreamCallback&);
 
-public:
-    TCPStreamListener(IOService&);
-    ///subclasses will expose these methods with similar arguments + protocol specific args
-    virtual bool listen(
-        const Address&addy,
-        const Stream::SubstreamCallback&newStreamCallback);
-    ///returns the name of the computer followed by a colon and then the service being listened on
-    virtual String listenAddressName()const;
-    ///returns the name of the computer followed by a colon and then the service being listened on
-    virtual Address listenAddress()const;
-    ///stops listening
-    virtual void close();
-    virtual ~TCPStreamListener();
-    IOService * mIOService;
-    TCPListener *mTCPAcceptor;
-};
-} }
-#endif
+
+} }  }

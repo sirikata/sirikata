@@ -34,7 +34,7 @@
 #include "TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
-
+#include "TCPStreamBuilder.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
 
@@ -50,7 +50,7 @@ void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Strea
         assert(0&&"ERROR IN THE TCP STREAM ACCEPTING PROCESS");
         //FIXME: attempt more?
     }else {
-        beginNewStream(socket,cb);
+        TCPStreamBuilder::beginNewStream(socket,cb);
         newAcceptPhase(listen,io,cb);
     }
 }
