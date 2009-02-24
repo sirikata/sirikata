@@ -84,7 +84,7 @@ public:
             ++newid;
             runRoutine(newStream);
         }else {
-            ++mDisconCount;
+            ++mEndCount;
         }
     }
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
@@ -112,6 +112,7 @@ public:
     std::vector<std::string> mMessagesToSend;
     Sirikata::AtomicValue<int> mCount;
     Sirikata::AtomicValue<int> mDisconCount;
+    Sirikata::AtomicValue<int> mEndCount;
     typedef Sirikata::uint8 uint8;
     std::map<unsigned int, std::vector<Sirikata::Network::Chunk> > mDataMap;
     const char * ENDSTRING;
@@ -204,7 +205,7 @@ public:
         validateSameness(id,orderedNetData,orderedKeyData);
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
-    SstTest():mCount(0),mDisconCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+    SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
@@ -448,7 +449,7 @@ public:
             while(mDisconCount.read()<3){
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
-                    std::cerr<<"Message Receive Count == "<<mDisconCount.read()<<'\n';
+                    std::cerr<<"Close Receive Count == "<<mDisconCount.read()<<'\n';
                     last_time=this_time;
                 }
             }
@@ -456,12 +457,14 @@ public:
             delete z;
         }
         time_t last_time=time(NULL);
-        while(mDisconCount.read()<(doSubstreams?4:2)){//checking for that final call to newSubstream
+        while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
             if (this_time>last_time+5) {
-                std::cerr<<"Message Receive Count == "<<mDisconCount.read()<<'\n';
+                std::cerr<<"SubStream End Receive Count == "<<mEndCount.read()<<'\n';
                 last_time=this_time;
             }
         }
+        sleep(1);
+        std::cout<<"Final counts: "<<mCount.read()<< " "<<mDisconCount.read()<<" "<<mEndCount.read()<<"\n";
     }
 };

@@ -296,7 +296,9 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
                         if (where->second==mSockets.size()) {
                             mAckedClosingStreams.erase(where);        
                             shutDownClosedStream(controlCode,id);
-                            closeStream(getSharedPtr(),id,TCPStream::TCPStreamAckCloseStream);
+                            if (controlCode==TCPStream::TCPStreamCloseStream) {
+                                closeStream(getSharedPtr(),id,TCPStream::TCPStreamAckCloseStream);
+                            }
                         }
                     }else{
                         if (mSockets.size()==1) {
