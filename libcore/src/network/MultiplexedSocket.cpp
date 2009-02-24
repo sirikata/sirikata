@@ -70,15 +70,30 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
     assert(boost::this_thread::get_id()==reactorThread);//this function must happen from the IO reactor so it can copy over registrations without a lock
     bool statusChanged=false;
     if (setConnectedStatus||!mCallbackRegistration.empty()) {
+        if (status==CONNECTED) {
+            //do a little house cleaning and empty as many new requests as possible
+            std::vector<RawRequest> newRequests;            
+            {
+                boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
+                newRequests.swap(mNewRequests);
+            }
+            for (size_t i=0,ie=newRequests.size();i<ie;++i) {
+                sendBytesNow(getSharedPtr(),newRequests[i]);
+            }
+            
+        }
         boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
         statusChanged=(status!=mSocketConnectionPhase);
         if (setConnectedStatus) {
-            mSocketConnectionPhase=status;
-            if (status==CONNECTED) {
+            if (status!=CONNECTED) {
+                mSocketConnectionPhase=status;
+            } else {
+                mSocketConnectionPhase=WAITCONNECTING;
                 for (size_t i=0,ie=mNewRequests.size();i<ie;++i) {
                     sendBytesNow(getSharedPtr(),mNewRequests[i]);
                 }
                 mNewRequests.clear();
+                mSocketConnectionPhase=CONNECTED;
             }
         }
         bool other_registrations=registration.empty();
@@ -149,6 +164,8 @@ void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
 #endif
                 thus->mNewRequests.push_back(data);
             }else {
+                //with the connectionMutex acquired, no socket is allowed to be in the mSocketConnectionPhase
+                assert(thus->mSocketConnectionPhase==PRECONNECTION);
 #ifdef TCPSSTLOG
                 FILE * fp=fopen("SENTBYTESLATER.sack","a");
                 fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
@@ -200,10 +217,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const std::tr1::shared_ptr<Multip
     for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
         MakeTCPReadBuffer(thus,i);
     }
-    for (size_t i=0,ie=thus->mNewRequests.size();i<ie;++i) {
-        sendBytesNow(thus,thus->mNewRequests[i]);
-    }
-    thus->mNewRequests.clear();
+    assert (thus->mNewRequests.size()==0);//would otherwise need to empty out new requests--but no one should have a reference to us here
 }
 ///erase all sockets and callbacks since the refcount is now zero;
 MultiplexedSocket::~MultiplexedSocket() {        

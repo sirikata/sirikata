@@ -64,6 +64,7 @@ private:
     std::deque<StreamIDCallbackPair> mCallbackRegistration;
     volatile enum SocketConnectionPhase{
         PRECONNECTION,
+        WAITCONNECTING,//need to fetch the lock, but about to connect
         CONNECTED,
         DISCONNECTED
     }mSocketConnectionPhase;
