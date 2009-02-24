@@ -136,6 +136,11 @@ public:
 		waitFor(1);
 	}
 	void verifyCB(const Fingerprint &expectedHash, const Transfer::SparseData *sparseData) {
+		if (!sparseData) {
+			TS_FAIL("Failed to download " + expectedHash.convertToHexString() + " from CacheLayer");
+			notifyOne();
+			return;
+		}
 		std::string fullData;
 		Transfer::cache_usize_type pos = 0, length;
 		while (true) {
@@ -156,10 +161,12 @@ public:
 		notifyOne(); // don't forget to do this.
 	}
 	void doTransferAndVerifyCB(const RemoteFileId *rfid) {
-		TS_ASSERT(rfid != NULL);
 		if (rfid) {
 			mTransferLayer->getData(*rfid, Transfer::Range(true),
 				std::tr1::bind(&NameLookupTest::verifyCB, this, rfid->fingerprint(), _1));
+		} else {
+			TS_FAIL("Name Lookup Failed!");
+			notifyOne();
 		}
 	}
 	void testDownload() {

@@ -154,8 +154,8 @@ void HTTPRequest::gotHeader(const std::string &header) {
 namespace {
 
 	static boost::once_flag flag = BOOST_ONCE_INIT;
-	CURLM *curlm;
-	CURL *parent_easy_curl;
+	CURLM *curlm = NULL;
+	CURL *parent_easy_curl = NULL;
 
 	//static ThreadSafeQueue<HTTPRequest*> requestQueue;
 	struct CurlGlobals {
@@ -227,13 +227,20 @@ namespace {
 		~CurlGlobals() {
 			cleaningUp = true;
 
-			doWakeup();
-			main_loop->join();
-			delete main_loop;
-			destroyWakeupFd();
+			if (main_loop) {
+				doWakeup();
+				main_loop->join();
+				delete main_loop;
+				destroyWakeupFd();
 
-			curl_multi_cleanup(curlm);
-			curl_global_cleanup();
+				if (parent_easy_curl) {
+					curl_easy_cleanup(parent_easy_curl);
+				}
+				if (curlm) {
+					curl_multi_cleanup(curlm);
+				}
+				curl_global_cleanup();
+			}
 		}
 	} globals;
 }

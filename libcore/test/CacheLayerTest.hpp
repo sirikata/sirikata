@@ -54,6 +54,7 @@ class CacheLayerTestSuite : public CxxTest::TestSuite
 	typedef Transfer::URIContext URIContext;
 	typedef Transfer::CacheLayer CacheLayer;
 	std::vector< CacheLayer*> mCacheLayers;
+	std::vector< Transfer::CachePolicy*> mCachePolicy;
 	volatile int finishedTest;
 
 	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mProtoReg;
@@ -81,19 +82,23 @@ public:
 	CacheLayer *createDiskCache(CacheLayer *next = NULL,
 				int size=32000,
 				std::string dir="diskCache") {
+		Transfer::CachePolicy *policy = new Transfer::LRUPolicy(size);
 		CacheLayer *layer = new Transfer::DiskCacheLayer(
-							new Transfer::LRUPolicy(size),
+							policy,
 							dir,
 							next);
 		mCacheLayers.push_back(layer);
+		mCachePolicy.push_back(policy);
 		return layer;
 	}
 	CacheLayer *createMemoryCache(CacheLayer *next = NULL,
 				int size=3200) {
+		Transfer::CachePolicy *policy = new Transfer::LRUPolicy(size);
 		CacheLayer *layer = new Transfer::MemoryCacheLayer(
-							new Transfer::LRUPolicy(size),
+							policy,
 							next);
 		mCacheLayers.push_back(layer);
+		mCachePolicy.push_back(policy);
 		return layer;
 	}
 	CacheLayer *createSimpleCache(bool memory, bool disk, bool http) {
@@ -115,6 +120,11 @@ public:
 			delete (*iter);
 		}
 		mCacheLayers.clear();
+		for (std::vector<Transfer::CachePolicy*>::iterator iter =
+					 mCachePolicy.begin(); iter != mCachePolicy.end(); ++iter) {
+			delete (*iter);
+		}
+		mCachePolicy.clear();
 	}
 
 	virtual void tearDown() {

@@ -55,6 +55,7 @@ class DownloadTest : public CxxTest::TestSuite {
 	TransferManager *mTransferManager;
 	TransferManager *mCachedTransferManager;
 	CacheLayer *mMemoryCache;
+	Transfer::CachePolicy *mMemoryCachePolicy;
 	CacheLayer *mCachedNetworkCache;
 	// No disk cache because it doesn't need to be persistent.
 	CacheLayer *mNetworkCache;
@@ -115,7 +116,8 @@ public:
 
 		// Uses the same event system, so don't combine the cached and non-cached ones into a single test.
 		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mService, mDownloadReg);
-		mMemoryCache = new Transfer::MemoryCacheLayer(new Transfer::LRUPolicy(1000000), mCachedNetworkCache);
+		mMemoryCachePolicy = new Transfer::LRUPolicy(1000000);
+		mMemoryCache = new Transfer::MemoryCacheLayer(mMemoryCachePolicy, mCachedNetworkCache);
 		mCachedNameLookup = new Transfer::CachedNameLookupManager(mService, mNameLookupReg);
 		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem);
 
@@ -136,11 +138,15 @@ public:
 		delete mNetworkCache;
 			// also the cached CacheLayer
 		delete mMemoryCache;
+		delete mMemoryCachePolicy;
 		delete mCachedNetworkCache; // CacheLayer's deleted from first to last.
 		delete mDownloadReg; // Download registry must be deleted after the NetworkCacheLayer.
 		delete mService;
 		delete mTransferManager;
+		delete mCachedTransferManager;
+
 		delete mEventSystem;
+		mEventProcessThread->join();
 		delete mEventProcessThread;
 
 		finishedTest = 0;

@@ -88,6 +88,16 @@ EventManager<T>::~EventManager() {
 		delete lock;
 		delete cv;
 	}
+	typename PrimaryListenerMap::iterator iter;
+	typename SecondaryListenerMap::iterator secIter;
+	for (iter = mListeners.begin(); iter != mListeners.end(); ++iter) {
+		SecondaryListenerMap *secMap = &((*iter).second->second);
+		for (secIter = secMap->begin(); secIter != secMap->end(); ++secIter) {
+			delete (*secIter).second;
+		}
+		delete (*iter).second;
+	}
+	mListeners.clear();
 }
 
 
