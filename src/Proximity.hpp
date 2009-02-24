@@ -1,5 +1,5 @@
 /*  cbr
- *  MotionVector.hpp
+ *  Proximity.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,64 +30,75 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_MOTION_VECTOR_HPP_
-#define _CBR_MOTION_VECTOR_HPP_
+#ifndef _CBR_PROXIMITY_HPP_
+#define _CBR_PROXIMITY_HPP_
 
 #include "Utility.hpp"
 #include "Time.hpp"
-#include "Duration.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
 
-template<typename CoordType>
-class MotionVector {
+class ProximityEvent {
 public:
-    MotionVector()
-     : mTime(0), mStart(0,0,0), mDirection(0,0,0)
-    {
+    enum Type {
+        Entered,
+        Exited
+    };
+
+    ProximityEvent(const UUID& q, const UUID& obj, Type t)
+     : mQuery(q), mObject(obj), mType(t) {}
+
+    const UUID& query() const {
+        return mQuery;
     }
 
-    MotionVector(const Time& t, const CoordType& pos, const CoordType& vel)
-     : mTime(t), mStart(pos), mDirection(vel)
-    {
+    const UUID& object() const {
+        return mObject;
     }
 
-    const Time& updateTime() const {
-        return mTime;
+    Type type() const {
+        return mType;
     }
-
-    const CoordType& position() const {
-        return mStart;
-    }
-
-    CoordType position(const Duration& dt) const {
-        return mStart + mDirection * dt.seconds();
-    }
-
-    CoordType position(const Time& t) const {
-        return position(t - mTime);
-    }
-
-    const CoordType& velocity() const {
-        return mDirection;
-    }
-
-    void update(const Time& t, const CoordType& pos, const CoordType& vel) {
-        assert(t > mTime);
-        mTime = t;
-        mStart = pos;
-        mDirection = vel;
-    }
-
 private:
-    Time mTime;
-    CoordType mStart;
-    CoordType mDirection;
-}; // class MotionVector
+    ProximityEvent();
 
-typedef MotionVector<Vector3f> MotionVector3f;
-typedef MotionVector<Vector3d> MotionVector3d;
+    UUID mQuery;
+    UUID mObject;
+    Type mType;
+}; // class ProximityEvent
+
+class Proximity {
+public:
+    Proximity();
+    ~Proximity();
+
+    void addObject(UUID obj, const MotionVector3f& loc);
+    void updateObject(UUID obj, const MotionVector3f& loc);
+    void removeObject(UUID obj);
+
+    // FIXME these could be more complicated, but we're going for simplicity for now
+    void addQuery(UUID obj, float radius);
+    void removeQuery(UUID obj);
+
+    // Update queries based on current state.  FIXME add event output
+    void evaluate(const Time& t, std::queue<ProximityEvent>& events);
+private:
+    typedef std::set<UUID> ObjectSet;
+    struct ObjectState {
+        MotionVector3f location;
+    };
+    typedef std::map<UUID, ObjectState*> ObjectMap;
+    struct QueryState {
+        float radius;
+        ObjectSet neighbors;
+    };
+    typedef std::map<UUID, QueryState*> QueryMap;
+
+    ObjectMap mTrackedObjects;
+    QueryMap mQueries;
+}; //class Proximity
 
 } // namespace CBR
 
-#endif //_CBR_MOTION_VECTOR_HPP_
+#endif //_CBR_PROXIMITY_HPP_

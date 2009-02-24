@@ -140,6 +140,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Duration.cpp
+  ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/Time.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
