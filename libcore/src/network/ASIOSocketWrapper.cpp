@@ -39,9 +39,7 @@
 #include "MultiplexedSocket.hpp"
 
 namespace Sirikata { namespace Network {
-const uint32 ASIOSocketWrapper::ASYNCHRONOUS_SEND_FLAG;
-const uint32 ASIOSocketWrapper::QUEUE_CHECK_FLAG;
-const size_t ASIOSocketWrapper::PACKET_BUFFER_SIZE;
+
 void copyHeader(void * destination, const UUID&key, unsigned int num) {
     std::memcpy(destination,TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH);
     ((char*)destination)[TCPStream::STRING_PREFIX_LENGTH]='0'+(num/10)%10;

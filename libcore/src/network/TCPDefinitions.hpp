@@ -34,8 +34,10 @@
 #define _TCPDefinitions_HPP_
 
 #include <boost/asio.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 typedef boost::asio::io_service IOService;
 typedef boost::asio::ip::tcp::acceptor TCPListener;

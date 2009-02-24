@@ -45,9 +45,11 @@ class ASIOSocketWrapper {
      */
     AtomicValue<uint32> mSendingStatus;
     ThreadSafeQueue<Chunk*>mSendQueue;
-    static const uint32 ASYNCHRONOUS_SEND_FLAG=(1<<29);
-    static const uint32 QUEUE_CHECK_FLAG=(1<<30);
-    static const size_t PACKET_BUFFER_SIZE=1400;
+	enum {
+		ASYNCHRONOUS_SEND_FLAG=(1<<29),
+		QUEUE_CHECK_FLAG=(1<<30),
+		PACKET_BUFFER_SIZE=1400
+	};
     uint8 mBuffer[PACKET_BUFFER_SIZE];
     typedef boost::system::error_code ErrorCode;
 /**
