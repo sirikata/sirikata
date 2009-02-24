@@ -37,6 +37,7 @@ class ASIOSocketWrapper;
 void triggerMultiplexedConnectionError(MultiplexedSocket*,ASIOSocketWrapper*,const boost::system::error_code &error);
 
 class ASIOSocketWrapper {
+#define ASIOSocketWrapperBuffer(pointer,size) boost::asio::buffer(pointer,(size))
     TCPSocket*mSocket;
     /**
      * The status of sending threads: odd number indicates asynchronous send... number >0  indicates other waiting threads number&ASYNCHRONOUS_SEND_FLAG indicates a thread is
@@ -51,6 +52,7 @@ class ASIOSocketWrapper {
 		PACKET_BUFFER_SIZE=1400
 	};
     uint8 mBuffer[PACKET_BUFFER_SIZE];
+    std::vector<uint8> mPacketLogger;
     typedef boost::system::error_code ErrorCode;
 /**
  * This function sets the QUEUE_CHECK_FLAG and checks the sendQueue for additional packets to send out.
@@ -58,6 +60,7 @@ class ASIOSocketWrapper {
  * If something is present in the queue it calls sendToWire with the queue
  */
     void finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket) {
+        assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
         mSendingStatus+=QUEUE_CHECK_FLAG;
         std::deque<Chunk*>toSend;
         mSendQueue.swap(toSend);
@@ -78,6 +81,18 @@ class ASIOSocketWrapper {
      * If the whole Chunk was shipped off, the finishAsyncSend function is called
      */
     void sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+#ifdef TCPSSTLOG
+        if (!error) {
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(&*toSend->begin()+originalOffset,bytes_sent,1,fp);
+            fclose(fp);
+        }
+#endif
+        if (!error) {
+            //mPacketLogger.insert(mPacketLogger.end(),test.begin(),test.end());
+        }
         if (error)  {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
@@ -95,6 +110,18 @@ class ASIOSocketWrapper {
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
     void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+#ifdef TCPSSTLOG
+        if (!error) {
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(&*const_toSend.front()->begin()+originalOffset,bytes_sent,1,fp);
+            fclose(fp);
+        }
+#endif
+        if (!error) {
+            //mPacketLogger.insert(mPacketLogger.end(),*const_toSend.front()->begin()+originalOffset,*const_toSend.front()->begin()+originalOffset+bytes_sent);
+        }
         if (error )   {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
@@ -122,11 +149,21 @@ class ASIOSocketWrapper {
      * If the whole buffer was shipped off, the sendToWire function is called with the rest of the queue unless it is empty
      */
     void sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
+#ifdef TCPSSTLOG
+            char TESTs[1024];
+            sprintf(TESTs,"%d.sack",(int)(size_t)this);
+            FILE * fp=fopen(TESTs,"a");
+            fwrite(currentBuffer,bytes_sent,1,fp);
+            fclose(fp);
+#endif
+        if (!error) {
+            //mPacketLogger.insert(mPacketLogger.end(),currentBuffer,currentBuffer+bytes_sent);
+        }
         if ( error ) {
             triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
             std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
         }else if (bytes_sent!=bufferSize) {
-            mSocket->async_send(boost::asio::buffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
+            mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
                                 boost::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                             this,
                                             parentMultiSocket,
@@ -153,15 +190,8 @@ class ASIOSocketWrapper {
  * When there's a single packet to be sent to the network, mSocket->async_send is simply called upon the Chunk to be sent
  */
     void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent=0) {
-#ifdef TCPSSTLOG
-            char TESTs[1024];
-            sprintf(TESTs,"%d.sack",(int)(size_t)this);
-            FILE * fp=fopen(TESTs,"a");
-            fwrite(&*toSend->begin()+bytesSent,toSend->size()-bytesSent,1,fp);
-            fclose(fp);
-#endif
 
-            mSocket->async_send(boost::asio::buffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
+            mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
                                 boost::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                             this,
                                             parentMultiSocket,
@@ -179,14 +209,7 @@ class ASIOSocketWrapper {
  */
     void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent=0){
         if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
-#ifdef TCPSSTLOG
-            char TESTs[1024];
-            sprintf(TESTs,"%d.sack",(int)(size_t)this);
-            FILE * fp=fopen(TESTs,"a");
-            fwrite(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent,1,fp);
-            fclose(fp);
-#endif
-            mSocket->async_send(boost::asio::buffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
+            mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
                                 boost::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                             this,
                                             parentMultiSocket,
@@ -213,14 +236,7 @@ class ASIOSocketWrapper {
                     toSend.pop_front();
                 }
             }
-#ifdef TCPSSTLOG
-            char TESTs[1024];
-            sprintf(TESTs,"%d.sack",(int)(size_t)this);
-            FILE * fp=fopen(TESTs,"a");
-            fwrite(mBuffer,bufferLocation,1,fp);
-            fclose(fp);
-#endif
-            mSocket->async_send(boost::asio::buffer(mBuffer,bufferLocation),
+            mSocket->async_send(ASIOSocketWrapperBuffer(mBuffer,bufferLocation),
                                 boost::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                             this,
                                             parentMultiSocket,
@@ -246,6 +262,14 @@ class ASIOSocketWrapper {
         bool sending_packet=(current_status&ASYNCHRONOUS_SEND_FLAG)!=0;
         while (sending_packet==false||queue_check) {
             if (sending_packet==false) {
+   while(queue_check){
+                     static bool epic_fail=true;
+                     if (epic_fail) {
+                         epic_fail=false;
+                         std::cerr<<"FAILURE of queue check "<< current_status<<'\n';
+                     }
+                 }
+
                 assert(queue_check==false);//no one should check the queue without being willing to send
                 current_status=++mSendingStatus;
                 if (current_status==1) {
@@ -256,7 +280,8 @@ class ASIOSocketWrapper {
                         mSendingStatus-=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG);
                         return;
                     }else {//the chunk may be on this queue, but we should promise folks to send it
-                        current_status-=QUEUE_CHECK_FLAG;
+                        assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
+                        mSendingStatus-=QUEUE_CHECK_FLAG;
                         if (toSend.size()==1) {
                             sendToWire(parentMultiSocket,toSend.front());
                         }else {
@@ -275,9 +300,11 @@ class ASIOSocketWrapper {
 public:
 
     ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket),mSendingStatus(0){
+        //mPacketLogger.reserve(268435456);
     }
 
     ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0){
+        //mPacketLogger.reserve(268435456);
     }
 
     ASIOSocketWrapper&operator=(const ASIOSocketWrapper& socket){
@@ -314,5 +341,6 @@ public:
  * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
  */
     void sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections);
+#undef ASIOSocketWrapperBuffer
 };
 } }

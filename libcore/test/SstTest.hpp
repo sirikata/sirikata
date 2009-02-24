@@ -76,7 +76,7 @@ public:
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back(newStream);
+            mStreams.push_back((TCPStream*)newStream);
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -90,7 +90,7 @@ public:
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back(newStream);
+            mStreams.push_back((TCPStream*)newStream);
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -108,7 +108,7 @@ public:
     std::string mPort;
     boost::asio::io_service mIO;
     boost::thread *mThread;
-    std::vector<Stream*> mStreams;
+    std::vector<TCPStream*> mStreams;
     std::vector<std::string> mMessagesToSend;
     Sirikata::AtomicValue<int> mCount;
     Sirikata::AtomicValue<int> mDisconCount;
@@ -208,7 +208,7 @@ public:
     SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
-        bool doUnorderedTest=true;
+        bool doUnorderedTest=false;
         bool doShortTest=false;
 
         if (doUnorderedTest){
@@ -309,7 +309,7 @@ public:
     }
     
     ~SstTest() {
-        for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+        for(std::vector<TCPStream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
             delete *i;
         }
         mStreams.resize(0);
@@ -403,6 +403,7 @@ public:
     void testConnectSend (void )
     {
         Stream*z=NULL;
+        TCPStream*tcpz;
         bool doSubstreams=true;
         {
             TCPStream r(mIO);
@@ -420,7 +421,7 @@ public:
                     zz->close();
                     delete zz;
                 }
-                z=r.factory();
+                tcpz=(TCPStream*)(z=r.factory());
                 z->cloneFrom(&r,
                              std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
                              std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1));
