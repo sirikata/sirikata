@@ -254,7 +254,12 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
         CommitCallbacks(registrations,CONNECTED,false);
         CallbackMap::iterator where=mCallbacks.find(id);
         if (where!=mCallbacks.end()) {
+            std::tr1::shared_ptr<AtomicValue<int> > sendStatus=where->second->mSendStatus.lock();
+            if (sendStatus) {
+                TCPStream::closeSendStatus(*sendStatus);
+            }
             where->second->mConnectionCallback(Stream::Disconnected,"Remote Host Disconnected");
+            
             CommitCallbacks(registrations,CONNECTED,false);//just in case stream committed new callbacks during callback
             where=mCallbacks.find(id);
             delete where->second;
@@ -291,25 +296,19 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
                         if (where->second==mSockets.size()) {
                             mAckedClosingStreams.erase(where);        
                             shutDownClosedStream(controlCode,id);
+                            closeStream(getSharedPtr(),id,TCPStream::TCPStreamAckCloseStream);
                         }
                     }else{
                         if (mSockets.size()==1) {
                             shutDownClosedStream(controlCode,id);
+                            if (controlCode==TCPStream::TCPStreamCloseStream) {
+                                closeStream(getSharedPtr(),id,TCPStream::TCPStreamAckCloseStream);
+                            }
                         }else {
                             mAckedClosingStreams[id]=1;
                         }
                     }
                 }
-                break;
-              default:
-                break;
-            }
-            switch (controlCode) {
-              case TCPStream::TCPStreamCloseStream:
-                if (id!=Stream::StreamID())
-                    mSockets[whichSocket].sendControlPacket(getSharedPtr(),TCPStream::TCPStreamAckCloseStream,id);
-                break;
-              case TCPStream::TCPStreamAckCloseStream:
                 break;
               default:
                 break;

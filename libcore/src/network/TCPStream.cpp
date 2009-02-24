@@ -41,16 +41,12 @@
 #include "TCPSetCallbacks.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
-const int TCPStream::SendStatusClosing=(1<<30);
 
 using namespace boost::asio::ip;
 
 
 
-
-
-
-TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(0) {
+TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
 
 }
 
@@ -90,30 +86,49 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
         std::memcpy(&outputBuffer[packetHeaderLength+streamIdLength],
                     &data[0],
                     data.size());
-    unsigned int sendStatus=++mSendStatus;
-    if ((sendStatus&SendStatusClosing)==0) {
+    bool didsend=false;
+    unsigned int sendStatus=++(*mSendStatus);
+    if ((sendStatus&(3*SendStatusClosing))==0) {
         MultiplexedSocket::sendBytes(mSocket,toBeSent);
+        didsend=true;
     }
-    --mSendStatus;
+    if (!didsend) {
+        delete toBeSent.data;
+        std::cerr<< "printing to closed stream id "<<getID().read();
+    }
+    --(*mSendStatus);
+}
+void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
+    int sendStatus=vSendStatus.read();
+    bool incd=false;
+    if ((sendStatus&(SendStatusClosing*3))==0) {
+        ///FIXME we want to |= here        
+        vSendStatus+=SendStatusClosing;
+        incd=true;
+    }
+    while ((sendStatus=vSendStatus.read())!=SendStatusClosing&&
+           sendStatus!=2*SendStatusClosing&&
+           sendStatus!=3*SendStatusClosing) {
+        
+    }
 }
 void TCPStream::close() {
-    mSendStatus+=SendStatusClosing;
-    while (mSendStatus.read()!=SendStatusClosing)
-        ;
+    closeSendStatus(*mSendStatus);
     mSocket->addCallbacks(getID(),NULL);
     MultiplexedSocket::closeStream(mSocket,getID());
 }
-TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(0) {
+TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0)) {
 }
 void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
                         const BytesReceivedCallback&bytesReceivedCallback) {
     mSocket=MultiplexedSocket::construct(mIO,substreamCallback);
-    mSendStatus=0;
+    *mSendStatus=0;
     mID=StreamID(1);
     mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
-                                                bytesReceivedCallback));
+                                                bytesReceivedCallback,
+                                                mSendStatus));
     mSocket->connect(addy,3);
 }
 Stream* TCPStream::factory() {
@@ -129,7 +144,8 @@ bool TCPStream::cloneFrom(Stream*otherStream,
     StreamID newID=mSocket->getNewID();
     mID=newID;
     mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
-                                              bytesReceivedCallback));
+                                              bytesReceivedCallback,
+                                              mSendStatus));
     return true;
 }
 

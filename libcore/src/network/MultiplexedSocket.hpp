@@ -77,12 +77,12 @@ private:
 public:
 
     IOService&getASIOService(){return *mIO;}
-    static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid) {
+    static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream) {
         RawRequest closeRequest;
         closeRequest.originStream=Stream::StreamID();//control packet
         closeRequest.unordered=false;
         closeRequest.unreliable=false;
-        closeRequest.data=ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamCloseStream,sid);
+        closeRequest.data=ASIOSocketWrapper::constructControlPacket(code,sid);
         sendBytes(thus,closeRequest);
     }
     static void sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);

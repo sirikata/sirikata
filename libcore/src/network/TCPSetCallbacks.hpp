@@ -41,7 +41,8 @@ public:
     virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
                             const Stream::BytesReceivedCallback &bytesReceivedCallback){
         mCallbacks=new TCPStream::Callbacks(connectionCallback,
-                                            bytesReceivedCallback);
+                                            bytesReceivedCallback,
+                                            mStream->mSendStatus);
         mMultiSocket->addCallbacks(mStream->getID(),mCallbacks);
     }
 };

@@ -35,6 +35,7 @@
 #include "util/AtomicTypes.hpp"
 namespace Sirikata { namespace Network {
 class MultiplexedSocket;
+class TCPSetCallbacks;
 
 
 /**
@@ -98,6 +99,7 @@ public:
     };
 private:
     friend class MultiplexedSocket;
+    friend class TCPSetCallbacks;
     ///The low level boost::asio io service handle
     IOService* mIO;
     ///the shared pointer to the communal sending connection
@@ -106,11 +108,15 @@ private:
     void addCallbacks(Callbacks*);
     ///The streamID that must be prepended to the data within any packet sent and all received packets for this Stream
     StreamID mID;
+    enum {
     ///A bit flag indicating that the socket is being shut down and no further sends may proceed
-    static const int SendStatusClosing;
+        SendStatusClosing=(1<<29)
+    };
     ///incremented while sending: or'd in SendStatusClosing when close function triggered so no further packets will be sent using old ID.
-    AtomicValue<int>mSendStatus;
+    std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
 public:
+    ///Atomically sets the sendStatus for this socket to closed. FIXME: should use atomic compare and swap for |= instead of += right now only supports 2 non-io threads closing at once
+    static void closeSendStatus(AtomicValue<int>&vSendStatus);
     ///Returns the active stream ID
     StreamID getID()const {return mID;}
     /**
@@ -121,9 +127,13 @@ public:
     public:
         Stream::ConnectionCallback mConnectionCallback;
         Stream::BytesReceivedCallback mBytesReceivedCallback;
+        std::tr1::weak_ptr<AtomicValue<int> > mSendStatus;
         Callbacks(const Stream::ConnectionCallback &connectionCallback,
-                  const Stream::BytesReceivedCallback &bytesReceivedCallback):
-            mConnectionCallback(connectionCallback),mBytesReceivedCallback(bytesReceivedCallback){
+                  const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                  const std::tr1::weak_ptr<AtomicValue<int> >&sendStatus):
+            mConnectionCallback(connectionCallback),
+            mBytesReceivedCallback(bytesReceivedCallback),
+            mSendStatus(sendStatus){
         }
     };
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone()
