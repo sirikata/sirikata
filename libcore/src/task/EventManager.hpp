@@ -35,6 +35,7 @@
 
 #include "util/LockFreeQueue.hpp"
 #include "util/ThreadSafeQueue.hpp"
+#include "util/AtomicTypes.hpp"
 
 #include "HashMap.hpp"
 #include "UniqueId.hpp"
@@ -263,6 +264,7 @@ private:
 	volatile void *mEventLock;
 	/// Used to notify an event loop that there are no events left to be processed.
 	volatile bool mCleanup;
+	AtomicValue<int> mPendingEvents;
 
 	/* PRIVATE FUNCTIONS */
 

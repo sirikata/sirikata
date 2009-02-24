@@ -54,7 +54,7 @@ namespace Task {
 
 template <class T>
 EventManager<T>::EventManager(bool useCV)
-		: mEventCV(NULL), mEventLock(NULL), mCleanup(false) {
+		: mEventCV(NULL), mEventLock(NULL), mCleanup(false), mPendingEvents(0) {
 	if (useCV) {
 		mEventCV = new boost::condition_variable;
 		mEventLock = new boost::mutex;
@@ -319,13 +319,18 @@ bool EventManager<T>::cleanUp(
 
 template <class T>
 void EventManager<T>::fire(EventPtr ev) {
+	mUnprocessed.push(ev);
 	std::cout << "**** Firing event " << (void*)(&(*ev)) <<
 		" with " << ev->getId() << std::endl;
-	mUnprocessed.push(ev);
 
-	if (mEventCV && !mCleanup) {
+	if (mEventCV && mEventLock && !mCleanup) {
+		boost::mutex *lock = (boost::mutex *)mEventLock;
 		boost::condition_variable *cv = (boost::condition_variable *)mEventCV;
-		cv->notify_one();
+		if (++mPendingEvents == 1) {
+			boost::unique_lock<boost::mutex> waitforevent (*lock);
+			// we are the first ones to fire an event.
+			cv->notify_one();
+		}
 	}
 };
 
@@ -449,9 +454,11 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	}
 
 	EventPtr *evTemp;
+	int numProcessed = 0;
 
 	while ((evTemp = processingList.next())!=NULL) {
 		EventPtr ev (*evTemp);
+		++numProcessed;
 
 		typename PrimaryListenerMap::iterator priIter =
 			mListeners.find(ev->getId().mPriId);
@@ -474,7 +481,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
         EventHistory eventHistory=EVENT_UNHANDLED;
 		// Call once per event order.
 		for (int i = 0; i < NUM_EVENTORDER && cancel == false; i++) {
-			std::cout << " >>>\tFiring " << ev->getId() <<
+			std::cout << " >>>\tFiring " << ev << ": " << ev->getId() <<
 				" [order " << i << "]" << std::endl;
 			ListenerList *currentList = &(primaryLists->get(i));
 			if (!currentList->empty())
@@ -510,6 +517,10 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 		std::cout << " >>>\tFinished " << ev->getId() << std::endl;
 	}
 
+	if (mEventCV) {
+		mPendingEvents -= numProcessed;
+	}
+
 	AbsTime finishTime = AbsTime::now();
 	std::cout << "**** Done processing events this round. " <<
 		"Took " << (float)(finishTime-startTime) <<
@@ -521,13 +532,16 @@ void EventManager<T>::sleep_processEventQueue() {
 	boost::mutex *lock = (boost::mutex *)mEventLock;
 	boost::condition_variable *cv = (boost::condition_variable *)mEventCV;
 
-	{
-		boost::unique_lock<boost::mutex> waitforevent (*lock);
-		while (!mCleanup) {
-			cv->wait(waitforevent);
-			temporary_processEventQueue(AbsTime::null());
+	while (!mCleanup) {
+		{
+			boost::unique_lock<boost::mutex> waitforevent (*lock);
+			while (!mCleanup && mPendingEvents.read() == 0) {
+				cv->wait(waitforevent);
+			}
 		}
+		temporary_processEventQueue(AbsTime::null());
 	}
+
 	{
 		boost::mutex *destroylock = (boost::mutex *)mEventLock;
 		boost::condition_variable *destroycv = (boost::condition_variable *)mEventCV;

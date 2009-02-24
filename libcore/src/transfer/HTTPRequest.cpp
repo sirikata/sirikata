@@ -401,12 +401,14 @@ void HTTPRequest::abort() {
 			mCurlRequest = NULL;
 		}
 	}
+
+	DenseDataPtr finishedData(getData());
 	CallbackFunc temp (mCallback);
 	mCallback = nullCallback;
 	HTTPRequestPtr ptr = mPreventDeletion;
 	mPreventDeletion.reset(); // may delete this.
 
-	temp(this, getData(), false);
+	temp(this, finishedData, false);
 	// ptr will now be deallocated.
 }
 
@@ -423,7 +425,9 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
 	// c_str is guaranteed to remain valid because mURI is const.
-	curl_easy_setopt(mCurlRequest, CURLOPT_URL, this->mURI.toString().c_str()); // safe for life of mURI.
+	std::string uriString = this->mURI.toString();
+	// Curl makes its own copy of the strings.
+	curl_easy_setopt(mCurlRequest, CURLOPT_URL, uriString.c_str());
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;
