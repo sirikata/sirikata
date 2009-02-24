@@ -219,7 +219,6 @@ public:
         mMessagesToSend.push_back("T1st");
         mMessagesToSend.push_back("T2nd");
         mMessagesToSend.push_back("T3rd");
-        if (!doShortTest) {
         mMessagesToSend.push_back("T4th");
         mMessagesToSend.push_back("T5th");
         if (doUnorderedTest){
@@ -231,6 +230,7 @@ public:
         mMessagesToSend.push_back("T7th");
         mMessagesToSend.push_back("T8th");
         mMessagesToSend.push_back("T9th");
+        if (!doShortTest) {
         std::string test("T");
         for (unsigned int i=0;i<16385;++i) {
             test+=(char)((i+5)%128);
@@ -314,7 +314,7 @@ public:
         mStreams.resize(0);
         mIO.stop();
         
-        
+        mThread->join();
         delete mThread;
     }
     void simpleConnect(Stream*s, const Address&addy) {
@@ -408,6 +408,7 @@ public:
             while (!mReadyToConnect);
             simpleConnect(&r,Address("127.0.0.1",mPort));
             runRoutine(&r);
+            if (doSubstreams) {
 
                 {
                     Stream*zz=r.factory();        
@@ -418,7 +419,6 @@ public:
                     zz->close();
                     delete zz;
                 }
-            if (doSubstreams) {
                 z=r.factory();
                 z->cloneFrom(&r,
                              std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
@@ -427,7 +427,7 @@ public:
             }
             //wait until done
             time_t last_time=time(NULL);
-            while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:3))&&!mAbortTest) {
+            while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Message Receive Count == "<<mCount.read()<<'\n';
@@ -456,7 +456,7 @@ public:
             delete z;
         }
         time_t last_time=time(NULL);
-        while(mDisconCount.read()<4){//checking for that final call to newSubstream
+        while(mDisconCount.read()<(doSubstreams?4:2)){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
             if (this_time>last_time+5) {
                 std::cerr<<"Message Receive Count == "<<mDisconCount.read()<<'\n';
