@@ -464,7 +464,7 @@ public:
                 last_time=this_time;
             }
         }
-        sleep(1);
-        std::cout<<"Final counts: "<<mCount.read()<< " "<<mDisconCount.read()<<" "<<mEndCount.read()<<"\n";
+        //sleep(1);
+        //std::cout<<"Final counts: "<<mCount.read()<< " "<<mDisconCount.read()<<" "<<mEndCount.read()<<"\n";
     }
 };
