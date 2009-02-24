@@ -33,6 +33,10 @@
 #ifndef _SIRIKATA_VECTOR4_HPP_
 #define _SIRIKATA_VECTOR4_HPP_
 
+#include <string>
+#include <cassert>
+#include <sstream>
+
 namespace Sirikata {
 template <typename scalar> class Vector3;
 

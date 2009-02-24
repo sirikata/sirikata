@@ -31,6 +31,10 @@
  */
 #ifndef _QUATERNION_HPP_
 #define _QUATERNION_HPP_
+
+#include "Vector3.hpp"
+#include "Vector4.hpp"
+
 namespace Sirikata {
 class Quaternion:public Vector4<float> {
 public:
