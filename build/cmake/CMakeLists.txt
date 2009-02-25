@@ -151,6 +151,7 @@ INCLUDE_DIRECTORIES(BEFORE
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Duration.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
+  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
