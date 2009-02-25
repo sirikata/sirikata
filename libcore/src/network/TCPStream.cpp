@@ -50,14 +50,15 @@ TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket
 
 }
 
-void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
+void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     MultiplexedSocket::RawRequest toBeSent;
+    // only allow 3 of the four possibilities because unreliable ordered is tricky and usually useless
     switch(reliability) {
       case Unreliable:
         toBeSent.unordered=true;
         toBeSent.unreliable=true;
         break;
-      case Reliable:
+      case ReliableOrdered:
         toBeSent.unordered=false;
         toBeSent.unreliable=false;
         break;
@@ -67,9 +68,10 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
         break;
     }
     toBeSent.originStream=getID();
-    uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];//={255,255,255,255,255,255,255,255};
+    uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
     unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
     unsigned int successLengthNeeded=toBeSent.originStream.serialize(serializedStreamId,streamIdLength);
+    ///this function should never return something larger than the  MAX_SERIALIZED_LEGNTH
     assert(successLengthNeeded<=streamIdLength);
     streamIdLength=successLengthNeeded;
     size_t totalSize=data.size();
@@ -77,6 +79,8 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
     uint30 packetLength=uint30(totalSize);
     uint8 packetLengthSerialized[uint30::MAX_SERIALIZED_LENGTH];
     unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,uint30::MAX_SERIALIZED_LENGTH);
+    //allocate a packet long enough to take both the length of the packet and the stream id as well as the packet data. totalSize = size of streamID + size of data and
+    //packetHeaderLength = the length of the length component of the packet
     toBeSent.data=new Chunk(totalSize+packetHeaderLength);
     
     uint8 *outputBuffer=&(*toBeSent.data)[0];
@@ -87,17 +91,21 @@ void TCPStream::send(const Chunk&data, Stream::Reliability reliability) {
                     &data[0],
                     data.size());
     bool didsend=false;
+    //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);
-    if ((sendStatus&(3*SendStatusClosing))==0) {
+    if ((sendStatus&(3*SendStatusClosing))==0) {///max of 3 entities can close the stream at once (FIXME: should implement |= on atomic ints), but as of now at most the recv thread the sender responsible and a user close() is all that is allowed at once...so 3 is fine)
         MultiplexedSocket::sendBytes(mSocket,toBeSent);
         didsend=true;
     }
+    //relinquish control to a potential closer
+    --(*mSendStatus);
     if (!didsend) {
+        //if the data was not sent, its our job to clean it up
         delete toBeSent.data;
         std::cerr<< "printing to closed stream id "<<getID().read();
     }
-    --(*mSendStatus);
 }
+///This function waits on the sendStatus clearing up so no outstanding sends are being made (and no further ones WILL be made cus of the SendStatusClosing flag that is on
 void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     int sendStatus=vSendStatus.read();
     bool incd=false;
@@ -106,6 +114,7 @@ void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
         vSendStatus+=SendStatusClosing;
         incd=true;
     }
+    //Wait until it's a pure sendStatus value without any 'remainders' caused by outstanding sends
     while ((sendStatus=vSendStatus.read())!=SendStatusClosing&&
            sendStatus!=2*SendStatusClosing&&
            sendStatus!=3*SendStatusClosing) {
@@ -113,8 +122,11 @@ void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     }
 }
 void TCPStream::close() {
+    //set the stream closed as soon as sends are done
     closeSendStatus(*mSendStatus);
+    //obliterate all incoming callback to this stream
     mSocket->addCallbacks(getID(),NULL);
+    //send out that the stream is now closed on all sockets
     MultiplexedSocket::closeStream(mSocket,getID());
 }
 TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0)) {
@@ -146,6 +158,7 @@ bool TCPStream::cloneFrom(Stream*otherStream,
     }
     StreamID newID=mSocket->getNewID();
     mID=newID;
+    //check from addCallbacks if the socket is already disconnected--if so let the user know
     return mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
                                                      bytesReceivedCallback,
                                                      mSendStatus))!=MultiplexedSocket::DISCONNECTED;

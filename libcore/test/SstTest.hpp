@@ -45,7 +45,7 @@ public:
         //boost::lock_guard<boost::mutex> connectingMutex(test);
         for (unsigned int i=0;i<mMessagesToSend.size();++i) {
             s->send(Chunk(mMessagesToSend[i].begin(),mMessagesToSend[i].end()),
-                    mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?Stream::ReliableUnordered:(mMessagesToSend[i][0]=='X'?Stream::Unreliable:Stream::Reliable)):Stream::Reliable);
+                    mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?ReliableUnordered:(mMessagesToSend[i][0]=='X'?Unreliable:ReliableOrdered)):ReliableOrdered);
         }
     }
     ///this will only be calledback if main connection fails--which means that secondary stream rather than answerer to secondary stream will fail

@@ -37,6 +37,16 @@ namespace Sirikata {
 /// Network contains Stream and TCPStream.
 namespace Network {
 typedef std::vector<uint8> Chunk;
+
+
+///Codes indicating if packet sending should be reliable or not,and in order or not
+enum StreamReliability {
+    Unreliable,
+    ReliableUnordered,
+    ReliableOrdered
+};
+
+
 /**
  * This is the stream interface by which applications will send packets to the world
  * Each protocol will provide a specific function similar to the connect and bind functions 
@@ -121,12 +131,6 @@ public:
         ConnectionFailed,
         Disconnected
     };
-    ///Codes indicating if packet sending should be reliable or not,and in order or not
-    enum Reliability {
-        Unreliable,
-        ReliableUnordered,
-        Reliable
-    };
     ///Callback type for when a connection happens (or doesn't) Callees will receive a ConnectionStatus code indicating connection successful, rejected or a later disconnection event
     typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
     ///Callback type for when a full chunk of bytes are waiting on the stream
@@ -176,7 +180,7 @@ public:
     
     
     ///Send a chunk of data to the receiver
-    virtual void send(const Chunk&data,Reliability)=0;
+    virtual void send(const Chunk&data,StreamReliability)=0;
     ///close this stream: if it is the last stream, close the connection as well
     virtual void close()=0;
     virtual ~Stream(){};

@@ -48,11 +48,12 @@ public:
         DISCONNECTED
     };
 private:
+    ///ASIO io service running in a single thread we can expect callbacks from
     IOService*mIO;
+    ///a vector of ASIO sockets (wrapped in with a simple send-full-packet abstraction)
     std::vector<ASIOSocketWrapper> mSockets;
-/// these items are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
-    static boost::mutex sConnectingMutex;
-    std::vector<RawRequest> mNewRequests;
+
+    ///This callback is called whenever a newly encountered StreamID is picked up
     Stream::SubstreamCallback mNewSubstreamCallback;
     typedef std::tr1::unordered_map<Stream::StreamID,TCPStream::Callbacks*,Stream::StreamID::Hasher> CallbackMap;
 	///Workaround for VC8 bug that does not define std::pair<Stream::StreamID,Callbacks*>::operator=
@@ -67,25 +68,48 @@ private:
            return std::pair<Stream::StreamID,TCPStream::Callbacks*>(mID,mCallback);
         }
     };
-    std::deque<StreamIDCallbackPair> mCallbackRegistration;
+    /// these next items (mCallbackRegistration, mNewRequests, mSocketConnectionPhase) are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
+    static boost::mutex sConnectingMutex;
+    ///list of packets that must be sent before mSocketConnectionPhase switches to CONNECTION
+    std::vector<RawRequest> mNewRequests;
+    ///must be set to PRECONNECTION when items are being placed on mNewRequests queue and WAITCONNECTING when it is emptying the queue (with lock held) and finally CONNECTED when the user can send directly to the socket.  DISCONNECTED must be set as soon as the socket fails to write or read
     volatile SocketConnectionPhase mSocketConnectionPhase;
-    ///Copies items from CallbackRegistration to mCallbacks Assumes sConnectingMutex is taken
+    ///This is a list of items for callback registration so that when packets are received by those streamIDs the appropriate callback may be called
+    std::deque<StreamIDCallbackPair> mCallbackRegistration;
+    ///a map of ID to callback, only to be touched by the io reactor thread
+    CallbackMap mCallbacks;
+
+    ///Copies items from newcallback to mCallbacks: must be called from the single io thread so no one would be looking to call the callbacks at the same time
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback);
+    ///reads the current list of id-callback pairs to the registration list and if setConectedStatus is set, changes the status of the overall MultiplexedSocket at the same time
     bool CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus=false);
+    ///Returns the least busy stream upon which unordered data may be piled
     size_t leastBusyStream();
+    /**
+     *chance in the current load that an unreliable packet may be dropped 
+     * (due to busy queues, etc). 
+     * \returns drop chance which must be less than 1.0 and greater or equal to 0.0 
+     */
     float dropChance(const Chunk*data,size_t whichStream);
+    /**
+     *  sends bytes to the network directly.
+     *  assumes that the mSocketConnectionPhase in the CONNECTED state    
+     */
     static void sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
 public:
-
+    ///public io service accessor for new stream construction
     IOService&getASIOService(){return *mIO;}
-    static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream) {
-        RawRequest closeRequest;
-        closeRequest.originStream=Stream::StreamID();//control packet
-        closeRequest.unordered=false;
-        closeRequest.unreliable=false;
-        closeRequest.data=ASIOSocketWrapper::constructControlPacket(code,sid);
-        sendBytes(thus,closeRequest);
-    }
+    
+    /**
+     * Sends a packet telling the other side that this stream is closed (or alternatively if its a closeAck that the close request was received and no further packets for that
+     * stream will be sent with that streamID
+     */
+    static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream);
+
+    /**
+     * Either sends or queues bytes in the data request depending on the connection state 
+     * if the state is not connected then it must take a lock and place them on the mNewRequests queue
+     */
     static void sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
     /**
      * Adds callbacks onto the queue of callbacks-to-be-added
@@ -96,24 +120,33 @@ public:
         mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
         return mSocketConnectionPhase;
     }
-    AtomicValue<uint32> mHighestStreamID;
     ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
     std::tr1::unordered_map<Stream::StreamID,unsigned int,Stream::StreamID::Hasher>mAckedClosingStreams;
+    ///a set of StreamIDs to hold the streams that were requested closed but have not been acknowledged, to prevent received packets triggering NewStream callbacks as if a new ID were received
     std::tr1::unordered_set<Stream::StreamID,Stream::StreamID::Hasher>mOneSidedClosingStreams;
 #define ThreadSafeStack ThreadSafeQueue //FIXME this can be way more efficient
-    ///actually free stream IDs
+    ///The highest streamID that has been used for making new streams on this side
+    AtomicValue<uint32> mHighestStreamID;
+    ///actually free stream IDs that will not be sent out until recalimed by this side
     ThreadSafeStack<Stream::StreamID>mFreeStreamIDs;
 #undef ThreadSafeStack
-    CallbackMap mCallbacks;
-
+    ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
+    ///Constructor for a connecting stream
     MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback);
+    ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
     MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback);
+    ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
     static void sendAllProtocolHeaders(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const UUID&syncedUUID);
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket();
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID
     void shutDownClosedStream(unsigned int controlCode,const Stream::StreamID &id);
+    /**
+     * Process an entire packet when received from the IO reactor thread.
+     * Control packets come in on Stream::StreamID() and others should be directed
+     * to the appropriate callback
+     */
     void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk);
     /**
      * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
@@ -189,7 +222,11 @@ public:
     void connectedCallback() {
         connectionFailureOrSuccessCallback(CONNECTED,Stream::Connected);
     }
-
+/**
+ *  Connect a newly constructed MultiplexedSocket to a given address
+ * \param address is a protocol-agnostic string of endpoint and service ID
+ * \param numSockets indicates how many TCP sockets should manage the orderlessness of this connection
+ */
     void connect(const Address&address, unsigned int numSockets);
 
     unsigned int numSockets() const {

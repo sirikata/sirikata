@@ -141,7 +141,7 @@ public:
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
     ///Implementation of send interface
-    virtual void send(const Chunk&data,Reliability);
+    virtual void send(const Chunk&data,StreamReliability);
     ///Implementation of connect interface
     virtual void connect(
         const Address& addy,

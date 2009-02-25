@@ -140,6 +140,17 @@ void MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocke
     }
 }
 
+
+void MultiplexedSocket::closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code) {
+    RawRequest closeRequest;
+    closeRequest.originStream=Stream::StreamID();//control packet
+    closeRequest.unordered=false;
+    closeRequest.unreliable=false;
+    closeRequest.data=ASIOSocketWrapper::constructControlPacket(code,sid);
+    sendBytes(thus,closeRequest);
+}
+
+
 void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
     if (thus->mSocketConnectionPhase==CONNECTED) {
         sendBytesNow(thus,data);
