@@ -43,7 +43,7 @@ class Server;
 
 class Object {
 public:
-    Object(Server* server, MotionPath* motion);
+    Object(Server* server, const UUID& id, MotionPath* motion);
 
     const UUID& uuid() {
         return mID;
