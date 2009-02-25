@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  Random.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
-
-#include "Utility.hpp"
+#include <cstdlib>
 
 namespace CBR {
 
-class Duration;
+inline float32 randFloat() {
+    return (float)rand() / (float)RAND_MAX;
+}
 
-class Time {
-public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
-
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
-
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
-private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+inline float32 randFloat(float32 minval, float32 maxval) {
+    return minval + randFloat() * (maxval - minval);
+}
 
 } // namespace CBR
-
-#endif //_CBR_TIME_HPP_

@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  Server.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#ifndef _CBR_SERVER_HPP_
+#define _CBR_SERVER_HPP_
 
 #include "Utility.hpp"
 
 namespace CBR {
 
-class Duration;
+typedef uint32 ServerID;
 
-class Time {
+/** Handles all the basic services provided for objects by a server,
+ *  including routing and message delivery, proximity services, and
+ *  object -> server mapping.  This is a singleton for each simulated
+ *  server.  Other servers are referenced by their ServerID.
+ */
+class Server {
 public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
+    Server(ServerID id);
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
-
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
+    const ServerID& id() const;
 private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+    ServerID mID;
+}; // class Server
 
 } // namespace CBR
 
-#endif //_CBR_TIME_HPP_
+#endif //_CBR_SERVER_HPP_

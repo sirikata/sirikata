@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  RandomMotionPath.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#include "RandomMotionPath.hpp"
+#include <algorithm>
+#include <cmath>
+#include "Random.hpp"
 
-#include "Utility.hpp"
+#ifndef PI
+#define PI 3.14159f
+#endif
 
 namespace CBR {
 
-class Duration;
+static Vector3f UniformSampleSphere(float u1, float u2) {
+    float32 z = 1.f - 2.f * u1;
+    float32 r = sqrtf(std::max(0.f, 1.f - z*z));
+    float32 phi = 2.f * PI * u2;
+    float32 x = r * cosf(phi);
+    float32 y = r * sinf(phi);
+    return Vector3f(x, y, z);
+}
 
-class Time {
-public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
+RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period) {
+    MotionVector3f last_motion(start, startpos, Vector3f(0,0,0));
+    for(Time curtime = start; curtime < end; curtime += update_period) {
+        Vector3f curpos = last_motion.position(curtime);
+        Vector3f dir = UniformSampleSphere( randFloat(), randFloat() );
+        mUpdates.push_back(MotionVector3f(curtime, curpos, dir));
+    }
+}
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
+const MotionVector3f* RandomMotionPath::nextUpdate(const Time& curtime) const {
+    for(uint32 i = 0; i < mUpdates.size(); i++)
+        if (mUpdates[i].updateTime() > curtime) return &mUpdates[i];
+    return NULL;
+}
 
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
-private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
 
 } // namespace CBR
-
-#endif //_CBR_TIME_HPP_

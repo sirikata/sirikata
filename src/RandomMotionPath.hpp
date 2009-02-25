@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  RandomMotionPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#ifndef _CBR_RANDOM_MOTION_PATH_HPP_
+#define _CBR_RANDOM_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
+#include "MotionPath.hpp"
 
 namespace CBR {
 
-class Duration;
-
-class Time {
+/** Random motion path.  Initialize with a starting position, speed, and
+ *  change frequency.  It will then generate a random path based on these
+ *  parameters.
+ *  NOTE: This is for testing only, and will generate inconsistent results
+ *  if used across multiple servers.
+ */
+class RandomMotionPath : public MotionPath {
 public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
+    RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period);
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
-
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
+    virtual const MotionVector3f* nextUpdate(const Time& curtime) const;
 private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+    std::vector<MotionVector3f> mUpdates;
+}; // class RandomMotionPath
 
 } // namespace CBR
 
-#endif //_CBR_TIME_HPP_
+#endif //_CBR_RANDOM_MOTION_PATH_HPP_

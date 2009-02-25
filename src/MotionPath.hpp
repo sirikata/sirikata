@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  MotionPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#ifndef _CBR_MOTION_PATH_HPP_
+#define _CBR_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
 
-class Duration;
-
-class Time {
+/** Base class for MotionPaths. All motion paths must implement one method
+ *  that allows random access into the update list, given the next update
+ *  that will occur after a specified time.
+ */
+class MotionPath {
 public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
-
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
-
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
-private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+    /** Given a current time, return the next update that will occur. Returns
+     *  NULL if there is not another update.
+     */
+    virtual const MotionVector3f* nextUpdate(const Time& curtime) const = 0;
+}; // class MotionPath
 
 } // namespace CBR
 
-#endif //_CBR_TIME_HPP_
+#endif //_CBR_MOTION_PATH_HPP_

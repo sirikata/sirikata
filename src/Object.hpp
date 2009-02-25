@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  Object.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#ifndef _CBR_OBJECT_HPP_
+#define _CBR_OBJECT_HPP_
 
 #include "Utility.hpp"
+#include "Time.hpp"
+#include "MotionPath.hpp"
 
 namespace CBR {
 
-class Duration;
+class Server;
 
-class Time {
+class Object {
 public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
+    Object(Server* server, MotionPath* motion);
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
+    const UUID& uuid() {
+        return mID;
+    }
 
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
+    void tick(const Time& t);
 private:
-    friend class Duration;
+    void addSubscriber(const UUID& sub);
+    void removeSubscriber(const UUID& sub);
 
-    Time();
+    void checkPositionUpdate(const Time& t);
 
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+    typedef std::set<UUID> ObjectSet;
+
+    UUID mID;
+    MotionPath* mMotion;
+    MotionVector3f mLocation;
+    Server* mServer;
+    ObjectSet mSubscribers;
+}; // class Object
 
 } // namespace CBR
 
-#endif //_CBR_TIME_HPP_
+#endif //_CBR_OBJECT_HPP_

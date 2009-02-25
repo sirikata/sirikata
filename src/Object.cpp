@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  Object.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,42 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
-
-#include "Utility.hpp"
+#include "Object.hpp"
+#include "Server.hpp"
 
 namespace CBR {
 
-class Duration;
+Object::Object(Server* server, MotionPath* motion)
+ : mID()
+{
+}
 
-class Time {
-public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
+void Object::addSubscriber(const UUID& sub) {
+    if (mSubscribers.find(sub) == mSubscribers.end())
+        mSubscribers.insert(sub);
+}
 
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
+void Object::removeSubscriber(const UUID& sub) {
+    ObjectSet::iterator it = mSubscribers.find(sub);
+    if (it != mSubscribers.end())
+        mSubscribers.erase(it);
+}
 
-    Duration operator-(const Time& rhs) const;
+void Object::tick(const Time& t) {
+    checkPositionUpdate(t);
+}
 
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
-private:
-    friend class Duration;
-
-    Time();
-
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+void Object::checkPositionUpdate(const Time& t) {
+    const MotionVector3f* update = mMotion->nextUpdate(mLocation.updateTime());
+    if (update != NULL && update->updateTime() <= t) {
+        mLocation = *update;
+        for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
+            // FIXME
+            // send( new PositionUpdate( mID, *it, mLocation ) );
+        }
+    }
+}
 
 } // namespace CBR
-
-#endif //_CBR_TIME_HPP_
