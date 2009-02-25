@@ -128,6 +128,15 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(SirikataCore REQUIRED)
 
+#dependency: raknet core
+IF(EXISTS ${DEPENDENCIES_ROOT}/installed-raknet)
+  SET(Raknet_ROOT ${DEPENDENCIES_ROOT}/installed-raknet)
+ELSE()
+  SET(Raknet_ROOT ${DEPENDENCIES_ROOT})
+ENDIF()
+FIND_PACKAGE(Raknet REQUIRED)
+
+
 #source file location
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 
@@ -135,7 +144,8 @@ SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 INCLUDE_DIRECTORIES(BEFORE
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
-        ${SirikataCore_INCLUDE_DIRS})
+        ${SirikataCore_INCLUDE_DIRS}
+        ${Raknet_INCLUDE_DIRS})
 
 #source files
 SET(CBR_SOURCES
@@ -154,4 +164,5 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${GLUT_LIBRARIES}
-        ${SirikataCore_LIBRARIES})
+        ${SirikataCore_LIBRARIES}
+        ${Raknet_LIBRARIES})
