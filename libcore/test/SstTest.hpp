@@ -48,6 +48,13 @@ public:
                     mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?Stream::ReliableUnordered:(mMessagesToSend[i][0]=='X'?Stream::Unreliable:Stream::Reliable)):Stream::Reliable);
         }
     }
+    ///this will only be calledback if main connection fails--which means that secondary stream rather than answerer to secondary stream will fail
+    void mainStreamConnectionCallback(int id, Stream::ConnectionStatus stat, const std::string&reason) {
+        connectionCallback(id,stat,reason);
+        if (stat!=Stream::Connected) {
+            ++mDisconCount;
+        }
+    }
     void connectionCallback(int id, Stream::ConnectionStatus stat, const std::string&reason) {
         Chunk connectionReason(2);
         connectionReason[0]='C';
@@ -59,8 +66,9 @@ public:
         }
 
         mDataMap[id].push_back(connectionReason);
-        if (stat!=Stream::Connected)
+        if (stat!=Stream::Connected){ 
             ++mDisconCount;
+        }
 
     }
     void dataRecvCallback(Stream *s,int id, const Chunk&data) {
@@ -322,7 +330,7 @@ public:
         static int id=-1;
         s->connect(addy,
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::connectionCallback,this,id,_1,_2),
+                   std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1));
         --id;
     }
@@ -414,26 +422,38 @@ public:
 
                 {
                     Stream*zz=r.factory();        
-                    zz->cloneFrom(&r,
-                                  std::tr1::bind(&SstTest::connectionCallback,this,-1999999999,_1,_2),
-                                  &Stream::ignoreBytesReceived);
-                    runRoutine(zz);
-                    zz->close();
+                    if (zz->cloneFrom(&r,
+                                      &Stream::ignoreConnectionStatus,
+                                      &Stream::ignoreBytesReceived)) {
+                        runRoutine(zz);
+                        zz->close();
+                    }else {
+                        //dont need to increment count since main stream will increment it twice in leu of this stream
+                    }
                     delete zz;
                 }
                 tcpz=(TCPStream*)(z=r.factory());
-                z->cloneFrom(&r,
-                             std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-                             std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1));
-                runRoutine(z);
+                if (z->cloneFrom(&r,
+                                 std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
+                                 std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1))) {
+                    runRoutine(z);
+                }else {
+                    ++mDisconCount;
+                }
             }
             //wait until done
             time_t last_time=time(NULL);
+            int retry_count=10;
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Message Receive Count == "<<mCount.read()<<'\n';
                     last_time=this_time;
+                    if (--retry_count<=0) {
+                        TS_FAIL("Timeout  in receiving messages");
+                        TS_ASSERT_EQUALS(mCount.read(),(int)(mMessagesToSend.size()*(doSubstreams?5:2)));
+                        break;
+                    }
                 }
             }
             TS_ASSERT(mAbortTest==false);
@@ -447,25 +467,35 @@ public:
         if( doSubstreams){
             z->close();
             time_t last_time=time(NULL);
+            int retry_count=3;
             while(mDisconCount.read()<3){
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Close Receive Count == "<<mDisconCount.read()<<'\n';
                     last_time=this_time;
+                    if (--retry_count<=0) {
+                        TS_FAIL("Timeout  in receiving close signals");
+                        TS_ASSERT_EQUALS(mDisconCount.read(),3);
+                        break;
+                    }
                 }
             }
 
             delete z;
         }
         time_t last_time=time(NULL);
+        int retry_count=3;
         while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
             if (this_time>last_time+5) {
                 std::cerr<<"SubStream End Receive Count == "<<mEndCount.read()<<'\n';
                 last_time=this_time;
+                if (--retry_count<=0) {
+                    TS_FAIL("Timeout  in receiving newSubstream functor deallocation request");
+                    TS_ASSERT_EQUALS(mEndCount.read(),1);
+                    break;
+                }
             }
         }
-        //sleep(1);
-        //std::cout<<"Final counts: "<<mCount.read()<< " "<<mDisconCount.read()<<" "<<mEndCount.read()<<"\n";
     }
 };

@@ -141,12 +141,14 @@ bool TCPStream::cloneFrom(Stream*otherStream,
     if (NULL==toBeCloned)
         return false;
     mSocket=toBeCloned->mSocket;
+    if (!mSocket) {
+        return false;
+    }
     StreamID newID=mSocket->getNewID();
     mID=newID;
-    mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
-                                              bytesReceivedCallback,
-                                              mSendStatus));
-    return true;
+    return mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
+                                                     bytesReceivedCallback,
+                                                     mSendStatus))!=MultiplexedSocket::DISCONNECTED;
 }
 
 

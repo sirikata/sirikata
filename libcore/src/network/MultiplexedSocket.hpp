@@ -41,6 +41,12 @@ public:
         Stream::StreamID originStream;
         Chunk * data;
     };
+    enum SocketConnectionPhase{
+        PRECONNECTION,
+        WAITCONNECTING,//need to fetch the lock, but about to connect
+        CONNECTED,
+        DISCONNECTED
+    };
 private:
     IOService*mIO;
     std::vector<ASIOSocketWrapper> mSockets;
@@ -62,12 +68,7 @@ private:
         }
     };
     std::deque<StreamIDCallbackPair> mCallbackRegistration;
-    volatile enum SocketConnectionPhase{
-        PRECONNECTION,
-        WAITCONNECTING,//need to fetch the lock, but about to connect
-        CONNECTED,
-        DISCONNECTED
-    }mSocketConnectionPhase;
+    volatile SocketConnectionPhase mSocketConnectionPhase;
     ///Copies items from CallbackRegistration to mCallbacks Assumes sConnectingMutex is taken
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback);
     bool CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus=false);
@@ -88,10 +89,12 @@ public:
     static void sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
     /**
      * Adds callbacks onto the queue of callbacks-to-be-added
+     * Returns true if the callbacks will be actually used or false if the socket is already disconnected
      */
-    void addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb) {
+    SocketConnectionPhase addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb) {
         boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
         mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
+        return mSocketConnectionPhase;
     }
     AtomicValue<uint32> mHighestStreamID;
     ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
