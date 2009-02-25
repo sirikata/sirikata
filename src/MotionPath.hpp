@@ -44,6 +44,8 @@ namespace CBR {
  */
 class MotionPath {
 public:
+    /** The initial motion vector for the object. */
+    virtual const MotionVector3f initial() const = 0;
     /** Given a current time, return the next update that will occur. Returns
      *  NULL if there is not another update.
      */

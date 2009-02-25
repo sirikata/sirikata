@@ -59,6 +59,11 @@ RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vec
     }
 }
 
+const MotionVector3f RandomMotionPath::initial() const {
+    assert( !mUpdates.empty() );
+    return mUpdates[0];
+}
+
 const MotionVector3f* RandomMotionPath::nextUpdate(const Time& curtime) const {
     for(uint32 i = 0; i < mUpdates.size(); i++)
         if (mUpdates[i].updateTime() > curtime) return &mUpdates[i];

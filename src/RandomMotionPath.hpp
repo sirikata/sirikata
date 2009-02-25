@@ -48,6 +48,7 @@ class RandomMotionPath : public MotionPath {
 public:
     RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period);
 
+    virtual const MotionVector3f initial() const;
     virtual const MotionVector3f* nextUpdate(const Time& curtime) const;
 private:
     std::vector<MotionVector3f> mUpdates;
