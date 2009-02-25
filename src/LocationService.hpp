@@ -1,5 +1,5 @@
 /*  cbr
- *  Server.hpp
+ *  LocationService.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,41 +30,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_HPP_
-#define _CBR_SERVER_HPP_
+#ifndef _CBR_LOCATION_SERVICE_HPP_
+#define _CBR_LOCATION_SERVICE_HPP_
 
 #include "Utility.hpp"
 #include "Time.hpp"
-#include "Proximity.hpp"
-#include "LocationService.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
 
-typedef uint32 ServerID;
-class Proximity;
-class Object;
-
-/** Handles all the basic services provided for objects by a server,
- *  including routing and message delivery, proximity services, and
- *  object -> server mapping.  This is a singleton for each simulated
- *  server.  Other servers are referenced by their ServerID.
+/** Interface for location services.  This provides a way for other components
+ *  to get the most current information about object locations.
  */
-class Server {
+class LocationService {
 public:
-    Server(ServerID id, LocationService* loc_service, Proximity* prox);
-
-    const ServerID& id() const;
-
-    void tick(const Time& t);
-private:
-    typedef std::map<UUID, Object*> ObjectMap;
-
-    ServerID mID;
-    ObjectMap mObjects;
-    LocationService* mLocationService;
-    Proximity* mProximity;
-}; // class Server
+    virtual void tick(const Time& t) = 0;
+    virtual MotionVector3f location(const UUID& uuid) = 0;
+}; // class LocationService
 
 } // namespace CBR
 
-#endif //_CBR_SERVER_HPP_
+#endif //_CBR_LOCATION_SERVICE_HPP_

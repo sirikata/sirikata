@@ -31,16 +31,23 @@
  */
 
 #include "Server.hpp"
+#include "Proximity.hpp"
+#include "Object.hpp"
 
 namespace CBR {
 
-Server::Server(ServerID id)
- : mID(id)
+Server::Server(ServerID id, LocationService* loc_service, Proximity* prox)
+ : mID(id),
+   mLocationService(loc_service),
+   mProximity(prox)
 {
 }
 
 const ServerID& Server::id() const {
     return mID;
+}
+
+void Server::tick(const Time& t) {
 }
 
 } // namespace CBR

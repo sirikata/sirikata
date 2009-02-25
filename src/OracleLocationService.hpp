@@ -1,5 +1,5 @@
 /*  cbr
- *  Server.hpp
+ *  OracleLocationService.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,41 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_HPP_
-#define _CBR_SERVER_HPP_
+#ifndef _CBR_ORACLE_LOCATION_SERVICE_HPP_
+#define _CBR_ORACLE_LOCATION_SERVICE_HPP_
 
-#include "Utility.hpp"
-#include "Time.hpp"
-#include "Proximity.hpp"
 #include "LocationService.hpp"
+#include "MotionPath.hpp"
 
 namespace CBR {
 
-typedef uint32 ServerID;
-class Proximity;
-class Object;
-
-/** Handles all the basic services provided for objects by a server,
- *  including routing and message delivery, proximity services, and
- *  object -> server mapping.  This is a singleton for each simulated
- *  server.  Other servers are referenced by their ServerID.
+/** Interface for location services.  This provides a way for other components
+ *  to get the most current information about object locations.
  */
-class Server {
+class OracleLocationService : public LocationService {
 public:
-    Server(ServerID id, LocationService* loc_service, Proximity* prox);
+    // FIXME add constructor which can add all the objects being simulated to mLocations
 
-    const ServerID& id() const;
-
-    void tick(const Time& t);
+    virtual void tick(const Time& t);
+    virtual MotionVector3f location(const UUID& uuid);
 private:
-    typedef std::map<UUID, Object*> ObjectMap;
+    struct LocationInfo {
+        MotionVector3f location;
+        bool has_next;
+        MotionVector3f next;
+        MotionPath* path;
+    };
+    typedef std::map<UUID, LocationInfo> LocationMap;
 
-    ServerID mID;
-    ObjectMap mObjects;
-    LocationService* mLocationService;
-    Proximity* mProximity;
-}; // class Server
+    LocationMap mLocations;
+}; // class LocationService
 
 } // namespace CBR
 
-#endif //_CBR_SERVER_HPP_
+#endif //_CBR_LOCATION_SERVICE_HPP_

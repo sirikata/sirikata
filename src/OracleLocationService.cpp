@@ -1,5 +1,5 @@
 /*  cbr
- *  Server.hpp
+ *  OracleLocationService.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,41 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_HPP_
-#define _CBR_SERVER_HPP_
-
-#include "Utility.hpp"
-#include "Time.hpp"
-#include "Proximity.hpp"
-#include "LocationService.hpp"
+#include "OracleLocationService.hpp"
 
 namespace CBR {
 
-typedef uint32 ServerID;
-class Proximity;
-class Object;
+void OracleLocationService::tick(const Time& t) {
+    // FIXME we could maintain a heap of event times instead of scanning through this list every time
+    for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
+        LocationInfo& locinfo = it->second;
+        if(locinfo.has_next && locinfo.next.updateTime() <= t) {
+            locinfo.location = locinfo.next;
+            const MotionVector3f* next = locinfo.path->nextUpdate(t);
+            if (next == NULL)
+                locinfo.has_next = false;
+            else
+                locinfo.next = *next;
+        }
+    }
+}
 
-/** Handles all the basic services provided for objects by a server,
- *  including routing and message delivery, proximity services, and
- *  object -> server mapping.  This is a singleton for each simulated
- *  server.  Other servers are referenced by their ServerID.
- */
-class Server {
-public:
-    Server(ServerID id, LocationService* loc_service, Proximity* prox);
+MotionVector3f OracleLocationService::location(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
 
-    const ServerID& id() const;
-
-    void tick(const Time& t);
-private:
-    typedef std::map<UUID, Object*> ObjectMap;
-
-    ServerID mID;
-    ObjectMap mObjects;
-    LocationService* mLocationService;
-    Proximity* mProximity;
-}; // class Server
+    LocationInfo locinfo = it->second;
+    return locinfo.location;
+}
 
 } // namespace CBR
-
-#endif //_CBR_SERVER_HPP_
