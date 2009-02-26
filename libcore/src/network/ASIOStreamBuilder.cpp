@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPStreamBuilder.cpp
+ *  ASIOStreamBuilder.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -37,7 +37,7 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
-namespace Sirikata { namespace Network { namespace TCPStreamBuilder{
+namespace Sirikata { namespace Network { namespace ASIOStreamBuilder{
 
 class IncompleteStreamState {
 public:
@@ -99,7 +99,7 @@ void beginNewStream(TCPSocket * socket, const Stream::SubstreamCallback& cb) {
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
-                            std::tr1::bind(&TCPStreamBuilder::buildStream,buffer,socket,cb,_1,_2));
+                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,cb,_1,_2));
 }
 
 } } } 

@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPStreamBuilder.hpp
+ *  ASIOStreamBuilder.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Sirikata { namespace Network { namespace TCPStreamBuilder {
+namespace Sirikata { namespace Network { namespace ASIOStreamBuilder {
 /**
  * Begins a new stream based on a TCPSocket connection acception with the following substream callback for stream creation
  * Only creates the stream if the handshake is complete and it has all the resources (udp, tcp sockets, etc) necessary at the time
