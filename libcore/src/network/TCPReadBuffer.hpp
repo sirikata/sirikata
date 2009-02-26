@@ -32,121 +32,93 @@
 
 namespace Sirikata { namespace Network {
 
-class TCPReadBuffer {
-    static const unsigned int sBufferLength=1440;
-    static const unsigned int mLowWaterMark=256;
+class ASIOReadBuffer {
+    enum {
+        ///The point at which the class switches from reading into a fixed buffer to filling a sole preallocated packet with data
+        sLowWaterMark=256,
+        ///The length of the fixed buffer
+        sBufferLength=1440        
+    };
+    ///A fixed length buffer to read incoming requests when the data is unknown in size or so far small in size
     uint8 mBuffer[sBufferLength];
+    ///Where is ASIO writing to in mBuffer
     unsigned int mBufferPos;
+    ///Which actual low level tcp socket from the mParentSocket is used for communication
     unsigned int mWhichBuffer;
+    ///A new chunk being read directly into--usually this member is only used to hold a large packet of information, otherwise the fixed length buffer is used
     Chunk mNewChunk;
+    ///The StreamID of a new, partially examined new chunk
     Stream::StreamID mNewChunkID;
+    ///The shared structure responsible for holding state about the associated TCPStream that this class reads and interprets data from
     std::tr1::weak_ptr<MultiplexedSocket> mParentSocket;
     typedef boost::system::error_code ErrorCode;
-public:
-    TCPReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
-        mBufferPos=0;
-        mWhichBuffer=whichSocket;
-        readIntoFixedBuffer(parentSocket);
-    }
+    /**
+     * This forwards the error message to the MultiplexedSocket so the appropriate action may be taken 
+     * (including,possibly, disconnecting and shutting down the socket connections and all associated streams
+     */
     void processError(MultiplexedSocket*parentSocket, const ErrorCode &error);
+    /**
+     * This function passes the contents of a chunk to the multiplexed socket for callback handling
+     * \param parentSocket is the MultiplexedSocket responsible for this stream with the relevant callback information
+     * \param whichSocket is the current ASIO socket responsible for having read the data. It must equal mWhichBuffer
+     * \param sid is the StreamID that sent the data which made it to this socket and got processed. It will help determine which callback to call
+     * \param newChunk is the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
+     */
     void processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,
                           unsigned int whichSocket,
-                          const Stream::StreamID&,
-                          const Chunk&mNewChunk);
+                          const Stream::StreamID& sid,
+                          const Chunk&newChunk);
+    /**
+     *  This function is called when either 0 information is known about the data to be read (such as size, etc)
+     *  or if the data is known but the packet is sufficiently small that other packets may be conjoined with it in the buffer
+     *  This function tells asio to read data from the socket into mBuffer at offset mBufferPos upto the end of the buffer
+     */
     void readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket);
+    /**
+     *  This function is called when a sufficiently large chunk needs to be filled up from a previous readIntoFixedBuffer call.
+     *  This function will tell ASIO to read directly into the mNewChunk class, offset by the mBufferPos upto the value of mNewChunk.size()     
+     */
     void readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket);
-    Stream::StreamID processPartialChunk(uint8* dataBuffer, uint32 packetLength, uint32 &bufferReceived, Chunk&retval) {
-        unsigned int headerLength=bufferReceived;
-        Stream::StreamID retid;
-        retid.unserialize(dataBuffer,headerLength);
-        assert(headerLength<=bufferReceived&&"High water mark must be greater than maximum StreamID size");
-        bufferReceived-=headerLength;
-        assert(headerLength<=packetLength&&"High water mark must be greater than maximum StreamID size");
-        retval.resize(packetLength-headerLength);
-        if (packetLength>headerLength) {
-            std::memcpy(&*retval.begin(),dataBuffer+headerLength,bufferReceived);
-        }
-        return retid;
-    }
-    void translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus) {
-        unsigned int chunkPos=0;
-        unsigned int packetHeaderLength;
-        Stream::uint30 packetLength;
-        while ((packetHeaderLength=mBufferPos-chunkPos)!=0&&packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {
-            if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
-                if (mBufferPos-chunkPos<mLowWaterMark) {
-                    break;//go directly to memmov code and move remnants to beginning of buffer to read a large portion at a time
-                }else {
-                    mBufferPos-=chunkPos;
-                    mBufferPos-=packetHeaderLength;
-                    assert(mNewChunk.size()==0);
-                    mNewChunkID = processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),mBufferPos,mNewChunk);
-                    readIntoChunk(thus);
-                    return;
-                }
-            }else {
-                uint32 chunkLength=packetLength.read();
-                Chunk resultChunk;
-                Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
-                processFullChunk(thus,mWhichBuffer,resultID,resultChunk);
-                chunkPos+=packetHeaderLength+packetLength.read();
-            }
-        }
-        if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
-            std::memmove(mBuffer,mBuffer+chunkPos,mBufferPos-chunkPos);
-        }
-        mBufferPos-=chunkPos;
-        readIntoFixedBuffer(thus);
-    }
-    void asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read){
-#ifdef TCPSSTLOG
-        char TESTs[1024];
-        sprintf(TESTs,"%d.socket",(int)(size_t)this);
-        FILE * fp=fopen(TESTs,"a");
-        fwrite(&mNewChunk[mBufferPos],bytes_read,1,fp);
-        fclose(fp);
-#endif
-        mBufferPos+=bytes_read;
-        std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
 
-        if (thus) {
-            if (error){
-                processError(&*thus,error);
-            }else {
-                if (mBufferPos>=mNewChunk.size()){
-                    assert(mBufferPos==mNewChunk.size());
-                    processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk);
-                    mNewChunk.resize(0);
-                    mBufferPos=0;
-                    readIntoFixedBuffer(thus);
-                }else {
-                    readIntoChunk(thus);
-                }
-            }
-        }else {
-            delete this;
-        }
-    }
-    void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read){
-#ifdef TCPSSTLOG
-        char TESTs[1024];
-        sprintf(TESTs,"%d.socket",(int)(size_t)this);
-        FILE * fp=fopen(TESTs,"a");
-        fwrite(&mBuffer[mBufferPos],bytes_read,1,fp);
-        fclose(fp);
-#endif
-        mBufferPos+=bytes_read;
-        std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+    /**
+     * Examines a buffer of bytes and converts it into a partially or totally filled chunk 
+     * and gives back information about unprocessed bytes and the StreamID that sent the chunk
+     * \param dataBuffer is the buffer to be read and turned into an active Chunk
+     * \param packetLength is the length of the to-be-returned Chunk plus the length of that chunk's streamID
+     * \param bufferReceived is the length of the dataBuffer, and the value returned in the bufferReceived is number of useful bytes copied to the returned chunk
+     * \param retval is the newly allocated chunk sized appropriately to hold all data that will ever be copied to it
+     * \returns the StreamID that this chunk was sent from
+     */
+    Stream::StreamID processPartialChunk(uint8* dataBuffer, uint32 packetLength, uint32 &bufferReceived, Chunk&retval);
 
-        if (thus) {
-            if (error){
-                    processError(&*thus,error);
-            }else {
-                    translateBuffer(thus);
-            }
-        }else {
-            delete this;// the socket is deleted
-        }
-    }
+    /**
+     * Examines the class variable mBuffer from the beginning to mBufferPos and translates all packets contained within to chunks and calls the appropriate callback
+     * If the information in the last unprocessed chunk is less than sLowWaterMark that excess information is moved to the front of the buffer and readIntoFixedBuffer is called
+     * If the information in the last unprocessed chunk is greater than the sLowWaterMark 
+     * then a new chunk is made specifically for the remaining data using the processPartialChunk function and readIntoChunk is called
+     */
+    void translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus);
+
+    /**
+     * The ASIO callback when ASIO was reading into a singleChunk
+     * The function reacts to errors by calling processErrors or a missing MultiplexedSocket by deleting this
+     * Otherwise the function reacts to
+     *     a partially full packet by calling readIntoFixedChunk and
+     *     a full packet by calling processFullChunk to invoke appropriate callbacks then readIntoFixedBuffer
+     */
+    void asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read);
+    /**
+     * The ASIO callback when ASIO was reading into the mBuffer from mBufferPos
+     * The function reacts to errors by calling processErrors or a missing MultiplexedSocket by deleting this
+     * Otherwise the function farms work off to translateBuffer
+     */
+    void asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read);
+public:
+    /**
+     *  The only public interface to TCPReadBuffer is the constructor which takes in a MultiplexedSocket and an integer offset
+     *  \param parentSocket the MultiplexedSocket which defines the whole connection (if the weak_ptr fails, the connection is bunk
+     *  \param whichSocket indicates which substream this read buffer is for, so the appropriate ASIO socket can be retrieved
+     */
+    ASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
 };
 } }

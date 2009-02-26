@@ -43,7 +43,10 @@ typedef boost::asio::io_service IOService;
 typedef boost::asio::ip::tcp::acceptor TCPListener;
 typedef boost::asio::ip::tcp::socket TCPSocket;
 class MultiplexedSocket;
-void MakeTCPReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
+#define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
+// #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
+
+void MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
 
 } }
 #endif

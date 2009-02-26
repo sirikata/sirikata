@@ -115,16 +115,8 @@ float MultiplexedSocket::dropChance(const Chunk*data,size_t whichStream) {
 }
 
 void MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
-#ifdef TCPSSTLOG
-    FILE * fp=fopen("SENTBYTESNOW.sack","a");
-    fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
-    fputc(':',fp);
-    for (size_t i=0;i<data.data->size();++i) {
-        fputc((*data.data)[i],fp);
-    }
-    fputc('\n',fp);
-    fclose(fp);
-#endif
+    TCPSSTLOG(this,"sendnow",&*data.data->begin(),data.data->size(),false);
+    TCPSSTLOG(this,"sendnow","\n",1,false);
     static Stream::StreamID::Hasher hasher;
     if (data.originStream==Stream::StreamID()) {
         unsigned int socket_size=(unsigned int)thus->mSockets.size();
@@ -163,30 +155,14 @@ void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
             }else if(thus->mSocketConnectionPhase==DISCONNECTED) {
                 //retval=false;
                 //FIXME is this the correct thing to do?
-#ifdef TCPSSTLOG
-                FILE * fp=fopen("SENTBYTESNEVER.sack","a");
-                fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
-                fputc(':',fp);
-                for (size_t i=0;i<data.data->size();++i) {
-                    fputc((*data.data)[i],fp);
-                }
-                fputc('\n',fp);
-                fclose(fp);
-#endif
+                TCPSSTLOG(this,"sendnvr",&*data.data->begin(),data.data->size(),false);                
+                TCPSSTLOG(this,"sendnvr","\n",1,false);
                 thus->mNewRequests.push_back(data);
             }else {
                 //with the connectionMutex acquired, no socket is allowed to be in the mSocketConnectionPhase
                 assert(thus->mSocketConnectionPhase==PRECONNECTION);
-#ifdef TCPSSTLOG
-                FILE * fp=fopen("SENTBYTESLATER.sack","a");
-                fputc('S',fp);        fputc('e',fp);        fputc('n',fp);        fputc('d',fp);
-                fputc(':',fp);
-                for (size_t i=0;i<data.data->size();++i) {
-                    fputc((*data.data)[i],fp);
-                }
-                fputc('\n',fp);
-                fclose(fp);
-#endif
+                TCPSSTLOG(this,"sendl8r",&*data.data->begin(),data.data->size(),false);
+                TCPSSTLOG(this,"sendl8r","\n",1,false);
                 thus->mNewRequests.push_back(data);
             }
         }
@@ -195,6 +171,14 @@ void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
         }
     }
 }
+
+MultiplexedSocket::SocketConnectionPhase MultiplexedSocket::addCallbacks(const Stream::StreamID&sid, 
+                                                                         TCPStream::Callbacks* cb) {
+    boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
+    mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
+    return mSocketConnectionPhase;
+}
+
 
 Stream::StreamID MultiplexedSocket::getNewID() {
     if (!mFreeStreamIDs.probablyEmpty()) {
@@ -226,7 +210,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const std::tr1::shared_ptr<Multip
     boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
     thus->mSocketConnectionPhase=CONNECTED;
     for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
-        MakeTCPReadBuffer(thus,i);
+        MakeASIOReadBuffer(thus,i);
     }
     assert (thus->mNewRequests.size()==0);//would otherwise need to empty out new requests--but no one should have a reference to us here
 }

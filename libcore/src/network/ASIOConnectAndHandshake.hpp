@@ -39,9 +39,6 @@ class ASIOConnectAndHandshake{
     UUID mHeaderUUID;
     Array<uint8,TCPStream::TcpSstHeaderSize> mFirstReceivedHeader;
     typedef boost::system::error_code ErrorCode;
-public:
-    ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
-                            const UUID&sharedUuid);
                             
    /**
     * This function checks a particular sockets initial handshake header.
@@ -55,7 +52,9 @@ public:
                              Array<uint8,TCPStream::TcpSstHeaderSize>* buffer, 
                              const ErrorCode&error,
                              std::size_t bytes_received);
-    
+    /**
+     * This function simply wraps checkHeaderContents having been passed a shared_ptr from an asio_callback
+     */
     static void checkHeader(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus, 
                             unsigned int whichSocket, 
                             Array<uint8,TCPStream::TcpSstHeaderSize>* buffer, 
@@ -75,10 +74,24 @@ public:
                                    unsigned int whichSocket,
                                    const boost::asio::ip::tcp::resolver::iterator &it,
                                    const ErrorCode &error);
+   /**
+    * This function is a callback from the async_resolve call from ASIO initialized from the public interface connect
+    * It may get an error if the host was not found or otherwise a valid iterator to a number of ip addresses
+    */
     static void handleResolve(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
                               const boost::system::error_code &error,
                               boost::asio::ip::tcp::resolver::iterator it);
+public:
+    /**
+     *  This function transforms the member mConnection from the PRECONNECTION socket phase to the CONNECTED socket phase
+     *  It first performs a resolution on the address and handles the callback in handleResolve. 
+     *  If the header checks out and matches with the other live sockets to the same sockets 
+     *    - MultiplexedSocket::connectedCallback() is called
+     *    - An ASIOReadBuffer is created for handling future reads
+     */
     static void connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
                         const Address&address);
+    ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
+                            const UUID&sharedUuid);
 };
 } }

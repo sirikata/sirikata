@@ -216,7 +216,7 @@ public:
     SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
-        bool doUnorderedTest=false;
+        bool doUnorderedTest=true;
         bool doShortTest=false;
 
         if (doUnorderedTest){
@@ -257,6 +257,17 @@ public:
 }
         test[0]='T';
         mMessagesToSend.push_back(test);
+        int pattern[40]={127,257,511,65537,129,16383,254,255,16384,256,16385,32767,1440,32768,32769,65535,65536,1401,1399,1280,
+                         228,25215,5141,627,151,1,4,124240,3,296,114385,25,17,47,42,24222,655,1441,1439,1024};
+        for (size_t i=0;i<sizeof(pattern)/sizeof(pattern[0]);++i) {
+            std::string pat="T";
+            for (int j=0;j<pattern[i];++j) {
+                pat+='~'-(i%((pattern[i]%90)+3));
+            }
+            mMessagesToSend.push_back(pat);
+            pat[0]='U';
+            mMessagesToSend.push_back(pat);
+        }
         mMessagesToSend.push_back("T_0th");
         mMessagesToSend.push_back("T_1st");
         mMessagesToSend.push_back("T_2nd");

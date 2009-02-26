@@ -48,6 +48,9 @@ public:
         DISCONNECTED
     };
 private:
+
+//Begin Members//
+
     ///ASIO io service running in a single thread we can expect callbacks from
     IOService*mIO;
     ///a vector of ASIO sockets (wrapped in with a simple send-full-packet abstraction)
@@ -78,6 +81,18 @@ private:
     std::deque<StreamIDCallbackPair> mCallbackRegistration;
     ///a map of ID to callback, only to be touched by the io reactor thread
     CallbackMap mCallbacks;
+    ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
+    std::tr1::unordered_map<Stream::StreamID,unsigned int,Stream::StreamID::Hasher>mAckedClosingStreams;
+    ///a set of StreamIDs to hold the streams that were requested closed but have not been acknowledged, to prevent received packets triggering NewStream callbacks as if a new ID were received
+    std::tr1::unordered_set<Stream::StreamID,Stream::StreamID::Hasher>mOneSidedClosingStreams;
+#define ThreadSafeStack ThreadSafeQueue //FIXME this can be way more efficient
+    ///The highest streamID that has been used for making new streams on this side
+    AtomicValue<uint32> mHighestStreamID;
+    ///actually free stream IDs that will not be sent out until recalimed by this side
+    ThreadSafeStack<Stream::StreamID>mFreeStreamIDs;
+#undef ThreadSafeStack
+
+//Begin helper functions//
 
     ///Copies items from newcallback to mCallbacks: must be called from the single io thread so no one would be looking to call the callbacks at the same time
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback);
@@ -96,6 +111,21 @@ private:
      *  assumes that the mSocketConnectionPhase in the CONNECTED state    
      */
     static void sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
+    /**
+     * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
+     * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
+     */
+    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage=std::string());
+   /**
+    * The connection failed before any sockets were established (or as a helper function after they have been cleaned)
+    * This function will call all substreams disconnected methods
+    */
+    void connectionFailedCallback(const std::string& error);
+   /**
+    * The connection failed before any sockets were established (or as a helper function after they have been cleaned)
+    * This function will call all substreams disconnected methods
+    */
+    void hostDisconnectedCallback(const std::string& error);
 public:
     ///public io service accessor for new stream construction
     IOService&getASIOService(){return *mIO;}
@@ -115,21 +145,7 @@ public:
      * Adds callbacks onto the queue of callbacks-to-be-added
      * Returns true if the callbacks will be actually used or false if the socket is already disconnected
      */
-    SocketConnectionPhase addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb) {
-        boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
-        mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
-        return mSocketConnectionPhase;
-    }
-    ///a map from StreamID to count of number of acked close requests--to avoid any unordered packets coming in
-    std::tr1::unordered_map<Stream::StreamID,unsigned int,Stream::StreamID::Hasher>mAckedClosingStreams;
-    ///a set of StreamIDs to hold the streams that were requested closed but have not been acknowledged, to prevent received packets triggering NewStream callbacks as if a new ID were received
-    std::tr1::unordered_set<Stream::StreamID,Stream::StreamID::Hasher>mOneSidedClosingStreams;
-#define ThreadSafeStack ThreadSafeQueue //FIXME this can be way more efficient
-    ///The highest streamID that has been used for making new streams on this side
-    AtomicValue<uint32> mHighestStreamID;
-    ///actually free stream IDs that will not be sent out until recalimed by this side
-    ThreadSafeStack<Stream::StreamID>mFreeStreamIDs;
-#undef ThreadSafeStack
+    SocketConnectionPhase addCallbacks(const Stream::StreamID&sid, TCPStream::Callbacks* cb);
     ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
     ///Constructor for a connecting stream
@@ -148,21 +164,18 @@ public:
      * to the appropriate callback
      */
     void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk);
-    /**
-     * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
-     * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
-     */
-    void connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage=std::string());
-   /**
-    * The connection failed before any sockets were established (or as a helper function after they have been cleaned)
-    * This function will call all substreams disconnected methods
-    */
-    void connectionFailedCallback(const std::string& error);
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
     */
     void connectionFailedCallback(unsigned int whichSocket, const std::string& error);
+   /**
+    * The connection failed to connect before any sockets had been established (ex: host not found)
+    * This function will call all substreams disconnected methods
+    */
+    template <class ErrorCode> void connectionFailedCallback(const ErrorCode& error) {
+        connectionFailedCallback(error.message());
+    }
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
@@ -183,12 +196,6 @@ public:
         connectionFailedCallback(which==mSockets.size()?0:which,error.message());
     }
 
-
-   /**
-    * The connection failed before any sockets were established (or as a helper function after they have been cleaned)
-    * This function will call all substreams disconnected methods
-    */
-    void hostDisconnectedCallback(const std::string& error);
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
