@@ -35,7 +35,9 @@
 
 namespace CBR {
 
-OracleLocationService::OracleLocationService(ObjectFactory* objfactory) {
+OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
+ : mCurrentTime(0)
+{
     assert(objfactory);
 
     for(ObjectFactory::iterator it = objfactory->begin(); it != objfactory->end(); it++) {
@@ -71,6 +73,8 @@ void OracleLocationService::tick(const Time& t) {
                 locinfo.next = *next;
         }
     }
+
+    mCurrentTime = t;
 }
 
 MotionVector3f OracleLocationService::location(const UUID& uuid) {
@@ -79,6 +83,11 @@ MotionVector3f OracleLocationService::location(const UUID& uuid) {
 
     LocationInfo locinfo = it->second;
     return locinfo.location;
+}
+
+Vector3f OracleLocationService::currentPosition(const UUID& uuid) {
+    MotionVector3f loc = location(uuid);
+    return loc.position(mCurrentTime);
 }
 
 } // namespace CBR

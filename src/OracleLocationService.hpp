@@ -50,6 +50,7 @@ public:
 
     virtual void tick(const Time& t);
     virtual MotionVector3f location(const UUID& uuid);
+    virtual Vector3f currentPosition(const UUID& uuid);
 private:
     struct LocationInfo {
         MotionVector3f location;
@@ -60,6 +61,7 @@ private:
     typedef std::map<UUID, LocationInfo> LocationMap;
 
     LocationMap mLocations;
+    Time mCurrentTime;
 }; // class LocationService
 
 } // namespace CBR
