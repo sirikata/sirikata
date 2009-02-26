@@ -1,5 +1,5 @@
 /*  cbr
- *  main.cpp
+ *  UniformObjectServerMap.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,32 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectFactory.hpp"
-#include "LocationService.hpp"
-#include "ObjectServerMap.hpp"
-#include "Proximity.hpp"
-#include "Server.hpp"
-
-#include "OracleLocationService.hpp"
 #include "UniformObjectServerMap.hpp"
 
-int main(int argc, char** argv) {
-    using namespace CBR;
+namespace CBR {
 
-    ObjectFactory* obj_factory = new ObjectFactory(1000);
-    LocationService* loc_service = new OracleLocationService(obj_factory);
-    ObjectServerMap* obj_server_map = new UniformObjectServerMap(
-        loc_service,
-        BoundingBox3f( Vector3f(0.f, 0.f, 0.f), Vector3f(1.f, 1.f, 1.f) ),
-        Vector3ui32(3, 1, 3)
-    );
-    Proximity* prox = new Proximity();
-    Server* server = new Server(0, loc_service, prox);
-
-    delete server;
-    delete prox;
-    delete loc_service;
-    delete obj_factory;
-
-    return 0;
+UniformObjectServerMap::UniformObjectServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside)
+ : ObjectServerMap(loc_service),
+   mRegion(region),
+   mServersPerDim(perside)
+{
 }
+
+UniformObjectServerMap::~UniformObjectServerMap() {
+}
+
+ServerID UniformObjectServerMap::lookup(const UUID& obj_id) {
+    Vector3f pos = mLocationService->currentPosition(obj_id);
+    assert( mRegion.contains(pos) );
+
+    Vector3f region_extents = mRegion.extents();
+    Vector3f to_point = pos - mRegion.min();
+
+    Vector3ui32 server_dim_indices( (uint32)((to_point.x/region_extents.x)*mServersPerDim.x),
+                                    (uint32)((to_point.y/region_extents.y)*mServersPerDim.y),
+                                    (uint32)((to_point.z/region_extents.z)*mServersPerDim.z) );
+
+    server_dim_indices.x = (server_dim_indices.x >= mServersPerDim.x) ? mServersPerDim.x-1 : server_dim_indices.x;
+    server_dim_indices.y = (server_dim_indices.y >= mServersPerDim.y) ? mServersPerDim.y-1 : server_dim_indices.y;
+    server_dim_indices.z = (server_dim_indices.z >= mServersPerDim.z) ? mServersPerDim.z-1 : server_dim_indices.z;
+
+    uint32 server_index = server_dim_indices.z*mServersPerDim.x*mServersPerDim.y + server_dim_indices.y*mServersPerDim.x + server_dim_indices.x + 1;
+    return ServerID(server_index);
+}
+
+} // namespace CBR

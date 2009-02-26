@@ -1,5 +1,5 @@
 /*  cbr
- *  main.cpp
+ *  UniformObjectServerMap.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,32 +30,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectFactory.hpp"
-#include "LocationService.hpp"
+#ifndef _CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
+#define _CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
+
 #include "ObjectServerMap.hpp"
-#include "Proximity.hpp"
-#include "Server.hpp"
+#include "BoundingBox.hpp"
 
-#include "OracleLocationService.hpp"
-#include "UniformObjectServerMap.hpp"
+namespace CBR {
 
-int main(int argc, char** argv) {
-    using namespace CBR;
+/* An implementation of ObjectServerMap based on a uniform grid layout of
+ * servers, a la Second Life.
+ */
+class UniformObjectServerMap : public ObjectServerMap {
+public:
+    UniformObjectServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside);
+    virtual ~UniformObjectServerMap();
 
-    ObjectFactory* obj_factory = new ObjectFactory(1000);
-    LocationService* loc_service = new OracleLocationService(obj_factory);
-    ObjectServerMap* obj_server_map = new UniformObjectServerMap(
-        loc_service,
-        BoundingBox3f( Vector3f(0.f, 0.f, 0.f), Vector3f(1.f, 1.f, 1.f) ),
-        Vector3ui32(3, 1, 3)
-    );
-    Proximity* prox = new Proximity();
-    Server* server = new Server(0, loc_service, prox);
+    virtual ServerID lookup(const UUID& obj_id);
+private:
+    BoundingBox3f mRegion;
+    Vector3ui32 mServersPerDim;
+};
 
-    delete server;
-    delete prox;
-    delete loc_service;
-    delete obj_factory;
+} // namespace CBR
 
-    return 0;
-}
+#endif //_CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
