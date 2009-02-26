@@ -55,8 +55,14 @@ typedef Sirikata::float64 float64;
 typedef Sirikata::Vector3f Vector3f;
 typedef Sirikata::Vector3d Vector3d;
 
+typedef Sirikata::Vector3<uint32> Vector3ui32;
+typedef Sirikata::Vector3<int32> Vector3i32;
+
 typedef Sirikata::Vector4f Vector4f;
 typedef Sirikata::Vector4d Vector4d;
+
+typedef Sirikata::Vector4<uint32> Vector4ui32;
+typedef Sirikata::Vector4<int32> Vector4i32;
 
 typedef Sirikata::Quaternion Quaternion;
 
