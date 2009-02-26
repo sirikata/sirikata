@@ -44,7 +44,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 using namespace Sirikata;
-//using std::tr1::shared_ptr;
+
 
 class NameLookupTest : public CxxTest::TestSuite
 {
@@ -85,7 +85,7 @@ public:
 		mService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
 		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
-		boost::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
+		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
 		mNameLookups = new Transfer::NameLookupManager(mService, mNameLookupReg);
 		mCachedNameLookups = new Transfer::CachedNameLookupManager(mService, mNameLookupReg);
@@ -128,6 +128,7 @@ public:
 		notifyOne();
 	}
 	void testNameLookup() {
+		using std::tr1::placeholders::_1;
 		//  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::simpleLookupCB, this,
@@ -161,6 +162,7 @@ public:
 		notifyOne(); // don't forget to do this.
 	}
 	void doTransferAndVerifyCB(const RemoteFileId *rfid) {
+		using std::tr1::placeholders::_1;
 		if (rfid) {
 			mTransferLayer->getData(*rfid, Transfer::Range(true),
 				std::tr1::bind(&NameLookupTest::verifyCB, this, rfid->fingerprint(), _1));
@@ -170,6 +172,7 @@ public:
 		}
 	}
 	void testDownload() {
+		using std::tr1::placeholders::_1;
         //  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::doTransferAndVerifyCB, this, _1));

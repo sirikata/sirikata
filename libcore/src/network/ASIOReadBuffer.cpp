@@ -52,24 +52,28 @@ void ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSock
 
 
 void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
+     
+     
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
         .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),
-                       boost::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
+                       std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
                                    this,
-                                   boost::asio::placeholders::error,
-                                   boost::asio::placeholders::bytes_transferred));
+                                   _1,
+                                   _2));
 }
 void ASIOReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
+     
+     
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
     assert(mBufferPos<mNewChunk.size());
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
         .async_receive(boost::asio::buffer(&*(mNewChunk.begin()+mBufferPos),mNewChunk.size()-mBufferPos),
-                       boost::bind(&ASIOReadBuffer::asioReadIntoChunk,
+                       std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
                                    this,
-                                   boost::asio::placeholders::error,
-                                   boost::asio::placeholders::bytes_transferred));
+                                   _1,
+                                   _2));
 }
 
 Stream::StreamID ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 packetLength, uint32 &bufferReceived, Chunk&retval) {

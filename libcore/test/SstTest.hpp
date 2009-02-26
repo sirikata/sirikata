@@ -109,7 +109,10 @@ public:
     }
     void ioThread(){
         TCPStreamListener s(mIO);
-        s.listen(Address("127.0.0.1",mPort),boost::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+		s.listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
         mIO.run();
     }
@@ -339,6 +342,8 @@ public:
     }
     void simpleConnect(Stream*s, const Address&addy) {
         static int id=-1;
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
         s->connect(addy,
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
@@ -444,6 +449,8 @@ public:
                     delete zz;
                 }
                 tcpz=(TCPStream*)(z=r.factory());
+                using std::tr1::placeholders::_1;
+                using std::tr1::placeholders::_2;
                 if (z->cloneFrom(&r,
                                  std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
                                  std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1))) {

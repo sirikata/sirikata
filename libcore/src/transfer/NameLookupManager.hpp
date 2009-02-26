@@ -74,6 +74,9 @@ private:
 			return;
 		}
 		URI lookupUri ((*services)[which], origNamedUri.filename());
+         
+         
+         
 		std::tr1::shared_ptr<NameLookupHandler> handler = mHandlers->lookup(lookupUri.proto());
 		if (handler) {
 			handler->nameLookup(lookupUri,
@@ -118,6 +121,7 @@ public:
 	 * @param namedUri A ServiceURI or a regular URI (depending on if serviceLookup is NULL)
 	 * @param cb       The Callback to be called either on success or failure. */
 	void lookupHash(const URI &namedUri, const Callback &cb) {
+         
 		if (mServiceLookup) {
 			mServiceLookup->lookupService(namedUri.context(), std::tr1::bind(&NameLookupManager::doNameLookup, this, cb, namedUri, 0, _1));
 		} else {

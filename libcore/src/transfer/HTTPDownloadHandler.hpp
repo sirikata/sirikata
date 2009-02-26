@@ -103,9 +103,9 @@ public:
 			const Range &bytes,
 			const DownloadHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, bytes));
-//		using std::tr1::placeholders::_1;
-//		using std::tr1::placeholders::_2;
-//		using std::tr1::placeholders::_3;
+		 
+		 
+		 //Vc9 needs this
 		req->setCallback(
 			std::tr1::bind(&HTTPDownloadHandler::httpCallback, cb, _1, _2, _3));
 		// should call callback when it finishes.
@@ -142,6 +142,8 @@ public:
 	 */
 	virtual void nameLookup(const URI &uri, const NameLookupHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, Range(true)));
+		 
+		 
 		req->setCallback(
 			std::tr1::bind(&HTTPDownloadHandler::nameCallback, cb, _1, _2, _3));
 		req->go(req);

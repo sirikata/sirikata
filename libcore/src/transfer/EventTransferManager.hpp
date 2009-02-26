@@ -137,6 +137,7 @@ class EventTransferManager : public TransferManager {
 				 */
 
 				// FIXME: mFirstTransferLayer may be destroyed if cleanup is called after previous check.
+                //using std::tr1::placeholders::_1;
 				theCacheLayer->getData(*remoteid, range,
 					std::tr1::bind(&EventTransferManager::downloadFinished, this, *remoteid, range, _1));
 

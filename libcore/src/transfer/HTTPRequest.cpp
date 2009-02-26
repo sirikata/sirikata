@@ -342,7 +342,7 @@ void HTTPRequest::curlLoop () {
 				DenseDataPtr finishedData(request->getData());
 				request->mCallback = nullCallback;
 
-				boost::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
+				std::tr1::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
 				request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
 
 				access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.

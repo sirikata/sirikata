@@ -203,7 +203,17 @@ typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;
 typedef Vector4<float32> Vector4f;
 typedef Vector4<float64> Vector4d;
+using std::tr1::placeholders::_1;
+using std::tr1::placeholders::_2;
+using std::tr1::placeholders::_3;
+using std::tr1::placeholders::_4;
+using std::tr1::placeholders::_5;
+using std::tr1::placeholders::_6;
+using std::tr1::placeholders::_7;
+using std::tr1::placeholders::_8;
+using std::tr1::placeholders::_9;
 }
+
 #if 0
 template class std::tr1::unordered_map<Sirikata::int32, Sirikata::int32>;
 template class std::tr1::unordered_map<Sirikata::uint32, Sirikata::uint32>;

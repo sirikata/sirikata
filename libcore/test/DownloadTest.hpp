@@ -104,7 +104,7 @@ public:
 		mService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
 		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
-		boost::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
+		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
 		mNameLookup = new Transfer::NameLookupManager(mService, mNameLookupReg);
 
@@ -174,10 +174,11 @@ public:
 	}
 
 	void testSimpleFileDownload() {
+		using std::tr1::placeholders::_1;
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+			std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+			std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
 		waitFor(2);
 	}
 
@@ -200,12 +201,13 @@ public:
 	}
 
 	void testCombiningRangedFileDownload() {
+        using std::tr1::placeholders::_1;
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadCheckRange, this, Range(0,3, Transfer::BOUNDS), _1), Range(0,3, Transfer::BOUNDS));
+			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(0,3, Transfer::BOUNDS), _1), Range(0,3, Transfer::BOUNDS));
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadCheckRange, this, Range(true), _1), Range(true));
+			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(true), _1), Range(true));
 		mTransferManager->download("meerkat:///arcade.mesh",
-			boost::bind(&DownloadTest::downloadCheckRange, this, Range(2, true), _1), Range(2, true));
+			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(2, true), _1), Range(2, true));
 		waitFor(3);
 	}
 };

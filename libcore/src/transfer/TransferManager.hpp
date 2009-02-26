@@ -123,7 +123,7 @@ public:
 			return mStatus;
 		}
 	};
-	typedef boost::shared_ptr<DownloadEvent> DownloadEventPtr;
+	typedef std::tr1::shared_ptr<DownloadEvent> DownloadEventPtr;
 
 public:
 

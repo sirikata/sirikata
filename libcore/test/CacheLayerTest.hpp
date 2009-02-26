@@ -69,7 +69,7 @@ public:
 		finishedTest = 0;
 		mCacheLayers.clear();
 		mProtoReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
-		boost::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
+		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mProtoReg->setHandler("http", httpHandler);
 	}
 

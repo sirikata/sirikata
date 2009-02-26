@@ -96,6 +96,8 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
 
 void beginNewStream(TCPSocket * socket, const Stream::SubstreamCallback& cb) {
     Array<uint8,TCPStream::TcpSstHeaderSize> *buffer=new Array<uint8,TCPStream::TcpSstHeaderSize>;
+     
+     
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),

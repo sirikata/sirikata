@@ -127,18 +127,19 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         std::cerr<<"Socket disconnected...waiting for recv to trigger error condition\n";
     }else if (bytes_sent!=bufferSize) {
+		 
+		 
         //if the previous send was not able to push the whole buffer out to the network, the rest must be sent
         mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
-                            boost::bind(&ASIOSocketWrapper::sendStaticBuffer,
+                            std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
                                         this,
                                         parentMultiSocket,
                                         toSend,
                                         currentBuffer+bytes_sent,
                                         bufferSize-bytes_sent,
                                         lastChunkOffset,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
-        
+                                          _1,
+                                          _2));        
     }else {
         if (!toSend.empty()) {
             //if stray items are left in a deque
@@ -159,27 +160,31 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
 
 void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
+     
+     
     mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
-                        boost::bind(&ASIOSocketWrapper::sendLargeChunkItem,
+                        std::tr1::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                     this,
                                     parentMultiSocket,
                                     toSend,
                                     bytesSent,
-                                    boost::asio::placeholders::error,
-                                    boost::asio::placeholders::bytes_transferred));
+                                          _1,
+                                          _2));
 }
 
 void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent){
+     
+     
     if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
         //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself 
         mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
-                            boost::bind(&ASIOSocketWrapper::sendLargeDequeItem,
+                            std::tr1::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                         this,
                                         parentMultiSocket,
                                         const_toSend,
                                         bytesSent,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
+                                          _1,
+                                          _2));
     }else if (const_toSend.front()->size()){
         //otherwise copy the packets onto the mBuffer and send from the fixed sized buffer
         std::deque<Chunk*> toSend=const_toSend;
@@ -204,15 +209,15 @@ void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>
         }
         //send the buffer filled with possibly many packets
         mSocket->async_send(ASIOSocketWrapperBuffer(mBuffer,bufferLocation),
-                            boost::bind(&ASIOSocketWrapper::sendStaticBuffer,
-                                        this,
-                                        parentMultiSocket,
-                                        toSend,
-                                        mBuffer,
-                                        bufferLocation,
-                                        bytesSent,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
+                            std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
+                                          this,
+                                          parentMultiSocket,
+                                          toSend,
+                                          mBuffer,
+                                          bufferLocation,
+                                          bytesSent,
+                                          _1,
+                                          _2));
     }
 }
 #undef ASIOSocketWrapperBuffer
