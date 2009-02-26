@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPReadBuffer.hpp
+ *  ASIOReadBuffer.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

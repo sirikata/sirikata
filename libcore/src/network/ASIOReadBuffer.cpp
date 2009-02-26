@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPReadBuffer.cpp
+ *  ASIOReadBuffer.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -37,7 +37,7 @@
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
-#include "TCPReadBuffer.hpp"
+#include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
 void MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket) {
     new ASIOReadBuffer(parentSocket,whichSocket);
