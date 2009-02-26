@@ -31,8 +31,32 @@
  */
 
 #include "OracleLocationService.hpp"
+#include "ObjectFactory.hpp"
 
 namespace CBR {
+
+OracleLocationService::OracleLocationService(ObjectFactory* objfactory) {
+    assert(objfactory);
+
+    for(ObjectFactory::iterator it = objfactory->begin(); it != objfactory->end(); it++) {
+        UUID objid = *it;
+        MotionPath* objpath = objfactory->motion(objid);
+
+        LocationInfo objinfo;
+        objinfo.path = objpath;
+        objinfo.location = objpath->initial();
+        const MotionVector3f* next = objpath->nextUpdate( objinfo.location.updateTime() );
+        if (next == NULL) {
+            objinfo.has_next = false;
+        }
+        else {
+            objinfo.has_next = true;
+            objinfo.next = *next;
+        }
+
+        mLocations[objid] = objinfo;
+    }
+}
 
 void OracleLocationService::tick(const Time& t) {
     // FIXME we could maintain a heap of event times instead of scanning through this list every time

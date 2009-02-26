@@ -38,11 +38,14 @@
 
 namespace CBR {
 
+class ObjectFactory;
+
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
 class OracleLocationService : public LocationService {
 public:
+    OracleLocationService(ObjectFactory* objfactory);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual void tick(const Time& t);

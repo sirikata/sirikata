@@ -30,6 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "ObjectFactory.hpp"
+#include "LocationService.hpp"
+#include "Proximity.hpp"
+#include "Server.hpp"
+
+#include "OracleLocationService.hpp"
+
 int main(int argc, char** argv) {
+    using namespace CBR;
+
+    ObjectFactory* obj_factory = new ObjectFactory(1000);
+    LocationService* loc_service = new OracleLocationService(obj_factory);
+    Proximity* prox = new Proximity();
+    Server* server = new Server(0, loc_service, prox);
+
+    delete server;
+    delete prox;
+    delete loc_service;
+    delete obj_factory;
+
     return 0;
 }
