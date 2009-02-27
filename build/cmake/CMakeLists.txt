@@ -111,6 +111,7 @@ ELSE()
   FIND_PACKAGE(Boost COMPONENTS system)
   STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
 ENDIF()
 VERIFY_VERSION(Boost 1 35 0)
 
@@ -145,6 +146,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
         ${SirikataCore_INCLUDE_DIRS}
+        ${SirikataCore_INCLUDE_DIRS}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Raknet_INCLUDE_DIRS})
 
 #source files
@@ -171,6 +173,7 @@ ADD_EXECUTABLE(cbr ${CBR_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
         ${Raknet_LIBRARIES})

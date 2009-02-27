@@ -37,6 +37,7 @@
 #include <sirikata/util/Vector3.hpp>
 #include <sirikata/util/Vector4.hpp>
 #include <sirikata/util/UUID.hpp>
+#include <sirikata/options/Options.hpp>
 
 namespace CBR {
 
@@ -67,6 +68,12 @@ typedef Sirikata::Vector4<int32> Vector4i32;
 typedef Sirikata::Quaternion Quaternion;
 
 typedef Sirikata::UUID UUID;
+
+typedef std::string String;
+
+typedef Sirikata::OptionSet OptionSet;
+typedef Sirikata::OptionValue OptionValue;
+typedef Sirikata::InitializeOptions InitializeOptions;
 
 } // namespace CBR
 

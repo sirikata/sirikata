@@ -41,17 +41,29 @@
 #include "Test.hpp"
 int main(int argc, char** argv) {
     using namespace CBR;
-    if (argc>1) {
-        if (strcmp(argv[1],"-test")==0) {
-            if (argc>2) {
-                if (strcmp(argv[2],"server")==0) {
-                    CBR::testServer(argc>3?argv[3]:"8080",argc>4?argv[4]:"127.0.0.1",argc>5?argv[5]:"8081");
-                }else if (strcmp(argv[2],"client")==0) {
-                    CBR::testClient(argc>3?argv[3]:"8081",argc>4?argv[4]:"127.0.0.1",argc>5?argv[5]:"8080");
-                }
-            }
-        }
+
+    InitializeOptions::module("cbr")
+        .addOption(new OptionValue("test", "none", Sirikata::OptionValueType<String>(), "Type of test to run"))
+        .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
+        .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
+        .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))
+        ;
+
+    OptionSet* options = OptionSet::getOptions("cbr");
+    options->parse(argc, argv);
+
+    String test_mode = options->referenceOption("test")->as<String>();
+    if (test_mode != "none") {
+        String server_port = options->referenceOption("server-port")->as<String>();
+        String client_port = options->referenceOption("client-port")->as<String>();
+        String host = options->referenceOption("host")->as<String>();
+        if (test_mode == "server")
+            CBR::testServer(server_port.c_str(), host.c_str(), client_port.c_str());
+        else if (test_mode == "client")
+            CBR::testClient(client_port.c_str(), host.c_str(), server_port.c_str());
+        return 0;
     }
+
     ObjectFactory* obj_factory = new ObjectFactory(100);
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
