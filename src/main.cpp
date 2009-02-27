@@ -42,15 +42,19 @@
 int main(int argc, char** argv) {
     using namespace CBR;
 
-    ObjectFactory* obj_factory = new ObjectFactory(1000);
+    ObjectFactory* obj_factory = new ObjectFactory(100);
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
         BoundingBox3f( Vector3f(0.f, 0.f, 0.f), Vector3f(1.f, 1.f, 1.f) ),
-        Vector3ui32(3, 1, 3)
+        Vector3ui32(1, 1, 1)
     );
     Proximity* prox = new Proximity();
-    Server* server = new Server(0, obj_factory, loc_service, server_map, prox);
+    Server* server = new Server(1, obj_factory, loc_service, server_map, prox);
+
+    // FIXME this is just for testing.  we should be using a real timer
+    for(Time t = Time(0); t < Time(0) + Duration::seconds((uint32)1); t += Duration::milliseconds((uint32)10))
+        server->tick(t);
 
     delete server;
     delete prox;

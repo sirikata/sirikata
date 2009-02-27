@@ -59,6 +59,9 @@ public:
 
     void tick(const Time& t);
 private:
+    void proximityTick(const Time& t);
+    void checkObjectMigrations();
+
     typedef std::map<UUID, Object*> ObjectMap;
 
     ServerID mID;

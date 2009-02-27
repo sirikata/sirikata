@@ -33,6 +33,8 @@
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "Object.hpp"
+#include "ObjectFactory.hpp"
+#include "ServerMap.hpp"
 
 namespace CBR {
 
@@ -43,6 +45,22 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mServerMap(server_map),
    mProximity(prox)
 {
+    // setup object which are initially residing on this server
+    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
+        UUID obj_id = *it;
+        MotionVector3f start_motion = loc_service->location(obj_id);
+        Vector3f start_pos = loc_service->currentPosition(obj_id);
+
+        mProximity->addObject(obj_id, start_motion);
+
+        if (mServerMap->lookup(start_pos) == mID) {
+            // Instantiate object
+            Object* obj = mObjectFactory->object(obj_id, this);
+            mObjects[obj_id] = obj;
+            // Register proximity query
+            mProximity->addQuery(obj_id, 100.f); // FIXME how to set proximity radius?
+        }
+    }
 }
 
 const ServerID& Server::id() const {
@@ -50,6 +68,29 @@ const ServerID& Server::id() const {
 }
 
 void Server::tick(const Time& t) {
+    // Update object locations
+    mLocationService->tick(t);
+
+    // Check proximity updates
+    proximityTick(t);
+
+    // Check for object migrations
+    checkObjectMigrations();
 }
+
+void Server::proximityTick(const Time& t) {
+    // Check for proximity updates
+    std::queue<ProximityEvent> proximity_events;
+    mProximity->evaluate(t, proximity_events);
+    // FIXME convert proximity events to messages, send
+}
+
+void Server::checkObjectMigrations() {
+    // * check for objects crossing server boundaries
+    //   * wrap up state and send message to other server
+    //     to reinstantiate the object there
+    //   * delete object on this side
+}
+
 
 } // namespace CBR
