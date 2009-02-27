@@ -39,6 +39,7 @@
 #include "OracleLocationService.hpp"
 #include "UniformServerMap.hpp"
 #include "Test.hpp"
+
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -47,6 +48,11 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
         .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
         .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))
+
+        .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
+        .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
+        .addOption(new OptionValue("layout", "<1,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
+        .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
         ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
@@ -64,18 +70,25 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    ObjectFactory* obj_factory = new ObjectFactory(100);
+    uint32 nobjects = options->referenceOption("objects")->as<uint32>();
+    BoundingBox3f region = options->referenceOption("region")->as<BoundingBox3f>();
+    Vector3ui32 layout = options->referenceOption("layout")->as<Vector3ui32>();
+    Duration duration = options->referenceOption("duration")->as<Duration>();
+
+    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
-        BoundingBox3f( Vector3f(0.f, 0.f, 0.f), Vector3f(1.f, 1.f, 1.f) ),
-        Vector3ui32(1, 1, 1)
+        region,
+        layout
     );
     Proximity* prox = new Proximity();
     Server* server = new Server(1, obj_factory, loc_service, server_map, prox);
 
     // FIXME this is just for testing.  we should be using a real timer
-    for(Time t = Time(0); t < Time(0) + Duration::seconds((uint32)1); t += Duration::milliseconds((uint32)10))
+    Time tbegin = Time(0);
+    Time tend = tbegin + duration;
+    for(Time t = tbegin; t < tend; t += Duration::milliseconds((uint32)10))
         server->tick(t);
 
     delete server;

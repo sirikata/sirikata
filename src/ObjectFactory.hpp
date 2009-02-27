@@ -31,6 +31,8 @@
  */
 
 #include "Utility.hpp"
+#include "Duration.hpp"
+#include "BoundingBox.hpp"
 
 namespace CBR {
 
@@ -51,7 +53,7 @@ public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
-    ObjectFactory(uint32 count);
+    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 
     iterator begin();

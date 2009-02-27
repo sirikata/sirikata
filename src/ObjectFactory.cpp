@@ -33,13 +33,19 @@
 #include "ObjectFactory.hpp"
 #include "RandomMotionPath.hpp"
 #include "Object.hpp"
+#include "Random.hpp"
 
 namespace CBR {
 
-ObjectFactory::ObjectFactory(uint32 count) {
+ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration) {
+    Time start(0);
+    Time end = start + duration;
+    Vector3f region_extents = region.extents();
+
     for(uint32 i = 0; i < count; i++) {
         UUID id = UUID::random(); // FIXME
-        MotionPath* motion = new RandomMotionPath(Time(0) + Duration::milliseconds((uint32)0), Time(0) + Duration::milliseconds((uint32)100000), Vector3f(0,0,0), 1, Duration::milliseconds((uint32)1000)); // FIXME
+        Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
+        MotionPath* motion = new RandomMotionPath(start, end, startpos, 1, Duration::milliseconds((uint32)1000)); // FIXME
 
         mObjectIDs.insert(id);
         mMotions[id] = motion;

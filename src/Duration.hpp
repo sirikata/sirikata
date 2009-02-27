@@ -41,6 +41,7 @@ class Time;
 
 class Duration {
 public:
+    Duration();
     Duration(uint64 microsecs);
     Duration(const Duration& cpy);
     ~Duration();
@@ -66,10 +67,11 @@ public:
 private:
     friend class Time;
 
-    Duration();
-
     int64 mMicrosecs;
 }; // class Duration
+
+std::ostream& operator<<(std::ostream& os, const Duration& rhs);
+std::istream& operator>>(std::istream& is, Duration& rhs);
 
 } // namespace CBR
 

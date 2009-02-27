@@ -127,6 +127,19 @@ private:
     CoordType mMax;
 }; // class BoundingBox
 
+template<typename CoordType> inline std::ostream& operator <<(std::ostream& os, const BoundingBox<CoordType> &rhs) {
+    os << '<' << rhs.min() << ',' << rhs.max() << '>';
+    return os;
+}
+template<typename CoordType> inline std::istream& operator >>(std::istream& is, BoundingBox<CoordType> &rhs) {
+    // FIXME this should be more robust.  It currently relies on the exact format provided by operator <<
+    char dummy;
+    CoordType minval, maxval;
+    is >> dummy >> minval >> dummy >> maxval >> dummy;
+    rhs = BoundingBox<CoordType>(minval, maxval);
+    return is;
+}
+
 typedef BoundingBox<Vector3f> BoundingBox3f;
 typedef BoundingBox<Vector3d> BoundingBox3d;
 

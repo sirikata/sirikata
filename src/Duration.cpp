@@ -35,6 +35,11 @@
 
 namespace CBR {
 
+Duration::Duration()
+ : mMicrosecs(0)
+{
+}
+
 Duration::Duration(uint64 microsecs)
  : mMicrosecs(microsecs)
 {
@@ -102,5 +107,31 @@ bool Duration::operator==(const Duration& rhs) const {
     return mMicrosecs == rhs.mMicrosecs;
 }
 
+std::ostream& operator<<(std::ostream& os, const Duration& rhs) {
+    os << rhs.milliseconds() << "ms";
+    return os;
+}
+
+std::istream& operator>>(std::istream& is, Duration& rhs) {
+    double v;
+    is >> v;
+
+    char type;
+    is >> type;
+    if (type == 's')
+        rhs = Duration::seconds((float)v);
+    else if (type == 'm') {
+        is >> type;
+        assert(type == 's');
+        rhs = Duration::milliseconds((float)v);
+    }
+    else if (type == 'u') {
+        is >> type;
+        assert(type == 's');
+        rhs = Duration((uint64)v);
+    }
+
+    return is;
+}
 
 } // namespace CBR
