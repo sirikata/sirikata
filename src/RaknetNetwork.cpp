@@ -1,6 +1,6 @@
 #include "RaknetNetwork.hpp"
 namespace CBR {
-RaknetNetwork::RaknetNetwork ():mListener(RakNetworkFactory::GetRakPeerInterface()){
+RaknetNetwork::RaknetNetwork ():mListener(RakNetworkFactory::GetRakPeerInterface()),mCurrentInspectionAddress("localhost","80"){
 }
 
 void RaknetNetwork::listen(const Sirikata::Network::Address&addy) {
@@ -61,13 +61,34 @@ Sirikata::Network::Chunk*RaknetNetwork::makeChunk(RakPeerInterface*i,Packet*p) {
     return retval;
 }
 
+bool RaknetNetwork::eraseOne(SocketList::iterator&i) {
+    SocketList::iterator oldi=i;
+    ++i;
+    ConnectionMap::iterator where=mOutboundConnectionMap.find(oldi->first);
+    mConnectingSockets.erase(oldi);
+    if (where!=mOutboundConnectionMap.end()) {
+        mOutboundConnectionMap.erase(where);
+        return true;
+    }
+    return false;
+}
 
 Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
-    
+    ConnectionMap::iterator currentSocketIteration=mOutboundConnectionMap.find(mCurrentInspectionAddress);
+    if (currentSocketIteration==mOutboundConnectionMap.end()) currentSocketIteration=mOutboundConnectionMap.begin();
+    else {
+        ConnectionMap::iterator nextSocketIteration=currentSocketIteration;
+        ++nextSocketIteration;
+        if (nextSocketIteration!=mOutboundConnectionMap.end()) {
+            mCurrentInspectionAddress=nextSocketIteration->first;
+        }
+    }
     for (SocketList::iterator i=mConnectingSockets.begin();i!=mConnectingSockets.end();) {
+        if (currentSocketIteration!=mOutboundConnectionMap.end()&&i->first.getHostName()==currentSocketIteration->first.getHostName()&&i->first.getService()==currentSocketIteration->first.getService())
+            currentSocketIteration=mOutboundConnectionMap.end();
         Packet *p;
         while (true) {
-            std::tr1::shared_ptr <Connection>conn(i->lock());
+            std::tr1::shared_ptr <Connection>conn(i->second.lock());
             if (conn) {
                 p=conn->mPeer->Receive();
                 if (p==NULL) break;
@@ -90,9 +111,8 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
                   case ID_INVALID_PASSWORD:
                   case ID_CONNECTION_LOST:
                       {
-                          SocketList::iterator oldi=i;
-                          ++i;                      
-                          mConnectingSockets.erase(oldi);
+                          if (eraseOne(i))
+                              currentSocketIteration=mOutboundConnectionMap.end();
                       }
                     continue;
                   case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -107,25 +127,53 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
                                                 true);
                           }
                       }
-                    conn->mToBeSent.clear();
-                    {
-                        SocketList::iterator oldi=i;
-                        ++i;
-                        mConnectingSockets.erase(oldi);
-                    }
+                      conn->mToBeSent.clear();
+                      if (eraseOne(i))
+                          currentSocketIteration=mOutboundConnectionMap.end();
                     continue;
                   default:
                     return makeChunk(conn->mPeer,p);                    
                 }                
                 ++i;
             }else{
-                SocketList::iterator oldi=i;
-                ++i;
-                mConnectingSockets.erase(oldi);
+                if (eraseOne(i))
+                    currentSocketIteration=mOutboundConnectionMap.end();
             }
         }
     }
+
     Packet*p;
+    while (currentSocketIteration!=mOutboundConnectionMap.end()
+           &&(p=currentSocketIteration->second->mPeer->Receive())) {
+        unsigned char packetIdentifier = p->data[0];
+        switch (packetIdentifier) {
+          case ID_ALREADY_CONNECTED:
+            fprintf (stderr,"Strange message about ID\n");
+            break;
+          case ID_REMOTE_NEW_INCOMING_CONNECTION: 
+            fprintf (stderr,"Disallowed peers\n");
+            break;
+          case ID_DISCONNECTION_NOTIFICATION:
+          case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server tel
+          case ID_REMOTE_CONNECTION_LOST: 
+          case ID_CONNECTION_BANNED:
+          case ID_CONNECTION_ATTEMPT_FAILED:
+          case ID_NO_FREE_INCOMING_CONNECTIONS:
+          case ID_MODIFIED_PACKET:
+            // Cheater!
+          case ID_INVALID_PASSWORD:
+          case ID_CONNECTION_LOST:
+            mOutboundConnectionMap.erase(currentSocketIteration);
+            currentSocketIteration=mOutboundConnectionMap.end();//stop the while loop
+            break;
+          case ID_CONNECTION_REQUEST_ACCEPTED:
+            fprintf (stderr,"Impossible connection request accepted\n");
+            break;
+          default:
+            return makeChunk(currentSocketIteration->second->mPeer,p);
+        }
+    }
+
     while((p=mListener->Receive())) {
         unsigned char packetIdentifier = p->data[0];
         switch (packetIdentifier) {

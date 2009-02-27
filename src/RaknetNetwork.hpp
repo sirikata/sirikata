@@ -33,10 +33,12 @@ class RaknetNetwork {
     };
     Sirikata::Network::Chunk *makeChunk(RakPeerInterface*,Packet*);
     std::tr1::shared_ptr<RakPeerInterface> mListener;
-    typedef std::list<std::tr1::weak_ptr<Connection> > SocketList;
+    typedef std::list<std::pair<Sirikata::Network::Address,std::tr1::weak_ptr<Connection> > > SocketList;
     SocketList mConnectingSockets;
     typedef std::tr1::unordered_map<Sirikata::Network::Address,std::tr1::shared_ptr<Connection>, AddressHasher, AddressEquals > ConnectionMap;
     ConnectionMap mOutboundConnectionMap;
+    Sirikata::Network::Address mCurrentInspectionAddress;
+    bool eraseOne(SocketList::iterator&i);
 public:
     RaknetNetwork();
     virtual void listen (const Sirikata::Network::Address&);
