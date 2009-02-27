@@ -180,10 +180,18 @@ public:
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
-class InitializeOptions {
+class InitializeClassOptions {
 public:
     ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
-    InitializeOptions(const char *,...);
+    InitializeClassOptions(const char *,const void * thus,...);
+};
+/**
+ * A dummy class to statically initialize a bunch of option classes that could add to a module
+ */
+class InitializeGlobalOptions {
+public:
+    ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
+    InitializeGlobalOptions(const char *,...);
 };
 /**
  * This class holds a set of options that may appear on a command line or within an argument to a module
@@ -191,22 +199,43 @@ public:
  */
 class OptionSet {
     std::map<std::string,OptionValue*> mNames;
-    friend class InitializeOptions;
+    friend class InitializeGlobalOptions;
+    friend class InitializeClassOptions;
     void addOptionNoLock(OptionValue*);
-    static OptionSet*getOptionsNoLock(const std::string&s);
+    static OptionSet*getOptionsNoLock(const std::string&s,const void * context);
     OptionValue* referenceOptionNoLock(const std::string &option, OptionValue**pointer);
+    class OptionNameAndContext {
+        const void * mContext;
+        std::string mName;
+    public:
+        OptionNameAndContext(const std::string&nam,const void *con) {
+            mContext=con;
+            mName=nam;
+        }
+        bool operator<(const OptionNameAndContext&other)const {
+            if (other.mContext==mContext) return mName<other.mName;
+            return other.mContext<mContext;
+        }
+    };
+    enum ParsingStage {
+        PARSED_NO_OPTIONS,
+        PARSED_BLANK_OPTIONS,
+        PARSED_UNBLANK_OPTIONS,
+        PARSED_PARTIAL_UNBLANK_OPTIONS
+    } mParsingStage;
 public:
-
     void parse(const std::string&);
     void parse(int, const char **);
     void addOption(OptionValue*v);
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
+    static OptionValue* referenceOption(const std::string& module, const void * context_ptr, const std::string &option, OptionValue**pointer=NULL);
     static std::map<std::string,OptionSet*>* optionSets() {
         static std::map<std::string,OptionSet*>*retval=new std::map<std::string,OptionSet*>();
         return retval;
     }
-    static OptionSet*getOptions(const std::string&s);
+    static OptionSet*getOptions(const std::string&s, const void *context);
+    static OptionSet*getOptions(const std::string&s){return getOptions(s,NULL);}
 };
 }
 

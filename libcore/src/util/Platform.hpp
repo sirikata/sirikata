@@ -198,6 +198,8 @@ typedef std::string String;
 #include "Noncopyable.hpp"
 #include "Array.hpp"
 #include "UUID.hpp"
+#include "options/Options.hpp"
+#include "Logging.hpp"
 namespace Sirikata {
 typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;

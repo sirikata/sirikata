@@ -264,6 +264,8 @@ OptionValue& OptionValue::operator=(const OptionValue&other) {
     return *this;
 }
 void OptionSet::parse(int argc, const char **argv){
+    if (argc>1)
+        mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
     {
@@ -281,6 +283,8 @@ void OptionSet::parse(int argc, const char **argv){
         exit(0);
 }
 void OptionSet::parse(const std::string&args){
+    if (args.size())
+        mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
     {
@@ -298,7 +302,7 @@ void OptionSet::parse(const std::string&args){
     if (dienow)
         exit(0);
 }
-OptionSet* OptionSet::getOptionsNoLock(const std::string&s){
+OptionSet* OptionSet::getOptionsNoLock(const std::string&s, const void * context){
     std::map<std::string,OptionSet*>::iterator i=optionSets()->find(s);
     if (i==optionSets()->end()){
         return (*optionSets())[s]=new OptionSet;
@@ -306,13 +310,17 @@ OptionSet* OptionSet::getOptionsNoLock(const std::string&s){
         return i->second;
     }
 }
-OptionSet* OptionSet::getOptions(const std::string&s){
+OptionSet* OptionSet::getOptions(const std::string&s, const void * context){
     boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-    return getOptionsNoLock(s);
+    return getOptionsNoLock(s,context);
 }
 OptionValue* OptionSet::referenceOption(const std::string&module, const std::string&option,OptionValue**pointer) {
     boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-    return getOptionsNoLock(module)->referenceOptionNoLock(option,pointer);
+    return getOptionsNoLock(module,NULL)->referenceOptionNoLock(option,pointer);
+}
+OptionValue* OptionSet::referenceOption(const std::string&module, const void * thus, const std::string&option,OptionValue**pointer) {
+    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+    return getOptionsNoLock(module,thus)->referenceOptionNoLock(option,pointer);
 }
 OptionValue* OptionSet::referenceOptionNoLock(const std::string&option,OptionValue**pointer) {
     std::map<std::string,OptionValue*>::iterator where=mNames.find(option);
@@ -343,15 +351,45 @@ void OptionSet::addOption(OptionValue *option) {
     addOptionNoLock(option);
 }
 
-InitializeOptions::InitializeOptions(const char * module,...) {
+InitializeClassOptions::InitializeClassOptions(const char * module,const void * thus,...) {
+    va_list vl;
+    va_start(vl,thus);
+    OptionValue* option;
+    OptionSet* curmodule;
+    {
+        boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+        curmodule=OptionSet::getOptionsNoLock(module,thus);
+        while ((option=va_arg(vl,OptionValue*))!=NULL) {
+            curmodule->addOptionNoLock(option);
+        }
+    }
+    if (curmodule->mParsingStage==OptionSet:: PARSED_NO_OPTIONS||curmodule->mParsingStage==OptionSet:: PARSED_BLANK_OPTIONS) {
+        curmodule->parse("");
+    }
+    if (curmodule->mParsingStage==OptionSet:: PARSED_UNBLANK_OPTIONS) {
+        std::cerr<< "Error adding more options after options have been parsed"<<std::endl;
+        curmodule->mParsingStage=OptionSet:: PARSED_PARTIAL_UNBLANK_OPTIONS;
+    }
+
+}
+InitializeGlobalOptions::InitializeGlobalOptions(const char * module,...) {
     va_list vl;
     va_start(vl,module);
     OptionValue* option;
-    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-    OptionSet* curmodule=OptionSet::getOptionsNoLock(module);
-    while ((option=va_arg(vl,OptionValue*))!=NULL) {
-        curmodule->addOptionNoLock(option);
+    OptionSet* curmodule;
+    {
+        boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+        curmodule=OptionSet::getOptionsNoLock(module,NULL);
+        while ((option=va_arg(vl,OptionValue*))!=NULL) {
+            curmodule->addOptionNoLock(option);
+        }
     }
-
+    if (curmodule->mParsingStage==OptionSet:: PARSED_NO_OPTIONS||curmodule->mParsingStage==OptionSet:: PARSED_BLANK_OPTIONS) {
+        curmodule->parse("");
+    }
+    if (curmodule->mParsingStage==OptionSet:: PARSED_UNBLANK_OPTIONS) {
+        std::cerr<< "Error adding more options after options have been parsed"<<std::endl;
+        curmodule->mParsingStage=OptionSet:: PARSED_PARTIAL_UNBLANK_OPTIONS;
+    }
 }
 }

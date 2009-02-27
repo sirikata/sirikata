@@ -37,7 +37,7 @@ class OptionTest : public CxxTest::TestSuite
     typedef Sirikata::OptionSet OptionSet;
     typedef Sirikata::OptionValue OptionValue;
     typedef Sirikata::OptionValueType<int> OptionValueTypeInt;
-    typedef Sirikata::InitializeOptions InitializeOptions;
+    typedef Sirikata::InitializeGlobalOptions InitializeGlobalOptions;
 public:
     int countString (const char ** test) {
         int count=0;
@@ -56,7 +56,7 @@ public:
         const int answers[256][256]={{1,5,4},{1,3,4},{0,5,4},{2,5,4},{-1,3,4},{1,3,4}};
         OptionValue *one;
         OptionValue *three=OptionSet::referenceOption("testInteger","three");
-        InitializeOptions o("testInteger",
+        InitializeGlobalOptions o("testInteger",
                             new OptionValue("four","4",OptionValueTypeInt(),"four is the lonliest number"),
                             one=new OptionValue("one","1",OptionValueTypeInt(),"one is the lonliest number"),
                             new OptionValue("three","3",OptionValueTypeInt(),"three is the number to which I shalt count"),

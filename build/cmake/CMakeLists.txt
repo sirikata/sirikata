@@ -452,6 +452,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/TCPStreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
+	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
 	${LIBCORE_SOURCE_DIR}/util/PluginManager.cpp
 	${LIBCORE_SOURCE_DIR}/util/Quaternion.cpp
