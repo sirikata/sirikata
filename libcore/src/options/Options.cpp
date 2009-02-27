@@ -263,7 +263,7 @@ OptionValue& OptionValue::operator=(const OptionValue&other) {
     mName=other.mName;
     return *this;
 }
-void OptionSet::parse(int argc, const char **argv){
+void OptionSet::parse(int argc, const char * const *argv){
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
     {

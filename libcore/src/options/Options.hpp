@@ -203,9 +203,9 @@ class OptionSet {
 public:
 
     void parse(const std::string&);
-    void parse(int, const char **);
+    void parse(int, const char * const *);
     void addOption(OptionValue*v);
-    OptionValue* referenceOption(const std::string &option, OptionValue**pointer);
+    OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
     static std::map<std::string,OptionSet*>* optionSets() {
         static std::map<std::string,OptionSet*>*retval=new std::map<std::string,OptionSet*>();
