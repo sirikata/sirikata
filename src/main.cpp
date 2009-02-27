@@ -32,25 +32,25 @@
 
 #include "ObjectFactory.hpp"
 #include "LocationService.hpp"
-#include "ObjectServerMap.hpp"
+#include "ServerMap.hpp"
 #include "Proximity.hpp"
 #include "Server.hpp"
 
 #include "OracleLocationService.hpp"
-#include "UniformObjectServerMap.hpp"
+#include "UniformServerMap.hpp"
 
 int main(int argc, char** argv) {
     using namespace CBR;
 
     ObjectFactory* obj_factory = new ObjectFactory(1000);
     LocationService* loc_service = new OracleLocationService(obj_factory);
-    ObjectServerMap* obj_server_map = new UniformObjectServerMap(
+    ServerMap* server_map = new UniformServerMap(
         loc_service,
         BoundingBox3f( Vector3f(0.f, 0.f, 0.f), Vector3f(1.f, 1.f, 1.f) ),
         Vector3ui32(3, 1, 3)
     );
     Proximity* prox = new Proximity();
-    Server* server = new Server(0, obj_factory, loc_service, obj_server_map, prox);
+    Server* server = new Server(0, obj_factory, loc_service, server_map, prox);
 
     delete server;
     delete prox;

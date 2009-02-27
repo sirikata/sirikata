@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectServerMap.hpp
+ *  UniformServerMap.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,31 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_SERVER_MAP_HPP_
-#define _CBR_OBJECT_SERVER_MAP_HPP_
-
-#include "Utility.hpp"
-#include "LocationService.hpp"
-#include "Server.hpp"
+#include "UniformServerMap.hpp"
 
 namespace CBR {
 
-/* Maps object identifiers to server identifiers based on location. In other
- * words, it attempts to answer the question "which server does this object
- * currently live on.
- */
-class ObjectServerMap {
-public:
-    ObjectServerMap(LocationService* loc_service)
-     : mLocationService(loc_service)
-    {}
-    virtual ~ObjectServerMap() {}
+UniformServerMap::UniformServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside)
+ : ServerMap(loc_service),
+   mRegion(region),
+   mServersPerDim(perside)
+{
+}
 
-    virtual ServerID lookup(const UUID& obj_id) = 0;
-protected:
-    LocationService* mLocationService;
-};
+UniformServerMap::~UniformServerMap() {
+}
+
+ServerID UniformServerMap::lookup(const Vector3f& pos) {
+    assert( mRegion.contains(pos) );
+
+    Vector3f region_extents = mRegion.extents();
+    Vector3f to_point = pos - mRegion.min();
+
+    Vector3ui32 server_dim_indices( (uint32)((to_point.x/region_extents.x)*mServersPerDim.x),
+                                    (uint32)((to_point.y/region_extents.y)*mServersPerDim.y),
+                                    (uint32)((to_point.z/region_extents.z)*mServersPerDim.z) );
+
+    server_dim_indices.x = (server_dim_indices.x >= mServersPerDim.x) ? mServersPerDim.x-1 : server_dim_indices.x;
+    server_dim_indices.y = (server_dim_indices.y >= mServersPerDim.y) ? mServersPerDim.y-1 : server_dim_indices.y;
+    server_dim_indices.z = (server_dim_indices.z >= mServersPerDim.z) ? mServersPerDim.z-1 : server_dim_indices.z;
+
+    uint32 server_index = server_dim_indices.z*mServersPerDim.x*mServersPerDim.y + server_dim_indices.y*mServersPerDim.x + server_dim_indices.x + 1;
+    return ServerID(server_index);
+}
+
+ServerID UniformServerMap::lookup(const UUID& obj_id) {
+    Vector3f pos = mLocationService->currentPosition(obj_id);
+    return lookup(pos);
+}
 
 } // namespace CBR
-
-#endif //_CBR_OBJECT_SERVER_MAP_HPP_

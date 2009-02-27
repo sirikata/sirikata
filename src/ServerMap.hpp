@@ -1,5 +1,5 @@
 /*  cbr
- *  UniformObjectServerMap.hpp
+ *  ServerMap.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,28 +30,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
-#define _CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
+#ifndef _CBR_SERVER_MAP_HPP_
+#define _CBR_SERVER_MAP_HPP_
 
-#include "ObjectServerMap.hpp"
-#include "BoundingBox.hpp"
+#include "Utility.hpp"
+#include "LocationService.hpp"
+#include "Server.hpp"
 
 namespace CBR {
 
-/* An implementation of ObjectServerMap based on a uniform grid layout of
- * servers, a la Second Life.
+/* Represents the layout of servers.  Allows you to map objects or positions
+ * to the server that handles them.
  */
-class UniformObjectServerMap : public ObjectServerMap {
+class ServerMap {
 public:
-    UniformObjectServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside);
-    virtual ~UniformObjectServerMap();
+    ServerMap(LocationService* loc_service)
+     : mLocationService(loc_service)
+    {}
+    virtual ~ServerMap() {}
 
-    virtual ServerID lookup(const UUID& obj_id);
-private:
-    BoundingBox3f mRegion;
-    Vector3ui32 mServersPerDim;
+    virtual ServerID lookup(const Vector3f& pos) = 0;
+    virtual ServerID lookup(const UUID& obj_id) = 0;
+protected:
+    LocationService* mLocationService;
 };
 
 } // namespace CBR
 
-#endif //_CBR_UNIFORM_OBJECT_SERVER_MAP_HPP_
+#endif //_CBR_SERVER_MAP_HPP_

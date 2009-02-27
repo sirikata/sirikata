@@ -36,11 +36,11 @@
 
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ObjectServerMap* obj_server_map, Proximity* prox)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
-   mObjectServerMap(obj_server_map),
+   mServerMap(server_map),
    mProximity(prox)
 {
 }

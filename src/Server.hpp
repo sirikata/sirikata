@@ -44,7 +44,7 @@ typedef uint32 ServerID;
 class Proximity;
 class Object;
 class ObjectFactory;
-class ObjectServerMap;
+class ServerMap;
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -53,7 +53,7 @@ class ObjectServerMap;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ObjectServerMap* obj_server_map, Proximity* prox);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox);
 
     const ServerID& id() const;
 
@@ -65,7 +65,7 @@ private:
     ObjectMap mObjects;
     ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
-    ObjectServerMap* mObjectServerMap;
+    ServerMap* mServerMap;
     Proximity* mProximity;
 }; // class Server
 
