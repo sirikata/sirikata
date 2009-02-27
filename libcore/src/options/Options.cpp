@@ -343,15 +343,20 @@ void OptionSet::addOption(OptionValue *option) {
     addOptionNoLock(option);
 }
 
-InitializeOptions::InitializeOptions(const char * module,...) {
-    va_list vl;
-    va_start(vl,module);
-    OptionValue* option;
-    boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-    OptionSet* curmodule=OptionSet::getOptionsNoLock(module);
-    while ((option=va_arg(vl,OptionValue*))!=NULL) {
-        curmodule->addOptionNoLock(option);
-    }
-
+InitializeOptions InitializeOptions::module(const char * module) {
+    OptionSet* opt_set = OptionSet::getOptions(module);
+    return InitializeOptions(opt_set);
 }
+
+InitializeOptions::InitializeOptions(OptionSet* opt_set)
+ : mOptionSet(opt_set)
+{
+}
+
+InitializeOptions InitializeOptions::addOption(OptionValue* opt_value) {
+    assert(opt_value != NULL);
+    mOptionSet->addOption(opt_value);
+    return InitializeOptions(mOptionSet);
+}
+
 }

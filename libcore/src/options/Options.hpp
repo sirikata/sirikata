@@ -182,8 +182,13 @@ public:
  */
 class InitializeOptions {
 public:
-    ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
-    InitializeOptions(const char *,...);
+    static InitializeOptions module(const char* module);
+
+    InitializeOptions addOption(OptionValue* opt_value);
+private:
+    InitializeOptions(OptionSet* opt_set);
+
+    OptionSet* mOptionSet;
 };
 /**
  * This class holds a set of options that may appear on a command line or within an argument to a module

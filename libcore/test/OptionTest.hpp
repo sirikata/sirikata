@@ -56,11 +56,11 @@ public:
         const int answers[256][256]={{1,5,4},{1,3,4},{0,5,4},{2,5,4},{-1,3,4},{1,3,4}};
         OptionValue *one;
         OptionValue *three=OptionSet::referenceOption("testInteger","three");
-        InitializeOptions o("testInteger",
-                            new OptionValue("four","4",OptionValueTypeInt(),"four is the lonliest number"),
-                            one=new OptionValue("one","1",OptionValueTypeInt(),"one is the lonliest number"),
-                            new OptionValue("three","3",OptionValueTypeInt(),"three is the number to which I shalt count"),
-                            NULL);
+        InitializeOptions::module("testInteger")
+            .addOption(new OptionValue("four","4",OptionValueTypeInt(),"four is the lonliest number"))
+            .addOption(one=new OptionValue("one","1",OptionValueTypeInt(),"one is the lonliest number"))
+            .addOption(new OptionValue("three","3",OptionValueTypeInt(),"three is the number to which I shalt count"))
+            ;
         OptionValue *four=OptionSet::referenceOption("testInteger","four");
         for (int i=0;i<6;++i) {
             OptionSet::getOptions("testInteger")->parse(countString(testString[i]),testString[i]);
