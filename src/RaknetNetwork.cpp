@@ -5,7 +5,7 @@ RaknetNetwork::RaknetNetwork ():mListener(RakNetworkFactory::GetRakPeerInterface
 
 void RaknetNetwork::listen(const Sirikata::Network::Address&addy) {
     SocketDescriptor socketDescriptor(atoi(addy.getService().c_str()),0);
-    mListener->Startup(32767,0,&socketDescriptor,1);
+    mListener->Startup(1,30,&socketDescriptor,1);
     mListener->SetOccasionalPing(true);
 }
 
@@ -18,11 +18,15 @@ bool RaknetNetwork::sendTo(const Sirikata::Network::Address&addy, const Sirikata
     if ((where=mOutboundConnectionMap.find(addy))==mOutboundConnectionMap.end()) {
         std::tr1::shared_ptr<Connection> newcnx(new Connection);
         newcnx->mPeer=RakNetworkFactory::GetRakPeerInterface();
-        newcnx->mPeer->Connect(addy.getHostName().c_str(),
-                               atoi(addy.getService().c_str()),
-                               "",
-                               0);        
+        bool startsuccess=newcnx->mPeer->Startup(1,0,new SocketDescriptor(),1);
+        assert(startsuccess);
+        bool evenTried=newcnx->mPeer->Connect(addy.getHostName().c_str(),
+                                              atoi(addy.getService().c_str()),
+                                              0,
+                                              0);        
+        assert(evenTried);
         mOutboundConnectionMap[addy]=found=newcnx;
+        mConnectingSockets.push_back(std::pair<Sirikata::Network::Address,std::tr1::shared_ptr<Connection> >(addy,newcnx));
     }else {
         found=where->second;
     }
@@ -87,11 +91,12 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
         if (currentSocketIteration!=mOutboundConnectionMap.end()&&i->first.getHostName()==currentSocketIteration->first.getHostName()&&i->first.getService()==currentSocketIteration->first.getService())
             currentSocketIteration=mOutboundConnectionMap.end();
         Packet *p;
-        while (true) {
+        while (i!=mConnectingSockets.end()) {
             std::tr1::shared_ptr <Connection>conn(i->second.lock());
             if (conn) {
                 p=conn->mPeer->Receive();
                 if (p==NULL) break;
+                fprintf (stderr,"GOT SOMETHING!!!a");
                 unsigned char packetIdentifier = p->data[0];
                 switch (packetIdentifier) {
                   case ID_ALREADY_CONNECTED:
@@ -111,8 +116,9 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
                   case ID_INVALID_PASSWORD:
                   case ID_CONNECTION_LOST:
                       {
-                          if (eraseOne(i))
+                          if (eraseOne(i)) {
                               currentSocketIteration=mOutboundConnectionMap.end();
+                          }
                       }
                     continue;
                   case ID_CONNECTION_REQUEST_ACCEPTED:
@@ -145,6 +151,7 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
     Packet*p;
     while (currentSocketIteration!=mOutboundConnectionMap.end()
            &&(p=currentSocketIteration->second->mPeer->Receive())) {
+        fprintf (stderr,"GOT SOMETHING!!!b");
         unsigned char packetIdentifier = p->data[0];
         switch (packetIdentifier) {
           case ID_ALREADY_CONNECTED:
@@ -175,6 +182,7 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
     }
 
     while((p=mListener->Receive())) {
+        fprintf (stderr,"GOT SOMETHINGc!!!");
         unsigned char packetIdentifier = p->data[0];
         switch (packetIdentifier) {
           case ID_ALREADY_CONNECTED:
