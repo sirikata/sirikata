@@ -42,6 +42,7 @@ template <typename scalar> class Vector3;
 
 template <typename scalar> class Vector4 {
 public:
+    static const unsigned char size = 4;
     typedef scalar real;
     union {
         struct {

@@ -39,6 +39,7 @@
 namespace Sirikata {
 template <typename scalar> class Vector3 {
 public:
+    static const unsigned char size = 3;
     typedef scalar real;
     union {
         struct {
