@@ -205,8 +205,14 @@ template<typename scalar> inline Vector4<scalar> operator /(scalar lhs, const Ve
     return Vector4<scalar>(lhs/rhs.x,lhs/rhs.y,lhs/rhs.z,lhs/rhs.w);
 }
 template<typename scalar> inline std::ostream& operator <<(std::ostream& os, const Vector4<scalar> &rhs) {
-    os<<'<'<<rhs.x<<", "<<rhs.y<<", "<<rhs.z<<", "<<rhs.w<<'>';
+    os<<'<'<<rhs.x<<","<<rhs.y<<","<<rhs.z<<","<<rhs.w<<'>';
     return os;
+}
+template<typename scalar> inline std::istream& operator >>(std::istream& is, Vector4<scalar> &rhs) {
+    // FIXME this should be more robust.  It currently relies on the exact format provided by operator <<
+    char dummy;
+    is >> dummy >> rhs.x >> dummy >> rhs.y >> dummy >> rhs.z >> dummy >> rhs.w >> dummy;
+    return is;
 }
 
 }
