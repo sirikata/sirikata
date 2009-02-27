@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
         Vector3ui32(3, 1, 3)
     );
     Proximity* prox = new Proximity();
-    Server* server = new Server(0, loc_service, prox);
+    Server* server = new Server(0, obj_factory, loc_service, obj_server_map, prox);
 
     delete server;
     delete prox;

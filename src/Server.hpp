@@ -43,6 +43,8 @@ namespace CBR {
 typedef uint32 ServerID;
 class Proximity;
 class Object;
+class ObjectFactory;
+class ObjectServerMap;
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -51,7 +53,7 @@ class Object;
  */
 class Server {
 public:
-    Server(ServerID id, LocationService* loc_service, Proximity* prox);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ObjectServerMap* obj_server_map, Proximity* prox);
 
     const ServerID& id() const;
 
@@ -61,7 +63,9 @@ private:
 
     ServerID mID;
     ObjectMap mObjects;
+    ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
+    ObjectServerMap* mObjectServerMap;
     Proximity* mProximity;
 }; // class Server
 
