@@ -89,9 +89,9 @@ public:
     void testToString( void )
     {
         Vector3d a(1,2,3.25);
-        std::string akey("<1, 2, 3.25>");
+        std::string akey("<1,2,3.25>");
         Vector3f b(-4,-.25,-.0625);
-        std::string bkey("<-4, -0.25, -0.0625>");
+        std::string bkey("<-4,-0.25,-0.0625>");
         TS_ASSERT_EQUALS(a.toString(),akey);
         TS_ASSERT_EQUALS(b.toString(),bkey);
         std::ostringstream oss;

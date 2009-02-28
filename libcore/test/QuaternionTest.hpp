@@ -48,9 +48,9 @@ public:
     void testToString( void )
     {
         Quaternion a(1,2,3.25,4.125);
-        std::string akey("<1, 2, 3.25, 4.125>");
+        std::string akey("<1,2,3.25,4.125>");
         Quaternion b(-4,-.25,-.0625,1.25);
-        std::string bkey("<-4, -0.25, -0.0625, 1.25>");
+        std::string bkey("<-4,-0.25,-0.0625,1.25>");
         TS_ASSERT_EQUALS(a.toString(),akey);
         TS_ASSERT_EQUALS(b.toString(),bkey);
         std::ostringstream oss;

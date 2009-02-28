@@ -263,7 +263,7 @@ OptionValue& OptionValue::operator=(const OptionValue&other) {
     mName=other.mName;
     return *this;
 }
-void OptionSet::parse(int argc, const char **argv){
+void OptionSet::parse(int argc, const char * const *argv){
     if (argc>1)
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -370,9 +370,19 @@ InitializeClassOptions::InitializeClassOptions(const char * module,const void * 
         std::cerr<< "Error adding more options after options have been parsed"<<std::endl;
         curmodule->mParsingStage=OptionSet:: PARSED_PARTIAL_UNBLANK_OPTIONS;
     }
-
 }
-InitializeGlobalOptions::InitializeGlobalOptions(const char * module,...) {
+
+InitializeClassOptions InitializeClassOptions::module(const char * module) {
+    OptionSet* opt_set = OptionSet::getOptions(module);
+    return InitializeClassOptions(opt_set);
+}
+
+InitializeClassOptions::InitializeClassOptions(OptionSet* opt_set)
+ : mOptionSet(opt_set)
+{
+}
+
+InitializeGlobalOptions::InitializeGlobalOptions(const char * module,...):InitializeClassOptions(OptionSet::getOptionsNoLock(module,NULL)) {
     va_list vl;
     va_start(vl,module);
     OptionValue* option;
@@ -392,4 +402,11 @@ InitializeGlobalOptions::InitializeGlobalOptions(const char * module,...) {
         curmodule->mParsingStage=OptionSet:: PARSED_PARTIAL_UNBLANK_OPTIONS;
     }
 }
+
+InitializeClassOptions InitializeClassOptions::addOption(OptionValue* opt_value) {
+    assert(opt_value != NULL);
+    mOptionSet->addOption(opt_value);
+    return InitializeClassOptions(mOptionSet);
+}
+
 }

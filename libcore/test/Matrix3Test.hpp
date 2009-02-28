@@ -129,8 +129,8 @@ public:
                      Vector3d(-1.25,-4,-.5),
                      Vector3d(5,2,1),COLUMNS());
 
-        std::string akey("{ col1:<5, 6, 7> col2:<8, 9.25, 10> col3:<11, 12, 13>}");
-        std::string bkey("{ col1:<8, 1, 9> col2:<-1.25, -4, -0.5> col3:<5, 2, 1>}");
+        std::string akey("{ col1:<5,6,7> col2:<8,9.25,10> col3:<11,12,13>}");
+        std::string bkey("{ col1:<8,1,9> col2:<-1.25,-4,-0.5> col3:<5,2,1>}");
         TS_ASSERT_EQUALS(a.toString(),akey);
         TS_ASSERT_EQUALS(b.toString(),bkey);
         std::ostringstream oss;

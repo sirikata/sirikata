@@ -180,15 +180,22 @@ public:
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
-class InitializeClassOptions {
+class InitializeClassOptions{
 public:
     ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
     InitializeClassOptions(const char *,const void * thus,...);
+    static InitializeClassOptions module(const char* module);
+
+    InitializeClassOptions addOption(OptionValue* opt_value);
+protected:
+    InitializeClassOptions(OptionSet* opt_set);
+
+    OptionSet* mOptionSet;
 };
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
-class InitializeGlobalOptions {
+class InitializeGlobalOptions :public InitializeClassOptions{
 public:
     ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
     InitializeGlobalOptions(const char *,...);
@@ -225,9 +232,9 @@ class OptionSet {
     } mParsingStage;
 public:
     void parse(const std::string&);
-    void parse(int, const char **);
+    void parse(int, const char * const *);
     void addOption(OptionValue*v);
-    OptionValue* referenceOption(const std::string &option, OptionValue**pointer);
+    OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
     static OptionValue* referenceOption(const std::string& module, const void * context_ptr, const std::string &option, OptionValue**pointer=NULL);
     static std::map<std::string,OptionSet*>* optionSets() {
