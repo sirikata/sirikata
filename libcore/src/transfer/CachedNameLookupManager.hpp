@@ -68,8 +68,8 @@ protected:
 	}
 
 public:
-	CachedNameLookupManager(ServiceLookup *serviceLookup, ProtocolRegistry<NameLookupHandler> *nameProtocols)
-		: NameLookupManager(serviceLookup, nameProtocols) {
+	CachedNameLookupManager(ProtocolRegistry<NameLookupHandler> *nameProtocols)
+		: NameLookupManager(nameProtocols) {
 	}
 
 	virtual void lookupHash(const URI &namedUri, const Callback &cb) {

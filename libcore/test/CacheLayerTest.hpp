@@ -68,14 +68,14 @@ public:
 	virtual void setUp() {
 		finishedTest = 0;
 		mCacheLayers.clear();
-		mProtoReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
+		mProtoReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>();
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mProtoReg->setHandler("http", httpHandler);
 	}
 
 	CacheLayer *createTransferLayer(CacheLayer *next=NULL) {
 		// NULL service lookup--we are using a simple http URL.
-		CacheLayer *layer = new Transfer::NetworkCacheLayer(next, NULL, mProtoReg);
+		CacheLayer *layer = new Transfer::NetworkCacheLayer(next, mProtoReg);
 		mCacheLayers.push_back(layer);
 		return layer;
 	}
@@ -167,7 +167,7 @@ public:
 	}
 
 	void doExampleComTest( CacheLayer *transfer ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
         using std::tr1::placeholders::_1;
 		transfer->getData(exampleComUri,
 				Transfer::Range(true),
@@ -225,7 +225,7 @@ public:
 	void testCleanup( void ) {
 		Transfer::RemoteFileId testUri (SHA256::computeDigest("01234"), URI(URIContext(), "http://www.google.com/"));
 		Transfer::RemoteFileId testUri2 (SHA256::computeDigest("56789"), URI(URIContext(), "http://www.google.com/intl/en_ALL/images/logo.gif"));
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
 		using std::tr1::placeholders::_1;
 		Transfer::TransferCallback simpleCB = std::tr1::bind(&CacheLayerTestSuite::simpleCallback, this, _1);
 		Transfer::TransferCallback checkNullCB = std::tr1::bind(&CacheLayerTestSuite::checkNullCallback, this, _1);
@@ -253,7 +253,7 @@ public:
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);
 
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
 		memory->purgeFromCache(exampleComUri.fingerprint());
 
 		std::string diskFile = "diskCache/" + exampleComUri.fingerprint().convertToHexString() + ".part";
@@ -376,7 +376,7 @@ public:
 	}
 
 	void testRange( void ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://localhost/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
 		CacheLayer *http = createTransferLayer();
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);

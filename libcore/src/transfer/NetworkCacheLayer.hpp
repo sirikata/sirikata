@@ -60,7 +60,6 @@ class NetworkCacheLayer : public CacheLayer {
 
 	volatile bool cleanup;
 	std::list<RequestInfo> mActiveTransfers;
-	ServiceLookup *mServicesLookup;
 	ProtocolRegistry<DownloadHandler> *mProtoReg;
 	boost::mutex mActiveTransferLock; ///< for abort.
 	boost::condition_variable mCleanupCV;
@@ -94,7 +93,7 @@ class NetworkCacheLayer : public CacheLayer {
 		 * if this class is destructed while we are executing doFetch.
 		 */
 		RequestInfo &info = *iter;
-		if (cleanup || whichService >= info.services->size()) {
+		if (cleanup || !info.services || whichService >= info.services->size()) {
 			std::cerr << "None of the " << whichService << " download URIContexts registered for " <<
 					info.fileId.uri() << " were successful." << std::endl;
 			CacheLayer::getData(info.fileId, info.range, info.callback);
@@ -122,8 +121,8 @@ class NetworkCacheLayer : public CacheLayer {
 	}
 
 public:
-	NetworkCacheLayer(CacheLayer *next, ServiceLookup *services, ProtocolRegistry<DownloadHandler> *protoReg)
-			:CacheLayer(next), mServicesLookup(services), mProtoReg(protoReg) {
+	NetworkCacheLayer(CacheLayer *next, ProtocolRegistry<DownloadHandler> *protoReg)
+			:CacheLayer(next), mProtoReg(protoReg) {
 		cleanup = false;
 	}
 
@@ -165,14 +164,8 @@ public:
 			infoIter = mActiveTransfers.insert(mActiveTransfers.end(), info);
 		}
 
-		if (mServicesLookup == NULL) {
-			ListOfServicesPtr services(new ListOfServices);
-			services->push_back(downloadFileId.uri().context());
-			gotServices(infoIter, services);
-		} else {
-			mServicesLookup->lookupService(downloadFileId.uri().context(),
-					std::tr1::bind(&NetworkCacheLayer::gotServices, this, infoIter, _1));
-		}
+		mProtoReg->lookupService(downloadFileId.uri().context(),
+				std::tr1::bind(&NetworkCacheLayer::gotServices, this, infoIter, _1));
 	}
 };
 

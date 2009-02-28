@@ -63,7 +63,8 @@ class DownloadTest : public CxxTest::TestSuite {
 	NameLookupManager *mCachedNameLookup;
 	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
 	Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mNameLookupReg;
-	Transfer::ServiceLookup *mService;
+	Transfer::ServiceLookup *mNameService;
+	Transfer::ServiceLookup *mDownloadService;
 
 	Task::GenEventManager *mEventSystem;
 
@@ -92,33 +93,34 @@ public:
 		mEventProcessThread = new boost::thread(boost::bind(
 			&Task::GenEventManager::sleep_processEventQueue, mEventSystem));
 
-		mService = new Transfer::CachedServiceLookup;
+		mNameService = new Transfer::CachedServiceLookup;
 
 		Transfer::ListOfServices *services;
 		services = new Transfer::ListOfServices;
 		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"));
-		mService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
+		mNameService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
 
+		mDownloadService = new Transfer::CachedServiceLookup;
 		services = new Transfer::ListOfServices;
 		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"));
-		mService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
+		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
-		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
+		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
-		mNameLookup = new Transfer::NameLookupManager(mService, mNameLookupReg);
+		mNameLookup = new Transfer::NameLookupManager(mNameLookupReg);
 
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
+		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
 		mDownloadReg->setHandler("http", httpHandler);
-		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mService, mDownloadReg);
+		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 
 		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem);
 
 		// Uses the same event system, so don't combine the cached and non-cached ones into a single test.
-		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mService, mDownloadReg);
+		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 		mMemoryCachePolicy = new Transfer::LRUPolicy(1000000);
 		mMemoryCache = new Transfer::MemoryCacheLayer(mMemoryCachePolicy, mCachedNetworkCache);
-		mCachedNameLookup = new Transfer::CachedNameLookupManager(mService, mNameLookupReg);
+		mCachedNameLookup = new Transfer::CachedNameLookupManager(mNameLookupReg);
 		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
@@ -128,10 +130,12 @@ public:
 	void tearDown() {
 		// Deletion order:
 		mTransferManager->cleanup();
+		mCachedTransferManager->cleanup();
 		// First delete name lookups
 		delete mNameLookup;
 		delete mCachedNameLookup;
 		delete mNameLookupReg;
+		delete mNameService;
 
 		// First delete data transfer -- this will cause all
 		// delete non-cached CacheLayer
@@ -141,7 +145,7 @@ public:
 		delete mMemoryCachePolicy;
 		delete mCachedNetworkCache; // CacheLayer's deleted from first to last.
 		delete mDownloadReg; // Download registry must be deleted after the NetworkCacheLayer.
-		delete mService;
+		delete mDownloadService;
 		delete mTransferManager;
 		delete mCachedTransferManager;
 

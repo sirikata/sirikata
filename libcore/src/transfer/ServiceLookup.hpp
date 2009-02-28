@@ -68,7 +68,6 @@ class ServiceLookup {
 public:
 	typedef std::tr1::function<void(ListOfServicesPtr)> Callback;
 private:
-	ListOfServicesPtr mEmptyListOfServices;
 
 	ServiceLookup* mRespondTo;
 	ServiceLookup* mNext;
@@ -104,7 +103,7 @@ public:
 	 * @param next  The next service lookup to try, or NULL at the end of the chain.
 	 */
 	ServiceLookup(ServiceLookup* next=NULL)
-			: mEmptyListOfServices(new ListOfServices()), mRespondTo(NULL), mNext(next) {
+			: mRespondTo(NULL), mNext(next) {
 		if (next) {
 			next->setResponder(this);
 		}
@@ -135,7 +134,7 @@ public:
 		} else {
 			std::cerr << "ServiceLookup could find no handlers for " <<
 				context << std::endl;
-			cb(mEmptyListOfServices);
+			cb(ListOfServicesPtr());
 		}
 	}
 };

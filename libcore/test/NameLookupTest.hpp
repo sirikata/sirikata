@@ -53,7 +53,8 @@ class NameLookupTest : public CxxTest::TestSuite
 	typedef Transfer::RemoteFileId RemoteFileId;
 	typedef Transfer::URIContext URIContext;
 
-	Transfer::ServiceLookup *mService;
+	Transfer::ServiceLookup *mNameService;
+	Transfer::ServiceLookup *mDownloadService;
 	Transfer::NameLookupManager *mNameLookups;
 	Transfer::CachedNameLookupManager *mCachedNameLookups;
 	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
@@ -67,32 +68,33 @@ class NameLookupTest : public CxxTest::TestSuite
 
 public:
 	void setUp() {
-		mService = new Transfer::CachedServiceLookup();
-
 		Transfer::ListOfServices *services;
+
+		mNameService = new Transfer::CachedServiceLookup();
 		services = new Transfer::ListOfServices;
 		services->push_back(URIContext("testoftheemergencybroadcastsystem","blah","","")); // check that other URIs will be tried
 		services->push_back(URIContext("http","localhost","","nonexistantdirectory"));
 		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"));
 		services->push_back(URIContext("http","localhost","","nonexistantdirectory1"));
-		mService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
+		mNameService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
 
+		mDownloadService = new Transfer::CachedServiceLookup();
 		services = new Transfer::ListOfServices;
 		services->push_back(URIContext("testoftheemergencybroadcastsystem2","blah","","")); // check that other URIs will be tried
 		services->push_back(URIContext("http", "localhost","","nonexistantdirectory2"));
 		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"));
 		services->push_back(URIContext("http", "localhost","","nonexistantdirectory3"));
-		mService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
+		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
-		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
+		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
-		mNameLookups = new Transfer::NameLookupManager(mService, mNameLookupReg);
-		mCachedNameLookups = new Transfer::CachedNameLookupManager(mService, mNameLookupReg);
+		mNameLookups = new Transfer::NameLookupManager(mNameLookupReg);
+		mCachedNameLookups = new Transfer::CachedNameLookupManager(mNameLookupReg);
 
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
+		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
 		mDownloadReg->setHandler("http", httpHandler);
-		mTransferLayer = new Transfer::NetworkCacheLayer(NULL, mService, mDownloadReg);
+		mTransferLayer = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 
 		finishedTest = 0;
 	}
@@ -102,7 +104,8 @@ public:
 		delete mNameLookups;
 		delete mCachedNameLookups;
 		delete mNameLookupReg;
-		delete mService;
+		delete mNameService;
+		delete mDownloadService;
 
 		finishedTest = 0;
 	}
