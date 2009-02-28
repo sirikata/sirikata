@@ -49,7 +49,7 @@ OptionValue* moduleLevel;
 InitializeGlobalOptions o("",
                     defaultLevel=new OptionValue("loglevel",
 #ifdef NDEBUG
-                                                 "info"
+                                                 "info",
 #else
                                                  "debug",
 #endif
@@ -57,18 +57,18 @@ InitializeGlobalOptions o("",
                                                  LogLevelParser()),
                     atLeastLevel=new OptionValue("maxloglevel",
 #ifdef NDEBUG
-                                                 "info"
+                                                 "info",
 #else
-                                                 "insane"
+                                                 "insane",
 #endif
-                                                 ,"Sets the maximum logging level any module may be set to",
+                                                 "Sets the maximum logging level any module may be set to",
                                                  LogLevelParser()),
                     moduleLevel=new OptionValue("moduleloglevel",
                                                 "",
                                                 "Sets a per-module logging level: should be formatted <module>=debug,<othermodule>=info...",
                                                 LogLevelMapParser()),
                      NULL);
-                    
+
 std::tr1::unordered_map<std::string,LOGGING_LEVEL> module_level;
 
 } }
