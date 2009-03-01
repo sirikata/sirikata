@@ -155,15 +155,19 @@ public:
 	void callbackExampleCom(const Transfer::RemoteFileId &uri, const Transfer::SparseData *myData) {
 		TS_ASSERT(myData != NULL);
 		if (myData) {
-			myData->debugPrint(std::cout);
+            if (SILOGP(transfer,debug)) {
+                std::stringstream dataStringStream;
+                myData->debugPrint(dataStringStream);
+                SILOG(transfer,debug,dataStringStream.str());
+            }
 			const Transfer::DenseData &densedata = (*myData->begin());
 			TS_ASSERT_EQUALS (SHA256::computeDigest(densedata.data(), (size_t)densedata.length()), uri.fingerprint());
 		} else {
-			std::cout << "fail!" << std::endl;
+			SILOG(transfer,error,"fail!");
 		}
-		std::cout << "Finished displaying!" << std::endl;
+		SILOG(transfer,debug,"Finished displaying!");
 		notifyOne();
-		std::cout << "Finished callback" << std::endl;
+		SILOG(transfer,debug,"Finished callback");
 	}
 
 	void doExampleComTest( CacheLayer *transfer ) {
@@ -175,7 +179,7 @@ public:
 
 		waitFor(1);
 
-		std::cout << "Finished localhost test" << std::endl;
+		SILOG(transfer,debug,"Finished localhost test");
 	}
 
 	void testDiskCache_exampleCom( void ) {
@@ -190,13 +194,13 @@ public:
 		CacheLayer *disk = createDiskCache();
 		CacheLayer *memory = createMemoryCache(disk);
 		// test disk cache.
-		std::cout << "Testing disk cache..."<<std::endl;
+		SILOG(transfer,debug,"Testing disk cache...");
 		doExampleComTest(memory);
 
 		// test memory cache.
 		memory->setNext(NULL);
 		// ensure it is not using the disk cache.
-		std::cout << "Testing memory cache..."<<std::endl;
+		SILOG(transfer,debug,"Testing memory cache...");
 		doExampleComTest(memory);
 	}
 
@@ -357,15 +361,7 @@ public:
 				if (!gotData) {
 					break;
 				}
-				bool equal = memcmp(compareData, gotData, len+offset<compare->endbyte() ? (size_t)len : (size_t)(compare->endbyte()-offset))==0;
-				TS_ASSERT(equal);
-				if (!equal) {
-					std::cout << std::endl << "WANT =======" << std::endl;
-					std::cout << std::string(compareData, compareData+len);
-					std::cout << std::endl << "GOT: =======" << std::endl;
-					std::cout << std::string(gotData, gotData+len);
-					std::cout << std::endl << "-----------" << std::endl;
-				}
+                TS_ASSERT_SAME_DATA(compareData,gotData,len+offset<compare->endbyte() ? (size_t)len : (size_t)(compare->endbyte()-offset));
 				offset += len;
 				if (offset >= compare->endbyte()) {
 					break;

@@ -59,7 +59,7 @@ protected:
 			if (mData.alloc(respondData->length(), writer)) {
 				bool newentry = writer.insert(fileId, respondData->length());
 				if (newentry) {
-					std::cout << fileId << " created " << *respondData << std::endl;
+					SILOG(transfer,debug,fileId << " created " << *respondData);
 					CacheData *cdata = new CacheData;
 					*writer = cdata;
 					cdata->mSparse.addValidData(respondData);
@@ -67,9 +67,12 @@ protected:
 				} else {
 					CacheData *cdata = static_cast<CacheData*>(*writer);
 					cdata->mSparse.addValidData(respondData);
-					std::cout << fileId << " already exists: ";
-					Range::printRangeList(std::cout, cdata->mSparse, (Range)(*respondData));
-					std::cout << std::endl;
+                    if (SILOGP(transfer,debug)) {
+                        SILOGNOCR(transfer,debug,fileId << " already exists: ");
+                        std::stringstream rangeListStream;
+                        Range::printRangeList(rangeListStream,cdata->mSparse, (Range)(*respondData));
+                        SILOGNOCR(transfer,debug,rangeListStream.str());
+                    }
 					writer.update(cdata->mSparse.getSpaceUsed());
 				}
 
@@ -105,8 +108,12 @@ public:
 			MemoryMap::read_iterator iter(mData);
 			if (iter.find(uri.fingerprint())) {
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
-				std::cout << "Found " << uri.fingerprint() << "; ranges=";
-				sparseData.debugPrint(std::cout);
+                if (SILOGP(transfer,debug)) {
+                    SILOGNOCR(transfer,debug,"Found " << uri.fingerprint() << "; ranges=");
+                    std::stringstream sparsePrintStream;
+                    sparseData.debugPrint(sparsePrintStream);
+                    SILOG(transfer,debug,sparsePrintStream.str());
+                }
 				if (requestedRange.isContainedBy(sparseData)) {
 					haveData = true;
 					foundData = sparseData;

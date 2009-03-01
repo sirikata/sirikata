@@ -178,19 +178,19 @@ public:
 	/** Would be a << operator, but it's inefficient, and should only be
 	 * used for debugging/testing purposes, so it's safer as a different function.
 	 */
-	void debugPrint(std::ostream &os) const {
+	std::ostream & debugPrint(std::ostream &os) const {
 		Range::base_type position = 0, len;
 		do {
 			const unsigned char *data = dataAt(position, len);
 			if (data) {
-				std::cout << "{GOT DATA "<<len<<"}";
-				std::cout << std::string(data, data+len);
+				os<<"{GOT DATA "<<len<<"}";
+				os<<std::string(data, data+len);
 			} else if (len) {
-				std::cout << "[INVALID:" <<len<< "]";
+				os<<"[INVALID:" <<len<< "]";
 			}
 			position += len;
 		} while (len);
-		std::cout << std::endl;
+		return os;
 	}
 
 	/**

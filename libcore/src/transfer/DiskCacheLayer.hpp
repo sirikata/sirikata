@@ -176,7 +176,7 @@ public:
 		try {
 			unserialize();
 		} catch (...) {
-			std::cerr << "ERROR loading file list!" << std::endl;
+			SILOG(transfer,fatal,"ERROR loading file list!");
 			/// do nothing
 		}
 	}

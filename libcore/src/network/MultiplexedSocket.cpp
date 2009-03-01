@@ -280,7 +280,7 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
                     unsigned int avail_len=newChunk.size()-1;
                     id.unserialize((const uint8*)&(newChunk[1]),avail_len);
                     if (avail_len+1>newChunk.size()) {
-                        std::cerr<<"Control Chunk too short\n";
+                        SILOG(tcpsst,warning,"Control Chunk too short");
                     }
                 }
                 if (id!=Stream::StreamID()) {
@@ -342,7 +342,7 @@ void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase
             i->second->mConnectionCallback(stat,errorMessage);
         }
     }else {
-        //std::cerr<< "Did not call callbacks because callback message already sent for "<<errorMessage<<'\n';
+        SILOG(tcpsst,debug,"Did not call callbacks because callback message already sent for "<<errorMessage);
     }
 }
 void MultiplexedSocket::connectionFailedCallback(const std::string& error) {

@@ -102,7 +102,7 @@ void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     if (!didsend) {
         //if the data was not sent, its our job to clean it up
         delete toBeSent.data;
-        std::cerr<< "printing to closed stream id "<<getID().read();
+        SILOG(tcpsst,debug,"printing to closed stream id "<<getID().read());
     }
 }
 ///This function waits on the sendStatus clearing up so no outstanding sends are being made (and no further ones WILL be made cus of the SendStatusClosing flag that is on

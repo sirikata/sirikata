@@ -142,10 +142,10 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
 			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
-			std::cout << "DOWNLOADING FILE RANGE " << (Range)(*mData) << " FROM "<<mURI << std::endl;
+			SILOG(transfer,debug,"DOWNLOADING FILE RANGE " << (Range)(*mData) << " FROM "<<mURI);
 		}
 	}
-	//std::cout << "Got header [" << headername << "] = " << headervalue << std::endl;
+	SILOG(transfer,insane,"Got header [" << headername << "] = " << headervalue);
 }
 
 
@@ -331,8 +331,8 @@ void HTTPRequest::curlLoop () {
 				} else {
 					// CURLE_RANGE_ERROR
 					// CURLE_HTTP_RETURNED_ERROR
-					std::cout << "failed " << request << ": " <<
-							curl_easy_strerror(transferMsg->data.result) << std::endl;
+					SILOG(transfer,debug,"failed " << request << ": " <<
+							curl_easy_strerror(transferMsg->data.result));
 					success = false;
 				}
 				curl_easy_cleanup(handle);

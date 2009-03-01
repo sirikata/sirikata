@@ -40,11 +40,12 @@ void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::
 }
 void Stream::ignoreBytesReceived(const Chunk&c) {
 #if 0
-    fprintf( stderr, "ignoring: ");
+    std::stringstream ss;
+    ss<<"ignoring: ";
     for (size_t i=0;i<c.size();++i) {
-        fprintf(stderr,"%c",c[i]);
+        ss<<c[i];
     }
-    fprintf(stderr,"\n");
+    SILOG(tcpsst,debug,ss.str());
 #endif
 }
 unsigned int Stream::StreamID::serialize(uint8 *destination, unsigned int maxsize) const{

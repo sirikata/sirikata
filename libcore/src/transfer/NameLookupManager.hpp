@@ -68,8 +68,8 @@ private:
 
 	void doNameLookup(Callback cb, URI origNamedUri, unsigned int which, ListOfServicesPtr services) {
 		if (which >= services->size()) {
-			std::cerr << "None of the " << which << " URIContexts registered for " <<
-					origNamedUri << " were successful for NameLookup." << std::endl;
+			SILOG(transfer,error,"None of the " << which << " URIContexts registered for " <<
+					origNamedUri << " were successful for NameLookup.");
 			cb(NULL);
 			return;
 		}

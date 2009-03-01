@@ -95,8 +95,8 @@ class NetworkCacheLayer : public CacheLayer {
 		 */
 		RequestInfo &info = *iter;
 		if (cleanup || whichService >= info.services->size()) {
-			std::cerr << "None of the " << whichService << " download URIContexts registered for " <<
-					info.fileId.uri() << " were successful." << std::endl;
+			SILOG(transfer,error,"None of the " << whichService << " download URIContexts registered for " <<
+					info.fileId.uri() << " were successful.");
 			CacheLayer::getData(info.fileId, info.range, info.callback);
 			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
 			mActiveTransfers.erase(iter);
