@@ -89,7 +89,7 @@ class HTTPDownloadHandler : public DownloadHandler, public NameLookupHandler {
 			std::string shasum = temp.filename();
 			callback(Fingerprint::convertFromHex(shasum), receivedUri, true);
 		} else {
-			std::cerr << "HTTP name lookup failed for " << httpreq->getURI() << std::endl;
+			SILOG(transfer,error,"HTTP name lookup failed for " << httpreq->getURI());
 			callback(Fingerprint(), std::string(), false);
 		}
 	}

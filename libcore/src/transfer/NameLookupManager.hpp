@@ -84,8 +84,8 @@ private:
 
 	void doNameLookup(Callback cb, URI origNamedUri, unsigned int which, ListOfServicesPtr services) {
 		if (!services || which >= services->size()) {
-			std::cerr << "None of the " << which << " URIContexts registered for " <<
-					origNamedUri << " were successful for NameLookup." << std::endl;
+			SILOG(transfer,error,"None of the " << which << " URIContexts registered for " <<
+					origNamedUri << " were successful for NameLookup.");
 			/// Hashed download.
 			if (mDownloadProto) {
 				mDownloadProto->lookupService(origNamedUri.context(), std::tr1::bind(&NameLookupManager::hashedDownload, this, cb, origNamedUri, _1));

@@ -188,7 +188,7 @@ public:
 	std::tr1::shared_ptr<ProtocolType> lookup(const std::string &proto) {
 		std::tr1::shared_ptr<ProtocolType> protoHandler (mHandlers[proto]);
 		if (!protoHandler) {
-			std::cerr << "No protocol handler registered for "<<proto<<std::endl;
+			SILOG(transfer,error,"No protocol handler registered for "<<proto);
 		}
 		return protoHandler;
 	}

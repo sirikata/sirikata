@@ -80,11 +80,21 @@ public:
 	static Task::EventResponse printTransfer(Task::EventPtr evptr) {
 		Transfer::DownloadEventPtr ev (std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent>(evptr));
 
-		std::cout << "Transfer " << (ev->success()?"finished":"failed")<<
-			" (" << ev->mStatus << "): " << ev->uri();
-		Range::printRangeList(std::cout, ev->data());
-		std::cout << std::endl;
-
+ 		if (ev->success()) {
+            if (SILOGP(transfer,debug)) {
+                std::stringstream rangeListStream;
+                Range::printRangeList(rangeListStream, ev->data());
+                SILOG(transfer,debug,"Transfer " << "finished" <<
+                      " (" << ev->mStatus << "): " << ev->uri() << rangeListStream);
+            }
+		} else {
+            if (SILOGP(transfer,error)) {
+                std::stringstream rangeListStream;
+                Range::printRangeList(rangeListStream, ev->data());
+                SILOG(transfer,error,"Transfer " << "failed" <<
+                      " (" << ev->mStatus << "): " << ev->uri() << rangeListStream);
+            }
+		}
 		return Task::EventResponse::nop();
 	}
 
@@ -188,7 +198,7 @@ public:
 
 	Task::EventResponse downloadCheckRange(const Range &toCheck, Task::EventPtr evbase) {
 		Transfer::DownloadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent> (evbase);
-		std::cout << toCheck << std::endl;
+		SILOG(transfer,debug,toCheck);
 		if (ev->data().empty()) {
 			std::stringstream msg;
 			msg << "Got empty data for " << toCheck << "!";

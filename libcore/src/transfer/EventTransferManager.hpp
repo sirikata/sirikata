@@ -90,7 +90,7 @@ class EventTransferManager : public TransferManager {
 			}
 			mEventSystem->fire(DownloadEventPtr(new DownloadEvent(stat, remoteid, downloadedData)));
 		} else {
-			std::cerr << "Finished download for " << remoteid.uri() << " but event has already fired..." << std::endl;
+			SILOGNOCR(transfer,error,"Finished download for " << remoteid.uri() << " but event has already fired...");
 		}
 	}
 
@@ -115,13 +115,13 @@ class EventTransferManager : public TransferManager {
 			bool found = false;
 			while (iter != mActiveTransfers.end() && (*iter).first == remoteid->fingerprint()) {
 				if (range.isContainedBy((*iter).second)) {
-					std::cout << "ISContained " << range << " " << (*iter).second << std::endl;
+					SILOG(transfer,debug,"ISContained " << range << " " << (*iter).second);
 					found = true;
 					break;
 				}
 				++iter;
 			}
-			std::cout << "Getting " << range << " (found = " << found << ")" << std::endl;
+			SILOG(transfer,debug,"Getting " << range << " (found = " << found << ")");
 			mEventSystem->subscribe(DownloadEvent::getIdPair(*remoteid), listener);
 			if (!found) {
 				mActiveTransfers.insert(

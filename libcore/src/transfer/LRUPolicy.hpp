@@ -78,7 +78,7 @@ public:
 
 		CachePolicy::updateSpace(size, 0);
 
-		std::cout << "[LRUPolicy] Freeing " << id << " (" << size << " bytes); " << mFreeSpace << " free" << std::endl;
+		SILOG(transfer,debug,"[LRUPolicy] Freeing " << id << " (" << size << " bytes); " << mFreeSpace << " free");
 		mLeastUsed.erase(lrudata->mIter);
 		delete lrudata;
 	}

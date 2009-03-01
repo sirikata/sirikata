@@ -46,8 +46,7 @@ bool newAcceptPhase(TCPListener*listen, IOService* io,const Stream::SubstreamCal
 void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb,const boost::system::error_code& error){
     if(error) {
 		boost::system::system_error se(error);
-		std::cerr << se.what() << std::endl;
-        assert(0&&"ERROR IN THE TCP STREAM ACCEPTING PROCESS");
+		SILOG(tcpsst,error, "ERROR IN THE TCP STREAM ACCEPTING PROCESS"<<se.what() << std::endl);
         //FIXME: attempt more?
     }else {
         ASIOStreamBuilder::beginNewStream(socket,cb);

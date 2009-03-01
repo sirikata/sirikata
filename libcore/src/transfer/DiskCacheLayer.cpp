@@ -189,8 +189,8 @@ void DiskCacheLayer::workerThread() {
 			}
 			int fd = open(filePath.c_str(), O_CREAT|O_WRONLY, 0666);
 			if (fd < 0) {
-				std::cerr << "Failed to open " << fileId <<
-					"for writing; reason: " << errno << std::endl;
+				SILOG(transfer,error, "Failed to open " << fileId <<
+					"for writing; reason: " << errno);
 				continue;
 			}
 			lseek(fd, req->data->startbyte(), SEEK_SET);
@@ -256,8 +256,8 @@ void DiskCacheLayer::workerThread() {
 			}
 			int fd = open(filePath.c_str(), O_RDONLY);
 			if (fd < 0) {
-				std::cerr << "Failed to open " << fileId <<
-					"for reading; reason: " << errno << std::endl;
+				SILOG(transfer,error, "Failed to open " << fileId <<
+					"for writing; reason: " << errno);
 				CacheLayer::getData(req->fileId, req->toRead, req->finished);
 				continue;
 			}
@@ -354,8 +354,8 @@ void DiskCacheLayer::unserialize() {
 				}
 			}
 
-			std::cout << "Cached fingerprint: " << fingerprintName <<
-				"(" << totalLength << ")" << std::endl;
+			SILOG(transfer,debug,"Cached fingerprint: " << fingerprintName <<
+				"(" << totalLength << ")");
 
 			Fingerprint fprint;
 			try {

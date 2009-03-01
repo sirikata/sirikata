@@ -132,8 +132,8 @@ public:
 		if (mNext) {
 			mNext->lookupService(context, cb);
 		} else {
-			std::cerr << "ServiceLookup could find no handlers for " <<
-				context << std::endl;
+			SILOG(transfer,error,"ServiceLookup could find no handlers for " <<
+				context);
 			cb(ListOfServicesPtr());
 		}
 	}

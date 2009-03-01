@@ -57,7 +57,7 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
     if (error || std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)!=0) {
-        std::cerr<< "Connection received with incomprehensible header";
+        SILOG(tcpsst,warning,"Connection received with incomprehensible header");
     }else {
         UUID context=UUID(buffer->begin()+(TCPStream::TcpSstHeaderSize-16),16);
         IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
@@ -69,7 +69,7 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
             assert(where!=sIncompleteStreams.end());
         }
         if ((int)numConnections!=where->second.mNumSockets) {
-            std::cerr<< "Single client disagrees on number of connections to establish";
+            SILOG(tcpsst,warning,"Single client disagrees on number of connections to establish: "<<numConnections<<" != "<<where->second.mNumSockets);
             sIncompleteStreams.erase(where);
         }else {
             where->second.mSockets.push_back(socket);
@@ -83,7 +83,7 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
                 TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
                 callback(strm,setCallbackFunctor);
                 if (setCallbackFunctor.mCallbacks==NULL) {
-                    std::cerr<<"Forgot to set listener on socket\n";
+                    SILOG(tcpsst,error,"Client code for stream "<<newID.read()<<" did not set listener on socket");
                     shared_socket->closeStream(shared_socket,newID);
                 }
             }else{
