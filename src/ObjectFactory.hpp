@@ -47,7 +47,11 @@ class Server;
  */
 class ObjectFactory {
     typedef std::set<UUID> ObjectIDSet;
-    typedef std::map<UUID, MotionPath*> MotionMap;
+    struct ObjectInputs {
+        MotionPath* motion;
+        float proximityRadius;
+    };
+    typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
     typedef std::map<UUID, Object*> ObjectMap;
 public:
     typedef ObjectIDSet::iterator iterator;
@@ -62,11 +66,12 @@ public:
     const_iterator end() const;
 
     MotionPath* motion(const UUID& id);
+    float proximityRadius(const UUID& id);
     Object* object(const UUID& id, Server* server);
     void destroyObject(const UUID& id);
 private:
     ObjectIDSet mObjectIDs;
-    MotionMap mMotions;
+    ObjectInputsMap mInputs;
     ObjectMap mObjects;
 }; // class ObjectFactory
 

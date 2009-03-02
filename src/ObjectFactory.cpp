@@ -44,11 +44,16 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
 
     for(uint32 i = 0; i < count; i++) {
         UUID id = UUID::random(); // FIXME
+
+        ObjectInputs* inputs = new ObjectInputs;
+
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
-        MotionPath* motion = new RandomMotionPath(start, end, startpos, 1, Duration::milliseconds((uint32)1000)); // FIXME
+        inputs->motion = new RandomMotionPath(start, end, startpos, 1, Duration::milliseconds((uint32)1000)); // FIXME
+
+        inputs->proximityRadius = randFloat() * 50 + 50; // FIXME
 
         mObjectIDs.insert(id);
-        mMotions[id] = motion;
+        mInputs[id] = inputs;
     }
 }
 
@@ -58,9 +63,10 @@ ObjectFactory::~ObjectFactory() {
         delete obj;
     }
 
-    for(MotionMap::iterator it = mMotions.begin(); it != mMotions.end(); it++) {
-        MotionPath* motion = it->second;
-        delete motion;
+    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+        ObjectInputs* inputs = it->second;
+        delete inputs->motion;
+        delete inputs;
     }
 }
 
@@ -82,8 +88,14 @@ ObjectFactory::const_iterator ObjectFactory::end() const {
 
 MotionPath* ObjectFactory::motion(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
-    assert( mMotions.find(id) != mMotions.end() );
-    return mMotions[id];
+    assert( mInputs.find(id) != mInputs.end() );
+    return mInputs[id]->motion;
+}
+
+float ObjectFactory::proximityRadius(const UUID& id) {
+    assert( mObjectIDs.find(id) != mObjectIDs.end() );
+    assert( mInputs.find(id) != mInputs.end() );
+    return mInputs[id]->proximityRadius;
 }
 
 Object* ObjectFactory::object(const UUID& id, Server* server) {
@@ -92,7 +104,7 @@ Object* ObjectFactory::object(const UUID& id, Server* server) {
     ObjectMap::iterator it = mObjects.find(id);
     if (it != mObjects.end()) return it->second;
 
-    Object* new_obj = new Object(server, id, motion(id));
+    Object* new_obj = new Object(server, id, motion(id), proximityRadius(id));
     mObjects[id] = new_obj;
     return new_obj;
 }

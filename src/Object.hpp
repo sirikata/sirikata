@@ -43,10 +43,14 @@ class Server;
 
 class Object {
 public:
-    Object(Server* server, const UUID& id, MotionPath* motion);
+    Object(Server* server, const UUID& id, MotionPath* motion, float prox_radius);
 
     const UUID& uuid() {
         return mID;
+    }
+
+    const float proximityRadius() {
+        return mProximityRadius;
     }
 
     void tick(const Time& t);
@@ -63,6 +67,7 @@ private:
     MotionVector3f mLocation;
     Server* mServer;
     ObjectSet mSubscribers;
+    float mProximityRadius;
 }; // class Object
 
 } // namespace CBR

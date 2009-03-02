@@ -35,10 +35,11 @@
 
 namespace CBR {
 
-Object::Object(Server* server, const UUID& id, MotionPath* motion)
+Object::Object(Server* server, const UUID& id, MotionPath* motion, float prox_radius)
  : mID(id),
    mMotion(motion),
-   mServer(server)
+   mServer(server),
+   mProximityRadius(prox_radius)
 {
     mLocation = mMotion->initial();
 }
