@@ -46,6 +46,7 @@ using namespace Sirikata;
 /*  Created on: Jan 10, 2009 */
 
 #define EXAMPLE_HASH "55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80"
+#define SERVER_URI "http://localhost/"
 
 class CacheLayerTestSuite : public CxxTest::TestSuite
 {
@@ -171,7 +172,7 @@ public:
 	}
 
 	void doExampleComTest( CacheLayer *transfer ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), SERVER_URI));
         using std::tr1::placeholders::_1;
 		transfer->getData(exampleComUri,
 				Transfer::Range(true),
@@ -229,7 +230,7 @@ public:
 	void testCleanup( void ) {
 		Transfer::RemoteFileId testUri (SHA256::computeDigest("01234"), URI(URIContext(), "http://www.google.com/"));
 		Transfer::RemoteFileId testUri2 (SHA256::computeDigest("56789"), URI(URIContext(), "http://www.google.com/intl/en_ALL/images/logo.gif"));
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), SERVER_URI));
 		using std::tr1::placeholders::_1;
 		Transfer::TransferCallback simpleCB = std::tr1::bind(&CacheLayerTestSuite::simpleCallback, this, _1);
 		Transfer::TransferCallback checkNullCB = std::tr1::bind(&CacheLayerTestSuite::checkNullCallback, this, _1);
@@ -257,7 +258,7 @@ public:
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);
 
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), SERVER_URI));
 		memory->purgeFromCache(exampleComUri.fingerprint());
 
 		std::string diskFile = "diskCache/" + exampleComUri.fingerprint().convertToHexString() + ".part";
@@ -372,7 +373,7 @@ public:
 	}
 
 	void testRange( void ) {
-		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), "http://example.com/"));
+		Transfer::RemoteFileId exampleComUri (SHA256::convertFromHex(EXAMPLE_HASH), URI(URIContext(), SERVER_URI));
 		CacheLayer *http = createTransferLayer();
 		CacheLayer *disk = createDiskCache(http);
 		CacheLayer *memory = createMemoryCache(disk);

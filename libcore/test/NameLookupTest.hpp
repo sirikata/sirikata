@@ -72,18 +72,34 @@ public:
 
 		mNameService = new Transfer::CachedServiceLookup();
 		services = new Transfer::ListOfServices;
-		services->push_back(URIContext("testoftheemergencybroadcastsystem","blah","","")); // check that other URIs will be tried
-		services->push_back(URIContext("http","localhost","","nonexistantdirectory"));
-		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"));
-		services->push_back(URIContext("http","localhost","","nonexistantdirectory1"));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("testoftheemergencybroadcastsystem","blah","",""),
+				Transfer::ServiceParams())); // check that other URIs will be tried
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","localhost","","nonexistantdirectory"),
+				Transfer::ServiceParams()));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"),
+				Transfer::ServiceParams()));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","localhost","","nonexistantdirectory1"),
+				Transfer::ServiceParams()));
 		mNameService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
 
 		mDownloadService = new Transfer::CachedServiceLookup();
 		services = new Transfer::ListOfServices;
-		services->push_back(URIContext("testoftheemergencybroadcastsystem2","blah","","")); // check that other URIs will be tried
-		services->push_back(URIContext("http", "localhost","","nonexistantdirectory2"));
-		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"));
-		services->push_back(URIContext("http", "localhost","","nonexistantdirectory3"));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("testoftheemergencybroadcastsystem2","blah","",""),
+				Transfer::ServiceParams())); // check that other URIs will be tried
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http", "localhost","","nonexistantdirectory2"),
+				Transfer::ServiceParams()));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"),
+				Transfer::ServiceParams()));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http", "localhost","","nonexistantdirectory3"),
+				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
 		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);

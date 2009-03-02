@@ -59,16 +59,16 @@ static curl_off_t HTTPRequest_seek_cb(HTTPRequest *handle, curl_off_t curloffset
 	cache_ssize_type offset = curloffset;
 	switch (origin) {
 	case SEEK_SET:
-		handle->seek(handle->getData()->startbyte() + offset);
+		handle->seek(handle->getUploadData().startbyte() + offset);
 		break;
 	case SEEK_CUR:
-		handle->seek(handle->getOffset() + offset);
+		handle->seek(handle->getUploadOffset() + offset);
 		break;
 	case SEEK_END:
-		handle->seek(handle->getData()->endbyte() + offset);
+		handle->seek(handle->getUploadData().endbyte() + offset);
 		break;
 	}
-	return handle->getOffset();
+	return handle->getUploadOffset();
 }
 
 size_t HTTPRequest::header_cb(char *data, size_t length, size_t count, HTTPRequest *handle) {
@@ -99,19 +99,65 @@ size_t HTTPRequest::write(const unsigned char *copyFrom, size_t length) {
 	return length;
 }
 
-size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
-	if (mOffset < mData->startbyte()) {
+template <class T>
+class ZeroIterator {
+	cache_usize_type mPos;
+public:
+	typedef std::forward_iterator_tag iterator_category;
+	typedef T value_type;
+	typedef cache_ssize_type difference_type;
+	typedef T* pointer;
+	typedef T& reference;
+	ZeroIterator(cache_usize_type i=0)
+		: mPos(i) {
+	}
+	inline cache_ssize_type operator-(const ZeroIterator &other) {
+		return mPos - other.mPos;
+	}
+	inline bool operator!=(const ZeroIterator &other) {
+		return other.mPos != mPos;
+	}
+	inline bool operator==(const ZeroIterator &other) {
+		return other.mPos == mPos;
+	}
+	inline ZeroIterator& operator++() {
+		++mPos;
+		return *this;
+	}
+	inline T operator *() {
 		return 0;
 	}
-	cache_ssize_type startByte = (mOffset - mData->startbyte());
-	cache_usize_type totalNeeded = startByte + length;
-	if (mData->length() < totalNeeded + length) {
-		length = (size_t)(mData->length() - totalNeeded);
+};
+
+size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
+	if (mUploadData.empty()) {
+		return 0;
 	}
-	const unsigned char *copyFrom = mData->dataAt(mOffset);
-	std::copy(copyFrom, copyFrom + length, copyTo);
-	mOffset += length;
-	return length;
+	if (mUploadOffset < mUploadData.startbyte()) {
+		return 0;
+	}
+	size_t origLength = length;
+//	cache_ssize_type startByte = (mUploadOffset - mUploadData->startbyte());
+//	cache_usize_type totalNeeded = startByte + length;
+	while (length > 0) {
+		// Fixme: this loop should be a lot simpler. overwrite empty chunks (copyFrom==NULL) with NUL bytes.
+		cache_usize_type chunkLength = 0;
+		const unsigned char *copyFrom = mUploadData.dataAt(mUploadOffset, chunkLength);
+		if (copyFrom == NULL && chunkLength == 0) {
+			return origLength - length;
+		}
+		if (chunkLength > length) {
+			chunkLength = length;
+		}
+		if (copyFrom == NULL) {
+			std::copy(ZeroIterator<unsigned char>(), ZeroIterator<unsigned char>(chunkLength), copyTo);
+		} else {
+			std::copy(copyFrom, copyFrom + chunkLength, copyTo);
+		}
+		mUploadOffset += chunkLength;
+		length -= chunkLength;
+	}
+	return origLength;
 }
 
 void HTTPRequest::gotHeader(const std::string &header) {
@@ -419,12 +465,18 @@ void HTTPRequest::abort() {
 	// ptr will now be deallocated.
 }
 
-void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
-	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
-
+HTTPRequest::~HTTPRequest() {
+	if (mCurlRequest) {
+		abort();
+	}
+	if (mHeaders) {
+		curl_slist_free_all((struct curl_slist *)mHeaders);
+	}
+}
+void HTTPRequest::initCurlHandle() {
 	boost::call_once(&initCurl, flag);
 
-	mCurlRequest = allocDefaultCurl(); //curl_easy_duphandle(parent_easy_curl);
+	mCurlRequest = allocDefaultCurl();
 	curl_easy_setopt(mCurlRequest, CURLOPT_WRITEDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_READDATA, this);
 	// only used for uploads.
@@ -459,10 +511,48 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 		mRangeString = orangestring.str();
 		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, mRangeString.c_str());
 	}
+}
+
+void HTTPRequest::setPUTData(const SparseData &uploadData) {
+	/*
+	if (!uploadData.contiguous()) {
+		// Should not happen here--if non-contiguous data makes it this far in the process, let it be filled with 0's.
+		throw std::runtime_exception("non-contiguous data passed to PUT!");
+	}
+	*/
+	mUploadData = uploadData;
+	curl_easy_setopt(mCurlRequest, CURLOPT_UPLOAD, 1);
+	curl_easy_setopt(mCurlRequest, CURLOPT_INFILESIZE_LARGE, uploadData.endbyte());
+}
+
+void HTTPRequest::setDELETE() {
+	curl_easy_setopt(mCurlRequest, CURLOPT_NOBODY, 1);
+	if (mURI.proto() == "http" || mURI.proto() == "https") {
+		curl_easy_setopt(mCurlRequest, CURLOPT_CUSTOMREQUEST, "DELETE");
+	} else if (mURI.proto() == "ftp"){
+		addHeader("DELE "+mURI.filename());
+	} else if (mURI.proto() == "sftp") {
+		addHeader("rm "+mURI.filename());
+	}
+}
+
+void HTTPRequest::addHeader(const std::string &header) {
+	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, header.c_str());
+}
+
+void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
+	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
 
 	curl_multi_add_handle(curlm, mCurlRequest);
 	mPreventDeletion = HTTPRequestPtr(holdReference);
 
+	if (mHeaders) {
+		if (mURI.proto() == "http" || mURI.proto() == "https") {
+			curl_easy_setopt(mCurlRequest, CURLOPT_HTTPHEADER, mHeaders);
+		} else if (mURI.proto() == "ftp" || mURI.proto() == "sftp") {
+			curl_easy_setopt(mCurlRequest, CURLOPT_POSTQUOTE, mHeaders);
+		}
+	}
 	globals.doWakeup();
 
 	//requestQueue.push(this);

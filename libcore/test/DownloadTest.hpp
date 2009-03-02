@@ -107,12 +107,16 @@ public:
 
 		Transfer::ListOfServices *services;
 		services = new Transfer::ListOfServices;
-		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","graphics.stanford.edu","","~danielrh/dns/names/global"),
+				Transfer::ServiceParams()));
 		mNameService->addToCache(URIContext("meerkat","","",""), Transfer::ListOfServicesPtr(services));
 
 		mDownloadService = new Transfer::CachedServiceLookup;
 		services = new Transfer::ListOfServices;
-		services->push_back(URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"));
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext("http","graphics.stanford.edu","","~danielrh/uploadsystem/files/global"),
+				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
 		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);

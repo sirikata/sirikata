@@ -165,7 +165,7 @@ public:
 		data->addToList(data, *this);
 	}
 
-	///gets the space used by the sparse file
+	///gets the space used by the sparse file.
 	inline cache_usize_type getSpaceUsed() const {
 		cache_usize_type length = 0;
 		const_iterator myend = end();
@@ -173,6 +173,30 @@ public:
 			length += (*iter).length();
 		}
 		return length;
+	}
+
+	inline cache_usize_type startbyte() const {
+		if (mSparseData.empty()) {
+			return 0;
+		}
+		return mSparseData.front()->startbyte();
+	}
+
+	inline cache_usize_type endbyte() const {
+		if (mSparseData.empty()) {
+			return 0;
+		}
+		return mSparseData.back()->endbyte();
+	}
+
+	inline cache_usize_type length() const {
+		return endbyte() - startbyte();
+	}
+
+	inline bool contiguous() const {
+		if (mSparseData.empty())
+			return true;
+		return Range(startbyte(), endbyte(), BOUNDS).isContainedBy(*this);
 	}
 
 	/** Would be a << operator, but it's inefficient, and should only be

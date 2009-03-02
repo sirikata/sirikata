@@ -102,7 +102,7 @@ class NetworkCacheLayer : public CacheLayer {
 			mCleanupCV.notify_one();
 			return;
 		}
-		URI lookupUri ((*info.services)[whichService], info.fileId.uri().filename());
+		URI lookupUri ((*info.services)[whichService].first, info.fileId.uri().filename());
 		std::tr1::shared_ptr<DownloadHandler> handler = mProtoReg->lookup(lookupUri.proto());
 		if (handler) {
 			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!

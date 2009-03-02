@@ -83,40 +83,24 @@ class URIContext {
 		*/
 	}
 
+	struct IsSpace {
+		inline bool operator()(const unsigned char c) {
+			return std::isspace(c);
+		}
+	};
+
+	void cleanup(std::string &s) {
+		// hostnames and protocols are case-insensitive.
+		for (std::string::size_type i = 0; i < s.length(); ++i) {
+			s[i] = std::tolower(s[i]);
+		}
+		// remove any illegal characters such as spaces.
+		s.erase(std::remove_if(s.begin(), s.end(), IsSpace()), s.end());
+	}
+
 public:
 	/// Default constructor (://@/) -- use this along with an absolute URI.
 	URIContext() {
-	}
-
-	URIContext(const URIContext &parent,
-			const std::string &newProto,
-			const std::string &newHost)
-		: mProto(newProto),
-		  mHost(newHost),
-		  mUser(parent.username()),
-		  mDirectory(parent.basepath()){
-	}
-	URIContext(const URIContext &parent,
-			const std::string &newProto,
-			const std::string &newHost,
-			const std::string &newUser)
-		: mProto(newProto),
-		  mHost(newHost),
-		  mUser(newUser),
-		  mDirectory(parent.basepath()){
-	}
-	/** These constructors are not very useful, but can be used for a
-	 * couple of specific situations where the string-based one doesn't work.
-	 */
-	URIContext(const URIContext &parent,
-			const std::string newProto,
-			const std::string &newHost,
-			const std::string &newUser,
-			const std::string &newDirectory)
-		: mProto(newProto),
-		  mHost(newHost),
-		  mUser(newUser),
-		  mDirectory(newDirectory){
 	}
 
 	/** Acts like the string-parsing constructor, NULL strings mean
@@ -131,6 +115,8 @@ public:
 		  mHost(newHost?*newHost:parent.host()),
 		  mUser(newUser?*newUser:parent.username()),
 		  mDirectory(newDirectory?*newDirectory:parent.basepath()){
+		cleanup(mProto);
+		cleanup(mHost);
 	}
 
 	/** The most useful constructor -- parses a URI string, and
@@ -205,9 +191,12 @@ public:
 
 		resolveParentDirectories(mDirectory);
 
+		cleanup(mProto);
+		cleanup(mHost);
+
 	}
 	/// Absolute URI constructor.
-	URIContext(const std::string newProto,
+	URIContext(const std::string &newProto,
 			const std::string &newHost,
 			const std::string &newUser,
 			const std::string &newDirectory)
@@ -215,6 +204,9 @@ public:
 		  mHost(newHost),
 		  mUser(newUser),
 		  mDirectory(newDirectory){
+
+		cleanup(mProto);
+		cleanup(mHost);
 	}
 
 	/// protocol getter (without a ':'), like "http".

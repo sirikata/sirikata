@@ -41,107 +41,28 @@
 namespace Sirikata {
 namespace Transfer {
 
-/** A protocol handler for downloading files. Examples of implementations may
- * include HTTP, BitTorrent, SVN, S3 ... Currently only Curl (HTTP,FTP) is implemented. */
-class DownloadHandler : public std::tr1::enable_shared_from_this<DownloadHandler> {
+/** A handle to an active transfer. Currently its only use is to call abort().
+ * Since this contains a shared_ptr to the transfer, it may be necessary.
+ *
+ * Hold onto this if you want to be able to abort the transfer.
+ * Otherwise, it is safe to discard this. Note that nothing will be
+ * free'd as long as you hold a reference to the TransferData. */
+
+template <class ProtocolType> class ProtocolData {
+	typedef std::tr1::shared_ptr<ProtocolType> ParentPtr;
+	ParentPtr mParent;
 public:
-	/** A handle to an active transfer. Currently its only use is to call abort().
-	 * Since this contains a shared_ptr to the transfer, it may be necessary */
-	class TransferData {
-		std::tr1::shared_ptr<DownloadHandler> mParent;
-	public:
-		const std::tr1::shared_ptr<DownloadHandler> &getParent() {
-			return mParent;
-		}
-		TransferData(const std::tr1::shared_ptr<DownloadHandler> &parent)
-			:mParent(parent) {
-		}
-		virtual ~TransferData() {}
+	typedef std::tr1::shared_ptr<ProtocolData<ProtocolType> > Ptr;
 
-		virtual void abort() {}
-	};
-	/** Hold onto this if you want to be able to abort the transfer.
-	 * Otherwise, it is safe to discard this. Note that nothing will be
-	 * free'd as long as you hold a reference to the TransferData. */
-	typedef std::tr1::shared_ptr<TransferData> TransferDataPtr;
-
-	/**
-	 * Virtual destructor. Note that the destructor should not be called until
-	 * all active connections have ended, since TransferData contains a reference
-	 * to this, and any active download may hold onto the TransferData.
-	 *
-	 * If you need to hold a reference to a  TransferData, make sure its mParent
-	 * is set to NULL so as to avoid a circular reference.
-	 */
-	virtual ~DownloadHandler() {
+	const ParentPtr &getParent() {
+		return mParent;
 	}
-
-	/** Called upon completion. Note that stream() will call this once per packet.
-	 *
-	 * @param data      The a shared_ptr<DenseData> containing the requested data.
-	 * @param           success is set to false on failure (when data is invalid).
-	 */
-	typedef std::tr1::function<void(DenseDataPtr data, bool success)> Callback;
-
-	/** Downloads the given range of a file, and calls cb(data, success) upon
-	 * completion or failure.
-	 *
-	 * @param uri      The entire URI to download (from ServiceLookup).
-	 * @param bytes    What range to download. Currently this does not support
-	 *                 multiple byteranges in one request.
-	 * @param cb       The callback to be called when the download has completed.
-	 *                 FIXME: 'data' may be non-null even if 'success' is false.
-	 */
-	virtual void download(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback &cb) {
-		cb(DenseDataPtr(), false);
+	ProtocolData(const ParentPtr &parent)
+		:mParent(parent) {
 	}
+	virtual ~ProtocolData() {}
 
-	/** Downloads the given range of a file, and calls streamCB for each packet
-	 * received. [Currently not implemented.]
-	 *
-	 * NOTE: In protocols such as bittorrent, the callback may be called with
-	 * out-of-order data. This may not make sense for some applications.
-	 * @see inOrderStream()
-	 *
-	 * @param uri      The entire URI to download (from ServiceLookup).
-	 * @param bytes    What range to download. Currently this does not support
-	 *                 multiple byteranges in one request.
-	 * @param streamCB The callback to be called for each packet. If 'success' is
-	 *                 false, it indicates either EOF or failed connection.
-	 */
-	virtual void stream(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback streamCB) {
-		streamCB(DenseDataPtr(), false);
-	}
-
-	/** Returns true if stream() will receive data in order (such as in HTTP or FTP)
-	 * FIXME: What about transfers that can lose packets (UDP video streaming)?
-	 * Are they best handled by a different interface? Or should that be a boolean passed somewhere?
-	 */
-	virtual bool inOrderStream() const {
-		return false;
-	}
-};
-
-/** A protocol handler for converting a filename to a hash, so that it can be
- * downloaded and cached. Currently, the only implementation is HTTP, but this
- * could include a custom DNS-like protocol that runs on top of UDP.*/
-class NameLookupHandler {
-public:
-	/** Passes a fingerprint as well as an unresolved URI you can use to download this.
-	 *
-	 * @param hash      The fingerprint of the resolved file.
-	 * @param uriString The URI to download, to be applied to the original URIContext.
-	 * @param success   If the name lookup succeeded.
-	 */
-	typedef std::tr1::function<void(const Fingerprint& hash, const std::string& uriString, bool success)> Callback;
-
-	virtual ~NameLookupHandler() {
-	}
-
-	/** Performs a name lookup using this method, and calls cb whether it succeeded or not. */
-	virtual void nameLookup(const URI &uri, const Callback &cb) {
-		cb(Fingerprint(), std::string(), false);
-	}
+	virtual void abort() {}
 };
 
 /** Class to handle associations from a basic internet protocol (http, ftp, ...) to a class that can download from it.
@@ -197,7 +118,7 @@ public:
 		if (allowProto && mAllowNonService &&
 				mHandlers.find(context.proto()) != mHandlers.end()) {
 			ListOfServicesPtr services(new ListOfServices);
-			services->push_back(context);
+			services->push_back(ListOfServices::value_type(context, ServiceParams()));
 			cb(services);
 		} else if (mServices) {
 			mServices->lookupService(context, cb);

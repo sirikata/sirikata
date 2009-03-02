@@ -58,9 +58,13 @@ private:
 	String mRangeString;// Upon go(), its c_str is passed to curl: do not change
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
+	void *mHeaders; // CURL header linked list.
 
 	Range::base_type mOffset;
 	DenseDataPtr mData;
+
+	Range::base_type mUploadOffset;
+	SparseData mUploadData;
 
 	/** The default callback--useful for POST queries where you do not care about the response */
 	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool){
@@ -79,21 +83,25 @@ private:
 	static size_t read_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);
 	static size_t header_cb(char *data, size_t length, size_t count, HTTPRequest *handle);
 
-public:
+	void initCurlHandle();
 
-	/// You may copy a request before starting it... not very useful.
-	inline HTTPRequest(const HTTPRequest &other)
-		: mURI(other.mURI), mRequestedRange(other.mRequestedRange),
-		mCallback(other.mCallback), mCurlRequest(NULL),
-		mOffset(other.mOffset), mData(other.mData){
-		// can't copy after starting the curl request.
-		assert(!other.mCurlRequest);
-	}
+	HTTPRequest(const HTTPRequest &other);
+public:
 
 	/** Do not ever use this--it is not thread safe, and the DenseDataPtr
 	 is passed to the callback anyway. May be made private */
 	inline const DenseDataPtr &getData() {
 		return mData;
+	}
+
+	/** Do not ever use this--it is not thread safe, and the DenseDataPtr
+	 is passed to the callback anyway. May be made private */
+	inline const SparseData &getUploadData() {
+		return mUploadData;
+	}
+
+	inline Range::base_type getUploadOffset() const {
+		return mUploadOffset;
 	}
 
 	/** Gets the current transfer offset--useful for a progress indicator.
@@ -112,22 +120,22 @@ public:
 	 * as the denseData should be cleared after each packet.
 	 */
 	inline void seek(Range::base_type offset) {
-		if (offset >= mRequestedRange.startbyte() &&
-				offset < mRequestedRange.endbyte()) {
-			mOffset = offset;
+		if (offset < mUploadData.endbyte()) {
+			mUploadOffset = offset;
+		} else {
+			mUploadOffset = mUploadData.endbyte();
 		}
 	}
 
 	HTTPRequest(const URI &uri, const Range &range)
 		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
-		mCurlRequest(NULL), mOffset(0), mData(new DenseData(range)) {
+		  mCurlRequest(NULL), mHeaders(NULL),
+		  mOffset(0), mData(new DenseData(range)), mUploadOffset(0)
+		  {
+		initCurlHandle();
 	}
 
-	~HTTPRequest() {
-		if (mCurlRequest) {
-			abort();
-		}
-	}
+	~HTTPRequest();
 
 	/// URI getter
 	inline const URI &getURI() const {return mURI;}
@@ -141,10 +149,31 @@ public:
 	 */
 	void abort();
 
+	void setOptions();
+
 	/// Setter for the response function.
 	inline void setCallback(const CallbackFunc &cb) {
 		mCallback = cb;
 	}
+
+	/**
+	 * Deletes the request file. Retrieved data may be empty,
+	 * but success should be true if the deletion was successful.
+	 * Should work for HTTP(s), FTP and SFTP
+	 */
+	void setDELETE();
+
+	/**
+	 * Performs an upload of this file. Again, there may be no retrieved data,
+	 * but success should be true if the upload was successful.
+	 */
+	void setPUTData(const SparseData &uploadData);
+
+	/** Note: you are responsible for checking the protocol
+	 * and using HTTP headers in the case of http, and valid FTP
+	 * commands in the case of FTP. Not doing so may cause a security bug.
+	 */
+	void addHeader(const std::string &header);
 
 	/**
 	 *  Executes the query.

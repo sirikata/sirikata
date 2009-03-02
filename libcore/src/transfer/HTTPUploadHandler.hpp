@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  HTTPDownloadHandler.hpp
+ *  HTTPUploadHandler.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,25 +29,22 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/*  Created on: Feb 8, 2009 */
+/*  Created on: Feb 26, 2009 */
 
-#ifndef SIRIKATA_HTTPDownloadHandler_HPP__
-#define SIRIKATA_HTTPDownloadHandler_HPP__
-
-#include "HTTPRequest.hpp"
-#include "DownloadHandler.hpp"
+#ifndef SIRIKATA_HTTPUploadHandler_HPP__
+#define SIRIKATA_HTTPUploadHandler_HPP__
 
 namespace Sirikata {
 namespace Transfer {
 
-/** A very simple subclass of DownloadHandler that wraps around the HTTPRequest
- * curl interface. It also provides a subclass of NameLookupHandler that reads
+/** A very simple subclass of UploadHandler that wraps around the HTTPRequest
+ * curl interface. It also provides a subclass of NameUploadHandler that reads
  * the fingerprint URI from a HTTP uri.
  * */
-class HTTPDownloadHandler :
-			public DownloadHandler,
-			public NameLookupHandler,
-			public std::tr1::enable_shared_from_this<HTTPDownloadHandler>
+class HTTPUploadHandler :
+			public UploadHandler,
+			public NameUploadHandler,
+			public std::tr1::enable_shared_from_this<HTTPUploadHandler>
 {
 
 	template <class Base>
@@ -67,46 +64,21 @@ class HTTPDownloadHandler :
 		}
 	};
 
-	static void httpCallback(
+	static void finishedCallback(
 			DownloadHandler::Callback callback,
 			HTTPRequest* httpreq,
 			const DenseDataPtr &recvData,
 			bool success) {
-		callback(recvData, success);
-	}
-
-	struct IsSpace {
-		bool operator()(const unsigned char c) {
-			return std::isspace(c);
-		}
-	};
-
-	static void nameCallback(
-			NameLookupHandler::Callback callback,
-			HTTPRequest* httpreq,
-			const DenseDataPtr &data,
-			bool success) {
-		if (success) {
-			cache_usize_type length = 0;
-			const unsigned char *content = data->data();
-			std::string receivedUri (content, content + data->length());
-			receivedUri.erase(std::remove_if(receivedUri.begin(), receivedUri.end(), IsSpace()), receivedUri.end());
-			URI temp(httpreq->getURI().context(), receivedUri);
-			std::string shasum = temp.filename();
-			callback(Fingerprint::convertFromHex(shasum), receivedUri, true);
-		} else {
-			SILOG(transfer,error,"HTTP name lookup failed for " << httpreq->getURI());
-			callback(Fingerprint(), std::string(), false);
-		}
+		callback(success);
 	}
 
 public:
 	/** Simple wrapper around HTTPRequest to download a URL.
 	 * The returned TransferDataPtr contains a shared reference to the HTTPRequest.
 	 * If you hold onto it, you can abort the download. */
-	virtual void download(DownloadHandler::TransferDataPtr *ptrRef,
+	virtual void upload(TransferDataPtr *ptrRef,
 			const URI &uri,
-			const Range &bytes,
+			const DenseDataPtr &uploadData,
 			const DownloadHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, bytes));
 
@@ -121,24 +93,11 @@ public:
 			 * it is possible for the HTTPRequest to call cb() before go() returns,
 			 * which will cause the object owning *ptrRef to be deleted.
 			 */
-			*ptrRef = DownloadHandler::TransferDataPtr(
+			*ptrRef = TransferDataPtr(
 				new HTTPTransferData<DownloadHandler>(shared_from_this(), req));
 		}
 
 		req->go(req);
-	}
-	/// FIXME: Unimplemented -- needs a better interface from HTTPRequest to work.
-	virtual void stream(DownloadHandler::TransferDataPtr *ptrRef,
-			const URI &uri,
-			const Range &bytes,
-			const DownloadHandler::Callback &cb) {
-		// Does not work yet.
-		cb(DenseDataPtr(), false);
-	}
-
-	/// HTTP (as with most TCP protocols) returns packets in order.
-	virtual bool inOrderStream() const {
-		return true;
 	}
 
 	/** Provides a simple nameLookup service using HTTP. It expects a request
@@ -146,29 +105,18 @@ public:
 	 * a 302 HTTP code to do this, as curl will silently redirect).
 	 * Also strips ASCII spaces/newlines from the body.
 	 */
-	virtual void nameLookup(NameLookupHandler::TransferDataPtr *ptrRef,
-			const URI &uri,
-			const NameLookupHandler::Callback &cb) {
+	virtual void uploadName(const URI &uri, const RemoteFileId &uploadId, const NameLookupHandler::Callback &cb) {
 		HTTPRequestPtr req (new HTTPRequest(uri, Range(true)));
 
 
 		req->setCallback(
-			std::tr1::bind(&HTTPDownloadHandler::nameCallback, cb, _1, _2, _3));
-
-		if (ptrRef) {
-			/*
-			 * Must set this before calling req->go() or else
-			 * it is possible for the HTTPRequest to call cb() before go() returns,
-			 * which will cause the object owning *ptrRef to be deleted.
-			 */
-			*ptrRef = NameLookupHandler::TransferDataPtr(
-				new HTTPTransferData<NameLookupHandler>(shared_from_this(), req));
-		}
+			std::tr1::bind(&HTTPUploadHandler::finishedCallback, cb, _1, _2, _3));
 		req->go(req);
 	}
 };
 
+
 }
 }
 
-#endif /* SIRIKATA_HTTPDownloadHandler_HPP__ */
+#endif /* SIRIKATA_HTTPUploadHandler_HPP__ */

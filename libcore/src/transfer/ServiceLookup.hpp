@@ -53,7 +53,8 @@ namespace Transfer {
  *
  * We still need an interface to invalidate a service--perhaps another class.
  */
-typedef std::vector<URIContext> ListOfServices;
+typedef std::map<std::string, std::string> ServiceParams;
+typedef std::vector<std::pair<URIContext, ServiceParams> > ListOfServices;
 
 /// A shared reference to the URIContext, so we don't have to copy it.
 typedef std::tr1::shared_ptr<ListOfServices> ListOfServicesPtr;

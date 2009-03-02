@@ -36,7 +36,7 @@
 
 #include "URI.hpp"
 #include "ServiceLookup.hpp"
-#include "ProtocolRegistry.hpp"
+#include "DownloadHandler.hpp"
 
 namespace Sirikata {
 namespace Transfer {
@@ -94,13 +94,14 @@ private:
 			}
 			return;
 		}
-		URI lookupUri ((*services)[which], origNamedUri.filename());
+		URI lookupUri ((*services)[which].first, origNamedUri.filename());
 
 
 
 		std::tr1::shared_ptr<NameLookupHandler> handler = mHandlers->lookup(lookupUri.proto());
 		if (handler) {
-			handler->nameLookup(lookupUri,
+			/// FIXME: Need a way of aborting a name lookup that is taking too long.
+			handler->nameLookup(NULL, lookupUri,
 				std::tr1::bind(&NameLookupManager::gotNameLookup, this, cb, origNamedUri, which, services, _1, _2, _3));
 		} else {
 			doNameLookup(cb, origNamedUri, which+1, services);
