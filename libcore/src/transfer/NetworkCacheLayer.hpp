@@ -53,7 +53,7 @@ class NetworkCacheLayer : public CacheLayer {
 		Range range;
 		ListOfServicesPtr services;
 
-		RequestInfo(const RemoteFileId &fileId, const Range &range, TransferCallback cb)
+		RequestInfo(const RemoteFileId &fileId, const Range &range, const TransferCallback &cb)
 			: callback(cb), fileId(fileId), range(range) {
 		}
 	};
@@ -103,7 +103,8 @@ class NetworkCacheLayer : public CacheLayer {
 			return;
 		}
 		URI lookupUri ((*info.services)[whichService].first, info.fileId.uri().filename());
-		std::tr1::shared_ptr<DownloadHandler> handler = mProtoReg->lookup(lookupUri.proto());
+		std::tr1::shared_ptr<DownloadHandler> handler;
+		lookupUri.getContext().setProto(mProtoReg->lookup(lookupUri.proto(), handler));
 		if (handler) {
 			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!
 			info.httpreq = DownloadHandler::TransferDataPtr();

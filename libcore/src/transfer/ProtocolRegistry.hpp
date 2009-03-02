@@ -75,7 +75,9 @@ public:
  */
 template <class ProtocolType>
 class ProtocolRegistry {
-	std::map<std::string, std::tr1::shared_ptr<ProtocolType> > mHandlers;
+	typedef std::tr1::shared_ptr<ProtocolType> HandlerPtr;
+	typedef std::map<std::string, std::pair<std::string, HandlerPtr> > HandlerMap;
+	HandlerMap mHandlers;
 	ServiceLookup *mServices;
 	bool mAllowNonService;
 
@@ -96,8 +98,12 @@ public:
 	 * @param handler A shared_ptr to a descendent of ProtocolType. It is legal to register
 	 *                the same instance for multiple protocols ("http" and "ftp").
 	 */
-	void setHandler(const std::string &proto, std::tr1::shared_ptr<ProtocolType> handler) {
-		mHandlers[proto] = handler;
+	void setHandler(const std::string &proto, const std::string &mappedproto, const HandlerPtr &handler) {
+		mHandlers[proto] = std::pair<std::string, HandlerPtr>(mappedproto, handler);
+	}
+
+	void setHandler(const std::string &proto, const HandlerPtr &handler) {
+		mHandlers[proto] = std::pair<std::string, HandlerPtr>(proto, handler);
 	}
 
 	/** Removes a registered protocol handler. */
@@ -106,15 +112,18 @@ public:
 	}
 
 	/** Looks up proto in the map. Returns NULL if no protocol handler was found. */
-	std::tr1::shared_ptr<ProtocolType> lookup(const std::string &proto) {
-		std::tr1::shared_ptr<ProtocolType> protoHandler (mHandlers[proto]);
-		if (!protoHandler) {
+	const std::string &lookup(const std::string &proto, HandlerPtr &handlerPtr) const {
+		typename HandlerMap::const_iterator iter = mHandlers.find(proto);
+		if (iter == mHandlers.end()) {
 			SILOG(transfer,error,"No protocol handler registered for "<<proto);
+			return proto;
 		}
-		return protoHandler;
+		const std::pair<std::string, HandlerPtr> &protoHandler = (*iter).second;
+		handlerPtr = protoHandler.second;
+		return protoHandler.first;
 	}
 
-	void lookupService(const URIContext &context, const ServiceLookup::Callback &cb, bool allowProto=true) {
+	void lookupService(const URIContext &context, const ServiceLookup::Callback &cb, bool allowProto=true) const {
 		if (allowProto && mAllowNonService &&
 				mHandlers.find(context.proto()) != mHandlers.end()) {
 			ListOfServicesPtr services(new ListOfServices);

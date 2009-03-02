@@ -213,6 +213,11 @@ public:
 	inline const std::string &proto() const {
 		return mProto;
 	}
+
+	inline void setProto(const std::string &proto) {
+		mProto = proto;
+	}
+
 	/** username getter--may be empty for no username.
 	 * Try not to store passwords in here, but if there is a password,
 	 * it will be of the form "username:password".
@@ -220,6 +225,11 @@ public:
 	inline const std::string &username() const {
 		return mUser;
 	}
+
+	inline void setUsername(const std::string &user) {
+		mUser = user;
+	}
+
 	/** hostname getter--includes port, if any, as well
 	 * as has brackets around IPv6 addresses. Examples:
 	 * www.example.com
@@ -229,10 +239,20 @@ public:
 	inline const std::string &host() const {
 		return mHost;
 	}
+
+
+	inline void setHost(const std::string &host) {
+		mHost = host;
+	}
+
 	/* The directory, excluding both initial slash and ending slash.
 	 * Often, this may just be the empty string, but depends on protocol. */
 	inline const std::string &basepath() const {
 		return mDirectory;
+	}
+
+	inline void setBasepath(const std::string &basepath) {
+		mDirectory = basepath;
 	}
 
 	/// Constructs a URI... will exclude an empty username.
@@ -335,6 +355,11 @@ public:
 		return mContext;
 	}
 
+	/// Gives a writable reference to a URIContext.
+	inline URIContext &getContext() {
+		return mContext;
+	}
+
 	/// Returns the protocol used (== context().proto())
 	inline const std::string &proto() const {
 		return mContext.proto();
@@ -358,6 +383,10 @@ public:
 	/// Returns just the filename withot slashes.
 	inline const std::string &filename() const {
 		return mPath;
+	}
+
+	inline void setFilename(const std::string &file) {
+		mPath = file;
 	}
 
 	/** Returns an absolute path that represents this file, including

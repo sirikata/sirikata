@@ -61,10 +61,9 @@ public:
 
 	/** Called upon completion. Note that stream() will call this once per packet.
 	 *
-	 * @param data      The a shared_ptr<DenseData> containing the requested data.
-	 * @param           success is set to false on failure (when data is invalid).
+	 * @param success is set to false on failure (when data is invalid).
 	 */
-	typedef std::tr1::function<void(DenseDataPtr data, bool success)> Callback;
+	typedef std::tr1::function<void(bool success)> Callback;
 
 	/** Downloads the given range of a file, and calls cb(data, success) upon
 	 * completion or failure.
@@ -75,7 +74,16 @@ public:
 	 * @param cb       The callback to be called when the download has completed.
 	 *                 FIXME: 'data' may be non-null even if 'success' is false.
 	 */
-	virtual void upload(TransferDataPtr *ptrRef, const URI &uri, const Range &bytes, const Callback &cb) = 0;
+	virtual void upload(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const SparseData &contents,
+			const Callback &cb) = 0;
+
+	virtual void remove(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Callback &cb) = 0;
 };
 
 /** A protocol handler for converting a filename to a hash, so that it can be
@@ -87,17 +95,25 @@ public:
 
 	/** Passes a fingerprint as well as an unresolved URI you can use to download this.
 	 *
-	 * @param hash      The fingerprint of the resolved file.
-	 * @param uriString The URI to download, to be applied to the original URIContext.
 	 * @param success   If the name lookup succeeded.
 	 */
-	typedef std::tr1::function<void(const Fingerprint& hash, const std::string& uriString, bool success)> Callback;
+	typedef std::tr1::function<void(bool success)> Callback;
 
 	virtual ~NameLookupHandler() {
 	}
 
 	/** Performs a name lookup using this method, and calls cb whether it succeeded or not. */
-	virtual void uploadName(TransferDataPtr *ptrRef, const URI &uri, const Callback &cb) = 0;
+	virtual void uploadName(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const RemoteFileId &upload,
+			const Callback &cb) = 0;
+
+	/** Performs a name deletion using this method, and calls cb whether it succeeded or not. */
+	virtual void removeName(TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Callback &cb) = 0;
 };
 
 

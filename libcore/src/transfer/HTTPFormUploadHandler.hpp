@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  HTTPUploadHandler.hpp
+ *  HTTPFormUploadHandler.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -31,17 +31,13 @@
  */
 /*  Created on: Feb 26, 2009 */
 
-#ifndef SIRIKATA_HTTPUploadHandler_HPP__
-#define SIRIKATA_HTTPUploadHandler_HPP__
+#ifndef SIRIKATA_HTTPFormUploadHandler_HPP__
+#define SIRIKATA_HTTPFormUploadHandler_HPP__
 
 namespace Sirikata {
 namespace Transfer {
 
-/** A very simple subclass of UploadHandler that wraps around the HTTPRequest
- * curl interface. It also provides a subclass of NameUploadHandler that reads
- * the fingerprint URI from a HTTP uri.
- * */
-class HTTPUploadHandler :
+class HTTPFormUploadHandler :
 			public UploadHandler,
 			public NameUploadHandler,
 			public std::tr1::enable_shared_from_this<HTTPUploadHandler>
@@ -94,9 +90,13 @@ public:
 			const URI &uri,
 			const SparseData &uploadData,
 			const UploadHandler::Callback &cb) {
+		//graphics.stanford.edu/~danielrh/uploadsystem/
+		//    ?value:uploadNeed=1&field:hash=MhashFile0&field:file=uploadFile0&
+		//     field:user=author&field:password=password&auth:type=plaintext
 		HTTPRequestPtr req;
-		createRequest<UploadHandler> (req, ptrRef, uri, cb);
-		req->setPUTData(uploadData);
+		createRequest<UploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		req->setPOSTData(params["field:file"], uri.filename(), uploadData);
+		//req->addPOSTField(params["field:hash"])
 		req->go(req);
 	}
 
@@ -105,8 +105,8 @@ public:
 			const URI &uri,
 			const UploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<UploadHandler> (req, ptrRef, uri, cb);
-		req->setDELETE();
+		createRequest<UploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
 		req->go(req);
 	}
 
@@ -121,8 +121,9 @@ public:
 			const RemoteFileId &uploadId,
 			const NameUploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<NameUploadHandler> (req, ptrRef, uri, cb);
-		req->setPUTData(uploadData);
+		createRequest<NameUploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		req->setPOSTData(params["field:file"], uri.filename(),
+				DenseDataPtr(new DenseData(uploadId.uri().toString())));
 		req->go(req);
 	}
 
@@ -131,8 +132,8 @@ public:
 			const URI &uri,
 			const NameUploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<NameUploadHandler> (req, ptrRef, uri, cb);
-		req->setDELETE();
+		createRequest<NameUploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
 		req->go(req);
 	}
 };
@@ -141,4 +142,4 @@ public:
 }
 }
 
-#endif /* SIRIKATA_HTTPUploadHandler_HPP__ */
+#endif /* SIRIKATA_HTTPFormUploadHandler_HPP__ */

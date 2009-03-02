@@ -60,6 +60,9 @@ private:
 	CURL *mCurlRequest;
 	void *mHeaders; // CURL header linked list.
 
+	void *mCurlFormBegin;
+	void *mCurlFormEnd;
+
 	Range::base_type mOffset;
 	DenseDataPtr mData;
 
@@ -130,6 +133,7 @@ public:
 	HTTPRequest(const URI &uri, const Range &range)
 		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
 		  mCurlRequest(NULL), mHeaders(NULL),
+		  mCurlFormBegin(NULL), mCurlFormEnd(NULL),
 		  mOffset(0), mData(new DenseData(range)), mUploadOffset(0)
 		  {
 		initCurlHandle();
@@ -166,8 +170,39 @@ public:
 	/**
 	 * Performs an upload of this file. Again, there may be no retrieved data,
 	 * but success should be true if the upload was successful.
+	 *
+	 * @param uploadData  A SparseData that represents the file.
+	 *                    Any non-contiguous chunks will be filled with 0's.
 	 */
 	void setPUTData(const SparseData &uploadData);
+
+	/**
+	 * Performs an upload of this file using POST.
+	 * Currently, only one file can be uploaded at a time,
+	 * however this is relatively easy to change if necessary.
+	 *
+	 * This may be used in conjunction with addPOSTField if other
+	 * non-file form fields are to be added.
+	 *
+	 * Currently, the Content-Type is hardcoded as application/octet-stream.
+	 *
+	 * @param fieldname  The name of the type="file" form field.
+	 * @param filename   The name of the file to be uploaded.
+	 * @param uploadData  A SparseData that represents the file.
+	 *                    Any non-contiguous chunks will be filled with 0's.
+	 */
+	void setPOSTData(const std::string &fieldname,
+			const std::string &filename,
+			const SparseData &uploadData);
+
+	/**
+	 * Creates a POST request using the multipart/form-data enctype.
+	 * This may be used in conjunction with setPOSTData, or without.
+	 *
+	 * @param name  The name of this form field.
+	 * @param value The value of this form field.
+	 */
+	void addPOSTField(const std::string &name, const std::string &value);
 
 	/** Note: you are responsible for checking the protocol
 	 * and using HTTP headers in the case of http, and valid FTP

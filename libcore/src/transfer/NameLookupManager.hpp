@@ -60,7 +60,7 @@ public:
 	typedef std::tr1::function<void(const RemoteFileId *fingerprint)> Callback;
 
 private:
-	void gotNameLookup(Callback cb, URI origNamedUri, unsigned int which, ListOfServicesPtr services,
+	void gotNameLookup(const Callback &cb, const URI &origNamedUri, unsigned int which, ListOfServicesPtr services,
 			const Fingerprint &hash, const std::string &str, bool success) {
 		if (!success) {
 			doNameLookup(cb, origNamedUri, which+1, services);
@@ -72,7 +72,7 @@ private:
 		cb(&rfid);
 	}
 
-	void hashedDownload(Callback cb, URI origNamedUri, ListOfServicesPtr services) {
+	void hashedDownload(const Callback &cb, const URI &origNamedUri, ListOfServicesPtr services) {
 		if (services && services->size() > 0) {
 			// It is safe to cast this URI to a RemoteFileId????
 			RemoteFileId rfid(origNamedUri);
@@ -82,7 +82,7 @@ private:
 		}
 	}
 
-	void doNameLookup(Callback cb, URI origNamedUri, unsigned int which, ListOfServicesPtr services) {
+	void doNameLookup(const Callback &cb, const URI &origNamedUri, unsigned int which, ListOfServicesPtr services) {
 		if (!services || which >= services->size()) {
 			SILOG(transfer,error,"None of the " << which << " URIContexts registered for " <<
 					origNamedUri << " were successful for NameLookup.");
@@ -98,7 +98,8 @@ private:
 
 
 
-		std::tr1::shared_ptr<NameLookupHandler> handler = mHandlers->lookup(lookupUri.proto());
+		std::tr1::shared_ptr<NameLookupHandler> handler;
+		lookupUri.getContext().setProto(mHandlers->lookup(lookupUri.proto(), handler));
 		if (handler) {
 			/// FIXME: Need a way of aborting a name lookup that is taking too long.
 			handler->nameLookup(NULL, lookupUri,

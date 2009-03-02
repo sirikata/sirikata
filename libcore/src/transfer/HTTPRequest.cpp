@@ -150,7 +150,7 @@ size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
 			chunkLength = length;
 		}
 		if (copyFrom == NULL) {
-			std::copy(ZeroIterator<unsigned char>(), ZeroIterator<unsigned char>(chunkLength), copyTo);
+			std::memset(copyTo, 0, chunkLength);
 		} else {
 			std::copy(copyFrom, copyFrom + chunkLength, copyTo);
 		}
@@ -472,6 +472,9 @@ HTTPRequest::~HTTPRequest() {
 	if (mHeaders) {
 		curl_slist_free_all((struct curl_slist *)mHeaders);
 	}
+	if (mCurlFormBegin) {
+		curl_formfree((struct curl_httppost *)mCurlFormBegin);
+	}
 }
 void HTTPRequest::initCurlHandle() {
 	boost::call_once(&initCurl, flag);
@@ -536,6 +539,33 @@ void HTTPRequest::setDELETE() {
 	}
 }
 
+void HTTPRequest::setPOSTData(const std::string &fieldname,
+		const std::string &filename,
+		const SparseData &uploadData) {
+	curl_formadd(
+		(struct curl_httppost **)&mCurlFormBegin,
+		(struct curl_httppost **)&mCurlFormEnd,
+		CURLFORM_NAMELENGTH, (long)fieldname.length(),
+		CURLFORM_COPYNAME, fieldname.data(),
+		CURLFORM_FILENAME, filename.c_str(),
+		CURLFORM_CONTENTTYPE, "application/octet-stream", // FIXME: Is this useful?
+		CURLFORM_CONTENTSLENGTH, (long)uploadData.length(),
+		CURLFORM_STREAM, this,
+		CURLFORM_END);
+}
+
+void HTTPRequest::addPOSTField(const std::string &name,
+		const std::string &value) {
+	curl_formadd(
+		(struct curl_httppost **)&mCurlFormBegin,
+		(struct curl_httppost **)&mCurlFormEnd,
+		CURLFORM_NAMELENGTH, (long)name.length(),
+		CURLFORM_COPYNAME, name.data(),
+		CURLFORM_CONTENTSLENGTH, (long)value.length(),
+		CURLFORM_COPYCONTENTS, value.data(),
+		CURLFORM_END);
+}
+
 void HTTPRequest::addHeader(const std::string &header) {
 	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, header.c_str());
 }
@@ -546,11 +576,14 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 	curl_multi_add_handle(curlm, mCurlRequest);
 	mPreventDeletion = HTTPRequestPtr(holdReference);
 
+	if (mCurlFormBegin) {
+		curl_easy_setopt(mCurlRequest, CURLOPT_HTTPPOST, mCurlFormBegin);
+	}
 	if (mHeaders) {
 		if (mURI.proto() == "http" || mURI.proto() == "https") {
 			curl_easy_setopt(mCurlRequest, CURLOPT_HTTPHEADER, mHeaders);
 		} else if (mURI.proto() == "ftp" || mURI.proto() == "sftp") {
-			curl_easy_setopt(mCurlRequest, CURLOPT_POSTQUOTE, mHeaders);
+			curl_easy_setopt(mCurlRequest, CURLOPT_QUOTE, mHeaders);
 		}
 	}
 	globals.doWakeup();

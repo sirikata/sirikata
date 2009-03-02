@@ -52,6 +52,12 @@ public:
 		}
 	}
 
+	DenseData(const std::string &str, bool wholeFile=true)
+			:Range(wholeFile) {
+		setLength(str.length(), wholeFile);
+		std::copy(str.begin(), str.end(), writableData());
+	}
+
 	/// equals dataAt(startbyte()).
 	inline const unsigned char *data() const {
 		return &(mData[0]);
@@ -93,6 +99,13 @@ class SparseData {
 public:
 	/// Acts like a STL container.
 	typedef DenseDataPtr value_type;
+
+	SparseData() {
+	}
+
+	SparseData(DenseDataPtr contents) {
+		addValidData(contents);
+	}
 
 	/// Simple stub iterator class for use by Range::isContainedBy()
 	class iterator : public ListType::iterator {
