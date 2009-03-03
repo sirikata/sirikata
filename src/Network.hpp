@@ -10,7 +10,7 @@ public:
     Address4(const Sirikata::Network::Address&a);
     Address4(unsigned int ip, unsigned short prt) {
         this->ip=ip;
-        this->port=port;
+        this->port=prt;
     }
     bool operator ==(const Address4&other)const {
         return ip==other.ip&&port==other.port;

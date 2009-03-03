@@ -10,7 +10,9 @@ RaknetNetwork::RaknetNetwork ():mListener(RakNetworkFactory::GetRakPeerInterface
 
 void RaknetNetwork::listen(const std::string&addy) {
     SocketDescriptor socketDescriptor(atoi(addy.c_str()),0);
-    mListener->Startup(16383,0,&socketDescriptor,1);
+    bool starting=mListener->Startup(16383,30,&socketDescriptor,1);
+	mListener->SetMaximumIncomingConnections(16383);
+    assert(starting);
     mListener->SetOccasionalPing(true);
 }
 Address4 MakeAddress(const SystemAddress &address) {
@@ -65,7 +67,8 @@ bool RaknetNetwork::sendTo(const Address4&addy, const Sirikata::Network::Chunk& 
         tosend->back().second.second=rel;
         return true;
     }else {
-        assert(!sendRemainingItems(sa));
+        assert(MakeAddress(sa)==addy);
+        sendRemainingItems(sa);
         return mListener->Send((const char*)&*paddedToSend.begin(),toSend.size()+1,pri,rel,0,sa,false);
     }
 }
@@ -95,21 +98,24 @@ bool RaknetNetwork::sendRemainingItems(SystemAddress address) {
 Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
     Packet*p;
     while ((p=mListener->Receive())) {
-        fprintf (stderr,"GOT SOMETHING!!!b");
         unsigned char packetIdentifier = p->data[0];
+        fprintf (stderr,"GOT SOMETHING!!!%d\n",packetIdentifier);
         switch (packetIdentifier) {
           case ID_ALREADY_CONNECTED:
             sendRemainingItems(p->systemAddress);
             break;
+          case ID_NEW_INCOMING_CONNECTION:
           case ID_REMOTE_NEW_INCOMING_CONNECTION: 
             sendRemainingItems(p->systemAddress);
+            break;
+          case ID_NO_FREE_INCOMING_CONNECTIONS:
+            fprintf (stderr,"NO FREE INCOMING CONNECTIONS");
             break;
           case ID_DISCONNECTION_NOTIFICATION:
           case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server tel
           case ID_REMOTE_CONNECTION_LOST: 
           case ID_CONNECTION_BANNED:
           case ID_CONNECTION_ATTEMPT_FAILED:
-          case ID_NO_FREE_INCOMING_CONNECTIONS:
           case ID_MODIFIED_PACKET:
             // Cheater!
 
@@ -122,8 +128,11 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
           case ID_CONNECTION_REQUEST_ACCEPTED:
             sendRemainingItems(p->systemAddress);
             break;
-          default:
+          case ID_USER_PACKET_ENUM:
             return makeChunk(mListener,p);
+          default:
+            fprintf(stderr,"New unknown error message: %d\n",ID_USER_PACKET_ENUM);
+            break;
         }
     }
     return  NULL;
