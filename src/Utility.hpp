@@ -73,7 +73,7 @@ typedef std::string String;
 
 typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
-typedef Sirikata::InitializeOptions InitializeOptions;
+typedef Sirikata::InitializeClassOptions InitializeOptions;
 
 } // namespace CBR
 

@@ -49,8 +49,8 @@ public:
     static const uint8 size = CoordType::size;
 
     BoundingBox()
-     : mMin(BBOX_MAX),
-       mMax(BBOX_MIN)
+        : mMin(BBOX_MAX,BBOX_MAX,BBOX_MAX),
+          mMax(BBOX_MIN,BBOX_MIN,BBOX_MIN)
     {
     }
 

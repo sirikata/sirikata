@@ -6,43 +6,36 @@
 #include "raknet/RakNetTypes.h"
 #include "raknet/BitStream.h"
 
-bool operator==(const Sirikata::Network::Address&a, 
-                const Sirikata::Network::Address&b) ;
 namespace CBR {
+
 class RaknetNetwork {
     class AddressHasher {
     public:
-        size_t operator()(const Sirikata::Network::Address& address)const{
-            return std::tr1::hash<Sirikata::String>()(address.getHostName())^
-                std::tr1::hash<Sirikata::String>()(address.getService());
+        size_t operator()(const Address4& address)const{
+            return std::tr1::hash<unsigned int>()(address.ip)^
+                std::tr1::hash<unsigned short>()(address.port);
         }
     };
     class AddressEquals {
     public:
-        size_t operator()(const Sirikata::Network::Address& a,const Sirikata::Network::Address& b)const{
-            return a.getHostName()==b.getHostName()&&a.getService()==b.getService();
+        size_t operator()(const Address4& a,const Address4& b)const{
+            return a.ip==b.ip&&a.port==b.port;
         }
     };
-    class Connection{
+    class SentQueue{
     public:
-        RakPeerInterface*mPeer;
-        std::vector<std::pair<Sirikata::Network::Chunk,std::pair<PacketPriority,PacketReliability> > >mToBeSent;
-        Connection() {
-            mPeer=NULL;
-        }
+        typedef std::vector<std::pair<Sirikata::Network::Chunk,std::pair<PacketPriority,PacketReliability> > > SendQueue;
+        SendQueue mToBeSent;
     };
     Sirikata::Network::Chunk *makeChunk(RakPeerInterface*,Packet*);
-    std::tr1::shared_ptr<RakPeerInterface> mListener;
-    typedef std::list<std::pair<Sirikata::Network::Address,std::tr1::weak_ptr<Connection> > > SocketList;
-    SocketList mConnectingSockets;
-    typedef std::tr1::unordered_map<Sirikata::Network::Address,std::tr1::shared_ptr<Connection>, AddressHasher, AddressEquals > ConnectionMap;
-    ConnectionMap mOutboundConnectionMap;
-    Sirikata::Network::Address mCurrentInspectionAddress;
-    bool eraseOne(SocketList::iterator&i);
+    RakPeerInterface *mListener;
+    typedef std::tr1::unordered_map<Address4,SentQueue, AddressHasher, AddressEquals > ConnectingMap;
+    ConnectingMap mConnectingSockets;
+    bool sendRemainingItems(SystemAddress address);
 public:
     RaknetNetwork();
-    virtual void listen (const Sirikata::Network::Address&);
-    virtual bool sendTo(const Sirikata::Network::Address&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
+    virtual void listen (const std::string&service);
+    virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual Sirikata::Network::Chunk*receiveOne();
    
 };

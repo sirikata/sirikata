@@ -5,15 +5,15 @@ namespace CBR {
 
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
     RaknetNetwork rn;
-    rn.listen(Network::Address("127.0.0.1",listenport));
+    rn.listen(listenport);
     bool canSend=!server;
     unsigned int mine=0;
     unsigned int theirs=0;
-    Network::Chunk toSend(4);
+    Sirikata::Network::Chunk toSend(4);
     unsigned int offset=15;
     unsigned int maxval=65637;
     while (mine<maxval||theirs<maxval) {
-        Network::Chunk *c;
+        Sirikata::Network::Chunk *c;
         while ((c=rn.receiveOne())) {
             canSend=true;
             unsigned int network;
@@ -28,7 +28,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
             unsigned int network=htonl(mine);
             mine+=offset;
             memcpy(&*toSend.begin(),&network,4);
-            rn.sendTo(Network::Address(hostname,port),toSend,true,true,0);
+            rn.sendTo(Address4(Sirikata::Network::Address(hostname,port)),toSend,true,true,0);
         }
     }
 }
