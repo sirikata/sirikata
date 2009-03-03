@@ -99,7 +99,7 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
     Packet*p;
     while ((p=mListener->Receive())) {
         unsigned char packetIdentifier = p->data[0];
-        fprintf (stderr,"GOT SOMETHING!!!%d\n",packetIdentifier);
+        //fprintf (stderr,"GOT SOMETHING!!!%d\n",packetIdentifier);
         switch (packetIdentifier) {
           case ID_ALREADY_CONNECTED:
             sendRemainingItems(p->systemAddress);
@@ -109,8 +109,7 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
             sendRemainingItems(p->systemAddress);
             break;
           case ID_NO_FREE_INCOMING_CONNECTIONS:
-            fprintf (stderr,"NO FREE INCOMING CONNECTIONS");
-            break;
+            fprintf (stderr,"NO FREE INCOMING CONNECTIONS:Retrying\n");
           case ID_DISCONNECTION_NOTIFICATION:
           case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server tel
           case ID_REMOTE_CONNECTION_LOST: 

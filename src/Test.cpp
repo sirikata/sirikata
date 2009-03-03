@@ -31,6 +31,8 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
             rn.sendTo(Address4(Sirikata::Network::Address(hostname,port)),toSend,true,true,0);
         }
     }
+    sleep (1);
+    printf("Passed\n");
 }
 void testServer(const char * listenport, const char* hostname, const char* port){
 
