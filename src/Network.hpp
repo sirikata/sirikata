@@ -19,7 +19,7 @@ public:
 class Network {
 
 public:
-
+    typedef Sirikata::Network::Chunk Chunk;
 
     virtual void listen (const std::string&service)=0;
     virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority)=0;
