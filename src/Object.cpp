@@ -72,7 +72,7 @@ void Object::checkPositionUpdate(const Time& t) {
                     *it,
                     mLocation
                 );
-            mServer->route(loc_msg, this);
+            mServer->route(loc_msg);
         }
     }
 }
@@ -90,7 +90,7 @@ void Object::proximityMessage(ProximityMessage* prox_msg) {
     else
         subs_msg = new SubscriptionMessage(uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
 
-    mServer->route(subs_msg, this);
+    mServer->route(subs_msg);
 
     delete prox_msg;
 }

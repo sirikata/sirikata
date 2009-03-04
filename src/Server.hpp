@@ -46,6 +46,7 @@ class Object;
 class ObjectFactory;
 class ServerMap;
 class Message;
+class ObjectToObjectMessage;
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -59,9 +60,8 @@ public:
     const ServerID& id() const;
 
     // Routing interface for objects.  Destination server will come from the message.
-    // Source object is provided to assist queuing decisions.
     // Servers should use the private route method which follows different rules.
-    void route(Message* msg, Object* src);
+    void route(ObjectToObjectMessage* msg);
 
     void tick(const Time& t);
 private:

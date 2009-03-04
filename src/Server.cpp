@@ -68,14 +68,14 @@ const ServerID& Server::id() const {
     return mID;
 }
 
-void Server::route(Message* msg, Object* src) {
+void Server::route(ObjectToObjectMessage* msg) {
     assert(msg != NULL);
-    assert(src != NULL);
 
-    UUID src_uuid = src->uuid();
+    UUID src_uuid = msg->sourceObject();
+    UUID dest_uuid = msg->destObject();
     ServerMessageHeader server_header(
         this->id(),
-        mServerMap->lookup(src_uuid)
+        mServerMap->lookup(dest_uuid)
     );
 
     uint32 offset = 0;
