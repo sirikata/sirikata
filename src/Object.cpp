@@ -68,8 +68,6 @@ void Object::checkPositionUpdate(const Time& t) {
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             LocationMessage* loc_msg =
                 new LocationMessage(
-                    mServer->id(),
-                    mServer->getServer(*it),
                     mID,
                     *it,
                     mLocation

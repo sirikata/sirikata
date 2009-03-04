@@ -62,10 +62,6 @@ public:
     // Source object is provided to assist queuing decisions.
     // Servers should use the private route method which follows different rules.
     void route(Message* msg, Object* src);
-    // Helper method to get the destination server for an object. The object shouldn't actually
-    // have to know this, we should probably just change the <src_server, dest_server> info to be
-    // a wrapper around the actual messages.
-    ServerID getServer(const UUID& dest);
 
     void tick(const Time& t);
 private:
@@ -73,8 +69,11 @@ private:
     void checkObjectMigrations();
 
     // Routing interface for servers.  This is used to route messages that originate from
-    // a server provided service, and thus don't have a source object.
-    void route(Message* msg);
+    // a server provided service, and thus don't have a source object.  Messages may be destined
+    // for either servers or objects.  The second form will simply automatically do the destination
+    // server lookup.
+    void route(Message* msg, const ServerID& dest_server);
+    void route(Message* msg, const UUID& dest_obj);
 
     typedef std::map<UUID, Object*> ObjectMap;
 

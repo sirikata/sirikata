@@ -34,38 +34,65 @@
 
 namespace CBR {
 
-Message::Message(const ServerID& src_server, const ServerID& dst_server, MessageType t)
- : mSourceServer(src_server), mDestServer(dst_server), mType(t)
+
+ServerMessageHeader::ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server)
+ : mSourceServer(src_server),
+   mDestServer(dest_server)
 {
 }
 
-Message::~Message() {
-}
-
-const ServerID& Message::sourceServer() const {
+const ServerID& ServerMessageHeader::sourceServer() const {
     return mSourceServer;
 }
 
-const ServerID& Message::destServer() const {
+const ServerID& ServerMessageHeader::destServer() const {
     return mDestServer;
 }
 
-MessageType Message::type() const {
-    return mType;
+uint32 ServerMessageHeader::serialize(Network::Chunk& wire, uint32 offset) {
+    if (wire.size() < offset + 2 * sizeof(ServerID) )
+        wire.resize( offset + 2 * sizeof(ServerID) );
+
+    memcpy( &wire[offset], &mSourceServer, sizeof(ServerID) );
+    offset += sizeof(ServerID);
+
+    memcpy( &wire[offset], &mDestServer, sizeof(ServerID) );
+    offset += sizeof(ServerID);
+
+    return offset;
 }
 
-Message* Message::deserialize(const Network::Chunk& wire) {
+ServerMessageHeader ServerMessageHeader::deserialize(const Network::Chunk& wire, uint32 offset) {
     ServerID raw_source;
     ServerID raw_dest;
-    uint8 raw_type;
-
-    uint32 offset = 0;
 
     memcpy( &raw_source, &wire[offset], sizeof(ServerID) );
     offset += sizeof(ServerID);
 
     memcpy( &raw_dest, &wire[offset], sizeof(ServerID) );
     offset += sizeof(ServerID);
+
+    return ServerMessageHeader(raw_source, raw_dest);
+}
+
+
+
+
+Message::Message(MessageType t)
+ : mType(t)
+{
+    assert( t > 0 && t < MESSAGE_TYPE_COUNT );
+}
+
+Message::~Message() {
+}
+
+MessageType Message::type() const {
+    return mType;
+}
+
+uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message** result) {
+    uint8 raw_type;
 
     memcpy( &raw_type, &wire[offset], 1 );
     offset += 1;
@@ -74,13 +101,13 @@ Message* Message::deserialize(const Network::Chunk& wire) {
 
     switch(raw_type) {
       case MESSAGE_TYPE_PROXIMITY:
-        msg = new ProximityMessage(raw_source, raw_dest, wire, offset);
+        msg = new ProximityMessage(wire, offset);
         break;
       case MESSAGE_TYPE_LOCATION:
-        msg = new LocationMessage(raw_source, raw_dest, wire, offset);
+        msg = new LocationMessage(wire, offset);
         break;
       case MESSAGE_TYPE_MIGRATE:
-        msg = new MigrateMessage(raw_source, raw_dest, wire, offset);
+        msg = new MigrateMessage(wire, offset);
         break;
       default:
 #if NDEBUG
@@ -89,20 +116,17 @@ Message* Message::deserialize(const Network::Chunk& wire) {
         break;
     }
 
-    return msg;
+    if (result != NULL)
+        *result = msg;
+    else // if they didn't want the result, just delete it
+        delete msg;
+
+    return offset;
 }
 
-uint32 Message::serializeHeader(Network::Chunk& wire) {
-    if (wire.size() < 2 * sizeof(ServerID) + 1)
-        wire.resize( 2 * sizeof(ServerID) + 1 );
-
-    uint32 offset = 0;
-
-    memcpy( &wire[offset], &mSourceServer, sizeof(ServerID) );
-    offset += sizeof(ServerID);
-
-    memcpy( &wire[offset], &mDestServer, sizeof(ServerID) );
-    offset += sizeof(ServerID);
+uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
+    if (wire.size() < offset + 1)
+        wire.resize( offset + 1 );
 
     memcpy( &wire[offset], &mType, 1 );
     offset += 1;
@@ -112,16 +136,16 @@ uint32 Message::serializeHeader(Network::Chunk& wire) {
 
 
 
-ProximityMessage::ProximityMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& dst_object, const UUID& nbr, EventType evt)
- : Message(src_server, dst_server, MESSAGE_TYPE_PROXIMITY),
+ProximityMessage::ProximityMessage(const UUID& dst_object, const UUID& nbr, EventType evt)
+ : Message(MESSAGE_TYPE_PROXIMITY),
    mDestObject(dst_object),
    mNeighbor(nbr),
    mEvent(evt)
 {
 }
 
-ProximityMessage::ProximityMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset)
- : Message(src_server, dst_server, MESSAGE_TYPE_PROXIMITY)
+ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32 offset)
+ : Message(MESSAGE_TYPE_PROXIMITY)
 {
     uint8 raw_dest_object[UUID::static_size];
     uint8 raw_neighbor[UUID::static_size];
@@ -152,40 +176,38 @@ const ProximityMessage::EventType ProximityMessage::event() const {
     return mEvent;
 }
 
-Network::Chunk ProximityMessage::serialize() {
-    Network::Chunk result;
-
-    uint32 offset = serializeHeader(result);
+uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
 
     uint32 prox_part_size = 2 * UUID::static_size + 1;
-    result.resize( result.size() + prox_part_size );
+    wire.resize( wire.size() + prox_part_size );
 
-    memcpy( &result[offset], mDestObject.getArray().data(), UUID::static_size );
+    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
 
-    memcpy( &result[offset], mNeighbor.getArray().data(), UUID::static_size );
+    memcpy( &wire[offset], mNeighbor.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
 
     uint8 evt_type = (uint8)mEvent;
-    memcpy( &result[offset], &evt_type, 1 );
+    memcpy( &wire[offset], &evt_type, 1 );
     offset += 1;
 
-    return result;
+    return offset;
 }
 
 
 
 
-LocationMessage::LocationMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
- : Message(src_server, dst_server, MESSAGE_TYPE_LOCATION),
+LocationMessage::LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
+ : Message(MESSAGE_TYPE_LOCATION),
    mSourceObject(src_object),
    mDestObject(dest_object),
    mLocation(loc)
 {
 }
 
-LocationMessage::LocationMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset)
- : Message(src_server, dst_server, MESSAGE_TYPE_LOCATION)
+LocationMessage::LocationMessage(const Network::Chunk& wire, uint32 offset)
+ : Message(MESSAGE_TYPE_LOCATION)
 {
     uint8 raw_src_object[UUID::static_size];
     uint8 raw_dest_object[UUID::static_size];
@@ -214,37 +236,35 @@ const MotionVector3f& LocationMessage::location() const {
     return mLocation;
 }
 
-Network::Chunk LocationMessage::serialize() {
-    Network::Chunk result;
-
-    uint32 offset = serializeHeader(result);
+uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
 
     uint32 loc_part_size = 2 * UUID::static_size + sizeof(MotionVector3f);
-    result.resize( result.size() + loc_part_size );
+    wire.resize( wire.size() + loc_part_size );
 
-    memcpy( &result[offset], mSourceObject.getArray().data(), UUID::static_size );
+    memcpy( &wire[offset], mSourceObject.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
 
-    memcpy( &result[offset], mDestObject.getArray().data(), UUID::static_size );
+    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
 
-    memcpy( &result[offset], &mLocation, sizeof(MotionVector3f) );
+    memcpy( &wire[offset], &mLocation, sizeof(MotionVector3f) );
     offset += sizeof(MotionVector3f);
 
-    return result;
+    return offset;
 }
 
 
 
 
-MigrateMessage::MigrateMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& obj)
- : Message(src_server, dst_server, MESSAGE_TYPE_MIGRATE),
+MigrateMessage::MigrateMessage(const UUID& obj)
+ : Message(MESSAGE_TYPE_MIGRATE),
    mObject(obj)
 {
 }
 
-MigrateMessage::MigrateMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset)
- : Message(src_server, dst_server, MESSAGE_TYPE_MIGRATE)
+MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32 offset)
+ : Message(MESSAGE_TYPE_MIGRATE)
 {
     uint8 raw_object[UUID::static_size];
 
@@ -258,18 +278,16 @@ const UUID& MigrateMessage::object() const {
     return mObject;
 }
 
-Network::Chunk MigrateMessage::serialize() {
-    Network::Chunk result;
-
-    uint32 offset = serializeHeader(result);
+uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
 
     uint32 loc_part_size = UUID::static_size;
-    result.resize( result.size() + loc_part_size );
+    wire.resize( wire.size() + loc_part_size );
 
-    memcpy( &result[offset], mObject.getArray().data(), UUID::static_size );
+    memcpy( &wire[offset], mObject.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
 
-    return result;
+    return offset;
 }
 
 

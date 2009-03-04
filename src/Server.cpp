@@ -73,7 +73,15 @@ void Server::route(Message* msg, Object* src) {
     assert(src != NULL);
 
     UUID src_uuid = src->uuid();
-    Network::Chunk msg_serialized = msg->serialize();
+    ServerMessageHeader server_header(
+        this->id(),
+        mServerMap->lookup(src_uuid)
+    );
+
+    uint32 offset = 0;
+    Network::Chunk msg_serialized;
+    server_header.serialize(msg_serialized, offset);
+    offset = msg->serialize(msg_serialized, offset);
 
     // FIXME
     //printf("from-obj-route\n");
@@ -81,19 +89,24 @@ void Server::route(Message* msg, Object* src) {
     delete msg;
 }
 
-ServerID Server::getServer(const UUID& dest) {
-    return mServerMap->lookup(dest);
-}
-
-void Server::route(Message* msg) {
+void Server::route(Message* msg, const ServerID& dest_server) {
     assert(msg != NULL);
 
-    Network::Chunk msg_serialized = msg->serialize();
+    ServerMessageHeader server_header(this->id(), dest_server);
+
+    uint32 offset = 0;
+    Network::Chunk msg_serialized;
+    server_header.serialize(msg_serialized, offset);
+    offset = msg->serialize(msg_serialized, offset);
 
     // FIXME
     //printf("from-serv-route\n");
 
     delete msg;
+}
+
+void Server::route(Message* msg, const UUID& dest_obj) {
+    route(msg, mServerMap->lookup(dest_obj));
 }
 
 void Server::tick(const Time& t) {
@@ -116,13 +129,11 @@ void Server::proximityTick(const Time& t) {
         ProximityEvent& evt = proximity_events.front();
         ProximityMessage* msg =
             new ProximityMessage(
-                this->id(),
-                mServerMap->lookup(evt.query()),
                 evt.query(),
                 evt.object(),
                 (evt.type() == ProximityEvent::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
             );
-        route(msg);
+        route(msg, evt.query());
         proximity_events.pop();
     }
 }

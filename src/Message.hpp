@@ -41,32 +41,52 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_PROXIMITY    1
 #define MESSAGE_TYPE_LOCATION     2
 #define MESSAGE_TYPE_MIGRATE      3
+#define MESSAGE_TYPE_COUNT        4
 
-/** Base class for messages that go over the network.  Must provide source,
- *  destination, message type, and serialization methods.
- */
-class Message {
+
+// Server to server routing header
+class ServerMessageHeader {
 public:
-    Message(const ServerID& src_server, const ServerID& dst_server, MessageType t);
-    virtual ~Message();
+    ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server);
 
     const ServerID& sourceServer() const;
     const ServerID& destServer() const;
-    MessageType type() const;
 
-    virtual Network::Chunk serialize() = 0;
-    static Message* deserialize(const Network::Chunk& wire);
-protected:
-    // takes care of serializing the header information properly, will overwrite
-    // contents of chunk.  returns the offset after serializing the header
-    uint32 serializeHeader(Network::Chunk& wire);
+    // Serialize this header into the network chunk, starting at the given offset.
+    // Returns the ending offset of the header.
+    uint32 serialize(Network::Chunk& wire, uint32 offset);
+    static ServerMessageHeader deserialize(const Network::Chunk& wire, uint32 offset);
 private:
-    Message();
+    ServerMessageHeader();
 
     ServerID mSourceServer;
     ServerID mDestServer;
+}; // class ServerMessageHeader
+
+
+
+/** Base class for messages that go over the network.  Must provide
+ *  message type and serialization methods.
+ */
+class Message {
+public:
+    Message(MessageType t);
+    virtual ~Message();
+
+    MessageType type() const;
+
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
+    static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
+protected:
+    // takes care of serializing the header information properly, will overwrite
+    // contents of chunk.  returns the offset after serializing the header
+    uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
+private:
+    Message();
+
     MessageType mType;
 }; // class Message
+
 
 
 class ProximityMessage : public Message {
@@ -76,16 +96,16 @@ public:
         Exited = 2
     };
 
-    ProximityMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& dest_object, const UUID& nbr, EventType evt);
+    ProximityMessage(const UUID& dest_object, const UUID& nbr, EventType evt);
 
     const UUID& destObject() const;
     const UUID& neighbor() const;
     const EventType event() const;
 
-    virtual Network::Chunk serialize();
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    ProximityMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset);
+    ProximityMessage(const Network::Chunk& wire, uint32 offset);
 
     UUID mDestObject;
     UUID mNeighbor;
@@ -96,16 +116,16 @@ private:
 
 class LocationMessage : public Message {
 public:
-    LocationMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+    LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
 
     const UUID& sourceObject() const;
     const UUID& destObject() const;
     const MotionVector3f& location() const;
 
-    virtual Network::Chunk serialize();
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    LocationMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset);
+    LocationMessage(const Network::Chunk& wire, uint32 offset);
 
     UUID mSourceObject;
     UUID mDestObject;
@@ -116,14 +136,14 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const ServerID& src_server, const ServerID& dst_server, const UUID& obj);
+    MigrateMessage(const UUID& obj);
 
     const UUID& object() const;
 
-    virtual Network::Chunk serialize();
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    MigrateMessage(const ServerID& src_server, const ServerID& dst_server, const Network::Chunk& wire, uint32 offset);
+    MigrateMessage(const Network::Chunk& wire, uint32 offset);
 
     UUID mObject;
 }; // class MigrateMessage
