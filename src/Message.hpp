@@ -40,8 +40,9 @@ typedef uint8 MessageType;
 
 #define MESSAGE_TYPE_PROXIMITY    1
 #define MESSAGE_TYPE_LOCATION     2
-#define MESSAGE_TYPE_MIGRATE      3
-#define MESSAGE_TYPE_COUNT        4
+#define MESSAGE_TYPE_SUBSCRIPTION 3
+#define MESSAGE_TYPE_MIGRATE      4
+#define MESSAGE_TYPE_COUNT        5
 
 
 // Server to server routing header
@@ -146,6 +147,23 @@ private:
 }; // class LocationMessage
 
 
+class SubscriptionMessage : public ObjectToObjectMessage {
+    enum Action {
+        Subscribe = 1,
+        Unsubscribe = 2
+    };
+
+    SubscriptionMessage(const UUID& src_object, const UUID& dest_object, const Action& act);
+
+    const Action& action() const;
+
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+private:
+    friend class Message;
+    SubscriptionMessage(const Network::Chunk& wire, uint32& offset);
+
+    Action mAction;
+}; // class SubscriptionMessage
 
 class MigrateMessage : public Message {
 public:

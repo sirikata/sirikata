@@ -106,6 +106,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_LOCATION:
         msg = new LocationMessage(wire, offset);
         break;
+      case MESSAGE_TYPE_SUBSCRIPTION:
+        msg = new SubscriptionMessage(wire, offset);
+        break;
       case MESSAGE_TYPE_MIGRATE:
         msg = new MigrateMessage(wire, offset);
         break;
@@ -269,6 +272,40 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
     memcpy( &wire[offset], &mLocation, sizeof(MotionVector3f) );
     offset += sizeof(MotionVector3f);
+
+    return offset;
+}
+
+
+
+SubscriptionMessage::SubscriptionMessage(const UUID& src_object, const UUID& dest_object, const Action& act)
+ : ObjectToObjectMessage(MESSAGE_TYPE_SUBSCRIPTION, src_object, dest_object),
+   mAction(act)
+{
+}
+
+SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset)
+ : ObjectToObjectMessage(MESSAGE_TYPE_SUBSCRIPTION, wire, offset)
+{
+    uint8 raw_act;
+    memcpy( &raw_act, &wire[offset], sizeof(uint8) );
+    offset += sizeof(uint8);
+}
+
+const SubscriptionMessage::Action& SubscriptionMessage::action() const {
+    return mAction;
+}
+
+uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    offset = serializeSourceDest(wire, offset);
+
+    uint32 sub_part_size = sizeof(uint8);
+    wire.resize( wire.size() + sub_part_size );
+
+    uint8 act = (uint8)mAction;
+    memcpy( &wire[offset], &act, sizeof(uint8) );
+    offset += sizeof(uint8);
 
     return offset;
 }
