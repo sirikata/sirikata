@@ -144,7 +144,7 @@ ProximityMessage::ProximityMessage(const UUID& dst_object, const UUID& nbr, Even
 {
 }
 
-ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32 offset)
+ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset)
  : Message(MESSAGE_TYPE_PROXIMITY)
 {
     uint8 raw_dest_object[UUID::static_size];
@@ -197,17 +197,15 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-
-LocationMessage::LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
- : Message(MESSAGE_TYPE_LOCATION),
+ObjectToObjectMessage::ObjectToObjectMessage(MessageType t, const UUID& src_object, const UUID& dest_object)
+ : Message(t),
    mSourceObject(src_object),
-   mDestObject(dest_object),
-   mLocation(loc)
+   mDestObject(dest_object)
 {
 }
 
-LocationMessage::LocationMessage(const Network::Chunk& wire, uint32 offset)
- : Message(MESSAGE_TYPE_LOCATION)
+ObjectToObjectMessage::ObjectToObjectMessage(MessageType t, const Network::Chunk& wire, uint32& offset)
+ : Message(t)
 {
     uint8 raw_src_object[UUID::static_size];
     uint8 raw_dest_object[UUID::static_size];
@@ -219,17 +217,43 @@ LocationMessage::LocationMessage(const Network::Chunk& wire, uint32 offset)
     memcpy( &raw_dest_object, &wire[offset], UUID::static_size );
     offset += UUID::static_size;
     mDestObject = UUID(raw_dest_object, UUID::static_size);
-
-    memcpy( &mLocation, &wire[offset], sizeof(MotionVector3f) );
-    offset += sizeof(MotionVector3f);
 }
 
-const UUID& LocationMessage::sourceObject() const {
+const UUID& ObjectToObjectMessage::sourceObject() const {
     return mSourceObject;
 }
 
-const UUID& LocationMessage::destObject() const {
+const UUID& ObjectToObjectMessage::destObject() const {
     return mDestObject;
+}
+
+uint32 ObjectToObjectMessage::serializeSourceDest(Network::Chunk& wire, uint32 offset) {
+    uint32 loc_part_size = 2 * UUID::static_size;
+    wire.resize( wire.size() + loc_part_size );
+
+    memcpy( &wire[offset], mSourceObject.getArray().data(), UUID::static_size );
+    offset += UUID::static_size;
+
+    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
+    offset += UUID::static_size;
+
+    return offset;
+}
+
+
+
+
+LocationMessage::LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
+ : ObjectToObjectMessage(MESSAGE_TYPE_LOCATION, src_object, dest_object),
+   mLocation(loc)
+{
+}
+
+LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset)
+ : ObjectToObjectMessage(MESSAGE_TYPE_LOCATION, wire, offset)
+{
+    memcpy( &mLocation, &wire[offset], sizeof(MotionVector3f) );
+    offset += sizeof(MotionVector3f);
 }
 
 const MotionVector3f& LocationMessage::location() const {
@@ -238,15 +262,10 @@ const MotionVector3f& LocationMessage::location() const {
 
 uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
+    offset = serializeSourceDest(wire, offset);
 
-    uint32 loc_part_size = 2 * UUID::static_size + sizeof(MotionVector3f);
+    uint32 loc_part_size = sizeof(MotionVector3f);
     wire.resize( wire.size() + loc_part_size );
-
-    memcpy( &wire[offset], mSourceObject.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
-
-    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
 
     memcpy( &wire[offset], &mLocation, sizeof(MotionVector3f) );
     offset += sizeof(MotionVector3f);
@@ -263,7 +282,7 @@ MigrateMessage::MigrateMessage(const UUID& obj)
 {
 }
 
-MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32 offset)
+MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset)
  : Message(MESSAGE_TYPE_MIGRATE)
 {
     uint8 raw_object[UUID::static_size];

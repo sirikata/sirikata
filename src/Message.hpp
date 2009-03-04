@@ -105,7 +105,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    ProximityMessage(const Network::Chunk& wire, uint32 offset);
+    ProximityMessage(const Network::Chunk& wire, uint32& offset);
 
     UUID mDestObject;
     UUID mNeighbor;
@@ -113,22 +113,35 @@ private:
 }; // class ProximityMessage
 
 
-
-class LocationMessage : public Message {
+// Base class for object to object messages.  Mostly saves a bit of serialization code
+class ObjectToObjectMessage : public Message {
 public:
-    LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+    ObjectToObjectMessage(MessageType t, const UUID& src_object, const UUID& dest_object);
 
     const UUID& sourceObject() const;
     const UUID& destObject() const;
+
+protected:
+    uint32 serializeSourceDest(Network::Chunk& wire, uint32 offset);
+    ObjectToObjectMessage(MessageType t, const Network::Chunk& wire, uint32& offset);
+
+private:
+    UUID mSourceObject;
+    UUID mDestObject;
+}; // class ObjectToObjectMessage
+
+
+class LocationMessage : public ObjectToObjectMessage {
+public:
+    LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+
     const MotionVector3f& location() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    LocationMessage(const Network::Chunk& wire, uint32 offset);
+    LocationMessage(const Network::Chunk& wire, uint32& offset);
 
-    UUID mSourceObject;
-    UUID mDestObject;
     MotionVector3f mLocation;
 }; // class LocationMessage
 
@@ -143,7 +156,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    MigrateMessage(const Network::Chunk& wire, uint32 offset);
+    MigrateMessage(const Network::Chunk& wire, uint32& offset);
 
     UUID mObject;
 }; // class MigrateMessage
