@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "Time.hpp"
 #include "MotionPath.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
@@ -54,6 +55,11 @@ public:
     }
 
     void tick(const Time& t);
+
+    void locationMessage(LocationMessage* loc_msg);
+    void proximityMessage(ProximityMessage* prox_msg);
+    void subscriptionMessage(SubscriptionMessage* subs_msg);
+
 private:
     void addSubscriber(const UUID& sub);
     void removeSubscriber(const UUID& sub);

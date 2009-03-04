@@ -75,6 +75,15 @@ private:
     void route(Message* msg, const ServerID& dest_server);
     void route(Message* msg, const UUID& dest_obj);
 
+    // Delivery interface.  This should be used to deliver received messages to the correct location -
+    // the server or object it is addressed to.
+    void deliver(Message* msg);
+    // Get the object pointer for the given ID, or NULL if it isn't available on this server.
+    Object* object(const UUID& dest) const;
+    // Forward the given message to its proper server.  Use this when a message arrives and the object
+    // no longer lives on this server.
+    void forward(Message* msg, const UUID& dest);
+
     typedef std::map<UUID, Object*> ObjectMap;
 
     ServerID mID;

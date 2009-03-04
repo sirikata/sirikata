@@ -151,6 +151,7 @@ private:
 
 
 class SubscriptionMessage : public ObjectToObjectMessage {
+public:
     enum Action {
         Subscribe = 1,
         Unsubscribe = 2

@@ -77,4 +77,31 @@ void Object::checkPositionUpdate(const Time& t) {
     }
 }
 
+void Object::locationMessage(LocationMessage* loc_msg) {
+    // FIXME do something with the data
+
+    delete loc_msg;
+}
+
+void Object::proximityMessage(ProximityMessage* prox_msg) {
+    SubscriptionMessage* subs_msg = NULL;
+    if (prox_msg->event() == ProximityMessage::Entered)
+        subs_msg = new SubscriptionMessage(uuid(), prox_msg->neighbor(), SubscriptionMessage::Subscribe);
+    else
+        subs_msg = new SubscriptionMessage(uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
+
+    mServer->route(subs_msg, this);
+
+    delete prox_msg;
+}
+
+void Object::subscriptionMessage(SubscriptionMessage* subs_msg) {
+    if (subs_msg->action() == SubscriptionMessage::Subscribe)
+        addSubscriber(subs_msg->sourceObject());
+    else
+        removeSubscriber(subs_msg->sourceObject());
+
+    delete subs_msg;
+}
+
 } // namespace CBR

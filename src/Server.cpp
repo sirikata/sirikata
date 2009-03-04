@@ -109,6 +109,65 @@ void Server::route(Message* msg, const UUID& dest_obj) {
     route(msg, mServerMap->lookup(dest_obj));
 }
 
+void Server::deliver(Message* msg) {
+    switch(msg->type()) {
+      case MESSAGE_TYPE_PROXIMITY:
+          {
+              ProximityMessage* prox_msg = static_cast<ProximityMessage*>(msg);
+              Object* dest_obj = object(prox_msg->destObject());
+              if (dest_obj == NULL)
+                  forward(prox_msg, prox_msg->destObject());
+              else
+                  dest_obj->proximityMessage(prox_msg);
+          }
+          break;
+      case MESSAGE_TYPE_LOCATION:
+          {
+              LocationMessage* loc_msg = static_cast<LocationMessage*>(msg);
+              Object* dest_obj = object(loc_msg->destObject());
+              if (dest_obj == NULL)
+                  forward(loc_msg, loc_msg->destObject());
+              else
+                  dest_obj->locationMessage(loc_msg);
+          }
+          break;
+      case MESSAGE_TYPE_SUBSCRIPTION:
+          {
+              SubscriptionMessage* subs_msg = static_cast<SubscriptionMessage*>(msg);
+              Object* dest_obj = object(subs_msg->destObject());
+              if (dest_obj == NULL)
+                  forward(subs_msg, subs_msg->destObject());
+              else
+                  dest_obj->subscriptionMessage(subs_msg);
+          }
+        break;
+      case MESSAGE_TYPE_MIGRATE:
+          {
+              MigrateMessage* migrate_msg = static_cast<MigrateMessage*>(msg);
+              // FIXME
+              delete migrate_msg;
+          }
+          break;
+      default:
+#if NDEBUG
+        assert(false);
+#endif
+        break;
+    }
+
+}
+
+Object* Server::object(const UUID& dest) const {
+    ObjectMap::const_iterator it = mObjects.find(dest);
+    if (it == mObjects.end())
+        return NULL;
+    return it->second;
+}
+
+void Server::forward(Message* msg, const UUID& dest) {
+    route(msg, dest);
+}
+
 void Server::tick(const Time& t) {
     // Update object locations
     mLocationService->tick(t);
