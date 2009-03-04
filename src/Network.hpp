@@ -1,3 +1,6 @@
+#ifndef _CBR_NETWORK_HPP_
+#define _CBR_NETWORK_HPP_
+
 #include "sirikata/util/Platform.hpp"
 #include "sirikata/network/Stream.hpp"
 namespace CBR {
@@ -26,3 +29,5 @@ public:
     virtual Sirikata::Network::Chunk*receiveOne()=0;
 };
 }
+
+#endif //_CBR_NETWORK_HPP_

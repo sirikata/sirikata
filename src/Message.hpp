@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _CBR_MESSAGE_HPP_
+#define _CBR_MESSAGE_HPP_
+
 #include "Utility.hpp"
 #include "Network.hpp"
 #include "Server.hpp"
@@ -180,3 +183,5 @@ private:
 }; // class MigrateMessage
 
 } // namespace CBR
+
+#endif //_CBR_MESSAGE_HPP_
