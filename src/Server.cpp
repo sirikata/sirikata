@@ -35,6 +35,7 @@
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "ServerMap.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
@@ -67,6 +68,34 @@ const ServerID& Server::id() const {
     return mID;
 }
 
+void Server::route(Message* msg, Object* src) {
+    assert(msg != NULL);
+    assert(src != NULL);
+
+    UUID src_uuid = src->uuid();
+    Network::Chunk msg_serialized = msg->serialize();
+
+    // FIXME
+    //printf("from-obj-route\n");
+
+    delete msg;
+}
+
+ServerID Server::getServer(const UUID& dest) {
+    return mServerMap->lookup(dest);
+}
+
+void Server::route(Message* msg) {
+    assert(msg != NULL);
+
+    Network::Chunk msg_serialized = msg->serialize();
+
+    // FIXME
+    //printf("from-serv-route\n");
+
+    delete msg;
+}
+
 void Server::tick(const Time& t) {
     // Update object locations
     mLocationService->tick(t);
@@ -82,7 +111,20 @@ void Server::proximityTick(const Time& t) {
     // Check for proximity updates
     std::queue<ProximityEvent> proximity_events;
     mProximity->evaluate(t, proximity_events);
-    // FIXME convert proximity events to messages, send
+
+    while(!proximity_events.empty()) {
+        ProximityEvent& evt = proximity_events.front();
+        ProximityMessage* msg =
+            new ProximityMessage(
+                this->id(),
+                mServerMap->lookup(evt.query()),
+                evt.query(),
+                evt.object(),
+                (evt.type() == ProximityEvent::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
+            );
+        route(msg);
+        proximity_events.pop();
+    }
 }
 
 void Server::checkObjectMigrations() {

@@ -45,6 +45,7 @@ class Proximity;
 class Object;
 class ObjectFactory;
 class ServerMap;
+class Message;
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -57,10 +58,23 @@ public:
 
     const ServerID& id() const;
 
+    // Routing interface for objects.  Destination server will come from the message.
+    // Source object is provided to assist queuing decisions.
+    // Servers should use the private route method which follows different rules.
+    void route(Message* msg, Object* src);
+    // Helper method to get the destination server for an object. The object shouldn't actually
+    // have to know this, we should probably just change the <src_server, dest_server> info to be
+    // a wrapper around the actual messages.
+    ServerID getServer(const UUID& dest);
+
     void tick(const Time& t);
 private:
     void proximityTick(const Time& t);
     void checkObjectMigrations();
+
+    // Routing interface for servers.  This is used to route messages that originate from
+    // a server provided service, and thus don't have a source object.
+    void route(Message* msg);
 
     typedef std::map<UUID, Object*> ObjectMap;
 

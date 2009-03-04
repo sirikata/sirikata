@@ -32,6 +32,7 @@
 
 #include "Object.hpp"
 #include "Server.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
@@ -65,8 +66,15 @@ void Object::checkPositionUpdate(const Time& t) {
     if (update != NULL && update->updateTime() <= t) {
         mLocation = *update;
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
-            // FIXME
-            // send( new PositionUpdate( mID, *it, mLocation ) );
+            LocationMessage* loc_msg =
+                new LocationMessage(
+                    mServer->id(),
+                    mServer->getServer(*it),
+                    mID,
+                    *it,
+                    mLocation
+                );
+            mServer->route(loc_msg, this);
         }
     }
 }
