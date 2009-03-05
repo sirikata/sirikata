@@ -89,7 +89,7 @@ void Server::route(ObjectToObjectMessage* msg) {
     if (destServerID==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
-        bool failed=!mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);   
+        bool failed=!mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);
         assert(!failed);
     }
     delete msg;
@@ -206,6 +206,12 @@ void Server::tick(const Time& t) {
     networkTick(t);
     // Check for object migrations
     checkObjectMigrations();
+
+    // Give objects a chance to process
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+        Object* obj = it->second;
+        obj->tick(t);
+    }
 }
 
 void Server::proximityTick(const Time& t) {
