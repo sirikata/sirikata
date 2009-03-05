@@ -43,7 +43,10 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
     Vector3f region_extents = region.extents();
 
     for(uint32 i = 0; i < count; i++) {
-        UUID id = UUID::random(); // FIXME
+        uint8 raw_uuid[UUID::static_size];
+        for(uint32 ui = 0; ui < UUID::static_size; ui++)
+            raw_uuid[ui] = (uint8)rand() % 256;
+        UUID id(raw_uuid, UUID::static_size);
 
         ObjectInputs* inputs = new ObjectInputs;
 

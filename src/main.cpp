@@ -54,9 +54,11 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
         .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
-        .addOption(new OptionValue("layout", "<1,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
+        .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
         .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
         .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
+
+        .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
         ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
@@ -78,6 +80,8 @@ int main(int argc, char** argv) {
     BoundingBox3f region = options->referenceOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = options->referenceOption("layout")->as<Vector3ui32>();
     Duration duration = options->referenceOption("duration")->as<Duration>();
+
+    srand( options->referenceOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
     LocationService* loc_service = new OracleLocationService(obj_factory);
