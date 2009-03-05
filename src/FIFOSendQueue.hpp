@@ -9,7 +9,7 @@ public:
     FIFOSendQueue(Network*net):mNetwork(net){}
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
-    virtual void service();
+    virtual void service(const Time& t);
 };
 }
 #endif

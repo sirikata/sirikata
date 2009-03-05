@@ -186,7 +186,7 @@ void Server::processChunk(const Network::Chunk&chunk) {
     }while (offset<chunk.size());
 }
 void Server::networkTick(const Time&t) {
-    mSendQueue->service();
+    mSendQueue->service(t);
     while (!mSelfMessages.empty()) {
         processChunk(mSelfMessages.front());
         mSelfMessages.pop_front();

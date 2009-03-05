@@ -6,7 +6,7 @@ public:
     virtual ~SendQueue(){}
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg)=0;
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj)=0;
-    virtual void service()=0;
+    virtual void service(const Time& t)=0;
 };
 }
 #endif
