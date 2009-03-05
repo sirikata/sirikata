@@ -36,34 +36,34 @@
 
 namespace Sirikata {
 
-class Location: protected Vector3<double> {
-    Vector3<float> mVelocity;
+class Location: protected Vector3<float64> {
+    Vector3<float32> mVelocity;
     Quaternion mOrientation;
-    Vector3<float> mAxisOfRotation;
-    float mAngularSpeed;
+    Vector3<float32> mAxisOfRotation;
+    float32 mAngularSpeed;
 public:
     Location(){}
-    Location(const Vector3<double>&position, 
+    Location(const Vector3<float64>&position, 
              const Quaternion&orientation, 
-             const Vector3<float> &velocity, 
-             const Vector3<float> angularVelocityAxis, 
-             float angularVelocityRadians):mVelocity(velocity),mOrientation(orientation),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {
+             const Vector3<float32> &velocity, 
+             const Vector3<float32> angularVelocityAxis, 
+             float32 angularVelocityRadians):mVelocity(velocity),mOrientation(orientation),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {
         x=position.x;
         y=position.y;
         z=position.z;
     }
-    const Vector3<double>&getPosition()const {
+    const Vector3<float64>&getPosition()const {
         return *this;
     }
-    void setPosition(const Vector3<double>& position) {
+    void setPosition(const Vector3<float64>& position) {
         x=position.x;
         y=position.y;
         z=position.z;
     }
-    const Vector3<float>&getVelocity()const {
+    const Vector3<float32>&getVelocity()const {
         return mVelocity;
     }
-    void setVelocity(const Vector3<float> velocity) {
+    void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
     } 
     const Quaternion&getOrientation() const{
@@ -72,27 +72,29 @@ public:
     void setOrientation(const Quaternion&orientation) {
         mOrientation=orientation;
     }
-    const Vector3<float>&getAxisOfRotation() const {
+    const Vector3<float32>&getAxisOfRotation() const {
         return mAxisOfRotation;
     }
-    void setAxisOfRotation(const Vector3<float>&axis) {
+    void setAxisOfRotation(const Vector3<float32>&axis) {
         mAxisOfRotation=axis;
     }
-    float getAngularSpeed() const{
+    float32 getAngularSpeed() const{
         return mAngularSpeed;
     }
-    void setAngularSpeed(float radianspersecond) {
+    void setAngularSpeed(float32 radianspersecond) {
         mAngularSpeed=radianspersecond;
     }
-    void addAngularRotation(const Vector3<float> &axis, float radianspersecond) {
+    void addAngularRotation(const Vector3<float32> &axis, float32 radianspersecond) {
         mAxisOfRotation=mAxisOfRotation*mAngularSpeed+axis*radianspersecond;
         mAngularSpeed=mAxisOfRotation.length();
         mAxisOfRotation/=mAngularSpeed;
     }
     template<class TimeDuration> Location predict(const TimeDuration&dt)const {
-        return Locaton(getPosition()+getVelocity()*(double)dt,
-                       getOrientation()*Quaternion(getAxisOfRotation(),
-                                                   getAngularSpeed()*(double)dt),
+        return Locaton(getPosition()+getVelocity()*(float64)dt,
+                       getAngularSpeed() 
+                        ? getOrientation()*Quaternion(getAxisOfRotation(),
+                                                     getAngularSpeed()*(float64)dt)
+                        : getOrientation(),
                        getVelocity(),
                        getAxisOfRotation(),
                        getAngularSpeed());
