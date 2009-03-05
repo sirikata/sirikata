@@ -5,7 +5,7 @@
        #include <arpa/inet.h>
 
 namespace CBR {
-RaknetNetwork::RaknetNetwork ():mListener(RakNetworkFactory::GetRakPeerInterface()){
+RaknetNetwork::RaknetNetwork (ServerIDMap*idmap):Network(idmap),mListener(RakNetworkFactory::GetRakPeerInterface()){
 }
 
 void RaknetNetwork::listen(const std::string&addy) {

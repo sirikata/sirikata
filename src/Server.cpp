@@ -29,22 +29,25 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include "Network.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "ServerMap.hpp"
 #include "Message.hpp"
-
+#include "ServerIDMap.hpp"
+#include "SendQueue.hpp"
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
    mServerMap(server_map),
-   mProximity(prox)
+   mProximity(prox),
+   mNetwork(net),
+   mSendQueue(sq)
 {
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
@@ -73,19 +76,22 @@ void Server::route(ObjectToObjectMessage* msg) {
 
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
+    ServerID destServerID=mServerMap->lookup(dest_uuid);
     ServerMessageHeader server_header(
         this->id(),
-        mServerMap->lookup(dest_uuid)
+        destServerID
     );
 
     uint32 offset = 0;
     Network::Chunk msg_serialized;
-    server_header.serialize(msg_serialized, offset);
+    offset=server_header.serialize(msg_serialized, offset);
     offset = msg->serialize(msg_serialized, offset);
-
-    // FIXME
-    //printf("from-obj-route\n");
-
+    if (destServerID==id()) {
+        mSelfMessages.push_back(msg_serialized);
+    }else {
+        bool failed=mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);   
+        assert(!failed);
+    }
     delete msg;
 }
 
@@ -96,12 +102,14 @@ void Server::route(Message* msg, const ServerID& dest_server) {
 
     uint32 offset = 0;
     Network::Chunk msg_serialized;
-    server_header.serialize(msg_serialized, offset);
+    offset=server_header.serialize(msg_serialized, offset);
     offset = msg->serialize(msg_serialized, offset);
-
-    // FIXME
-    //printf("from-serv-route\n");
-
+    if (dest_server==id()) {
+        mSelfMessages.push_back(msg_serialized);
+    }else {
+        bool failed=mSendQueue->addMessage(dest_server,msg_serialized);
+        assert(!failed);
+    }
     delete msg;
 }
 
@@ -168,13 +176,34 @@ void Server::forward(Message* msg, const UUID& dest) {
     route(msg, dest);
 }
 
+void Server::processChunk(const Network::Chunk&chunk) {
+    Message* result;
+    unsigned int offset=0;
+    do {
+        ServerMessageHeader hdr=ServerMessageHeader::deserialize(chunk,offset);
+        offset=Message::deserialize(chunk,offset,&result);
+        deliver(result);
+    }while (offset<chunk.size());
+}
+void Server::networkTick(const Time&t) {
+    mSendQueue->service();
+    while (!mSelfMessages.empty()) {
+        processChunk(mSelfMessages.front());
+        mSelfMessages.pop_front();
+    }
+    Sirikata::Network::Chunk *c=NULL;
+    while((c=mNetwork->receiveOne())) {
+        processChunk(*c);
+        delete c;
+    }
+}
 void Server::tick(const Time& t) {
     // Update object locations
     mLocationService->tick(t);
 
     // Check proximity updates
     proximityTick(t);
-
+    networkTick(t);
     // Check for object migrations
     checkObjectMigrations();
 }

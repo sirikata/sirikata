@@ -1,7 +1,14 @@
 #include "Network.hpp"
+#include "ServerIDMap.hpp"
 #include <netdb.h>
 namespace CBR{
-
+bool Network::send(const ServerID&sid,const Sirikata::Network::Chunk&c, bool reliable, bool ordered, int priority){
+    Address4* addy=mServerIDMap->lookup(sid);
+    if (addy) {
+        return this->sendTo(*addy,c,reliable,ordered,priority);
+    }
+    return false;
+}
 
 
 

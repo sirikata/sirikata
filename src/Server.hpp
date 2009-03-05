@@ -40,14 +40,15 @@
 
 namespace CBR {
 
-typedef uint32 ServerID;
 class Proximity;
 class Object;
 class ObjectFactory;
+class ServerIDMap;
 class ServerMap;
 class Message;
 class ObjectToObjectMessage;
-
+class SendQueue;
+class Network;
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
  *  object -> server mapping.  This is a singleton for each simulated
@@ -55,7 +56,7 @@ class ObjectToObjectMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq);
 
     const ServerID& id() const;
 
@@ -65,13 +66,16 @@ public:
 
     void tick(const Time& t);
 private:
+    std::deque<Network::Chunk>mSelfMessages;
     void proximityTick(const Time& t);
+    void networkTick(const Time& t);
     void checkObjectMigrations();
-
+    void processChunk(const Sirikata::Network::Chunk&chunk);
     // Routing interface for servers.  This is used to route messages that originate from
     // a server provided service, and thus don't have a source object.  Messages may be destined
     // for either servers or objects.  The second form will simply automatically do the destination
     // server lookup.
+    // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
     void route(Message* msg, const ServerID& dest_server);
     void route(Message* msg, const UUID& dest_obj);
 
@@ -83,15 +87,15 @@ private:
     // Forward the given message to its proper server.  Use this when a message arrives and the object
     // no longer lives on this server.
     void forward(Message* msg, const UUID& dest);
-
     typedef std::map<UUID, Object*> ObjectMap;
-
     ServerID mID;
     ObjectMap mObjects;
     ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
     ServerMap* mServerMap;
     Proximity* mProximity;
+    Network * mNetwork;
+    SendQueue* mSendQueue;
 }; // class Server
 
 } // namespace CBR

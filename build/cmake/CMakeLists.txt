@@ -152,6 +152,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Duration.cpp
+  ${CBR_SOURCE_DIR}/FIFOSendQueue.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
@@ -161,6 +162,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
+  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Time.cpp
   ${CBR_SOURCE_DIR}/UniformServerMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp

@@ -8,7 +8,7 @@
 
 namespace CBR {
 
-class RaknetNetwork {
+class RaknetNetwork :public Network{
     class AddressHasher {
     public:
         size_t operator()(const Address4& address)const{
@@ -32,10 +32,11 @@ class RaknetNetwork {
     typedef std::tr1::unordered_map<Address4,SentQueue, AddressHasher, AddressEquals > ConnectingMap;
     ConnectingMap mConnectingSockets;
     bool sendRemainingItems(SystemAddress address);
+
 public:
-    RaknetNetwork();
-    virtual void listen (const std::string&service);
     virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
+    RaknetNetwork(ServerIDMap*sidm);
+    virtual void listen (const std::string&service);
     virtual Sirikata::Network::Chunk*receiveOne();
    
 };

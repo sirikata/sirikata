@@ -1,10 +1,12 @@
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
+#include "TabularServerIDMap.hpp"
 #include <arpa/inet.h>
 namespace CBR {
 
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
-    RaknetNetwork rn;
+    std::stringstream strst;
+    RaknetNetwork rn(new TabularServerIDMap(strst));
     rn.listen(listenport);
     bool canSend=!server;
     unsigned int mine=0;

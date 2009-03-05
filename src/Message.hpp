@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "Network.hpp"
+
 #include "Server.hpp"
 
 namespace CBR {
@@ -59,7 +60,7 @@ public:
     // Serialize this header into the network chunk, starting at the given offset.
     // Returns the ending offset of the header.
     uint32 serialize(Network::Chunk& wire, uint32 offset);
-    static ServerMessageHeader deserialize(const Network::Chunk& wire, uint32 offset);
+    static ServerMessageHeader deserialize(const Network::Chunk& wire, uint32 &offset);
 private:
     ServerMessageHeader();
 

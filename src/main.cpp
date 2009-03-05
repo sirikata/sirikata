@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include "Network.hpp"
 #include "ObjectFactory.hpp"
 #include "LocationService.hpp"
 #include "ServerMap.hpp"
@@ -39,7 +39,9 @@
 #include "OracleLocationService.hpp"
 #include "UniformServerMap.hpp"
 #include "Test.hpp"
-
+#include "RaknetNetwork.hpp"
+#include "FIFOSendQueue.hpp"
+#include "TabularServerIDMap.hpp"
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -53,6 +55,7 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
         .addOption(new OptionValue("layout", "<1,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
         .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
+        .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
         ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
@@ -82,8 +85,13 @@ int main(int argc, char** argv) {
         region,
         layout
     );
+    String filehandle = options->referenceOption("serverips")->as<String>();
+    std::ifstream ipConfigFileHandle(filehandle.c_str());
+    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    Network * raknetNetwork=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
-    Server* server = new Server(1, obj_factory, loc_service, server_map, prox);
+    SendQueue* sq=new FIFOSendQueue(raknetNetwork);
+    Server* server = new Server(1, obj_factory, loc_service, server_map, prox,raknetNetwork,sq);
 
     // FIXME this is just for testing.  we should be using a real timer
     Time tbegin = Time(0);

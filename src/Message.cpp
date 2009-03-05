@@ -62,7 +62,7 @@ uint32 ServerMessageHeader::serialize(Network::Chunk& wire, uint32 offset) {
     return offset;
 }
 
-ServerMessageHeader ServerMessageHeader::deserialize(const Network::Chunk& wire, uint32 offset) {
+ServerMessageHeader ServerMessageHeader::deserialize(const Network::Chunk& wire, uint32 &offset) {
     ServerID raw_source;
     ServerID raw_dest;
 
@@ -113,9 +113,7 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
         msg = new MigrateMessage(wire, offset);
         break;
       default:
-#if NDEBUG
         assert(false);
-#endif
         break;
     }
 
