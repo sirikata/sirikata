@@ -5,7 +5,7 @@ namespace CBR {
 
 
 TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {
-    int count=0;
+    int count=1;
     while(!filestream.bad()&&!filestream.fail()&&!filestream.eof()) {
         char ip[1025];
         ip[1024]='\0';
