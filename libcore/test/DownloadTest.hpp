@@ -85,14 +85,14 @@ public:
                 std::stringstream rangeListStream;
                 Range::printRangeList(rangeListStream, ev->data());
                 SILOG(transfer,debug,"Transfer " << "finished" <<
-                      " (" << ev->mStatus << "): " << ev->uri() << rangeListStream);
+                      " (" << ev->getStatus() << "): " << ev->uri() << rangeListStream);
             }
 		} else {
             if (SILOGP(transfer,error)) {
                 std::stringstream rangeListStream;
                 Range::printRangeList(rangeListStream, ev->data());
                 SILOG(transfer,error,"Transfer " << "failed" <<
-                      " (" << ev->mStatus << "): " << ev->uri() << rangeListStream);
+                      " (" << ev->getStatus() << "): " << ev->uri() << rangeListStream);
             }
 		}
 		return Task::EventResponse::nop();
@@ -128,14 +128,14 @@ public:
 		mDownloadReg->setHandler("http", httpHandler);
 		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 
-		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem);
+		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem,NULL,NULL);
 
 		// Uses the same event system, so don't combine the cached and non-cached ones into a single test.
 		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 		mMemoryCachePolicy = new Transfer::LRUPolicy(1000000);
 		mMemoryCache = new Transfer::MemoryCacheLayer(mMemoryCachePolicy, mCachedNetworkCache);
 		mCachedNameLookup = new Transfer::CachedNameLookupManager(mNameLookupReg);
-		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem);
+		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem,NULL,NULL);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
 
@@ -184,7 +184,7 @@ public:
 	Task::EventResponse downloadFinished(Task::EventPtr evbase) {
 		Transfer::DownloadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent> (evbase);
 
-		TS_ASSERT_EQUALS(ev->mStatus, Transfer::TransferManager::SUCCESS);
+		TS_ASSERT_EQUALS(ev->getStatus(), Transfer::TransferManager::SUCCESS);
 
 		notifyOne();
 

@@ -53,7 +53,28 @@ namespace Transfer {
  *
  * We still need an interface to invalidate a service--perhaps another class.
  */
-typedef std::map<std::string, std::string> ServiceParams;
+class ServiceParams : public std::map<std::string,  std::string> {
+	std::string mEmpty;
+
+	std::string &operator[](const std::string &name);
+public:
+	inline void set(const std::string &name, const std::string &value) {
+		iterator iter (insert(value_type(name, std::string())).first);
+		(*iter).second = value;
+	}
+
+	inline const std::string &get(const std::string &name) const {
+		const_iterator iter (find(name));
+		if (iter != end()) {
+			return (*iter).second;
+		} else {
+			return mEmpty;
+		}
+	}
+	inline const std::string &operator[](const std::string &name) const {
+		return get(name);
+	}
+};
 typedef std::vector<std::pair<URIContext, ServiceParams> > ListOfServices;
 
 /// A shared reference to the URIContext, so we don't have to copy it.

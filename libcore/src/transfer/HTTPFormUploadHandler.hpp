@@ -34,13 +34,20 @@
 #ifndef SIRIKATA_HTTPFormUploadHandler_HPP__
 #define SIRIKATA_HTTPFormUploadHandler_HPP__
 
+#include "HTTPRequest.hpp"
+#include "UploadHandler.hpp"
+#include "Range.hpp"
+#include "URI.hpp"
+#include "TransferData.hpp"
+
 namespace Sirikata {
 namespace Transfer {
 
+/// Uses HTTP POST to upload names or files.
 class HTTPFormUploadHandler :
 			public UploadHandler,
 			public NameUploadHandler,
-			public std::tr1::enable_shared_from_this<HTTPUploadHandler>
+			public std::tr1::enable_shared_from_this<HTTPFormUploadHandler>
 {
 	typedef std::tr1::function<void (bool)> Callback;
 
@@ -70,14 +77,26 @@ class HTTPFormUploadHandler :
 	}
 
 	template <class Base>
-	void createRequest (HTTPRequestPtr &req, typename Base::TransferDataPtr *ptrRef, const URI &uri, const Callback&cb) {
-		req = HTTPRequestPtr(new HTTPRequest(uri, bytes));
+	void createRequest (HTTPRequestPtr &req,
+			typename Base::TransferDataPtr *ptrRef,
+			const ServiceParams &params,
+			const URI &uri,
+			const Callback&cb) {
+		// Note: Here, the filename of the URI is the file to upload,
+		// but the context is the location of the http form.
+		req = HTTPRequestPtr(new HTTPRequest(URI(uri.context().toString(false)), Range(true)));
 		req->setCallback(
-			std::tr1::bind(&HTTPDownloadHandler::httpCallback, cb, _1, _2, _3));
+			std::tr1::bind(&HTTPFormUploadHandler::finishedCallback, cb, _1, _2, _3));
 		if (ptrRef) {
 			// Must set this before calling req->go()
-			*ptrRef = Base::TransferDataPtr(
+			*ptrRef = typename Base::TransferDataPtr(
 				new HTTPTransferData<Base>(shared_from_this(), req));
+		}
+
+		for (ServiceParams::const_iterator iter = params.lower_bound("value:");
+				iter != params.end() && (*iter).first.compare(0,6,"value:")==0;
+				++iter) {
+			req->addPOSTField((*iter).first.substr(6), (*iter).second);
 		}
 	}
 
@@ -94,9 +113,13 @@ public:
 		//    ?value:uploadNeed=1&field:hash=MhashFile0&field:file=uploadFile0&
 		//     field:user=author&field:password=password&auth:type=plaintext
 		HTTPRequestPtr req;
-		createRequest<UploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		createRequest<UploadHandler> (req, ptrRef, params,
+				uri, cb);
 		req->setPOSTData(params["field:file"], uri.filename(), uploadData);
 		//req->addPOSTField(params["field:hash"])
+		if (!params["field:insert"].empty()) {
+			req->addPOSTField(params["field:insert"],"on"); // checkbox
+		}
 		req->go(req);
 	}
 
@@ -105,8 +128,12 @@ public:
 			const URI &uri,
 			const UploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<UploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		createRequest<UploadHandler> (req, ptrRef, params,
+				uri, cb);
 		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		if (!params["field:remove"].empty()) {
+			req->addPOSTField(params["field:remove"],"on"); // checkbox
+		}
 		req->go(req);
 	}
 
@@ -121,9 +148,13 @@ public:
 			const RemoteFileId &uploadId,
 			const NameUploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<NameUploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		createRequest<NameUploadHandler> (req, ptrRef, params,
+				uri, cb);
 		req->setPOSTData(params["field:file"], uri.filename(),
 				DenseDataPtr(new DenseData(uploadId.uri().toString())));
+		if (!params["field:insert"].empty()) {
+			req->addPOSTField(params["field:insert"],"on"); // checkbox
+		}
 		req->go(req);
 	}
 
@@ -132,8 +163,12 @@ public:
 			const URI &uri,
 			const NameUploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
-		createRequest<NameUploadHandler> (req, ptrRef, URI(uri.context()), cb);
+		createRequest<NameUploadHandler> (req, ptrRef, params,
+				uri, cb);
 		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		if (!params["field:remove"].empty()) {
+			req->addPOSTField(params["field:remove"],"on"); // checkbox
+		}
 		req->go(req);
 	}
 };

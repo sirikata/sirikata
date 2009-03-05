@@ -41,12 +41,12 @@ namespace Transfer {
 
 /** A protocol handler for downloading files. Examples of implementations may
  * include HTTP, BitTorrent, SVN, S3 ... Currently only Curl (HTTP,FTP) is implemented. */
-class UploadHandler : public ProtocolHandler<UploadHandler> {
+class UploadHandler {
 public:
 	/** Hold onto this if you want to be able to abort the transfer.
 	 * Otherwise, it is safe to discard this. Note that nothing will be
 	 * free'd as long as you hold a reference to the TransferData. */
-	typedef typename ProtocolData<UploadHandler>::Ptr TransferDataPtr;
+	typedef ProtocolData<UploadHandler>::Ptr TransferDataPtr;
 
 	/**
 	 * Virtual destructor. Note that the destructor should not be called until
@@ -80,6 +80,9 @@ public:
 			const SparseData &contents,
 			const Callback &cb) = 0;
 
+	/** Deletes a file.
+	 * @see upload
+	 */
 	virtual void remove(TransferDataPtr *ptrRef,
 			const ServiceParams &params,
 			const URI &uri,
@@ -89,9 +92,9 @@ public:
 /** A protocol handler for converting a filename to a hash, so that it can be
  * downloaded and cached. Currently, the only implementation is HTTP, but this
  * could include a custom DNS-like protocol that runs on top of UDP.*/
-class NameUploadHandler : public ProtocolHandler<NameUploadHandler> {
+class NameUploadHandler {
 public:
-	typedef typename ProtocolData<NameUploadHandler>::Ptr TransferDataPtr;
+	typedef ProtocolData<NameUploadHandler>::Ptr TransferDataPtr;
 
 	/** Passes a fingerprint as well as an unresolved URI you can use to download this.
 	 *
@@ -99,7 +102,7 @@ public:
 	 */
 	typedef std::tr1::function<void(bool success)> Callback;
 
-	virtual ~NameLookupHandler() {
+	virtual ~NameUploadHandler() {
 	}
 
 	/** Performs a name lookup using this method, and calls cb whether it succeeded or not. */

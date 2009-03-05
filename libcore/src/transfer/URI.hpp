@@ -52,6 +52,8 @@ typedef SHA256 Fingerprint;
  * Does not handle query strings (?param1&param2...) or anchors (#someanchor)
  * although, those would also be forms of relative URIs.*/
 class URIContext {
+	friend class URI;
+
 	std::string mProto;
 	std::string mHost;
 	std::string mUser;
@@ -127,6 +129,23 @@ public:
 			  mHost(parent.host()),
 			  mUser(parent.username()),
 			  mDirectory(parent.basepath()) {
+		parse(identifier);
+	}
+
+	/** The most useful constructor -- parses a URI string, and
+	 * tries to follow rules regarding relative paths and hostnames.
+	 *
+	 * This constructor is provided for convenience, and in many cases,
+	 * URIs are only allowed to be absolute.
+	 */
+	URIContext(const std::string &identifier) {
+		parse(identifier);
+	}
+private:
+	void parse(std::string identifier) {
+		if (!identifier.empty() && identifier[identifier.length()-1] != '/') {
+			identifier += '/';
+		}
 		std::string::size_type colonpos = identifier.find(':');
 		std::string::size_type firstslashpos = identifier.find('/');
 		std::string::size_type startpos = 0;
@@ -195,6 +214,8 @@ public:
 		cleanup(mHost);
 
 	}
+
+public:
 	/// Absolute URI constructor.
 	URIContext(const std::string &newProto,
 			const std::string &newHost,
@@ -256,9 +277,15 @@ public:
 	}
 
 	/// Constructs a URI... will exclude an empty username.
-	inline std::string toString() const {
-		return mProto + "://" + (mUser.empty() ? std::string() : (mUser + "@")) +
-			mHost + (mDirectory.empty() ? "/" : ("/" + mDirectory + "/"));
+	inline std::string toString(bool trailingSlash=true) const {
+		std::string ret (mProto + "://" + (mUser.empty() ? std::string() : (mUser + "@")) + mHost);
+		if (!mDirectory.empty()) {
+			ret += ("/" + mDirectory);
+		}
+		if (trailingSlash) {
+			return ret + '/';
+		}
+		return ret;
 	}
 
 	/// ordering comparison -- more accurate than ordering based on toString().
@@ -305,11 +332,19 @@ class URI {
 				// this is actually a hostname section... don't copy it into the filename.
 				// unless there were three slashes in a row.
 				mPath = std::string();
+				mContext.parse(url);
 			} else {
 				mPath = url.substr(slash+1);
+				mContext.parse(url.substr(0, slash+1));
 			}
-		} else{
-			mPath = url;
+		} else {
+			std::string::size_type colon = url.find(':');
+			if (colon != std::string::npos) {
+				mPath = url.substr(colon+1);
+				mContext.parse(url.substr(0, colon+1));
+			} else {
+				mPath = url;
+			}
 		}
 	}
 public:
@@ -324,7 +359,7 @@ public:
 	 * @param uri   A relative or absolute URI.
 	 */
 	URI(const URIContext &parentContext, const std::string &url)
-			: mContext(parentContext, url) {
+			: mContext(parentContext) {
 		findSlash(url);
 	}
 
@@ -333,8 +368,7 @@ public:
 	 *
 	 * @param uri   An absolute URI.
 	 */
-	URI(const char *url)
-			: mContext(URIContext(), url) {
+	URI(const char *url) {
 		findSlash(url);
 	}
 
@@ -343,8 +377,7 @@ public:
 	 *
 	 * @param uri   An absolute URI.
 	 */
-	URI(const std::string &url)
-			: mContext(URIContext(), url) {
+	URI(const std::string &url) {
 		findSlash(url);
 	}
 
@@ -443,6 +476,10 @@ public:
 
 	RemoteFileId(const Fingerprint &fingerprint, const URI &uri)
 			: mHash(fingerprint), mURI(uri) {
+	}
+
+	RemoteFileId(const Fingerprint &fingerprint, const URIContext &context)
+			: mHash(fingerprint), mURI(context, fingerprint.convertToHexString()) {
 	}
 
 	explicit RemoteFileId(const URI &fingerprinturi)

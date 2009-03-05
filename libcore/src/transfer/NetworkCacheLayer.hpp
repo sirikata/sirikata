@@ -36,7 +36,7 @@
 
 #include "CacheLayer.hpp"
 #include "ServiceLookup.hpp"
-#include "ProtocolRegistry.hpp"
+#include "DownloadHandler.hpp"
 
 #include <boost/thread.hpp>
 namespace Sirikata {

@@ -36,9 +36,14 @@
 #include <string>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
+
+#include "Array.hpp"
 
 namespace Sirikata {
+
 class SHA256 {
+	friend class SHA256Context;
 public:
     enum {static_size=32,hex_size=64};
 private:
@@ -148,6 +153,39 @@ public:
     }
 
 };
+
+/** Class to allow creating a shasum from sparse data and other types. */
+class SHA256Context {
+	/// Do not allow copying because no function exists to copy SHA256_CTX
+	SHA256Context(const SHA256Context &other);
+	SHA256Context & operator=(const SHA256Context &other);
+
+	/// Opaque reference to SHA256_CTX.
+	void *mCtx;
+
+	/** Stores the result after the context has been freed.
+	 * Allows return by reference.
+	 */
+	SHA256 mRetval;
+public:
+	/// Constructs a new context with no data.
+	SHA256Context();
+	/// Destroys context only if not already cast to SHA256.
+	~SHA256Context();
+
+	/// Insert data.
+	void update(const void *data, size_t length);
+	/// Insert std::string data; same as update(data(),length())
+	inline void update(const std::string &data) {
+		update(data.data(), data.length());
+	}
+	/// Insert zero data -- special case to make SparseData easier to handle.
+	void updateZeros(size_t length);
+
+	/// Returns a SHA256 sum from the updated data. Cannot update after this.
+	const SHA256& get();
+};
+
 }
 
 #endif //_SIRIKATA_SHA256_HPP_

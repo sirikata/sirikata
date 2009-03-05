@@ -33,6 +33,7 @@
 #ifndef SIRIKATA_TransferData_HPP__
 #define SIRIKATA_TransferData_HPP__
 
+#include "util/Sha256.hpp"
 #include "Range.hpp"
 
 namespace Sirikata {
@@ -254,6 +255,26 @@ public:
 		}
 		length = 0;
 		return NULL;
+	}
+
+	SHA256 computeFingerprint() const {
+		SHA256Context context;
+		const unsigned char *data;
+		Range::length_type length;
+		Range::base_type start = 0;
+
+		while (true) {
+			data = dataAt(start, length);
+			start += length;
+			if (data == NULL && length == 0) {
+				break;
+			} else if (data == NULL) {
+				context.updateZeros(length);
+			} else {
+				context.update(data, length);
+			}
+		}
+		return context.get();
 	}
 
 };

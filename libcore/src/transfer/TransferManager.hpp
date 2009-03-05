@@ -44,6 +44,8 @@ namespace Transfer {
 
 /// You can subscribe to this event to receive notifications of all completed downloads.
 static const char *DownloadEventId = "DownloadFinished";
+static const char *UploadEventId = "UploadFinished";
+static const char *UploadDataEventId = "UploadDataFinished";
 
 /** Manages requests going into the cache.
  *
@@ -58,15 +60,15 @@ public:
 	/** Very basic status messages--more detailed (permanent/network/temporary)
 	 * statuses should be added to allow for better error handling.
 	 */
-	enum Status {SUCCESS, FAIL_UNIMPLEMENTED, FAIL_NAMELOOKUP, FAIL_DOWNLOAD, FAIL_SHUTDOWN};
+	enum Status {SUCCESS, FAIL_UNIMPLEMENTED, FAIL_NAMELOOKUP, FAIL_DOWNLOAD, FAIL_NAMEUPLOAD, FAIL_UPLOAD, FAIL_AUTH, FAIL_SHUTDOWN};
 
 	/// An Event that will be fired to all subscribers of DownloadEventId.
-	struct DownloadEvent : public Task::Event {
-
+	class DownloadEvent : public Task::Event {
 		const RemoteFileId mFileId;
 		const SparseData mData;
 		const Status mStatus;
 
+	public:
 		/** Gets the event ID that this event will be subscribed to.
 		 *
 		 * @returns IdPair(DownloadEventId, fileid.fingerprint().convertToHexString())
@@ -81,11 +83,11 @@ public:
 		}
 
 		/// @returns fingerprint of the downloaded file.
-		const Fingerprint &fingerprint() const {
+		inline const Fingerprint &fingerprint() const {
 			return mFileId.fingerprint();
 		}
 		/// @returns the URI of the hashed file (mhash:///...), NOT the named file.
-		const URI &uri() const {
+		inline const URI &uri() const {
 			return mFileId.uri();
 		}
 
@@ -111,19 +113,46 @@ public:
 		 * @todo  Clean up exactly what data will be returned, and when it is safe to
 		 * ignore the event and remain subscribed to a given file without leaking.
 		 */
-		const SparseData &data() const {
+		inline const SparseData &data() const {
 			return mData;
 		}
 		/// Checks for a successful transfer. For more detail, call getStatus().
-		bool success() const {
+		inline bool success() const {
 			return mStatus == SUCCESS;
 		}
 		/// @returns SUCCESS, or any failure value in the enumeration.
-		Status getStatus() const {
+		inline Status getStatus() const {
 			return mStatus;
 		}
 	};
 	typedef std::tr1::shared_ptr<DownloadEvent> DownloadEventPtr;
+
+	class UploadEvent: public Task::Event {
+		Status mStatus;
+		URI mURI;
+	public:
+		static Task::IdPair getIdPair(const URI &uploadURI) {
+			return Task::IdPair(UploadEventId, uploadURI.toString());
+		}
+		UploadEvent(Status stat, const URI &uploadURI) :
+			Task::Event(getIdPair(uploadURI)),
+			mStatus(stat),
+			mURI(uploadURI) {
+		}
+		/// Checks for a successful transfer. For more detail, call getStatus().
+		inline bool success() const {
+			return mStatus == SUCCESS;
+		}
+		/// @returns SUCCESS, or any failure value in the enumeration.
+		inline Status getStatus() const {
+			return mStatus;
+		}
+		/// @returns the URI of the hashed file (mhash:///...), NOT the named file.
+		inline const URI &uri() const {
+			return mURI;
+		}
+	};
+	typedef std::tr1::shared_ptr<UploadEvent> UploadEventPtr;
 
 public:
 
@@ -156,7 +185,7 @@ public:
 	 * are not being downloaded at the same time.
 	 *
 	 * @param name      URI of the named file (e.g. meerkat:///somefile.texture)
-	 * @param listener  An EventListner to receive a DownloadEventPtr with the retrieved data.
+	 * @param listener  An EventListener to receive a DownloadEventPtr with the retrieved data.
 	 * @param range     What part of the file to retrieve, or Range(true) for the whole file.
 	 */
 	///
@@ -169,25 +198,84 @@ public:
 	 * are not being downloaded at the same time.
 	 *
 	 * @param name      RemoteFileId of the hash and download URI (e.g. mhash:///1234567890abcdef...)
-	 * @param listener  An EventListner to receive a DownloadEventPtr with the retrieved data.
+	 * @param listener  An EventListener to receive a DownloadEventPtr with the retrieved data.
 	 * @param range     What part of the file to retrieve, or Range(true) for the whole file.
 	 */
 	virtual void downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
 		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, RemoteFileId(), NULL)));
 	}
 
-	/** Not yet implemented -- may be moved outside of TransferManager.
-	 * Will be changed to call a callback when finished with the upload.
+	/// Like the other upload() function, but avoids recomputing the hash.
+	virtual void upload(const URI &name,
+			const RemoteFileId &hash,
+			const SparseData &toUpload,
+			const EventListener &listener) {
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+	}
+
+	/** Uploads a filename, and if necessary, uploads the data as well.
 	 *
-	 * @returns true if upload is implemented, false otherwise.
+	 * @param name         The named file to be uploaded (of the form "meerkat:///somefile.texture")
+	 * @param hashContext  The location to upload the data to (usually "mhash:")
+	 * @param toUpload     Data to be uploaded. Will only be uploaded if necessary.
+	 * @param listener     An EventListener to receive a UploadEventPtr with the retrieved data.
 	 */
-	virtual bool upload(const URI &name, const SparseData &toUpload) {
-		return false;
+	inline void upload(const URI &name,
+			const URIContext &hashContext,
+			const SparseData &toUpload,
+			const EventListener &listener) {
+		RemoteFileId rfid(toUpload.computeFingerprint(), hashContext);
+		upload(name, rfid, toUpload, listener);
+	}
+
+	/**
+	 * Like upload(), but does not check if the referenced data exists.
+	 *
+	 * Similar to calling:
+	 * NameUploadHandler::uploadName(NULL, service.lookup(name.proto()), name, hash, listener)
+	 *
+	 * @param name     The named file to be uploaded (of the form "meerkat:///somefile.texture")
+	 * @param hash     The precomputed hash of the referenced file.
+	 * @param listener An EventListener to receive a UploadEventPtr with the retrieved data.
+	 */
+	virtual void uploadName(const URI &name,
+			const RemoteFileId &hash,
+			const EventListener &listener) {
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+	}
+
+	/**
+	 * Like upload(), but does not allocate a name for this object.
+	 *
+	 * Similar to calling:
+	 * UploadHandler::upload(NULL, service.lookup(hash.url().proto()), hash.url(), toUpload, listener)
+	 *
+	 * @param hash      The hash of the file upload.
+	 * @param toUpload  SparseData to upload (can be cast from DenseData).
+	 * @param listener  A listener to receive the UploadEvent.
+	 */
+	virtual void uploadByHash(const RemoteFileId &hash,
+			const SparseData &toUpload,
+			const EventListener &listener) {
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri())));
+	}
+	/** Like the other uploadByHash() function, but computes the hash.
+	 *
+	 * @param hashContext  The URIContext to upload the hash to (e.g. "mhash:")
+	 */
+	inline void uploadByHash(const URIContext &hashContext,
+			const SparseData &toUpload,
+			const EventListener &listener) {
+		RemoteFileId rfid(toUpload.computeFingerprint(), hashContext);
+		uploadByHash(rfid, toUpload, listener);
 	}
 };
 
 typedef TransferManager::DownloadEvent DownloadEvent;
 typedef TransferManager::DownloadEventPtr DownloadEventPtr;
+
+typedef TransferManager::UploadEvent UploadEvent;
+typedef TransferManager::UploadEventPtr UploadEventPtr;
 
 }
 }

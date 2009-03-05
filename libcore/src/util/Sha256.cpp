@@ -85,20 +85,64 @@ SHA256 SHA256::convertFromHex(const std::string&data){
         throw std::invalid_argument("input string was the wrong length for a SHA256 Digest");
     return convertFromHex(data.data());
 }
+
+using namespace Sirikata::Util::Internal;
 SHA256 SHA256::computeDigest(const void*data, size_t length) {
     SHA256 retval;
-    Sirikata::Util::Internal::SHA256_CTX context;
-    Sirikata::Util::Internal::SHA256_Init(&context);
-    Sirikata::Util::Internal::SHA256_Update(&context, (const unsigned char*)data, length);
-    Sirikata::Util::Internal::SHA256_Final(retval.mData.data(), &context);
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, (const unsigned char*)data, length);
+    SHA256_Final(retval.mData.data(), &context);
     return retval;
 }
 SHA256 SHA256::computeDigest(const std::string&data) {
     SHA256 retval;
-    Sirikata::Util::Internal::SHA256_CTX context;
-    Sirikata::Util::Internal::SHA256_Init(&context);
-    Sirikata::Util::Internal::SHA256_Update(&context, (const unsigned char*)data.data(), data.length());
-    Sirikata::Util::Internal::SHA256_Final(retval.mData.data(), &context);
+    SHA256_CTX context;
+    SHA256_Init(&context);
+    SHA256_Update(&context, (const unsigned char*)data.data(), data.length());
+    SHA256_Final(retval.mData.data(), &context);
     return retval;
 }
+
+SHA256Context::SHA256Context() {
+    mCtx = new SHA256_CTX;
+    SHA256_Init((SHA256_CTX*)mCtx);
+}
+
+void SHA256Context::update(const void *data, size_t length) {
+    if (mCtx) {
+    	SHA256_Update((SHA256_CTX *)mCtx, (const unsigned char*)data, length);
+    } else {
+        throw std::logic_error("SHA256Context may not be updated any more.");
+    }
+}
+
+void SHA256Context::updateZeros(size_t length) {
+	static unsigned char zeros[512] = {0}; // Wasteful?
+	while (length >= sizeof(zeros)) {
+		update(zeros, sizeof(zeros));
+		length -= sizeof(zeros);
+	}
+	if (length) {
+		update(zeros, length);
+	}
+}
+
+const SHA256& SHA256Context::get() {
+    if (mCtx) {
+        SHA256_CTX * context = (SHA256_CTX *)mCtx;
+        SHA256_Final(mRetval.mData.data(), context);
+        delete context;
+        mCtx = NULL;
+    }
+    return mRetval;
+}
+
+SHA256Context::~SHA256Context() {
+	if (mCtx) {
+        SHA256_CTX * context = (SHA256_CTX *)mCtx;
+        delete context;
+	}
+}
+
 }
