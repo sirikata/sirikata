@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
         .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))
 
+        .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
         .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
         .addOption(new OptionValue("layout", "<1,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
@@ -91,7 +92,8 @@ int main(int argc, char** argv) {
     Network * raknetNetwork=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
     SendQueue* sq=new FIFOSendQueue(raknetNetwork);
-    Server* server = new Server(1, obj_factory, loc_service, server_map, prox,raknetNetwork,sq);
+    ServerID server_id = options->referenceOption("id")->as<ServerID>();
+    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox,raknetNetwork,sq);
 
     // FIXME this is just for testing.  we should be using a real timer
     Time tbegin = Time(0);

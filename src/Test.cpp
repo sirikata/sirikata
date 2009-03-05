@@ -5,9 +5,9 @@
 namespace CBR {
 
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
-    std::stringstream strst;
+    std::stringstream strst( std::string(hostname) + ":" + std::string(listenport) + std::string("\n") );
     RaknetNetwork rn(new TabularServerIDMap(strst));
-    rn.listen(listenport);
+    rn.listen(ServerID(1));
     bool canSend=!server;
     unsigned int mine=0;
     unsigned int theirs=0;
@@ -38,10 +38,10 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
 }
 void testServer(const char * listenport, const char* hostname, const char* port){
 
-    testAny(listenport,hostname,port,true);    
+    testAny(listenport,hostname,port,true);
 }
 void testClient(const char * listenport, const char* hostname, const char* port){
-    testAny(listenport,hostname,port,false);    
+    testAny(listenport,hostname,port,false);
 
 }
 

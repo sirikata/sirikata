@@ -1,4 +1,5 @@
 #include "RaknetNetwork.hpp"
+#include "ServerIDMap.hpp"
 
        #include <sys/socket.h>
        #include <netinet/in.h>
@@ -8,8 +9,10 @@ namespace CBR {
 RaknetNetwork::RaknetNetwork (ServerIDMap*idmap):Network(idmap),mListener(RakNetworkFactory::GetRakPeerInterface()){
 }
 
-void RaknetNetwork::listen(const std::string&addy) {
-    SocketDescriptor socketDescriptor(atoi(addy.c_str()),0);
+void RaknetNetwork::listen(const ServerID& as_server) {
+    Address4* addr = mServerIDMap->lookup(as_server);
+    assert(addr != NULL);
+    SocketDescriptor socketDescriptor(addr->getPort(),0);
     bool starting=mListener->Startup(16383,30,&socketDescriptor,1);
 	mListener->SetMaximumIncomingConnections(16383);
     assert(starting);
@@ -31,9 +34,9 @@ void ConnectTo(RakPeerInterface*ri,const SystemAddress &sa) {
     bool evenTried=ri->Connect(hostname.c_str(),
                                       sa.port,
                                       0,
-                                      0);        
-    assert(evenTried);   
- 
+                                      0);
+    assert(evenTried);
+
 }
 bool RaknetNetwork::sendTo(const Address4&addy, const Sirikata::Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
     if (toSend.size()==0)
@@ -73,7 +76,7 @@ bool RaknetNetwork::sendTo(const Address4&addy, const Sirikata::Network::Chunk& 
     }
 }
 Sirikata::Network::Chunk*RaknetNetwork::makeChunk(RakPeerInterface*i,Packet*p) {
-    
+
     Sirikata::Network::Chunk*retval=new Sirikata::Network::Chunk(0);
     retval->insert(retval->end(),p->data+1,p->data+p->length);
     i->DeallocatePacket(p);
@@ -105,14 +108,14 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
             sendRemainingItems(p->systemAddress);
             break;
           case ID_NEW_INCOMING_CONNECTION:
-          case ID_REMOTE_NEW_INCOMING_CONNECTION: 
+          case ID_REMOTE_NEW_INCOMING_CONNECTION:
             sendRemainingItems(p->systemAddress);
             break;
           case ID_NO_FREE_INCOMING_CONNECTIONS:
             fprintf (stderr,"NO FREE INCOMING CONNECTIONS:Retrying\n");
           case ID_DISCONNECTION_NOTIFICATION:
           case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server tel
-          case ID_REMOTE_CONNECTION_LOST: 
+          case ID_REMOTE_CONNECTION_LOST:
           case ID_CONNECTION_BANNED:
           case ID_CONNECTION_ATTEMPT_FAILED:
           case ID_MODIFIED_PACKET:

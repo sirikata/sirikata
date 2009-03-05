@@ -36,9 +36,9 @@ class RaknetNetwork :public Network{
 public:
     virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
     RaknetNetwork(ServerIDMap*sidm);
-    virtual void listen (const std::string&service);
+    virtual void listen (const ServerID& as_server);
     virtual Sirikata::Network::Chunk*receiveOne();
-   
+
 };
 
 }

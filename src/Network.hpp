@@ -28,6 +28,10 @@ public:
     bool operator ==(const Address4&other)const {
         return ip==other.ip&&port==other.port;
     }
+
+    uint16 getPort() const {
+        return port;
+    }
 };
 class ServerIDMap;
 class Network {
@@ -38,7 +42,7 @@ public:
     typedef Sirikata::Network::Chunk Chunk;
     Network(ServerIDMap*sidm):mServerIDMap(sidm){}
     virtual bool send(const ServerID&,const Network::Chunk&, bool reliable, bool ordered, int priority);
-    virtual void listen (const std::string&service)=0;
+    virtual void listen (const ServerID& as_server)=0;
     virtual Sirikata::Network::Chunk*receiveOne()=0;
 };
 }

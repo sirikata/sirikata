@@ -49,6 +49,9 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mNetwork(net),
    mSendQueue(sq)
 {
+    // start the network listening
+    mNetwork->listen(mID);
+
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
         UUID obj_id = *it;
