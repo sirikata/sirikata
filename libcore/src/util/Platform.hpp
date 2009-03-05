@@ -191,8 +191,6 @@ typedef uchar byte;
 typedef std::string String;
 
 } // namespace Sirikata
-#include "Vector3.hpp"
-#include "Vector4.hpp"
 #include "Quaternion.hpp"
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
@@ -200,7 +198,11 @@ typedef std::string String;
 #include "UUID.hpp"
 #include "options/Options.hpp"
 #include "Logging.hpp"
+#include "task/Time.hpp"
+#include "Location.hpp"
 namespace Sirikata {
+typedef Task::AbsTime Time;
+typedef Task::DeltaTime Duration;
 typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;
 typedef Vector4<float32> Vector4f;
