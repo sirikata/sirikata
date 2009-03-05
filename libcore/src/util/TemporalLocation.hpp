@@ -34,26 +34,29 @@
 
 namespace Sirikata {
 
-class TemporalLocation: public Location {
+template <typename Value, typename UpdatePredicate> class TemporalLocation {
+    Value mCurrentValue;
     Time mWhen;
+    UpdatePredicate mNeedsUpdate;
 public:
     TemporalLocation(){}
-    TemporalLocation(const Vector3<float64>&position, 
-                     const Quaternion&orientation, 
-                     const Vector3<float32> &velocity, 
-                     const Vector3<float32> angularVelocityAxis, 
-                     float32 angularVelocityRadians,
-                     Time when):
-        Location(position,
-                 orientation,
-                 velocity,
-                 AngularVelocityAxis,
-                 angularVelocityRadians),
-       mWhen(when){}
-    Time getTime() {
+    TemporalLocation(const Value&l,
+                     Time when,
+                     const UpdatePredicate &needsUpdate):
+        mCurrentValue(l),
+       mWhen(when),
+       mNeedsUpdate(needsUpdate){}
+    bool needsUpdate(const Time&now, const Value&actualValue) {
+        return mNeedsUpdate(actualValue,getLocation(now));
+    }
+    Value getLocation(const Time &t) const {
+        return mCurrentValue.predict(t-mWhen);
+    }
+    Time getLastLocationUpdateTime() {
         return mWhen;
     }
-    void setTime(const Time&t) {
+    void updateLocation(const Value&l, const Time&t) {
+        mCurrentValue=l;
         mWhen=t;
     }
 };

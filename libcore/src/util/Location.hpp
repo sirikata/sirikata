@@ -90,14 +90,14 @@ public:
         mAxisOfRotation/=mAngularSpeed;
     }
     template<class TimeDuration> Location predict(const TimeDuration&dt)const {
-        return Locaton(getPosition()+getVelocity()*(float64)dt,
-                       getAngularSpeed() 
-                        ? getOrientation()*Quaternion(getAxisOfRotation(),
-                                                     getAngularSpeed()*(float64)dt)
-                        : getOrientation(),
-                       getVelocity(),
-                       getAxisOfRotation(),
-                       getAngularSpeed());
+        return Location(getPosition()+Vector3<float64>(getVelocity())*(float64)dt,
+                        getAngularSpeed() 
+                         ? getOrientation()*Quaternion(getAxisOfRotation(),
+                                                       getAngularSpeed()*(float64)dt)
+                         : getOrientation(),
+                        getVelocity(),
+                        getAxisOfRotation(),
+                        getAngularSpeed());
     }
 };
 }
