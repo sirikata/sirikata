@@ -14,7 +14,8 @@ bool FIFOSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&m
 }
 void FIFOSendQueue::service(){
     while(mQueue.size()) {
-        mNetwork->send(mQueue.front().first,mQueue.front().second,false,true,1);
+        bool ok=mNetwork->send(mQueue.front().first,mQueue.front().second,false,true,1);
+        assert(ok&&"Network Send Failed");
         mQueue.pop();
     }
 }

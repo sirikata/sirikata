@@ -89,7 +89,7 @@ void Server::route(ObjectToObjectMessage* msg) {
     if (destServerID==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
-        bool failed=mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);   
+        bool failed=!mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);   
         assert(!failed);
     }
     delete msg;
@@ -107,7 +107,7 @@ void Server::route(Message* msg, const ServerID& dest_server) {
     if (dest_server==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
-        bool failed=mSendQueue->addMessage(dest_server,msg_serialized);
+        bool failed=!mSendQueue->addMessage(dest_server,msg_serialized);
         assert(!failed);
     }
     delete msg;
