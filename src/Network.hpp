@@ -41,6 +41,7 @@ public:
     virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority)=0;
     typedef Sirikata::Network::Chunk Chunk;
     Network(ServerIDMap*sidm):mServerIDMap(sidm){}
+    virtual ~Network() {}
     virtual bool send(const ServerID&,const Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual void listen (const ServerID& as_server)=0;
     virtual Sirikata::Network::Chunk*receiveOne()=0;
