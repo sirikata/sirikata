@@ -287,6 +287,7 @@ SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& off
 {
     uint8 raw_act;
     memcpy( &raw_act, &wire[offset], sizeof(uint8) );
+    mAction = (Action)raw_act;
     offset += sizeof(uint8);
 }
 
