@@ -52,10 +52,13 @@ static Vector3f UniformSampleSphere(float u1, float u2) {
 
 RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period) {
     MotionVector3f last_motion(start, startpos, Vector3f(0,0,0));
-    for(Time curtime = start; curtime < end; curtime += update_period) {
+    mUpdates.push_back(last_motion);
+    Time offset_start = start + update_period * randFloat();
+    for(Time curtime = offset_start; curtime < end; curtime += update_period) {
         Vector3f curpos = last_motion.position(curtime);
         Vector3f dir = UniformSampleSphere( randFloat(), randFloat() );
-        mUpdates.push_back(MotionVector3f(curtime, curpos, dir));
+        last_motion = MotionVector3f(curtime, curpos, dir);
+        mUpdates.push_back(last_motion);
     }
 }
 
