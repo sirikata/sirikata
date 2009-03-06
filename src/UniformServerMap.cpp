@@ -34,6 +34,13 @@
 
 namespace CBR {
 
+template<typename T>
+T clamp(T val, T minval, T maxval) {
+    if (val < minval) return minval;
+    if (val > maxval) return maxval;
+    return val;
+}
+
 UniformServerMap::UniformServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside)
  : ServerMap(loc_service),
    mRegion(region),
@@ -45,20 +52,18 @@ UniformServerMap::~UniformServerMap() {
 }
 
 ServerID UniformServerMap::lookup(const Vector3f& pos) {
-    assert( mRegion.contains(pos) );
-
     Vector3f region_extents = mRegion.extents();
     Vector3f to_point = pos - mRegion.min();
 
-    Vector3ui32 server_dim_indices( (uint32)((to_point.x/region_extents.x)*mServersPerDim.x),
-                                    (uint32)((to_point.y/region_extents.y)*mServersPerDim.y),
-                                    (uint32)((to_point.z/region_extents.z)*mServersPerDim.z) );
+    Vector3i32 server_dim_indices( (int32)((to_point.x/region_extents.x)*mServersPerDim.x),
+                                   (int32)((to_point.y/region_extents.y)*mServersPerDim.y),
+                                   (int32)((to_point.z/region_extents.z)*mServersPerDim.z) );
 
-    server_dim_indices.x = (server_dim_indices.x >= mServersPerDim.x) ? mServersPerDim.x-1 : server_dim_indices.x;
-    server_dim_indices.y = (server_dim_indices.y >= mServersPerDim.y) ? mServersPerDim.y-1 : server_dim_indices.y;
-    server_dim_indices.z = (server_dim_indices.z >= mServersPerDim.z) ? mServersPerDim.z-1 : server_dim_indices.z;
+    server_dim_indices.x = clamp(server_dim_indices.x, 0, (int32)mServersPerDim.x-1);
+    server_dim_indices.y = clamp(server_dim_indices.y, 0, (int32)mServersPerDim.y-1);
+    server_dim_indices.z = clamp(server_dim_indices.z, 0, (int32)mServersPerDim.z-1);
 
-    uint32 server_index = server_dim_indices.z*mServersPerDim.x*mServersPerDim.y + server_dim_indices.y*mServersPerDim.x + server_dim_indices.x + 1;
+    uint32 server_index = (uint32) server_dim_indices.z*mServersPerDim.x*mServersPerDim.y + server_dim_indices.y*mServersPerDim.x + server_dim_indices.x + 1;
     return ServerID(server_index);
 }
 
