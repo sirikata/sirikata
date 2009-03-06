@@ -1,5 +1,5 @@
 /*  cbr
- *  Time.hpp
+ *  Statistics.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,44 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_TIME_HPP_
-#define _CBR_TIME_HPP_
+#ifndef _CBR_STATISTICS_HPP_
+#define _CBR_STATISTICS_HPP_
 
 #include "Utility.hpp"
+#include "Time.hpp"
 
 namespace CBR {
 
-class Duration;
 
-class Time {
+class BandwidthStatistics {
 public:
-    Time(uint64 since_epoch);
-    Time(const Time& cpy);
-    ~Time();
+    void sent(const ServerID& dest, uint32 size, const Time& t);
+    void received(const ServerID& dest, uint32 size, const Time& t);
 
-    Time operator+(const Duration& dt) const;
-    Time& operator+=(const Duration& dt);
-
-    Time operator-(const Duration& dt) const;
-    Time& operator-=(const Duration& dt);
-
-    Duration operator-(const Time& rhs) const;
-
-    bool operator<(const Time& rhs) const;
-    bool operator>(const Time& rhs) const;
-    bool operator<=(const Time& rhs) const;
-    bool operator>=(const Time& rhs) const;
-    bool operator==(const Time& rhs) const;
-
-    uint64 raw() const { return mSinceEpoch; }
+    void save(const String& filename);
 private:
-    friend class Duration;
+    struct Packet {
+        Packet()
+         : id(0), size(0), time(0) {}
 
-    Time();
+        ServerID id;
+        uint32 size;
+        Time time;
+    };
 
-    uint64 mSinceEpoch; // microseconds since epoch
-}; // class Time
+    struct PacketBatch {
+        static const uint16 max_size = 65535;
+        uint16 size;
+        Packet* packets;
+
+        bool full() const {
+            return (size >= max_size);
+        }
+    };
+
+    std::vector<PacketBatch*> sentBatches;
+    std::vector<PacketBatch*> receivedBatches;
+
+}; // class BandwidthStatistics
 
 } // namespace CBR
 
-#endif //_CBR_TIME_HPP_
+#endif //_CBR_STATISTICS_HPP_

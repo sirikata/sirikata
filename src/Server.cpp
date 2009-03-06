@@ -38,6 +38,8 @@
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 #include "SendQueue.hpp"
+#include "Statistics.hpp"
+
 namespace CBR {
 
 Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq)
@@ -47,8 +49,11 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mServerMap(server_map),
    mProximity(prox),
    mNetwork(net),
-   mSendQueue(sq)
+   mSendQueue(sq),
+   mCurrentTime(0)
 {
+    mBandwidthStats = new BandwidthStatistics();
+
     // start the network listening
     mNetwork->listen(mID);
 
@@ -70,6 +75,13 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
     }
 }
 
+Server::~Server() {
+    OptionSet* options = OptionSet::getOptions("cbr");
+
+    mBandwidthStats->save( options->referenceOption("stats.bandwidth-filename")->as<String>() );
+    delete mBandwidthStats;
+}
+
 const ServerID& Server::id() const {
     return mID;
 }
@@ -89,6 +101,9 @@ void Server::route(ObjectToObjectMessage* msg) {
     Network::Chunk msg_serialized;
     offset=server_header.serialize(msg_serialized, offset);
     offset = msg->serialize(msg_serialized, offset);
+
+    mBandwidthStats->sent(destServerID, offset, mCurrentTime);
+
     if (destServerID==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
@@ -107,6 +122,9 @@ void Server::route(Message* msg, const ServerID& dest_server) {
     Network::Chunk msg_serialized;
     offset=server_header.serialize(msg_serialized, offset);
     offset = msg->serialize(msg_serialized, offset);
+
+    mBandwidthStats->sent(dest_server, offset, mCurrentTime);
+
     if (dest_server==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
@@ -184,7 +202,11 @@ void Server::processChunk(const Network::Chunk&chunk) {
     unsigned int offset=0;
     do {
         ServerMessageHeader hdr=ServerMessageHeader::deserialize(chunk,offset);
+        assert(hdr.destServer() == id());
         offset=Message::deserialize(chunk,offset,&result);
+
+        mBandwidthStats->received(hdr.sourceServer(), offset, mCurrentTime);
+
         deliver(result);
     }while (offset<chunk.size());
 }
@@ -201,6 +223,8 @@ void Server::networkTick(const Time&t) {
     }
 }
 void Server::tick(const Time& t) {
+    mCurrentTime = t;
+
     // Update object locations
     mLocationService->tick(t);
 

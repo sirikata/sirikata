@@ -49,6 +49,8 @@ class Message;
 class ObjectToObjectMessage;
 class SendQueue;
 class Network;
+class BandwidthStatistics;
+
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
  *  object -> server mapping.  This is a singleton for each simulated
@@ -57,6 +59,7 @@ class Network;
 class Server {
 public:
     Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq);
+    ~Server();
 
     const ServerID& id() const;
 
@@ -96,6 +99,9 @@ private:
     Proximity* mProximity;
     Network * mNetwork;
     SendQueue* mSendQueue;
+
+    Time mCurrentTime;
+    BandwidthStatistics* mBandwidthStats;
 }; // class Server
 
 } // namespace CBR

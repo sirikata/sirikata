@@ -67,6 +67,8 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
 
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
+
+        .addOption(new OptionValue("stats.bandwidth-filename", "", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
         ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
