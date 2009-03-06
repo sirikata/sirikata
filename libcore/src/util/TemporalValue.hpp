@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Math Library
- *  TemporalLocation.hpp
+ *  TemporalValue.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,35 +29,36 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _TEMPORAL_LOCATION_HPP_
-#define _TEMPORLA_LOCATION_HPP_
+#ifndef _TEMPORAL_VALUE_HPP_
+#define _TEMPORAL_VALUE_HPP_
 
 namespace Sirikata {
 
-template <typename Value, typename UpdatePredicate> class TemporalLocation {
+template <typename Value, typename UpdatePredicate> class TemporalValue
+    : protected UpdatePredicate {//inherit from update predicate since 0 sized inheritance takes 0 space
     Value mCurrentValue;
     Time mWhen;
-    UpdatePredicate mNeedsUpdate;
 public:
-    TemporalLocation(){}
-    TemporalLocation(const Value&l,
-                     Time when,
-                     const UpdatePredicate &needsUpdate):
-        mCurrentValue(l),
-       mWhen(when),
-       mNeedsUpdate(needsUpdate){}
-    bool needsUpdate(const Time&now, const Value&actualValue) {
-        return mNeedsUpdate(actualValue,getLocation(now));
+    TemporalValue(const Time &when,
+                  const Value&l,
+                  const UpdatePredicate &needsUpdate):
+       UpdatePredicate(needsUpdate),
+       mCurrentValue(l),
+       mWhen(when){}
+    bool needsUpdate(const Time&now, const Value&actualValue) const{
+        const UpdatePredicate * mNeedsUpdate=this;
+        return (*mNeedsUpdate)(actualValue,extrapolate(now));
     }
-    Value getLocation(const Time &t) const {
-        return mCurrentValue.predict(t-mWhen);
+    Value extrapolate(const Time &t) const {
+        return mCurrentValue.extrapolate(t-mWhen);
     }
-    Time getLastLocationUpdateTime() {
+    Time getLastValueUpdateTime() const{
         return mWhen;
     }
-    void updateLocation(const Value&l, const Time&t) {
+    TemporalValue<Value,UpdatePredicate>& updateValue(const Time&t,const Value&l) {
         mCurrentValue=l;
         mWhen=t;
+        return *this;
     }
 };
 }

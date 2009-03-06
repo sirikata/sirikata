@@ -56,7 +56,9 @@ public:
                const Vector3<scalar> &zAxis);
     void toAngleAxis (scalar& returnAngleRadians,
                       Vector3<scalar>& returnAxis) const;
-
+    Quaternion normal()const {
+        return Quaternion(Vector4<scalar>::normal());
+    }
     Quaternion operator+(const Quaternion&other) const{
         return Quaternion(Vector4<scalar>::operator+(other));
     }

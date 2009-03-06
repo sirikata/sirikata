@@ -363,7 +363,7 @@ IF(NOT OGRE_ROOT)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.6.x)
     SET(OGRE_ROOT ${PLATFORM_LIBS}/ogre-1.6.x)
   ENDIF()
-  IF(WIN32)
+  IF(WIN32 AND OGRE_ROOT)
     GET_FILENAME_COMPONENT(OGRE_ROOT ${OGRE_ROOT} ABSOLUTE)
   ENDIF()
   IF(NOT OGRE_ROOT)
@@ -544,6 +544,7 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/Vector3Test.hpp
   ${LIBCORE_DIR}/test/Matrix3Test.hpp
   ${LIBCORE_DIR}/test/QuaternionTest.hpp
+  ${LIBCORE_DIR}/test/ExtrapolationTest.hpp
   ${LIBCORE_DIR}/test/EventTest.hpp
   ${LIBCORE_DIR}/test/OptionTest.hpp
   ${LIBCORE_DIR}/test/NameLookupTest.hpp

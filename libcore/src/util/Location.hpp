@@ -52,6 +52,40 @@ public:
         y=position.y;
         z=position.z;
     }
+    bool operator ==(const Location&other)const {
+        bool eq=x==other.x&&y==other.y&&z==other.z;
+        bool veq=other.mVelocity==mVelocity;
+        bool qeq=mOrientation==other.mOrientation;
+        bool aeq=mAxisOfRotation==other.mAxisOfRotation;
+        bool seq=mAngularSpeed==other.mAngularSpeed;
+        return eq&&veq&&qeq&&aeq&&seq;
+    }
+    class Error {
+        float64 mDistanceError;
+        float32 mAngularError;
+    public:
+        Error(float64 distanceError, float32 angularError){
+            mDistanceError=distanceError;
+            mAngularError=angularError;
+        }
+        Error(const Location&correct, const Location&incorrect) {
+            mDistanceError=(incorrect.getPosition()-correct.getPosition()).length();
+            mAngularError=2.0*std::acos(correct.getOrientation().normal()
+                                        .dot(incorrect.getOrientation().normal()));
+        }
+        bool operator<= (const Error&other)const {
+            return mDistanceError<=other.mDistanceError&&mAngularError<=other.mAngularError;
+        }
+    };
+    class ErrorPredicate {
+        Error mBound;
+    public:
+        ErrorPredicate(const Error&bound):mBound(bound){}
+        ///Returns true if the error is too high... i.e. the error is not less than the bound
+        bool operator() (const Location &correct, const Location &incorrect) const{
+            return !(Error(correct,incorrect)<=mBound);
+        }
+    }; 
     const Vector3<float64>&getPosition()const {
         return *this;
     }
@@ -87,9 +121,22 @@ public:
     void addAngularRotation(const Vector3<float32> &axis, float32 radianspersecond) {
         mAxisOfRotation=mAxisOfRotation*mAngularSpeed+axis*radianspersecond;
         mAngularSpeed=mAxisOfRotation.length();
-        mAxisOfRotation/=mAngularSpeed;
+        if (mAngularSpeed)
+            mAxisOfRotation/=mAngularSpeed;
     }
-    template<class TimeDuration> Location predict(const TimeDuration&dt)const {
+    Location blend(const Location&newLocation,float32 percentNew) const{
+        float32 percentOld=(1.0f-percentNew);
+        Vector3<float32> angAxis=mAxisOfRotation*mAngularSpeed*percentOld;
+        angAxis+=newLocation.getAxisOfRotation()*newLocation.getAngularSpeed()*percentNew;
+        float angSpeed=angAxis.length();
+        if (angSpeed) angAxis/=angSpeed;
+        return Location (newLocation.getPosition()*percentNew+getPosition()*percentOld,
+                         (newLocation.getOrientation()*percentNew+getOrientation()*percentOld).normal(),
+                         newLocation.getVelocity()*percentNew+getVelocity()*percentOld,
+                         angAxis,
+                         angSpeed);
+    }
+    template<class TimeDuration> Location extrapolate(const TimeDuration&dt)const {
         return Location(getPosition()+Vector3<float64>(getVelocity())*(float64)dt,
                         getAngularSpeed() 
                          ? getOrientation()*Quaternion(getAxisOfRotation(),
@@ -100,5 +147,8 @@ public:
                         getAngularSpeed());
     }
 };
+
+
+
 }
 #endif
