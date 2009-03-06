@@ -422,12 +422,12 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 		}
 	}
 
-	{
-		SILOG(task,debug,"==== All Event Subscribers for " << (intptr_t)this << " ====");
+	if (SILOGP(task,insane)){
+		SILOG(task,insane,"==== All Event Subscribers for " << (intptr_t)this << " ====");
 		typename PrimaryListenerMap::const_iterator priIter =
 			mListeners.begin();
 		while (priIter != mListeners.end()) {
-			SILOG(task,debug,"  ID " << (*priIter).first << ":");
+			SILOG(task,insane,"  ID " << (*priIter).first << ":");
 			PartiallyOrderedListenerList *primaryLists =
 				&((*priIter).second->first);
 			SecondaryListenerMap *secondaryMap =
@@ -437,7 +437,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 				ListenerList *currentList = &(primaryLists->get(i));
 				for (typename ListenerList::const_iterator iter = currentList->begin();
 						iter != currentList->end(); ++iter) {
-					SILOG(task,debug," \t"
+					SILOG(task,insane," \t"
 						"[" << (i==MIDDLE?'=':i<MIDDLE?'*':'/') << "] " <<
 						(*iter).second);
 				}
@@ -446,12 +446,12 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			typename SecondaryListenerMap::const_iterator secIter;
 			secIter = secondaryMap->begin();
 			while (secIter != secondaryMap->end()) {
-				SILOG(task,debug,"\tSec ID " << (*secIter).first << ":");
+				SILOG(task,insane,"\tSec ID " << (*secIter).first << ":");
 				for (int i = 0; i < NUM_EVENTORDER; i++) {
 					ListenerList *currentList = &((*secIter).second->get(i));
 					for (typename ListenerList::const_iterator iter = currentList->begin();
 							iter != currentList->end(); ++iter) {
-						SILOG(task,debug," \t\t"
+						SILOG(task,insane," \t\t"
 							"[" << (i==MIDDLE?'=':i<MIDDLE?'*':'/') << "] " <<
 							(*iter).second);
 					}
@@ -460,7 +460,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			}
 			++priIter;
 		}
-		SILOG(task,debug,"==== ---------------------------------- ====");
+		SILOG(task,insane,"==== ---------------------------------- ====");
 	}
 
 	EventPtr *evTemp;
