@@ -39,6 +39,11 @@ Proximity::Proximity() {
 }
 
 Proximity::~Proximity() {
+    while(!mQueries.empty())
+        removeQuery( mQueries.begin()->first );
+
+    while(!mTrackedObjects.empty())
+        removeObject( mTrackedObjects.begin()->first );
 }
 
 void Proximity::addObject(UUID obj, const MotionVector3f& loc) {
