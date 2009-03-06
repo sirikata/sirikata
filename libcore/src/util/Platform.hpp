@@ -217,7 +217,14 @@ using std::tr1::placeholders::_7;
 using std::tr1::placeholders::_8;
 using std::tr1::placeholders::_9;
 }
-
+#include "BoundingSphere.hpp"
+#include "BoundingBox.hpp"
+namespace Sirikata {
+typedef BoundingBox<float32> BoundingBox3f3f;
+typedef BoundingBox<float64> BoundingBox3d3f;
+typedef BoundingSphere<float32> BoundingSphere3f;
+typedef BoundingSphere<float64> BoundingSphere3d;
+}
 #if 0
 template class std::tr1::unordered_map<Sirikata::int32, Sirikata::int32>;
 template class std::tr1::unordered_map<Sirikata::uint32, Sirikata::uint32>;

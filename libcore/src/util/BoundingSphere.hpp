@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  ObjectHost.cpp
+/*  Sirikata Utilities -- Math Library
+ *  BoundingSphere.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,16 +29,31 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <util/Platform.hpp>
-#include <oh/ObjectHost.hpp>
-#include "graphics/GraphicsObject.hpp"
+#ifndef _SIRIKATA_BOUNDING_SPHERE_HPP
+#define _SIRIKATA_BOUNDING_SPHERE_HPP
 namespace Sirikata {
-
-ObjectHost::ObjectHost() {
+template <typename real> class BoundingSphere {
+    Vector3<real> mCenter;
+    float32 mRadius;
+public:
+    static BoundingSphere<real> null() {
+        return BoundingSphere<real>(Vector3<real>(0,0,0),0);
+    }
+    BoundingSphere() {}
+    BoundingSphere(const Vector3<real>&center, float radius){
+        mCenter=center;
+        mRadius=radius;
+    }
+    float32 radius()const{
+        return mRadius;
+    }
+    Vector3<real> center() const {
+        return mCenter;
+    }
+    BoundingSphere<real> recenter(const Vector3<real>&newCenter) {
+        mRadius+=(newCenter-mCenter).length();
+        mCenter=newCenter;
+    }
+};
 }
-
-ObjectHost::~ObjectHost() {
-}
-
-} // namespace Sirikata
+#endif

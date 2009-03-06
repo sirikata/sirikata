@@ -32,13 +32,12 @@
 #ifndef _LOCATION_HPP_
 #define _LOCATION_HPP_
 
-#include "Quaternion.hpp"
+#include "Transform.hpp"
 
 namespace Sirikata {
 
-class Location: protected Vector3<float64> {
+class Location: public Transform {
     Vector3<float32> mVelocity;
-    Quaternion mOrientation;
     Vector3<float32> mAxisOfRotation;
     float32 mAngularSpeed;
 public:
@@ -47,65 +46,22 @@ public:
              const Quaternion&orientation, 
              const Vector3<float32> &velocity, 
              const Vector3<float32> angularVelocityAxis, 
-             float32 angularVelocityRadians):mVelocity(velocity),mOrientation(orientation),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {
-        x=position.x;
-        y=position.y;
-        z=position.z;
-    }
+             float32 angularVelocityRadians):Transform(position,orientation),mVelocity(velocity),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {}
     bool operator ==(const Location&other)const {
-        bool eq=x==other.x&&y==other.y&&z==other.z;
+        bool eq=getPosition()==other.getPosition();
         bool veq=other.mVelocity==mVelocity;
-        bool qeq=mOrientation==other.mOrientation;
+        bool qeq=getOrientation()==other.getOrientation();
         bool aeq=mAxisOfRotation==other.mAxisOfRotation;
         bool seq=mAngularSpeed==other.mAngularSpeed;
         return eq&&veq&&qeq&&aeq&&seq;
     }
-    class Error {
-        float64 mDistanceError;
-        float32 mAngularError;
-    public:
-        Error(float64 distanceError, float32 angularError){
-            mDistanceError=distanceError;
-            mAngularError=angularError;
-        }
-        Error(const Location&correct, const Location&incorrect) {
-            mDistanceError=(incorrect.getPosition()-correct.getPosition()).length();
-            mAngularError=2.0*std::acos(correct.getOrientation().normal()
-                                        .dot(incorrect.getOrientation().normal()));
-        }
-        bool operator<= (const Error&other)const {
-            return mDistanceError<=other.mDistanceError&&mAngularError<=other.mAngularError;
-        }
-    };
-    class ErrorPredicate {
-        Error mBound;
-    public:
-        ErrorPredicate(const Error&bound):mBound(bound){}
-        ///Returns true if the error is too high... i.e. the error is not less than the bound
-        bool operator() (const Location &correct, const Location &incorrect) const{
-            return !(Error(correct,incorrect)<=mBound);
-        }
-    }; 
-    const Vector3<float64>&getPosition()const {
-        return *this;
-    }
-    void setPosition(const Vector3<float64>& position) {
-        x=position.x;
-        y=position.y;
-        z=position.z;
-    }
+
     const Vector3<float32>&getVelocity()const {
         return mVelocity;
     }
     void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
     } 
-    const Quaternion&getOrientation() const{
-        return mOrientation;
-    }
-    void setOrientation(const Quaternion&orientation) {
-        mOrientation=orientation;
-    }
     const Vector3<float32>&getAxisOfRotation() const {
         return mAxisOfRotation;
     }

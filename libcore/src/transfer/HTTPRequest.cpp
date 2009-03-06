@@ -595,6 +595,11 @@ void HTTPRequest::setPOSTData(const std::string &fieldname,
 		const std::string &filename,
 		const SparseData &uploadData) {
 	mUploadData = uploadData;
+#if !(LIBCURL_VERSION_MAJOR>7||LIBCURL_VERSION_MINOR>18)
+    Range::length_type templen;
+    uploadData.dataAt(0,templen);
+    assert(templen==uploadData.length());//assert that this is contiguous until later
+#endif
 	curl_formadd(
 		(struct curl_httppost **)&mCurlFormBegin,
 		(struct curl_httppost **)&mCurlFormEnd,
@@ -602,8 +607,15 @@ void HTTPRequest::setPOSTData(const std::string &fieldname,
 		CURLFORM_COPYNAME, fieldname.data(),
 		CURLFORM_FILENAME, filename.c_str(),
 		CURLFORM_CONTENTTYPE, "application/octet-stream", // FIXME: Is this useful?
+#if LIBCURL_VERSION_MAJOR>7||LIBCURL_VERSION_MINOR>18
 		CURLFORM_CONTENTSLENGTH, (long)uploadData.length(),
 		CURLFORM_STREAM, this,
+#else
+		CURLFORM_CONTENTSLENGTH, (long)templen,        
+        CURLFORM_BUFFER, filename.c_str(),
+        CURLFORM_BUFFERPTR, templen?uploadData.dataAt(0,templen):NULL,
+        CURLFORM_BUFFERLENGTH, templen,
+#endif
 		CURLFORM_END);
 }
 

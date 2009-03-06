@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  ObjectHost.cpp
+/*  Sirikata liboh -- Object Host Graphics Interface
+ *  GraphicsObject.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,15 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include <oh/ObjectHost.hpp>
-#include "graphics/GraphicsObject.hpp"
+#include <liboh/Platform.hpp>
+#include "GraphicsObject.hpp"
 namespace Sirikata {
-
-ObjectHost::ObjectHost() {
+GraphicsObject::GraphicsObject():mCapabilities(HAS_NO_CAPABILITY) {
+    
 }
-
-ObjectHost::~ObjectHost() {
 }
-
-} // namespace Sirikata
