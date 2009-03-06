@@ -41,6 +41,8 @@ namespace CBR {
 
 class BandwidthStatistics {
 public:
+    ~BandwidthStatistics();
+
     void sent(const ServerID& dest, uint32 size, const Time& t);
     void received(const ServerID& dest, uint32 size, const Time& t);
 
@@ -58,7 +60,9 @@ private:
     struct PacketBatch {
         static const uint16 max_size = 65535;
         uint16 size;
-        Packet* packets;
+        Packet packets[max_size];
+
+        PacketBatch() : size(0) {}
 
         bool full() const {
             return (size >= max_size);

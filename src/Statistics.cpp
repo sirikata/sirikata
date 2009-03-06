@@ -35,14 +35,23 @@
 
 namespace CBR {
 
-void BandwidthStatistics::sent(const ServerID& dest, uint32 size, const Time& t) {
-    if (sentBatches.empty() || sentBatches.back()->full()) {
-        PacketBatch* pb = new PacketBatch();
-        pb->size = 0;
-        pb->packets = new Packet[PacketBatch::max_size];
-
-        sentBatches.push_back(pb);
+BandwidthStatistics::~BandwidthStatistics() {
+    for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
+        PacketBatch* pb = *it;
+        delete pb;
     }
+    sentBatches.clear();
+
+    for(std::vector<PacketBatch*>::iterator it = receivedBatches.begin(); it != receivedBatches.end(); it++) {
+        PacketBatch* pb = *it;
+        delete pb;
+    }
+    receivedBatches.clear();
+}
+
+void BandwidthStatistics::sent(const ServerID& dest, uint32 size, const Time& t) {
+    if (sentBatches.empty() || sentBatches.back()->full())
+        sentBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = sentBatches.back();
     pb->packets[pb->size].id = dest;
@@ -52,13 +61,8 @@ void BandwidthStatistics::sent(const ServerID& dest, uint32 size, const Time& t)
 }
 
 void BandwidthStatistics::received(const ServerID& dest, uint32 size, const Time& t) {
-    if (receivedBatches.empty() || receivedBatches.back()->full()) {
-        PacketBatch* pb = new PacketBatch();
-        pb->size = 0;
-        pb->packets = new Packet[PacketBatch::max_size];
-
-        receivedBatches.push_back(pb);
-    }
+    if (receivedBatches.empty() || receivedBatches.back()->full())
+        receivedBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = receivedBatches.back();
     pb->packets[pb->size].id = dest;
