@@ -29,6 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include "Timer.hpp"
 #include "Network.hpp"
 #include "ObjectFactory.hpp"
 #include "LocationService.hpp"
@@ -42,6 +44,7 @@
 #include "RaknetNetwork.hpp"
 #include "FIFOSendQueue.hpp"
 #include "TabularServerIDMap.hpp"
+
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -50,6 +53,11 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
         .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
         .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))
+
+        .addOption(new OptionValue("sim", "false", Sirikata::OptionValueType<bool>(), "Turns simulated clock time on or off"))
+        .addOption(new OptionValue("sim-step", "10ms", Sirikata::OptionValueType<Duration>(), "Size of simulation time steps"))
+
+        .addOption(new OptionValue("time-dilation", "1.0", Sirikata::OptionValueType<float>(), "Factor by which times will be scaled (to allow faster processing when CPU and bandwidth is readily available, slower when they are overloaded)"))
 
         .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
         .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
@@ -99,11 +107,30 @@ int main(int argc, char** argv) {
     ServerID server_id = options->referenceOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox,raknetNetwork,sq);
 
-    // FIXME this is just for testing.  we should be using a real timer
+    bool sim = options->referenceOption("sim")->as<bool>();
+    Duration sim_step = options->referenceOption("sim-step")->as<Duration>();
+
+    float time_dilation = options->referenceOption("time-dilation")->as<float>();
+    float inv_time_dilation = 1.f / time_dilation;
+
     Time tbegin = Time(0);
     Time tend = tbegin + duration;
-    for(Time t = tbegin; t < tend; t += Duration::milliseconds((uint32)10))
-        server->tick(t);
+
+    if (sim) {
+        for(Time t = tbegin; t < tend; t += sim_step)
+            server->tick(t);
+    }
+    else {
+        Timer timer;
+        timer.start();
+
+        while( true ) {
+            Duration elapsed = timer.elapsed() * inv_time_dilation;
+            if (elapsed > duration)
+                break;
+            server->tick(tbegin + elapsed);
+        }
+    }
 
     delete server;
     delete prox;

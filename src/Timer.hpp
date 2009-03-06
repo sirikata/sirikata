@@ -1,5 +1,5 @@
 /*  cbr
- *  Duration.hpp
+ *  Timer.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,56 +30,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_DURATION_HPP_
-#define _CBR_DURATION_HPP_
+#ifndef _CBR_TIMER_HPP_
+#define _CBR_TIMER_HPP_
 
-#include "Utility.hpp"
+#include "Time.hpp"
+#include "Duration.hpp"
+#include <boost/date_time.hpp>
 
 namespace CBR {
 
-class Time;
-
-class Duration {
+class Timer {
 public:
-    Duration();
-    Duration(uint64 microsecs);
-    Duration(const Duration& cpy);
-    ~Duration();
+    Timer();
+    ~Timer();
 
-    static Duration seconds(float32 dt);
-    static Duration seconds(uint32 dt);
-    static Duration milliseconds(float32 dt);
-    static Duration milliseconds(uint32 dt);
+    void start();
+    Time now();
+    Duration elapsed();
 
-    float32 seconds() const;
-    float32 milliseconds() const;
-
-    Duration operator+(const Duration& rhs) const;
-    Duration& operator+=(const Duration& rhs);
-
-    Time operator+(const Time& rhs) const;
-
-    Duration operator-(const Duration& rhs) const;
-    Duration& operator-=(const Duration& rhs);
-
-    Duration operator*(float s) const;
-    Duration& operator*=(float s);
-
-    bool operator<(const Duration& rhs) const;
-    bool operator<=(const Duration& rhs) const;
-    bool operator>(const Duration& rhs) const;
-    bool operator>=(const Duration& rhs) const;
-    bool operator==(const Duration& rhs) const;
-    bool operator!=(const Duration& rhs) const;
 private:
-    friend class Time;
-
-    int64 mMicrosecs;
-}; // class Duration
-
-std::ostream& operator<<(std::ostream& os, const Duration& rhs);
-std::istream& operator>>(std::istream& is, Duration& rhs);
+    boost::posix_time::ptime mStart;
+}; // class Timer
 
 } // namespace CBR
 
-#endif //_CBR_DURATION_HPP_
+#endif //_CBR_TIMER_HPP_

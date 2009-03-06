@@ -1,5 +1,5 @@
 /*  cbr
- *  Duration.hpp
+ *  Timer.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,56 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_DURATION_HPP_
-#define _CBR_DURATION_HPP_
-
-#include "Utility.hpp"
+#include "Timer.hpp"
 
 namespace CBR {
 
-class Time;
+Timer::Timer() {
+}
 
-class Duration {
-public:
-    Duration();
-    Duration(uint64 microsecs);
-    Duration(const Duration& cpy);
-    ~Duration();
+Timer::~Timer() {
+}
 
-    static Duration seconds(float32 dt);
-    static Duration seconds(uint32 dt);
-    static Duration milliseconds(float32 dt);
-    static Duration milliseconds(uint32 dt);
+void Timer::start() {
+    mStart = boost::posix_time::microsec_clock::local_time();
+}
 
-    float32 seconds() const;
-    float32 milliseconds() const;
+Time Timer::now() {
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
+    return Time( since_start.total_microseconds() );
+}
 
-    Duration operator+(const Duration& rhs) const;
-    Duration& operator+=(const Duration& rhs);
+Duration Timer::elapsed() {
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
+    return Duration( since_start.total_microseconds() );
+}
 
-    Time operator+(const Time& rhs) const;
-
-    Duration operator-(const Duration& rhs) const;
-    Duration& operator-=(const Duration& rhs);
-
-    Duration operator*(float s) const;
-    Duration& operator*=(float s);
-
-    bool operator<(const Duration& rhs) const;
-    bool operator<=(const Duration& rhs) const;
-    bool operator>(const Duration& rhs) const;
-    bool operator>=(const Duration& rhs) const;
-    bool operator==(const Duration& rhs) const;
-    bool operator!=(const Duration& rhs) const;
-private:
-    friend class Time;
-
-    int64 mMicrosecs;
-}; // class Duration
-
-std::ostream& operator<<(std::ostream& os, const Duration& rhs);
-std::istream& operator>>(std::istream& is, Duration& rhs);
 
 } // namespace CBR
-
-#endif //_CBR_DURATION_HPP_

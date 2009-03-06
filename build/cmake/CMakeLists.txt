@@ -164,6 +164,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Time.cpp
+  ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/UniformServerMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/main.cpp
