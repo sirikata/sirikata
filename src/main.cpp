@@ -103,11 +103,11 @@ int main(int argc, char** argv) {
     String filehandle = options->referenceOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    Network * raknetNetwork=new RaknetNetwork(server_id_map);
+    Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
-    SendQueue* sq=new FIFOSendQueue(raknetNetwork);
+    SendQueue* sq=new FIFOSendQueue(network);
     ServerID server_id = options->referenceOption("id")->as<ServerID>();
-    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox,raknetNetwork,sq);
+    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
 
     bool sim = options->referenceOption("sim")->as<bool>();
     Duration sim_step = options->referenceOption("sim-step")->as<Duration>();
@@ -135,7 +135,11 @@ int main(int argc, char** argv) {
     }
 
     delete server;
+    delete sq;
     delete prox;
+    delete network;
+    delete server_id_map;
+    delete server_map;
     delete loc_service;
     delete obj_factory;
 
