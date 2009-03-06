@@ -117,6 +117,9 @@ public:
 				uri, cb);
 		req->setPOSTData(params["field:file"], uri.filename(), uploadData);
 		//req->addPOSTField(params["field:hash"])
+		if (!params["field:filename"].empty()) {
+			req->addPOSTField(params["field:filename"], uri.filename());
+		}
 		if (!params["field:insert"].empty()) {
 			req->addPOSTField(params["field:insert"],"on"); // checkbox
 		}
@@ -130,7 +133,11 @@ public:
 		HTTPRequestPtr req;
 		createRequest<UploadHandler> (req, ptrRef, params,
 				uri, cb);
-		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		if (params["field:filename"].empty()) {
+			req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		} else {
+			req->addPOSTField(params["field:filename"], uri.filename());
+		}
 		if (!params["field:remove"].empty()) {
 			req->addPOSTField(params["field:remove"],"on"); // checkbox
 		}
@@ -150,8 +157,13 @@ public:
 		HTTPRequestPtr req;
 		createRequest<NameUploadHandler> (req, ptrRef, params,
 				uri, cb);
-		req->setPOSTData(params["field:file"], uri.filename(),
-				DenseDataPtr(new DenseData(uploadId.uri().toString())));
+		if (params["field:filename"].empty()) {
+			req->setPOSTData(params["field:file"], uri.filename(),
+					DenseDataPtr(new DenseData(uploadId.uri().toString())));
+		} else {
+			req->addPOSTField(params["field:file"], uploadId.uri().toString());
+			req->addPOSTField(params["field:filename"], uri.filename());
+		}
 		if (!params["field:insert"].empty()) {
 			req->addPOSTField(params["field:insert"],"on"); // checkbox
 		}
@@ -165,7 +177,11 @@ public:
 		HTTPRequestPtr req;
 		createRequest<NameUploadHandler> (req, ptrRef, params,
 				uri, cb);
-		req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		if (params["field:filename"].empty()) {
+			req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+		} else {
+			req->addPOSTField(params["field:filename"], uri.filename());
+		}
 		if (!params["field:remove"].empty()) {
 			req->addPOSTField(params["field:remove"],"on"); // checkbox
 		}

@@ -136,7 +136,7 @@ size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
 	if (mUploadOffset < mUploadData.startbyte()) {
 		return 0;
 	}
-	size_t origLength = length;
+	size_t offset = 0;
 //	cache_ssize_type startByte = (mUploadOffset - mUploadData->startbyte());
 //	cache_usize_type totalNeeded = startByte + length;
 	while (length > 0) {
@@ -144,20 +144,21 @@ size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
 		cache_usize_type chunkLength = 0;
 		const unsigned char *copyFrom = mUploadData.dataAt(mUploadOffset, chunkLength);
 		if (copyFrom == NULL && chunkLength == 0) {
-			return origLength - length;
+			return offset;
 		}
 		if (chunkLength > length) {
 			chunkLength = length;
 		}
 		if (copyFrom == NULL) {
-			std::memset(copyTo, 0, chunkLength);
+			std::memset(copyTo+offset, 0, chunkLength);
 		} else {
-			std::copy(copyFrom, copyFrom + chunkLength, copyTo);
+			std::copy(copyFrom, copyFrom + chunkLength, copyTo+offset);
 		}
+		offset += chunkLength;
 		mUploadOffset += chunkLength;
 		length -= chunkLength;
 	}
-	return origLength;
+	return offset;
 }
 
 void HTTPRequest::gotHeader(const std::string &header) {
@@ -168,16 +169,27 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		std::string ver;
 		int code = 0; // assume a good response unless curl says otherwise.
 		istr >> ver >> code;
-		// **untested**
-		if (code == 200 && (!mRequestedRange.goesToEndOfFile() || mRequestedRange.startbyte() != 0)) {
-			mRequestedRange = Range(true); // Server is giving us the whole file.
-			mData->setBase(0);
-			mData->setLength(0, true);
+		if (code) {
+			if (code == 200 && (!mRequestedRange.goesToEndOfFile() || mRequestedRange.startbyte() != 0)) {
+				SILOG(transfer,debug,"Server does not support partial content for " << mURI);
+				mRequestedRange = Range(true); // Server is giving us the whole file.
+				mData->setBase(0);
+				mData->setLength(0, true);
+			}
+			mStatusCode = code;
+			SILOG(transfer,debug,"Got status " << code << " (" << ver << ") for "<<mURI);
 		}
 		return;
 	}
 	std::string headername = header.substr(0, colon);
-	std::string headervalue = header.substr(colon+1);
+	std::string::size_type endpos = header.length();
+	if (endpos > 2 && header[endpos-1] == '\n' && header[endpos-2] == '\r') {
+		endpos -= 2;
+	}
+	do {
+		++colon;
+	} while (colon < endpos && header[colon] == ' ');
+	std::string headervalue = header.substr(colon, endpos-colon);
 	for (std::string::size_type i = 0; i < colon; i++) {
 		headername[i] = tolower(headername[i]);
 	}
@@ -188,7 +200,7 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
 			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
-			SILOG(transfer,debug,"DOWNLOADING FILE RANGE " << (Range)(*mData) << " FROM "<<mURI);
+			SILOG(transfer,debug,"Downloading file range " << (Range)(*mData) << " from "<<mURI);
 		}
 	}
 	SILOG(transfer,insane,"Got header [" << headername << "] = " << headervalue);
@@ -198,6 +210,25 @@ void HTTPRequest::gotHeader(const std::string &header) {
 #define RETRY_TIME 1.0
 
 namespace {
+
+	struct ServerProperties {
+		bool does_not_support_Expect_100_continue;
+		ServerProperties() {
+			does_not_support_Expect_100_continue = false;
+		}
+	} defaultProps;
+	typedef std::map<std::string, ServerProperties> ServerPropertyMap;
+	ServerPropertyMap properties;
+	const ServerProperties &getProperties(const URI &uri) {
+		ServerPropertyMap::const_iterator iter = properties.find(uri.host());
+		if (iter != properties.end()) {
+			return (*iter).second;
+		}
+		return defaultProps;
+	}
+	ServerProperties &editProperties(const URI &uri) {
+		return properties[uri.host()];
+	}
 
 	static boost::once_flag flag = BOOST_ONCE_INIT;
 	CURLM *curlm = NULL;
@@ -372,30 +403,46 @@ void HTTPRequest::curlLoop () {
 			if (transferMsg->msg == CURLMSG_DONE) {
 				HTTPRequest *request = (HTTPRequest*)dataptr;
 				bool success;
+				curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &request->mStatusCode);
+				bool retry = false; // Only retry if ServerProperties has changed! Do not want to get stuck in an infinite loop.
 				if (transferMsg->data.result == 0) {
 					success = true;
 				} else {
 					// CURLE_RANGE_ERROR
 					// CURLE_HTTP_RETURNED_ERROR
-					SILOG(transfer,debug,"failed " << request << ": " <<
-							curl_easy_strerror(transferMsg->data.result));
+					std::stringstream str;
+					str << curl_easy_strerror(transferMsg->data.result) <<
+							" (" << request->mStatusCode << ") for " << request->mURI;
+					SILOG(transfer,info,str.str());
 					success = false;
+					if (request->mStatusCode == 417) {
+						editProperties(request->mURI).does_not_support_Expect_100_continue = true;
+						retry = true;
+					}
 				}
+
+				curl_multi_remove_handle(curlm, handle);
 				curl_easy_cleanup(handle);
-				request->mCurlRequest = NULL; // handle is freed.
 
-				CallbackFunc temp (request->mCallback);
-				DenseDataPtr finishedData(request->getData());
-				request->mCallback = nullCallback;
+				if (retry) {
+					request->initCurlHandle();
+					request->setFinalProperties();
+					curl_multi_add_handle(curlm, request->mCurlRequest);
+				} else {
+					request->mCurlRequest = NULL; // handle is freed.
+					CallbackFunc temp (request->mCallback);
+					DenseDataPtr finishedData(request->getData());
+					request->mCallback = nullCallback;
 
-				std::tr1::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
-				request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
+					std::tr1::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
+					request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
 
-				access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.
-				temp(request, finishedData, success); // may delete request.
+					access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.
+					temp(request, finishedData, success); // may delete request.
 
-				// now tempPtr is allowed to free request.
-				//access_curl_handle.lock();
+					// now tempPtr is allowed to free request.
+					//access_curl_handle.lock();
+				}
 			}
 		}
 
@@ -479,6 +526,13 @@ HTTPRequest::~HTTPRequest() {
 void HTTPRequest::initCurlHandle() {
 	boost::call_once(&initCurl, flag);
 
+	// Initialize stateful members here in case the transfer must be restarted.
+	mStatusCode = 0;
+	mOffset = 0;
+	mData = DenseDataPtr(new DenseData(mRequestedRange));
+	mUploadOffset = 0;
+
+	// Create a curl object and initialize options specific to this transfer.
 	mCurlRequest = allocDefaultCurl();
 	curl_easy_setopt(mCurlRequest, CURLOPT_WRITEDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_READDATA, this);
@@ -510,9 +564,7 @@ void HTTPRequest::initCurlHandle() {
 	}
 
 	if (nontrivialRange) {
-		assert(mRangeString.length()==0);//make sure this hasn't been called twice because then curl would point to a dangly string
-		mRangeString = orangestring.str();
-		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, mRangeString.c_str());
+		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, orangestring.str().c_str());
 	}
 }
 
@@ -542,6 +594,7 @@ void HTTPRequest::setDELETE() {
 void HTTPRequest::setPOSTData(const std::string &fieldname,
 		const std::string &filename,
 		const SparseData &uploadData) {
+	mUploadData = uploadData;
 	curl_formadd(
 		(struct curl_httppost **)&mCurlFormBegin,
 		(struct curl_httppost **)&mCurlFormEnd,
@@ -570,14 +623,12 @@ void HTTPRequest::addHeader(const std::string &header) {
 	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, header.c_str());
 }
 
-void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
-	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
-
-	curl_multi_add_handle(curlm, mCurlRequest);
-	mPreventDeletion = HTTPRequestPtr(holdReference);
-
+void HTTPRequest::setFinalProperties() {
 	if (mCurlFormBegin) {
 		curl_easy_setopt(mCurlRequest, CURLOPT_HTTPPOST, mCurlFormBegin);
+	}
+	if (getProperties(mURI).does_not_support_Expect_100_continue) {
+		addHeader("Expect:");
 	}
 	if (mHeaders) {
 		if (mURI.proto() == "http" || mURI.proto() == "https") {
@@ -586,6 +637,16 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 			curl_easy_setopt(mCurlRequest, CURLOPT_QUOTE, mHeaders);
 		}
 	}
+}
+
+void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
+	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
+
+	setFinalProperties();
+
+	mPreventDeletion = HTTPRequestPtr(holdReference);
+	curl_multi_add_handle(curlm, mCurlRequest);
+
 	globals.doWakeup();
 
 	//requestQueue.push(this);

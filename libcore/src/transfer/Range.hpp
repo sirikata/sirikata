@@ -56,6 +56,8 @@ private:
 
 	bool mWholeFile;
 
+	/// Cause an error for accidentally calling the (int,bool) constructor.
+	Range(base_type start, base_type end);
 public:
 
 	/// Pass in true for the whole file, and false for an empty range.

@@ -32,6 +32,7 @@
 /*  Created on: Mar 3, 2009 */
 
 #include <cxxtest/TestSuite.h>
+
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
 #include "transfer/CachedServiceLookup.hpp"
@@ -116,23 +117,16 @@ class UploadTest : public CxxTest::TestSuite {
 		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
 		mDownloadReg->setHandler("http", httpDownHandler);
 
-		mUpNameService = new Transfer::CachedServiceLookup;
-		params.set("field:file", "MHashFile0");
-		//params.set("field:user", "highlevel0");
+		//params.set("field:user", "");
 		//params.set("field:password", "authentication0");
-		params.set("value:highlevel0", "test");
-		params.set("value:authentication0", "test");
-		params.set("value:uploadNeed", "1");
-		services = new Transfer::ListOfServices;
-		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext(SERVER "/dns/index.php"),
-				params));
-		mUpNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
-		mUpNameReg = new Transfer::ProtocolRegistry<Transfer::NameUploadHandler>(mUpNameService);
-		mUpNameReg->setHandler("http", httpUpHandler);
+		//params.set("value:author", "test");
+		params.set("value:password", "test");
+		//params.set("value:authentication0", "test");
 
 		mUploadService = new Transfer::CachedServiceLookup;
 		params.set("field:file", "uploadFile0");
+		params.unset("field:filename");
+		params.set("value:uploadNeed", "1");
 		services = new Transfer::ListOfServices;
 		services->push_back(Transfer::ListOfServices::value_type(
 				URIContext(SERVER "/uploadsystem/index.php"),
@@ -140,6 +134,18 @@ class UploadTest : public CxxTest::TestSuite {
 		mUploadService->addToCache(URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
 		mUploadReg = new Transfer::ProtocolRegistry<Transfer::UploadHandler>(mUploadService);
 		mUploadReg->setHandler("http", httpUpHandler);
+
+		mUpNameService = new Transfer::CachedServiceLookup;
+		params.set("field:file", "MHashFile0");
+		params.set("field:filename", "highlevel0");
+		params.unset("value:uploadNeed");
+		services = new Transfer::ListOfServices;
+		services->push_back(Transfer::ListOfServices::value_type(
+				URIContext(SERVER "/dns/index.php"),
+				params));
+		mUpNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
+		mUpNameReg = new Transfer::ProtocolRegistry<Transfer::NameUploadHandler>(mUpNameService);
+		mUpNameReg->setHandler("http", httpUpHandler);
 
 		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
 		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mUpNameReg, mUploadReg);
@@ -176,13 +182,15 @@ public:
 		Transfer::SparseData sd;
 		Transfer::DenseDataPtr first(new Transfer::DenseData(Range(0,8,Transfer::LENGTH)));
 		std::memcpy(first->writableData(), "12345678", first->length());
-		sd.addValidData(first);
 		Transfer::DenseDataPtr second(new Transfer::DenseData(Range(6,9,Transfer::LENGTH)));
 		std::memcpy(second->writableData(), "78abcdefg", second->length());
 		sd.addValidData(second);
+		sd.addValidData(first);
 		Transfer::Fingerprint fp = sd.computeFingerprint();
-		mTransferManager->upload("meerkat:///test",URIContext("mhash:"), sd,
+		mTransferManager->upload("meerkat:///test", URIContext("mhash:"), sd,
 				std::tr1::bind(&UploadTest::uploadFinished, this, _1));
+		//mTransferManager->uploadName("meerkat:///test",Transfer::RemoteFileId(fp, URIContext("mhash:")),
+		//		std::tr1::bind(&UploadTest::uploadFinished, this, _1));
 
 		waitFor(1);
 	}

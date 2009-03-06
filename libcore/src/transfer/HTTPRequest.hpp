@@ -53,15 +53,15 @@ public:
 private:
 	HTTPRequestPtr mPreventDeletion; ///< set to shared_from_this while cURL owns a reference.
 
-	const URI mURI; // const because its c_str is passed to curl.
+	const URI mURI;
 	Range mRequestedRange;
-	String mRangeString;// Upon go(), its c_str is passed to curl: do not change
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
 	void *mHeaders; // CURL header linked list.
 
 	void *mCurlFormBegin;
 	void *mCurlFormEnd;
+	long mStatusCode;
 
 	Range::base_type mOffset;
 	DenseDataPtr mData;
@@ -86,7 +86,8 @@ private:
 	static size_t read_cb(unsigned char *data, size_t length, size_t count, HTTPRequest *handle);
 	static size_t header_cb(char *data, size_t length, size_t count, HTTPRequest *handle);
 
-	void initCurlHandle();
+	void setFinalProperties(); ///< Will be called if the request must be retried.
+	void initCurlHandle(); ///< Only called initially--sets defaults for all properties.
 
 	HTTPRequest(const HTTPRequest &other);
 public:
@@ -133,8 +134,7 @@ public:
 	HTTPRequest(const URI &uri, const Range &range)
 		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
 		  mCurlRequest(NULL), mHeaders(NULL),
-		  mCurlFormBegin(NULL), mCurlFormEnd(NULL),
-		  mOffset(0), mData(new DenseData(range)), mUploadOffset(0)
+		  mCurlFormBegin(NULL), mCurlFormEnd(NULL)
 		  {
 		initCurlHandle();
 	}

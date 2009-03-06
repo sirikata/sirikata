@@ -80,6 +80,10 @@ public:
 		return &(mData[(std::vector<unsigned char>::size_type)(offset-startbyte())]);
 	}
 
+	inline std::string asString() const {
+		return std::string((const char *)data(),(size_t)length());
+	}
+
 	/// Sets the length of the range, as well as allocates more space in the data vector.
 	inline void setLength(size_t len, bool is_npos) {
 		Range::setLength(len, is_npos);

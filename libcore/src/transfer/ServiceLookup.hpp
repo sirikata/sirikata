@@ -63,6 +63,13 @@ public:
 		(*iter).second = value;
 	}
 
+	inline void unset(const std::string &name) {
+		iterator iter (find(name));
+		if (iter != end()) {
+			erase(iter);
+		}
+	}
+
 	inline const std::string &get(const std::string &name) const {
 		const_iterator iter (find(name));
 		if (iter != end()) {
