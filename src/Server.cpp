@@ -212,10 +212,14 @@ void Server::processChunk(const Network::Chunk&chunk) {
 }
 void Server::networkTick(const Time&t) {
     mSendQueue->service(t);
-    while (!mSelfMessages.empty()) {
-        processChunk(mSelfMessages.front());
-        mSelfMessages.pop_front();
+
+    std::deque<Network::Chunk> self_messages;
+    self_messages.swap( mSelfMessages );
+    while (!self_messages.empty()) {
+        processChunk(self_messages.front());
+        self_messages.pop_front();
     }
+
     Sirikata::Network::Chunk *c=NULL;
     while((c=mNetwork->receiveOne())) {
         processChunk(*c);
