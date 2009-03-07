@@ -33,45 +33,58 @@
 #include "util/ListenerProvider.hpp"
 
 using namespace Sirikata;
-class ListenerTest : public CxxTest::TestSuite
-{
+class ListenerTestClass {
 public:
+    int total;
+    ListenerTestClass() {total=1;}
+    virtual ~ListenerTestClass(){}
+    virtual void notify(int i) {
+        total*=i;
+    }
+};
+
+class ListenerTest :  public CxxTest::TestSuite
+                   ,public Sirikata::MarkovianProvider1<ListenerTestClass*,int>
+{
+    class Test :public ListenerTestClass{
+    public:
+        Test() {total=0;}
+        virtual void notify(int i) {
+            total+=i;
+        }
+        
+    };
+public:
+    ListenerTest():MarkovianProvider1<ListenerTestClass*,int>(10){}
+
     void setUp( void )
     {
     }
     void tearDown( void )
     {
     }
-    class Test {
-    public:
-        int total;
-        Test() {total=0;}
-        void notify(int i) {
-            total+=i;
-        }
-    };
 
     void testListenerCallAddRemove( void ) {
-        Test * a=(new Test),*b=(new Test),*c=(new Test),*d=(new Test);
+        ListenerTestClass * a=(new Test),*b=(new ListenerTestClass),*c=(new Test),*d=(new Test);
         
-        Provider<Test*> provider;
+        Provider<ListenerTestClass*> provider;
         provider.addListener(a);
         provider.addListener(b);
         provider.addListener(c);
-        provider.addListener(d);
-        provider.notify(8);
+        provider.notify(&ListenerTestClass::notify,8);
         provider.removeListener(a);
-        provider.notify(4);
+        provider.addListener(d);
+        provider.notify(&ListenerTestClass::notify,4);
         provider.removeListener(b);
-        provider.notify(2);
+        provider.notify(&ListenerTestClass::notify,2);
         provider.removeListener(d);
-        provider.notify(1);
+        provider.notify(&ListenerTestClass::notify,1);
         provider.removeListener(c);
-        provider.notify(16);
+        provider.notify(&ListenerTestClass::notify,16);
         TS_ASSERT_EQUALS(a->total,8);
-        TS_ASSERT_EQUALS(b->total,12);
+        TS_ASSERT_EQUALS(b->total,32);
         TS_ASSERT_EQUALS(c->total,15);
-        TS_ASSERT_EQUALS(d->total,14);
+        TS_ASSERT_EQUALS(d->total,6);
         delete a;delete b;delete c; delete d;
     }
     void testSharedListenerCallAddRemove( void ) {
@@ -82,15 +95,15 @@ public:
         provider.addListener(b);
         provider.addListener(c);
         provider.addListener(d);
-        provider.notify(8);
+        provider.notify(&ListenerTestClass::notify,8);
         provider.removeListener(b);
-        provider.notify(4);
+        provider.notify(&ListenerTestClass::notify,4);
         provider.removeListener(a);
-        provider.notify(2);
+        provider.notify(&ListenerTestClass::notify,2);
         provider.removeListener(d);
-        provider.notify(1);
+        provider.notify(&ListenerTestClass::notify,1);
         provider.removeListener(c);
-        provider.notify(16);
+        provider.notify(&ListenerTestClass::notify,16);
         TS_ASSERT_EQUALS(a->total,12);
         TS_ASSERT_EQUALS(b->total,8);
         TS_ASSERT_EQUALS(c->total,15);
@@ -100,20 +113,20 @@ public:
     void testStatelessListenerCallAddRemove( void ) {
         Test * a=(new Test),*b=(new Test),*c=(new Test),*d=(new Test);
         
-        StatelessProvider1<Test*,int> provider(10);
-        provider.addListener(a);
-        provider.addListener(b);
-        provider.addListener(c);
-        provider.notify(8);
-        provider.addListener(d);
-        provider.removeListener(a);
-        provider.notify(4);
-        provider.removeListener(b);
-        provider.notify(2);
-        provider.removeListener(d);
-        provider.notify(1);
-        provider.removeListener(c);
-        provider.notify(16);
+
+        this->addListener(a);
+        this->addListener(b);
+        this->addListener(c);
+        this->notify(8);
+        this->addListener(d);
+        this->removeListener(a);
+        this->notify(4);
+        this->removeListener(b);
+        this->notify(2);
+        this->removeListener(d);
+        this->notify(1);
+        this->removeListener(c);
+        this->notify(16);
         TS_ASSERT_EQUALS(a->total,18);
         TS_ASSERT_EQUALS(b->total,22);
         TS_ASSERT_EQUALS(c->total,25);
