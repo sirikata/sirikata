@@ -539,6 +539,7 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 #test source files
 SET(CXXTESTSources
+  ${LIBCORE_DIR}/test/ListenerTest.hpp
   ${LIBCORE_DIR}/test/SstTest.hpp
   ${LIBCORE_DIR}/test/TR1Test.hpp
   ${LIBCORE_DIR}/test/AnyTest.hpp
