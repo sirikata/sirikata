@@ -34,30 +34,31 @@
 #define _FAIR_MESSAGE_QUEUE_HPP_
 
 #include "Time.hpp"
-#include "MessageQueue.hpp"
 
-namespace Cobra {
+namespace CBR {
 
 class Message;
 class Server;
-template <typename Message> class Queue {
-    std::dequeue<Message> mMessages;
-    uint32 mMaxSize;
-public:
-    MessageQueue(uint32 max_size){
-        mMaxSize=max_size;
-    }
-    ~MessageQueue(){}
-
+namespace QueueEnum {
     enum PushResult {
         PushSucceeded,
         PushExceededMaximumSize
     };
-    PushResult push(const Message &msg){
+};
+template <typename Message> class Queue {
+    std::deque<Message> mMessages;
+    uint32 mMaxSize;
+public:
+    Queue(uint32 max_size){
+        mMaxSize=max_size;
+    }
+    ~Queue(){}
+
+    QueueEnum::PushResult push(const Message &msg){
         if (mMessages.size()>=mMaxSize)
-            return PushExceededMaximumSize;
+            return QueueEnum::PushExceededMaximumSize;
         mMessages.push_back(msg);
-        return PushSucceeded;
+        return QueueEnum::PushSucceeded;
     }
 
     const Message& front() const{
@@ -80,11 +81,27 @@ public:
 template<class MessageQueue> class Weight {
 public:
     uint32 operator()(const MessageQueue&mq)const {
-        return mq.front().size();
+        return mq.front()->size();
     }
 };
-class <Message,Key,WeightFunction=Weight<MessageQueue>> class FairMessageQueue {
+template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairMessageQueue {
 public:
+    struct ServerQueueInfo {
+        ServerQueueInfo():nextFinishTime(0) {
+            messageQueue=NULL;
+            weight=1.0;
+        }
+        ServerQueueInfo(Queue<Message*>* queue, float w)
+         : messageQueue(queue), weight(w), nextFinishTime(0) {}
+
+        Queue<Message*>* messageQueue;
+        float weight;
+        Time nextFinishTime;
+    };
+
+
+    typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
+
     typedef Queue<Message*> MessageQueue;
     FairMessageQueue(uint32 bytes_per_second)
         : mRate(bytes_per_second),
@@ -97,8 +114,9 @@ public:
          bytes_sent(0){}   
 
     ~FairMessageQueue(){
-        for(ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-            ServerQueueInfo* queue_info = it->second;
+        typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
+        for(; it != mServerQueues.end(); it++) {
+            ServerQueueInfo* queue_info = &it->second;
             delete queue_info->messageQueue;
             delete queue_info;
         }
@@ -107,20 +125,29 @@ public:
     void addQueue(MessageQueue *mq, Key server, float weight){
         assert(mq->empty());
         
-        ServerQueueInfo* queue_info = new ServerQueueInfo(mq, weight);
+        ServerQueueInfo queue_info (mq, weight);
         
         mTotalWeight += weight;
         mServerQueues[server] = queue_info;
+    }
+    bool removeQueue(Key server) {
+        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
+        bool retval=( where != mServerQueues.end() );
+        if (retval) {
+            delete where->second.messageQueue;
+            mServerQueues.erase(where);
+        }
+        return retval;
     }
     bool hasQueue(Key server) const{
         return ( mServerQueues.find(server) != mServerQueues.end() );
     }
 
-    MessageQueue::PushResult queueMessage(Key dest_server, Message msg){
-        ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
+    QueueEnum::PushResult queueMessage(Key dest_server, Message *msg){
+        typename ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
         assert( qi_it != mServerQueues.end() );
         
-        ServerQueueInfo* queue_info = qi_it->second;
+        ServerQueueInfo* queue_info = &qi_it->second;
 
         if (queue_info->messageQueue->empty())
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
@@ -129,7 +156,7 @@ public:
     }
 
     // returns a list of messages which should be delivered immediately
-    std::vector<Message> tick(const Time& t){
+    std::vector<Message*> tick(const Time& t){
         Duration since_last = t - mCurrentTime;
         mCurrentTime = t;
         
@@ -157,7 +184,7 @@ public:
             if (mMessageBeingSent == NULL) {
                 // Find the non-empty queue with the earliest finish time
                 ServerQueueInfo* min_queue_info = NULL;
-                for(ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
+                for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
                     ServerQueueInfo* queue_info = &it->second;
                     if (queue_info->messageQueue->empty()) continue;
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
@@ -175,7 +202,7 @@ public:
                     
                     // update the next finish time if there's anything in the queue
                     if (!min_queue_info->messageQueue->empty())
-                        min_queue_info->nextFinishTime = finishTime(min_queue_info->messageQueue->frontSize(), min_queue_info->weight);
+                        min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue), min_queue_info->weight);
                 }
             }
         }
@@ -203,16 +230,6 @@ private:
         
         return mCurrentVirtualTime + transmitTime;        
     }
-
-    struct ServerQueueInfo {
-        ServerQueueInfo(MessageQueue* queue, float w)
-         : messageQueue(queue), weight(w), nextFinishTime(0) {}
-
-        MessageQueue* messageQueue;
-        float weight;
-        Time nextFinishTime;
-    };
-    typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
 
     uint32 mRate;
     uint32 mTotalWeight;
