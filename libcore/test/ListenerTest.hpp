@@ -32,7 +32,6 @@
 #include <cxxtest/TestSuite.h>
 #include "util/ListenerProvider.hpp"
 
-using namespace Sirikata;
 class ListenerTestClass {
 public:
     int total;
@@ -55,7 +54,7 @@ class ListenerTest :  public CxxTest::TestSuite
         
     };
 public:
-    ListenerTest():MarkovianProvider1<ListenerTestClass*,int>(10){}
+    ListenerTest():Sirikata::MarkovianProvider1<ListenerTestClass*,int>(10){}
 
     void setUp( void )
     {
@@ -63,52 +62,55 @@ public:
     void tearDown( void )
     {
     }
-
-    void testListenerCallAddRemove( void ) {
-        ListenerTestClass * a=(new Test),*b=(new ListenerTestClass),*c=(new Test),*d=(new Test);
+    template <typename T> class TestCallAddRemove :public Sirikata::Provider<T>{
+        int callCount;
+    public:
+        TestCallAddRemove() {
+            callCount=0;
+        }
+        virtual void listenerAdded(T ){callCount+=1;}
+        virtual void listenerRemoved(T ){callCount+=16;}
+        virtual void firstListenerAdded(T ){callCount+=256;}
+        virtual void lastListenerRemoved(T ){callCount+=256*16;}
         
-        Provider<ListenerTestClass*> provider;
-        provider.addListener(a);
-        provider.addListener(b);
-        provider.addListener(c);
-        provider.notify(&ListenerTestClass::notify,8);
-        provider.removeListener(a);
-        provider.addListener(d);
-        provider.notify(&ListenerTestClass::notify,4);
-        provider.removeListener(b);
-        provider.notify(&ListenerTestClass::notify,2);
-        provider.removeListener(d);
-        provider.notify(&ListenerTestClass::notify,1);
-        provider.removeListener(c);
-        provider.notify(&ListenerTestClass::notify,16);
-        TS_ASSERT_EQUALS(a->total,8);
-        TS_ASSERT_EQUALS(b->total,32);
-        TS_ASSERT_EQUALS(c->total,15);
-        TS_ASSERT_EQUALS(d->total,6);
-        delete a;delete b;delete c; delete d;
+        TestCallAddRemove& test(T aa, T bb, T cc, T dd) {
+            T a(aa);
+            T b(bb);
+            T c(cc);
+            T d(dd);
+            this->notify(&ListenerTestClass::notify,65535);
+            this->addListener(a);
+            this->addListener(b);
+            this->addListener(c);
+            this->notify(&ListenerTestClass::notify,8);
+            this->removeListener(a);
+            this->addListener(d);
+            this->notify(&ListenerTestClass::notify,4);
+            this->removeListener(b);
+            this->notify(&ListenerTestClass::notify,2);
+            this->removeListener(d);
+            this->notify(&ListenerTestClass::notify,1);
+            this->removeListener(c);
+            this->notify(&ListenerTestClass::notify,16);
+            TS_ASSERT_EQUALS(a->total,dynamic_cast<Test*>(&*a)?8:8);
+            TS_ASSERT_EQUALS(b->total,dynamic_cast<Test*>(&*b)?12:32);
+            TS_ASSERT_EQUALS(c->total,dynamic_cast<Test*>(&*c)?15:64);
+            TS_ASSERT_EQUALS(d->total,dynamic_cast<Test*>(&*d)?6:8);
+            TS_ASSERT_EQUALS(callCount,4+4*16+256+256*16);
+            return *this;
+        }
+    };
+    void testListenerCallAddRemove( void ) {
+        ListenerTestClass* a=new Test;
+        ListenerTestClass* b=new ListenerTestClass;
+        ListenerTestClass* c=new Test;
+        ListenerTestClass* d=new ListenerTestClass;
+        TestCallAddRemove<ListenerTestClass*>().test(a,b,c,d);
+        delete a;delete b;delete c;delete d;
     }
     void testSharedListenerCallAddRemove( void ) {
-        std::tr1::shared_ptr<Test> a(new Test),b(new Test),c(new Test),d(new Test);
-        
-        Provider<std::tr1::shared_ptr<Test> > provider;
-        provider.addListener(a);
-        provider.addListener(b);
-        provider.addListener(c);
-        provider.addListener(d);
-        provider.notify(&ListenerTestClass::notify,8);
-        provider.removeListener(b);
-        provider.notify(&ListenerTestClass::notify,4);
-        provider.removeListener(a);
-        provider.notify(&ListenerTestClass::notify,2);
-        provider.removeListener(d);
-        provider.notify(&ListenerTestClass::notify,1);
-        provider.removeListener(c);
-        provider.notify(&ListenerTestClass::notify,16);
-        TS_ASSERT_EQUALS(a->total,12);
-        TS_ASSERT_EQUALS(b->total,8);
-        TS_ASSERT_EQUALS(c->total,15);
-        TS_ASSERT_EQUALS(d->total,14);
-        
+        std::tr1::shared_ptr<ListenerTestClass> a(new Test),b(new ListenerTestClass),c(new Test),d(new Test);
+        TestCallAddRemove<std::tr1::shared_ptr<ListenerTestClass> >().test(a,b,c,d);        
     }
     void testStatelessListenerCallAddRemove( void ) {
         Test * a=(new Test),*b=(new Test),*c=(new Test),*d=(new Test);
