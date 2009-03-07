@@ -21,6 +21,7 @@ class LightInfo {
         CAST_SHADOW=1024
     }
     int32 mWhichFields;
+public:
     LightInfo() {
         mWhichFields=0;
         mDiffuseColor=Color(1,1,1);
@@ -44,7 +45,7 @@ class LightInfo {
     float32 mAmbientPower;
     float32 mShadowPower;
     float64 mLightRnage;
-    float32 mConstantFalloff
+    float32 mConstantFalloff;
     float32 mLinearFalloff;
     float32 mQuadraticFalloff;
     float32 mConeInnerRadians;
