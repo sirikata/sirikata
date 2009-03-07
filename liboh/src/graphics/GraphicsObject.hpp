@@ -52,6 +52,7 @@ class GraphicsObject {
     };
     uint32 mCapabilities;
 public:
+    virtual ~GraphicsObject(){}
     GraphicsObject():mCapabilities(HAS_NO_CAPABILITY) {}
     virtual void show()=0;
     virtual void hide()=0;
