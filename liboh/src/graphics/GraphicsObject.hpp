@@ -34,6 +34,8 @@
 #define _SIRIKATA_GRAPHICS_OBJECT_HPP_
 
 namespace Sirikata {
+typedef Vector4f ColorAlpha;
+typedef Vector3f Color;
 class GraphicsCamera;
 class GraphicsObject {
     enum CapabilityFlags {
@@ -45,7 +47,8 @@ class GraphicsObject {
         HAS_CAMERA_CAPABILITY=16,
         HAS_BOUNDS_CAPABILITY=32,
         HAS_SELECTION_CAPABILITY=64,
-        HAS_ALL_CAPABILITY=HAS_MESH_CAPABILITY|HAS_LOD_CAPABILITY|HAS_SCALE_CAPABILITY|HAS_ANIMATION_CAPABILITY|HAS_CAMERA_CAPABILITY|HAS_BOUNDS_CAPABILITY|HAS_SELECTION_CAPABILITY
+        HAS_LIGHT_CAPABILITY=128,
+        HAS_ALL_CAPABILITY=HAS_MESH_CAPABILITY|HAS_LOD_CAPABILITY|HAS_SCALE_CAPABILITY|HAS_ANIMATION_CAPABILITY|HAS_CAMERA_CAPABILITY|HAS_BOUNDS_CAPABILITY|HAS_SELECTION_CAPABILITY|HAS_LIGHT_CAPABILITY
     };
     uint32 mCapabilities;
 public:
@@ -136,8 +139,24 @@ public:
     virtual bool setMaterialLODBias(float32 factor, unsigned int max_level=(1<<31), unsigned int min_level=0){
         return false;
     }
-    
-    
+    bool hasLightCapability() {
+        return 0!=(mCapabilities&HAS_LIGHT_CAPABILITY);
+    }
+    virtual bool setLightDiffuseColor(const Color&c){return false;}
+    virtual bool setLightSpecularColor(const Color&c){return false;}
+    virtual bool setLightPower(float32 c){return false;}
+    ///ogre only looks at the absolute value of this
+    virtual bool setLightAmbientColor(const Color&c){return false;}
+    ///ogre only looks at the absolute value of this
+    virtual bool setLightShadowColor(const Color&c){return false;}
+    virtual bool setLightRange(float64 maxRange){return false;}
+    virtual bool setLightFalloff(float32 constant, float32 linear,float32 quadratic){return false;}
+    virtual bool setLightSpotlightCone(float32 innerRadians, float32 outerRadians,float32 coneFalloff){return false;}
+    enum LightTypes {
+        POINT_LIGHT,SPOTLIGHT_LIGHT,DIRECTIONAL_LIGHT,NUM_LIGHT_TYPES//defaults to point=0?
+    };
+    virtual bool setLightType(String type){return false;}
+    virtual bool setCastsShadow(bool shouldCastShadow){return false;}
 };
 }
 #endif

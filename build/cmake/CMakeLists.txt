@@ -63,7 +63,9 @@ ENDIF()
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
 STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
-SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden)
+SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo )
+#-Wabi 
+#-Wold-style-cast 
 #-fno-rtti
 ADD_DEFINITIONS(${ADDED_DEFINITIONS})
 #-fno-rtti
