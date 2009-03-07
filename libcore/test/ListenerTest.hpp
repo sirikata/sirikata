@@ -97,4 +97,27 @@ public:
         TS_ASSERT_EQUALS(d->total,14);
         
     }
+    void testStatelessListenerCallAddRemove( void ) {
+        Test * a=(new Test),*b=(new Test),*c=(new Test),*d=(new Test);
+        
+        StatelessProvider1<Test*,int> provider(10);
+        provider.addListener(a);
+        provider.addListener(b);
+        provider.addListener(c);
+        provider.notify(8);
+        provider.addListener(d);
+        provider.removeListener(a);
+        provider.notify(4);
+        provider.removeListener(b);
+        provider.notify(2);
+        provider.removeListener(d);
+        provider.notify(1);
+        provider.removeListener(c);
+        provider.notify(16);
+        TS_ASSERT_EQUALS(a->total,18);
+        TS_ASSERT_EQUALS(b->total,22);
+        TS_ASSERT_EQUALS(c->total,25);
+        TS_ASSERT_EQUALS(d->total,14);
+        delete a;delete b;delete c; delete d;
+    }
 };

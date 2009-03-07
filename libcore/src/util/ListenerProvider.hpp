@@ -1,7 +1,7 @@
 namespace Sirikata {
 template <typename ListenerPtr> class Provider {
     typedef std::vector<ListenerPtr> ListenerVector;
-    typedef std::tr1::unordered_map<ListenerPtr,size_t> ListenerMap;
+    typedef std::map<ListenerPtr,size_t> ListenerMap;
     ListenerVector mListeners;
     ListenerMap mListenerIndex;
 public:
@@ -77,5 +77,139 @@ public:
         }
     }
 };
+template<typename ListenerPtr, class A> class StatelessProvider1:protected Provider<ListenerPtr> {
+    A mA;
+public:
+    StatelessProvider1(const A&a):mA(a) {}
+    void notify(const A&a) {
+        mA=a;
+        this->Provider<ListenerPtr>::notify(mA);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
+template<typename ListenerPtr, class A, class B> class StatelessProvider2:protected Provider<ListenerPtr> {
+    A mA;
+    B mB;
+public:
+    StatelessProvider2(const A&a, const B&b):mA(a),mB(b) {}
+    void notify(const A&a, const B&b) {
+        mA=a;
+        mB=b;
+        this->Provider<ListenerPtr>::notify(mA,mB);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA,mB);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
+template<typename ListenerPtr, class A, class B, class C> class StatelessProvider3:protected Provider<ListenerPtr> {
+    A mA;
+    B mB;
+    C mC;
+public:
+    StatelessProvider3(const A&a, const B&b, const C&c):mA(a),mB(b),mC(c) {}
+    void notify(const A&a, const B&b, const C&c) {
+        mA=a;
+        mB=b;
+        mC=c;
+        this->Provider<ListenerPtr>::notify(mA,mB,mC);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA,mB,mC);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
+template<typename ListenerPtr, class A, class B, class C, class D> class StatelessProvider4:protected Provider<ListenerPtr> {
+    A mA;
+    B mB;
+    C mC;
+    D mD;
+public:
+    StatelessProvider4(const A&a, const B&b, const C&c, const D&d):mA(a),mB(b),mC(c),mD(d) {}
+    void notify(const A&a, const B&b, const C&c, const D&d) {
+        mA=a;
+        mB=b;
+        mC=c;
+        mD=d;
+        this->Provider<ListenerPtr>::notify(mA,mB,mC,mD);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA,mB,mC,mD);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
+template<typename ListenerPtr, class A, class B, class C, class D, class E> 
+ class StatelessProvider5:protected Provider<ListenerPtr> {
+    A mA;
+    B mB;
+    C mC;
+    D mD;
+    E mE;
+public:
+    StatelessProvider5(const A&a, const B&b, const C&c,const D&d, const E&e):mA(a),mB(b),mC(c),mD(d),mE(e) {}
+    void notify(const A&a, const B&b, const C&c, const D&d, const E&e) {
+        mA=a;
+        mB=b;
+        mC=c;
+        mD=d;
+        mE=e;
+        this->Provider<ListenerPtr>::notify(mA,mB,mC,mD,mE);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA,mB,mC,mD,mE);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
+template<typename ListenerPtr, class A, class B, class C, class D, class E, class F> 
+ class StatelessProvider6:protected Provider<ListenerPtr> {
+    A mA;
+    B mB;
+    C mC;
+    D mD;
+    E mE;
+    F mF;
+public:
+    StatelessProvider6(const A&a, const B&b, const C&c,const D&d, const E&e, const F&f):mA(a),mB(b),mC(c),mD(d),mE(e),mF(f) {}
+    void notify(const A&a, const B&b, const C&c, const D&d, const E&e, const F&f) {
+        mA=a;
+        mB=b;
+        mC=c;
+        mD=d;
+        mE=e;
+        mF=f;
+        this->Provider<ListenerPtr>::notify(mA,mB,mC,mD,mE,mF);
+    }
+    void addListener(ListenerPtr p) {
+        p->notify(mA,mB,mC,mD,mE,mF);
+        this->Provider<ListenerPtr>::addListener(p);
+    }
+    void removeListener(ListenerPtr p) {
+        this->Provider<ListenerPtr>::removeListener(p);
+    }
+};
+
 
 }
