@@ -51,7 +51,7 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
         ObjectInputs* inputs = new ObjectInputs;
 
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
-        inputs->motion = new RandomMotionPath(start, end, startpos, 1, Duration::milliseconds((uint32)1000)); // FIXME
+        inputs->motion = new RandomMotionPath(start, end, startpos, 1, Duration::milliseconds((uint32)1000), region); // FIXME
 
         inputs->proximityRadius = randFloat() * 50 + 50; // FIXME
 

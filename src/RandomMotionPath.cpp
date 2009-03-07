@@ -50,14 +50,22 @@ static Vector3f UniformSampleSphere(float u1, float u2) {
     return Vector3f(x, y, z);
 }
 
-RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period) {
+RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region) {
     MotionVector3f last_motion(start, startpos, Vector3f(0,0,0));
     mUpdates.push_back(last_motion);
     Time offset_start = start + update_period * randFloat();
     for(Time curtime = offset_start; curtime < end; curtime += update_period) {
         Vector3f curpos = last_motion.position(curtime);
-        Vector3f dir = UniformSampleSphere( randFloat(), randFloat() );
+        Vector3f dir = UniformSampleSphere( randFloat(), randFloat() ) * speed;
         last_motion = MotionVector3f(curtime, curpos, dir);
+        // last_motion is what we would like, no we have to make sure we'll stay  in range
+        Vector3f nextpos = last_motion.position(curtime + update_period);
+        Vector3f nextpos_clamped = region.clamp(nextpos);
+        Vector3f to_dest = nextpos_clamped - curpos;
+        dir = to_dest * (1.f / update_period.seconds());
+
+        last_motion = MotionVector3f(curtime, curpos, dir);
+
         mUpdates.push_back(last_motion);
     }
 }
