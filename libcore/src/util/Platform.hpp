@@ -189,6 +189,7 @@ typedef double float64;
 
 typedef uchar byte;
 typedef std::string String;
+typedef std::vector<uint8> MemoryBuffer;
 
 } // namespace Sirikata
 #include "Quaternion.hpp"

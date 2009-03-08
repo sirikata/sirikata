@@ -1,7 +1,7 @@
-/*  Sirikata
- *  main.cpp
+/*  Sirikata Object Host -- Proxy Creation and Destruction manager
+ *  ProxyManager.hpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,23 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <util/Platform.hpp>
-#include <options/Options.hpp>
-
-#include <ProxyManager.hpp>
-#include <../plugins/ogre/OgreSystem.hpp>
+#include <util/ListenerProvider.hpp>
+#include "ProxyCreationListener.hpp"
 namespace Sirikata {
-//InitializeOptions main_options("verbose",
+class ProxyManager : public Provider<ProxyCreationListener*> {
+public:
+    ProxyManager();
+    ~ProxyManager();
 
-}
 
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
-    OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new ProxyManager;
-    Provider<Sirikata::ProxyCreationListener*>*provider=pm;
-    new OgreSystem(pm,"");
-    return 0;
+};
 }

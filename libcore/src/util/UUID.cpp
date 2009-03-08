@@ -74,5 +74,11 @@ std::string UUID::rawHexData()const{
     }
     return retval;
 }
-
+unsigned int UUID::hash() const {
+    uint64 a;
+    uint64 b;
+    memcpy(&a,mData.begin(),sizeof(a));
+    memcpy(&b,mData.begin()+8,sizeof(b));
+    return std::tr1::hash<uint64>()(a)^std::tr1::hash<uint64>()(b);
+}
 }

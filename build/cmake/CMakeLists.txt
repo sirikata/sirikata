@@ -63,7 +63,8 @@ ENDIF()
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
 STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
-SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Woverloaded-virtual -Wsign-promo )
+SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
+#-Woverloaded_virtual
 #-Wabi 
 #-Wold-style-cast 
 #-fno-rtti
@@ -428,7 +429,10 @@ SET(INCLUDE_DIRECTORIES
   ${CURL_INCLUDE_DIRS}
   ${PROTOCOLBUFFERS_INCLUDE_DIRS}
   ${CXXTESTRoot})
+IF(OGRE_FOUND)
+SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${OGRE_INCLUDE_DIRS})
 
+ENDIF()
 INCLUDE_DIRECTORIES(BEFORE ${INCLUDE_DIRECTORIES})
 
 SET(INCLUDE_COMMAND)
@@ -529,7 +533,7 @@ IF(NOT WIN32)
 ENDIF()
 
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
-SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp )
+SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp ${LIBOH_SOURCE_DIR}/ProxyManager.cpp ${LIBOH_SOURCE_DIR}/../plugins/ogre/OgreSystem.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
 
@@ -540,20 +544,6 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 #test source files
 SET(CXXTESTSources
   ${LIBCORE_DIR}/test/ListenerTest.hpp
-  ${LIBCORE_DIR}/test/SstTest.hpp
-  ${LIBCORE_DIR}/test/TR1Test.hpp
-  ${LIBCORE_DIR}/test/AnyTest.hpp
-  ${LIBCORE_DIR}/test/AtomicTest.hpp
-  ${LIBCORE_DIR}/test/Vector3Test.hpp
-  ${LIBCORE_DIR}/test/Matrix3Test.hpp
-  ${LIBCORE_DIR}/test/QuaternionTest.hpp
-  ${LIBCORE_DIR}/test/ExtrapolationTest.hpp
-  ${LIBCORE_DIR}/test/EventTest.hpp
-  ${LIBCORE_DIR}/test/OptionTest.hpp
-  ${LIBCORE_DIR}/test/NameLookupTest.hpp
-  ${LIBCORE_DIR}/test/CacheLayerTest.hpp
-  ${LIBCORE_DIR}/test/UploadTest.hpp
-  ${LIBCORE_DIR}/test/DownloadTest.hpp
  )
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
@@ -565,10 +555,6 @@ SET(TEST_SOURCES ${CXXTEST_CPP_FILE})
 
 #linker flags
 SET(CMAKE_DEBUG_POSTFIX "_d")
-SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /usr/local)
-SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/local)
-
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
 IF(WIN32)
   SET(SYSTEM_DL_LIBRARY "wsock32")
@@ -578,8 +564,13 @@ ENDIF()
 
 SET(SIRIKATA_CORE_LIBRARIES
     ${SYSTEM_DL_LIBRARY}
-    ${Boost_LIBRARIES})
-
+    ${Boost_LIBRARIES} )
+IF(OGRE_FOUND)
+LINK_DIRECTORIES(${Boost_LIBRARY_DIRS} ${OGRE_LIBRARY_DIRS})
+SET(SIRIKATA_CORE_LIBRARIES ${SIRIKATA_CORE_LIBRARIES} ${OGRE_LIBRARIES})
+ELSE()
+LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+ENDIF()
 
 SET(SIRIKATA_CORE_LIB sirikata-core)
 SET(SIRIKATA_SPACE_LIB sirikata-space)

@@ -1,7 +1,7 @@
-/*  Sirikata
- *  main.cpp
+/*  Sirikata liboh -- Ogre Graphics Plugin
+ *  OgreGraphics.hpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _SIRIKATA_OGRE_GRAPHICS_
+#define _SIRIKATA_OGRE_GRAPHICS_
 #include <util/Platform.hpp>
-#include <options/Options.hpp>
+#include <util/ListenerProvider.hpp>
+#include <ProxyCreationListener.hpp>
+#include <Ogre.h>
+namespace Sirikata { namespace Graphics {
 
-#include <ProxyManager.hpp>
-#include <../plugins/ogre/OgreSystem.hpp>
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
+class OgreSystem: public ProxyCreationListener {
+    Ogre::SceneManager *mSceneManager;
+    Ogre::RenderTarget *mRenderTarget;
+    OptionValue*mWindowWidth;
+    OptionValue*mWindowHeight;
+    OptionValue*mFullScreen;
+    static uint32 sNumOgreSystems;
+    static Ogre::Plugin*sCDNArchivePlugin;
+    static Ogre::Root *sRoot;
+    Provider<ProxyCreationListener*>*mProxyManager;
+    void loadBuiltinPlugins();
+public:
+    OgreSystem(Provider<ProxyCreationListener*>*proxyManager, const String&options);
+    Ogre::RenderTarget *getRenderTarget();
+    static Ogre::Root *getRoot();
+    Ogre::SceneManager* getSceneManager();
+    virtual void createProxy(ProxyObjectPtr p);
+    virtual void destroyProxy(ProxyObjectPtr p);
+    ~OgreSystem();
+};
 
-}
 
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
-    OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new ProxyManager;
-    Provider<Sirikata::ProxyCreationListener*>*provider=pm;
-    new OgreSystem(pm,"");
-    return 0;
-}
+} }
+#endif
