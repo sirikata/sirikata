@@ -172,9 +172,17 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const UUID& obj);
+    MigrateMessage(const UUID& obj, float proxRadius, uint16_t subscriberCount);
+
+    ~MigrateMessage();
 
     const UUID& object() const;
+
+    const float proximityRadius() const;
+
+    const int subscriberCount() const;
+
+    UUID* subscriberList() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
@@ -182,6 +190,12 @@ private:
     MigrateMessage(const Network::Chunk& wire, uint32& offset);
 
     UUID mObject;
+
+    float mProximityRadius;
+
+    uint16_t mCountSubscribers;
+    UUID* mSubscribers;
+    
 }; // class MigrateMessage
 
 } // namespace CBR

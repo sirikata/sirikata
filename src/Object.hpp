@@ -40,6 +40,7 @@
 
 namespace CBR {
 
+typedef std::set<UUID> ObjectSet;
 class Server;
 
 class Object {
@@ -53,21 +54,24 @@ public:
     const float proximityRadius() {
         return mProximityRadius;
     }
+  
+    const ObjectSet& subscriberSet() {
+        return mSubscribers;
+    }
 
     void tick(const Time& t);
 
     void locationMessage(LocationMessage* loc_msg);
     void proximityMessage(ProximityMessage* prox_msg);
     void subscriptionMessage(SubscriptionMessage* subs_msg);
+    void migrateMessage(MigrateMessage* migrate_msg);
 
 private:
     void addSubscriber(const UUID& sub);
     void removeSubscriber(const UUID& sub);
 
     void checkPositionUpdate(const Time& t);
-
-    typedef std::set<UUID> ObjectSet;
-
+   
     UUID mID;
     MotionPath* mMotion;
     MotionVector3f mLocation;

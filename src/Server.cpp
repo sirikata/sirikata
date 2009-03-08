@@ -58,7 +58,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
     mNetwork->listen(mID);
 
     // setup object which are initially residing on this server
-    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
+    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {              
         UUID obj_id = *it;
         MotionVector3f start_motion = loc_service->location(obj_id);
         Vector3f start_pos = loc_service->currentPosition(obj_id);
@@ -173,7 +173,14 @@ void Server::deliver(Message* msg) {
       case MESSAGE_TYPE_MIGRATE:
           {
               MigrateMessage* migrate_msg = static_cast<MigrateMessage*>(msg);
-              // FIXME
+
+	      const UUID obj_id = migrate_msg->object();
+
+	      Object* obj = mObjectFactory->object(obj_id, this);
+	      obj->migrateMessage(migrate_msg);
+	      	      
+	      mObjects[obj_id] = obj;	      
+
               delete migrate_msg;
           }
           break;
@@ -237,7 +244,7 @@ void Server::tick(const Time& t) {
     networkTick(t);
     // Check for object migrations
     checkObjectMigrations();
-
+    
     // Give objects a chance to process
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* obj = it->second;
@@ -265,10 +272,46 @@ void Server::proximityTick(const Time& t) {
 
 void Server::checkObjectMigrations() {
     // * check for objects crossing server boundaries
-    //   * wrap up state and send message to other server
+    // * wrap up state and send message to other server
     //     to reinstantiate the object there
-    //   * delete object on this side
+    // * delete object on this side
+
+    std::vector<UUID> migrated_objects;
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+        Object* obj = it->second;
+        const UUID& obj_id = obj->uuid();
+      
+        Vector3f obj_pos = mLocationService->currentPosition(obj_id);      
+      
+        if (mServerMap->lookup(obj_pos) != mID) {
+	    ServerID new_server_id = mServerMap->lookup(obj_pos);	    
+	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);	    
+	
+  	    route( migrate_msg , new_server_id);
+	    migrated_objects.push_back(obj_id);
+        }
+    }
+
+    for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
+      mObjects.erase(*it);
+    }
 }
 
+MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
+    const UUID& obj_id = obj->uuid();
+
+    MigrateMessage* migrate_msg = new MigrateMessage(obj_id,
+						    obj->proximityRadius(),
+						    obj->subscriberSet().size()); 
+    ObjectSet::iterator it;
+    int i=0;
+    UUID* migrate_msg_subscribers = migrate_msg->subscriberList();
+    for (it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++) {
+        migrate_msg_subscribers[i] = *it;
+        i++;
+    }
+
+    return migrate_msg;
+}
 
 } // namespace CBR

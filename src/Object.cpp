@@ -65,7 +65,7 @@ void Object::checkPositionUpdate(const Time& t) {
     const MotionVector3f* update = mMotion->nextUpdate(mLocation.updateTime());
     if (update != NULL && update->updateTime() <= t) {
         mLocation = *update;
-        for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
+	for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             LocationMessage* loc_msg =
                 new LocationMessage(
                     mID,
@@ -102,6 +102,15 @@ void Object::subscriptionMessage(SubscriptionMessage* subs_msg) {
         removeSubscriber(subs_msg->sourceObject());
 
     delete subs_msg;
+}
+
+void Object::migrateMessage(MigrateMessage* migrate_msg) {
+    mID = migrate_msg->object();
+    mProximityRadius = migrate_msg->proximityRadius();
+    
+    for (int i = 0; i < migrate_msg->subscriberCount(); i++) {
+      addSubscriber(migrate_msg->subscriberList()[i]);      
+    }
 }
 
 } // namespace CBR

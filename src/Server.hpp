@@ -38,6 +38,7 @@
 #include "Proximity.hpp"
 #include "LocationService.hpp"
 
+
 namespace CBR {
 
 class Proximity;
@@ -50,6 +51,7 @@ class ObjectToObjectMessage;
 class SendQueue;
 class Network;
 class BandwidthStatistics;
+class MigrateMessage;
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -90,6 +92,9 @@ private:
     // Forward the given message to its proper server.  Use this when a message arrives and the object
     // no longer lives on this server.
     void forward(Message* msg, const UUID& dest);
+
+    MigrateMessage* wrapObjectStateForMigration(Object* obj);
+
     typedef std::map<UUID, Object*> ObjectMap;
     ServerID mID;
     ObjectMap mObjects;

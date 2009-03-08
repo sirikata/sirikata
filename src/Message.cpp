@@ -312,22 +312,48 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-MigrateMessage::MigrateMessage(const UUID& obj)
+MigrateMessage::MigrateMessage(const UUID& obj, float proxRadius, uint16_t subscriberCount)
  : Message(MESSAGE_TYPE_MIGRATE),
-   mObject(obj)
+   mObject(obj),
+   mProximityRadius(proxRadius),
+   mCountSubscribers(subscriberCount)
 {
+
+  mSubscribers = new UUID[mCountSubscribers];
+
 }
 
 MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset)
  : Message(MESSAGE_TYPE_MIGRATE)
 {
     uint8 raw_object[UUID::static_size];
-
     memcpy( &raw_object, &wire[offset], UUID::static_size );
     offset += UUID::static_size;
     mObject = UUID(raw_object, UUID::static_size);
+
+    float proximityRadius;
+    memcpy(&proximityRadius, &wire[offset], sizeof(proximityRadius));
+    offset += sizeof(float);
+    mProximityRadius = proximityRadius;
+
+    uint16_t countSubscribers;
+    memcpy(&countSubscribers, &wire[offset], sizeof(countSubscribers));
+    offset += sizeof(uint16_t);
+    mCountSubscribers = countSubscribers;
+
+    mSubscribers = new UUID[mCountSubscribers];
+
+    for (int i=0; i < mCountSubscribers; i++) {
+      memcpy( &raw_object, &wire[offset], UUID::static_size );
+      offset += UUID::static_size;
+      mSubscribers[i] = UUID(raw_object, UUID::static_size);
+    }
 }
 
+MigrateMessage::~MigrateMessage() {
+    if (mCountSubscribers > 0)
+        delete mSubscribers;
+}
 
 const UUID& MigrateMessage::object() const {
     return mObject;
@@ -335,16 +361,39 @@ const UUID& MigrateMessage::object() const {
 
 uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
+    
+    uint32 uuid_size = UUID::static_size;
+    wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) + 
+		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers);
 
-    uint32 loc_part_size = UUID::static_size;
-    wire.resize( wire.size() + loc_part_size );
+    memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
+    offset += uuid_size;
 
-    memcpy( &wire[offset], mObject.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
+    memcpy( &wire[offset], &mProximityRadius, sizeof(mProximityRadius) );
+    offset += sizeof(mProximityRadius);
 
+    memcpy( &wire[offset], &mCountSubscribers, sizeof(mCountSubscribers) );
+    offset += sizeof(mCountSubscribers);
+
+    for (int i=0; i < mCountSubscribers; i++) {
+      memcpy( &wire[offset], mSubscribers[i].getArray().data(), uuid_size);
+      offset += uuid_size;
+    }
+   
     return offset;
 }
 
+const float MigrateMessage::proximityRadius() const {
+    return mProximityRadius;
+}
+
+const int MigrateMessage::subscriberCount() const {
+    return mCountSubscribers;
+}
+
+UUID* MigrateMessage::subscriberList() const {
+  return mSubscribers;
+}
 
 
 } // namespace CBR
