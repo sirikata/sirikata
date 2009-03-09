@@ -83,6 +83,7 @@ private:
     // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
     void route(Message* msg, const ServerID& dest_server);
     void route(Message* msg, const UUID& dest_obj);
+    void route(Message* msg, const ServerID& dest_server, const UUID& src_uuid);
 
     // Delivery interface.  This should be used to deliver received messages to the correct location -
     // the server or object it is addressed to.

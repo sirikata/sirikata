@@ -58,7 +58,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
     mNetwork->listen(mID);
 
     // setup object which are initially residing on this server
-    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {              
+    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
         UUID obj_id = *it;
         MotionVector3f start_motion = loc_service->location(obj_id);
         Vector3f start_pos = loc_service->currentPosition(obj_id);
@@ -92,28 +92,15 @@ void Server::route(ObjectToObjectMessage* msg) {
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
     ServerID destServerID=mServerMap->lookup(dest_uuid);
-    ServerMessageHeader server_header(
-        this->id(),
-        destServerID
-    );
 
-    uint32 offset = 0;
-    Network::Chunk msg_serialized;
-    offset=server_header.serialize(msg_serialized, offset);
-    offset = msg->serialize(msg_serialized, offset);
-
-    mBandwidthStats->sent(destServerID, offset, mCurrentTime);
-
-    if (destServerID==id()) {
-        mSelfMessages.push_back(msg_serialized);
-    }else {
-        bool failed=!mSendQueue->addMessage(destServerID,msg_serialized,src_uuid);
-        assert(!failed);
-    }
-    delete msg;
+    route(msg, destServerID, src_uuid);
 }
 
 void Server::route(Message* msg, const ServerID& dest_server) {
+    route(msg, dest_server, UUID::nil());
+}
+
+void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uuid) {
     assert(msg != NULL);
 
     ServerMessageHeader server_header(this->id(), dest_server);
@@ -128,7 +115,9 @@ void Server::route(Message* msg, const ServerID& dest_server) {
     if (dest_server==id()) {
         mSelfMessages.push_back(msg_serialized);
     }else {
-        bool failed=!mSendQueue->addMessage(dest_server,msg_serialized);
+        bool failed = (src_uuid.isNil()) ?
+            !mSendQueue->addMessage(dest_server, msg_serialized) :
+            !mSendQueue->addMessage(dest_server, msg_serialized, src_uuid);
         assert(!failed);
     }
     delete msg;
@@ -178,8 +167,8 @@ void Server::deliver(Message* msg) {
 
 	      Object* obj = mObjectFactory->object(obj_id, this);
 	      obj->migrateMessage(migrate_msg);
-	      	      
-	      mObjects[obj_id] = obj;	      
+
+	      mObjects[obj_id] = obj;
 
               delete migrate_msg;
           }
@@ -244,7 +233,7 @@ void Server::tick(const Time& t) {
     networkTick(t);
     // Check for object migrations
     checkObjectMigrations();
-    
+
     // Give objects a chance to process
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* obj = it->second;
@@ -280,13 +269,13 @@ void Server::checkObjectMigrations() {
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* obj = it->second;
         const UUID& obj_id = obj->uuid();
-      
-        Vector3f obj_pos = mLocationService->currentPosition(obj_id);      
-      
+
+        Vector3f obj_pos = mLocationService->currentPosition(obj_id);
+
         if (mServerMap->lookup(obj_pos) != mID) {
-	    ServerID new_server_id = mServerMap->lookup(obj_pos);	    
-	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);	    
-	
+	    ServerID new_server_id = mServerMap->lookup(obj_pos);
+	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
+
   	    route( migrate_msg , new_server_id);
 	    migrated_objects.push_back(obj_id);
         }
@@ -302,7 +291,7 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
 
     MigrateMessage* migrate_msg = new MigrateMessage(obj_id,
 						    obj->proximityRadius(),
-						    obj->subscriberSet().size()); 
+						    obj->subscriberSet().size());
     ObjectSet::iterator it;
     int i=0;
     UUID* migrate_msg_subscribers = migrate_msg->subscriberList();
