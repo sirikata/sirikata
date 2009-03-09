@@ -31,7 +31,7 @@
  */
 
 #ifndef _SIRIKATA_FACTORY_HPP_
-#define _SIRIKATA_FACTORY__HPP_
+#define _SIRIKATA_FACTORY_HPP_
 
 namespace Sirikata {
 template<class T, class Ftype>
@@ -53,6 +53,17 @@ public:
         return Ftype(boost::bind(&FactoryImpl<T,Ftype>::staticNoop));
     }
     FactoryImpl(){}
+    bool unregisterConstructor(const String& name, bool isDefault=false) {
+        if (mConstructors.find(name)==mConstructors.end())
+            return false;
+        mConstructors.erase(mConstructors.find(name));
+        if (isDefault) {
+            if (mConstructors.find(String())==mConstructors.end())
+                return false;
+            mConstructors.erase(mConstructors.find(String()));
+        }
+        return true;
+    }
     bool registerConstructor(const String& name,
                              const Ftype &constructor,
                              bool isDefault=false) {

@@ -35,15 +35,16 @@
 namespace Sirikata {
 
 template <class T> class AutoSingleton {
+    static T*sInstance;
 public:
     static T&getSingleton() {
         if (sInstance==NULL)
             sInstance = new T;
-        return *sInstance;
+        return *static_cast<T*>(sInstance);
     }
     AutoSingleton() {
         if (sInstance==NULL)
-            sInstance=this;
+            sInstance=static_cast<T*>(this);
     }
     virtual ~AutoSingleton() {
         if (sInstance==this)

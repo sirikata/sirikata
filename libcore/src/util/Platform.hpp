@@ -192,6 +192,8 @@ typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
 
 } // namespace Sirikata
+#include "Singleton.hpp"
+#include "Factory.hpp"
 #include "Quaternion.hpp"
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"

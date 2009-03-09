@@ -50,6 +50,10 @@ class OgreSystem: public ProxyCreationListener {
     Provider<ProxyCreationListener*>*mProxyManager;
     void loadBuiltinPlugins();
 public:
+    static ProxyCreationListener* create(Provider<ProxyCreationListener*>*proxyManager,
+                                         const String&options){
+        return new OgreSystem(proxyManager,options);
+    }
     OgreSystem(Provider<ProxyCreationListener*>*proxyManager, const String&options);
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
