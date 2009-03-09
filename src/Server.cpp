@@ -93,14 +93,14 @@ void Server::route(ObjectToObjectMessage* msg) {
     UUID dest_uuid = msg->destObject();
     ServerID destServerID=mServerMap->lookup(dest_uuid);
 
-    route(msg, destServerID, src_uuid);
+    route(msg, destServerID, src_uuid, false);
 }
 
-void Server::route(Message* msg, const ServerID& dest_server) {
-    route(msg, dest_server, UUID::nil());
+void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
+    route(msg, dest_server, UUID::nil(), is_forward);
 }
 
-void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uuid) {
+void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uuid, bool is_forward) {
     assert(msg != NULL);
 
     ServerMessageHeader server_header(this->id(), dest_server);
@@ -110,10 +110,11 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
     offset=server_header.serialize(msg_serialized, offset);
     offset = msg->serialize(msg_serialized, offset);
 
-    mBandwidthStats->sent(dest_server, offset, mCurrentTime);
+    if (!is_forward || dest_server != id())
+        mBandwidthStats->sent(dest_server, offset, mCurrentTime);
 
     if (dest_server==id()) {
-        mSelfMessages.push_back(msg_serialized);
+        mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }else {
         bool failed = (src_uuid.isNil()) ?
             !mSendQueue->addMessage(dest_server, msg_serialized) :
@@ -123,8 +124,8 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
     delete msg;
 }
 
-void Server::route(Message* msg, const UUID& dest_obj) {
-    route(msg, mServerMap->lookup(dest_obj));
+void Server::route(Message* msg, const UUID& dest_obj, bool is_forward) {
+    route(msg, mServerMap->lookup(dest_obj), is_forward);
 }
 
 void Server::deliver(Message* msg) {
@@ -195,10 +196,10 @@ Object* Server::object(const UUID& dest) const {
 }
 
 void Server::forward(Message* msg, const UUID& dest) {
-    route(msg, dest);
+    route(msg, dest, true);
 }
 
-void Server::processChunk(const Network::Chunk&chunk) {
+void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {
     Message* result;
     unsigned int offset=0;
     do {
@@ -206,7 +207,8 @@ void Server::processChunk(const Network::Chunk&chunk) {
         assert(hdr.destServer() == id());
         offset=Message::deserialize(chunk,offset,&result);
 
-        mBandwidthStats->received(hdr.sourceServer(), offset, mCurrentTime);
+        if (!forwarded_self_msg)
+            mBandwidthStats->received(hdr.sourceServer(), offset, mCurrentTime);
 
         deliver(result);
     }while (offset<chunk.size());
@@ -214,16 +216,16 @@ void Server::processChunk(const Network::Chunk&chunk) {
 void Server::networkTick(const Time&t) {
     mSendQueue->service(t);
 
-    std::deque<Network::Chunk> self_messages;
+    std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty()) {
-        processChunk(self_messages.front());
+        processChunk(self_messages.front().data, self_messages.front().forwarded);
         self_messages.pop_front();
     }
 
     Sirikata::Network::Chunk *c=NULL;
     while((c=mNetwork->receiveOne())) {
-        processChunk(*c);
+        processChunk(*c, false);
         delete c;
     }
 }

@@ -71,19 +71,18 @@ public:
 
     void tick(const Time& t);
 private:
-    std::deque<Network::Chunk>mSelfMessages;
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
-    void processChunk(const Sirikata::Network::Chunk&chunk);
+    void processChunk(const Sirikata::Network::Chunk&chunk, bool forwarded_self_msg);
     // Routing interface for servers.  This is used to route messages that originate from
     // a server provided service, and thus don't have a source object.  Messages may be destined
     // for either servers or objects.  The second form will simply automatically do the destination
     // server lookup.
     // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    void route(Message* msg, const ServerID& dest_server);
-    void route(Message* msg, const UUID& dest_obj);
-    void route(Message* msg, const ServerID& dest_server, const UUID& src_uuid);
+    void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
+    void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
+    void route(Message* msg, const ServerID& dest_server, const UUID& src_uuid, bool is_forward = false);
 
     // Delivery interface.  This should be used to deliver received messages to the correct location -
     // the server or object it is addressed to.
@@ -105,6 +104,15 @@ private:
     Proximity* mProximity;
     Network * mNetwork;
     SendQueue* mSendQueue;
+
+    struct SelfMessage {
+        SelfMessage(const Network::Chunk& d, bool f)
+         : data(d), forwarded(f) {}
+
+        Network::Chunk data;
+        bool forwarded;
+    };
+    std::deque<SelfMessage>mSelfMessages;
 
     Time mCurrentTime;
     BandwidthStatistics* mBandwidthStats;
