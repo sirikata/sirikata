@@ -35,9 +35,10 @@
 
 namespace Sirikata {
 template<class T, class Ftype>
-class FactoryImpl {
+class SIRIKATA_EXPORT FactoryImpl {
 
-    std::map<String,Ftype> mConstructors;
+    typedef std::map<String,Ftype> ConstructorMap;
+    ConstructorMap mConstructors;
     template <class U> static U* noop(U*) {
         return NULL;
     }
@@ -48,19 +49,19 @@ class FactoryImpl {
         T temp;
         return noop(temp);
     }
+    Ftype mNoop;
 public:
-    Ftype getNoop() const{
-        return Ftype(boost::bind(&FactoryImpl<T,Ftype>::staticNoop));
-    }
-    FactoryImpl(){}
+    FactoryImpl():mNoop(boost::bind(&FactoryImpl<T,Ftype>::staticNoop)){}
     bool unregisterConstructor(const String& name, bool isDefault=false) {
-        if (mConstructors.find(name)==mConstructors.end())
+        typename ConstructorMap::iterator where=mConstructors.find(name);
+        if (where==mConstructors.end())
             return false;
-        mConstructors.erase(mConstructors.find(name));
+        mConstructors.erase(where);
         if (isDefault) {
-            if (mConstructors.find(String())==mConstructors.end())
+            where=mConstructors.find(String());
+            if (where==mConstructors.end())
                 return false;
-            mConstructors.erase(mConstructors.find(String()));
+            mConstructors.erase(where);
         }
         return true;
     }
@@ -74,12 +75,13 @@ public:
             mConstructors[String()]=constructor;
         return true;
     }
-    Ftype getConstructor(const String&name){
-        if (mConstructors.find(name)==mConstructors.end())
-            return getNoop();
-        return mConstructors[name];
+    const Ftype &getConstructor(const String&name)const{
+        typename ConstructorMap::const_iterator where=mConstructors.find(name);
+        if (where==mConstructors.end())
+            return mNoop;
+        return where->second;
     }
-    Ftype getDefaultConstructor(){
+    const Ftype& getDefaultConstructor()const{
         return getConstructor(String());
     }
 };

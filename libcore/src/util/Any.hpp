@@ -34,14 +34,17 @@
 #include <typeinfo>
 namespace Sirikata {
 class Any {
+public:
     class Holder{
         friend class Any;
-    protected:
+    public:
         virtual ~Holder(){};
+    protected:
 
         virtual Holder * clone()const=0;
         virtual const std::type_info& typeOf()const=0;
     };
+private:
     template <class T> class SubHolder:public Holder{
         friend class Any;
         T mValue;
@@ -92,9 +95,10 @@ public:
      * And this item must be reset without removing the other.
      * Used in Option.hpp to allow for threadsafe reads
      */
-    Any& newAndDoNotFree(const Any&value){
+    Holder* newAndDoNotFree(const Any&value){
+        Holder *retval=mHolder;
         mHolder=value.mHolder?value.mHolder->clone():NULL;
-        return *this;
+        return retval;
     }
     const std::type_info&typeOf() const {
         return mHolder?mHolder->typeOf():typeid(void);

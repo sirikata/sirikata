@@ -63,7 +63,8 @@ ENDIF()
 STRING(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
 STRING(COMPARE EQUAL ${UPPERCASE_BUILD_TYPE} "DEBUG" ISDEBUG)
 
-SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
+SET(ADDED_DEFINITIONS -Wall -Wno-unused-function -Wno-unused-variable -fvisibility=hidden -fPIC -Wnon-virtual-dtor  -Wreorder -Wstrict-null-sentinel -Wsign-promo )
+
 #-Woverloaded_virtual
 #-Wabi 
 #-Wold-style-cast 
@@ -415,6 +416,7 @@ SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
 
 #plugins locations
 SET(LIBCORE_PLUGIN_DIR ${LIBCORE_DIR}/plugins)
+SET(LIBOH_PLUGIN_DIR ${LIBOH_DIR}/plugins)
 
 #cxx flags
 # FIXME these include directories should be project specific
@@ -533,13 +535,21 @@ IF(NOT WIN32)
 ENDIF()
 
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
-SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp ${LIBOH_SOURCE_DIR}/ProxyManager.cpp ${LIBOH_SOURCE_DIR}/../plugins/ogre/OgreSystem.cpp )
+SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
+                  ${LIBOH_SOURCE_DIR}/ProxyManager.cpp 
+                  ${LIBOH_SOURCE_DIR}/GraphicsFactory.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
 
 # plugins sources
 SET(LIBCORE_PLUGIN_SKELETON_DIR ${LIBCORE_PLUGIN_DIR}/skeleton)
 SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterface.cpp)
+
+SET(LIBOH_PLUGIN_OGRE_DIR ${LIBOH_PLUGIN_DIR}/ogre)
+SET(LIBOH_PLUGIN_OGRE_SOURCES
+  ${LIBOH_PLUGIN_OGRE_DIR}/OgreSystem.cpp
+  ${LIBOH_PLUGIN_OGRE_DIR}/OgrePlugin.cpp
+        )
 
 #test source files
 SET(CXXTESTSources
@@ -622,6 +632,10 @@ TARGET_LINK_LIBRARIES(${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 ADD_PLUGIN_TARGET(skeleton
                     SOURCES ${LIBCORE_PLUGIN_SKELETON_SOURCES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+
+ADD_PLUGIN_TARGET(ogre
+                    SOURCES ${LIBOH_PLUGIN_OGRE_SOURCES}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} EXCLUDE_FROM_ALL ${TEST_SOURCES})

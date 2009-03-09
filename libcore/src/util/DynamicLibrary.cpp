@@ -78,7 +78,7 @@ bool DynamicLibrary::unload() {
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
     bool success = dlclose(mHandle);
 #endif
-
+    mHandle=NULL;
     return success;
 }
 

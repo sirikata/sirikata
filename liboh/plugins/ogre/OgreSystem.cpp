@@ -36,8 +36,13 @@ namespace Graphics {
 Ogre::Root *OgreSystem::sRoot;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 uint32 OgreSystem::sNumOgreSystems=0;
-
-OgreSystem::OgreSystem(Provider<ProxyCreationListener*>*proxyManager, const String&options):mProxyManager(proxyManager) {
+OgreSystem::OgreSystem(){
+    mSceneManager=NULL;
+    mRenderTarget=NULL;
+    mProxyManager=NULL;
+}
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+    mProxyManager=proxyManager;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
     //add ogre system options here
@@ -61,23 +66,31 @@ OgreSystem::OgreSystem(Provider<ProxyCreationListener*>*proxyManager, const Stri
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
                            mWindowHeight=new OptionValue("windowheight","768",OptionValueType<uint32>(),"Window height"),
         NULL);
-    
+    bool userAccepted=true;
+
     OptionSet::getOptions("ogre",this)->parse(options);
+
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&((restoreConfig->as<bool>()&&getRoot()->restoreConfig()) 
-                            || getRoot()->showConfigDialog()));
-   
-    if (getRoot()->isInitialised()) {
-        bool doAutoWindow=autoCreateWindow->as<bool>();
-        sRoot->initialise(doAutoWindow,windowTitle->as<String>());      
-        if (!doAutoWindow) {
-            getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                            || (userAccepted=getRoot()->showConfigDialog())));
+    if (userAccepted) {
+        if (!getRoot()->isInitialised()) {
+            bool doAutoWindow=autoCreateWindow->as<bool>();
+            sRoot->initialise(doAutoWindow,windowTitle->as<String>());      
+            if (!doAutoWindow) {
+                getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+            }
+        } else if (createWindow->as<bool>()) {
+            sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+        }else {
+            assert(false&&"Cant remember how to create a render targt");//support creating a render target here
         }
-    } else if (createWindow->as<bool>()) {
-        sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-    }else {
-        assert(false&&"Cant remember how to create a render targt");//support creating a render target here
     }
+    if (!getRoot()->isInitialised()) {
+        return false;
+    }
+
+    return true;
 }
 void loadBuiltinPlugins () {
     /*

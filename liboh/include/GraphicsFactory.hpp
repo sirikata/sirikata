@@ -1,7 +1,7 @@
-/*  Sirikata
- *  main.cpp
+/*  Sirikata Object Host -- Proxy Creation and Destruction manager
+ *  GraphicsFactory.hpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,40 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
-#include <options/Options.hpp>
-#include <util/PluginManager.hpp>
-#include <ProxyManager.hpp>
-#include <GraphicsFactory.hpp>
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
+#ifndef _SIRIKATA_GRAPHICS_FACTORY_
+#define _SIRIKATA_GRAPHICS_FACTORY_
+#include <util/ListenerProvider.hpp>
+#include "ProxyCreationListener.hpp"
+namespace Sirikata{
+
+///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
+class SIRIKATA_EXPORT GraphicsFactory
+    : public AutoSingleton<GraphicsFactory>,
+      public Factory2<ProxyCreationListener*,
+                      Provider<ProxyCreationListener*>*,//the ProxyManager
+                      const String&> //options string for the graphics system
+{};
+    
 
 }
-
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    PluginManager plugins;
-    plugins.load(
-#ifdef NDEBUG
-        "libogre.so"
-#else
-        "libogre_d.so"
 #endif
-        );
-    OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new ProxyManager;
-    Provider<Sirikata::ProxyCreationListener*>*provider=pm;
-    String graphicsCommandArguments;
-    String graphicsPluginName("ogre");
-    GraphicsFactory::getSingleton();
-
-    const std::tr1::function<ProxyCreationListener*(Provider<ProxyCreationListener*>*pm,const String&)> *f=&    GraphicsFactory::getSingleton()
-        .getConstructor(graphicsPluginName);
-    ProxyCreationListener *graphicsSystem=(*f)(provider,graphicsCommandArguments);
-    delete graphicsSystem;
-
-    delete pm;
-    plugins.gc();
-    GraphicsFactory::destroy();
-    return 0;
-}

@@ -90,13 +90,17 @@ void PluginManager::load(const String& filename) {
 }
 
 void PluginManager::gc() {
-    for(PluginInfoList::iterator it = mPlugins.begin(); it != mPlugins.end(); it++) {
+    for(PluginInfoList::iterator it = mPlugins.begin(); it != mPlugins.end();) {
         PluginInfo* pi = *it;
         if (pi->plugin != NULL && pi->plugin->refcount() == 0) {
-            pi->plugin->destroy();
-            pi->plugin->unload();
-            delete pi->plugin;
+            delete pi->plugin;//deleting the pulgin destroys() then unloads() it
             pi->plugin = NULL;
+            delete pi;
+            PluginInfoList::iterator eraseme=it;
+            ++it;
+            mPlugins.erase(eraseme);
+        }else{
+            ++it;
         }
     }
 }

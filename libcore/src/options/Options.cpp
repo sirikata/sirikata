@@ -35,7 +35,7 @@
 #include "boost/program_options.hpp"
 #include <iostream>
 #include <stdarg.h>
-
+#include "util/ThreadSafeQueue.hpp"
 namespace Sirikata {
 class simple_string:public std::string {
 public:
@@ -196,6 +196,51 @@ namespace {
  	    }
 
 }
+namespace {
+template <class T>class Stash{
+    ThreadSafeQueue<T*> mQueue;
+public:
+    void hideUntilQuit(T*ov) {
+        if (ov!=NULL) {
+            mQueue.push(ov);
+        }
+    }
+    void purgeUnused() {
+        std::tr1::unordered_set<T*> alreadyDestroyed;
+        std::deque<T*> toDestroy;
+        mQueue.swap(toDestroy);
+        while(!toDestroy.empty()) {
+            if (alreadyDestroyed.find(toDestroy.front())==alreadyDestroyed.end()) {
+                alreadyDestroyed.insert(toDestroy.front());
+                delete toDestroy.front();
+                toDestroy.pop_front();
+            }else {
+                toDestroy.pop_front();
+            }
+        }
+    }
+    ~Stash() {
+        purgeUnused();
+    }
+};
+class HolderStash:public Stash<Any::Holder>, public AutoSingleton<HolderStash> {};
+AUTO_SINGLETON_INSTANCE(HolderStash);
+class ValueStash:public Stash<OptionValue>, public AutoSingleton<ValueStash> {};
+AUTO_SINGLETON_INSTANCE(ValueStash);
+class QuitOptionsPlugin {
+public:
+    ~QuitOptionsPlugin() {
+        for (std::map<std::string,OptionSet*>::iterator i=OptionSet::optionSets()->begin();
+             i!=OptionSet::optionSets()->end();
+             ++i) {
+            delete i->second;
+        }
+        delete OptionSet::optionSets();
+        HolderStash::destroy();
+        ValueStash::destroy();
+    }
+}gQuitOptionsPlugin;
+}
 class OptionRegistration {
 public:
     static boost::mutex & OptionSetMutex() {
@@ -230,7 +275,7 @@ public:
 				 if (options.count(i->first)){
                      const simple_string* s=boost::any_cast<simple_string>(&options[i->first].value());
                      assert(s!=NULL);
-                     i->second->mValue.newAndDoNotFree(i->second->mParser(*s));
+                     HolderStash::getSingleton().hideUntilQuit(i->second->mValue.newAndDoNotFree(i->second->mParser(*s)));
 				 }
         }
         return true;
@@ -238,7 +283,9 @@ public:
 };
 bool OptionValue::initializationSet(const OptionValue&other) {
     if (mParser==NULL){
-        mValue.newAndDoNotFree(other.mValue);
+        
+        HolderStash::getSingleton().hideUntilQuit(mValue.newAndDoNotFree(other.mValue));
+        mDefaultChar=other.mDefaultChar;
         mDefaultValue=other.mDefaultValue;
         mDescription=other.mDescription;
         mParser=other.mParser;
@@ -254,7 +301,8 @@ bool OptionValue::initializationSet(const OptionValue&other) {
 
 OptionValue& OptionValue::operator=(const OptionValue&other) {
     Any oldValue=mValue;
-    mValue.newAndDoNotFree(other.mValue);
+    HolderStash::getSingleton().hideUntilQuit(mValue.newAndDoNotFree(other.mValue));
+    mDefaultChar=other.mDefaultChar;
     mDefaultValue=other.mDefaultValue;
     mDescription=other.mDescription;
     mParser=other.mParser;
@@ -262,6 +310,16 @@ OptionValue& OptionValue::operator=(const OptionValue&other) {
     mChangeFunction=other.mChangeFunction;
     mName=other.mName;
     return *this;
+}
+OptionSet::OptionSet() {
+    mParsingStage=PARSED_NO_OPTIONS;
+}
+OptionSet::~OptionSet() {
+    for (std::map<std::string,OptionValue*>::iterator i=mNames.begin();
+         i!=mNames.end();
+         ++i){
+        ValueStash::getSingleton().hideUntilQuit(i->second);
+    }
 }
 void OptionSet::parse(int argc, const char * const *argv){
     if (argc>1)

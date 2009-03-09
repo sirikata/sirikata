@@ -49,12 +49,18 @@ class OgreSystem: public ProxyCreationListener {
     static Ogre::Root *sRoot;
     Provider<ProxyCreationListener*>*mProxyManager;
     void loadBuiltinPlugins();
+    OgreSystem();
+    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+                    const String&options);
 public:
     static ProxyCreationListener* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options){
-        return new OgreSystem(proxyManager,options);
+        OgreSystem*os= new OgreSystem;
+        if (os->initialize(proxyManager,options))
+            return os;
+        delete os;
+        return NULL;
     }
-    OgreSystem(Provider<ProxyCreationListener*>*proxyManager, const String&options);
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();
