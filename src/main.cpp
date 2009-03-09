@@ -66,6 +66,8 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
         .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
 
+        .addOption(new OptionValue("bandwidth", "2000000000", Sirikata::OptionValueType<uint32>(), "Total bandwidth for this server in bytes per second"))
+
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue("stats.bandwidth-filename", "", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
@@ -105,7 +107,7 @@ int main(int argc, char** argv) {
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
-    SendQueue* sq=new FIFOSendQueue(network);
+    SendQueue* sq=new FIFOSendQueue(network, options->referenceOption("bandwidth")->as<uint32>());
     ServerID server_id = options->referenceOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
 

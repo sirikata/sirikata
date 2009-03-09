@@ -4,8 +4,11 @@
 
 
 namespace CBR{
-FairSendQueue::FairSendQueue(Network*net):mClientQueues(200000000),mServerQueues(2000000000),mNetwork(net) {
-    
+FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second)
+ : mClientQueues(bytes_per_second),
+   mServerQueues(bytes_per_second),
+   mNetwork(net)
+{
 }
 
 bool FairSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
@@ -18,7 +21,7 @@ void FairSendQueue::service(const Time&t){
     bool freeClientTicks=true;
     if (mClientServerBuffer.empty()) {
         freeClientTicks=false;
-        mClientServerBuffer=mClientQueues.tick(t);       
+        mClientServerBuffer=mClientQueues.tick(t);
     }
     size_t count=0;
     for (count=0;count<mClientServerBuffer.size();++count) {
@@ -40,7 +43,7 @@ void FairSendQueue::service(const Time&t){
             }
         }
     }
-        
+
     std::vector<ServerMessagePair*> finalSendMessages=mServerQueues.tick(t);
     for (std::vector<ServerMessagePair*>::iterator i=finalSendMessages.begin(),ie=finalSendMessages.end();
          i!=ie;
@@ -62,7 +65,7 @@ void FairSendQueue::service(const Time&t){
         mClientServerBuffer.resize(0);
     }
 }
-    
+
 void FairSendQueue::addServer(ServerID sid, float weight) {
     mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
 }
@@ -77,4 +80,3 @@ void FairSendQueue::removeClient(UUID sid) {
 }
 
 }
-

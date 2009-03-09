@@ -16,14 +16,14 @@ class FairSendQueue:public SendQueue {
         unsigned int size()const {
             return mPair.second.size();
         }
-        
+
     };
     FairMessageQueue<ServerMessagePair,UUID> mClientQueues;
     std::vector<ServerMessagePair*> mClientServerBuffer;
     FairMessageQueue<ServerMessagePair, ServerID > mServerQueues;
     Network * mNetwork;
 public:
-    FairSendQueue(Network*net);
+    FairSendQueue(Network*net, uint32 bytes_per_second);
     void addServer(ServerID, float weight);
     void removeServer(ServerID);
     void addClient(UUID,float weight=1);
