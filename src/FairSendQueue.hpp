@@ -1,5 +1,5 @@
-#ifndef _CBR_FIFOSENDQUEUE_HPP
-#define _CBR_FIFOSENDQUEUE_HPP
+#ifndef _CBR_FAIRSENDQUEUE_HPP
+#define _CBR_FAIRSENDQUEUE_HPP
 #include "SendQueue.hpp"
 #include "FairMessageQueue.hpp"
 namespace CBR {
