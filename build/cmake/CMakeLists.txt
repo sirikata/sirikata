@@ -543,7 +543,23 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 #test source files
 SET(CXXTESTSources
+  ${LIBCORE_DIR}/test/AnyTest.hpp
+  ${LIBCORE_DIR}/test/AtomicTest.hpp
+  ${LIBCORE_DIR}/test/CacheLayerTest.hpp
+  ${LIBCORE_DIR}/test/DownloadTest.hpp
+  ${LIBCORE_DIR}/test/EventTest.hpp
+  ${LIBCORE_DIR}/test/ExtrapolationTest.hpp
+  ${LIBCORE_DIR}/test/FactoryTest.hpp
   ${LIBCORE_DIR}/test/ListenerTest.hpp
+  ${LIBCORE_DIR}/test/Matrix3Test.hpp
+  ${LIBCORE_DIR}/test/NameLookupTest.hpp
+  ${LIBCORE_DIR}/test/OptionTest.hpp
+  ${LIBCORE_DIR}/test/QuaternionTest.hpp
+  ${LIBCORE_DIR}/test/SstTest.hpp
+  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
+  ${LIBCORE_DIR}/test/TR1Test.hpp
+  ${LIBCORE_DIR}/test/UploadTest.hpp
+  ${LIBCORE_DIR}/test/Vector3Test.hpp
  )
 
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}

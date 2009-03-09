@@ -1,7 +1,7 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  AtomicTest.hpp
+ *  ListenerTest.hpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
