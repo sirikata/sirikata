@@ -78,17 +78,7 @@ ServerMessageHeader ServerMessageHeader::deserialize(const Network::Chunk& wire,
 
 
 
-Message::Message(MessageType t)
- : mType(t)
-{
-    assert( t > 0 && t < MESSAGE_TYPE_COUNT );
-}
-
 Message::~Message() {
-}
-
-MessageType Message::type() const {
-    return mType;
 }
 
 uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message** result) {
@@ -129,8 +119,9 @@ uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
     if (wire.size() < offset + 1)
         wire.resize( offset + 1 );
 
-    memcpy( &wire[offset], &mType, 1 );
-    offset += 1;
+    MessageType t = type();
+    memcpy( &wire[offset], &t, sizeof(MessageType) );
+    offset += sizeof(MessageType);
 
     return offset;
 }
@@ -138,7 +129,7 @@ uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
 
 
 ProximityMessage::ProximityMessage(const UUID& dst_object, const UUID& nbr, EventType evt)
- : Message(MESSAGE_TYPE_PROXIMITY),
+ : Message(),
    mDestObject(dst_object),
    mNeighbor(nbr),
    mEvent(evt)
@@ -146,7 +137,7 @@ ProximityMessage::ProximityMessage(const UUID& dst_object, const UUID& nbr, Even
 }
 
 ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset)
- : Message(MESSAGE_TYPE_PROXIMITY)
+ : Message()
 {
     uint8 raw_dest_object[UUID::static_size];
     uint8 raw_neighbor[UUID::static_size];
@@ -163,6 +154,10 @@ ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset)
     memcpy( &raw_evt_type, &wire[offset], 1 );
     offset += 1;
     mEvent = (EventType)raw_evt_type;
+}
+
+MessageType ProximityMessage::type() const {
+    return MESSAGE_TYPE_PROXIMITY;
 }
 
 const UUID& ProximityMessage::destObject() const {
@@ -198,15 +193,15 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-ObjectToObjectMessage::ObjectToObjectMessage(MessageType t, const UUID& src_object, const UUID& dest_object)
- : Message(t),
+ObjectToObjectMessage::ObjectToObjectMessage(const UUID& src_object, const UUID& dest_object)
+ : Message(),
    mSourceObject(src_object),
    mDestObject(dest_object)
 {
 }
 
-ObjectToObjectMessage::ObjectToObjectMessage(MessageType t, const Network::Chunk& wire, uint32& offset)
- : Message(t)
+ObjectToObjectMessage::ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset)
+ : Message()
 {
     uint8 raw_src_object[UUID::static_size];
     uint8 raw_dest_object[UUID::static_size];
@@ -245,16 +240,20 @@ uint32 ObjectToObjectMessage::serializeSourceDest(Network::Chunk& wire, uint32 o
 
 
 LocationMessage::LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
- : ObjectToObjectMessage(MESSAGE_TYPE_LOCATION, src_object, dest_object),
+ : ObjectToObjectMessage(src_object, dest_object),
    mLocation(loc)
 {
 }
 
 LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset)
- : ObjectToObjectMessage(MESSAGE_TYPE_LOCATION, wire, offset)
+ : ObjectToObjectMessage(wire, offset)
 {
     memcpy( &mLocation, &wire[offset], sizeof(MotionVector3f) );
     offset += sizeof(MotionVector3f);
+}
+
+MessageType LocationMessage::type() const {
+    return MESSAGE_TYPE_LOCATION;
 }
 
 const MotionVector3f& LocationMessage::location() const {
@@ -277,18 +276,22 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 SubscriptionMessage::SubscriptionMessage(const UUID& src_object, const UUID& dest_object, const Action& act)
- : ObjectToObjectMessage(MESSAGE_TYPE_SUBSCRIPTION, src_object, dest_object),
+ : ObjectToObjectMessage(src_object, dest_object),
    mAction(act)
 {
 }
 
 SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset)
- : ObjectToObjectMessage(MESSAGE_TYPE_SUBSCRIPTION, wire, offset)
+ : ObjectToObjectMessage(wire, offset)
 {
     uint8 raw_act;
     memcpy( &raw_act, &wire[offset], sizeof(uint8) );
     mAction = (Action)raw_act;
     offset += sizeof(uint8);
+}
+
+MessageType SubscriptionMessage::type() const {
+    return MESSAGE_TYPE_SUBSCRIPTION;
 }
 
 const SubscriptionMessage::Action& SubscriptionMessage::action() const {
@@ -313,7 +316,7 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 MigrateMessage::MigrateMessage(const UUID& obj, float proxRadius, uint16_t subscriberCount)
- : Message(MESSAGE_TYPE_MIGRATE),
+ : Message(),
    mObject(obj),
    mProximityRadius(proxRadius),
    mCountSubscribers(subscriberCount)
@@ -324,7 +327,7 @@ MigrateMessage::MigrateMessage(const UUID& obj, float proxRadius, uint16_t subsc
 }
 
 MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset)
- : Message(MESSAGE_TYPE_MIGRATE)
+ : Message()
 {
     uint8 raw_object[UUID::static_size];
     memcpy( &raw_object, &wire[offset], UUID::static_size );
@@ -355,15 +358,19 @@ MigrateMessage::~MigrateMessage() {
         delete mSubscribers;
 }
 
+MessageType MigrateMessage::type() const {
+    return MESSAGE_TYPE_MIGRATE;
+}
+
 const UUID& MigrateMessage::object() const {
     return mObject;
 }
 
 uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-    
+
     uint32 uuid_size = UUID::static_size;
-    wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) + 
+    wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) +
 		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers);
 
     memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
@@ -379,7 +386,7 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
       memcpy( &wire[offset], mSubscribers[i].getArray().data(), uuid_size);
       offset += uuid_size;
     }
-   
+
     return offset;
 }
 

@@ -75,10 +75,9 @@ private:
  */
 class Message {
 public:
-    Message(MessageType t);
     virtual ~Message();
 
-    MessageType type() const;
+    virtual MessageType type() const = 0;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
@@ -87,9 +86,6 @@ protected:
     // contents of chunk.  returns the offset after serializing the header
     uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
 private:
-    Message();
-
-    MessageType mType;
 }; // class Message
 
 
@@ -102,6 +98,8 @@ public:
     };
 
     ProximityMessage(const UUID& dest_object, const UUID& nbr, EventType evt);
+
+    virtual MessageType type() const;
 
     const UUID& destObject() const;
     const UUID& neighbor() const;
@@ -121,14 +119,14 @@ private:
 // Base class for object to object messages.  Mostly saves a bit of serialization code
 class ObjectToObjectMessage : public Message {
 public:
-    ObjectToObjectMessage(MessageType t, const UUID& src_object, const UUID& dest_object);
+    ObjectToObjectMessage(const UUID& src_object, const UUID& dest_object);
 
     const UUID& sourceObject() const;
     const UUID& destObject() const;
 
 protected:
     uint32 serializeSourceDest(Network::Chunk& wire, uint32 offset);
-    ObjectToObjectMessage(MessageType t, const Network::Chunk& wire, uint32& offset);
+    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset);
 
 private:
     UUID mSourceObject;
@@ -139,6 +137,8 @@ private:
 class LocationMessage : public ObjectToObjectMessage {
 public:
     LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+
+    virtual MessageType type() const;
 
     const MotionVector3f& location() const;
 
@@ -160,6 +160,8 @@ public:
 
     SubscriptionMessage(const UUID& src_object, const UUID& dest_object, const Action& act);
 
+    virtual MessageType type() const;
+
     const Action& action() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
@@ -175,6 +177,8 @@ public:
     MigrateMessage(const UUID& obj, float proxRadius, uint16_t subscriberCount);
 
     ~MigrateMessage();
+
+    virtual MessageType type() const;
 
     const UUID& object() const;
 
@@ -195,7 +199,7 @@ private:
 
     uint16_t mCountSubscribers;
     UUID* mSubscribers;
-    
+
 }; // class MigrateMessage
 
 } // namespace CBR

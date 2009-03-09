@@ -131,7 +131,9 @@ void Server::deliver(Message* msg) {
     switch(msg->type()) {
       case MESSAGE_TYPE_PROXIMITY:
           {
-              ProximityMessage* prox_msg = static_cast<ProximityMessage*>(msg);
+              ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
+              assert(prox_msg != NULL);
+
               Object* dest_obj = object(prox_msg->destObject());
               if (dest_obj == NULL)
                   forward(prox_msg, prox_msg->destObject());
@@ -141,7 +143,9 @@ void Server::deliver(Message* msg) {
           break;
       case MESSAGE_TYPE_LOCATION:
           {
-              LocationMessage* loc_msg = static_cast<LocationMessage*>(msg);
+              LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
+              assert(loc_msg != NULL);
+
               Object* dest_obj = object(loc_msg->destObject());
               if (dest_obj == NULL)
                   forward(loc_msg, loc_msg->destObject());
@@ -151,7 +155,9 @@ void Server::deliver(Message* msg) {
           break;
       case MESSAGE_TYPE_SUBSCRIPTION:
           {
-              SubscriptionMessage* subs_msg = static_cast<SubscriptionMessage*>(msg);
+              SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
+              assert(subs_msg != NULL);
+
               Object* dest_obj = object(subs_msg->destObject());
               if (dest_obj == NULL)
                   forward(subs_msg, subs_msg->destObject());
@@ -161,7 +167,8 @@ void Server::deliver(Message* msg) {
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
-              MigrateMessage* migrate_msg = static_cast<MigrateMessage*>(msg);
+              MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
+              assert(migrate_msg != NULL);
 
 	      const UUID obj_id = migrate_msg->object();
 
@@ -174,9 +181,7 @@ void Server::deliver(Message* msg) {
           }
           break;
       default:
-#if NDEBUG
         assert(false);
-#endif
         break;
     }
 
