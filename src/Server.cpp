@@ -111,7 +111,7 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
     offset = msg->serialize(msg_serialized, offset);
 
     if (!is_forward || dest_server != id())
-        mBandwidthStats->sent(dest_server, offset, mCurrentTime);
+        mBandwidthStats->sent(dest_server, msg->id(), offset, mCurrentTime);
 
     if (dest_server==id()) {
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
@@ -208,7 +208,7 @@ void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {
         offset=Message::deserialize(chunk,offset,&result);
 
         if (!forwarded_self_msg)
-            mBandwidthStats->received(hdr.sourceServer(), offset, mCurrentTime);
+            mBandwidthStats->received(hdr.sourceServer(), result->id(), offset, mCurrentTime);
 
         deliver(result);
     }while (offset<chunk.size());
@@ -257,6 +257,7 @@ void Server::proximityTick(const Time& t) {
         ProximityEvent& evt = proximity_events.front();
         ProximityMessage* msg =
             new ProximityMessage(
+                id(),
                 evt.query(),
                 evt.object(),
                 (evt.type() == ProximityEvent::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
@@ -296,7 +297,8 @@ void Server::checkObjectMigrations() {
 MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
     const UUID& obj_id = obj->uuid();
 
-    MigrateMessage* migrate_msg = new MigrateMessage(obj_id,
+    MigrateMessage* migrate_msg = new MigrateMessage(id(),
+                                                    obj_id,
 						    obj->proximityRadius(),
 						    obj->subscriberSet().size());
     ObjectSet::iterator it;

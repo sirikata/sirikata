@@ -69,6 +69,8 @@ private:
 }; // class ServerMessageHeader
 
 
+uint32 GetUniqueIDServerID(uint32 uid);
+uint32 GetUniqueIDMessageID(uint32 uid);
 
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
@@ -78,14 +80,20 @@ public:
     virtual ~Message();
 
     virtual MessageType type() const = 0;
+    uint32 id() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
 protected:
+    Message(const ServerID& src_server, bool x); // note the bool is here to make the signature different than the next constructor
+    Message(uint32 id);
+
     // takes care of serializing the header information properly, will overwrite
     // contents of chunk.  returns the offset after serializing the header
     uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
 private:
+    static uint32 sIDSource;
+    uint32 mID;
 }; // class Message
 
 
@@ -97,7 +105,7 @@ public:
         Exited = 2
     };
 
-    ProximityMessage(const UUID& dest_object, const UUID& nbr, EventType evt);
+    ProximityMessage(const ServerID& src_server, const UUID& dest_object, const UUID& nbr, EventType evt);
 
     virtual MessageType type() const;
 
@@ -108,7 +116,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    ProximityMessage(const Network::Chunk& wire, uint32& offset);
+    ProximityMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
     UUID mDestObject;
     UUID mNeighbor;
@@ -119,14 +127,14 @@ private:
 // Base class for object to object messages.  Mostly saves a bit of serialization code
 class ObjectToObjectMessage : public Message {
 public:
-    ObjectToObjectMessage(const UUID& src_object, const UUID& dest_object);
+    ObjectToObjectMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object);
 
     const UUID& sourceObject() const;
     const UUID& destObject() const;
 
 protected:
     uint32 serializeSourceDest(Network::Chunk& wire, uint32 offset);
-    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset);
+    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
 private:
     UUID mSourceObject;
@@ -136,7 +144,7 @@ private:
 
 class LocationMessage : public ObjectToObjectMessage {
 public:
-    LocationMessage(const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+    LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
 
     virtual MessageType type() const;
 
@@ -145,7 +153,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    LocationMessage(const Network::Chunk& wire, uint32& offset);
+    LocationMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
     MotionVector3f mLocation;
 }; // class LocationMessage
@@ -158,7 +166,7 @@ public:
         Unsubscribe = 2
     };
 
-    SubscriptionMessage(const UUID& src_object, const UUID& dest_object, const Action& act);
+    SubscriptionMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const Action& act);
 
     virtual MessageType type() const;
 
@@ -167,14 +175,14 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    SubscriptionMessage(const Network::Chunk& wire, uint32& offset);
+    SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
     Action mAction;
 }; // class SubscriptionMessage
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const UUID& obj, float proxRadius, uint16_t subscriberCount);
+    MigrateMessage(const ServerID& src_server, const UUID& obj, float proxRadius, uint16_t subscriberCount);
 
     ~MigrateMessage();
 
@@ -191,7 +199,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    MigrateMessage(const Network::Chunk& wire, uint32& offset);
+    MigrateMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
     UUID mObject;
 

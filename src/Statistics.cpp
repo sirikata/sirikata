@@ -31,6 +31,7 @@
  */
 
 #include "Statistics.hpp"
+#include "Message.hpp"
 #include <iostream>
 
 namespace CBR {
@@ -49,23 +50,25 @@ BandwidthStatistics::~BandwidthStatistics() {
     receivedBatches.clear();
 }
 
-void BandwidthStatistics::sent(const ServerID& dest, uint32 size, const Time& t) {
+void BandwidthStatistics::sent(const ServerID& dest, uint32 id, uint32 size, const Time& t) {
     if (sentBatches.empty() || sentBatches.back()->full())
         sentBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = sentBatches.back();
-    pb->packets[pb->size].id = dest;
+    pb->packets[pb->size].server = dest;
+    pb->packets[pb->size].id = id;
     pb->packets[pb->size].size = size;
     pb->packets[pb->size].time = t;
     pb->size++;
 }
 
-void BandwidthStatistics::received(const ServerID& dest, uint32 size, const Time& t) {
+void BandwidthStatistics::received(const ServerID& src, uint32 id, uint32 size, const Time& t) {
     if (receivedBatches.empty() || receivedBatches.back()->full())
         receivedBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = receivedBatches.back();
-    pb->packets[pb->size].id = dest;
+    pb->packets[pb->size].server = src;
+    pb->packets[pb->size].id = id;
     pb->packets[pb->size].size = size;
     pb->packets[pb->size].time = t;
     pb->size++;
@@ -75,17 +78,19 @@ void BandwidthStatistics::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out);
 
     of << "Sent" << std::endl;
+    of << "DestServer ServerID MessageID Size Time" << std::endl;
     for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
         PacketBatch* pb = *it;
         for(uint16 i = 0; i < pb->size; i++)
-            of << pb->packets[i].id << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
+            of << pb->packets[i].server << " " << GetUniqueIDServerID(pb->packets[i].id) << " " << GetUniqueIDMessageID(pb->packets[i].id) << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
     }
 
     of << "Received" << std::endl;
+    of << "SourceServer ServerID MessageID Size Time" << std::endl;
     for(std::vector<PacketBatch*>::iterator it = receivedBatches.begin(); it != receivedBatches.end(); it++) {
         PacketBatch* pb = *it;
         for(uint16 i = 0; i < pb->size; i++)
-            of << pb->packets[i].id << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
+            of << pb->packets[i].server << " " << GetUniqueIDServerID(pb->packets[i].id) << " " << GetUniqueIDMessageID(pb->packets[i].id) << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
     }
 }
 

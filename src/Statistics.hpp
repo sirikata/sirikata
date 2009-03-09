@@ -43,8 +43,8 @@ class BandwidthStatistics {
 public:
     ~BandwidthStatistics();
 
-    void sent(const ServerID& dest, uint32 size, const Time& t);
-    void received(const ServerID& dest, uint32 size, const Time& t);
+    void sent(const ServerID& dest, uint32 id, uint32 size, const Time& t);
+    void received(const ServerID& src, uint32 id, uint32 size, const Time& t);
 
     void save(const String& filename);
 private:
@@ -52,7 +52,8 @@ private:
         Packet()
          : id(0), size(0), time(0) {}
 
-        ServerID id;
+        ServerID server;
+        uint32 id;
         uint32 size;
         Time time;
     };
