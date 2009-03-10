@@ -48,7 +48,7 @@ namespace Transfer {
 //#define NUM_WORKER_THREADS 10
 
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
-class DiskCacheLayer : public CacheLayer {
+class SIRIKATA_EXPORT DiskCacheLayer : public CacheLayer {
 public:
 	struct CacheData : public CacheEntry {
 		RangeList mRanges;

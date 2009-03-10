@@ -39,24 +39,24 @@ namespace ThreadSafeQueueNS{
 class Lock;
 class Condition;
 /// acquires lok Locks a lock
-void lock(Lock*lok);
+SIRIKATA_EXPORT void lock(Lock*lok);
 /// acquires lok, calls check, and while check returns false wait on a condition
-void wait(Lock*lok,
+SIRIKATA_EXPORT void wait(Lock*lok,
           Condition* cond,
           bool(*check)(void*, void *),
           void* arg1, void* arg2);
 /// Notifies the condition once
-void notify(Condition* cond);
+SIRIKATA_EXPORT void notify(Condition* cond);
 /// release the lock
-void unlock(Lock*lok);
+SIRIKATA_EXPORT void unlock(Lock*lok);
 /// creates a Lock class
-Lock* lockCreate();
+SIRIKATA_EXPORT Lock* lockCreate();
 /// creates a condition
-Condition* condCreate();
+SIRIKATA_EXPORT Condition* condCreate();
 /// destroys the lock class
-void lockDestroy(Lock*oldlock);
+SIRIKATA_EXPORT void lockDestroy(Lock*oldlock);
 /// destroys the condition
-void condDestroy(Condition*oldcond);
+SIRIKATA_EXPORT void condDestroy(Condition*oldcond);
 }
 /// A queue of any type that has thread-safe push() and pop() functions.
 template <typename T> class ThreadSafeQueue {

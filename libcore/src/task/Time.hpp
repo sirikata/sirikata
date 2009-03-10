@@ -52,7 +52,7 @@ namespace Task {
  *
  * @see AbsTime
  */
-class DeltaTime {
+class SIRIKATA_EXPORT DeltaTime {
 	double mDeltaTime;
 
 public:
@@ -117,7 +117,7 @@ public:
  *
  * @see DeltaTime
  */
-class AbsTime {
+class SIRIKATA_EXPORT AbsTime {
 
 	double mTime;
 

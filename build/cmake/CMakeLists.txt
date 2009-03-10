@@ -514,7 +514,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
 	${LIBCORE_SOURCE_DIR}/util/PluginManager.cpp
-	${LIBCORE_SOURCE_DIR}/util/Quaternion.cpp
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp

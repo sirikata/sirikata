@@ -42,7 +42,7 @@
 
 namespace Sirikata {
 
-class SHA256 {
+class SIRIKATA_EXPORT SHA256 {
 	friend class SHA256Context;
 public:
     enum {static_size=32,hex_size=64};
@@ -155,7 +155,7 @@ public:
 };
 
 /** Class to allow creating a shasum from sparse data and other types. */
-class SHA256Context {
+class SIRIKATA_EXPORT SHA256Context {
 	/// Do not allow copying because no function exists to copy SHA256_CTX
 	SHA256Context(const SHA256Context &other);
 	SHA256Context & operator=(const SHA256Context &other);

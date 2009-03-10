@@ -59,7 +59,7 @@ enum StreamReliability {
 
  * 
  */
-class Stream {
+class SIRIKATA_EXPORT Stream {
 protected:
     Stream(){}
 public:
@@ -67,7 +67,7 @@ public:
      * This class stores up to 30 bits of data in a 4 byte memory slot. It may be serialized to between 1 and 4 bytes
      * This class is useful for defining unique StreamIDs as well as other lowlevel data like packet lengths
      */
-    class uint30{
+    class SIRIKATA_EXPORT uint30{
         uint32 mID;
     public:
         ///The maximum length that any uint30 will be serialized out to

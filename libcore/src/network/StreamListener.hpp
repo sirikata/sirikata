@@ -37,7 +37,7 @@ namespace Sirikata { namespace Network {
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
  */
-class StreamListener {
+class SIRIKATA_EXPORT StreamListener {
 protected:
     StreamListener(){}
 public:

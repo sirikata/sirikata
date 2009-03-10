@@ -202,15 +202,20 @@ typedef std::vector<uint8> MemoryBuffer;
 } // namespace Sirikata
 #include "Singleton.hpp"
 #include "Factory.hpp"
+#include "Vector4.hpp"
+#include "Matrix3x3.hpp"
 #include "Quaternion.hpp"
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
 #include "options/OptionValue.hpp"
 #include "Logging.hpp"
-#include "task/Time.hpp"
 #include "Location.hpp"
 namespace Sirikata {
+namespace Task {
+class AbsTime;
+class DeltaTime;
+}
 typedef Task::AbsTime Time;
 typedef Task::DeltaTime Duration;
 typedef Vector3<float32> Vector3f;

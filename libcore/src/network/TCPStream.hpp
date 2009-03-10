@@ -83,7 +83,7 @@ class TCPSetCallbacks;
  * If all streams are shut down, the sockets may be deactivated
  * If the socket disconnects due to error, then Disconnect callbacks must be called
  */
-class TCPStream:public Stream {
+class SIRIKATA_EXPORT TCPStream:public Stream {
 public:
     class Callbacks;
     static const char * STRING_PREFIX() {

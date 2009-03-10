@@ -69,7 +69,7 @@ namespace Task {
  * Defines the set of return values for an EventListener. An acceptable
  * value includes the bitwise or of any values in the enum.
  */
-class EventResponse {
+class SIRIKATA_EXPORT EventResponse {
 	enum {
 		NOP,
 		DELETE_LISTENER=1,
@@ -118,12 +118,12 @@ enum EventOrder {
 	NUM_EVENTORDER
 };
 /// Exception thrown if an invalid EventOrder is passed.
-class EventOrderException : std::exception {};
+class SIRIKATA_EXPORT EventOrderException : std::exception {};
 
 /** Some EventManagers may require a different base class which
  * inherits from Event but have additional properties. */
 template <class EventBase=Event>
-class EventManager {
+class SIRIKATA_EXPORT EventManager {
 
 	/* TYPEDEFS */
 public:
@@ -164,7 +164,7 @@ private:
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo*> PrimaryListenerMap;
 
-	class EventSubscriptionInfo {
+	class SIRIKATA_EXPORT EventSubscriptionInfo {
 		ListenerList *mList;
 		typename ListenerList::iterator mIter;
 
@@ -191,7 +191,7 @@ private:
 	};
 	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
 
-	struct ListenerRequest {
+	struct SIRIKATA_EXPORT ListenerRequest {
 		SubscriptionId listenerId;
 		IdPair eventId;
 		EventListener listenerFunc;

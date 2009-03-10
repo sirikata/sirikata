@@ -45,7 +45,7 @@ typedef void CURL;
 typedef std::tr1::shared_ptr<class HTTPRequest> HTTPRequestPtr;
 
 /// Downloads the specified file in another thread and calls callback when finished.
-class HTTPRequest {
+class SIRIKATA_EXPORT HTTPRequest {
 public:
 
 	typedef std::tr1::function<void(HTTPRequest*,

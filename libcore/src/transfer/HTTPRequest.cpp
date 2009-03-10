@@ -187,12 +187,15 @@ void HTTPRequest::gotHeader(const std::string &header) {
 	if (endpos > 2 && header[endpos-1] == '\n' && header[endpos-2] == '\r') {
 		endpos -= 2;
 	}
-	do {
-		++colon;
-	} while (colon < endpos && header[colon] == ' ');
-	std::string headervalue = header.substr(colon, endpos-colon);
-	for (std::string::size_type i = 0; i < colon; i++) {
-		headername[i] = tolower(headername[i]);
+	if (colon<endpos) {
+		do {
+			++colon;
+		} while (colon < endpos && header[colon] == ' ');
+	}
+	
+	std::string headervalue = (colon<endpos?header.substr(colon, endpos-colon):(std::string()));
+	for (std::string::iterator iter = headername.begin(),iterend=headername.end();iter!=iterend; ++iter) {
+		*iter = tolower(*iter);
 	}
 	if (headername == "content-length") {
 		std::istringstream istr(headervalue);
