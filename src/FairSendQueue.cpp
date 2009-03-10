@@ -1,11 +1,12 @@
 #include "Network.hpp"
 #include "Server.hpp"
 #include "FairSendQueue.hpp"
-
+#include "Message.hpp"
 
 namespace CBR{
-FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second)
- : mClientQueues(bytes_per_second),
+FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second, BandwidthStatistics* bstats)
+ : SendQueue(bstats),
+   mClientQueues(bytes_per_second),
    mServerQueues(bytes_per_second),
    mNetwork(net)
 {
@@ -49,6 +50,7 @@ void FairSendQueue::service(const Time&t){
          i!=ie;
          ++i) {
         mNetwork->send((*i)->mPair.first,(*i)->mPair.second,false,true,1);
+        mBandwidthStats->sent( (*i)->mPair.first, GetMessageUniqueID((*i)->mPair.second), (*i)->mPair.second.size(), t);
     }
     finalSendMessages.resize(0);
     for (;count<mClientServerBuffer.size();++count) {
@@ -65,7 +67,7 @@ void FairSendQueue::service(const Time&t){
     }
 }
 
-    
+
 void FairSendQueue::registerServer(ServerID sid, float weight) {
     if (!mServerQueues.hasQueue(sid)) {
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
@@ -75,7 +77,7 @@ void FairSendQueue::removeServer(ServerID sid) {
     mServerQueues.removeQueue(sid);
 }
 void FairSendQueue::registerClient(UUID sid, float weight) {
-   if (!mClientQueues.hasQueue(sid)) { 
+   if (!mClientQueues.hasQueue(sid)) {
        mClientQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
    }
 }

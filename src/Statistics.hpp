@@ -63,6 +63,7 @@ class BandwidthStatistics {
 public:
     ~BandwidthStatistics();
 
+    void queued(const ServerID& dest, uint32 id, uint32 size, const Time& t);
     void sent(const ServerID& dest, uint32 id, uint32 size, const Time& t);
     void received(const ServerID& src, uint32 id, uint32 size, const Time& t);
 
@@ -85,6 +86,7 @@ private:
 
     typedef Batch<Packet> PacketBatch;
 
+    std::vector<PacketBatch*> queuedBatches;
     std::vector<PacketBatch*> sentBatches;
     std::vector<PacketBatch*> receivedBatches;
 

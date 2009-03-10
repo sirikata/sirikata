@@ -42,6 +42,12 @@ std::ostream& BandwidthStatistics::Packet::write(std::ostream& os) {
 }
 
 BandwidthStatistics::~BandwidthStatistics() {
+    for(std::vector<PacketBatch*>::iterator it = queuedBatches.begin(); it != queuedBatches.end(); it++) {
+        PacketBatch* pb = *it;
+        delete pb;
+    }
+    queuedBatches.clear();
+
     for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
         PacketBatch* pb = *it;
         delete pb;
@@ -53,6 +59,15 @@ BandwidthStatistics::~BandwidthStatistics() {
         delete pb;
     }
     receivedBatches.clear();
+}
+
+void BandwidthStatistics::queued(const ServerID& dest, uint32 id, uint32 size, const Time& t) {
+    if (queuedBatches.empty() || queuedBatches.back()->full())
+        queuedBatches.push_back( new PacketBatch() );
+
+    PacketBatch* pb = queuedBatches.back();
+    pb->items[pb->size] = Packet(dest, id, size, t);
+    pb->size++;
 }
 
 void BandwidthStatistics::sent(const ServerID& dest, uint32 id, uint32 size, const Time& t) {
@@ -75,6 +90,13 @@ void BandwidthStatistics::received(const ServerID& src, uint32 id, uint32 size, 
 
 void BandwidthStatistics::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out);
+
+    of << "Queued" << std::endl;
+    of << "DestServer ServerID MessageID Size Time" << std::endl;
+    for(std::vector<PacketBatch*>::iterator it = queuedBatches.begin(); it != queuedBatches.end(); it++) {
+        PacketBatch* pb = *it;
+        pb->write(of);
+    }
 
     of << "Sent" << std::endl;
     of << "DestServer ServerID MessageID Size Time" << std::endl;

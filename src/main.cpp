@@ -39,6 +39,7 @@
 #include "Server.hpp"
 
 #include "Options.hpp"
+#include "Statistics.hpp"
 
 #include "OracleLocationService.hpp"
 #include "UniformServerMap.hpp"
@@ -49,6 +50,7 @@
 
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
+
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -66,6 +68,9 @@ int main(int argc, char** argv) {
             CBR::testClient(client_port.c_str(), host.c_str(), server_port.c_str());
         return 0;
     }
+
+    BandwidthStatistics* bandwidth_stats = new BandwidthStatistics();
+    LocationStatistics* location_stats = new LocationStatistics();
 
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
@@ -90,11 +95,11 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
 
-    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>());
+    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(), bandwidth_stats);
     obj_factory->createObjectQueues(sq);
 
     ServerID server_id = GetOption("id")->as<ServerID>();
-    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
+    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, bandwidth_stats, location_stats);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -130,6 +135,16 @@ int main(int argc, char** argv) {
     delete server_map;
     delete loc_service;
     delete obj_factory;
+
+
+    String bandwidth_file = GetPerServerFile(STATS_BANDWIDTH_FILE, server_id);
+    if (!bandwidth_file.empty()) bandwidth_stats->save(bandwidth_file);
+    delete bandwidth_stats;
+
+    String location_file = GetPerServerFile(STATS_LOCATION_FILE, server_id);
+    if (!location_file.empty()) location_stats->save(location_file);
+    delete location_stats;
+
 
     return 0;
 }

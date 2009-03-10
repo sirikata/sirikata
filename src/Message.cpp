@@ -52,6 +52,16 @@ uint32 GetUniqueIDMessageID(uint32 uid) {
     return ( uid & ~MESSAGE_ID_SERVER_BITS );
 }
 
+uint32 GetMessageUniqueID(const Network::Chunk& msg) {
+    uint32 offset = 0;
+    offset += 2 * sizeof(ServerID); // size of ServerMessageHeader
+    offset += 1; // size of msg type
+
+    uint32 uid;
+    memcpy(&uid, &msg[offset], sizeof(uint32));
+    return uid;
+}
+
 ServerMessageHeader::ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server)
  : mSourceServer(src_server),
    mDestServer(dest_server)

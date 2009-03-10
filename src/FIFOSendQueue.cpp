@@ -2,10 +2,13 @@
 #include "Network.hpp"
 #include "Server.hpp"
 #include "FIFOSendQueue.hpp"
+#include "Message.hpp"
+
 namespace CBR {
 
-FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second)
- : mNetwork(net),
+FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, BandwidthStatistics* bstats)
+ : SendQueue(bstats),
+   mNetwork(net),
    mRate(bytes_per_second),
    mRemainderBytes(0),
    mLastTime(0)
@@ -28,6 +31,7 @@ void FIFOSendQueue::service(const Time& t){
         bool ok=mNetwork->send(mQueue.front().first,mQueue.front().second,false,true,1);
         free_bytes -= mQueue.front().second.size();
         assert(ok&&"Network Send Failed");
+        mBandwidthStats->sent( mQueue.front().first, GetMessageUniqueID(mQueue.front().second), mQueue.front().second.size(), t);
         mQueue.pop();
     }
 
