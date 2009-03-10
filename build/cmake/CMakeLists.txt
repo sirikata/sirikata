@@ -161,6 +161,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
+  ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp

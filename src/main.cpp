@@ -38,6 +38,8 @@
 #include "Proximity.hpp"
 #include "Server.hpp"
 
+#include "Options.hpp"
+
 #include "OracleLocationService.hpp"
 #include "UniformServerMap.hpp"
 #include "Test.hpp"
@@ -50,40 +52,14 @@
 int main(int argc, char** argv) {
     using namespace CBR;
 
-    InitializeOptions::module("cbr")
-        .addOption(new OptionValue("test", "none", Sirikata::OptionValueType<String>(), "Type of test to run"))
-        .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))
-        .addOption(new OptionValue("client-port", "8081", Sirikata::OptionValueType<String>(), "Port for client side of test"))
-        .addOption(new OptionValue("host", "127.0.0.1", Sirikata::OptionValueType<String>(), "Host to connect to for test"))
+    InitOptions();
+    ParseOptions(argc, argv);
 
-        .addOption(new OptionValue("sim", "false", Sirikata::OptionValueType<bool>(), "Turns simulated clock time on or off"))
-        .addOption(new OptionValue("sim-step", "10ms", Sirikata::OptionValueType<Duration>(), "Size of simulation time steps"))
-
-        .addOption(new OptionValue("time-dilation", "1.0", Sirikata::OptionValueType<float>(), "Factor by which times will be scaled (to allow faster processing when CPU and bandwidth is readily available, slower when they are overloaded)"))
-
-        .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
-        .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
-        .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
-        .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
-        .addOption(new OptionValue("duration", "1s", Sirikata::OptionValueType<Duration>(), "Duration of the simulation"))
-        .addOption(new OptionValue("serverips", "serverip.txt", Sirikata::OptionValueType<String>(), "The file containing the server ip list"))
-
-        .addOption(new OptionValue("bandwidth", "2000000000", Sirikata::OptionValueType<uint32>(), "Total bandwidth for this server in bytes per second"))
-
-        .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
-
-        .addOption(new OptionValue("stats.bandwidth-filename", "", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
-        .addOption(new OptionValue("stats.location-filename", "", Sirikata::OptionValueType<String>(), "The filename to save location stats to"))
-     ;
-
-    OptionSet* options = OptionSet::getOptions("cbr");
-    options->parse(argc, argv);
-
-    String test_mode = options->referenceOption("test")->as<String>();
+    String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
-        String server_port = options->referenceOption("server-port")->as<String>();
-        String client_port = options->referenceOption("client-port")->as<String>();
-        String host = options->referenceOption("host")->as<String>();
+        String server_port = GetOption("server-port")->as<String>();
+        String client_port = GetOption("client-port")->as<String>();
+        String host = GetOption("host")->as<String>();
         if (test_mode == "server")
             CBR::testServer(server_port.c_str(), host.c_str(), client_port.c_str());
         else if (test_mode == "client")
@@ -91,12 +67,12 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    uint32 nobjects = options->referenceOption("objects")->as<uint32>();
-    BoundingBox3f region = options->referenceOption("region")->as<BoundingBox3f>();
-    Vector3ui32 layout = options->referenceOption("layout")->as<Vector3ui32>();
-    Duration duration = options->referenceOption("duration")->as<Duration>();
+    uint32 nobjects = GetOption("objects")->as<uint32>();
+    BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
+    Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    Duration duration = GetOption("duration")->as<Duration>();
 
-    srand( options->referenceOption("rand-seed")->as<uint32>() );
+    srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
 
@@ -108,22 +84,22 @@ int main(int argc, char** argv) {
         layout
     );
 
-    String filehandle = options->referenceOption("serverips")->as<String>();
+    String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
 
-    SendQueue* sq=new FairSendQueue(network, options->referenceOption("bandwidth")->as<uint32>());
+    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>());
     obj_factory->createObjectQueues(sq);
 
-    ServerID server_id = options->referenceOption("id")->as<ServerID>();
+    ServerID server_id = GetOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
 
-    bool sim = options->referenceOption("sim")->as<bool>();
-    Duration sim_step = options->referenceOption("sim-step")->as<Duration>();
+    bool sim = GetOption("sim")->as<bool>();
+    Duration sim_step = GetOption("sim-step")->as<Duration>();
 
-    float time_dilation = options->referenceOption("time-dilation")->as<float>();
+    float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
 
     Time tbegin = Time(0);

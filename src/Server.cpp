@@ -39,6 +39,7 @@
 #include "ServerIDMap.hpp"
 #include "SendQueue.hpp"
 #include "Statistics.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
@@ -82,11 +83,11 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
 Server::~Server() {
     OptionSet* options = OptionSet::getOptions("cbr");
 
-    String bandwidth_file = options->referenceOption("stats.bandwidth-filename")->as<String>();
+    String bandwidth_file = GetPerServerFile(STATS_BANDWIDTH_FILE, id());
     if (!bandwidth_file.empty()) mBandwidthStats->save(bandwidth_file);
     delete mBandwidthStats;
 
-    String location_file = options->referenceOption("stats.location-filename")->as<String>();
+    String location_file = GetPerServerFile(STATS_LOCATION_FILE, id());
     if (!location_file.empty()) mLocationStats->save(location_file);
     delete mLocationStats;
 }
