@@ -193,8 +193,8 @@ Stream::StreamID MultiplexedSocket::getNewID() {
 MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
-    : mIO(&sockets[0]->io_service()),
+MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
+    : mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
     mSocketConnectionPhase=PRECONNECTION;

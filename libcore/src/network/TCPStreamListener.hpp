@@ -34,6 +34,8 @@
 #define SIRIKATA_TCPStreamListener_HPP__
 #include "StreamListener.hpp"
 namespace Sirikata { namespace Network {
+class IOService;
+class TCPListener;
 /**
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered

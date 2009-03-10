@@ -50,7 +50,7 @@ void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Strea
 		SILOG(tcpsst,error, "ERROR IN THE TCP STREAM ACCEPTING PROCESS"<<se.what() << std::endl);
         //FIXME: attempt more?
     }else {
-        ASIOStreamBuilder::beginNewStream(socket,cb);
+        ASIOStreamBuilder::beginNewStream(socket,io,cb);
         newAcceptPhase(listen,io,cb);
     }
 }

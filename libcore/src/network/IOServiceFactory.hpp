@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPDefinitions.hpp
+ *  IOServiceFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,34 +29,24 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_IOSERVICEFACTORY_HPP_
+#define _SIRIKATA_IOSERVICEFACTORY_HPP_
 
-#ifndef _TCPDefinitions_HPP_
-#define _TCPDefinitions_HPP_
-#include <boost/asio.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/system/system_error.hpp>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
-typedef boost::asio::ip::tcp::socket TCPSocket;
-typedef boost::asio::io_service InternalIOService;
-class IOServiceFactory;
-class SIRIKATA_EXPORT IOService:public InternalIOService {
-    friend class IOServiceFactory;
-    IOService();
-    ~IOService();
-public:
+class IOService;
+class SIRIKATA_EXPORT IOServiceFactory {
+    static void io_service_initializer(IOService*io_ret);
+  public:
+    static IOService* makeIOService();
+    static void destroyIOService(IOService*io);
+    static IOService& singletonIOService();
+    static std::size_t pollService(IOService*);
+    static std::size_t runService(IOService*);
+    static std::size_t pollOneService(IOService*);
+    static std::size_t runOneService(IOService*);
+    static void stopService(IOService*);
+    static void resetService(IOService*);
+    static void dispatchServiceMessage(IOService*,const std::tr1::function<void()>&f);
 };
-class TCPListener :public boost::asio::ip::tcp::acceptor {
-public:
-    template <class Endpoint> TCPListener(IOService&io,Endpoint ep):
-        boost::asio::ip::tcp::acceptor(io,ep){}
-};
-class MultiplexedSocket;
-#define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
-// #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
-
-void MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
-
 } }
 #endif

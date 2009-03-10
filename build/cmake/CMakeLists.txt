@@ -505,6 +505,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/ASIOReadBuffer.cpp
 	${LIBCORE_SOURCE_DIR}/network/ASIOSocketWrapper.cpp
 	${LIBCORE_SOURCE_DIR}/network/ASIOStreamBuilder.cpp
+	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/MultiplexedSocket.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp
 	${LIBCORE_SOURCE_DIR}/network/TCPStream.cpp

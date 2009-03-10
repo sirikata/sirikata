@@ -53,6 +53,7 @@ IncompleteStreamMap sIncompleteStreams;
 ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
 void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
                  TCPSocket *socket,
+                 IOService *ioService,
                  Stream::SubstreamCallback callback,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
@@ -74,7 +75,7 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
         }else {
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
-                std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(context,where->second.mSockets,callback));
+                std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(ioService,context,where->second.mSockets,callback));
                 MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                 sIncompleteStreams.erase(where);
                 Stream::StreamID newID=Stream::StreamID(1);
@@ -94,14 +95,14 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
     delete buffer;
 }
 
-void beginNewStream(TCPSocket * socket, const Stream::SubstreamCallback& cb) {
+void beginNewStream(TCPSocket * socket, IOService*ioService,const Stream::SubstreamCallback& cb) {
     Array<uint8,TCPStream::TcpSstHeaderSize> *buffer=new Array<uint8,TCPStream::TcpSstHeaderSize>;
      
      
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
-                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,cb,_1,_2));
+                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,_1,_2));
 }
 
 } } } 

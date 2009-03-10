@@ -36,7 +36,7 @@
 namespace Sirikata { namespace Network {
 class MultiplexedSocket;
 class TCPSetCallbacks;
-
+class IOService;
 
 /**
  * This is a particular example implementation of the Stream interface sitting atop TCP.
@@ -97,9 +97,6 @@ public:
         TCPStreamCloseStream=1,
         TCPStreamAckCloseStream=2
     };
-    static IOService*makeIOService();
-    static void destroyIOService(IOService*io);
-    static IOService&singletonIOService();
 private:
     friend class MultiplexedSocket;
     friend class TCPSetCallbacks;

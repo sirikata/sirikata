@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "network/TCPDefinitions.hpp"
 #include "network/TCPStream.hpp"
 #include "network/TCPStreamListener.hpp"
+#include "network/IOServiceFactory.hpp"
 #include <cxxtest/TestSuite.h>
 #include <boost/thread.hpp>
 #include <time.h>
@@ -114,10 +114,10 @@ public:
 
 		s.listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
-        mIO->run();
+        IOServiceFactory::runService(mIO);
     }
     std::string mPort;
-    boost::asio::io_service *mIO;
+    IOService *mIO;
     boost::thread *mThread;
     std::vector<TCPStream*> mStreams;
     std::vector<std::string> mMessagesToSend;
@@ -216,7 +216,7 @@ public:
         validateSameness(id,orderedNetData,orderedKeyData);
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
-    SstTest():mIO(TCPStream::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+    SstTest():mIO(IOServiceFactory::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
@@ -335,11 +335,11 @@ public:
             delete *i;
         }
         mStreams.resize(0);
-        mIO->stop();
+        IOServiceFactory::stopService(mIO);
         
         mThread->join();
         delete mThread;
-        TCPStream::destroyIOService(mIO);
+        IOServiceFactory::destroyIOService(mIO);
         mIO=NULL;
     }
     void simpleConnect(Stream*s, const Address&addy) {

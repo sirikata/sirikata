@@ -151,7 +151,7 @@ public:
     ///Constructor for a connecting stream
     MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
-    MultiplexedSocket(const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback);
+    MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
     static void sendAllProtocolHeaders(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const UUID&syncedUUID);
     ///erase all sockets and callbacks since the refcount is now zero;
