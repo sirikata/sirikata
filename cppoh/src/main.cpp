@@ -44,10 +44,18 @@ int main(int argc,const char**argv) {
     using namespace Sirikata;
     PluginManager plugins;
     plugins.load(
+#ifdef __APPLE__
+#ifdef NDEBUG
+        "libogre.dylib"
+#else
+        "libogre_d.dylib"
+#endif
+#else
 #ifdef NDEBUG
         "libogre.so"
 #else
         "libogre_d.so"
+#endif
 #endif
         );
     OptionSet::getOptions("")->parse(argc,argv);

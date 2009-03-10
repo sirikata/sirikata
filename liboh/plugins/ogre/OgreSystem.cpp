@@ -31,6 +31,9 @@
  */
 #include "OgreSystem.hpp"
 #include <OgrePlugin.h>
+volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
+volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
+
 namespace Sirikata {
 namespace Graphics {
 Ogre::Root *OgreSystem::sRoot;
@@ -62,6 +65,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            autoCreateWindow=new OptionValue("autowindow","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
+                           mOgreRootDir=new OptionValue("ogreroot",".",OptionValueType<String>(),"Directory with ogre plugins"),
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
                            mWindowHeight=new OptionValue("windowheight","768",OptionValueType<uint32>(),"Window height"),
@@ -71,9 +75,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionSet::getOptions("ogre",this)->parse(options);
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
+                         &&loadBuiltinPlugins()
                          &&((restoreConfig->as<bool>()&&getRoot()->restoreConfig()) 
                             || (userAccepted=getRoot()->showConfigDialog())));
-    if (userAccepted) {
+    if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
             bool doAutoWindow=autoCreateWindow->as<bool>();
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());      
@@ -92,7 +97,75 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 
     return true;
 }
-void loadBuiltinPlugins () {
+namespace {
+bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
+    root+='/';
+    root+=filename;
+#ifndef __APPLE__
+    FILE *fp=fopen(root.c_str(),"rb");
+#endif
+    if (
+#ifndef __APPLE__
+        fp
+#else
+        true
+#endif
+        ) {
+#ifndef __APPLE__
+        fclose(fp);
+#endif
+        Ogre::Root::getSingleton().loadPlugin(root);
+        return true;
+    }else {
+        if (recursive)  {
+            if (ogreLoadPlugin("../../dependencies/ogre-1.6.1/lib",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../dependencies/ogre-1.6.1/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../dependencies/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("/usr/local/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("/usr/lib/OGRE",filename,false))
+                return true;
+        }
+    }
+    return false;
+}
+}
+bool OgreSystem::loadBuiltinPlugins () {
+    bool retval=true;
+#ifdef __APPLE__
+    ogreLoadPlugin(String(),"RenderSystem_GL");
+    ogreLoadPlugin(String(),"Plugin_CgProgramManager");
+    ogreLoadPlugin(String(),"Plugin_ParticleFX");
+    ogreLoadPlugin(String(),"Plugin_OctreeSceneManager");
+#else
+#ifdef _WIN32
+#ifdef NDEBUG
+   #define OGRE_DEBUG_MACRO ".dll"
+#else
+   #define OGRE_DEBUG_MACRO "_d.dll"
+#endif
+#else
+#ifdef NDEBUG
+   #define OGRE_DEBUG_MACRO ".so"
+#else
+   #define OGRE_DEBUG_MACRO ".so"
+#endif
+#endif
+    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_GL" OGRE_DEBUG_MACRO);
+    ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_Direct3D9" OGRE_DEBUG_MACRO);
+    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_CgProgramManager" OGRE_DEBUG_MACRO);
+    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_ParticleFX" OGRE_DEBUG_MACRO);
+    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO);
+#undef OGRE_DEBUG_MACRO
+#endif
+    return retval;
     /*
     sCDNArchivePlugin=new CDNArchivePlugin;
     getRoot()->installPlugin(&*sCDNArchivePlugin);

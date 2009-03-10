@@ -44,11 +44,12 @@ class OgreSystem: public ProxyCreationListener {
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
     OptionValue*mFullScreen;
+    OptionValue* mOgreRootDir;
     static uint32 sNumOgreSystems;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
     Provider<ProxyCreationListener*>*mProxyManager;
-    void loadBuiltinPlugins();
+    bool loadBuiltinPlugins();
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
