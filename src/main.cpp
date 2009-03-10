@@ -46,7 +46,7 @@
 #include "FIFOSendQueue.hpp"
 
 #include "TabularServerIDMap.hpp"
-
+#include "ExpIntegral.hpp"
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
+        std::tr1::bind(&integralExpFunction,100000000.,_1,_2,_3,_4),
         region,
         layout
     );

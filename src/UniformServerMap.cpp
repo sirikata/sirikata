@@ -41,8 +41,8 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-UniformServerMap::UniformServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside)
- : ServerMap(loc_service),
+UniformServerMap::UniformServerMap(LocationService* loc_service, const BandwidthFunction&bw, const BoundingBox3f& region, const Vector3ui32& perside)
+ : ServerMap(loc_service,bw),
    mRegion(region),
    mServersPerDim(perside)
 {
@@ -50,7 +50,30 @@ UniformServerMap::UniformServerMap(LocationService* loc_service, const BoundingB
 
 UniformServerMap::~UniformServerMap() {
 }
+void UniformServerMap::serverRegionLookup(ServerID sid, Vector3d &retmin, Vector3d&retmax)const {
+    Vector3i32 server_dim_indices(sid%mServersPerDim.x,
+                                  (sid/mServersPerDim.x)%mServersPerDim.y,
+                                  (sid/mServersPerDim.x/mServersPerDim.y)%mServersPerDim.z);
+    double xsize=mRegion.extents().x/mServersPerDim.x;
+    double ysize=mRegion.extents().y/mServersPerDim.y;
+    double zsize=mRegion.extents().z/mServersPerDim.z;
+    retmin=Vector3d(server_dim_indices.x*xsize+mRegion.min().x,
+                    server_dim_indices.y*ysize+mRegion.min().y,
+                    server_dim_indices.z*zsize+mRegion.min().z);
+    retmax=Vector3d((1+server_dim_indices.x)*xsize+mRegion.min().x,
+                    (1+server_dim_indices.y)*ysize+mRegion.min().y,
+                    (1+server_dim_indices.z)*zsize+mRegion.min().z);
+}
+double UniformServerMap::serverBandwidthRate(ServerID source, ServerID destination) const{
 
+    Vector3d sourcemin;
+    Vector3d sourcemax;
+    Vector3d destmin;
+    Vector3d destmax;
+    serverRegionLookup(source,sourcemin,sourcemax);
+    serverRegionLookup(source,destmin,destmax);
+    return mBandwidthCap(sourcemin,sourcemax,destmin,destmax);
+}
 ServerID UniformServerMap::lookup(const Vector3f& pos) {
     Vector3f region_extents = mRegion.extents();
     Vector3f to_point = pos - mRegion.min();

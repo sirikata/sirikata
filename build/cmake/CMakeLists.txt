@@ -152,6 +152,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Duration.cpp
+  ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOSendQueue.cpp
   ${CBR_SOURCE_DIR}/FairSendQueue.cpp
   ${CBR_SOURCE_DIR}/Message.cpp

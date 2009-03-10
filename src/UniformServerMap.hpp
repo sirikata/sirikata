@@ -43,12 +43,14 @@ namespace CBR {
  */
 class UniformServerMap : public ServerMap {
 public:
-    UniformServerMap(LocationService* loc_service, const BoundingBox3f& region, const Vector3ui32& perside);
+    UniformServerMap(LocationService* loc_service, const BandwidthFunction&bw, const BoundingBox3f& region, const Vector3ui32& perside);
     virtual ~UniformServerMap();
 
     virtual ServerID lookup(const Vector3f& pos);
     virtual ServerID lookup(const UUID& obj_id);
+    virtual double serverBandwidthRate(ServerID source, ServerID destination)const;
 private:
+    void serverRegionLookup(ServerID sid, Vector3d& retmin, Vector3d &retmax)const;
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;
 };

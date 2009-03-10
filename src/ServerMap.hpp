@@ -44,15 +44,21 @@ namespace CBR {
  */
 class ServerMap {
 public:
-    ServerMap(LocationService* loc_service)
+    ////map from xyxmin,  xyxmax,  uvwmin,  uvwmax  to  bandwidth
+    typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> BandwidthFunction;
+    ServerMap(LocationService* loc_service, const BandwidthFunction&bandwidthIntegral)
      : mLocationService(loc_service)
+      ,mBandwidthCap(bandwidthIntegral)
     {}
     virtual ~ServerMap() {}
 
     virtual ServerID lookup(const Vector3f& pos) = 0;
     virtual ServerID lookup(const UUID& obj_id) = 0;
+    virtual double serverBandwidthRate(ServerID source, ServerID destination)const=0;
 protected:
+
     LocationService* mLocationService;
+    BandwidthFunction mBandwidthCap;
 };
 
 } // namespace CBR
