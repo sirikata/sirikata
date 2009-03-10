@@ -32,249 +32,11 @@
 
 #ifndef _SIRIKATA_OPTIONS_HPP_
 #define _SIRIKATA_OPTIONS_HPP_
-
-#include "util/Any.hpp"
 namespace Sirikata {
-class OptionSet;
-template <class T> class OptionValueType {public:
-    static Any lexical_cast(const std::string &value){
-        T retval=T();
-        std::istringstream ss(value);
-        ss>>retval;
-        return retval;
-    }
-};
-template <> class OptionValueType<std::string> {public:
-    static Any lexical_cast(const std::string &value){
-        return value;
-    }
-};
-template <> class OptionValueType<bool> {public:
-    static Any lexical_cast(const std::string &value){
-        bool retval=false;
-        if (value.size()){
-            if (value[0]=='T'||value[0]=='t'||value[0]=='1'||value[0]=='Y'||value[0]=='y')
-                retval=true;
-        }
-        return retval;
-    }
-};
-class OptionRegistration;
-
-/**
- * A class that holds a particular option value, readable by other parts of the program as well as settable by those parts
- */
-class OptionValue{
-    Any mValue;
-    std::string mDefaultValue;
-    const char *mDefaultChar;
-    const char* mDescription;
-    std::tr1::function<Any(std::string)> mParser;
-    std::tr1::function<void(const std::string&,Any,Any)>mChangeFunction;
-    const char* mName;
-
-    static void noop(const std::string&,Any ,Any) {
-
-    }
-    ///Option Registration needs to have access to mValue to set it for the very first time without triggering event
-    friend class OptionRegistration;
-    ///OptionSet needs to have access to the members directly to return them
-    friend class OptionSet;
-    /**
-     * Initializes an OptionValue and asserts that the mParser is NULL (in case 2 people added the same option)
-     * \returns true unless there was a conflict in setting the variable
-     */
-    bool initializationSet(const OptionValue&other);
-public:
-
-    const Any*operator->()const {
-        return &mValue;
-    }
-    Any*operator->() {
-        return &mValue;
-    }
-    const Any*get()const {
-        return &mValue;
-    }
-    Any* get() {
-        return &mValue;
-    }
-    template <class T> T&as(){return mValue.as<T>();}
-    template <class T> const T&as()const{return mValue.as<T>();}
-    const char*description() const{
-        return mDescription;
-    }
-    const char *defaultValue() const{
-        return mDefaultChar?mDefaultChar:mDefaultValue.c_str();
-    }
-    ///changes the option value and invokes mChangeFunction message
-    OptionValue& operator=(const OptionValue&other);
-
-    OptionValue() {
-        mDefaultChar=NULL;
-        mDescription="";mName="";
-        mChangeFunction=NULL;
-        mParser=NULL;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    template<class T>OptionValue(const char*option, const std::string&defaultValue, T type, const char*description, OptionValue**pointer=NULL):mDefaultChar(NULL){
-        mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
-        mName=option;
-        mDefaultValue=defaultValue;
-        mDescription=description;
-        mChangeFunction=std::tr1::function<void(const std::string&, Any, Any)>(&OptionValue::noop);
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param changeFunction is the function that will be invoked if someone atomically changes the OptionValue type by invoking =
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    template<class T>OptionValue(const char* option, const std::string&defaultValue, T xtype, const char*description, std::tr1::function<void(const std::string&,Any,Any)>&changeFunction, OptionValue**pointer=NULL) :mDefaultChar(NULL){
-        mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
-        mName=option;
-        mDescription=description;
-        mDefaultValue=defaultValue;
-        mChangeFunction=std::tr1::function<void(const std::string&, Any, Any)>(&OptionValue::noop);
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param parser is the function that can convert a string to the Sirikata::Any of the appropriate type
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    OptionValue(const char* option, const std::string&defaultValue, const char *description, const std::tr1::function<Any(std::string)>& parser, OptionValue**pointer=NULL) :mDefaultChar(NULL){
-        mParser=parser;
-        mName=option;
-        mDescription=description;
-        mDefaultValue=defaultValue;
-        mChangeFunction=&OptionValue::noop;
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param parser is the function that can convert a string to the Sirikata::Any of the appropriate type
-     * \param changeFunction is the function that will be invoked if someone atomically changes the OptionValue type by invoking =
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    OptionValue(const char* option, const std::string&defaultValue, const char* description, const std::tr1::function<Any(std::string)>& parser,  const std::tr1::function<void(const std::string&, Any, Any)> &changeFunction, OptionValue**pointer=NULL) :mDefaultChar(NULL){
-        mParser=parser;
-        mName=option;
-        mDescription=description;
-        mDefaultValue=defaultValue;
-        mChangeFunction=changeFunction;
-        if (pointer)
-            *pointer=this;
-    }
-
-
-
-
-
-
-
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    template<class T>OptionValue(const char*option, const char*defaultValue, T type, const char*description, OptionValue**pointer=NULL){
-        mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
-        mName=option;
-        mDefaultChar=defaultValue;
-        mDescription=description;
-        mChangeFunction=std::tr1::function<void(const std::string&, Any, Any)>(&OptionValue::noop);
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param changeFunction is the function that will be invoked if someone atomically changes the OptionValue type by invoking =
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    template<class T>OptionValue(const char* option, const char*defaultValue, T xtype, const char*description, std::tr1::function<void(const std::string&,Any,Any)>&changeFunction, OptionValue**pointer=NULL) {
-        mParser=std::tr1::function<Any(std::string)>(&T::lexical_cast);
-        mName=option;
-        mDescription=description;
-        mDefaultChar=defaultValue;
-        mChangeFunction=std::tr1::function<void(const std::string&, Any, Any)>(&OptionValue::noop);
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param parser is the function that can convert a string to the Sirikata::Any of the appropriate type
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    OptionValue(const char* option, const char*defaultValue, const char *description, const std::tr1::function<Any(std::string)>& parser, OptionValue**pointer=NULL) {
-        mParser=parser;
-        mName=option;
-        mDescription=description;
-        mDefaultChar=defaultValue;
-        mChangeFunction=&OptionValue::noop;
-        if (pointer)
-            *pointer=this;
-    }
-    /**
-     * Invoke an option, setting its default value with a particular lexiccal cast function, a description and optionally a pointer to set to the result
-     * \param option is the name of the option in the config or text files
-     * \param defaultValue is the string representation of the default value as if a user typed it in
-     * \param type is a class that contains a static lexical_cast function that transforms a string into an Sirikata::Any of the appropirate type
-     * \param description is the textual description for the user when looking through the command line help
-     * \param parser is the function that can convert a string to the Sirikata::Any of the appropriate type
-     * \param changeFunction is the function that will be invoked if someone atomically changes the OptionValue type by invoking =
-     * \param pointer holds a pointer to an OptionValue that will get set to the newly constructed class
-     */
-    OptionValue(const char* option, const char*defaultValue, const char* description, const std::tr1::function<Any(std::string)>& parser,  const std::tr1::function<void(const std::string&, Any, Any)> &changeFunction, OptionValue**pointer=NULL) {
-        mParser=parser;
-        mName=option;
-        mDescription=description;
-        mDefaultChar=defaultValue;
-        mChangeFunction=changeFunction;
-        if (pointer)
-            *pointer=this;
-    }
-
-
-
-};
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
-class InitializeClassOptions{
+class SIRIKATA_EXPORT InitializeClassOptions{
 public:
     ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
     InitializeClassOptions(const char *,const void * thus,...);
@@ -289,7 +51,7 @@ protected:
 /**
  * A dummy class to statically initialize a bunch of option classes that could add to a module
  */
-class InitializeGlobalOptions :public InitializeClassOptions{
+class SIRIKATA_EXPORT InitializeGlobalOptions :public InitializeClassOptions{
 public:
     ///Takes a null terminated arg tuple of OptionValues* that should be added to the option set
     InitializeGlobalOptions(const char *,...);
@@ -298,7 +60,7 @@ public:
  * This class holds a set of options that may appear on a command line or within an argument to a module
  * Holds a static index to all OptionSets currently available in the program.
  */
-class OptionSet {
+class SIRIKATA_EXPORT OptionSet {
     std::map<std::string,OptionValue*> mNames;
     friend class InitializeGlobalOptions;
     friend class InitializeClassOptions;
@@ -324,6 +86,7 @@ class OptionSet {
         PARSED_UNBLANK_OPTIONS,
         PARSED_PARTIAL_UNBLANK_OPTIONS
     } mParsingStage;
+    bool initializationSet(OptionValue* thus, const OptionValue&other);
 public:
 
     OptionSet();

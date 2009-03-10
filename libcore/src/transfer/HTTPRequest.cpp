@@ -31,6 +31,7 @@
  */
 /*  Created on: Dec 31, 2008 */
 #include "util/Standard.hh"
+#include "options/Options.hpp"
 #include "HTTPRequest.hpp"
 #include "TransferData.hpp"
 #include "util/ThreadSafeQueue.hpp"

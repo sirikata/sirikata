@@ -35,6 +35,7 @@
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOStreamBuilder.hpp"
+#include "options/Options.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
 

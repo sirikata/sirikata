@@ -34,7 +34,7 @@
 #define _SIRIKATA_SINGLETON_HPP_
 namespace Sirikata {
 
-template <class T> class SIRIKATA_EXPORT AutoSingleton {
+template <class T> class AutoSingleton {
     static T*sInstance;
 public:
     static T&getSingleton() {

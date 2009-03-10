@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
+#include "options/Options.hpp"
 namespace Sirikata { namespace Logging {
 class LogLevelParser {public:
     static LOGGING_LEVEL lex_cast(const std::string&value) {

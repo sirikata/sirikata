@@ -35,7 +35,7 @@
 
 namespace Sirikata {
 template<class T, class Ftype>
-class SIRIKATA_EXPORT FactoryImpl {
+class FactoryImpl {
 
     typedef std::map<String,Ftype> ConstructorMap;
     ConstructorMap mConstructors;
@@ -86,13 +86,19 @@ public:
     }
 };
 
-template <class T>class SIRIKATA_EXPORT Factory:public FactoryImpl<T,std::tr1::function<T()> >{};
+template <class T>class Factory:public FactoryImpl<T,std::tr1::function<T()> >{};
 
-template <class T, typename A>class SIRIKATA_EXPORT Factory1:public FactoryImpl<T,std::tr1::function<T(A)> >{};
+template <class T, typename A>class Factory1:public FactoryImpl<T,std::tr1::function<T(A)> >{};
 
-template <class T, typename A, typename B>class SIRIKATA_EXPORT Factory2:public FactoryImpl<T,std::tr1::function<T(A,B)> >{};
+template <class T, typename A, typename B>class Factory2:public FactoryImpl<T,std::tr1::function<T(A,B)> >{};
 
-template <class T, typename A, typename B, typename C>class SIRIKATA_EXPORT Factory3:public FactoryImpl<T,std::tr1::function<T(A,B,C)> >{};
+template <class T, typename A, typename B, typename C>class Factory3:public FactoryImpl<T,std::tr1::function<T(A,B,C)> >{};
+
+template <class T, typename A, typename B, typename C, typename D>class Factory4:public FactoryImpl<T,std::tr1::function<T(A,B,C,D)> >{};
+
+template <class T, typename A, typename B, typename C, typename D, typename E>class Factory5:public FactoryImpl<T,std::tr1::function<T(A,B,C,D,E)> >{};
+
+template <class T, typename A, typename B, typename C, typename D, typename E, typename F>class Factory6:public FactoryImpl<T,std::tr1::function<T(A,B,C,D,E,F)> >{};
 
 }
 #endif

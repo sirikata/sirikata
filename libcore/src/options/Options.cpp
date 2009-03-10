@@ -281,16 +281,16 @@ public:
         return true;
     }
 };
-bool OptionValue::initializationSet(const OptionValue&other) {
-    if (mParser==NULL){
+bool OptionSet::initializationSet(OptionValue* thus, const OptionValue&other) {
+    if (thus->mParser==NULL){
         
-        HolderStash::getSingleton().hideUntilQuit(mValue.newAndDoNotFree(other.mValue));
-        mDefaultChar=other.mDefaultChar;
-        mDefaultValue=other.mDefaultValue;
-        mDescription=other.mDescription;
-        mParser=other.mParser;
-        mChangeFunction=other.mChangeFunction;
-        mName=other.mName;
+        HolderStash::getSingleton().hideUntilQuit(thus->mValue.newAndDoNotFree(other.mValue));
+        thus->mDefaultChar=other.mDefaultChar;
+        thus->mDefaultValue=other.mDefaultValue;
+        thus->mDescription=other.mDescription;
+        thus->mParser=other.mParser;
+        thus->mChangeFunction=other.mChangeFunction;
+        thus->mName=other.mName;
         return true;
     }else if (other.mParser==NULL) {
         return true;
@@ -400,7 +400,7 @@ void OptionSet::addOptionNoLock(OptionValue*option) {
     if (where==mNames.end()) {
         mNames[option->mName]=option;
     }else {
-        where->second->initializationSet(*option);
+		OptionSet::initializationSet(where->second,*option);
         delete option;
     }
 }

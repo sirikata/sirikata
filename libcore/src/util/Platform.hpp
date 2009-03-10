@@ -78,54 +78,6 @@
 # endif
 #endif
 
-/*
-#ifndef SIRIKATA_LIBOH_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-#   if defined(STATIC_LINKED)
-#     define SIRIKATA_LIBOH_EXPORT
-#   else
-#     if defined(SIRIKATA_LIBOH_BUILD)
-#       define SIRIKATA_LIBOH_EXPORT __declspec(dllexport)
-#     else
-#       define SIRIKATA_LIBOH_EXPORT __declspec(dllimport)
-#     endif
-#   endif
-#   define SIRIKATA_LIBOH__PLUGIN_EXPORT __declspec(dllexport)
-# else
-#   if defined(__GNUC__) && __GNUC__ >= 4
-#     define SIRIKATA_LIBOH_EXPORT __attribute__ ((visibility("default")))
-#     define SIRIKATA_LIBOH_PLUGIN_EXPORT __attribute__ ((visibility("default")))
-#   else
-#     define SIRIKATA_LIBOH_EXPORT
-#     define SIRIKATA_LIBOH_PLUGIN_EXPORT
-#   endif
-# endif
-#endif
-
-
-#ifndef SIRIKATA_LIBSPACE_EXPORT
-# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-#   if defined(STATIC_LINKED)
-#     define SIRIKATA_LIBSPACE_EXPORT
-#   else
-#     if defined(SIRIKATA_LIBSPACE_BUILD)
-#       define SIRIKATA_LIBSPACE_EXPORT __declspec(dllexport)
-#     else
-#       define SIRIKATA_LIBSPACE_EXPORT __declspec(dllimport)
-#     endif
-#   endif
-#   define SIRIKATA_LIBSPACE__PLUGIN_EXPORT __declspec(dllexport)
-# else
-#   if defined(__GNUC__) && __GNUC__ >= 4
-#     define SIRIKATA_LIBSPACE_EXPORT __attribute__ ((visibility("default")))
-#     define SIRIKATA_LIBSPACE_PLUGIN_EXPORT __attribute__ ((visibility("default")))
-#   else
-#     define SIRIKATA_LIBSPACE_EXPORT
-#     define SIRIKATA_LIBSPACE_PLUGIN_EXPORT
-#   endif
-# endif
-#endif
-*/
 
 
 #ifndef SIRIKATA_EXPORT_C
@@ -186,6 +138,8 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+//need to get rid of GetMessage for protocol buffer compatibility
+#undef GetMessage
 #endif
 
 #include <assert.h>
@@ -252,8 +206,7 @@ typedef std::vector<uint8> MemoryBuffer;
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"
-#include "UUID.hpp"
-#include "options/Options.hpp"
+#include "options/OptionValue.hpp"
 #include "Logging.hpp"
 #include "task/Time.hpp"
 #include "Location.hpp"

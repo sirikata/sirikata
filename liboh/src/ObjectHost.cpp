@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <oh/Platform.hpp>
 #include <oh/ObjectHost.hpp>
 #include "graphics/GraphicsObject.hpp"
 namespace Sirikata {

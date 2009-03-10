@@ -32,7 +32,7 @@
 
 #ifndef _TCPDefinitions_HPP_
 #define _TCPDefinitions_HPP_
-
+#include "options/Options.hpp"
 #include <boost/asio.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/system/system_error.hpp>

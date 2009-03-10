@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 namespace Sirikata {
+class OptionValue;
 namespace Logging {
 enum LOGGING_LEVEL {
     fatal=1,
@@ -39,7 +40,6 @@ enum LOGGING_LEVEL {
     debug=4096,
     insane=32768
 };
-
 extern OptionValue* defaultLevel;
 extern OptionValue* atLeastLevel;
 extern OptionValue* moduleLevel;

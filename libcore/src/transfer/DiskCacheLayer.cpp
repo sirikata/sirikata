@@ -33,6 +33,7 @@
 #include "util/Standard.hh"
 #include "DiskCacheLayer.hpp"
 
+#include "options/Options.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
 
