@@ -36,6 +36,11 @@
 
 namespace CBR {
 
+std::ostream& BandwidthStatistics::Packet::write(std::ostream& os) {
+    os << server << " " << GetUniqueIDServerID(id) << " " << GetUniqueIDMessageID(id) << " " << size << " " << time.raw() << std::endl;
+    return os;
+}
+
 BandwidthStatistics::~BandwidthStatistics() {
     for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
         PacketBatch* pb = *it;
@@ -55,10 +60,7 @@ void BandwidthStatistics::sent(const ServerID& dest, uint32 id, uint32 size, con
         sentBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = sentBatches.back();
-    pb->packets[pb->size].server = dest;
-    pb->packets[pb->size].id = id;
-    pb->packets[pb->size].size = size;
-    pb->packets[pb->size].time = t;
+    pb->items[pb->size] = Packet(dest, id, size, t);
     pb->size++;
 }
 
@@ -67,10 +69,7 @@ void BandwidthStatistics::received(const ServerID& src, uint32 id, uint32 size, 
         receivedBatches.push_back( new PacketBatch() );
 
     PacketBatch* pb = receivedBatches.back();
-    pb->packets[pb->size].server = src;
-    pb->packets[pb->size].id = id;
-    pb->packets[pb->size].size = size;
-    pb->packets[pb->size].time = t;
+    pb->items[pb->size] = Packet(src, id, size, t);
     pb->size++;
 }
 
@@ -81,17 +80,53 @@ void BandwidthStatistics::save(const String& filename) {
     of << "DestServer ServerID MessageID Size Time" << std::endl;
     for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
         PacketBatch* pb = *it;
-        for(uint16 i = 0; i < pb->size; i++)
-            of << pb->packets[i].server << " " << GetUniqueIDServerID(pb->packets[i].id) << " " << GetUniqueIDMessageID(pb->packets[i].id) << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
+        pb->write(of);
     }
 
     of << "Received" << std::endl;
     of << "SourceServer ServerID MessageID Size Time" << std::endl;
     for(std::vector<PacketBatch*>::iterator it = receivedBatches.begin(); it != receivedBatches.end(); it++) {
         PacketBatch* pb = *it;
-        for(uint16 i = 0; i < pb->size; i++)
-            of << pb->packets[i].server << " " << GetUniqueIDServerID(pb->packets[i].id) << " " << GetUniqueIDMessageID(pb->packets[i].id) << " " << pb->packets[i].size << " " << pb->packets[i].time.raw() << std::endl;
+        pb->write(of);
     }
 }
+
+
+std::ostream& LocationStatistics::LocationUpdate::write(std::ostream& os) {
+    os << receiver.readableHexData() << " "
+       << source.readableHexData() << " "
+       << "(" << location.updateTime().raw() << " " << location.position().toString() << " " << location.velocity().toString() << ") "
+       << time.raw()
+       << std::endl;
+    return os;
+}
+
+LocationStatistics::~LocationStatistics() {
+    for(std::vector<LocationUpdateBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
+        LocationUpdateBatch* pb = *it;
+        delete pb;
+    }
+    batches.clear();
+}
+
+void LocationStatistics::update(const UUID& receiver, const UUID& source, const MotionVector3f& loc, const Time& t) {
+    if (batches.empty() || batches.back()->full())
+        batches.push_back( new LocationUpdateBatch() );
+
+    LocationUpdateBatch* pb = batches.back();
+    pb->items[pb->size] = LocationUpdate(receiver, source, loc, t);
+    pb->size++;
+}
+
+void LocationStatistics::save(const String& filename) {
+    std::ofstream of(filename.c_str(), std::ios::out);
+
+    of << "Receiver Source Location Time" << std::endl;
+    for(std::vector<LocationUpdateBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
+        LocationUpdateBatch* pb = *it;
+        pb->write(of);
+    }
+}
+
 
 } // namespace CBR

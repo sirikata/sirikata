@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue("stats.bandwidth-filename", "", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
+        .addOption(new OptionValue("stats.location-filename", "", Sirikata::OptionValueType<String>(), "The filename to save location stats to"))
      ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
@@ -98,7 +99,7 @@ int main(int argc, char** argv) {
     srand( options->referenceOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    
+
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
@@ -117,7 +118,7 @@ int main(int argc, char** argv) {
 
     ServerID server_id = options->referenceOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
-    
+
     bool sim = options->referenceOption("sim")->as<bool>();
     Duration sim_step = options->referenceOption("sim-step")->as<Duration>();
 

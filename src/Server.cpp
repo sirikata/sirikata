@@ -53,6 +53,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mCurrentTime(0)
 {
     mBandwidthStats = new BandwidthStatistics();
+    mLocationStats = new LocationStatistics();
 
     // start the network listening
     mNetwork->listen(mID);
@@ -81,8 +82,13 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
 Server::~Server() {
     OptionSet* options = OptionSet::getOptions("cbr");
 
-    mBandwidthStats->save( options->referenceOption("stats.bandwidth-filename")->as<String>() );
+    String bandwidth_file = options->referenceOption("stats.bandwidth-filename")->as<String>();
+    if (!bandwidth_file.empty()) mBandwidthStats->save(bandwidth_file);
     delete mBandwidthStats;
+
+    String location_file = options->referenceOption("stats.location-filename")->as<String>();
+    if (!location_file.empty()) mLocationStats->save(location_file);
+    delete mLocationStats;
 }
 
 const ServerID& Server::id() const {
@@ -153,8 +159,10 @@ void Server::deliver(Message* msg) {
               Object* dest_obj = object(loc_msg->destObject());
               if (dest_obj == NULL)
                   forward(loc_msg, loc_msg->destObject());
-              else
+              else {
+                  mLocationStats->update(loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location(), mCurrentTime);
                   dest_obj->locationMessage(loc_msg);
+              }
           }
           break;
       case MESSAGE_TYPE_SUBSCRIPTION:
@@ -249,7 +257,7 @@ void Server::tick(const Time& t) {
     // Give objects a chance to process
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* obj = it->second;
-        obj->tick(t);	
+        obj->tick(t);
     }
 }
 
@@ -312,7 +320,7 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
     UUID* migrate_msg_subscribers = migrate_msg->subscriberList();
     for (it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++) {
         migrate_msg_subscribers[i] = *it;
-	//printf("sent migrateMsg->msubscribers[i] = %s\n", 
+	//printf("sent migrateMsg->msubscribers[i] = %s\n",
 	//       migrate_msg_subscribers[i].readableHexData().c_str()  );
         i++;
     }
@@ -322,7 +330,7 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
 
 ServerID Server::lookup(const Vector3f& pos) {
     ServerID sid = mServerMap->lookup(pos);
-    
+
     mSendQueue->registerServer(sid);
 
     return sid;
@@ -334,7 +342,7 @@ ServerID Server::lookup(const UUID& obj_id) {
   mSendQueue->registerServer(sid);
 
   return sid;
-       
+
 }
 
 } // namespace CBR

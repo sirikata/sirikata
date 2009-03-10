@@ -151,8 +151,8 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
 }
 
 uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
-    if (wire.size() < offset + 1 + 4)
-        wire.resize( offset + 1 + 4 );
+    if (wire.size() < offset + sizeof(MessageType) + sizeof(uint32) )
+        wire.resize( offset + sizeof(MessageType) + sizeof(uint32) );
 
     MessageType t = type();
     memcpy( &wire[offset], &t, sizeof(MessageType) );

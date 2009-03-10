@@ -51,6 +51,7 @@ class ObjectToObjectMessage;
 class SendQueue;
 class Network;
 class BandwidthStatistics;
+class LocationStatistics;
 class MigrateMessage;
 
 /** Handles all the basic services provided for objects by a server,
@@ -119,6 +120,7 @@ private:
 
     Time mCurrentTime;
     BandwidthStatistics* mBandwidthStats;
+    LocationStatistics* mLocationStats;
 }; // class Server
 
 } // namespace CBR

@@ -35,8 +35,28 @@
 
 #include "Utility.hpp"
 #include "Time.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
+
+template<typename T>
+struct Batch {
+    static const uint16 max_size = 65535;
+    uint16 size;
+    T items[max_size];
+
+    Batch() : size(0) {}
+
+    bool full() const {
+        return (size >= max_size);
+    }
+
+    std::ostream& write(std::ostream& os) {
+        for(uint32 i = 0; i < size; i++)
+            items[i].write(os);
+        return os;
+    }
+};
 
 
 class BandwidthStatistics {
@@ -50,7 +70,12 @@ public:
 private:
     struct Packet {
         Packet()
-         : id(0), size(0), time(0) {}
+         : server(0), id(0), size(0), time(0) {}
+
+        Packet(const ServerID& _server, uint32 _id, uint32 _size, const Time& _time)
+         : server(_server), id(_id), size(_size), time(_time) {}
+
+        std::ostream& write(std::ostream& os);
 
         ServerID server;
         uint32 id;
@@ -58,22 +83,40 @@ private:
         Time time;
     };
 
-    struct PacketBatch {
-        static const uint16 max_size = 65535;
-        uint16 size;
-        Packet packets[max_size];
-
-        PacketBatch() : size(0) {}
-
-        bool full() const {
-            return (size >= max_size);
-        }
-    };
+    typedef Batch<Packet> PacketBatch;
 
     std::vector<PacketBatch*> sentBatches;
     std::vector<PacketBatch*> receivedBatches;
 
 }; // class BandwidthStatistics
+
+class LocationStatistics {
+public:
+    ~LocationStatistics();
+
+    void update(const UUID& receiver, const UUID& source, const MotionVector3f& loc, const Time& t);
+
+    void save(const String& filename);
+private:
+    struct LocationUpdate {
+        LocationUpdate()
+         : receiver(UUID::nil()), source(UUID::nil()), location(), time(0) {}
+
+        LocationUpdate(const UUID& _receiver, const UUID& _source, const MotionVector3f& _loc, const Time& _time)
+         : receiver(_receiver), source(_source), location(_loc), time(_time) {}
+
+        std::ostream& write(std::ostream& os);
+
+        UUID receiver;
+        UUID source;
+        MotionVector3f location;
+        Time time;
+    };
+
+    typedef Batch<LocationUpdate> LocationUpdateBatch;
+
+    std::vector<LocationUpdateBatch*> batches;
+}; // class LocationStatistics
 
 } // namespace CBR
 
