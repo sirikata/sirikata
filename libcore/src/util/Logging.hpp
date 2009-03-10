@@ -29,6 +29,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_defaultLevel;
+extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_atLeastLevel;
+extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_moduleLevel;
 namespace Sirikata {
 class OptionValue;
 namespace Logging {
@@ -40,20 +43,18 @@ enum LOGGING_LEVEL {
     debug=4096,
     insane=32768
 };
-extern OptionValue* defaultLevel;
-extern OptionValue* atLeastLevel;
-extern OptionValue* moduleLevel;
 } }
 #if 1
 # ifdef DEBUG_ALL
 #  define SILOGP(module,lvl) true
 # else
+//needs to use unsafeAs because the LOGGING_LEVEL typeinfos are not preserved across dll lines
 #  define SILOGP(module,lvl) \
-    (Sirikata::Logging::defaultLevel->as<Sirikata::Logging::LOGGING_LEVEL>()>=Sirikata::Logging::lvl&& \
-        ( (Sirikata::Logging::moduleLevel->as<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)==Sirikata::Logging::moduleLevel->as<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
-           Sirikata::Logging::defaultLevel->as<Sirikata::Logging::LOGGING_LEVEL>()>=(Sirikata::Logging::lvl)) \
-          || (Sirikata::Logging::moduleLevel->as<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)!=Sirikata::Logging::moduleLevel->as<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
-              Sirikata::Logging::moduleLevel->as<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >()[#module]>=Sirikata::Logging::lvl)))
+    (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel)->unsafeAs<Sirikata::Logging::LOGGING_LEVEL>()>=Sirikata::Logging::lvl&& \
+        ( (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)==reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
+           reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel)->unsafeAs<Sirikata::Logging::LOGGING_LEVEL>()>=(Sirikata::Logging::lvl)) \
+		   || (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)!=reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
+              reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >()[#module]>=Sirikata::Logging::lvl)))
 # endif
 # define SILOGNOCR(module,lvl,value) \
     if (SILOGP(module,lvl)) \

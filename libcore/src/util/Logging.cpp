@@ -31,6 +31,11 @@
  */
 #include "util/Standard.hh"
 #include "options/Options.hpp"
+extern "C" {
+void *Sirikata_Logging_OptionValue_defaultLevel;
+void *Sirikata_Logging_OptionValue_atLeastLevel;
+void *Sirikata_Logging_OptionValue_moduleLevel;
+}
 namespace Sirikata { namespace Logging {
 class LogLevelParser {public:
     static LOGGING_LEVEL lex_cast(const std::string&value) {
@@ -75,11 +80,8 @@ class LogLevelMapParser {public:
     }
 };
 
-OptionValue* defaultLevel;
-OptionValue* atLeastLevel;
-OptionValue* moduleLevel;
 InitializeGlobalOptions o("",
-                    defaultLevel=new OptionValue("loglevel",
+                    Sirikata_Logging_OptionValue_defaultLevel=new OptionValue("loglevel",
 #ifdef NDEBUG
                                                  "info",
 #else
@@ -87,7 +89,7 @@ InitializeGlobalOptions o("",
 #endif
                                                  "Sets the default level for logging when no per-module override",
                                                  LogLevelParser()),
-                    atLeastLevel=new OptionValue("maxloglevel",
+                    Sirikata_Logging_OptionValue_atLeastLevel=new OptionValue("maxloglevel",
 #ifdef NDEBUG
                                                  "info",
 #else
@@ -95,7 +97,7 @@ InitializeGlobalOptions o("",
 #endif
                                                  "Sets the maximum logging level any module may be set to",
                                                  LogLevelParser()),
-                    moduleLevel=new OptionValue("moduleloglevel",
+                    Sirikata_Logging_OptionValue_moduleLevel=new OptionValue("moduleloglevel",
                                                 "",
                                                 "Sets a per-module logging level: should be formatted <module>=debug,<othermodule>=info...",
                                                 LogLevelMapParser()),

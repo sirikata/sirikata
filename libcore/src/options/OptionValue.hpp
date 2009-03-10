@@ -97,6 +97,8 @@ public:
     }
     template <class T> T&as(){return mValue.as<T>();}
     template <class T> const T&as()const{return mValue.as<T>();}
+    template <class T> T&unsafeAs(){return mValue.unsafeAs<T>();}
+    template <class T> const T&unsafeAs()const{return mValue.unsafeAs<T>();}
     const char*description() const{
         return mDescription;
     }
