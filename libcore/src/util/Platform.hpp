@@ -139,6 +139,7 @@
 #include <cstring>
 #include <cmath>
 #include <fstream>
+#include <locale>
 #include <iostream>
 #include <string>
 #include <sstream>

@@ -224,9 +224,7 @@ public:
     }
 };
 class HolderStash:public Stash<Any::Holder>, public AutoSingleton<HolderStash> {};
-AUTO_SINGLETON_INSTANCE(HolderStash);
 class ValueStash:public Stash<OptionValue>, public AutoSingleton<ValueStash> {};
-AUTO_SINGLETON_INSTANCE(ValueStash);
 class QuitOptionsPlugin {
 public:
     ~QuitOptionsPlugin() {
@@ -241,6 +239,8 @@ public:
     }
 }gQuitOptionsPlugin;
 }
+AUTO_SINGLETON_INSTANCE(HolderStash);
+AUTO_SINGLETON_INSTANCE(ValueStash);
 class OptionRegistration {
 public:
     static boost::mutex & OptionSetMutex() {

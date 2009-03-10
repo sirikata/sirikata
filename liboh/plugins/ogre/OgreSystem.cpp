@@ -57,7 +57,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*autoCreateWindow;
     OptionValue*windowTitle;
     
-    InitializeClassOptions("ogre",this,
+    InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
@@ -72,7 +72,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
         NULL);
     bool userAccepted=true;
 
-    OptionSet::getOptions("ogre",this)->parse(options);
+    OptionSet::getOptions("ogregraphics",this)->parse(options);
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
@@ -126,7 +126,15 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
                 return true;
             if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
                 return true;
-            if (ogreLoadPlugin("../../dependencies/lib/OGRE",filename,false))
+            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.1/lib",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.x/lib",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.1/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../../dependencies/lib/OGRE",filename,false))
                 return true;
             if (ogreLoadPlugin("/usr/local/lib/OGRE",filename,false))
                 return true;

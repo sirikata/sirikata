@@ -273,9 +273,9 @@ public:
 			if (data == NULL && length == 0) {
 				break;
 			} else if (data == NULL) {
-				context.updateZeros(length);
+				context.updateZeros((size_t)length);
 			} else {
-				context.update(data, length);
+				context.update(data, (size_t)length);
 			}
 		}
 		return context.get();

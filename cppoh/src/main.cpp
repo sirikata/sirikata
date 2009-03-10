@@ -46,15 +46,23 @@ int main(int argc,const char**argv) {
     plugins.load(
 #ifdef __APPLE__
 #ifdef NDEBUG
-        "libogre.dylib"
+        "libogregraphics.dylib"
 #else
-        "libogre_d.dylib"
+        "libogregraphics_d.dylib"
+#endif
+#else
+#ifdef _WIN32
+#ifdef NDEBUG
+        "ogregraphics.dll"
+#else
+        "ogregraphics_d.dll"
 #endif
 #else
 #ifdef NDEBUG
-        "libogre.so"
+        "libogregraphics.so"
 #else
-        "libogre_d.so"
+        "libogregraphics_d.so"
+#endif
 #endif
 #endif
         );
@@ -62,14 +70,13 @@ int main(int argc,const char**argv) {
     ProxyManager * pm=new ProxyManager;
     Provider<Sirikata::ProxyCreationListener*>*provider=pm;
     String graphicsCommandArguments;
-    String graphicsPluginName("ogre");
+    String graphicsPluginName("ogregraphics");
     GraphicsFactory::getSingleton();
 
-    const std::tr1::function<ProxyCreationListener*(Provider<ProxyCreationListener*>*pm,const String&)> *f=&    GraphicsFactory::getSingleton()
-        .getConstructor(graphicsPluginName);
-    ProxyCreationListener *graphicsSystem=(*f)(provider,graphicsCommandArguments);
+    ProxyCreationListener *graphicsSystem=
+        GraphicsFactory::getSingleton()
+          .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
     delete graphicsSystem;
-
     delete pm;
     plugins.gc();
     GraphicsFactory::destroy();

@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "Standard.hh"
+#include "util/Standard.hh"
 namespace Sirikata { namespace Logging {
 class LogLevelParser {public:
     static LOGGING_LEVEL lex_cast(const std::string&value) {

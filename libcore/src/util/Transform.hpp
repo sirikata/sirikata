@@ -61,8 +61,8 @@ public:
         }
         Error(const Transform&correct, const Transform&incorrect) {
             mDistanceError=(incorrect.getPosition()-correct.getPosition()).length();
-            mAngularError=2.0*std::acos(correct.getOrientation().normal()
-                                        .dot(incorrect.getOrientation().normal()));
+            mAngularError=(float32)(2.0*std::acos(correct.getOrientation().normal()
+                                             .dot(incorrect.getOrientation().normal())));
         }
         bool operator<= (const Error&other)const {
             return mDistanceError<=other.mDistanceError&&mAngularError<=other.mAngularError;

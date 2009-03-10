@@ -37,8 +37,8 @@ typedef std::tr1::shared_ptr<ProxyObject*> ProxyObjectPtr;
 class ProxyCreationListener {
 public:
     virtual ~ProxyCreationListener(){}
-    virtual void createProxy (const ProxyObjectPtr)=0;
-    virtual void destroyProxy (const ProxyObjectPtr)=0;
+    virtual void createProxy (ProxyObjectPtr)=0;
+    virtual void destroyProxy (ProxyObjectPtr)=0;
 };
 }
 #endif

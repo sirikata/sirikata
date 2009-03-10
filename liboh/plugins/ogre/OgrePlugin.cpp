@@ -7,7 +7,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     using namespace Sirikata::Graphics;
     if (core_plugin_refcount==0)
-        GraphicsFactory::getSingleton().registerConstructor("ogre",
+        GraphicsFactory::getSingleton().registerConstructor("ogregraphics",
                                                             &OgreSystem::create,
                                                             true);
     core_plugin_refcount++;
@@ -17,11 +17,11 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     core_plugin_refcount--;
     if (core_plugin_refcount==0)
-        GraphicsFactory::getSingleton().unregisterConstructor("ogre",true);
+        GraphicsFactory::getSingleton().unregisterConstructor("ogregraphics",true);
 }
 
 SIRIKATA_PLUGIN_EXPORT_C const char* name() {
-    return "ogre";
+    return "ogregraphics";
 }
 
 SIRIKATA_PLUGIN_EXPORT_C int refcount() {

@@ -46,7 +46,7 @@ class SIRIKATA_EXPORT FactoryImpl {
         return U();
     }
     static T staticNoop() {
-        T temp;
+        T temp=T();
         return noop(temp);
     }
     Ftype mNoop;
@@ -86,13 +86,13 @@ public:
     }
 };
 
-template <class T>class Factory:public FactoryImpl<T,std::tr1::function<T()> >{};
+template <class T>class SIRIKATA_EXPORT Factory:public FactoryImpl<T,std::tr1::function<T()> >{};
 
-template <class T, typename A>class Factory1:public FactoryImpl<T,std::tr1::function<T(A)> >{};
+template <class T, typename A>class SIRIKATA_EXPORT Factory1:public FactoryImpl<T,std::tr1::function<T(A)> >{};
 
-template <class T, typename A, typename B>class Factory2:public FactoryImpl<T,std::tr1::function<T(A,B)> >{};
+template <class T, typename A, typename B>class SIRIKATA_EXPORT Factory2:public FactoryImpl<T,std::tr1::function<T(A,B)> >{};
 
-template <class T, typename A, typename B, typename C>class Factory3:public FactoryImpl<T,std::tr1::function<T(A,B,C)> >{};
+template <class T, typename A, typename B, typename C>class SIRIKATA_EXPORT Factory3:public FactoryImpl<T,std::tr1::function<T(A,B,C)> >{};
 
 }
 #endif
