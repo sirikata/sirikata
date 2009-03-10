@@ -32,7 +32,7 @@
 #include <util/ListenerProvider.hpp>
 #include "ProxyCreationListener.hpp"
 namespace Sirikata {
-class ProxyManager : public Provider<ProxyCreationListener*> {
+class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
 public:
     ProxyManager();
     ~ProxyManager();

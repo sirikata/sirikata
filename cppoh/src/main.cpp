@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <util/Platform.hpp>
+#include <oh/Platform.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
 #include <ProxyManager.hpp>

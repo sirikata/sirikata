@@ -87,14 +87,17 @@ class URIContext {
 
 	struct IsSpace {
 		inline bool operator()(const unsigned char c) {
-			return std::isspace(c,std::locale());
+			using namespace std;
+			int kspace=(char)c;
+			return isspace(kspace);
 		}
 	};
 
 	void cleanup(std::string &s) {
 		// hostnames and protocols are case-insensitive.
 		for (std::string::size_type i = 0; i < s.length(); ++i) {
-			s[i] = std::tolower(s[i],std::locale());
+			using namespace std;
+			s[i] = tolower(s[i]);
 		}
 		// remove any illegal characters such as spaces.
 		s.erase(std::remove_if(s.begin(), s.end(), IsSpace()), s.end());

@@ -1,4 +1,4 @@
-#include <util/Platform.hpp>
+#include <oh/Platform.hpp>
 #include <GraphicsFactory.hpp>
 #include "OgreSystem.hpp"
 static int core_plugin_refcount = 0;

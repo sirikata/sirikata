@@ -40,6 +40,10 @@
 
 
 #if defined(__WIN32__) || defined(_WIN32)
+// disable type needs to have dll-interface to be used byu clients due to STL member variables which are not public
+#pragma warning (disable: 4251)
+//disable non dll-interface class used as base for dll-interface class when deriving from singleton
+#pragma warning (disable : 4275)
 #  define SIRIKATA_PLATFORM PLATFORM_WINDOWS
 #elif defined(__APPLE_CC__) || defined(__APPLE__)
 #  define SIRIKATA_PLATFORM PLATFORM_MAC
@@ -73,6 +77,56 @@
 #   endif
 # endif
 #endif
+
+/*
+#ifndef SIRIKATA_LIBOH_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_LIBOH_EXPORT
+#   else
+#     if defined(SIRIKATA_LIBOH_BUILD)
+#       define SIRIKATA_LIBOH_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_LIBOH_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_LIBOH__PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_LIBOH_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_LIBOH_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_LIBOH_EXPORT
+#     define SIRIKATA_LIBOH_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
+
+
+#ifndef SIRIKATA_LIBSPACE_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_LIBSPACE_EXPORT
+#   else
+#     if defined(SIRIKATA_LIBSPACE_BUILD)
+#       define SIRIKATA_LIBSPACE_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_LIBSPACE_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_LIBSPACE__PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_LIBSPACE_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_LIBSPACE_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_LIBSPACE_EXPORT
+#     define SIRIKATA_LIBSPACE_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
+*/
+
 
 #ifndef SIRIKATA_EXPORT_C
 # define SIRIKATA_EXPORT_C extern "C" SIRIKATA_EXPORT
@@ -139,7 +193,6 @@
 #include <cstring>
 #include <cmath>
 #include <fstream>
-#include <locale>
 #include <iostream>
 #include <string>
 #include <sstream>
