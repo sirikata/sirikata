@@ -111,14 +111,13 @@ public:
          mMessageBeingSent(NULL),
          mMessageSendFinishTime(0),
          mServerQueues(),
-         bytes_sent(0){}   
+         bytes_sent(0){}
 
     ~FairMessageQueue(){
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
         for(; it != mServerQueues.end(); it++) {
             ServerQueueInfo* queue_info = &it->second;
-            delete queue_info->messageQueue;
-            delete queue_info;
+            delete queue_info->messageQueue;            
         }
     }
 
@@ -145,6 +144,7 @@ public:
 
     QueueEnum::PushResult queueMessage(Key dest_server, Message *msg){
         typename ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
+
         assert( qi_it != mServerQueues.end() );
         
         ServerQueueInfo* queue_info = &qi_it->second;
@@ -216,7 +216,6 @@ public:
         }
         
         return msgs;
-        
     }
 private:
     // because I *CAN*

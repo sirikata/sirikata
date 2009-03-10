@@ -65,7 +65,9 @@ void Object::checkPositionUpdate(const Time& t) {
     const MotionVector3f* update = mMotion->nextUpdate(mLocation.updateTime());
     if (update != NULL && update->updateTime() <= t) {
         mLocation = *update;
-	for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
+
+
+        for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             LocationMessage* loc_msg =
                 new LocationMessage(
                     mServer->id(),
@@ -111,6 +113,9 @@ void Object::migrateMessage(MigrateMessage* migrate_msg) {
 
     for (int i = 0; i < migrate_msg->subscriberCount(); i++) {
       addSubscriber(migrate_msg->subscriberList()[i]);
+
+      //printf("recvd migrateMsg->msubscribers[i] = %s\n", 
+      //     migrate_msg->subscriberList()[i].readableHexData().c_str()  );
     }
 }
 

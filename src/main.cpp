@@ -42,7 +42,9 @@
 #include "UniformServerMap.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
+#include "FairSendQueue.hpp"
 #include "FIFOSendQueue.hpp"
+
 #include "TabularServerIDMap.hpp"
 
 int main(int argc, char** argv) {
@@ -71,7 +73,7 @@ int main(int argc, char** argv) {
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue("stats.bandwidth-filename", "", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
-        ;
+     ;
 
     OptionSet* options = OptionSet::getOptions("cbr");
     options->parse(argc, argv);
@@ -96,21 +98,26 @@ int main(int argc, char** argv) {
     srand( options->referenceOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
         region,
         layout
     );
+
     String filehandle = options->referenceOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity();
-    SendQueue* sq=new FIFOSendQueue(network, options->referenceOption("bandwidth")->as<uint32>());
+
+    SendQueue* sq=new FairSendQueue(network, options->referenceOption("bandwidth")->as<uint32>());
+    obj_factory->createObjectQueues(sq);
+
     ServerID server_id = options->referenceOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq);
-
+    
     bool sim = options->referenceOption("sim")->as<bool>();
     Duration sim_step = options->referenceOption("sim-step")->as<Duration>();
 
@@ -121,8 +128,9 @@ int main(int argc, char** argv) {
     Time tend = tbegin + duration;
 
     if (sim) {
-        for(Time t = tbegin; t < tend; t += sim_step)
-            server->tick(t);
+        for(Time t = tbegin; t < tend; t += sim_step){
+	    server->tick(t);
+        }
     }
     else {
         Timer timer;

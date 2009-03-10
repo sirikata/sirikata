@@ -6,7 +6,7 @@ namespace CBR {
 
 TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {
     int count=1;
-    while(!filestream.bad()&&!filestream.fail()&&!filestream.eof()) {
+    while(!filestream.bad() && !filestream.fail() && !filestream.eof()) {
         char ip[1025];
         ip[1024]='\0';
         char service[1025];
@@ -17,8 +17,8 @@ TabularServerIDMap::TabularServerIDMap(std::istream&filestream) {
         Address4 addy(Sirikata::Network::Address(ip,service));
         mIDMap[count]=addy;
         mAddressMap[addy]=count;
-        count++;
-    }
+	count++;
+    } 
 }
 ServerID *TabularServerIDMap::lookup(const Address4& address){
     if (mAddressMap.find(address)!=mAddressMap.end())

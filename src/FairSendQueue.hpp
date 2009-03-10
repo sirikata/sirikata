@@ -23,11 +23,14 @@ class FairSendQueue:public SendQueue {
     FairMessageQueue<ServerMessagePair, ServerID > mServerQueues;
     Network * mNetwork;
 public:
+
     FairSendQueue(Network*net, uint32 bytes_per_second);
-    void addServer(ServerID, float weight);
+
+    void registerServer(ServerID, float weight);
     void removeServer(ServerID);
-    void addClient(UUID,float weight=1);
+    void registerClient(UUID,float weight);
     void removeClient(UUID);
+
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
     virtual void service(const Time&t);

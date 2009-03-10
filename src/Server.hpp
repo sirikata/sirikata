@@ -95,6 +95,9 @@ private:
 
     MigrateMessage* wrapObjectStateForMigration(Object* obj);
 
+    ServerID lookup(const Vector3f&);
+    ServerID lookup(const UUID&);
+
     typedef std::map<UUID, Object*> ObjectMap;
     ServerID mID;
     ObjectMap mObjects;

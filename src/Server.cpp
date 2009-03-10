@@ -65,7 +65,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
 
         mProximity->addObject(obj_id, start_motion);
 
-        if (mServerMap->lookup(start_pos) == mID) {
+        if (lookup(start_pos) == mID) {
             // Instantiate object
             Object* obj = mObjectFactory->object(obj_id, this);
             mObjects[obj_id] = obj;
@@ -73,6 +73,9 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
             mProximity->addQuery(obj_id, 100.f); // FIXME how to set proximity radius?
         }
     }
+
+    //sq->registerServer(1, 1);
+    //sq->registerServer(2, 1);
 }
 
 Server::~Server() {
@@ -91,7 +94,7 @@ void Server::route(ObjectToObjectMessage* msg) {
 
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
-    ServerID destServerID=mServerMap->lookup(dest_uuid);
+    ServerID destServerID=lookup(dest_uuid);
 
     route(msg, destServerID, src_uuid, false);
 }
@@ -125,7 +128,7 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
 }
 
 void Server::route(Message* msg, const UUID& dest_obj, bool is_forward) {
-    route(msg, mServerMap->lookup(dest_obj), is_forward);
+    route(msg, lookup(dest_obj), is_forward);
 }
 
 void Server::deliver(Message* msg) {
@@ -177,6 +180,8 @@ void Server::deliver(Message* msg) {
 	      obj->migrateMessage(migrate_msg);
 
 	      mObjects[obj_id] = obj;
+
+	      //printf("MESSAGE_TYPE_MIGRATE received from obj_id %s\n", obj_id.readableHexData().c_str());
 
               delete migrate_msg;
           }
@@ -244,7 +249,7 @@ void Server::tick(const Time& t) {
     // Give objects a chance to process
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         Object* obj = it->second;
-        obj->tick(t);
+        obj->tick(t);	
     }
 }
 
@@ -279,10 +284,11 @@ void Server::checkObjectMigrations() {
         const UUID& obj_id = obj->uuid();
 
         Vector3f obj_pos = mLocationService->currentPosition(obj_id);
+	ServerID new_server_id = lookup(obj_pos);
 
-        if (mServerMap->lookup(obj_pos) != mID) {
-	    ServerID new_server_id = mServerMap->lookup(obj_pos);
+        if (new_server_id != mID) {
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
+	    //printf("migrating object %s \n", obj_id.readableHexData().c_str());
 
   	    route( migrate_msg , new_server_id);
 	    migrated_objects.push_back(obj_id);
@@ -306,10 +312,29 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
     UUID* migrate_msg_subscribers = migrate_msg->subscriberList();
     for (it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++) {
         migrate_msg_subscribers[i] = *it;
+	//printf("sent migrateMsg->msubscribers[i] = %s\n", 
+	//       migrate_msg_subscribers[i].readableHexData().c_str()  );
         i++;
     }
 
     return migrate_msg;
+}
+
+ServerID Server::lookup(const Vector3f& pos) {
+    ServerID sid = mServerMap->lookup(pos);
+    
+    mSendQueue->registerServer(sid);
+
+    return sid;
+}
+
+ServerID Server::lookup(const UUID& obj_id) {
+  ServerID sid = mServerMap->lookup(obj_id);
+
+  mSendQueue->registerServer(sid);
+
+  return sid;
+       
 }
 
 } // namespace CBR

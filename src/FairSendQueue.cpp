@@ -49,7 +49,6 @@ void FairSendQueue::service(const Time&t){
          i!=ie;
          ++i) {
         mNetwork->send((*i)->mPair.first,(*i)->mPair.second,false,true,1);
-        delete *i;
     }
     finalSendMessages.resize(0);
     for (;count<mClientServerBuffer.size();++count) {
@@ -66,14 +65,19 @@ void FairSendQueue::service(const Time&t){
     }
 }
 
-void FairSendQueue::addServer(ServerID sid, float weight) {
-    mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+    
+void FairSendQueue::registerServer(ServerID sid, float weight) {
+    if (!mServerQueues.hasQueue(sid)) {
+        mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+    }
 }
 void FairSendQueue::removeServer(ServerID sid) {
     mServerQueues.removeQueue(sid);
 }
-void FairSendQueue::addClient(UUID sid, float weight) {
-    mClientQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+void FairSendQueue::registerClient(UUID sid, float weight) {
+   if (!mClientQueues.hasQueue(sid)) { 
+       mClientQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+   }
 }
 void FairSendQueue::removeClient(UUID sid) {
     mClientQueues.removeQueue(sid);

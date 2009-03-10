@@ -34,6 +34,8 @@
 #include "Duration.hpp"
 #include "BoundingBox.hpp"
 
+#include "FairSendQueue.hpp"
+
 namespace CBR {
 
 class MotionPath;
@@ -69,6 +71,9 @@ public:
     float proximityRadius(const UUID& id);
     Object* object(const UUID& id, Server* server);
     void destroyObject(const UUID& id);
+
+    void createObjectQueues(SendQueue* sq);
+
 private:
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
