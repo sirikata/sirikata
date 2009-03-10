@@ -187,6 +187,7 @@ public:
 		sd.addValidData(second);
 		sd.addValidData(first);
 		Transfer::Fingerprint fp = sd.computeFingerprint();
+		using std::tr1::placeholders::_1;
 		mTransferManager->upload("meerkat:///test", URIContext("mhash:"), sd,
 				std::tr1::bind(&UploadTest::uploadFinished, this, _1));
 		//mTransferManager->uploadName("meerkat:///test",Transfer::RemoteFileId(fp, URIContext("mhash:")),

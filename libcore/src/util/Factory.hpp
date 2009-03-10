@@ -51,7 +51,7 @@ class FactoryImpl {
     }
     Ftype mNoop;
 public:
-    FactoryImpl():mNoop(boost::bind(&FactoryImpl<T,Ftype>::staticNoop)){}
+	FactoryImpl():mNoop(std::tr1::bind(&FactoryImpl<T,Ftype>::staticNoop)){}
     bool unregisterConstructor(const String& name, bool isDefault=false) {
         typename ConstructorMap::iterator where=mConstructors.find(name);
         if (where==mConstructors.end())
