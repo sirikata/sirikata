@@ -524,7 +524,7 @@ HTTPRequest::~HTTPRequest() {
 		curl_slist_free_all((struct curl_slist *)mHeaders);
 	}
 	if (mCurlFormBegin) {
-		curl_formfree((struct curl_httppost *)mCurlFormBegin);
+		curl_formfree(mCurlFormBegin);
 	}
 }
 void HTTPRequest::initCurlHandle() {
@@ -605,8 +605,8 @@ void HTTPRequest::setPOSTData(const std::string &fieldname,
     assert(templen==uploadData.length());//assert that this is contiguous until later
 #endif
 	curl_formadd(
-		(struct curl_httppost **)&mCurlFormBegin,
-		(struct curl_httppost **)&mCurlFormEnd,
+		&mCurlFormBegin,
+		&mCurlFormEnd,
 		CURLFORM_NAMELENGTH, (long)fieldname.length(),
 		CURLFORM_COPYNAME, fieldname.data(),
 		CURLFORM_FILENAME, filename.c_str(),
@@ -626,8 +626,8 @@ void HTTPRequest::setPOSTData(const std::string &fieldname,
 void HTTPRequest::addPOSTField(const std::string &name,
 		const std::string &value) {
 	curl_formadd(
-		(struct curl_httppost **)&mCurlFormBegin,
-		(struct curl_httppost **)&mCurlFormEnd,
+        &mCurlFormBegin,
+		&mCurlFormEnd,
 		CURLFORM_NAMELENGTH, (long)name.length(),
 		CURLFORM_COPYNAME, name.data(),
 		CURLFORM_CONTENTSLENGTH, (long)value.length(),

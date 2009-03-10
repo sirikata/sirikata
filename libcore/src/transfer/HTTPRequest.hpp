@@ -37,8 +37,11 @@
 #include "URI.hpp"
 #include "TransferData.hpp"
 
+extern "C" struct curl_httppost;
+
 namespace Sirikata {
 namespace Transfer {
+
 
 typedef void CURL;
 
@@ -59,8 +62,8 @@ private:
 	CURL *mCurlRequest;
 	void *mHeaders; // CURL header linked list.
 
-	void *mCurlFormBegin;
-	void *mCurlFormEnd;
+	curl_httppost *mCurlFormBegin;
+	curl_httppost *mCurlFormEnd;
 	long mStatusCode;
 
 	Range::base_type mOffset;
