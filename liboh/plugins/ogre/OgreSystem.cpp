@@ -101,7 +101,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 }
 namespace {
 bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
-    root+='/';
+    if (root.length())
+        root+='/';
     root+=filename;
 #ifndef __APPLE__
     FILE *fp=fopen(root.c_str(),"rb");

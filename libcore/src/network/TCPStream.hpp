@@ -97,6 +97,9 @@ public:
         TCPStreamCloseStream=1,
         TCPStreamAckCloseStream=2
     };
+    static IOService*makeIOService();
+    static void destroyIOService(IOService*io);
+    static IOService&singletonIOService();
 private:
     friend class MultiplexedSocket;
     friend class TCPSetCallbacks;

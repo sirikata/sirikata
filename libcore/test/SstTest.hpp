@@ -108,16 +108,16 @@ public:
         }
     }
     void ioThread(){
-        TCPStreamListener s(mIO);
+        TCPStreamListener s(*mIO);
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
 		s.listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
-        mIO.run();
+        mIO->run();
     }
     std::string mPort;
-    boost::asio::io_service mIO;
+    boost::asio::io_service *mIO;
     boost::thread *mThread;
     std::vector<TCPStream*> mStreams;
     std::vector<std::string> mMessagesToSend;
@@ -216,7 +216,7 @@ public:
         validateSameness(id,orderedNetData,orderedKeyData);
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
-    SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+    SstTest():mIO(TCPStream::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
         mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
@@ -335,10 +335,12 @@ public:
             delete *i;
         }
         mStreams.resize(0);
-        mIO.stop();
+        mIO->stop();
         
         mThread->join();
         delete mThread;
+        TCPStream::destroyIOService(mIO);
+        mIO=NULL;
     }
     void simpleConnect(Stream*s, const Address&addy) {
         static int id=-1;
@@ -430,7 +432,7 @@ public:
         TCPStream*tcpz;
         bool doSubstreams=true;
         {
-            TCPStream r(mIO);
+            TCPStream r(*mIO);
             while (!mReadyToConnect);
             simpleConnect(&r,Address("127.0.0.1",mPort));
             runRoutine(&r);

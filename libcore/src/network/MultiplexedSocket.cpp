@@ -342,7 +342,7 @@ void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase
             i->second->mConnectionCallback(stat,errorMessage);
         }
     }else {
-        SILOG(tcpsst,debug,"Did not call callbacks because callback message already sent for "<<errorMessage);
+        //SILOG(tcpsst,debug,"Did not call callbacks because callback message already sent for "<<errorMessage);
     }
 }
 void MultiplexedSocket::connectionFailedCallback(const std::string& error) {

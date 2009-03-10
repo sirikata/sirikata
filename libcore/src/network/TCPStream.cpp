@@ -43,9 +43,29 @@
 namespace Sirikata { namespace Network {
 
 using namespace boost::asio::ip;
-
-
-
+namespace {
+boost::once_flag io_singleton=BOOST_ONCE_INIT;
+bool called_io_service=false;
+void io_service_initializer(IOService*io_ret){
+    static IOService io;
+    called_io_service=true;
+    io_ret=&io;
+}
+}
+IOService&TCPStream::singletonIOService() {
+    static IOService*io=NULL;
+    boost::call_once(io_singleton,boost::bind(io_service_initializer,io));
+    return *io;
+}
+IOService*TCPStream::makeIOService() {
+    return new IOService;
+}
+void TCPStream::destroyIOService(IOService*io) {
+    if (called_io_service==false)
+        delete io;
+    else if (&singletonIOService()!=io)
+        delete io;
+}
 TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
 
 }
