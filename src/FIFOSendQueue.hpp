@@ -3,7 +3,29 @@
 #include "SendQueue.hpp"
 namespace CBR {
 class FIFOSendQueue:public SendQueue {
-    std::queue<std::pair<ServerID,Network::Chunk> > mQueue;
+    class ServerMessagePair {
+    private:
+        std::pair<ServerID,Network::Chunk> mPair;
+    public:
+        ServerMessagePair(const ServerID&sid, const Network::Chunk&data):mPair(sid,data){}
+        //destructively modifies the data chunk to quickly place it in the queue
+        ServerMessagePair(const ServerID&sid, Network::Chunk&data):mPair(sid,Network::Chunk()){
+            mPair.second.swap(data);
+        }
+        unsigned int size()const {
+            return mPair.second.size();
+        }
+
+        ServerID dest() const {
+            return mPair.first;
+        }
+
+        const Network::Chunk data() const {
+            return mPair.second;
+        }
+    };
+
+    std::queue<ServerMessagePair> mQueue;
     Network * mNetwork;
     uint32 mRate;
     uint32 mRemainderBytes;

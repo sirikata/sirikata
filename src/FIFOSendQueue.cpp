@@ -16,22 +16,22 @@ FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, BandwidthSta
 }
 
 bool FIFOSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
-    mQueue.push(std::pair<ServerID,Network::Chunk>(destinationServer,msg));
+    mQueue.push(ServerMessagePair(destinationServer,msg));
     return true;
 }
 bool FIFOSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj){
-    mQueue.push(std::pair<ServerID,Network::Chunk>(destinationServer,msg));
+    mQueue.push(ServerMessagePair(destinationServer,msg));
     return true;
 }
 void FIFOSendQueue::service(const Time& t){
     Duration sinceLast = t - mLastTime;
     uint32 free_bytes = mRemainderBytes + (uint32)(sinceLast.seconds() * mRate);
 
-    while(!mQueue.empty() && mQueue.front().second.size() <= free_bytes) {
-        bool ok=mNetwork->send(mQueue.front().first,mQueue.front().second,false,true,1);
-        free_bytes -= mQueue.front().second.size();
+    while(!mQueue.empty() && mQueue.front().data().size() <= free_bytes) {
+        bool ok=mNetwork->send(mQueue.front().dest(),mQueue.front().data(),false,true,1);
+        free_bytes -= mQueue.front().data().size();
         assert(ok&&"Network Send Failed");
-        mBandwidthStats->sent( mQueue.front().first, GetMessageUniqueID(mQueue.front().second), mQueue.front().second.size(), t);
+        mBandwidthStats->sent( mQueue.front().dest(), GetMessageUniqueID(mQueue.front().data()), mQueue.front().data().size(), t);
         mQueue.pop();
     }
 

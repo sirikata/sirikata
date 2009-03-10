@@ -5,7 +5,7 @@
 namespace CBR {
 class FairSendQueue:public SendQueue {
     class ServerMessagePair {
-    public:
+    private:
         std::pair<ServerID,Network::Chunk> mPair;
     public:
         ServerMessagePair(const ServerID&sid, const Network::Chunk&data):mPair(sid,data){}
@@ -17,6 +17,13 @@ class FairSendQueue:public SendQueue {
             return mPair.second.size();
         }
 
+        ServerID dest() const {
+            return mPair.first;
+        }
+
+        const Network::Chunk data() const {
+            return mPair.second;
+        }
     };
     FairMessageQueue<ServerMessagePair,UUID> mClientQueues;
     std::vector<ServerMessagePair*> mClientServerBuffer;

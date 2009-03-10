@@ -26,7 +26,7 @@ void FairSendQueue::service(const Time&t){
     }
     size_t count=0;
     for (count=0;count<mClientServerBuffer.size();++count) {
-        if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,
+        if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),
                                        mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
         }else {
             break;
@@ -37,7 +37,7 @@ void FairSendQueue::service(const Time&t){
         freeClientTicks=false;
         count=0;
         for (count=0;count<mClientServerBuffer.size();++count) {
-            if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,
+            if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),
                                            mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
             }else {
                 break;
@@ -49,12 +49,12 @@ void FairSendQueue::service(const Time&t){
     for (std::vector<ServerMessagePair*>::iterator i=finalSendMessages.begin(),ie=finalSendMessages.end();
          i!=ie;
          ++i) {
-        mNetwork->send((*i)->mPair.first,(*i)->mPair.second,false,true,1);
-        mBandwidthStats->sent( (*i)->mPair.first, GetMessageUniqueID((*i)->mPair.second), (*i)->mPair.second.size(), t);
+        mNetwork->send((*i)->dest(),(*i)->data(),false,true,1);
+        mBandwidthStats->sent( (*i)->dest(), GetMessageUniqueID((*i)->data()), (*i)->data().size(), t);
     }
     finalSendMessages.resize(0);
     for (;count<mClientServerBuffer.size();++count) {
-        if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
+        if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
             break;
         }
     }
