@@ -47,7 +47,7 @@ public:
     virtual ~LocationService() {}
 
     virtual void tick(const Time& t) = 0;
-    virtual MotionVector3f location(const UUID& uuid) = 0;
+    virtual TimedMotionVector3f location(const UUID& uuid) = 0;
     virtual Vector3f currentPosition(const UUID& uuid) = 0;
 }; // class LocationService
 

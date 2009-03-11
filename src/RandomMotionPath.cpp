@@ -51,33 +51,33 @@ static Vector3f UniformSampleSphere(float u1, float u2) {
 }
 
 RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region) {
-    MotionVector3f last_motion(start, startpos, Vector3f(0,0,0));
+    TimedMotionVector3f last_motion(start, MotionVector3f(startpos, Vector3f(0,0,0)));
     mUpdates.push_back(last_motion);
     Time offset_start = start + update_period * randFloat();
     for(Time curtime = offset_start; curtime < end; curtime += update_period) {
-        Vector3f curpos = last_motion.position(curtime);
+        Vector3f curpos = last_motion.extrapolate(curtime).position();
         Vector3f dir = UniformSampleSphere( randFloat(), randFloat() ) * speed;
-        last_motion = MotionVector3f(curtime, curpos, dir);
+        last_motion = TimedMotionVector3f(curtime, MotionVector3f(curpos, dir));
         // last_motion is what we would like, no we have to make sure we'll stay  in range
-        Vector3f nextpos = last_motion.position(curtime + update_period);
+        Vector3f nextpos = last_motion.extrapolate(curtime + update_period).position();
         Vector3f nextpos_clamped = region.clamp(nextpos);
         Vector3f to_dest = nextpos_clamped - curpos;
         dir = to_dest * (1.f / update_period.seconds());
 
-        last_motion = MotionVector3f(curtime, curpos, dir);
+        last_motion = TimedMotionVector3f(curtime, MotionVector3f(curpos, dir));
 
         mUpdates.push_back(last_motion);
     }
 }
 
-const MotionVector3f RandomMotionPath::initial() const {
+const TimedMotionVector3f RandomMotionPath::initial() const {
     assert( !mUpdates.empty() );
     return mUpdates[0];
 }
 
-const MotionVector3f* RandomMotionPath::nextUpdate(const Time& curtime) const {
+const TimedMotionVector3f* RandomMotionPath::nextUpdate(const Time& curtime) const {
     for(uint32 i = 0; i < mUpdates.size(); i++)
-        if (mUpdates[i].updateTime() > curtime) return &mUpdates[i];
+        if (mUpdates[i].time() > curtime) return &mUpdates[i];
     return NULL;
 }
 

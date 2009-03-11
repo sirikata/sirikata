@@ -38,6 +38,8 @@
 #include <sirikata/util/Vector4.hpp>
 #include <sirikata/util/UUID.hpp>
 #include <sirikata/options/Options.hpp>
+#include <sirikata/util/TemporalValue.hpp>
+#include <sirikata/util/Extrapolation.hpp>
 
 namespace CBR {
 
@@ -75,6 +77,37 @@ typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
 typedef Sirikata::InitializeClassOptions InitializeOptions;
 typedef uint32 ServerID;
+
+
+class Time;
+class Duration;
+
+/* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */
+
+template <typename Value>
+class TemporalValue : public Sirikata::TemporalValueBase<Value, Time> {
+public:
+    TemporalValue()
+     : Sirikata::TemporalValueBase<Value, Time>( Time(0), Value() )
+    {}
+    TemporalValue(const Time& when, const Value& l)
+     : Sirikata::TemporalValueBase<Value, Time>(when, l)
+    {}
+}; // class TemporalValue
+
+
+template<typename Value>
+class Extrapolator : public virtual Sirikata::ExtrapolatorBase<Value, Time> {
+}; // class Extrapolator
+
+template <typename Value, typename UpdatePredicate>
+class TimedWeightedExtrapolator : public Sirikata::TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>, public Extrapolator<Value> {
+public:
+    TimedWeightedExtrapolator(const Duration&fadeTime, const Time&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
+     : Sirikata::TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(fadeTime, t, actualValue, needsUpdate)
+    {}
+}; // class TimedWeightedExtrapolator
+
 
 } // namespace CBR
 

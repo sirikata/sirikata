@@ -73,8 +73,8 @@ public:
     Proximity();
     ~Proximity();
 
-    void addObject(UUID obj, const MotionVector3f& loc);
-    void updateObject(UUID obj, const MotionVector3f& loc);
+    void addObject(UUID obj, const TimedMotionVector3f& loc);
+    void updateObject(UUID obj, const TimedMotionVector3f& loc);
     void removeObject(UUID obj);
 
     // FIXME these could be more complicated, but we're going for simplicity for now
@@ -86,7 +86,7 @@ public:
 private:
     typedef std::set<UUID> ObjectSet;
     struct ObjectState {
-        MotionVector3f location;
+        TimedMotionVector3f location;
     };
     typedef std::map<UUID, ObjectState*> ObjectMap;
     struct QueryState {

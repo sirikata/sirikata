@@ -46,7 +46,7 @@ Proximity::~Proximity() {
         removeObject( mTrackedObjects.begin()->first );
 }
 
-void Proximity::addObject(UUID obj, const MotionVector3f& loc) {
+void Proximity::addObject(UUID obj, const TimedMotionVector3f& loc) {
     assert(mTrackedObjects.find(obj) == mTrackedObjects.end());
 
     ObjectState* objstate = new ObjectState();
@@ -55,7 +55,7 @@ void Proximity::addObject(UUID obj, const MotionVector3f& loc) {
     mTrackedObjects[obj] = objstate;
 }
 
-void Proximity::updateObject(UUID obj, const MotionVector3f& loc) {
+void Proximity::updateObject(UUID obj, const TimedMotionVector3f& loc) {
     ObjectMap::iterator it = mTrackedObjects.find(obj);
     assert(it != mTrackedObjects.end());
 
@@ -95,7 +95,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEvent>& events) {
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         QueryState* query_state = query_it->second;
-        Vector3f query_pos = mTrackedObjects[query_id]->location.position(t);
+        Vector3f query_pos = mTrackedObjects[query_id]->location.extrapolate(t).position();
 
         // generate new neighbor set
         ObjectSet new_neighbors;
@@ -104,7 +104,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEvent>& events) {
             ObjectState* obj_state = object_it->second;
             if (obj_id == query_id) continue;
 
-            Vector3f obj_pos = obj_state->location.position(t);
+            Vector3f obj_pos = obj_state->location.extrapolate(t).position();
             if ( (query_pos - obj_pos).lengthSquared() < query_state->radius*query_state->radius )
                 new_neighbors.insert(obj_id);
         }

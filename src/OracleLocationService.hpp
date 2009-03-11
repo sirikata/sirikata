@@ -49,13 +49,13 @@ public:
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual void tick(const Time& t);
-    virtual MotionVector3f location(const UUID& uuid);
+    virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
 private:
     struct LocationInfo {
-        MotionVector3f location;
+        TimedMotionVector3f location;
         bool has_next;
-        MotionVector3f next;
+        TimedMotionVector3f next;
         MotionPath* path;
     };
     typedef std::map<UUID, LocationInfo> LocationMap;

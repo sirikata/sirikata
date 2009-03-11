@@ -49,10 +49,10 @@ class RandomMotionPath : public MotionPath {
 public:
     RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region);
 
-    virtual const MotionVector3f initial() const;
-    virtual const MotionVector3f* nextUpdate(const Time& curtime) const;
+    virtual const TimedMotionVector3f initial() const;
+    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
 private:
-    std::vector<MotionVector3f> mUpdates;
+    std::vector<TimedMotionVector3f> mUpdates;
 }; // class RandomMotionPath
 
 } // namespace CBR

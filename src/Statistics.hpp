@@ -96,7 +96,7 @@ class LocationStatistics {
 public:
     ~LocationStatistics();
 
-    void update(const UUID& receiver, const UUID& source, const MotionVector3f& loc, const Time& t);
+    void update(const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc, const Time& t);
 
     void save(const String& filename);
 private:
@@ -104,14 +104,14 @@ private:
         LocationUpdate()
          : receiver(UUID::nil()), source(UUID::nil()), location(), time(0) {}
 
-        LocationUpdate(const UUID& _receiver, const UUID& _source, const MotionVector3f& _loc, const Time& _time)
+        LocationUpdate(const UUID& _receiver, const UUID& _source, const TimedMotionVector3f& _loc, const Time& _time)
          : receiver(_receiver), source(_source), location(_loc), time(_time) {}
 
         std::ostream& write(std::ostream& os);
 
         UUID receiver;
         UUID source;
-        MotionVector3f location;
+        TimedMotionVector3f location;
         Time time;
     };
 

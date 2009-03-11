@@ -39,10 +39,10 @@ namespace CBR {
 Object::Object(Server* server, const UUID& id, MotionPath* motion, float prox_radius)
  : mID(id),
    mMotion(motion),
+   mLocation(mMotion->initial()),
    mServer(server),
    mProximityRadius(prox_radius)
 {
-    mLocation = mMotion->initial();
 }
 
 
@@ -62,8 +62,8 @@ void Object::tick(const Time& t) {
 }
 
 void Object::checkPositionUpdate(const Time& t) {
-    const MotionVector3f* update = mMotion->nextUpdate(mLocation.updateTime());
-    if (update != NULL && update->updateTime() <= t) {
+    const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
+    if (update != NULL && update->time() <= t) {
         mLocation = *update;
 
 
@@ -114,7 +114,7 @@ void Object::migrateMessage(MigrateMessage* migrate_msg) {
     for (int i = 0; i < migrate_msg->subscriberCount(); i++) {
       addSubscriber(migrate_msg->subscriberList()[i]);
 
-      //printf("recvd migrateMsg->msubscribers[i] = %s\n", 
+      //printf("recvd migrateMsg->msubscribers[i] = %s\n",
       //     migrate_msg->subscriberList()[i].readableHexData().c_str()  );
     }
 }

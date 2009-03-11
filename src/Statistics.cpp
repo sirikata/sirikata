@@ -117,7 +117,7 @@ void BandwidthStatistics::save(const String& filename) {
 std::ostream& LocationStatistics::LocationUpdate::write(std::ostream& os) {
     os << receiver.readableHexData() << " "
        << source.readableHexData() << " "
-       << "(" << location.updateTime().raw() << " " << location.position().toString() << " " << location.velocity().toString() << ") "
+       << "(" << location.time().raw() << " " << location.value().position().toString() << " " << location.value().velocity().toString() << ") "
        << time.raw()
        << std::endl;
     return os;
@@ -131,7 +131,7 @@ LocationStatistics::~LocationStatistics() {
     batches.clear();
 }
 
-void LocationStatistics::update(const UUID& receiver, const UUID& source, const MotionVector3f& loc, const Time& t) {
+void LocationStatistics::update(const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc, const Time& t) {
     if (batches.empty() || batches.back()->full())
         batches.push_back( new LocationUpdateBatch() );
 

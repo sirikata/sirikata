@@ -47,7 +47,7 @@ OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
         LocationInfo objinfo;
         objinfo.path = objpath;
         objinfo.location = objpath->initial();
-        const MotionVector3f* next = objpath->nextUpdate( objinfo.location.updateTime() );
+        const TimedMotionVector3f* next = objpath->nextUpdate( objinfo.location.time() );
         if (next == NULL) {
             objinfo.has_next = false;
         }
@@ -64,9 +64,9 @@ void OracleLocationService::tick(const Time& t) {
     // FIXME we could maintain a heap of event times instead of scanning through this list every time
     for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
         LocationInfo& locinfo = it->second;
-        if(locinfo.has_next && locinfo.next.updateTime() <= t) {
+        if(locinfo.has_next && locinfo.next.time() <= t) {
             locinfo.location = locinfo.next;
-            const MotionVector3f* next = locinfo.path->nextUpdate(t);
+            const TimedMotionVector3f* next = locinfo.path->nextUpdate(t);
             if (next == NULL)
                 locinfo.has_next = false;
             else
@@ -77,7 +77,7 @@ void OracleLocationService::tick(const Time& t) {
     mCurrentTime = t;
 }
 
-MotionVector3f OracleLocationService::location(const UUID& uuid) {
+TimedMotionVector3f OracleLocationService::location(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     assert(it != mLocations.end());
 
@@ -86,8 +86,8 @@ MotionVector3f OracleLocationService::location(const UUID& uuid) {
 }
 
 Vector3f OracleLocationService::currentPosition(const UUID& uuid) {
-    MotionVector3f loc = location(uuid);
-    return loc.position(mCurrentTime);
+    TimedMotionVector3f loc = location(uuid);
+    return loc.extrapolate(mCurrentTime).position();
 }
 
 } // namespace CBR

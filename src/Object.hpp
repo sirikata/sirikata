@@ -54,7 +54,7 @@ public:
     const float proximityRadius() {
         return mProximityRadius;
     }
-  
+
     const ObjectSet& subscriberSet() {
         return mSubscribers;
     }
@@ -71,10 +71,10 @@ private:
     void removeSubscriber(const UUID& sub);
 
     void checkPositionUpdate(const Time& t);
-   
+
     UUID mID;
     MotionPath* mMotion;
-    MotionVector3f mLocation;
+    TimedMotionVector3f mLocation;
     Server* mServer;
     ObjectSet mSubscribers;
     float mProximityRadius;

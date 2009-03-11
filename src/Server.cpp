@@ -61,7 +61,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
         UUID obj_id = *it;
-        MotionVector3f start_motion = loc_service->location(obj_id);
+        TimedMotionVector3f start_motion = loc_service->location(obj_id);
         Vector3f start_pos = loc_service->currentPosition(obj_id);
 
         mProximity->addObject(obj_id, start_motion);
@@ -331,7 +331,7 @@ ServerID Server::lookup(const UUID& obj_id) {
   ServerID sid = mServerMap->lookup(obj_id);
   if (sid!=mID&&!mSendQueue->hasServerRegistered(sid)) {
       double rate=mServerMap->serverBandwidthRate(mID,sid);
-      printf ("Rate to %d: %f\n",sid,rate);      
+      printf ("Rate to %d: %f\n",sid,rate);
       mSendQueue->registerServer(sid,rate);
   }
   return sid;

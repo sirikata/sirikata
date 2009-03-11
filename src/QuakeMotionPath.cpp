@@ -41,6 +41,9 @@
 #define PI 3.14159f
 #endif
 
+#define FLT_MIN -1e30f
+#define FLT_MAX 1e30f
+
 namespace CBR {
 
 
@@ -48,74 +51,75 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 				  const BoundingBox3f& region )
 {
     std::ifstream inputFile(quakeDataTraceFile);
-    
+
     String str1="", str2="";
 
-    float minX=INT_MAX, maxX=INT_MIN;
-    float minY=INT_MAX, maxY=INT_MIN;
-    float minZ=INT_MAX, maxZ=INT_MIN;
+    float minX=FLT_MAX, maxX=FLT_MIN;
+    float minY=FLT_MAX, maxY=FLT_MIN;
+    float minZ=FLT_MAX, maxZ=FLT_MIN;
 
     if ( getline(inputFile, str1) ) {
 
         while ( getline(inputFile, str2)) {
 	    getline(inputFile, str2);
-	
-  	    MotionVector3f motionVector = parseTraceLines(str1, str2, scaleDownFactor);
+
+  	    TimedMotionVector3f motionVector = parseTraceLines(str1, str2, scaleDownFactor);
 	    mUpdates.push_back(motionVector);
 
-	    if (motionVector.position().x < minX) minX = motionVector.position().x;
-	    if (motionVector.position().y < minY) minY = motionVector.position().y;
-	    if (motionVector.position().z < minZ) minZ = motionVector.position().z;
+	    if (motionVector.value().position().x < minX) minX = motionVector.value().position().x;
+	    if (motionVector.value().position().y < minY) minY = motionVector.value().position().y;
+	    if (motionVector.value().position().z < minZ) minZ = motionVector.value().position().z;
 
-	    if (motionVector.position().x > maxX) maxX = motionVector.position().x;
-	    if (motionVector.position().y > maxY) maxY = motionVector.position().y;
-	    if (motionVector.position().z > maxZ) maxZ = motionVector.position().z;	    
+	    if (motionVector.value().position().x > maxX) maxX = motionVector.value().position().x;
+	    if (motionVector.value().position().y > maxY) maxY = motionVector.value().position().y;
+	    if (motionVector.value().position().z > maxZ) maxZ = motionVector.value().position().z;
 
 	    str1 = str2;
         }
 
-	float maxRatio = (maxX - minX) / (region.max().x - region.min().x);	
+	float maxRatio = (maxX - minX) / (region.max().x - region.min().x);
 
-	if ( (maxY - minY)/(region.max().y - region.min().y) > maxRatio) 
+	if ( (maxY - minY)/(region.max().y - region.min().y) > maxRatio)
 	    maxRatio = (maxY - minY) / (region.max().y - region.min().y);
 
-	if ((maxZ - minZ)/(region.max().z - region.min().z) > maxRatio) 
+	if ((maxZ - minZ)/(region.max().z - region.min().z) > maxRatio)
 	    maxRatio = (maxZ - minZ) / (region.max().z - region.min().z);
 
 	printf("maxRatio=%f\n", maxRatio);
 
 	if (maxRatio > 1.f) {
 	    for (uint32_t i = 0; i < mUpdates.size(); i++) {
-	      mUpdates[i] =  MotionVector3f(mUpdates[i].updateTime(),
-					    region.clamp(mUpdates[i].position()/maxRatio),
-					    mUpdates[i].velocity()/maxRatio
-					    );
+	      mUpdates[i] = TimedMotionVector3f(mUpdates[i].time(),
+                                                MotionVector3f(
+                                                region.clamp(mUpdates[i].value().position()/maxRatio),
+                                                mUpdates[i].value().velocity()/maxRatio
+                                                ));
 	    }
 	}
     }
 }
 
-const MotionVector3f QuakeMotionPath::initial() const {
+const TimedMotionVector3f QuakeMotionPath::initial() const {
     assert( !mUpdates.empty() );
     return mUpdates[0];
 }
 
-const MotionVector3f* QuakeMotionPath::nextUpdate(const Time& curtime) const {
+const TimedMotionVector3f* QuakeMotionPath::nextUpdate(const Time& curtime) const {
     for(uint32 i = 0; i < mUpdates.size(); i++) {
-        if (mUpdates[i].updateTime() > curtime) {	  
+        if (mUpdates[i].time() > curtime) {
 	    return &mUpdates[i];
         }
     }
     return NULL;
 }
 
-MotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String secondLine, float scaleDownFactor) {
+TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String secondLine, float scaleDownFactor) {
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
-    boost::char_separator<char> sep(",: ");     
+    boost::char_separator<char> sep(",: ");
     boost::tokenizer<boost::char_separator<char> > tokens(firstLine, sep);
-  
+
     tokenizer::iterator tok_iter = tokens.begin();
-            
+
     int id = atoi((*tok_iter).c_str());
 
     ++tok_iter;
@@ -135,9 +139,9 @@ MotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String secondL
     Vector3f cur_pos = Vector3f(x, y, z) / scaleDownFactor;
 
     boost::tokenizer<boost::char_separator<char> > tokens2(secondLine, sep);
-  
+
     tok_iter = tokens2.begin();
-            
+
     id = atoi((*tok_iter).c_str());
 
     ++tok_iter;
@@ -153,10 +157,10 @@ MotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String secondL
     int t2 = atoi((*tok_iter).c_str());
 
     Vector3f next_pos = Vector3f(x, y, z) / scaleDownFactor;
-    
+
     Vector3f vel = (next_pos - cur_pos) * 1.f / (t2 - t1);
 
-    return MotionVector3f(Time(t1 - start_time), cur_pos, vel  );
+    return TimedMotionVector3f(Time(t1 - start_time), MotionVector3f(cur_pos, vel) );
 }
 
 

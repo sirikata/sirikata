@@ -287,24 +287,37 @@ uint32 ObjectToObjectMessage::serializeSourceDest(Network::Chunk& wire, uint32 o
 
 
 
-LocationMessage::LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc)
+LocationMessage::LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc)
  : ObjectToObjectMessage(src_server, src_object, dest_object),
    mLocation(loc)
 {
 }
 
 LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
- : ObjectToObjectMessage(wire, offset, _id)
+ : ObjectToObjectMessage(wire, offset, _id),
+   mLocation( Time(0), MotionVector3f() )
 {
-    memcpy( &mLocation, &wire[offset], sizeof(MotionVector3f) );
-    offset += sizeof(MotionVector3f);
+    Time t(0);
+    Vector3f pos;
+    Vector3f vel;
+
+    memcpy( &t, &wire[offset], sizeof(Time) );
+    offset += sizeof(Time);
+
+    memcpy( &pos, &wire[offset], sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    memcpy( &vel, &wire[offset], sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    mLocation = TimedMotionVector3f( t, MotionVector3f(pos, vel) );
 }
 
 MessageType LocationMessage::type() const {
     return MESSAGE_TYPE_LOCATION;
 }
 
-const MotionVector3f& LocationMessage::location() const {
+const TimedMotionVector3f& LocationMessage::location() const {
     return mLocation;
 }
 
@@ -315,8 +328,15 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     uint32 loc_part_size = sizeof(MotionVector3f);
     wire.resize( wire.size() + loc_part_size );
 
-    memcpy( &wire[offset], &mLocation, sizeof(MotionVector3f) );
-    offset += sizeof(MotionVector3f);
+    Time t = mLocation.time();
+    memcpy( &wire[offset], &t, sizeof(Time) );
+    offset += sizeof(Time);
+
+    memcpy( &wire[offset], &mLocation.value().position(), sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    memcpy( &wire[offset], &mLocation.value().velocity(), sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
 
     return offset;
 }

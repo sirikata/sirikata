@@ -47,11 +47,11 @@ public:
     virtual ~MotionPath() {}
 
     /** The initial motion vector for the object. */
-    virtual const MotionVector3f initial() const = 0;
+    virtual const TimedMotionVector3f initial() const = 0;
     /** Given a current time, return the next update that will occur. Returns
      *  NULL if there is not another update.
      */
-    virtual const MotionVector3f* nextUpdate(const Time& curtime) const = 0;
+    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const = 0;
 }; // class MotionPath
 
 } // namespace CBR

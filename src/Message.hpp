@@ -145,18 +145,18 @@ private:
 
 class LocationMessage : public ObjectToObjectMessage {
 public:
-    LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const MotionVector3f& loc);
+    LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc);
 
     virtual MessageType type() const;
 
-    const MotionVector3f& location() const;
+    const TimedMotionVector3f& location() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
     LocationMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
-    MotionVector3f mLocation;
+    TimedMotionVector3f mLocation;
 }; // class LocationMessage
 
 

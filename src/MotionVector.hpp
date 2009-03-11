@@ -43,50 +43,37 @@ template<typename CoordType>
 class MotionVector {
 public:
     MotionVector()
-     : mTime(0), mStart(0,0,0), mDirection(0,0,0)
+     : mStart(0,0,0), mDirection(0,0,0)
     {
     }
 
-    MotionVector(const Time& t, const CoordType& pos, const CoordType& vel)
-     : mTime(t), mStart(pos), mDirection(vel)
+    MotionVector(const CoordType& pos, const CoordType& vel)
+     : mStart(pos), mDirection(vel)
     {
-    }
-
-    const Time& updateTime() const {
-        return mTime;
     }
 
     const CoordType& position() const {
         return mStart;
     }
 
-    CoordType position(const Duration& dt) const {
-        return mStart + mDirection * dt.seconds();
-    }
-
-    CoordType position(const Time& t) const {
-        return position(t - mTime);
-    }
-
     const CoordType& velocity() const {
         return mDirection;
     }
 
-    void update(const Time& t, const CoordType& pos, const CoordType& vel) {
-        assert(t > mTime);
-        mTime = t;
-        mStart = pos;
-        mDirection = vel;
+    MotionVector extrapolate(const Duration& dt) const {
+        return MotionVector(mStart + mDirection * dt.seconds(), mDirection);
     }
 
 private:
-    Time mTime;
     CoordType mStart;
     CoordType mDirection;
 }; // class MotionVector
 
 typedef MotionVector<Vector3f> MotionVector3f;
 typedef MotionVector<Vector3d> MotionVector3d;
+
+typedef TemporalValue<MotionVector3f> TimedMotionVector3f;
+typedef TemporalValue<MotionVector3d> TimedMotionVector3d;
 
 } // namespace CBR
 
