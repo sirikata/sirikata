@@ -42,7 +42,7 @@ public:
     virtual ~ExtrapolatorBase(){}
     virtual bool needsUpdate(const TimeType&now, const Value&actualValue)const=0;
     virtual Value extrapolate(const TimeType&now)const=0;
-    virtual TimeType getLastValueUpdateTime()const=0;
+    virtual TimeType lastUpdateTime()const=0;
     virtual ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&now, const Value&actualValue)=0;
 };
 
@@ -74,7 +74,7 @@ public:
         return (*mNeedsUpdate)(actualValue, extrapolate(now));
     }
     Value extrapolate(const TimeType&t) const {
-        DurationType timeSinceUpdate=t-mValuePresent.getLastValueUpdateTime();
+        DurationType timeSinceUpdate=t-mValuePresent.lastUpdateTime();
         if (mFadeTime<timeSinceUpdate) {
             return mValuePresent.extrapolate(t);
         }else{
@@ -83,8 +83,8 @@ public:
                        (float64)timeSinceUpdate/(float64)mFadeTime);
         }
     }
-    TimeType getLastValueUpdateTime()const{
-        return mValuePresent.getLastValueUpdateTime();
+    TimeType lastUpdateTime()const{
+        return mValuePresent.lastUpdateTime();
     }
     ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&t, const Value&l) {
         mValuePast=mValuePresent;

@@ -48,7 +48,7 @@ public:
     Value extrapolate(const TimeType &t) const {
         return mCurrentValue.extrapolate(t-mWhen);
     }
-    TimeType getLastValueUpdateTime() const{
+    TimeType lastUpdateTime() const{
         return mWhen;
     }
     void updateValue(const TimeType&t,const Value&l) {
