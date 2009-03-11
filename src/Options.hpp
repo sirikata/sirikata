@@ -37,6 +37,8 @@
 
 #define CBR_MODULE "cbr"
 
+#define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
+
 #define STATS_BANDWIDTH_FILE "stats.bandwidth-filename"
 #define STATS_LOCATION_FILE "stats.location-filename"
 

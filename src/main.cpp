@@ -32,6 +32,7 @@
 
 #include "Timer.hpp"
 #include "Network.hpp"
+#include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "LocationService.hpp"
 #include "ServerMap.hpp"
@@ -68,6 +69,8 @@ int main(int argc, char** argv) {
             CBR::testClient(client_port.c_str(), host.c_str(), server_port.c_str());
         return 0;
     }
+
+    MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
     BandwidthStatistics* bandwidth_stats = new BandwidthStatistics();
     LocationStatistics* location_stats = new LocationStatistics();

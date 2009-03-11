@@ -61,6 +61,8 @@ void InitOptions() {
 
         .addOption(new OptionValue(STATS_BANDWIDTH_FILE, "bandwidth.txt", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
         .addOption(new OptionValue(STATS_LOCATION_FILE, "location.txt", Sirikata::OptionValueType<String>(), "The filename to save location stats to"))
+
+        .addOption(new OptionValue(MAX_EXTRAPOLATOR_DIST, "1.0", Sirikata::OptionValueType<float64>(), "The maximum distance an object is permitted to deviate from the predictions by other objects before an update is sent out."))
      ;
 }
 

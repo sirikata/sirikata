@@ -109,6 +109,71 @@ public:
 }; // class TimedWeightedExtrapolator
 
 
+/** SimpleExtrapolator classes, which always give the most accurate information available, at the cost of possibly being discontinuous. */
+template <typename Value, typename UpdatePredicate, typename TimeType, typename DurationType>
+class SimpleExtrapolatorBase : public virtual Sirikata::ExtrapolatorBase<Value, TimeType>, protected UpdatePredicate {
+protected:
+    typedef Sirikata::TemporalValueBase<Value, TimeType> TemporalValueType;
+    TemporalValueType mValue;
+public:
+    SimpleExtrapolatorBase(const TimeType& t, const Value& actualValue, const UpdatePredicate& needsUpdate)
+     : Sirikata::ExtrapolatorBase<Value, TimeType>(),
+       UpdatePredicate(needsUpdate),
+       mValue(t,actualValue)
+    {}
+    SimpleExtrapolatorBase(const TimeType& t, const Value& actualValue)
+     : Sirikata::ExtrapolatorBase<Value, TimeType>(),
+       UpdatePredicate(),
+       mValue(t,actualValue)
+    {}
+
+    SimpleExtrapolatorBase(const TemporalValueType& tv, const UpdatePredicate& needsUpdate)
+     : Sirikata::ExtrapolatorBase<Value, TimeType>(),
+       UpdatePredicate(needsUpdate),
+       mValue(tv)
+    {}
+    SimpleExtrapolatorBase(const TemporalValueType& tv)
+     : Sirikata::ExtrapolatorBase<Value, TimeType>(),
+       UpdatePredicate(),
+       mValue(tv)
+    {}
+
+    virtual ~SimpleExtrapolatorBase(){}
+    virtual bool needsUpdate(const TimeType&now,const Value&actualValue) const{
+        const UpdatePredicate* mNeedsUpdate=this;
+        return (*mNeedsUpdate)(actualValue, extrapolate(now));
+    }
+    Value extrapolate(const TimeType&t) const {
+        return mValue.extrapolate(t);
+    }
+    TimeType lastUpdateTime()const{
+        return mValue.time();
+    }
+    SimpleExtrapolatorBase& updateValue(const TimeType&t, const Value&l) {
+        mValue = TemporalValueType(t,l);
+        return *this;
+    }
+};
+
+template <typename Value, typename UpdatePredicate>
+class SimpleExtrapolator : public SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>, public Extrapolator<Value> {
+private:
+    typedef typename SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>::TemporalValueType TemporalValueType;
+public:
+    SimpleExtrapolator(const Time& t, const Value& actualValue, const UpdatePredicate& needsUpdate)
+     : SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(t, actualValue, needsUpdate)
+    {}
+    SimpleExtrapolator(const Time& t, const Value& actualValue)
+     : SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(t, actualValue)
+    {}
+    SimpleExtrapolator(const TemporalValueType& tv, const UpdatePredicate& needsUpdate)
+     : SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(tv, needsUpdate)
+    {}
+    SimpleExtrapolator(const TemporalValueType& tv)
+     : SimpleExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(tv)
+    {}
+};
+
 } // namespace CBR
 
 
