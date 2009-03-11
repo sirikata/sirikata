@@ -36,10 +36,13 @@
 
 namespace CBR {
 
+float64 MaxDistUpdatePredicate::maxDist = 0.0;
+
 Object::Object(Server* server, const UUID& id, MotionPath* motion, float prox_radius)
  : mID(id),
    mMotion(motion),
    mLocation(mMotion->initial()),
+   mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mServer(server),
    mProximityRadius(prox_radius)
 {
@@ -63,10 +66,11 @@ void Object::tick(const Time& t) {
 
 void Object::checkPositionUpdate(const Time& t) {
     const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
-    if (update != NULL && update->time() <= t) {
+    if (update != NULL && update->time() <= t)
         mLocation = *update;
 
-
+    if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
+        mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             LocationMessage* loc_msg =
                 new LocationMessage(

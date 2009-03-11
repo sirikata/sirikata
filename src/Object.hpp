@@ -43,6 +43,13 @@ namespace CBR {
 typedef std::set<UUID> ObjectSet;
 class Server;
 
+struct MaxDistUpdatePredicate {
+    static float64 maxDist;
+    bool operator()(const MotionVector3f& lhs, const MotionVector3f& rhs) const {
+        return (lhs.position() - rhs.position()).length() > maxDist;
+    }
+};
+
 class Object {
 public:
     Object(Server* server, const UUID& id, MotionPath* motion, float prox_radius);
@@ -75,6 +82,7 @@ private:
     UUID mID;
     MotionPath* mMotion;
     TimedMotionVector3f mLocation;
+    SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
     Server* mServer;
     ObjectSet mSubscribers;
     float mProximityRadius;
