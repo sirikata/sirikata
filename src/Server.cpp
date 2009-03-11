@@ -74,9 +74,6 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
             mProximity->addQuery(obj_id, 100.f); // FIXME how to set proximity radius?
         }
     }
-
-    //sq->registerServer(1, 1);
-    //sq->registerServer(2, 1);
 }
 
 Server::~Server() {
@@ -189,7 +186,6 @@ void Server::deliver(Message* msg) {
         assert(false);
         break;
     }
-
 }
 
 Object* Server::object(const UUID& dest) const {
@@ -287,7 +283,9 @@ void Server::checkObjectMigrations() {
 
         if (new_server_id != mID) {
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
-	    //printf("migrating object %s \n", obj_id.readableHexData().c_str());
+	    printf("migrating object %s due to position %s \n", 
+		   obj_id.readableHexData().c_str(),
+		   obj_pos.toString().c_str());
 
   	    route( migrate_msg , new_server_id);
 	    migrated_objects.push_back(obj_id);

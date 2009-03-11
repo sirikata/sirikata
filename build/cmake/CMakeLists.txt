@@ -164,6 +164,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
+  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp

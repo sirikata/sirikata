@@ -35,6 +35,8 @@
 #include "Object.hpp"
 #include "Random.hpp"
 
+#include "QuakeMotionPath.hpp"
+
 namespace CBR {
 
 ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration) {
