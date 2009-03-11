@@ -32,34 +32,43 @@
 #ifndef _TEMPORAL_VALUE_HPP_
 #define _TEMPORAL_VALUE_HPP_
 
+#include "Time.hpp"
+
 namespace Sirikata {
 
-template <typename Value, typename UpdatePredicate> class TemporalValue
-    : protected UpdatePredicate {//inherit from update predicate since 0 sized inheritance takes 0 space
-    Value mCurrentValue;
-    Time mWhen;
+template <typename Value, typename UpdatePredicate, typename TimeType>
+class TemporalValueBase : protected UpdatePredicate { //inherit from update predicate since 0 sized inheritance takes 0 space
 public:
-    TemporalValue(const Time &when,
-                  const Value&l,
-                  const UpdatePredicate &needsUpdate):
-       UpdatePredicate(needsUpdate),
-       mCurrentValue(l),
-       mWhen(when){}
-    bool needsUpdate(const Time&now, const Value&actualValue) const{
-        const UpdatePredicate * mNeedsUpdate=this;
+    Value mCurrentValue;
+    TimeType mWhen;
+public:
+    TemporalValueBase(const TimeType &when, const Value&l, const UpdatePredicate &needsUpdate)
+       : UpdatePredicate(needsUpdate),
+         mCurrentValue(l),
+         mWhen(when){}
+    bool needsUpdate(const TimeType&now, const Value&actualValue) const{
+        const UpdatePredicate* mNeedsUpdate=this;
         return (*mNeedsUpdate)(actualValue,extrapolate(now));
     }
-    Value extrapolate(const Time &t) const {
+    Value extrapolate(const TimeType &t) const {
         return mCurrentValue.extrapolate(t-mWhen);
     }
-    Time getLastValueUpdateTime() const{
+    TimeType getLastValueUpdateTime() const{
         return mWhen;
     }
-    TemporalValue<Value,UpdatePredicate>& updateValue(const Time&t,const Value&l) {
+    void updateValue(const TimeType&t,const Value&l) {
         mCurrentValue=l;
         mWhen=t;
-        return *this;
     }
 };
+
+template <typename Value, typename UpdatePredicate>
+class TemporalValue : public TemporalValueBase<Value, UpdatePredicate, Time> {
+public:
+    TemporalValue(const Time& when, const Value& l, const UpdatePredicate& needsUpdate)
+     : TemporalValueBase<Value, UpdatePredicate, Time>(when, l, needsUpdate)
+    {}
+}; // class TemporalValue
+
 }
 #endif

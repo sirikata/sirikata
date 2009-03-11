@@ -31,36 +31,47 @@
  */
 #ifndef _EXTRAPOLATION_HPP_
 #define _EXTRAPOLATION_HPP_
+
 #include "TemporalValue.hpp"
+
 namespace Sirikata {
-template<typename Value> class Extrapolator {
+
+template<typename Value, typename TimeType>
+class ExtrapolatorBase {
 public:
-    virtual ~Extrapolator(){}
-    virtual bool needsUpdate(const Time&now, const Value&actualValue)const=0;
-    virtual Value extrapolate(const Time&now)const=0;
-    virtual Time getLastValueUpdateTime()const=0;
-    virtual Extrapolator<Value>& updateValue(const Time&now, const Value&actualValue)=0;
+    virtual ~ExtrapolatorBase(){}
+    virtual bool needsUpdate(const TimeType&now, const Value&actualValue)const=0;
+    virtual Value extrapolate(const TimeType&now)const=0;
+    virtual TimeType getLastValueUpdateTime()const=0;
+    virtual ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&now, const Value&actualValue)=0;
 };
 
-template <typename Value, typename UpdatePredicate>
-class TimedWeightedExtrapolator:public Extrapolator<Value> {
+template<typename Value>
+class Extrapolator : public virtual ExtrapolatorBase<Value, Time> {
+};
+
+
+template <typename Value, typename UpdatePredicate, typename TimeType, typename DurationType>
+class TimedWeightedExtrapolatorBase : public virtual ExtrapolatorBase<Value, TimeType> {
+protected:
     enum ValueTimes{PAST=0,PRESENT=1, MAXSAMPLES};
-    TemporalValue<Value,UpdatePredicate> mValuePast;
-    TemporalValue<Value,UpdatePredicate> mValuePresent;
-    Duration mFadeTime;
+    typedef TemporalValueBase<Value,UpdatePredicate,TimeType> TemporalValueType;
+    TemporalValueType mValuePast;
+    TemporalValueType mValuePresent;
+    DurationType mFadeTime;
 public:
-    TimedWeightedExtrapolator(const Duration&fadeTime, const Time&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
+    TimedWeightedExtrapolatorBase(const DurationType&fadeTime, const TimeType&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
     :mValuePast(t,actualValue,needsUpdate)
     ,mValuePresent(t,actualValue,needsUpdate)
     ,mFadeTime(fadeTime) {}
-    virtual ~TimedWeightedExtrapolator(){}
-    virtual bool needsUpdate(const Time&now,const Value&actualValue) const{
-        return TemporalValue<Value,UpdatePredicate>(mValuePresent)
-                 .updateValue(now,extrapolate(now))
-                    .needsUpdate(now,actualValue);
+    virtual ~TimedWeightedExtrapolatorBase(){}
+    virtual bool needsUpdate(const TimeType&now,const Value&actualValue) const{
+        TemporalValueType updated(mValuePresent);
+        updated.updateValue(now,extrapolate(now));
+        return updated.needsUpdate(now,actualValue);
     }
-    Value extrapolate(const Time&t) const {
-        Duration timeSinceUpdate=t-mValuePresent.getLastValueUpdateTime();
+    Value extrapolate(const TimeType&t) const {
+        DurationType timeSinceUpdate=t-mValuePresent.getLastValueUpdateTime();
         if (mFadeTime<timeSinceUpdate) {
             return mValuePresent.extrapolate(t);
         }else{
@@ -69,14 +80,23 @@ public:
                        (float64)timeSinceUpdate/(float64)mFadeTime);
         }
     }
-    Time getLastValueUpdateTime()const{ 
+    TimeType getLastValueUpdateTime()const{
         return mValuePresent.getLastValueUpdateTime();
     }
-    Extrapolator<Value>& updateValue(const Time&t, const Value&l) {
+    ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&t, const Value&l) {
         mValuePast=mValuePresent;
         mValuePresent.updateValue(t,l);
         return *this;
     }
 };
+
+template <typename Value, typename UpdatePredicate>
+class TimedWeightedExtrapolator : public TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>, public Extrapolator<Value> {
+public:
+    TimedWeightedExtrapolator(const Duration&fadeTime, const Time&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
+     : TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(fadeTime, t, actualValue, needsUpdate)
+    {}
+};
+
 }
 #endif
