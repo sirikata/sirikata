@@ -54,7 +54,13 @@ public:
 
     virtual ServerID lookup(const Vector3f& pos) = 0;
     virtual ServerID lookup(const UUID& obj_id) = 0;
-    virtual double serverBandwidthRate(ServerID source, ServerID destination)const=0;
+    enum BandwidthNormalization{
+        NORMALIZE_BY_SEND_RATE,
+        NORMALIZE_BY_RECEIVE_RATE,
+        NORMALIZE_BY_MIN_SEND_AND_RECEIVE_RATE,
+        DO_NOT_NORMALIZE
+    };
+    virtual double serverBandwidthRate(ServerID source, ServerID destination, BandwidthNormalization bn=NORMALIZE_BY_RECEIVE_RATE)const=0;
 protected:
 
     LocationService* mLocationService;

@@ -64,7 +64,7 @@ void UniformServerMap::serverRegionLookup(ServerID sid, Vector3d &retmin, Vector
                     (1+server_dim_indices.y)*ysize+mRegion.min().y,
                     (1+server_dim_indices.z)*zsize+mRegion.min().z);
 }
-double UniformServerMap::serverBandwidthRate(ServerID source, ServerID destination) const{
+double UniformServerMap::serverBandwidthRate(ServerID source, ServerID destination, BandwidthNormalization normalization_type) const{
 
     Vector3d sourcemin;
     Vector3d sourcemax;
@@ -72,8 +72,25 @@ double UniformServerMap::serverBandwidthRate(ServerID source, ServerID destinati
     Vector3d destmax;
     serverRegionLookup(source,sourcemin,sourcemax);
     serverRegionLookup(destination,destmin,destmax);
-    float totalFunctionBandwidth=mBandwidthCap(sourcemin,sourcemax,Vector3d(mRegion.min()),Vector3d(mRegion.max()))-mBandwidthCap(sourcemin,sourcemax,sourcemin,sourcemax);
-    return mBandwidthCap(sourcemin,sourcemax,destmin,destmax)/totalFunctionBandwidth;
+    //how much data am I able to send if I was sending everywhere
+    double totalSendBandwidth=mBandwidthCap(sourcemin,sourcemax,Vector3d(mRegion.min()),Vector3d(mRegion.max()))-mBandwidthCap(sourcemin,sourcemax,sourcemin,sourcemax);
+    //how much data is my destination able to receive
+    double totalReceiveBandwidth=mBandwidthCap(Vector3d(mRegion.min()),Vector3d(mRegion.max()),destmin,destmax)-mBandwidthCap(destmin,destmax,destmin,destmax);
+    //take the min of recv and send
+    double totalBandwidthCap=totalSendBandwidth>totalReceiveBandwidth?totalSendBandwidth:totalReceiveBandwidth;
+    //we only want to normalize by what the poor fool will receive, our fair queue will apportion our send bandwidth
+    double unnormalized_result=mBandwidthCap(sourcemin,sourcemax,destmin,destmax);
+    switch (normalization_type) {
+      case DO_NOT_NORMALIZE:
+        return unnormalized_result;
+      case NORMALIZE_BY_MIN_SEND_AND_RECEIVE_RATE:
+        return unnormalized_result/totalBandwidthCap;
+      case NORMALIZE_BY_RECEIVE_RATE:
+        return unnormalized_result/totalReceiveBandwidth;
+      case NORMALIZE_BY_SEND_RATE:
+        return unnormalized_result/totalSendBandwidth;
+    }
+    return unnormalized_result;
 }
 ServerID UniformServerMap::lookup(const Vector3f& pos) {
     Vector3f region_extents = mRegion.extents();
