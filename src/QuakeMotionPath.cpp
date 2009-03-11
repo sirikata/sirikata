@@ -60,11 +60,9 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 
     if ( getline(inputFile, str1) ) {
 
-        while ( getline(inputFile, str2)) {
-	    getline(inputFile, str2);
-
+        while ( getline(inputFile, str2)) {	    
   	    TimedMotionVector3f motionVector = parseTraceLines(str1, str2, scaleDownFactor);
-	    mUpdates.push_back(motionVector);
+	    mUpdates.push_back(motionVector);	    
 
 	    if (motionVector.value().position().x < minX) minX = motionVector.value().position().x;
 	    if (motionVector.value().position().y < minY) minY = motionVector.value().position().y;
@@ -85,10 +83,8 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 	if ((maxZ - minZ)/(region.max().z - region.min().z) > maxRatio)
 	    maxRatio = (maxZ - minZ) / (region.max().z - region.min().z);
 
-	printf("maxRatio=%f\n", maxRatio);
-
 	if (maxRatio > 1.f) {
-	    for (uint32_t i = 0; i < mUpdates.size(); i++) {
+	    for (uint32_t i = 0; i < mUpdates.size(); i++) {	      
 	      mUpdates[i] = TimedMotionVector3f(mUpdates[i].time(),
                                                 MotionVector3f(
                                                 region.clamp(mUpdates[i].value().position()/maxRatio),
@@ -106,7 +102,7 @@ const TimedMotionVector3f QuakeMotionPath::initial() const {
 
 const TimedMotionVector3f* QuakeMotionPath::nextUpdate(const Time& curtime) const {
     for(uint32 i = 0; i < mUpdates.size(); i++) {
-        if (mUpdates[i].time() > curtime) {
+        if (mUpdates[i].time() > curtime) {	 
 	    return &mUpdates[i];
         }
     }
@@ -160,7 +156,7 @@ TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String se
 
     Vector3f vel = (next_pos - cur_pos) * 1.f / (t2 - t1);
 
-    return TimedMotionVector3f(Time(t1 - start_time), MotionVector3f(cur_pos, vel) );
+    return TimedMotionVector3f(Time( (t1 - start_time)*1000.0f), MotionVector3f(cur_pos, vel) );
 }
 
 
