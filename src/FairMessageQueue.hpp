@@ -117,15 +117,15 @@ public:
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
         for(; it != mServerQueues.end(); it++) {
             ServerQueueInfo* queue_info = &it->second;
-            delete queue_info->messageQueue;            
+            delete queue_info->messageQueue;
         }
     }
 
     void addQueue(MessageQueue *mq, Key server, float weight){
         assert(mq->empty());
-        
+
         ServerQueueInfo queue_info (mq, weight);
-        
+
         mTotalWeight += weight;
         mServerQueues[server] = queue_info;
     }
@@ -146,12 +146,12 @@ public:
         typename ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
 
         assert( qi_it != mServerQueues.end() );
-        
+
         ServerQueueInfo* queue_info = &qi_it->second;
 
         if (queue_info->messageQueue->empty())
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
-        
+
         return queue_info->messageQueue->push(msg);
     }
 
@@ -159,13 +159,13 @@ public:
     std::vector<Message*> tick(const Time& t){
         Duration since_last = t - mCurrentTime;
         mCurrentTime = t;
-        
+
         std::vector<Message*> msgs;
-        
+
         bool processed_message = true;
         while( processed_message == true ) {
             processed_message = false;
-            
+
             // If we are currently working on delivering a message, check if it can now be delivered
             if (mMessageBeingSent != NULL) {
                 if ( mCurrentTime > mMessageSendFinishTime ) {
@@ -178,7 +178,7 @@ public:
                 // past time for processing a new message
                 mMessageSendFinishTime = mCurrentTime;
             }
-            
+
             // If no message is currently being processed (or we just finished processing one), check for
             // another message to process
             if (mMessageBeingSent == NULL) {
@@ -190,31 +190,31 @@ public:
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                         min_queue_info = queue_info;
                 }
-                
+
                 // If we actually have something to deliver, deliver it
                 if (min_queue_info) {
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
                     mMessageBeingSent = min_queue_info->messageQueue->pop();
-                    
+
                     uint32 message_size = mMessageBeingSent->size();
                     Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
                     mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
-                    
+
                     // update the next finish time if there's anything in the queue
                     if (!min_queue_info->messageQueue->empty())
                         min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue), min_queue_info->weight);
                 }
             }
         }
-        
+
         if (msgs.size() > 0) {
             for(uint32 k = 0; k < msgs.size(); k++) {
                 bytes_sent += msgs[k]->size();
             }
             Duration since_start = mCurrentTime - Time(0);
-            printf("%d / %f = %f bytes per second\n", bytes_sent, since_start.seconds(), bytes_sent / since_start.seconds());
+            //printf("%d / %f = %f bytes per second\n", bytes_sent, since_start.seconds(), bytes_sent / since_start.seconds());
         }
-        
+
         return msgs;
     }
 private:
@@ -226,8 +226,8 @@ private:
         float queue_frac = weight / mTotalWeight;
         Duration transmitTime = Duration::seconds( size / (mRate * queue_frac) );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
-        
-        return mCurrentVirtualTime + transmitTime;        
+
+        return mCurrentVirtualTime + transmitTime;
     }
 
     uint32 mRate;

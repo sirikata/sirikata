@@ -1,11 +1,12 @@
 #include "Network.hpp"
 #include "Server.hpp"
 #include "FairSendQueue.hpp"
-
+#include "Message.hpp"
 
 namespace CBR{
-FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second)
- : mClientQueues(bytes_per_second),
+FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second, BandwidthStatistics* bstats)
+ : SendQueue(bstats),
+   mClientQueues(bytes_per_second),
    mServerQueues(bytes_per_second),
    mNetwork(net)
 {
@@ -25,7 +26,7 @@ void FairSendQueue::service(const Time&t){
     }
     size_t count=0;
     for (count=0;count<mClientServerBuffer.size();++count) {
-        if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,
+        if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),
                                        mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
         }else {
             break;
@@ -36,7 +37,7 @@ void FairSendQueue::service(const Time&t){
         freeClientTicks=false;
         count=0;
         for (count=0;count<mClientServerBuffer.size();++count) {
-            if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,
+            if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),
                                            mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
             }else {
                 break;
@@ -48,11 +49,12 @@ void FairSendQueue::service(const Time&t){
     for (std::vector<ServerMessagePair*>::iterator i=finalSendMessages.begin(),ie=finalSendMessages.end();
          i!=ie;
          ++i) {
-        mNetwork->send((*i)->mPair.first,(*i)->mPair.second,false,true,1);
+        mNetwork->send((*i)->dest(),(*i)->data(),false,true,1);
+        mBandwidthStats->sent( (*i)->dest(), GetMessageUniqueID((*i)->data()), (*i)->data().size(), t);
     }
     finalSendMessages.resize(0);
     for (;count<mClientServerBuffer.size();++count) {
-        if (mServerQueues.queueMessage(mClientServerBuffer[count]->mPair.first,mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
+        if (mServerQueues.queueMessage(mClientServerBuffer[count]->dest(),mClientServerBuffer[count])!=QueueEnum::PushSucceeded) {
             break;
         }
     }
@@ -68,6 +70,7 @@ void FairSendQueue::service(const Time&t){
 bool FairSendQueue::hasServerRegistered(ServerID sid) const{
     return mServerQueues.hasQueue(sid);
 }
+
 void FairSendQueue::registerServer(ServerID sid, float weight) {
     if (!mServerQueues.hasQueue(sid)) {
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
@@ -77,7 +80,7 @@ void FairSendQueue::removeServer(ServerID sid) {
     mServerQueues.removeQueue(sid);
 }
 void FairSendQueue::registerClient(UUID sid, float weight) {
-   if (!mClientQueues.hasQueue(sid)) { 
+   if (!mClientQueues.hasQueue(sid)) {
        mClientQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
    }
 }

@@ -39,10 +39,11 @@
 #include "ServerIDMap.hpp"
 #include "SendQueue.hpp"
 #include "Statistics.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, BandwidthStatistics* bstats, LocationStatistics* lstats)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
@@ -50,11 +51,10 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mProximity(prox),
    mNetwork(net),
    mSendQueue(sq),
-   mCurrentTime(0)
+   mCurrentTime(0),
+   mBandwidthStats(bstats),
+   mLocationStats(lstats)
 {
-    mBandwidthStats = new BandwidthStatistics();
-    mLocationStats = new LocationStatistics();
-
     // start the network listening
     mNetwork->listen(mID);
 
@@ -80,15 +80,6 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
 }
 
 Server::~Server() {
-    OptionSet* options = OptionSet::getOptions("cbr");
-
-    String bandwidth_file = options->referenceOption("stats.bandwidth-filename")->as<String>();
-    if (!bandwidth_file.empty()) mBandwidthStats->save(bandwidth_file);
-    delete mBandwidthStats;
-
-    String location_file = options->referenceOption("stats.location-filename")->as<String>();
-    if (!location_file.empty()) mLocationStats->save(location_file);
-    delete mLocationStats;
 }
 
 const ServerID& Server::id() const {
@@ -120,7 +111,7 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
     offset = msg->serialize(msg_serialized, offset);
 
     if (!is_forward || dest_server != id())
-        mBandwidthStats->sent(dest_server, msg->id(), offset, mCurrentTime);
+        mBandwidthStats->queued(dest_server, msg->id(), offset, mCurrentTime);
 
     if (dest_server==id()) {
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );

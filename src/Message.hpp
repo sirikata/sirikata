@@ -48,6 +48,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_MIGRATE      4
 #define MESSAGE_TYPE_COUNT        5
 
+uint32 GetMessageUniqueID(const Network::Chunk& msg);
 
 // Server to server routing header
 class ServerMessageHeader {

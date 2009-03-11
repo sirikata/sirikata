@@ -61,7 +61,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, BandwidthStatistics* bstats, LocationStatistics* lstats);
     ~Server();
 
     const ServerID& id() const;
