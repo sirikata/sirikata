@@ -33,6 +33,7 @@
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
 #include <OgrePlugin.h>
+#include "ogreCoreZip.hpp"
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 

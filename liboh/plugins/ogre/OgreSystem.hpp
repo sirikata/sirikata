@@ -35,7 +35,7 @@
 #include <util/Platform.hpp>
 #include <util/ListenerProvider.hpp>
 #include <ProxyCreationListener.hpp>
-#include <Ogre.h>
+#include <OgreRoot.h>
 namespace Sirikata { namespace Graphics {
 
 class OgreSystem: public ProxyCreationListener {
