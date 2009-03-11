@@ -79,7 +79,7 @@ class UploadTest : public CxxTest::TestSuite {
 		Transfer::UploadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::UploadEvent> (evbase);
 		std::ostringstream msg;
 		msg << "Upload " << (ev->success()?"succeeded":"failed") <<
-			" (" << ev->getStatus() << ")" << ": " << ev->uri();
+			" (" << ((int)ev->getStatus()) << ")" << ": " << ev->uri();
 		if (ev->success()) {
 			SILOG(transfer,debug,msg);
 		} else {
@@ -180,15 +180,15 @@ class UploadTest : public CxxTest::TestSuite {
 public:
 	void testSimpleUpload() {
 		Transfer::SparseData sd;
-		Transfer::DenseDataPtr first(new Transfer::DenseData(Range(0,8,Transfer::LENGTH)));
+		Transfer::MutableDenseDataPtr first(new Transfer::DenseData(Range(0,8,Transfer::LENGTH)));
 		std::memcpy(first->writableData(), "12345678", first->length());
-		Transfer::DenseDataPtr second(new Transfer::DenseData(Range(6,9,Transfer::LENGTH)));
+		Transfer::MutableDenseDataPtr second(new Transfer::DenseData(Range(6,9,Transfer::LENGTH)));
 		std::memcpy(second->writableData(), "78abcdefg", second->length());
 		sd.addValidData(second);
 		sd.addValidData(first);
 		Transfer::Fingerprint fp = sd.computeFingerprint();
 		using std::tr1::placeholders::_1;
-		mTransferManager->upload("meerkat:///test", URIContext("mhash:"), sd,
+		mTransferManager->upload("meerkat:///test", URIContext("mhash:"), sd.flatten(),
 				std::tr1::bind(&UploadTest::uploadFinished, this, _1));
 		//mTransferManager->uploadName("meerkat:///test",Transfer::RemoteFileId(fp, URIContext("mhash:")),
 		//		std::tr1::bind(&UploadTest::uploadFinished, this, _1));

@@ -183,7 +183,7 @@ class EventTransferManager : public TransferManager {
 				success = false;
 			}
 			Status stat = success ? SUCCESS : FAIL_NAMEUPLOAD;
-			Task::EventPtr ev (new UploadEvent(stat, name));
+			Task::EventPtr ev (new UploadEvent(stat, name, UploadEventId));
 			mEventSystem->fire(ev);
 			return;
 		}
@@ -199,7 +199,7 @@ class EventTransferManager : public TransferManager {
 
 	void doUploadData(
 			const RemoteFileId &hash,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			unsigned int which,
 			bool success,
 			bool successThisRound,
@@ -210,7 +210,7 @@ class EventTransferManager : public TransferManager {
 				success = false;
 			}
 			Status stat = success ? SUCCESS : FAIL_UPLOAD;
-			Task::EventPtr ev (new UploadEvent(stat, hash.uri()));
+			Task::EventPtr ev (new UploadEvent(stat, hash.uri(), UploadDataEventId));
 			mEventSystem->fire(ev);
 			return;
 		}
@@ -291,10 +291,10 @@ public:
 
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
 		if (!mNameUploadReg || !mUploadReg) {
-			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 		}
 		/*
 		if (!exists(hash.uri())) {
@@ -311,9 +311,9 @@ public:
 			const RemoteFileId &hash,
 			const EventListener &listener) {
 		if (!mNameUploadReg) {
-			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 		}
-		mEventSystem->subscribe(UploadEvent::getIdPair(name), listener);
+		mEventSystem->subscribe(UploadEvent::getIdPair(name, UploadEventId), listener);
 
 		mNameUploadReg->lookupService(
 			name.context(),
@@ -322,12 +322,12 @@ public:
 	}
 
 	virtual void uploadByHash(const RemoteFileId &hash,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
 		if (!mUploadReg) {
-			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri())));
+			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri(), UploadDataEventId)));
 		}
-		mEventSystem->subscribe(UploadEvent::getIdPair(hash.uri()), listener);
+		mEventSystem->subscribe(UploadEvent::getIdPair(hash.uri(), UploadDataEventId), listener);
 
 		mUploadReg->lookupService(
 			hash.uri().context(),

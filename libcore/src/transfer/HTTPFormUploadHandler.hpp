@@ -107,7 +107,7 @@ public:
 	virtual void upload(UploadHandler::TransferDataPtr *ptrRef,
 			const ServiceParams &params,
 			const URI &uri,
-			const SparseData &uploadData,
+			const DenseDataPtr &uploadData,
 			const UploadHandler::Callback &cb) {
 		//graphics.stanford.edu/~danielrh/uploadsystem/
 		//    ?value:uploadNeed=1&field:hash=MhashFile0&field:file=uploadFile0&
@@ -115,7 +115,7 @@ public:
 		HTTPRequestPtr req;
 		createRequest<UploadHandler> (req, ptrRef, params,
 				uri, cb);
-		req->setPOSTData(params["field:file"], uri.filename(), uploadData);
+		req->addPOSTData(params["field:file"], uri.filename(), uploadData);
 		//req->addPOSTField(params["field:hash"])
 		if (!params["field:filename"].empty()) {
 			req->addPOSTField(params["field:filename"], uri.filename());
@@ -134,7 +134,8 @@ public:
 		createRequest<UploadHandler> (req, ptrRef, params,
 				uri, cb);
 		if (params["field:filename"].empty()) {
-			req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+			req->addPOSTData(params["field:file"], uri.filename(),
+					DenseDataPtr(new DenseData(Range(false))));
 		} else {
 			req->addPOSTField(params["field:filename"], uri.filename());
 		}
@@ -158,7 +159,7 @@ public:
 		createRequest<NameUploadHandler> (req, ptrRef, params,
 				uri, cb);
 		if (params["field:filename"].empty()) {
-			req->setPOSTData(params["field:file"], uri.filename(),
+			req->addPOSTData(params["field:file"], uri.filename(),
 					DenseDataPtr(new DenseData(uploadId.uri().toString())));
 		} else {
 			req->addPOSTField(params["field:file"], uploadId.uri().toString());
@@ -178,7 +179,8 @@ public:
 		createRequest<NameUploadHandler> (req, ptrRef, params,
 				uri, cb);
 		if (params["field:filename"].empty()) {
-			req->setPOSTData(params["field:file"], uri.filename(), SparseData());
+			req->addPOSTData(params["field:file"], uri.filename(),
+					DenseDataPtr(new DenseData(Range(false))));
 		} else {
 			req->addPOSTField(params["field:filename"], uri.filename());
 		}

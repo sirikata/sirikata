@@ -83,7 +83,7 @@ private:
 		RemoteFileId fileId;
 		Range toRead;
 		TransferCallback finished;
-		std::tr1::shared_ptr<DenseData> data; // if NULL, read data.
+		DenseDataPtr data; // if NULL, read data.
 
 	};
 

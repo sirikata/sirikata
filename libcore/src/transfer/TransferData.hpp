@@ -93,7 +93,8 @@ public:
 	}
 };
 
-typedef std::tr1::shared_ptr<DenseData> DenseDataPtr;
+typedef std::tr1::shared_ptr<DenseData> MutableDenseDataPtr;
+typedef std::tr1::shared_ptr<const DenseData> DenseDataPtr;
 
 /// Represents a series of DenseData.  Often you may have adjacent DenseData.
 class SparseData {
@@ -118,7 +119,7 @@ public:
 		iterator(const ListType::iterator &e) :
 			ListType::iterator(e) {
 		}
-		inline DenseData &operator* () {
+		inline const DenseData &operator* () {
 			return *(this->ListType::iterator::operator*());
 		}
 
@@ -279,6 +280,33 @@ public:
 			}
 		}
 		return context.get();
+	}
+
+	DenseDataPtr flatten() const {
+		if (mSparseData.size() == 0) {
+			return DenseDataPtr(new DenseData(Range(false)));
+		}
+		if (mSparseData.size() == 1) {
+			return mSparseData.front();
+		}
+		MutableDenseDataPtr denseData (new DenseData(Range(startbyte(),endbyte(),BOUNDS)));
+		const unsigned char *data;
+		unsigned char *outdata = denseData->writableData();
+		Range::length_type length;
+		Range::base_type start = 0;
+
+		while (start < denseData->length()) {
+			data = dataAt(start + startbyte(), length);
+			start += length;
+			if (data == NULL && length == 0) {
+				break;
+			} else if (data == NULL) {
+				std::memset(outdata + start, (unsigned char)0, (size_t)length);
+			} else {
+				std::copy(data, data+length, outdata + start);
+			}
+		}
+		return denseData;
 	}
 
 };

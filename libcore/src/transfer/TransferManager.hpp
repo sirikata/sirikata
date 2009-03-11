@@ -131,11 +131,11 @@ public:
 		Status mStatus;
 		URI mURI;
 	public:
-		static Task::IdPair getIdPair(const URI &uploadURI) {
-			return Task::IdPair(UploadEventId, uploadURI.toString());
+		static Task::IdPair getIdPair(const URI &uploadURI, const char *id) {
+			return Task::IdPair(id, uploadURI.toString());
 		}
-		UploadEvent(Status stat, const URI &uploadURI) :
-			Task::Event(getIdPair(uploadURI)),
+		UploadEvent(Status stat, const URI &uploadURI, const char *id) :
+			Task::Event(getIdPair(uploadURI, id)),
 			mStatus(stat),
 			mURI(uploadURI) {
 		}
@@ -208,9 +208,9 @@ public:
 	/// Like the other upload() function, but avoids recomputing the hash.
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 	}
 
 	/** Uploads a filename, and if necessary, uploads the data as well.
@@ -222,9 +222,11 @@ public:
 	 */
 	inline void upload(const URI &name,
 			const URIContext &hashContext,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		RemoteFileId rfid(toUpload.computeFingerprint(), hashContext);
+		RemoteFileId rfid(
+			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
+			hashContext);
 		upload(name, rfid, toUpload, listener);
 	}
 
@@ -241,7 +243,7 @@ public:
 	virtual void uploadName(const URI &name,
 			const RemoteFileId &hash,
 			const EventListener &listener) {
-		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name)));
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 	}
 
 	/**
@@ -255,18 +257,20 @@ public:
 	 * @param listener  A listener to receive the UploadEvent.
 	 */
 	virtual void uploadByHash(const RemoteFileId &hash,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri())));
+		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri(), UploadDataEventId)));
 	}
 	/** Like the other uploadByHash() function, but computes the hash.
 	 *
 	 * @param hashContext  The URIContext to upload the hash to (e.g. "mhash:")
 	 */
 	inline void uploadByHash(const URIContext &hashContext,
-			const SparseData &toUpload,
+			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		RemoteFileId rfid(toUpload.computeFingerprint(), hashContext);
+		RemoteFileId rfid(
+			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
+			hashContext);
 		uploadByHash(rfid, toUpload, listener);
 	}
 };

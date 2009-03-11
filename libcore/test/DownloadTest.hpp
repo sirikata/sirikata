@@ -85,14 +85,14 @@ public:
                 std::stringstream rangeListStream;
                 Range::printRangeList(rangeListStream, ev->data());
                 SILOG(transfer,debug,"Transfer " << "finished" <<
-                      " (" << ev->getStatus() << "): " << ev->uri() << rangeListStream);
+                      " (" << ((int)ev->getStatus()) << "): " << ev->uri() << rangeListStream);
             }
 		} else {
             if (SILOGP(transfer,error)) {
                 std::stringstream rangeListStream;
                 Range::printRangeList(rangeListStream, ev->data());
                 SILOG(transfer,error,"Transfer " << "failed" <<
-                      " (" << ev->getStatus() << "): " << ev->uri() << rangeListStream);
+                      " (" << (int)(ev->getStatus()) << "): " << ev->uri() << rangeListStream);
             }
 		}
 		return Task::EventResponse::nop();

@@ -380,14 +380,14 @@ public:
 		using std::tr1::placeholders::_1;
 		memory->purgeFromCache(exampleComUri.fingerprint());
 		{
-			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
+			Transfer::MutableDenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "TML>\r\n", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
 					std::tr1::bind(&CacheLayerTestSuite::compareCallback, this, expect, _1));
 		}
 		{
-			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
+			Transfer::MutableDenseDataPtr expect(new Transfer::DenseData(Transfer::Range(8, 6, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "<HEAD>", (size_t)expect->length());
 			memory->getData(exampleComUri,
 					(Transfer::Range)*expect,
@@ -395,7 +395,7 @@ public:
 		}
 		waitFor(2);
 		{
-			Transfer::DenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 12, Transfer::LENGTH)));
+			Transfer::MutableDenseDataPtr expect(new Transfer::DenseData(Transfer::Range(2, 12, Transfer::LENGTH)));
 			memcpy(expect->writableData(), "TML>\r\n<HEAD>", (size_t)expect->length());
 			memory->setNext(NULL);
 			memory->getData(exampleComUri,

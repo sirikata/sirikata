@@ -60,13 +60,13 @@ static curl_off_t HTTPRequest_seek_cb(HTTPRequest *handle, curl_off_t curloffset
 	cache_ssize_type offset = curloffset;
 	switch (origin) {
 	case SEEK_SET:
-		handle->seek(handle->getUploadData().startbyte() + offset);
+		handle->seek(offset);
 		break;
 	case SEEK_CUR:
 		handle->seek(handle->getUploadOffset() + offset);
 		break;
 	case SEEK_END:
-		handle->seek(handle->getUploadData().endbyte() + offset);
+		handle->seek(handle->getUploadData()->length() + offset);
 		break;
 	}
 	return handle->getUploadOffset();
@@ -100,66 +100,21 @@ size_t HTTPRequest::write(const unsigned char *copyFrom, size_t length) {
 	return length;
 }
 
-template <class T>
-class ZeroIterator {
-	cache_usize_type mPos;
-public:
-	typedef std::forward_iterator_tag iterator_category;
-	typedef T value_type;
-	typedef cache_ssize_type difference_type;
-	typedef T* pointer;
-	typedef T& reference;
-	ZeroIterator(cache_usize_type i=0)
-		: mPos(i) {
-	}
-	inline cache_ssize_type operator-(const ZeroIterator &other) {
-		return mPos - other.mPos;
-	}
-	inline bool operator!=(const ZeroIterator &other) {
-		return other.mPos != mPos;
-	}
-	inline bool operator==(const ZeroIterator &other) {
-		return other.mPos == mPos;
-	}
-	inline ZeroIterator& operator++() {
-		++mPos;
-		return *this;
-	}
-	inline T operator *() {
-		return 0;
-	}
-};
-
 size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
-	if (mUploadData.empty()) {
+	if (!mStreamUploadData) {
 		return 0;
 	}
-	if (mUploadOffset < mUploadData.startbyte()) {
+	if (mUploadOffset >= mStreamUploadData->length()) {
 		return 0;
 	}
-	size_t offset = 0;
-//	cache_ssize_type startByte = (mUploadOffset - mUploadData->startbyte());
-//	cache_usize_type totalNeeded = startByte + length;
-	while (length > 0) {
-		// Fixme: this loop should be a lot simpler. overwrite empty chunks (copyFrom==NULL) with NUL bytes.
-		cache_usize_type chunkLength = 0;
-		const unsigned char *copyFrom = mUploadData.dataAt(mUploadOffset, chunkLength);
-		if (copyFrom == NULL && chunkLength == 0) {
-			return offset;
-		}
-		if (chunkLength > length) {
-			chunkLength = length;
-		}
-		if (copyFrom == NULL) {
-			std::memset(copyTo+offset, 0, chunkLength);
-		} else {
-			std::copy(copyFrom, copyFrom + chunkLength, copyTo+offset);
-		}
-		offset += chunkLength;
-		mUploadOffset += chunkLength;
-		length -= chunkLength;
+	const unsigned char *copyFrom = mStreamUploadData->data() + mUploadOffset;
+	size_t dataLength = mStreamUploadData->length() - mUploadOffset;
+	if (dataLength < length) {
+		length = dataLength;
 	}
-	return offset;
+	std::copy(copyFrom, copyFrom + length, copyTo);
+	mUploadOffset += length;
+	return length;
 }
 
 void HTTPRequest::gotHeader(const std::string &header) {
@@ -192,7 +147,7 @@ void HTTPRequest::gotHeader(const std::string &header) {
 			++colon;
 		} while (colon < endpos && header[colon] == ' ');
 	}
-	
+
 	std::string headervalue = (colon<endpos?header.substr(colon, endpos-colon):(std::string()));
 	for (std::string::iterator iter = headername.begin(),iterend=headername.end();iter!=iterend; ++iter) {
 		*iter = tolower(*iter);
@@ -434,6 +389,7 @@ void HTTPRequest::curlLoop () {
 					curl_multi_add_handle(curlm, request->mCurlRequest);
 				} else {
 					request->mCurlRequest = NULL; // handle is freed.
+					request->mState = FINISHED;
 					CallbackFunc temp (request->mCallback);
 					DenseDataPtr finishedData(request->getData());
 					request->mCallback = nullCallback;
@@ -497,6 +453,7 @@ void HTTPRequest::curlLoop () {
 }
 
 void HTTPRequest::abort() {
+	mState = FINISHED;
 	if (mCurlRequest) {
 		boost::lock_guard<boost::mutex> access_curl_handle(globals.http_lock);
 		if (mCurlRequest) {
@@ -531,9 +488,10 @@ void HTTPRequest::initCurlHandle() {
 	boost::call_once(&initCurl, flag);
 
 	// Initialize stateful members here in case the transfer must be restarted.
+	mState = NEW;
 	mStatusCode = 0;
 	mOffset = 0;
-	mData = DenseDataPtr(new DenseData(mRequestedRange));
+	mData = MutableDenseDataPtr(new DenseData(mRequestedRange));
 	mUploadOffset = 0;
 
 	// Create a curl object and initialize options specific to this transfer.
@@ -572,59 +530,118 @@ void HTTPRequest::initCurlHandle() {
 	}
 }
 
-void HTTPRequest::setPUTData(const SparseData &uploadData) {
+const char *go_update_error = "Cannot set parameters after calling go()!";
+static DenseDataPtr nullData(new DenseData(Range(false)));
+
+void HTTPRequest::setPUTData(const DenseDataPtr &uploadData) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (!mSimplePOSTString.empty()) {
+		throw std::logic_error("setPUT after addSimplePOSTField.");
+	}
+	if (mCurlFormBegin != NULL || mCurlFormEnd != NULL) {
+		throw std::logic_error("setPUT after addPOSTData.");
+	}
 	/*
 	if (!uploadData.contiguous()) {
 		// Should not happen here--if non-contiguous data makes it this far in the process, let it be filled with 0's.
 		throw std::runtime_exception("non-contiguous data passed to PUT!");
 	}
 	*/
-	mUploadData = uploadData;
-	curl_easy_setopt(mCurlRequest, CURLOPT_UPLOAD, 1);
-	curl_easy_setopt(mCurlRequest, CURLOPT_INFILESIZE_LARGE, uploadData.endbyte());
+	mStreamUploadData = uploadData;
 }
 
 void HTTPRequest::setDELETE() {
-	curl_easy_setopt(mCurlRequest, CURLOPT_NOBODY, 1);
-	if (mURI.proto() == "http" || mURI.proto() == "https") {
-		curl_easy_setopt(mCurlRequest, CURLOPT_CUSTOMREQUEST, "DELETE");
-	} else if (mURI.proto() == "ftp"){
-		addHeader("DELE "+mURI.filename());
-	} else if (mURI.proto() == "sftp") {
-		addHeader("rm "+mURI.filename());
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
 	}
+	if (!mSimplePOSTString.empty()) {
+		throw std::logic_error("setDELETE after addSimplePOSTField.");
+	}
+	if (mCurlFormBegin != NULL || mCurlFormEnd != NULL) {
+		throw std::logic_error("setDELETE after addPOSTData.");
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("setDELETE after setPUTData.");
+	}
+	mTypeDELETE = true;
 }
 
-void HTTPRequest::setPOSTData(const std::string &fieldname,
+void HTTPRequest::addPOSTData(const std::string &fieldname,
 		const std::string &filename,
-		const SparseData &uploadData) {
-	mUploadData = uploadData;
-#if !(LIBCURL_VERSION_MAJOR>7||LIBCURL_VERSION_MINOR>18)
-    Range::length_type templen;
-    uploadData.dataAt(0,templen);
-    assert(templen==uploadData.length());//assert that this is contiguous until later
-#endif
+		const DenseDataPtr &uploadData,
+		const char *contentType) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("addPOSTData after setPUTData.");
+	}
+	if (!mSimplePOSTString.empty()) {
+		throw std::logic_error("addPOSTData after addSimplePOSTField.");
+	}
+	mDataReferences.push_back(uploadData);
 	curl_formadd(
 		&mCurlFormBegin,
 		&mCurlFormEnd,
 		CURLFORM_NAMELENGTH, (long)fieldname.length(),
 		CURLFORM_COPYNAME, fieldname.data(),
 		CURLFORM_FILENAME, filename.c_str(),
-		CURLFORM_CONTENTTYPE, "application/octet-stream", // FIXME: Is this useful?
-#if LIBCURL_VERSION_MAJOR>7||LIBCURL_VERSION_MINOR>18
-		CURLFORM_CONTENTSLENGTH, (long)uploadData.length(),
-		CURLFORM_STREAM, this,
-#else
-		CURLFORM_CONTENTSLENGTH, (long)templen,        
+		CURLFORM_CONTENTTYPE, contentType, // FIXME: Is this useful?
+		CURLFORM_CONTENTSLENGTH, (long)uploadData->length(),
         CURLFORM_BUFFER, filename.c_str(),
-        CURLFORM_BUFFERPTR, templen?uploadData.dataAt(0,templen):NULL,
-        CURLFORM_BUFFERLENGTH, templen,
-#endif
+        CURLFORM_BUFFERPTR, uploadData->data(),
+        CURLFORM_BUFFERLENGTH, (long)uploadData->length(),
 		CURLFORM_END);
 }
 
+void HTTPRequest::addPOSTArray(const std::string &fieldname,
+		const std::vector<std::pair<std::string,DenseDataPtr> > &fileData,
+		const char *contentType) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("addPOSTArray after setPUTData.");
+	}
+	if (!mSimplePOSTString.empty()) {
+		throw std::logic_error("addPOSTArray after addSimplePOSTField.");
+	}
+	std::vector<curl_forms> formsarray;
+	for (unsigned int i = 0; i < fileData.size(); i++) {
+		mDataReferences.push_back(fileData[i].second);
+		curl_forms tempforms[5] = {
+			{CURLFORM_CONTENTTYPE, (const char*)contentType}, // FIXME: Is this useful?
+			{CURLFORM_CONTENTSLENGTH, (const char*)(uintptr_t)fileData[i].second->length()},
+			{CURLFORM_BUFFER, (const char*)fileData[i].first.c_str()},
+			{CURLFORM_BUFFERPTR, (const char*)fileData[i].second->data()},
+			{CURLFORM_BUFFERLENGTH, (const char*)(uintptr_t)fileData[i].second->length()}};
+		formsarray.insert(formsarray.end(),
+				tempforms, tempforms+(sizeof(tempforms)/sizeof(*tempforms)));
+	}
+	curl_forms end = {CURLFORM_END};
+	formsarray.push_back(end);
+	curl_formadd(
+		&mCurlFormBegin,
+		&mCurlFormEnd,
+		CURLFORM_NAMELENGTH, (long)fieldname.length(),
+		CURLFORM_COPYNAME, fieldname.data(),
+		CURLFORM_ARRAY, &(formsarray[0]),
+		CURLFORM_END
+		);
+}
 void HTTPRequest::addPOSTField(const std::string &name,
 		const std::string &value) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("addPOSTField after setPUTData.");
+	}
+	if (!mSimplePOSTString.empty()) {
+		throw std::logic_error("addPOSTData after addSimplePOSTField.");
+	}
 	curl_formadd(
         &mCurlFormBegin,
 		&mCurlFormEnd,
@@ -635,14 +652,75 @@ void HTTPRequest::addPOSTField(const std::string &name,
 		CURLFORM_END);
 }
 
+void HTTPRequest::addSimplePOSTField(const std::string &namestr, const std::string &valuestr) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("addSimplePOSTField after setPUTData.");
+	}
+	if (mCurlFormBegin != NULL || mCurlFormEnd != NULL) {
+		throw std::logic_error("addSimplePOSTField after addPOSTData.");
+	}
+	char *name = curl_easy_escape(mCurlRequest, namestr.data(), namestr.length());
+	char *value = curl_easy_escape(mCurlRequest, valuestr.data(), valuestr.length());
+	if (!mSimplePOSTString.empty()) {
+		mSimplePOSTString += '&';
+	}
+	mSimplePOSTString += name;
+	mSimplePOSTString += '=';
+	mSimplePOSTString += value;
+	curl_free(name);
+	curl_free(value);
+}
+
+void HTTPRequest::setSimplePOSTString(const std::string &postString) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	if (mStreamUploadData) {
+		throw std::logic_error("setSimplePOSTString after setPUTData.");
+	}
+	if (mCurlFormBegin != NULL || mCurlFormEnd != NULL) {
+		throw std::logic_error("setSimplePOSTString after addPOSTData.");
+	}
+	mSimplePOSTString = postString;
+}
+
+
 void HTTPRequest::addHeader(const std::string &header) {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
 	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, header.c_str());
 }
 
 void HTTPRequest::setFinalProperties() {
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	// Request types:
 	if (mCurlFormBegin) {
 		curl_easy_setopt(mCurlRequest, CURLOPT_HTTPPOST, mCurlFormBegin);
+	} else if (!mSimplePOSTString.empty()) {
+		curl_easy_setopt(mCurlRequest, CURLOPT_POST, 1);
+		curl_easy_setopt(mCurlRequest, CURLOPT_POSTFIELDSIZE_LARGE,
+				(curl_off_t)mSimplePOSTString.length());
+		curl_easy_setopt(mCurlRequest, CURLOPT_POSTFIELDS, mSimplePOSTString.data());
+	} else if (mStreamUploadData) {
+		curl_easy_setopt(mCurlRequest, CURLOPT_UPLOAD, 1);
+		curl_easy_setopt(mCurlRequest, CURLOPT_INFILESIZE_LARGE, mStreamUploadData->length());
+	} else if (mTypeDELETE) {
+		curl_easy_setopt(mCurlRequest, CURLOPT_NOBODY, 1);
+		if (mURI.proto() == "http" || mURI.proto() == "https") {
+			curl_easy_setopt(mCurlRequest, CURLOPT_CUSTOMREQUEST, "DELETE");
+		} else if (mURI.proto() == "ftp"){
+			addHeader("DELE "+mURI.filename());
+		} else if (mURI.proto() == "sftp") {
+			addHeader("rm "+mURI.filename());
+		}
 	}
+
 	if (getProperties(mURI).does_not_support_Expect_100_continue) {
 		addHeader("Expect:");
 	}
@@ -653,17 +731,23 @@ void HTTPRequest::setFinalProperties() {
 			curl_easy_setopt(mCurlRequest, CURLOPT_QUOTE, mHeaders);
 		}
 	}
+	mState = INPROGRESS;
 }
 
 void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
-	boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
+	if (mState >= INPROGRESS) {
+		throw std::logic_error(go_update_error);
+	}
+	{
+		boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
 
-	setFinalProperties();
+		setFinalProperties();
 
-	mPreventDeletion = HTTPRequestPtr(holdReference);
-	curl_multi_add_handle(curlm, mCurlRequest);
+		mPreventDeletion = HTTPRequestPtr(holdReference);
+		curl_multi_add_handle(curlm, mCurlRequest);
 
-	globals.doWakeup();
+		globals.doWakeup();
+	}
 
 	//requestQueue.push(this);
 	// CURLOPT_REFERER

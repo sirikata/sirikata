@@ -92,7 +92,7 @@ public:
 	virtual void upload(UploadHandler::TransferDataPtr *ptrRef,
 			const ServiceParams &params,
 			const URI &uri,
-			const SparseData &uploadData,
+			const DenseDataPtr &uploadData,
 			const UploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
 		createRequest<UploadHandler> (req, ptrRef, uri, cb);
@@ -122,7 +122,7 @@ public:
 			const NameUploadHandler::Callback &cb) {
 		HTTPRequestPtr req;
 		createRequest<NameUploadHandler> (req, ptrRef, uri, cb);
-		req->setPUTData(uploadData);
+		req->setPUTData(DenseDataPtr(new DenseData(uploadId.uri().toString())));
 		req->go(req);
 	}
 

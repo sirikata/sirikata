@@ -56,21 +56,28 @@ public:
 private:
 	HTTPRequestPtr mPreventDeletion; ///< set to shared_from_this while cURL owns a reference.
 
+	enum {NEW, INPROGRESS, FINISHED} mState;
+
 	const URI mURI;
 	Range mRequestedRange;
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
 	void *mHeaders; // CURL header linked list.
 
-	curl_httppost *mCurlFormBegin;
+	/// Request types:
+	curl_httppost *mCurlFormBegin; ///< POST multipart/form-data
 	curl_httppost *mCurlFormEnd;
+	std::string mSimplePOSTString; ///< POST application/x-www-form-urlencoded
+	bool mTypeDELETE; ///< DELETE
 	long mStatusCode;
 
-	Range::base_type mOffset;
-	DenseDataPtr mData;
-
 	Range::base_type mUploadOffset;
-	SparseData mUploadData;
+	DenseDataPtr mStreamUploadData; ///< PUT or ftp upload
+
+	std::vector<DenseDataPtr> mDataReferences; ///< prevent from being freed.
+
+	Range::base_type mOffset;
+	MutableDenseDataPtr mData;
 
 	/** The default callback--useful for POST queries where you do not care about the response */
 	static void nullCallback(HTTPRequest*, const DenseDataPtr &, bool){
@@ -97,14 +104,13 @@ public:
 
 	/** Do not ever use this--it is not thread safe, and the DenseDataPtr
 	 is passed to the callback anyway. May be made private */
-	inline const DenseDataPtr &getData() {
+	inline const MutableDenseDataPtr &getData() {
 		return mData;
 	}
 
-	/** Do not ever use this--it is not thread safe, and the DenseDataPtr
-	 is passed to the callback anyway. May be made private */
-	inline const SparseData &getUploadData() {
-		return mUploadData;
+	/// Returns the DenseData passed to setPUTData()
+	inline const DenseDataPtr &getUploadData() {
+		return mStreamUploadData;
 	}
 
 	inline Range::base_type getUploadOffset() const {
@@ -127,17 +133,18 @@ public:
 	 * as the denseData should be cleared after each packet.
 	 */
 	inline void seek(Range::base_type offset) {
-		if (offset < mUploadData.endbyte()) {
+		if (offset < mStreamUploadData->length()) {
 			mUploadOffset = offset;
 		} else {
-			mUploadOffset = mUploadData.endbyte();
+			mUploadOffset = mStreamUploadData->length();
 		}
 	}
 
 	HTTPRequest(const URI &uri, const Range &range)
-		: mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
+		: mState(NEW),
+		  mURI(uri), mRequestedRange(range), mCallback(&nullCallback),
 		  mCurlRequest(NULL), mHeaders(NULL),
-		  mCurlFormBegin(NULL), mCurlFormEnd(NULL)
+		  mCurlFormBegin(NULL), mCurlFormEnd(NULL), mTypeDELETE(false)
 		  {
 		initCurlHandle();
 	}
@@ -156,8 +163,6 @@ public:
 	 */
 	void abort();
 
-	void setOptions();
-
 	/// Setter for the response function.
 	inline void setCallback(const CallbackFunc &cb) {
 		mCallback = cb;
@@ -167,22 +172,25 @@ public:
 	 * Deletes the request file. Retrieved data may be empty,
 	 * but success should be true if the deletion was successful.
 	 * Should work for HTTP(s), FTP and SFTP
+	 *
+	 * Use this with a REST-style upload system.
 	 */
 	void setDELETE();
 
 	/**
 	 * Performs an upload of this file. Again, there may be no retrieved data,
 	 * but success should be true if the upload was successful.
+	 * Should work for HTTP(s), FTP and SFTP.
+	 *
+	 * Use this with a REST-style upload system.
 	 *
 	 * @param uploadData  A SparseData that represents the file.
 	 *                    Any non-contiguous chunks will be filled with 0's.
 	 */
-	void setPUTData(const SparseData &uploadData);
+	void setPUTData(const DenseDataPtr &uploadData);
 
 	/**
-	 * Performs an upload of this file using POST.
-	 * Currently, only one file can be uploaded at a time,
-	 * however this is relatively easy to change if necessary.
+	 * Performs an upload of a set of files using HTTP/POST.
 	 *
 	 * This may be used in conjunction with addPOSTField if other
 	 * non-file form fields are to be added.
@@ -190,22 +198,59 @@ public:
 	 * Currently, the Content-Type is hardcoded as application/octet-stream.
 	 *
 	 * @param fieldname  The name of the type="file" form field.
+	 *                   Note: The form field should end with "[]"
+	 * @param uploadData  A SparseData that represents the file.
+	 *                    Any non-contiguous chunks will be filled with 0's.
+	 * @param filename   The name of the file to be uploaded.
+	 */
+	void addPOSTArray(const std::string &fieldname,
+			const std::vector<std::pair<std::string, DenseDataPtr> > &uploadData,
+			const char *contentType="application/octet-stream");
+
+	/**
+	 * Performs an upload of this file using HTTP/POST.
+	 *
+	 * This may be used in conjunction with addPOSTField if other
+	 * non-file form fields are to be added.
+	 *
+	 * @param fieldname  The name of the type="file" form field.
 	 * @param filename   The name of the file to be uploaded.
 	 * @param uploadData  A SparseData that represents the file.
 	 *                    Any non-contiguous chunks will be filled with 0's.
 	 */
-	void setPOSTData(const std::string &fieldname,
+	void addPOSTData(const std::string &fieldname,
 			const std::string &filename,
-			const SparseData &uploadData);
+			const DenseDataPtr &uploadData,
+			const char *contentType="application/octet-stream");
 
 	/**
 	 * Creates a POST request using the multipart/form-data enctype.
-	 * This may be used in conjunction with setPOSTData, or without.
+	 * This may be used in conjunction with addPOSTData, or without.
 	 *
 	 * @param name  The name of this form field.
 	 * @param value The value of this form field.
 	 */
 	void addPOSTField(const std::string &name, const std::string &value);
+
+	/**
+	 * Creates a POST request using the application/x-www-form-urlencoded enctype.
+	 * This may not be used in conjunction with addPOSTData or addPOSTField
+	 *
+	 * Use this when request size is a concern, or when you are not
+	 * uploading files.
+	 *
+	 * @param name  The name of this form field.
+	 * @param value The value of this form field.
+	 */
+	void addSimplePOSTField(const std::string &name, const std::string &value);
+
+	/**
+	 * Creates a POST request using the application/x-www-form-urlencoded enctype.
+	 * This may not be used in conjunction with addPOSTData or addPOSTField
+	 *
+	 * @param postString  The url-encoded form data.
+	 */
+	void setSimplePOSTString(const std::string &postString);
 
 	/** Note: you are responsible for checking the protocol
 	 * and using HTTP headers in the case of http, and valid FTP

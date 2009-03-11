@@ -77,7 +77,7 @@ public:
 	virtual void upload(TransferDataPtr *ptrRef,
 			const ServiceParams &params,
 			const URI &uri,
-			const SparseData &contents,
+			const DenseDataPtr &contents,
 			const Callback &cb) = 0;
 
 	/** Deletes a file.
