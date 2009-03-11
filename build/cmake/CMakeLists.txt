@@ -489,6 +489,20 @@ ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtobufFile}
 #		   	   ${SirikataProtobufGenFile}
                    COMMENT "Creating protocol buffers cpp file")
 
+#binary files to be linked into sirikata
+SET(BINARY_TO_CPP_SOURCE_FILE ${TOP_LEVEL}/externals/binarytocpp/binarytocpp.cpp)
+SET(BINARY_TO_CPP_BINARY binarytocpp)
+ADD_EXECUTABLE(${BINARY_TO_CPP_BINARY} ${BINARY_TO_CPP_SOURCE_FILE} )
+GET_TARGET_PROPERTY(BINARY_TO_CPP_RUNABLE ${BINARY_TO_CPP_BINARY} LOCATION)
+
+IF(OGRE_ZIP_PATH)
+    SET(SirikataOgreCoreZipCpp ${CMAKE_CURRENT_SOURCE_DIR}/ogreCoreZip.cpp)
+    ADD_CUSTOM_COMMAND(OUTPUT ${SirikataOgreCoreZipCpp}
+                       COMMAND ${BINARY_TO_CPP_RUNABLE} -namespace=Sirikata ogreCoreZip ${OGRE_ZIP_PATH} ${SirikataOgreCoreZipCpp}
+                       DEPENDS ${BINARY_TO_CPP_BINARY}
+                       COMMENT "Creating OgreZip cpp file")
+  SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${SirikataOgreCoreZipCpp})
+ENDIF()
 #source files
 
 SET(SIRIKATA_CORE_SOURCES
@@ -557,6 +571,7 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 SET(LIBOH_PLUGIN_OGREGRAPHICS_DIR ${LIBOH_PLUGIN_DIR}/ogre)
 SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
+  ${SirikataOgreCoreZipCpp}
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystem.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgrePlugin.cpp
         )
@@ -652,6 +667,7 @@ ADD_PLUGIN_TARGET(ogregraphics
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} 
                     LIBRARIES ${OGRE_LIBRARIES})
 ENDIF(OGRE_FOUND)
+
 
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} EXCLUDE_FROM_ALL ${TEST_SOURCES})
