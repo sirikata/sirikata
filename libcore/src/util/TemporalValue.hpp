@@ -36,20 +36,15 @@
 
 namespace Sirikata {
 
-template <typename Value, typename UpdatePredicate, typename TimeType>
-class TemporalValueBase : protected UpdatePredicate { //inherit from update predicate since 0 sized inheritance takes 0 space
+template <typename Value, typename TimeType>
+class TemporalValueBase {
 public:
     Value mCurrentValue;
     TimeType mWhen;
 public:
-    TemporalValueBase(const TimeType &when, const Value&l, const UpdatePredicate &needsUpdate)
-       : UpdatePredicate(needsUpdate),
-         mCurrentValue(l),
+    TemporalValueBase(const TimeType &when, const Value&l)
+       : mCurrentValue(l),
          mWhen(when){}
-    bool needsUpdate(const TimeType&now, const Value&actualValue) const{
-        const UpdatePredicate* mNeedsUpdate=this;
-        return (*mNeedsUpdate)(actualValue,extrapolate(now));
-    }
     Value extrapolate(const TimeType &t) const {
         return mCurrentValue.extrapolate(t-mWhen);
     }
@@ -62,11 +57,11 @@ public:
     }
 };
 
-template <typename Value, typename UpdatePredicate>
-class TemporalValue : public TemporalValueBase<Value, UpdatePredicate, Time> {
+template <typename Value>
+class TemporalValue : public TemporalValueBase<Value, Time> {
 public:
-    TemporalValue(const Time& when, const Value& l, const UpdatePredicate& needsUpdate)
-     : TemporalValueBase<Value, UpdatePredicate, Time>(when, l, needsUpdate)
+    TemporalValue(const Time& when, const Value& l)
+     : TemporalValueBase<Value, Time>(when, l)
     {}
 }; // class TemporalValue
 

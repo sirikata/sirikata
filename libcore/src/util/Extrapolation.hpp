@@ -52,23 +52,26 @@ class Extrapolator : public virtual ExtrapolatorBase<Value, Time> {
 
 
 template <typename Value, typename UpdatePredicate, typename TimeType, typename DurationType>
-class TimedWeightedExtrapolatorBase : public virtual ExtrapolatorBase<Value, TimeType> {
+class TimedWeightedExtrapolatorBase : public virtual ExtrapolatorBase<Value, TimeType>, protected UpdatePredicate { // Use protected inheritence for low cost inclusing, zero cost
+                                                                                                                    // if the class is empty
 protected:
     enum ValueTimes{PAST=0,PRESENT=1, MAXSAMPLES};
-    typedef TemporalValueBase<Value,UpdatePredicate,TimeType> TemporalValueType;
+    typedef TemporalValueBase<Value, TimeType> TemporalValueType;
     TemporalValueType mValuePast;
     TemporalValueType mValuePresent;
     DurationType mFadeTime;
 public:
     TimedWeightedExtrapolatorBase(const DurationType&fadeTime, const TimeType&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
-    :mValuePast(t,actualValue,needsUpdate)
-    ,mValuePresent(t,actualValue,needsUpdate)
-    ,mFadeTime(fadeTime) {}
+     : ExtrapolatorBase<Value, TimeType>(),
+       UpdatePredicate(needsUpdate),
+       mValuePast(t,actualValue),
+       mValuePresent(t,actualValue),
+       mFadeTime(fadeTime)
+    {}
     virtual ~TimedWeightedExtrapolatorBase(){}
     virtual bool needsUpdate(const TimeType&now,const Value&actualValue) const{
-        TemporalValueType updated(mValuePresent);
-        updated.updateValue(now,extrapolate(now));
-        return updated.needsUpdate(now,actualValue);
+        const UpdatePredicate* mNeedsUpdate=this;
+        return (*mNeedsUpdate)(actualValue, extrapolate(now));
     }
     Value extrapolate(const TimeType&t) const {
         DurationType timeSinceUpdate=t-mValuePresent.getLastValueUpdateTime();
