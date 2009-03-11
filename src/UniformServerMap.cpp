@@ -71,7 +71,7 @@ double UniformServerMap::serverBandwidthRate(ServerID source, ServerID destinati
     Vector3d destmin;
     Vector3d destmax;
     serverRegionLookup(source,sourcemin,sourcemax);
-    serverRegionLookup(source,destmin,destmax);
+    serverRegionLookup(destination,destmin,destmax);
     float totalFunctionBandwidth=mBandwidthCap(sourcemin,sourcemax,Vector3d(mRegion.min()),Vector3d(mRegion.max()))-mBandwidthCap(sourcemin,sourcemax,sourcemin,sourcemax);
     return mBandwidthCap(sourcemin,sourcemax,destmin,destmax)/totalFunctionBandwidth;
 }

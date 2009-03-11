@@ -330,19 +330,22 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
 
 ServerID Server::lookup(const Vector3f& pos) {
     ServerID sid = mServerMap->lookup(pos);
-
-    mSendQueue->registerServer(sid);
-
+    if (mID!=sid&&!mSendQueue->hasServerRegistered(sid)) {
+        double rate=mServerMap->serverBandwidthRate(mID,sid);
+        printf ("Rate to %d: %f\n",sid,rate);
+        mSendQueue->registerServer(sid,rate);
+    }
     return sid;
 }
 
 ServerID Server::lookup(const UUID& obj_id) {
   ServerID sid = mServerMap->lookup(obj_id);
-
-  mSendQueue->registerServer(sid);
-
+  if (sid!=mID&&!mSendQueue->hasServerRegistered(sid)) {
+      double rate=mServerMap->serverBandwidthRate(mID,sid);
+      printf ("Rate to %d: %f\n",sid,rate);      
+      mSendQueue->registerServer(sid,rate);
+  }
   return sid;
-
 }
 
 } // namespace CBR
