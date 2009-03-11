@@ -61,10 +61,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
         UUID obj_id = *it;
-        TimedMotionVector3f start_motion = loc_service->location(obj_id);
         Vector3f start_pos = loc_service->currentPosition(obj_id);
-
-        mProximity->addObject(obj_id, start_motion);
 
         if (lookup(start_pos) == mID) {
             // Instantiate object
@@ -283,7 +280,7 @@ void Server::checkObjectMigrations() {
 
         if (new_server_id != mID) {
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
-	    printf("migrating object %s due to position %s \n", 
+	    printf("migrating object %s due to position %s \n",
 		   obj_id.readableHexData().c_str(),
 		   obj_pos.toString().c_str());
 

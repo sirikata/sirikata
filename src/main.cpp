@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     Network* network=new RaknetNetwork(server_id_map);
-    Proximity* prox = new Proximity();
+    Proximity* prox = new Proximity(obj_factory, loc_service);
 
     SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(), bandwidth_stats);
     obj_factory->createObjectQueues(sq);

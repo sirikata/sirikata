@@ -68,14 +68,13 @@ private:
     Type mType;
 }; // class ProximityEvent
 
+class LocationService;
+class ObjectFactory;
+
 class Proximity {
 public:
-    Proximity();
+    Proximity(ObjectFactory* objfactory, LocationService* locservice);
     ~Proximity();
-
-    void addObject(UUID obj, const TimedMotionVector3f& loc);
-    void updateObject(UUID obj, const TimedMotionVector3f& loc);
-    void removeObject(UUID obj);
 
     // FIXME these could be more complicated, but we're going for simplicity for now
     void addQuery(UUID obj, float radius);
@@ -85,17 +84,14 @@ public:
     void evaluate(const Time& t, std::queue<ProximityEvent>& events);
 private:
     typedef std::set<UUID> ObjectSet;
-    struct ObjectState {
-        TimedMotionVector3f location;
-    };
-    typedef std::map<UUID, ObjectState*> ObjectMap;
     struct QueryState {
         float radius;
         ObjectSet neighbors;
     };
     typedef std::map<UUID, QueryState*> QueryMap;
 
-    ObjectMap mTrackedObjects;
+    ObjectFactory* mObjectFactory;
+    LocationService* mLocationService;
     QueryMap mQueries;
 }; //class Proximity
 

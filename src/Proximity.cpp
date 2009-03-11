@@ -31,47 +31,22 @@
  */
 
 #include "Proximity.hpp"
+#include "LocationService.hpp"
+#include "ObjectFactory.hpp"
+
 #include <algorithm>
 
 namespace CBR {
 
-Proximity::Proximity() {
+Proximity::Proximity(ObjectFactory* objfactory, LocationService* locservice)
+ : mObjectFactory(objfactory),
+   mLocationService(locservice)
+{
 }
 
 Proximity::~Proximity() {
     while(!mQueries.empty())
         removeQuery( mQueries.begin()->first );
-
-    while(!mTrackedObjects.empty())
-        removeObject( mTrackedObjects.begin()->first );
-}
-
-void Proximity::addObject(UUID obj, const TimedMotionVector3f& loc) {
-    assert(mTrackedObjects.find(obj) == mTrackedObjects.end());
-
-    ObjectState* objstate = new ObjectState();
-    objstate->location = loc;
-
-    mTrackedObjects[obj] = objstate;
-}
-
-void Proximity::updateObject(UUID obj, const TimedMotionVector3f& loc) {
-    ObjectMap::iterator it = mTrackedObjects.find(obj);
-    assert(it != mTrackedObjects.end());
-
-    ObjectState* objstate = it->second;
-    assert(objstate != NULL);
-    objstate->location = loc;
-}
-
-void Proximity::removeObject(UUID obj) {
-    ObjectMap::iterator it = mTrackedObjects.find(obj);
-    assert(it != mTrackedObjects.end());
-
-    ObjectState* objstate = it->second;
-    delete objstate;
-
-    mTrackedObjects.erase(it);
 }
 
 void Proximity::addQuery(UUID obj, float radius) {
@@ -95,16 +70,15 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEvent>& events) {
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         QueryState* query_state = query_it->second;
-        Vector3f query_pos = mTrackedObjects[query_id]->location.extrapolate(t).position();
+        Vector3f query_pos = mLocationService->currentPosition(query_id);
 
         // generate new neighbor set
         ObjectSet new_neighbors;
-        for(ObjectMap::iterator object_it = mTrackedObjects.begin(); object_it != mTrackedObjects.end(); object_it++) {
-            UUID obj_id = object_it->first;
-            ObjectState* obj_state = object_it->second;
+        for(ObjectFactory::iterator object_it = mObjectFactory->begin(); object_it != mObjectFactory->end(); object_it++) {
+            UUID obj_id = *object_it;
             if (obj_id == query_id) continue;
 
-            Vector3f obj_pos = obj_state->location.extrapolate(t).position();
+            Vector3f obj_pos = mLocationService->currentPosition(obj_id);
             if ( (query_pos - obj_pos).lengthSquared() < query_state->radius*query_state->radius )
                 new_neighbors.insert(obj_id);
         }
