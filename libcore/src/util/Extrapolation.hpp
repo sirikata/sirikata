@@ -74,7 +74,7 @@ public:
         return (*mNeedsUpdate)(actualValue, extrapolate(now));
     }
     Value extrapolate(const TimeType&t) const {
-        DurationType timeSinceUpdate=t-mValuePresent.lastUpdateTime();
+        DurationType timeSinceUpdate=t-mValuePresent.time();
         if (mFadeTime<timeSinceUpdate) {
             return mValuePresent.extrapolate(t);
         }else{
@@ -84,7 +84,7 @@ public:
         }
     }
     TimeType lastUpdateTime()const{
-        return mValuePresent.lastUpdateTime();
+        return mValuePresent.time();
     }
     ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&t, const Value&l) {
         mValuePast=mValuePresent;
