@@ -36,6 +36,9 @@
 #include "ogreCoreZip.hpp"
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
+//enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
+//volatile char assert_malloc_is_gequal_1[OGRE_MEMORY_ALLOCATOR*2-1]={0};
+//volatile char assert_malloc_is_lequal_1[3-OGRE_MEMORY_ALLOCATOR*2]={0};
 
 namespace Sirikata {
 namespace Graphics {
@@ -129,6 +132,8 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
             if (ogreLoadPlugin("../../dependencies/ogre-1.6.1/lib/OGRE",filename,false))
                 return true;
             if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("../../dependencies/lib/OGRE",filename,false))
                 return true;
             if (ogreLoadPlugin("../../../dependencies/ogre-1.6.1/lib",filename,false))
                 return true;
