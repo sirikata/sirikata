@@ -325,7 +325,7 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
     offset = serializeSourceDest(wire, offset);
 
-    uint32 loc_part_size = sizeof(MotionVector3f);
+    uint32 loc_part_size = sizeof(Time) + 2 * sizeof(Vector3f);
     wire.resize( wire.size() + loc_part_size );
 
     Time t = mLocation.time();
