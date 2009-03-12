@@ -6,8 +6,8 @@
 namespace CBR{
 FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats)
  : SendQueue(bstats),
-   mClientQueues(bytes_per_second,true),
-   mServerQueues(bytes_per_second,renormalizeWeights),
+   mClientQueues(bytes_per_second,0,false),
+   mServerQueues(bytes_per_second,0,renormalizeWeights),
    mNetwork(net)
 {
 }

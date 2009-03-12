@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),!GetOption("capexcessbandwidth")->as<bool>(), bandwidth_stats);
+    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), bandwidth_stats);
     obj_factory->createObjectQueues(sq);
 
     ServerID server_id = GetOption("id")->as<ServerID>();

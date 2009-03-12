@@ -104,10 +104,12 @@ public:
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
     unsigned int mEmptyQueueMessageLength;
     bool mRenormalizeWeight;
+    int64 mLeftoverBytes;
     typedef Queue<Message*> MessageQueue;
-    FairMessageQueue(uint32 bytes_per_second, bool renormalizeWeight)
-        :mEmptyQueueMessageLength(0),
+    FairMessageQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
+        :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
+         mLeftoverBytes(0),
          mRate(bytes_per_second),
          mTotalWeight(0),
          mCurrentTime(0),
@@ -167,7 +169,10 @@ public:
     std::vector<Message*> tick(const Time& t){
         Duration since_last = t - mCurrentTime;
         mCurrentTime = t;
-
+        double renormalized_rate=mRate;
+        if (mRenormalizeWeight)
+            renormalized_rate*=mTotalWeight;
+        mLeftoverBytes+=(int64)(((double)since_last.seconds())*renormalized_rate);
         std::vector<Message*> msgs;
         static Message*sNullMessage=new Message(mEmptyQueueMessageLength);
         static unsigned int serviceEmptyQueue=mEmptyQueueMessageLength;
@@ -207,14 +212,21 @@ public:
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
                     mMessageBeingSent = sNullMessage;
                     if (!min_queue_info->messageQueue->empty()) {
-                        min_queue_info->messageQueue->pop();
+                        if (mLeftoverBytes<min_queue_info->messageQueue->front()->size())
+                            break;
+                        mMessageBeingSent=min_queue_info->messageQueue->pop();
                         if (min_queue_info->messageQueue->empty()&&!serviceEmptyQueue) {
                             mTotalWeight-=min_queue_info->weight;
                         }
+                    }else {
+                        if (mLeftoverBytes<mMessageBeingSent->size())
+                            break;                        
                     }
                     uint32 message_size = mMessageBeingSent->size();
-                    Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
-                    mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
+                    assert(message_size<=mLeftoverBytes);
+                    mLeftoverBytes-=message_size;
+                    //Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
+                    //mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
 
                     // update the next finish time if there's anything in the queue
                     if (serviceEmptyQueue||!min_queue_info->messageQueue->empty()) {
@@ -240,7 +252,7 @@ private:
         return finishTime(size,weight);
     }
     Time finishTime(uint32 size, float weight) const{
-        float queue_frac = mRenormalizeWeight?weight / mTotalWeight:weight;
+        float queue_frac = weight;
         Duration transmitTime = Duration::seconds( size / (mRate * queue_frac) );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
 
