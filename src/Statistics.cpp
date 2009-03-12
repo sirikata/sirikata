@@ -32,6 +32,7 @@
 
 #include "Statistics.hpp"
 #include "Message.hpp"
+#include "Options.hpp"
 #include <iostream>
 
 namespace CBR {
@@ -114,13 +115,34 @@ void BandwidthStatistics::save(const String& filename) {
 }
 
 
-std::ostream& LocationStatistics::LocationUpdate::write(std::ostream& os) {
+std::ostream& LocationUpdate::write(std::ostream& os) {
     os << receiver.readableHexData() << " "
        << source.readableHexData() << " "
-       << "(" << location.time().raw() << " " << location.value().position().toString() << " " << location.value().velocity().toString() << ") "
+       << " ( " << location.time().raw() << " " << location.value().position().toString() << " " << location.value().velocity().toString() << " ) "
        << time.raw()
        << std::endl;
     return os;
+}
+
+std::istream& LocationUpdate::read(std::istream& is) {
+    std::string receiver_human;
+    std::string source_human;
+    std::string garbage;
+    uint64 loc_time_raw;
+    Vector3f loc_pos, loc_vel;
+    uint64 time_raw;
+
+    is >> receiver_human
+       >> source_human
+       >> garbage >> loc_time_raw >> loc_pos >> loc_vel >> garbage
+       >> time_raw;
+
+    receiver = UUID(receiver_human);
+    source = UUID(source_human);
+    location = TimedMotionVector3f( Time(loc_time_raw), MotionVector3f(loc_pos, loc_vel) );
+    time = Time(time_raw);
+
+    return is;
 }
 
 LocationStatistics::~LocationStatistics() {
@@ -143,10 +165,79 @@ void LocationStatistics::update(const UUID& receiver, const UUID& source, const 
 void LocationStatistics::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out);
 
-    of << "Receiver Source Location Time" << std::endl;
+    //of << "Receiver Source Location Time" << std::endl;
     for(std::vector<LocationUpdateBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
         LocationUpdateBatch* pb = *it;
         pb->write(of);
+    }
+}
+
+
+
+CompiledLocationStatistics::CompiledLocationStatistics(const char* opt_name, const uint32 nservers) {
+    // read in all our data
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            LocationUpdate lu;
+            try {
+                lu.read(is);
+            }
+            catch(...) {
+                break;
+            }
+
+            ObjectViewMap::iterator view_it = mViewMap.find(lu.receiver);
+            if (view_it == mViewMap.end()) {
+                mViewMap[lu.receiver] = new ObjectMotionSequenceMap;
+                view_it = mViewMap.find(lu.receiver);
+            }
+            assert(view_it != mViewMap.end());
+            ObjectMotionSequenceMap* update_sequence_map = view_it->second;
+
+            ObjectMotionSequenceMap::iterator motion_it = update_sequence_map->find(lu.source);
+            if (motion_it == update_sequence_map->end()) {
+                (*update_sequence_map)[lu.source] = new MotionUpdateSequence;
+                motion_it = update_sequence_map->find(lu.source);
+            }
+            assert(motion_it != update_sequence_map->end());
+            MotionUpdateSequence* update_sequence = motion_it->second;
+
+            update_sequence->updates.push_back( MotionUpdate( lu.time, lu.location ) );
+        }
+    }
+
+    // sort each location update sequence by *time received*, run through and drop any updates which arrived after newer updates
+    for(ObjectViewMap::iterator view_it = mViewMap.begin(); view_it != mViewMap.end(); view_it++) {
+        ObjectMotionSequenceMap* sequence_map = view_it->second;
+        for(ObjectMotionSequenceMap::iterator motion_it = sequence_map->begin(); motion_it != sequence_map->end(); motion_it++) {
+            MotionUpdateSequence* sequence = motion_it->second;
+
+            std::sort(sequence->updates.begin(), sequence->updates.end(), MotionUpdateTimeComparator());
+
+            std::vector<MotionUpdate> out_of_date_culled;
+            Time most_recent(0);
+            for(std::vector<MotionUpdate>::iterator update_it = sequence->updates.begin(); update_it != sequence->updates.end(); update_it++) {
+                if (most_recent < update_it->value().time()) {
+                    out_of_date_culled.push_back(*update_it);
+                    most_recent = update_it->value().time();
+                }
+            }
+            sequence->updates.swap(out_of_date_culled);
+        }
+    }
+}
+
+CompiledLocationStatistics::~CompiledLocationStatistics() {
+    for(ObjectViewMap::iterator view_it = mViewMap.begin(); view_it != mViewMap.end(); view_it++) {
+        ObjectMotionSequenceMap* sequence_map = view_it->second;
+        for(ObjectMotionSequenceMap::iterator motion_it = sequence_map->begin(); motion_it != sequence_map->end(); motion_it++) {
+            MotionUpdateSequence* sequence = motion_it->second;
+            delete sequence;
+        }
+        delete sequence_map;
     }
 }
 

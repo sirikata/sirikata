@@ -92,6 +92,23 @@ private:
 
 }; // class BandwidthStatistics
 
+
+struct LocationUpdate {
+    LocationUpdate()
+     : receiver(UUID::nil()), source(UUID::nil()), location(), time(0) {}
+
+    LocationUpdate(const UUID& _receiver, const UUID& _source, const TimedMotionVector3f& _loc, const Time& _time)
+     : receiver(_receiver), source(_source), location(_loc), time(_time) {}
+
+    std::ostream& write(std::ostream& os);
+    std::istream& read(std::istream& is);
+
+    UUID receiver;
+    UUID source;
+    TimedMotionVector3f location;
+    Time time;
+};
+
 class LocationStatistics {
 public:
     ~LocationStatistics();
@@ -100,25 +117,35 @@ public:
 
     void save(const String& filename);
 private:
-    struct LocationUpdate {
-        LocationUpdate()
-         : receiver(UUID::nil()), source(UUID::nil()), location(), time(0) {}
-
-        LocationUpdate(const UUID& _receiver, const UUID& _source, const TimedMotionVector3f& _loc, const Time& _time)
-         : receiver(_receiver), source(_source), location(_loc), time(_time) {}
-
-        std::ostream& write(std::ostream& os);
-
-        UUID receiver;
-        UUID source;
-        TimedMotionVector3f location;
-        Time time;
-    };
-
     typedef Batch<LocationUpdate> LocationUpdateBatch;
 
     std::vector<LocationUpdateBatch*> batches;
 }; // class LocationStatistics
+
+
+/* Statistics pulled from all result files. */
+class CompiledLocationStatistics {
+public:
+    CompiledLocationStatistics(const char* opt_name, const uint32 nservers);
+    ~CompiledLocationStatistics();
+private:
+
+    typedef TemporalValue<TimedMotionVector3f> MotionUpdate;
+    struct MotionUpdateTimeComparator {
+        bool operator()(const MotionUpdate& lhs, const MotionUpdate& rhs) {
+            return (lhs.time() < rhs.time());
+        }
+    };
+
+    struct MotionUpdateSequence {
+        std::vector<MotionUpdate> updates;
+    };
+
+    typedef std::map<UUID, MotionUpdateSequence*> ObjectMotionSequenceMap;
+    typedef std::map<UUID, ObjectMotionSequenceMap*> ObjectViewMap;
+
+    ObjectViewMap mViewMap;
+}; // class CompiledLocationStatistics
 
 } // namespace CBR
 
