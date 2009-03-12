@@ -46,7 +46,15 @@
 
 namespace CBR {
 
+std::map<const char*, uint32> QuakeMotionPath::mObjectsInFile; 
 
+std::map<const char*, uint32> QuakeMotionPath::mObjectsCreatedFromFile;
+
+/* Creates a new motion path from the given trace file. If no objects have been created
+   using the trace so far, it uses the trajectory of ID 1 in the trace file as the motion
+   path. Otherwise, it uses the trajectory of the next available ID in the trace file 
+   modulo the total number of objects contained in the trace file.
+*/
 QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDownFactor,
 				  const BoundingBox3f& region )
 {
@@ -58,11 +66,23 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
     float minY=FLT_MAX, maxY=FLT_MIN;
     float minZ=FLT_MAX, maxZ=FLT_MIN;
 
-    if ( getline(inputFile, str1) ) {
+    if (mObjectsCreatedFromFile.find(quakeDataTraceFile) == mObjectsCreatedFromFile.end() ) {
+        int count_objects = countObjectsInFile(quakeDataTraceFile);
+      
+        mObjectsInFile[quakeDataTraceFile] = count_objects;
+      
+        mID = 1;
+    }
+    else {
+        mID = (mObjectsCreatedFromFile[quakeDataTraceFile] % 
+	       mObjectsInFile[quakeDataTraceFile]) + 1;
+    }
 
-        while ( getline(inputFile, str2)) {	    
+    if ( (str1=findLineMatchingID(inputFile)) != "" ) {
+        while ( (str2=findLineMatchingID(inputFile)) != "" ) {
+	    
   	    TimedMotionVector3f motionVector = parseTraceLines(str1, str2, scaleDownFactor);
-	    mUpdates.push_back(motionVector);	    
+	    mUpdates.push_back(motionVector);
 
 	    if (motionVector.value().position().x < minX) minX = motionVector.value().position().x;
 	    if (motionVector.value().position().y < minY) minY = motionVector.value().position().y;
@@ -92,7 +112,22 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
                                                 ));
 	    }
 	}
+
+	std::cout << "maxRatio " << mID << ":"  << maxRatio << "\n";
+
     }
+    else {
+      throw std::runtime_error("Quake trace file empty");
+    }
+
+
+    if (mObjectsCreatedFromFile.find(quakeDataTraceFile) == mObjectsCreatedFromFile.end() ) {
+      mObjectsCreatedFromFile[quakeDataTraceFile] = 1;
+    }
+    else {
+      mObjectsCreatedFromFile[quakeDataTraceFile] = mObjectsCreatedFromFile[quakeDataTraceFile] + 1;
+    }
+
 }
 
 const TimedMotionVector3f QuakeMotionPath::initial() const {
@@ -102,7 +137,8 @@ const TimedMotionVector3f QuakeMotionPath::initial() const {
 
 const TimedMotionVector3f* QuakeMotionPath::nextUpdate(const Time& curtime) const {
     for(uint32 i = 0; i < mUpdates.size(); i++) {
-        if (mUpdates[i].time() > curtime) {	 
+        if (mUpdates[i].time() > curtime) {
+	  std::cout << "mUpdates[i].id=" << mID << ", position=" << mUpdates[i].value().position().toString() << "\n";
 	    return &mUpdates[i];
         }
     }
@@ -159,5 +195,46 @@ TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String se
     return TimedMotionVector3f(Time( (t1 - start_time)*1000.0f), MotionVector3f(cur_pos, vel) );
 }
 
+uint32 QuakeMotionPath::getIDFromTraceLine(String line) {
+    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+    boost::char_separator<char> sep(",: ");
+    boost::tokenizer<boost::char_separator<char> > tokens(line, sep);
+
+    tokenizer::iterator tok_iter = tokens.begin();
+
+    uint32 id = atoi((*tok_iter).c_str());
+
+    return id;
+}
+
+/* Finds the next line in the input file which has data for object matching mID */
+std::string QuakeMotionPath::findLineMatchingID(std::ifstream& inputFile) {
+    std::string str="";
+    while ( getline(inputFile, str)) {
+      if (mID == getIDFromTraceLine(str) )
+	break;
+    }
+
+    return str;
+}
+
+uint32 QuakeMotionPath::countObjectsInFile(const char* inputFileName) {
+    std::ifstream inputFile(inputFileName);
+
+    String str;
+    std::map <int, int> id_map;
+
+    while ( getline(inputFile, str) ) {
+        uint32 id = getIDFromTraceLine(str);
+
+	if ( id_map.find(id) == id_map.end() ) {
+	    id_map[id]=1;
+	}	        
+    }
+
+    inputFile.close();
+
+    return id_map.size();
+}
 
 } // namespace CBR
