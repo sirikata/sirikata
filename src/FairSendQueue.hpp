@@ -36,7 +36,7 @@ class FairSendQueue:public SendQueue {
     Network * mNetwork;
 public:
 
-    FairSendQueue(Network*net, uint32 bytes_per_second, BandwidthStatistics* bstats);
+    FairSendQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats);
 
     bool hasServerRegistered(ServerID sid)const;
     void registerServer(ServerID, float weight);

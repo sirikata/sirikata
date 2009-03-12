@@ -102,10 +102,13 @@ public:
 
 
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
-
+    unsigned int mEmptyQueueMessageLength;
+    bool mRenormalizeWeight;
     typedef Queue<Message*> MessageQueue;
-    FairMessageQueue(uint32 bytes_per_second)
-        : mRate(bytes_per_second),
+    FairMessageQueue(uint32 bytes_per_second, bool renormalizeWeight)
+        :mEmptyQueueMessageLength(0),
+         mRenormalizeWeight(renormalizeWeight),
+         mRate(bytes_per_second),
          mTotalWeight(0),
          mCurrentTime(0),
          mCurrentVirtualTime(0),
@@ -134,6 +137,7 @@ public:
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
         bool retval=( where != mServerQueues.end() );
         if (retval) {
+            mTotalWeight -= where->second.weight;
             delete where->second.messageQueue;
             mServerQueues.erase(where);
         }
@@ -150,9 +154,12 @@ public:
 
         ServerQueueInfo* queue_info = &qi_it->second;
 
-        if (queue_info->messageQueue->empty())
+        if (queue_info->messageQueue->empty()) {
+            if (!mEmptyQueueMessageLength) {
+                mTotalWeight+=queue_info->weight;
+            }
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
-
+        }
         return queue_info->messageQueue->push(msg);
     }
 
@@ -162,9 +169,8 @@ public:
         mCurrentTime = t;
 
         std::vector<Message*> msgs;
-        unsigned int emptyQueueMessageLength=0;//4096;
-        static Message*sNullMessage=new Message(emptyQueueMessageLength);
-        static unsigned int serviceEmptyQueue=emptyQueueMessageLength;
+        static Message*sNullMessage=new Message(mEmptyQueueMessageLength);
+        static unsigned int serviceEmptyQueue=mEmptyQueueMessageLength;
         bool processed_message = true;
         while( processed_message == true ) {
             processed_message = false;
@@ -199,15 +205,21 @@ public:
                 // If we actually have something to deliver, deliver it
                 if (min_queue_info) {
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
-                    mMessageBeingSent = min_queue_info->messageQueue->empty()?sNullMessage:min_queue_info->messageQueue->pop();
-
+                    mMessageBeingSent = sNullMessage;
+                    if (!min_queue_info->messageQueue->empty()) {
+                        min_queue_info->messageQueue->pop();
+                        if (min_queue_info->messageQueue->empty()&&!serviceEmptyQueue) {
+                            mTotalWeight-=min_queue_info->weight;
+                        }
+                    }
                     uint32 message_size = mMessageBeingSent->size();
                     Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
                     mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
 
                     // update the next finish time if there's anything in the queue
-                    if (serviceEmptyQueue||!min_queue_info->messageQueue->empty())
+                    if (serviceEmptyQueue||!min_queue_info->messageQueue->empty()) {
                         min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,sNullMessage), min_queue_info->weight);
+                    }
                 }
             }
         }
@@ -228,7 +240,7 @@ private:
         return finishTime(size,weight);
     }
     Time finishTime(uint32 size, float weight) const{
-        float queue_frac = weight / mTotalWeight;
+        float queue_frac = mRenormalizeWeight?weight / mTotalWeight:weight;
         Duration transmitTime = Duration::seconds( size / (mRate * queue_frac) );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
 
