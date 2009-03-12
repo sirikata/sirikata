@@ -49,6 +49,7 @@ template <typename Message> class Queue {
     std::deque<Message> mMessages;
     uint32 mMaxSize;
 public:
+    typedef Message MessageType;
     Queue(uint32 max_size){
         mMaxSize=max_size;
     }
@@ -80,8 +81,8 @@ public:
 
 template<class MessageQueue> class Weight {
 public:
-    uint32 operator()(const MessageQueue&mq)const {
-        return mq.front()->size();
+    template <class MessageType> uint32 operator()(const MessageQueue&mq,const MessageType*nil)const {
+        return mq.empty()?nil->size():mq.front()->size();
     }
 };
 template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairMessageQueue {
@@ -161,7 +162,9 @@ public:
         mCurrentTime = t;
 
         std::vector<Message*> msgs;
-
+        unsigned int emptyQueueMessageLength=0;//4096;
+        static Message*sNullMessage=new Message(emptyQueueMessageLength);
+        static unsigned int serviceEmptyQueue=emptyQueueMessageLength;
         bool processed_message = true;
         while( processed_message == true ) {
             processed_message = false;
@@ -169,7 +172,9 @@ public:
             // If we are currently working on delivering a message, check if it can now be delivered
             if (mMessageBeingSent != NULL) {
                 if ( mCurrentTime > mMessageSendFinishTime ) {
-                    msgs.push_back(mMessageBeingSent);
+                    if (mMessageBeingSent!=sNullMessage) {
+                        msgs.push_back(mMessageBeingSent);
+                    }
                     mMessageBeingSent = NULL;
                     processed_message = true;
                 }
@@ -186,23 +191,23 @@ public:
                 ServerQueueInfo* min_queue_info = NULL;
                 for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
                     ServerQueueInfo* queue_info = &it->second;
-                    if (queue_info->messageQueue->empty()) continue;
+                    if (queue_info->messageQueue->empty()&&!serviceEmptyQueue) continue;
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                         min_queue_info = queue_info;
                 }
-
+                
                 // If we actually have something to deliver, deliver it
                 if (min_queue_info) {
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
-                    mMessageBeingSent = min_queue_info->messageQueue->pop();
+                    mMessageBeingSent = min_queue_info->messageQueue->empty()?sNullMessage:min_queue_info->messageQueue->pop();
 
                     uint32 message_size = mMessageBeingSent->size();
                     Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
                     mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
 
                     // update the next finish time if there's anything in the queue
-                    if (!min_queue_info->messageQueue->empty())
-                        min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue), min_queue_info->weight);
+                    if (serviceEmptyQueue||!min_queue_info->messageQueue->empty())
+                        min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,sNullMessage), min_queue_info->weight);
                 }
             }
         }

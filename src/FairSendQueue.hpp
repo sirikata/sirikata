@@ -13,10 +13,15 @@ class FairSendQueue:public SendQueue {
         ServerMessagePair(const ServerID&sid, Network::Chunk&data):mPair(sid,Network::Chunk()){
             mPair.second.swap(data);
         }
+        explicit ServerMessagePair(size_t size):mPair(0,Network::Chunk(size)){
+
+        }
         unsigned int size()const {
             return mPair.second.size();
         }
-
+        bool empty() const {
+            return size()==0;
+        }
         ServerID dest() const {
             return mPair.first;
         }
