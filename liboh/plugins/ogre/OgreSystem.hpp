@@ -34,27 +34,30 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <util/Platform.hpp>
 #include <util/ListenerProvider.hpp>
-#include <ProxyCreationListener.hpp>
+#include <TimeSteppedSimulation.hpp>
 #include <OgreRoot.h>
 namespace Sirikata { namespace Graphics {
 
-class OgreSystem: public ProxyCreationListener {
+class OgreSystem: public TimeSteppedSimulation {
     Ogre::SceneManager *mSceneManager;
     Ogre::RenderTarget *mRenderTarget;
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
     OptionValue*mFullScreen;
     OptionValue* mOgreRootDir;
+    ///How many seconds we aim to spend in each frame
+    OptionValue*mFrameDuration;
+    
     static uint32 sNumOgreSystems;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
-    Provider<ProxyCreationListener*>*mProxyManager;
+    Provider<TimeSteppedSimulation*>*mProxyManager;
     bool loadBuiltinPlugins();
     OgreSystem();
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+    bool initialize(Provider<TimeSteppedSimulation*>*proxyManager,
                     const String&options);
 public:
-    static ProxyCreationListener* create(Provider<ProxyCreationListener*>*proxyManager,
+    static TimeSteppedSimulation* create(Provider<TimeSteppedSimulation*>*proxyManager,
                                          const String&options){
         OgreSystem*os= new OgreSystem;
         if (os->initialize(proxyManager,options))
@@ -62,6 +65,8 @@ public:
         delete os;
         return NULL;
     }
+    virtual Duration desiredTickRate()const;
+    virtual void tick();
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

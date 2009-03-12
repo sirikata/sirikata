@@ -34,7 +34,8 @@
 
 class LightListener {
 public:
+    virtual ~LightListener() {}
     virtual void notify (const LightInfo&) =0;
 };
-typedef std::tr1::shared_ptr<LightListener> LightListenerPtr;
+typedef LightListener* LightListenerPtr;
 #endif

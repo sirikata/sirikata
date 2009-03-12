@@ -33,7 +33,11 @@
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
 #include <OgrePlugin.h>
-#include "ogreCoreZip.hpp"
+#include <OgreTextureManager.h>
+#include <OgreRenderWindow.h>
+#include <OgreRenderTexture.h>
+#include <OgreHardwarePixelBuffer.h>
+#include <task/Time.hpp>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -50,7 +54,84 @@ OgreSystem::OgreSystem(){
     mRenderTarget=NULL;
     mProxyManager=NULL;
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+namespace {
+class FrequencyType{public:
+    static Any lexical_cast(const std::string&value) {
+        double val=60;
+        std::istringstream ss(value);
+        ss>>val;
+        if (val==0.)
+            val=60.;
+        return Duration(1./val);
+    }
+};
+class ShadowType{public:
+        static bool caseq(const std::string&a, const std::string&b){
+            if (a.length()!=b.length())
+                return false;
+            for (std::string::const_iterator ia=a.begin(),iae=a.end(),ib=b.begin();
+                 ia!=iae;
+                 ++ia,++ib) {
+                using namespace std;
+                if (toupper(*ia)!=toupper(*ib))
+                    return false;
+            }
+            return true;
+        }
+        static Any lexical_cast(const std::string&value) {
+            Ogre::ShadowTechnique st=Ogre::SHADOWTYPE_NONE;
+            if (caseq(value,"textureadditive"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_ADDITIVE;
+            if (caseq(value,"texturemodulative"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_MODULATIVE;
+            if (caseq(value,"textureadditiveintegrated"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_ADDITIVE_INTEGRATED;
+            if (caseq(value,"texturemodulativeintegrated"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_MODULATIVE_INTEGRATED;
+            if (caseq(value,"stenciladditive"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_ADDITIVE;
+            if (caseq(value,"stencilmodulative"))
+                return st=Ogre::SHADOWTYPE_TEXTURE_MODULATIVE;
+            if (caseq(value,"none"))
+                return st=Ogre::SHADOWTYPE_NONE;
+            return st=Ogre::SHADOWTYPE_NONE;
+        }
+};
+class OgrePixelFormatParser{public:
+        static Any lexical_cast(const std::string&value) {
+            Ogre::PixelFormat fmt=Ogre::PF_A8B8G8R8;
+            if (value=="16")
+                return fmt=Ogre::PF_FLOAT16_RGBA;
+            if (value=="32")
+                return fmt=Ogre::PF_FLOAT32_RGBA;
+            if (value=="dxt1"||value=="DXT1")
+                return fmt=Ogre::PF_DXT1;
+            if (value=="dxt3"||value=="DXT3")
+                return fmt=Ogre::PF_DXT3;
+            if (value=="dxt5"||value=="DXT5")
+                return fmt=Ogre::PF_DXT5;
+            if (value=="8")
+                return fmt=Ogre::PF_R8G8B8;
+            if (value=="8a")
+                return fmt=Ogre::PF_A8R8G8B8;
+            return fmt;
+        }        
+};
+class BugfixRenderTexture:public Ogre::RenderTexture{
+    Ogre::HardwarePixelBufferSharedPtr mHardwarePixelBuffer;
+public:
+    BugfixRenderTexture(Ogre::HardwarePixelBufferSharedPtr hpbp):Ogre::RenderTexture(&*hpbp,0),mHardwarePixelBuffer(hpbp) {
+
+    }
+    virtual bool requiresTextureFlipping() const{
+        if (&Ogre::RenderTexture::requiresTextureFlipping) {
+            return this->Ogre::RenderTexture::requiresTextureFlipping();
+        }
+        return false;
+    }
+};
+}
+bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const String&options) {
     mProxyManager=proxyManager;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
@@ -60,9 +141,13 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*ogreLogFile;
     OptionValue*restoreConfig;
     OptionValue*createWindow;
+    OptionValue*ogreSceneManager;
     OptionValue*autoCreateWindow;
-    OptionValue*windowTitle;
-    
+    OptionValue*windowTitle;    
+    OptionValue*windowDepth;
+    OptionValue*shadowTechnique;
+    OptionValue*shadowFarDistance;
+    OptionValue*renderBufferAutoMipmap;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
@@ -71,11 +156,17 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            autoCreateWindow=new OptionValue("autowindow","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
-                           mOgreRootDir=new OptionValue("ogreroot",".",OptionValueType<String>(),"Directory with ogre plugins"),
+                           mOgreRootDir=new OptionValue("ogretoplevel",".",OptionValueType<String>(),"Directory with ogre plugins"),
+                           ogreSceneManager=new OptionValue("scenemanager","OctreeSceneManager",OptionValueType<String>(),"Which scene manager to use to arrange objects"),
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
                            mWindowHeight=new OptionValue("windowheight","768",OptionValueType<uint32>(),"Window height"),
-        NULL);
+                           windowDepth=new OptionValue("colordepth","8",OgrePixelFormatParser(),"Pixel color depth"),
+                           renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
+                           mFrameDuration=new OptionValue("fps","60",FrequencyType(),"Target framerate"),
+                           shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
+                           shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float>(),"The distance away a shadowcaster may hide the light"),
+                           NULL);
     bool userAccepted=true;
 
     OptionSet::getOptions("ogregraphics",this)->parse(options);
@@ -87,20 +178,46 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
             bool doAutoWindow=autoCreateWindow->as<bool>();
-            sRoot->initialise(doAutoWindow,windowTitle->as<String>());      
+            sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
             if (!doAutoWindow) {
-                getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                mRenderTarget=static_cast<Ogre::RenderTarget*>(getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>()));
+            }else {
+                mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
         } else if (createWindow->as<bool>()) {
-            sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+            mRenderTarget=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
         }else {
+            Ogre::TexturePtr texptr=Ogre::TextureManager::getSingleton().getByName(windowTitle->as<String>());
+            if (texptr.isNull()) {
+                texptr=Ogre::TextureManager::getSingleton().createManual(windowTitle->as<String>(),
+                                                                         "Sirikata",
+                                                                         Ogre::TEX_TYPE_2D,
+                                                                         mWindowWidth->as<uint32>(),
+                                                                         mWindowHeight->as<uint32>(),
+                                                                         1,
+                                                                         renderBufferAutoMipmap->as<bool>()?Ogre::MIP_DEFAULT:1,
+                                                                         windowDepth->as<Ogre::PixelFormat>(),
+                                                                         renderBufferAutoMipmap->as<bool>()?(Ogre::TU_AUTOMIPMAP|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY):(Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY));
+            }
+            
+            mRenderTarget=OGRE_NEW BugfixRenderTexture(texptr->getBuffer());
             assert(false&&"Cant remember how to create a render targt");//support creating a render target here
         }
     }
     if (!getRoot()->isInitialised()) {
         return false;
     }
-
+    try {
+        mSceneManager=getRoot()->createSceneManager(ogreSceneManager->as<String>());
+    }catch (Ogre::Exception &e) {
+        if (e.getNumber()==Ogre::Exception::ERR_ITEM_NOT_FOUND) {
+            SILOG(ogre,warning,"Cannot find ogre scene manager: "<<ogreSceneManager->as<String>());
+            getRoot()->createSceneManager(0);            
+        } else
+            throw e;
+    }
+    mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
+    mSceneManager->setShadowFarDistance(shadowFarDistance->as<float>());
     return true;
 }
 namespace {
@@ -214,6 +331,11 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
     assert(false&&"Need to destroy create proxy");
 }
-
+Duration OgreSystem::desiredTickRate()const{
+    return mFrameDuration->as<Duration>();
+}
+void OgreSystem::tick(){
+    //
+}
 }
 }

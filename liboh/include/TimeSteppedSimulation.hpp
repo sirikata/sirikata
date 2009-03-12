@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  TimeSteppedSimulation.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,14 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+
+#ifndef _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
+#define _SIRIKATA_TIME_STEPPED_SIMULATION_HPP_
+#include "ProxyCreationListener.hpp"
+
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<TimeSteppedSimulation*> {
+
+class TimeSteppedSimulation: public ProxyCreationListener{
 public:
-    ProxyManager();
-    ~ProxyManager();
-
-
+    virtual Duration desiredTickRate()const=0;
+    virtual void tick()=0;
 };
+
 }
+
+#endif

@@ -46,8 +46,8 @@ class GraphicsObject {
         HAS_ANIMATION_CAPABILITY=8,
         HAS_CAMERA_CAPABILITY=16,
         HAS_BOUNDS_CAPABILITY=32,
-        HAS_SELECTION_CAPABILITY=64,
-        HAS_LIGHT_CAPABILITY=128,
+        HAS_SELECTION_CAPABILITY=64,//+
+        HAS_LIGHT_CAPABILITY=128,//
         HAS_ALL_CAPABILITY=HAS_MESH_CAPABILITY|HAS_LOD_CAPABILITY|HAS_SCALE_CAPABILITY|HAS_ANIMATION_CAPABILITY|HAS_CAMERA_CAPABILITY|HAS_BOUNDS_CAPABILITY|HAS_SELECTION_CAPABILITY|HAS_LIGHT_CAPABILITY
     };
     uint32 mCapabilities;
@@ -59,9 +59,6 @@ public:
     virtual bool isHidden()=0;
     bool hasMeshCapability() const {
         return 0!=(mCapabilities&HAS_MESH_CAPABILITY);
-    }
-    virtual bool loadMesh(const String&name){
-        return false;
     }
     virtual void unloadMesh(){}
     bool hasScaleCapability() const {
@@ -103,7 +100,6 @@ public:
     bool hasSelectedCapability() {
         return 0!=(mCapabilities&HAS_SELECTION_CAPABILITY);
     }
-    virtual bool setSelected(bool selected)=0;
     bool hasAnimationCapability() {
         return 0!=(mCapabilities&HAS_ANIMATION_CAPABILITY);
     }

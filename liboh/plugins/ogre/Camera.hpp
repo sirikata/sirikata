@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Graphical Object Host
+ *  Entity.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,32 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+#ifndef SIRIKATA_GRAPHICS_ENTITY_HPP__
+#define SIRIKATA_GRAPHICS_ENTITY_HPP__
+
+#include <OgreMovableObject.h>
+#include <OgreRenderable.h>
+#include "util/Vector3.hpp"
+
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<TimeSteppedSimulation*> {
+namespace GraphicsOH {
+
+class Camera : public Entity, public ObjectListener {
 public:
-    ProxyManager();
-    ~ProxyManager();
+    Camera(OgreScene *scene,
+           const UUID &id)
+      : Entity(scene,
+               id,
+               scene->mOgreScene->createCamera(id)) {
+    }
 
-
+    virtual ~Camera() {
+        mSceneNode->detachAllObjects();
+        mScene->mOgreScene->destroyLight(mId);
+    }
 };
+
 }
+}
+
+#endif

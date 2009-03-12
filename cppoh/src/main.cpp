@@ -68,12 +68,12 @@ int main(int argc,const char**argv) {
         );
     OptionSet::getOptions("")->parse(argc,argv);
     ProxyManager * pm=new ProxyManager;
-    Provider<Sirikata::ProxyCreationListener*>*provider=pm;
+    Provider<TimeSteppedSimulation*>*provider=pm;
     String graphicsCommandArguments;
     String graphicsPluginName("ogregraphics");
     GraphicsFactory::getSingleton();
 
-    ProxyCreationListener *graphicsSystem=
+    TimeSteppedSimulation *graphicsSystem=
         GraphicsFactory::getSingleton()
           .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
     delete graphicsSystem;

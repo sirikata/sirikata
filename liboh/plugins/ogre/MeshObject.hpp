@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Graphical Object Host
+ *  MeshObject.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,55 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+#ifndef SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
+#define SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
+
+#include "LightListener.hpp"
+
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<TimeSteppedSimulation*> {
+namespace GraphicsOH {
+
+class MeshObject
+    : public Entity,
+      public MeshListener {
+
+    URI mMeshURI;
+
+    void created() {
+        mSceneNode->attachObject(mOgreObject);
+    }
+
 public:
-    ProxyManager();
-    ~ProxyManager();
+    MeshObject(OgreScene *scene,
+               const UUID &id,
+               const URI &meshFile)
+        : Entity(scene,
+                 id,
+                 scene->mOgreScene->createEntity(id, Ogre::SceneManager::PT_CUBE)),
+          mMeshURI(meshFile) {
+        scene->mDependencyManager->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
+    }
 
+    virtual ~MeshObject() {
+        mSceneNode->detachAllObjects();
+        mScene->mOgreScene->destroyLight(mId);
+    }
 
+    Vector3f getScale() {
+        return fromOgre(renderable->getScale());
+    }
+    void setScale(Vector3f &scale) {
+        renderable->setScale(toOgre(scale));
+    }
+
+  /*
+    virtual bool loadMesh(const String&name){
+        return false;
+    }
+  */
 };
+
 }
+}
+
+#endif

@@ -72,7 +72,7 @@ public:
         return T(x,y,z);
     }
 #else
-    template<class T> T convert(const T*ptr=NULL) const{
+    template<class T> T convert() const{
         return T(x,y,z);
     }
 #endif
