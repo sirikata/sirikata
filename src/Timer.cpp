@@ -40,6 +40,10 @@ Timer::Timer() {
 Timer::~Timer() {
 }
 static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
+Time Timer::getSpecifiedDate(const std::string&dat) {
+    boost::posix_time::time_duration since_epoch=boost::posix_time::time_from_string(dat)-gEpoch;
+    return Time(since_epoch.total_microseconds());
+}
 void Timer::start() {
     mStart = boost::posix_time::microsec_clock::local_time();
 }
@@ -52,7 +56,7 @@ void Timer::setSystemClockOffset(const Duration&skew) {
     sOffset=skew;
 }
 
-Time Timer::now() const{
+Time Timer::now() {
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;
     return Time( since_start.total_microseconds() )+sOffset;
 }

@@ -125,13 +125,25 @@ int main(int argc, char** argv) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, bandwidth_stats, location_stats);
-
+    
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
 
     float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
+    
+    ///////////Wait until start of simulation/////////////////////
+    if (GetOption("wait-until")->as<String>().length()) {
+        Duration waiting_time=Timer::getSpecifiedDate(GetOption("wait-until")->as<String>())-Timer::now();
+        float32 waitin=waiting_time.milliseconds();
+        printf ("waiting for %f seconds\n",waitin/1000.);
+        if (waitin>0)
+            usleep(waitin*1000.);
+    }
 
+
+    ///////////Go go go!! start of simulation/////////////////////
+    
     Time tbegin = Time(0);
     Time tend = tbegin + duration;
 
