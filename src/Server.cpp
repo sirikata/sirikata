@@ -251,17 +251,17 @@ void Server::tick(const Time& t) {
 
 void Server::proximityTick(const Time& t) {
     // Check for proximity updates
-    std::queue<ProximityEvent> proximity_events;
+    std::queue<ProximityEventInfo> proximity_events;
     mProximity->evaluate(t, proximity_events);
 
     while(!proximity_events.empty()) {
-        ProximityEvent& evt = proximity_events.front();
+        ProximityEventInfo& evt = proximity_events.front();
         ProximityMessage* msg =
             new ProximityMessage(
                 id(),
                 evt.query(),
                 evt.object(),
-                (evt.type() == ProximityEvent::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
+                (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
             );
         route(msg, evt.query());
         proximity_events.pop();

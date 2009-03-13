@@ -66,7 +66,7 @@ void Proximity::removeQuery(UUID obj) {
     mQueries.erase(it);
 }
 
-void Proximity::evaluate(const Time& t, std::queue<ProximityEvent>& events) {
+void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         QueryState* query_state = query_it->second;
@@ -100,10 +100,10 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEvent>& events) {
 
 
         for(ObjectSet::iterator it = added_objs.begin(); it != added_objs.end(); it++)
-            events.push(ProximityEvent(query_id, *it, ProximityEvent::Entered));
+            events.push(ProximityEventInfo(query_id, *it, ProximityEventInfo::Entered));
 
         for(ObjectSet::iterator it = removed_objs.begin(); it != removed_objs.end(); it++)
-            events.push(ProximityEvent(query_id, *it, ProximityEvent::Exited));
+            events.push(ProximityEventInfo(query_id, *it, ProximityEventInfo::Exited));
 
         // update to new neighbor list
         query_state->neighbors = new_neighbors;

@@ -39,14 +39,14 @@
 
 namespace CBR {
 
-class ProximityEvent {
+class ProximityEventInfo {
 public:
     enum Type {
         Entered,
         Exited
     };
 
-    ProximityEvent(const UUID& q, const UUID& obj, Type t)
+    ProximityEventInfo(const UUID& q, const UUID& obj, Type t)
      : mQuery(q), mObject(obj), mType(t) {}
 
     const UUID& query() const {
@@ -61,7 +61,7 @@ public:
         return mType;
     }
 private:
-    ProximityEvent();
+    ProximityEventInfo();
 
     UUID mQuery;
     UUID mObject;
@@ -81,7 +81,7 @@ public:
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output
-    void evaluate(const Time& t, std::queue<ProximityEvent>& events);
+    void evaluate(const Time& t, std::queue<ProximityEventInfo>& events);
 private:
     typedef std::set<UUID> ObjectSet;
     struct QueryState {
