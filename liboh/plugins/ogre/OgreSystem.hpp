@@ -34,8 +34,8 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <util/Platform.hpp>
 #include <util/ListenerProvider.hpp>
-#include <TimeSteppedSimulation.hpp>
-#include <OgreRoot.h>
+#include <oh/TimeSteppedSimulation.hpp>
+#include <OgrePrerequisites.h>
 namespace Sirikata { namespace Graphics {
 
 class OgreSystem: public TimeSteppedSimulation {

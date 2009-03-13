@@ -1,7 +1,8 @@
 #include <oh/Platform.hpp>
+#include <oh/ProxyManager.hpp>
+
 #include <util/ListenerProvider.hpp>
 
-#include "ProxyManager.hpp"
 namespace Sirikata{
 ProxyManager::ProxyManager() {
     

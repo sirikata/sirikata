@@ -33,8 +33,8 @@
 #include <oh/Platform.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
-#include <ProxyManager.hpp>
-#include <GraphicsFactory.hpp>
+#include <oh/ProxyManager.hpp>
+#include <oh/GraphicsFactory.hpp>
 namespace Sirikata {
 //InitializeOptions main_options("verbose",
 

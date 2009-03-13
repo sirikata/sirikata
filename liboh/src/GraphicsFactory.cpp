@@ -1,5 +1,5 @@
 #include <util/Platform.hpp>
-#include "GraphicsFactory.hpp"
+#include <oh/GraphicsFactory.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::GraphicsFactory);
 namespace Sirikata {

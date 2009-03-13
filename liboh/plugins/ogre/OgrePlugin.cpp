@@ -1,5 +1,5 @@
 #include <oh/Platform.hpp>
-#include <GraphicsFactory.hpp>
+#include <oh/GraphicsFactory.hpp>
 #include "OgreSystem.hpp"
 static int core_plugin_refcount = 0;
 

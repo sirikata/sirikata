@@ -32,6 +32,7 @@
 #include <oh/Platform.hpp>
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
+#include <OgreRoot.h>
 #include <OgrePlugin.h>
 #include <OgreTextureManager.h>
 #include <OgreRenderWindow.h>
