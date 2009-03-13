@@ -54,10 +54,32 @@
 
 int main(int argc, char** argv) {
     using namespace CBR;
-
+    
     InitOptions();
     ParseOptions(argc, argv);
-
+    std::string time_server=GetOption("time-server")->as<String>();
+    int ntppipes[2];
+    pipe(ntppipes);
+    if (0==fork()) {
+        close(ntppipes[0]);
+        close(1);
+        dup2(ntppipes[1],1);
+        execlp("ntpdate","ntpdate","-q","-p","8",time_server.c_str(),NULL);
+    }
+    {
+        FILE * ntp=fdopen(ntppipes[0],"rb");
+        int stratum;
+        float offset;
+        float delay;
+        int ip[4];
+        if (3==fscanf(ntp,"server %*s stratum %d, offset %f, delay %f\n",&stratum,&offset,&delay)) {
+            printf ("Match offset %f\n",offset);
+            Timer::setSystemClockOffset(Duration::seconds((float32)offset));
+        }
+        fclose(ntp);
+        close(ntppipes[0]);
+        close(ntppipes[1]);
+    }
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
         String server_port = GetOption("server-port")->as<String>();

@@ -40,6 +40,7 @@ namespace CBR {
 class Duration;
 
 class Time {
+    
 public:
     Time(uint64 since_epoch);
     Time(const Time& cpy);
@@ -64,7 +65,6 @@ private:
     friend class Duration;
 
     Time();
-
     uint64 mSinceEpoch; // microseconds since epoch
 }; // class Time
 

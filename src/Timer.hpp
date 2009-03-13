@@ -40,13 +40,17 @@
 namespace CBR {
 
 class Timer {
+    static Duration sOffset;
+
 public:
+    static void setSystemClockOffset(const Duration &skew);
     Timer();
     ~Timer();
-
+    
     void start();
-    Time now();
-    Duration elapsed();
+    Time getTimerStarted()const;
+    Time now()const;
+    Duration elapsed()const;
 
 private:
     boost::posix_time::ptime mStart;

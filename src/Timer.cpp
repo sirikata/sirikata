@@ -39,19 +39,27 @@ Timer::Timer() {
 
 Timer::~Timer() {
 }
-
+static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
 void Timer::start() {
     mStart = boost::posix_time::microsec_clock::local_time();
 }
-
-Time Timer::now() {
-    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
-    return Time( since_start.total_microseconds() );
+Time Timer::getTimerStarted() const{
+    boost::posix_time::time_duration since_start =mStart-gEpoch;
+    return Time(since_start.total_microseconds());
+}
+Duration Timer::sOffset=Duration::seconds(0.0f);
+void Timer::setSystemClockOffset(const Duration&skew) {
+    sOffset=skew;
 }
 
-Duration Timer::elapsed() {
+Time Timer::now() const{
+    boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;
+    return Time( since_start.total_microseconds() )+sOffset;
+}
+
+Duration Timer::elapsed() const{
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
-    return Duration( since_start.total_microseconds() );
+    return Duration( since_start.total_microseconds() )+sOffset;
 }
 
 
