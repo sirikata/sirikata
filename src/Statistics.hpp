@@ -119,31 +119,6 @@ private:
     BatchedBuffer data;
 }; // class ObjectTrace
 
-
-/* Statistics pulled from all result files. */
-class CompiledLocationStatistics {
-public:
-    CompiledLocationStatistics(const char* opt_name, const uint32 nservers);
-    ~CompiledLocationStatistics();
-private:
-
-    typedef TemporalValue<TimedMotionVector3f> MotionUpdate;
-    struct MotionUpdateTimeComparator {
-        bool operator()(const MotionUpdate& lhs, const MotionUpdate& rhs) {
-            return (lhs.time() < rhs.time());
-        }
-    };
-
-    struct MotionUpdateSequence {
-        std::vector<MotionUpdate> updates;
-    };
-
-    typedef std::map<UUID, MotionUpdateSequence*> ObjectMotionSequenceMap;
-    typedef std::map<UUID, ObjectMotionSequenceMap*> ObjectViewMap;
-
-    ObjectViewMap mViewMap;
-}; // class CompiledLocationStatistics
-
 } // namespace CBR
 
 #endif //_CBR_STATISTICS_HPP_
