@@ -33,6 +33,8 @@
 #include "Analysis.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
+#include "MotionPath.hpp"
+#include "ObjectFactory.hpp"
 
 namespace CBR {
 
@@ -146,10 +148,8 @@ LocationErrorAnalysis::~LocationErrorAnalysis() {
 }
 
 bool LocationErrorAnalysis::observed(const UUID& observer, const UUID& seen) const {
-    ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
-    if (event_lists_it == mEventLists.end()) return false;
-
-    EventList* events = event_lists_it->second;
+    EventList* events = getEventList(observer);
+    if (events == NULL) return false;
 
     // they were observed if both a proximity entered event and a location update were received
     bool found_prox_entered = false;
@@ -166,6 +166,121 @@ bool LocationErrorAnalysis::observed(const UUID& observer, const UUID& seen) con
     }
 
     return (found_prox_entered && found_loc);
+}
+
+struct AlwaysUpdatePredicate {
+    static float64 maxDist;
+    bool operator()(const MotionVector3f& lhs, const MotionVector3f& rhs) const {
+        return (lhs.position() - rhs.position()).length() > maxDist;
+    }
+};
+
+static bool event_matches_prox_entered(ObjectEvent* evt) {
+    ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
+    return (prox != NULL && prox->entered);
+}
+
+static bool event_matches_prox_exited(ObjectEvent* evt) {
+    ProximityEvent* prox = dynamic_cast<ProximityEvent*>(evt);
+    return (prox != NULL && !prox->entered);
+}
+
+static bool event_matches_loc(ObjectEvent* evt) {
+    LocationEvent* loc = dynamic_cast<LocationEvent*>(evt);
+    return (loc != NULL);
+}
+
+
+// Return the average error in the approximation of an object over its observed period, sampled at the given rate.
+double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const {
+    /* In this method we run through all the updates, tracking the real path along the way.
+     * The main loop iterates over all the updates received, focusing on those dealing with
+     * the specified target object.  We have 3 states we can be in
+     * 1) Searching for a proximity update indicating the object has entered our region
+     * 2) Searching for the first location update after getting that proximity update from
+     *    part 1.  Note we also need to see if we get a proximity update indicating the object
+     *    exited our region.
+     * 3) Sampling.  In this mode, we're progressing forward in time and sampling.  At each event,
+     *    we stop to see if we need to update the prediction or if the object has exited our proximity.
+     */
+    enum Mode {
+        SEARCHING_PROX,
+        SEARCHING_FIRST_LOC,
+        SAMPLING
+    };
+
+    assert( observed(observer, seen) );
+
+    MotionPath* true_path = obj_factory->motion(seen);
+    TimedMotionVector3f true_motion = true_path->initial();
+    const TimedMotionVector3f* next_true_motion = true_path->nextUpdate(true_motion.time());
+
+    EventList* events = getEventList(observer);
+    TimedMotionVector3f pred_motion;
+
+    Time cur_time(0);
+    Mode mode = SEARCHING_PROX;
+    double error_sum = 0.0;
+    uint32 sample_count = 0;
+    for(EventList::iterator main_it = events->begin(); main_it != events->end(); main_it++) {
+        ObjectEvent* cur_event = *main_it;
+        if (!(cur_event->source == seen)) continue;
+
+        if (mode == SEARCHING_PROX) {
+            if (event_matches_prox_entered(cur_event))
+                mode = SEARCHING_FIRST_LOC;
+        }
+        else if (mode == SEARCHING_FIRST_LOC) {
+            if (event_matches_prox_exited(cur_event))
+                mode = SEARCHING_PROX;
+            else if (event_matches_loc(cur_event)) {
+                LocationEvent* loc = dynamic_cast<LocationEvent*>(cur_event);
+                pred_motion = loc->loc;
+                cur_time = loc->time;
+                mode = SAMPLING;
+            }
+        }
+        else if (mode == SAMPLING) {
+            Time end_sampling_time = cur_event->time;
+
+            // sample up to the current time
+            while( cur_time < end_sampling_time ) {
+                // update the true motion vector if necessary, get true position
+                while(next_true_motion != NULL && next_true_motion->time() < cur_time) {
+                    true_motion = *next_true_motion;
+                    next_true_motion = true_path->nextUpdate(true_motion.time());
+                }
+                Vector3f true_pos = true_motion.extrapolate(cur_time).position();
+
+                // get the predicted position
+                Vector3f pred_pos = pred_motion.extrapolate(cur_time).position();
+
+                error_sum += (true_pos - pred_pos).length();
+                sample_count++;
+
+                cur_time += sampling_rate;
+            }
+
+            if (event_matches_prox_exited(cur_event))
+                mode = SEARCHING_PROX;
+            else if (event_matches_loc(cur_event)) {
+                LocationEvent* loc = dynamic_cast<LocationEvent*>(cur_event);
+                if (loc->loc.time() >= pred_motion.time())
+                    pred_motion = loc->loc;
+            }
+
+            cur_time = end_sampling_time;
+        }
+    }
+
+    return (sample_count == 0) ? 0 : error_sum / sample_count;
+}
+
+LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID& observer) const {
+    ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
+    if (event_lists_it == mEventLists.end()) return NULL;
+
+    return event_lists_it->second;
 }
 
 } // namespace CBR

@@ -40,6 +40,7 @@
 namespace CBR {
 
 struct ObjectEvent;
+class ObjectFactory;
 
 /** Error of observed vs. true object locations over simulation period. */
 class LocationErrorAnalysis {
@@ -49,10 +50,14 @@ public:
 
     // Return true if observer was watching seen at any point during the simulation
     bool observed(const UUID& observer, const UUID& seen) const;
+
+    // Return the average error in the approximation of an object over its observed period, sampled at the given rate.
+    double averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const;
 private:
     typedef std::vector<ObjectEvent*> EventList;
-
     typedef std::map<UUID, EventList*> ObjectEventListMap;
+
+    EventList* getEventList(const UUID& observer) const;
 
     ObjectEventListMap mEventLists;
 }; // class LocationErrorAnalysis
