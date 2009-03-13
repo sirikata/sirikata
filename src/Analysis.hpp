@@ -39,28 +39,19 @@
 
 namespace CBR {
 
+struct ObjectEvent;
+
 /** Error of observed vs. true object locations over simulation period. */
 class LocationErrorAnalysis {
 public:
     LocationErrorAnalysis(const char* opt_name, const uint32 nservers);
     ~LocationErrorAnalysis();
 private:
+    typedef std::vector<ObjectEvent*> EventList;
 
-    typedef TemporalValue<TimedMotionVector3f> MotionUpdate;
-    struct MotionUpdateTimeComparator {
-        bool operator()(const MotionUpdate& lhs, const MotionUpdate& rhs) {
-            return (lhs.time() < rhs.time());
-        }
-    };
+    typedef std::map<UUID, EventList*> ObjectEventListMap;
 
-    struct MotionUpdateSequence {
-        std::vector<MotionUpdate> updates;
-    };
-
-    typedef std::map<UUID, MotionUpdateSequence*> ObjectMotionSequenceMap;
-    typedef std::map<UUID, ObjectMotionSequenceMap*> ObjectViewMap;
-
-    ObjectViewMap mViewMap;
+    ObjectEventListMap mEventLists;
 }; // class LocationErrorAnalysis
 
 

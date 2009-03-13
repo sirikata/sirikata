@@ -41,6 +41,7 @@
 
 #include "Options.hpp"
 #include "Statistics.hpp"
+#include "Analysis.hpp"
 
 #include "OracleLocationService.hpp"
 #include "UniformServerMap.hpp"
@@ -105,6 +106,11 @@ int main(int argc, char** argv) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+
+    {
+        LocationErrorAnalysis(STATS_OBJECT_TRACE_FILE, 2);
+        exit(0);
+    }
 
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(

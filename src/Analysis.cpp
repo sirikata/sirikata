@@ -31,75 +31,116 @@
  */
 
 #include "Analysis.hpp"
+#include "Statistics.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
+struct ObjectEvent {
+    static ObjectEvent* read(std::istream& is);
+
+    ObjectEvent()
+     : time(0)
+    {}
+
+    Time time;
+    UUID receiver;
+    UUID source;
+};
+
+struct ObjectEventTimeComparator {
+    bool operator()(const ObjectEvent* lhs, const ObjectEvent* rhs) const {
+        return (lhs->time < rhs->time);
+    }
+};
+
+struct ProximityEvent : public ObjectEvent {
+    bool entered;
+};
+
+struct LocationEvent : public ObjectEvent {
+    TimedMotionVector3f loc;
+};
+
+struct SubscriptionEvent : public ObjectEvent {
+    bool started;
+};
+
+
+ObjectEvent* ObjectEvent::read(std::istream& is) {
+    char tag;
+    is.read( &tag, sizeof(tag) );
+
+    if (!is) return NULL;
+
+    ObjectEvent* evt = NULL;
+
+    if (tag == ObjectTrace::ProximityTag) {
+        ProximityEvent* pevt = new ProximityEvent;
+        is.read( (char*)&pevt->time, sizeof(pevt->time) );
+        is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
+        is.read( (char*)&pevt->source, sizeof(pevt->source) );
+        is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
+        evt = pevt;
+    }
+    else if (tag == ObjectTrace::LocationTag) {
+        LocationEvent* levt = new LocationEvent;
+        is.read( (char*)&levt->time, sizeof(levt->time) );
+        is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
+        is.read( (char*)&levt->source, sizeof(levt->source) );
+        is.read( (char*)&levt->loc, sizeof(levt->loc) );
+        evt = levt;
+    }
+    else if (tag == ObjectTrace::SubscriptionTag) {
+        SubscriptionEvent* sevt = new SubscriptionEvent;
+        is.read( (char*)&sevt->time, sizeof(sevt->time) );
+        is.read( (char*)&sevt->receiver, sizeof(sevt->receiver) );
+        is.read( (char*)&sevt->source, sizeof(sevt->source) );
+        is.read( (char*)&sevt->started, sizeof(sevt->started) );
+        evt = sevt;
+    }
+    else {
+        assert(false);
+    }
+
+    return evt;
+}
+
+
 LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
-/*
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            LocationUpdate lu;
-            try {
-                lu.read(is);
-            }
-            catch(...) {
+            ObjectEvent* evt = ObjectEvent::read(is);
+            if (evt == NULL)
                 break;
-            }
 
-            ObjectViewMap::iterator view_it = mViewMap.find(lu.receiver);
-            if (view_it == mViewMap.end()) {
-                mViewMap[lu.receiver] = new ObjectMotionSequenceMap;
-                view_it = mViewMap.find(lu.receiver);
+            ObjectEventListMap::iterator it = mEventLists.find( evt->receiver );
+            if (it == mEventLists.end()) {
+                mEventLists[ evt->receiver ] = new EventList;
+                it = mEventLists.find( evt->receiver );
             }
-            assert(view_it != mViewMap.end());
-            ObjectMotionSequenceMap* update_sequence_map = view_it->second;
+            assert( it != mEventLists.end() );
 
-            ObjectMotionSequenceMap::iterator motion_it = update_sequence_map->find(lu.source);
-            if (motion_it == update_sequence_map->end()) {
-                (*update_sequence_map)[lu.source] = new MotionUpdateSequence;
-                motion_it = update_sequence_map->find(lu.source);
-            }
-            assert(motion_it != update_sequence_map->end());
-            MotionUpdateSequence* update_sequence = motion_it->second;
-
-            update_sequence->updates.push_back( MotionUpdate( lu.time, lu.location ) );
+            EventList* evt_list = it->second;
+            evt_list->push_back(evt);
         }
     }
 
-    // sort each location update sequence by *time received*, run through and drop any updates which arrived after newer updates
-    for(ObjectViewMap::iterator view_it = mViewMap.begin(); view_it != mViewMap.end(); view_it++) {
-        ObjectMotionSequenceMap* sequence_map = view_it->second;
-        for(ObjectMotionSequenceMap::iterator motion_it = sequence_map->begin(); motion_it != sequence_map->end(); motion_it++) {
-            MotionUpdateSequence* sequence = motion_it->second;
-
-            std::sort(sequence->updates.begin(), sequence->updates.end(), MotionUpdateTimeComparator());
-
-            std::vector<MotionUpdate> out_of_date_culled;
-            Time most_recent(0);
-            for(std::vector<MotionUpdate>::iterator update_it = sequence->updates.begin(); update_it != sequence->updates.end(); update_it++) {
-                if (most_recent < update_it->value().time()) {
-                    out_of_date_culled.push_back(*update_it);
-                    most_recent = update_it->value().time();
-                }
-            }
-            sequence->updates.swap(out_of_date_culled);
-        }
+    for(ObjectEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+        EventList* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), ObjectEventTimeComparator());
     }
-*/
 }
 
 LocationErrorAnalysis::~LocationErrorAnalysis() {
-    for(ObjectViewMap::iterator view_it = mViewMap.begin(); view_it != mViewMap.end(); view_it++) {
-        ObjectMotionSequenceMap* sequence_map = view_it->second;
-        for(ObjectMotionSequenceMap::iterator motion_it = sequence_map->begin(); motion_it != sequence_map->end(); motion_it++) {
-            MotionUpdateSequence* sequence = motion_it->second;
-            delete sequence;
-        }
-        delete sequence_map;
+    for(ObjectEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+        EventList* event_list = event_lists_it->second;
+        for(EventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++)
+            delete *events_it;
     }
 }
 
