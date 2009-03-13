@@ -66,8 +66,10 @@ void Object::tick(const Time& t) {
 
 void Object::checkPositionUpdate(const Time& t) {
     const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
-    if (update != NULL && update->time() <= t)
+    while(update != NULL && update->time() <= t) {
         mLocation = *update;
+        update = mMotion->nextUpdate(mLocation.time());
+    }
 
     if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
         mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
