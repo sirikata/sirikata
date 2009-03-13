@@ -43,7 +43,7 @@
 
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, BandwidthStatistics* bstats, LocationStatistics* lstats)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, BandwidthStatistics* bstats, ObjectTrace* otrace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
@@ -53,7 +53,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mSendQueue(sq),
    mCurrentTime(0),
    mBandwidthStats(bstats),
-   mLocationStats(lstats)
+   mObjectTrace(otrace)
 {
     // start the network listening
     mNetwork->listen(mID);
@@ -132,8 +132,10 @@ void Server::deliver(Message* msg) {
               Object* dest_obj = object(prox_msg->destObject());
               if (dest_obj == NULL)
                   forward(prox_msg, prox_msg->destObject());
-              else
+              else {
+                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->type() == ProximityMessage::Entered) ? true : false );
                   dest_obj->proximityMessage(prox_msg);
+              }
           }
           break;
       case MESSAGE_TYPE_LOCATION:
@@ -145,7 +147,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(loc_msg, loc_msg->destObject());
               else {
-                  mLocationStats->update(loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location(), mCurrentTime);
+                  mObjectTrace->loc(mCurrentTime, loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
                   dest_obj->locationMessage(loc_msg);
               }
           }
@@ -158,8 +160,10 @@ void Server::deliver(Message* msg) {
               Object* dest_obj = object(subs_msg->destObject());
               if (dest_obj == NULL)
                   forward(subs_msg, subs_msg->destObject());
-              else
+              else {
+                  mObjectTrace->subscription(mCurrentTime, subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                   dest_obj->subscriptionMessage(subs_msg);
+              }
           }
         break;
       case MESSAGE_TYPE_MIGRATE:

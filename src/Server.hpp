@@ -52,6 +52,7 @@ class SendQueue;
 class Network;
 class BandwidthStatistics;
 class LocationStatistics;
+class ObjectTrace;
 class MigrateMessage;
 
 /** Handles all the basic services provided for objects by a server,
@@ -61,7 +62,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, BandwidthStatistics* bstats, LocationStatistics* lstats);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, BandwidthStatistics* bstats, ObjectTrace* otrace);
     ~Server();
 
     const ServerID& id() const;
@@ -120,7 +121,7 @@ private:
 
     Time mCurrentTime;
     BandwidthStatistics* mBandwidthStats;
-    LocationStatistics* mLocationStats;
+    ObjectTrace* mObjectTrace;
 }; // class Server
 
 } // namespace CBR

@@ -115,67 +115,71 @@ void BandwidthStatistics::save(const String& filename) {
 }
 
 
-std::ostream& LocationUpdate::write(std::ostream& os) {
-    os << receiver.readableHexData() << " "
-       << source.readableHexData() << " "
-       << " ( " << location.time().raw() << " " << location.value().position().toString() << " " << location.value().velocity().toString() << " ) "
-       << time.raw()
-       << std::endl;
-    return os;
-}
+// write the specified number of bytes from the pointer to the buffer
+void BatchedBuffer::write(const void* buf, uint32 nbytes) {
+    const uint8* bufptr = (const uint8*)buf;
+    while( nbytes > 0 ) {
+        if (batches.empty() || batches.back()->full())
+            batches.push_back( new ByteBatch() );
 
-std::istream& LocationUpdate::read(std::istream& is) {
-    std::string receiver_human;
-    std::string source_human;
-    std::string garbage;
-    uint64 loc_time_raw;
-    Vector3f loc_pos, loc_vel;
-    uint64 time_raw;
+        ByteBatch* batch = batches.back();
+        uint32 avail = batch->max_size - batch->size;
+        uint32 to_copy = std::min(avail, nbytes);
 
-    is >> receiver_human
-       >> source_human
-       >> garbage >> loc_time_raw >> loc_pos >> loc_vel >> garbage
-       >> time_raw;
-
-    receiver = UUID(receiver_human);
-    source = UUID(source_human);
-    location = TimedMotionVector3f( Time(loc_time_raw), MotionVector3f(loc_pos, loc_vel) );
-    time = Time(time_raw);
-
-    return is;
-}
-
-LocationStatistics::~LocationStatistics() {
-    for(std::vector<LocationUpdateBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
-        LocationUpdateBatch* pb = *it;
-        delete pb;
-    }
-    batches.clear();
-}
-
-void LocationStatistics::update(const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc, const Time& t) {
-    if (batches.empty() || batches.back()->full())
-        batches.push_back( new LocationUpdateBatch() );
-
-    LocationUpdateBatch* pb = batches.back();
-    pb->items[pb->size] = LocationUpdate(receiver, source, loc, t);
-    pb->size++;
-}
-
-void LocationStatistics::save(const String& filename) {
-    std::ofstream of(filename.c_str(), std::ios::out);
-
-    //of << "Receiver Source Location Time" << std::endl;
-    for(std::vector<LocationUpdateBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
-        LocationUpdateBatch* pb = *it;
-        pb->write(of);
+        memcpy( &batch->items[batch->size], bufptr, to_copy);
+        batch->size += to_copy;
+        bufptr += to_copy;
+        nbytes -= to_copy;
     }
 }
 
+// write the buffer to an ostream
+void BatchedBuffer::write(std::ostream& os) {
+    for(std::vector<ByteBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
+        ByteBatch* bb = *it;
+        os.write( (const char*)&(bb->items[0]) , bb->size );
+    }
+}
+
+
+const char ObjectTrace::ProximityTag = 'p';
+const char ObjectTrace::LocationTag = 'l';
+const char ObjectTrace::SubscriptionTag = 's';
+
+void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered) {
+    data.write( &ProximityTag, sizeof(ProximityTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &receiver, sizeof(receiver) );
+    data.write( &source, sizeof(source) );
+    data.write( &entered, sizeof(entered) );
+}
+
+void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
+    data.write( &LocationTag, sizeof(ProximityTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &receiver, sizeof(receiver) );
+    data.write( &source, sizeof(source) );
+    data.write( &loc, sizeof(loc) );
+}
+
+void ObjectTrace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
+    data.write( &SubscriptionTag, sizeof(ProximityTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &receiver, sizeof(receiver) );
+    data.write( &source, sizeof(source) );
+    data.write( &start, sizeof(start) );
+}
+
+void ObjectTrace::save(const String& filename) {
+    std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
+
+    data.write(of);
+}
 
 
 CompiledLocationStatistics::CompiledLocationStatistics(const char* opt_name, const uint32 nservers) {
     // read in all our data
+/*
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -228,6 +232,7 @@ CompiledLocationStatistics::CompiledLocationStatistics(const char* opt_name, con
             sequence->updates.swap(out_of_date_culled);
         }
     }
+*/
 }
 
 CompiledLocationStatistics::~CompiledLocationStatistics() {

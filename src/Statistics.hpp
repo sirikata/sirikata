@@ -92,35 +92,32 @@ private:
 
 }; // class BandwidthStatistics
 
+class BatchedBuffer {
+public:
 
-struct LocationUpdate {
-    LocationUpdate()
-     : receiver(UUID::nil()), source(UUID::nil()), location(), time(0) {}
-
-    LocationUpdate(const UUID& _receiver, const UUID& _source, const TimedMotionVector3f& _loc, const Time& _time)
-     : receiver(_receiver), source(_source), location(_loc), time(_time) {}
-
-    std::ostream& write(std::ostream& os);
-    std::istream& read(std::istream& is);
-
-    UUID receiver;
-    UUID source;
-    TimedMotionVector3f location;
-    Time time;
+    // write the specified number of bytes from the pointer to the buffer
+    void write(const void* buf, uint32 nbytes);
+    // write the buffer to an ostream
+    void write(std::ostream& os);
+private:
+    typedef Batch<uint8> ByteBatch;
+    std::vector<ByteBatch*> batches;
 };
 
-class LocationStatistics {
+class ObjectTrace {
 public:
-    ~LocationStatistics();
+    static const char ProximityTag;
+    static const char LocationTag;
+    static const char SubscriptionTag;
 
-    void update(const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc, const Time& t);
+    void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered);
+    void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
+    void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     void save(const String& filename);
 private:
-    typedef Batch<LocationUpdate> LocationUpdateBatch;
-
-    std::vector<LocationUpdateBatch*> batches;
-}; // class LocationStatistics
+    BatchedBuffer data;
+}; // class ObjectTrace
 
 
 /* Statistics pulled from all result files. */
