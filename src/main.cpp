@@ -54,7 +54,7 @@
 
 int main(int argc, char** argv) {
     using namespace CBR;
-    
+
     InitOptions();
     ParseOptions(argc, argv);
     std::string time_server=GetOption("time-server")->as<String>();
@@ -125,13 +125,13 @@ int main(int argc, char** argv) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
     Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, bandwidth_stats, location_stats);
-    
+
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
 
     float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
-    
+
     ///////////Wait until start of simulation/////////////////////
     if (GetOption("wait-until")->as<String>().length()) {
         Duration waiting_time=Timer::getSpecifiedDate(GetOption("wait-until")->as<String>())-Timer::now();
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
 
 
     ///////////Go go go!! start of simulation/////////////////////
-    
+
     Time tbegin = Time(0);
     Time tend = tbegin + duration;
 
@@ -182,6 +182,12 @@ int main(int argc, char** argv) {
     if (!location_file.empty()) location_stats->save(location_file);
     delete location_stats;
 
+    String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
+    if (!sync_file.empty()) {
+        std::ofstream sos(sync_file.c_str(), std::ios::out);
+        if (sos)
+            sos << Timer::getSystemClockOffset().milliseconds() << std::endl;
+    }
 
     return 0;
 }

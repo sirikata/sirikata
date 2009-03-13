@@ -44,10 +44,11 @@ class Timer {
 
 public:
     static void setSystemClockOffset(const Duration &skew);
+    static Duration getSystemClockOffset();
     static Time getSpecifiedDate(const std::string&datestring);
     Timer();
     ~Timer();
-    
+
     void start();
     Time getTimerStarted()const;
     static Time now();

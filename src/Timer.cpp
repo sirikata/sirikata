@@ -55,6 +55,9 @@ Duration Timer::sOffset=Duration::seconds(0.0f);
 void Timer::setSystemClockOffset(const Duration&skew) {
     sOffset=skew;
 }
+Duration Timer::getSystemClockOffset(){
+    return sOffset;
+}
 
 Time Timer::now() {
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;

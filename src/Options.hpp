@@ -41,6 +41,7 @@
 
 #define STATS_BANDWIDTH_FILE "stats.bandwidth-filename"
 #define STATS_LOCATION_FILE "stats.location-filename"
+#define STATS_SYNC_FILE      "stats.sync-filename"
 
 namespace CBR {
 
