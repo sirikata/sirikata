@@ -42,6 +42,7 @@ struct ObjectEvent {
     ObjectEvent()
      : time(0)
     {}
+    virtual ~ObjectEvent() {}
 
     Time time;
     UUID receiver;
@@ -144,5 +145,27 @@ LocationErrorAnalysis::~LocationErrorAnalysis() {
     }
 }
 
+bool LocationErrorAnalysis::observed(const UUID& observer, const UUID& seen) const {
+    ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
+    if (event_lists_it == mEventLists.end()) return false;
+
+    EventList* events = event_lists_it->second;
+
+    // they were observed if both a proximity entered event and a location update were received
+    bool found_prox_entered = false;
+    bool found_loc = false;
+
+    for(EventList::iterator event_it = events->begin(); event_it != events->end(); event_it++) {
+        ProximityEvent* prox = dynamic_cast<ProximityEvent*>(*event_it);
+        if (prox != NULL && prox->entered)
+            found_prox_entered = true;
+
+        LocationEvent* loc = dynamic_cast<LocationEvent*>(*event_it);
+        if (loc != NULL)
+            found_loc = true;
+    }
+
+    return (found_prox_entered && found_loc);
+}
 
 } // namespace CBR

@@ -46,6 +46,9 @@ class LocationErrorAnalysis {
 public:
     LocationErrorAnalysis(const char* opt_name, const uint32 nservers);
     ~LocationErrorAnalysis();
+
+    // Return true if observer was watching seen at any point during the simulation
+    bool observed(const UUID& observer, const UUID& seen) const;
 private:
     typedef std::vector<ObjectEvent*> EventList;
 
