@@ -63,7 +63,7 @@ Time Timer::now() {
 
 Duration Timer::elapsed() const{
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart;
-    return Duration( since_start.total_microseconds() )+sOffset;
+    return Duration( since_start.total_microseconds() );
 }
 
 
