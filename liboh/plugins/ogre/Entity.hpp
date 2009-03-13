@@ -32,13 +32,16 @@
 #ifndef SIRIKATA_GRAPHICS_ENTITY_HPP__
 #define SIRIKATA_GRAPHICS_ENTITY_HPP__
 
+#include "OgreSystem.hpp"
+#undef nil
+#include <util/UUID.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
-#include "util/Vector3.hpp"
-
+#include <OgreSceneManager.h>
 namespace Sirikata {
-namespace GraphicsOH {
-
+typedef Vector4f ColorAlpha;
+typedef Vector3f Color;
+namespace Graphics {
 inline Ogre::Quaternion toOgre(const Sirikata::Quaternion &quat) {
     return quat.convert<Ogre::Quaternion>();
 }
@@ -69,32 +72,31 @@ inline Ogre::ColourValue toOgreRGBA(const Sirikata::Color &rgb, float32 alpha) {
 }
 
 inline Sirikata::Quaternion fromOgre(const Ogre::Quaternion &quat) {
-    return Sirikata::Quaternion(quat);
+    return Sirikata::Quaternion(quat.x,quat.y,quat.z,quat.w);
 }
 
 inline Sirikata::Vector3f fromOgre(const Ogre::Vector3 &pos) {
     return Sirikata::Vector3f(pos);
-}pos) + base;a
 }
 
 inline Sirikata::Vector4f fromOgre(const Ogre::Vector4 &pos) {
-    return Sirikata::Vector4f(pos);
+    return Sirikata::Vector4f(pos.x,pos.y,pos.z,pos.w);
 }
 
 inline Sirikata::ColorAlpha fromOgreRGBA(const Ogre::ColourValue &rgba) {
-    return Sirikata::ColorAlpha(rgba);
+    return Sirikata::ColorAlpha(rgba.r,rgba.b,rgba.g,rgba.a);
 }
 
 inline Sirikata::Color fromOgreRGB(const Ogre::ColourValue &rgba) {
-    return Sirikata::Color(rgba);
+    return Sirikata::Color(rgba.r,rgba.g,rgba.b);
 }
-
+class OgreSystem;
 class Entity {
-    void created() = 0;
-    void destroyed() = 0;
+    virtual void created() = 0;
+    virtual void destroyed() = 0;
 
 protected:
-    OgreScene *const mScene;
+    OgreSystem *const mScene;
 
     UUID mId;
 
@@ -102,36 +104,36 @@ protected:
     Ogre::SceneNode *mSceneNode;
 public:
 
-    Entity(OgreScene *scene,
+    Entity(OgreSystem *scene,
            const UUID &id,
            Ogre::MovableObject *obj=NULL)
           : mScene(scene),
             mId(id),
             mOgreObject(obj),
-            mSceneNode(scene->mOgreScene->createSceneNode(id)) {
-        scene->mOgreScene->getRootSceneNode()->addChild(mNode);
+           mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())) {
+        scene->getSceneManager()->getRootSceneNode()->addChild(mSceneNode);
     }
 
     virtual ~Entity() {
-        scene->mOgreScene->destroySceneNode(mId);
+        mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
     }
 
-    OgreScene *getScene() {
+    OgreSystem *getScene() {
         return mScene;
     }
 
     Vector3d getPosition() {
-        return fromOgre(mSceneNode->getPosition(), scene->offset);
+        return Vector3d(fromOgre(mSceneNode->getPosition()))+ getScene()->getOffset();
     }
     void setPosition(Vector3d &pos) {
-        mSceneNode->setPosition(toOgre(pos, scene->offset));
+        mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
     }
 
     Quaternion getOrientation() {
         return fromOgre(mSceneNode->getOrientation());
     }
     void setOrientation(Quaternion &orient) {
-        mSceneNode->setPosition(toOgre(orient));
+        mSceneNode->setOrientation(toOgre(orient));
     }
 
     virtual bool setSelected(bool selected) {

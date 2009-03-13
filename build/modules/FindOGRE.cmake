@@ -61,7 +61,7 @@ ELSE(WIN32)  # Linux etc
   IF(NOT PKG_CONFIG_FOUND)
     MESSAGE("Could not find pkg-config (to search for OGRE)")
   ELSE(NOT PKG_CONFIG_FOUND)
-    SET(ENV{PKG_CONFIG_PATH} ${OGRE_ROOT}/lib/pkgconfig)
+    SET(ENV{PKG_CONFIG_PATH} ${OGRE_ROOT}/../lib/pkgconfig)
     IF(OGRE_MINIMUM_VERSION)
       PKG_CHECK_MODULES( OGRE OGRE >= ${OGRE_MINIMUM_VERSION})  # will set OGRE_FOUND
     ELSE(OGRE_MINIMUM_VERSION)
@@ -69,7 +69,7 @@ ELSE(WIN32)  # Linux etc
     ENDIF(OGRE_MINIMUM_VERSION)
   ENDIF(NOT PKG_CONFIG_FOUND)
   IF(OGRE_FOUND)
-    SET(OGRE_ZIP_PATH ${OGRE_ROOT}/ogre/Samples/Media/packs/OgreCore.zip)
+    SET(OGRE_ZIP_PATH ${OGRE_ROOT}/Samples/Media/packs/OgreCore.zip)
   ENDIF()
 ENDIF(WIN32)
 

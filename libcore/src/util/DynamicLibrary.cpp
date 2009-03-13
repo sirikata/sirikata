@@ -62,8 +62,16 @@ bool DynamicLibrary::load() {
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     mHandle = LoadLibrary(mPath.c_str());
+    if (dddmHandle == NULL) {
+        DWORD errnum = GetLastError();
+        SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
+    }
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
     mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    if (mHandle == NULL) {
+        const char *errorstr = dlerror();
+        SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errorstr);
+    }
 #endif
 
     return (mHandle != NULL);

@@ -33,21 +33,27 @@
 #ifndef _SIRIKATA_OGRE_GRAPHICS_
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <util/Platform.hpp>
+#include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedSimulation.hpp>
 #include <OgrePrerequisites.h>
+#include <OgreResourceManager.h>
+#include <OgrePixelFormat.h>
 namespace Sirikata { namespace Graphics {
 
 class OgreSystem: public TimeSteppedSimulation {
     Ogre::SceneManager *mSceneManager;
+    static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
+    OptionValue*mWindowDepth;
     OptionValue*mFullScreen;
     OptionValue* mOgreRootDir;
     ///How many seconds we aim to spend in each frame
     OptionValue*mFrameDuration;
-    
+    Time mLastFrameTime;
+    static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
@@ -56,7 +62,19 @@ class OgreSystem: public TimeSteppedSimulation {
     OgreSystem();
     bool initialize(Provider<TimeSteppedSimulation*>*proxyManager,
                     const String&options);
+    void renderOneFrame(Duration frameTime);
+    ///all the things that should happen just before the frame
+    void preFrame(Duration);
+    ///all the things that should happen once the frame finishes
+    void postFrame(Duration);
+    void destroyRenderTarget(Ogre::ResourcePtr &name);
+    Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
+    Vector3d mFloatingPointOffset;
 public:
+    const Vector3d& getOffset()const {return mFloatingPointOffset;}
+    void destroyRenderTarget(const String &name);
+    ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
+    Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
     static TimeSteppedSimulation* create(Provider<TimeSteppedSimulation*>*proxyManager,
                                          const String&options){
         OgreSystem*os= new OgreSystem;

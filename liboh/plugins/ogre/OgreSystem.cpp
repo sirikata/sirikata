@@ -38,7 +38,7 @@
 #include <OgreRenderWindow.h>
 #include <OgreRenderTexture.h>
 #include <OgreHardwarePixelBuffer.h>
-#include <task/Time.hpp>
+#include <OgreWindowEventUtilities.h>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -48,9 +48,13 @@ volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 namespace Sirikata {
 namespace Graphics {
 Ogre::Root *OgreSystem::sRoot;
+Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
+std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
-OgreSystem::OgreSystem(){
+OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
+{
+    mRenderTarget=NULL;
     mSceneManager=NULL;
     mRenderTarget=NULL;
     mProxyManager=NULL;
@@ -132,6 +136,67 @@ public:
     }
 };
 }
+void OgreSystem::destroyRenderTarget(const String&name) {
+    if (mRenderTarget->getName()==name) {
+        
+    }else {
+        Ogre::ResourcePtr renderTargetTexture=Ogre::TextureManager::getSingleton().getByName(name);
+        if (!renderTargetTexture.isNull())
+            destroyRenderTarget(renderTargetTexture);
+    }
+}
+void OgreSystem::destroyRenderTarget(Ogre::ResourcePtr&name) {
+    Ogre::TextureManager::getSingleton().remove(name);
+}
+Ogre::RenderTarget*OgreSystem::createRenderTarget(String name, uint32 width, uint32 height) {
+    if (name.length()==0&&mRenderTarget)
+        name=mRenderTarget->getName();
+    if (width==0) width=mWindowWidth->as<uint32>();
+    if (height==0) width=mWindowHeight->as<uint32>();
+    return createRenderTarget(name,width,height,true,mWindowDepth->as<Ogre::PixelFormat>());
+}
+Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf) {
+    if (mRenderTarget&&mRenderTarget->getName()==name) {
+        return mRenderTarget;
+    }else if (sRenderTarget&&sRenderTarget->getName()==name) {
+        return sRenderTarget;
+    }else {
+        Ogre::TexturePtr texptr=Ogre::TextureManager::getSingleton().getByName(name);
+        if (texptr.isNull()) {
+            texptr=Ogre::TextureManager::getSingleton().createManual(name,
+                                                                     "Sirikata",
+                                                                     Ogre::TEX_TYPE_2D,
+                                                                     width,
+                                                                     height,
+                                                                     1,
+                                                                     automipmap?Ogre::MIP_DEFAULT:1,
+                                                                     pf,
+                                                                     automipmap?(Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY):(Ogre::TU_RENDERTARGET|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY));
+        }
+        try {
+            return texptr->getBuffer()->getRenderTarget();
+        }catch (Ogre::Exception &e) {
+            if (e.getNumber()==Ogre::Exception::ERR_RENDERINGAPI_ERROR) {
+                width=texptr->getWidth();
+                height=texptr->getHeight();
+                uint32 nummipmaps=texptr->getNumMipmaps();
+                pf=texptr->getFormat();
+                Ogre::ResourcePtr resourceTexPtr=texptr;
+                Ogre::TextureManager::getSingleton().remove(resourceTexPtr);
+                texptr=Ogre::TextureManager::getSingleton().createManual(name,
+                                                                         "Sirikata",
+                                                                         Ogre::TEX_TYPE_2D,
+                                                                         width,
+                                                                         height,
+                                                                         1,
+                                                                         automipmap?Ogre::MIP_DEFAULT:1,
+                                                                         pf,
+                                                                         automipmap?(Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY):(Ogre::TU_RENDERTARGET|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY));
+                return texptr->getBuffer()->getRenderTarget();
+            }else throw;
+        }
+    }
+}
 bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const String&options) {
     mProxyManager=proxyManager;
     ++sNumOgreSystems;
@@ -145,7 +210,6 @@ bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const
     OptionValue*ogreSceneManager;
     OptionValue*autoCreateWindow;
     OptionValue*windowTitle;    
-    OptionValue*windowDepth;
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
@@ -162,7 +226,7 @@ bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
                            mWindowHeight=new OptionValue("windowheight","768",OptionValueType<uint32>(),"Window height"),
-                           windowDepth=new OptionValue("colordepth","8",OgrePixelFormatParser(),"Pixel color depth"),
+                           mWindowDepth=new OptionValue("colordepth","8",OgrePixelFormatParser(),"Pixel color depth"),
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
                            mFrameDuration=new OptionValue("fps","60",FrequencyType(),"Target framerate"),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
@@ -181,28 +245,20 @@ bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const
             bool doAutoWindow=autoCreateWindow->as<bool>();
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
             if (!doAutoWindow) {
-                mRenderTarget=static_cast<Ogre::RenderTarget*>(getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>()));
+                sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>()));
             }else {
-                mRenderTarget=getRoot()->getAutoCreatedWindow();
+                sRenderTarget=mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
         } else if (createWindow->as<bool>()) {
             mRenderTarget=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+            if (sRenderTarget==NULL)
+                sRenderTarget=mRenderTarget;
         }else {
-            Ogre::TexturePtr texptr=Ogre::TextureManager::getSingleton().getByName(windowTitle->as<String>());
-            if (texptr.isNull()) {
-                texptr=Ogre::TextureManager::getSingleton().createManual(windowTitle->as<String>(),
-                                                                         "Sirikata",
-                                                                         Ogre::TEX_TYPE_2D,
-                                                                         mWindowWidth->as<uint32>(),
-                                                                         mWindowHeight->as<uint32>(),
-                                                                         1,
-                                                                         renderBufferAutoMipmap->as<bool>()?Ogre::MIP_DEFAULT:1,
-                                                                         windowDepth->as<Ogre::PixelFormat>(),
-                                                                         renderBufferAutoMipmap->as<bool>()?(Ogre::TU_AUTOMIPMAP|Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY):(Ogre::TU_DYNAMIC|Ogre::TU_WRITE_ONLY));
-            }
-            
-            mRenderTarget=OGRE_NEW BugfixRenderTexture(texptr->getBuffer());
-            assert(false&&"Cant remember how to create a render targt");//support creating a render target here
+            mRenderTarget=createRenderTarget(windowTitle->as<String>(),
+                                             mWindowWidth->as<uint32>(),
+                                             mWindowHeight->as<uint32>(),
+                                             renderBufferAutoMipmap->as<bool>(),
+                                             mWindowDepth->as<Ogre::PixelFormat>());
         }
     }
     if (!getRoot()->isInitialised()) {
@@ -219,6 +275,7 @@ bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const
     }
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float>());
+    sActiveOgreScenes.push_back(this);
     return true;
 }
 namespace {
@@ -316,6 +373,14 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
+    for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()
+             ;iter!=sActiveOgreScenes.end();) {
+        if (*iter==this) {
+            sActiveOgreScenes.erase(iter++);
+            break;
+        }else ++iter;
+        assert(iter!=sActiveOgreScenes.end());
+    }
     mProxyManager->removeListener(this);    
     --sNumOgreSystems;
     if (sNumOgreSystems==0) {
@@ -335,8 +400,33 @@ void OgreSystem::destroyProxy(ProxyObjectPtr p){
 Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();
 }
-void OgreSystem::tick(){
-    //
+
+void OgreSystem::renderOneFrame(Duration frameTime) {
+    for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
+        (*iter++)->preFrame(frameTime);
+    }    
+    Ogre::WindowEventUtilities::messagePump();
+    Ogre::Root::getSingleton().renderOneFrame();    
+    for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
+        (*iter++)->postFrame(Time::now()-mLastFrameTime);
+    }
 }
+void OgreSystem::tick(){
+    Time curFrameTime(Time::now());
+    Duration frameTime=curFrameTime-mLastFrameTime;
+    if (mRenderTarget==sRenderTarget)
+        renderOneFrame(frameTime);
+    else if (sRenderTarget==NULL) {
+        SILOG(ogre,warning,"No window set to render: skipping render phase");
+    }
+    mLastFrameTime=curFrameTime;//reevaluate Time::now()?
+}
+void OgreSystem::preFrame(Duration frameTime) {
+
+}
+void OgreSystem::postFrame(Duration frameTime) {
+
+}
+
 }
 }

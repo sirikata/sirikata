@@ -1,7 +1,7 @@
-/*  Sirikata Graphical Object Host
- *  Entity.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  ListenerProvider.hpp
  *
- *  Copyright (c) 2009, Patrick Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,47 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
-#define SIRIKATA_GRAPHICS_CAMERA_HPP__
-#include "Entity.hpp"
-#include <oh/ProxyObjectListener.hpp>
-#include <OgreMovableObject.h>
-#include <OgreRenderable.h>
-#include <OgreRenderTarget.h>
-
+#ifndef _SIRIKATA_PROXY_OBJECT_LISTENER_HPP_
+#define _SIRIKATA_PROXY_OBJECT_LISTENER_HPP_
 namespace Sirikata {
-namespace Graphics {
-
-class Camera : public Entity, public ProxyObjectListener {
-    Ogre::Camera *mCamera;
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::Viewport *mViewport;
+class ProxyObject;
+typedef std::tr1::shared_ptr<ProxyObject*> ProxyObjectPtr;
+class SIRIKATA_OH_EXPORT ProxyObjectListener {
 public:
-    Camera(OgreSystem *scene,
-           const UUID &id,
-           const String&renderTargetName,
-           const uint32 width,
-           const uint32 height,
-           Ogre::Camera*camera=NULL)
-      : Entity(scene,
-               id,
-               camera?camera:camera=scene->getSceneManager()->createCamera(id.readableHexData())) {
-            mRenderTarget = scene->createRenderTarget(renderTargetName,
-                                                      width,
-                                                      height);
-            
-            mViewport= mRenderTarget->addViewport(camera);
-            assert(false&&"unimplemented");
-        }
-
-    virtual ~Camera() {
-        mSceneNode->detachAllObjects();
-        mScene->getSceneManager()->destroyLight(mId.readableHexData());
-    }
-    virtual Ogre::Viewport* getViewport();
+    virtual ~ProxyObjectListener(){}
+    //FIXME listens for updates to proxyobjects
 };
-
 }
-}
-
 #endif

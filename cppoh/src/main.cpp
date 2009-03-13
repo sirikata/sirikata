@@ -76,6 +76,11 @@ int main(int argc,const char**argv) {
     TimeSteppedSimulation *graphicsSystem=
         GraphicsFactory::getSingleton()
           .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
+    graphicsSystem->tick();
+    graphicsSystem->tick();
+    graphicsSystem->tick();
+    for (int i=0;i<4096;++i)
+        graphicsSystem->tick();
     delete graphicsSystem;
     delete pm;
     plugins.gc();

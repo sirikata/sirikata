@@ -61,7 +61,7 @@ public:
     }
     Vector4(){}
     template<class T>T convert(const T*ptr=NULL) const{
-        return T(x,y,z);
+        return T(x,y,z,w);
     }
     template <class V> static Vector4 fromArray(const V&other){
         return Vector4(other[0],other[1],other[2],other[3]);
