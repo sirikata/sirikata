@@ -4,6 +4,8 @@
 #include "FairMessageQueue.hpp"
 namespace CBR {
 class FairSendQueue:public SendQueue {
+protected:
+
     class ServerMessagePair {
     private:
         std::pair<ServerID,Network::Chunk> mPair;

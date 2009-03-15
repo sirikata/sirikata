@@ -48,6 +48,7 @@
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
 #include "FairSendQueue.hpp"
+#include "LossyFairSendQueue.hpp"
 #include "FIFOSendQueue.hpp"
 
 #include "TabularServerIDMap.hpp"

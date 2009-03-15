@@ -1,5 +1,5 @@
 /*  cobra
- *  FairMessageQueue.hpp
+ *  LossyFairMessageQueue.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,67 +30,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _FAIR_MESSAGE_QUEUE_HPP_
-#define _FAIR_MESSAGE_QUEUE_HPP_
+#ifndef _LOSSY_FAIR_MESSAGE_QUEUE_HPP_
+#define _LOSSY_FAIR_MESSAGE_QUEUE_HPP_
 
 #include "Time.hpp"
+#include "Message.hpp"
+#include "LossyFairSendQueue.hpp"
+
+#include "FairMessageQueue.hpp"
 
 namespace CBR {
 
+class LossyFairSendQueue;
+
 class Message;
 class Server;
-namespace QueueEnum {
-    enum PushResult {
-        PushSucceeded,
-        PushExceededMaximumSize
-    };
-};
-template <typename Message> class Queue {
-    std::deque<Message> mMessages;
-    uint32 mMaxSize;
-public:
-    typedef Message MessageType;
-    Queue(uint32 max_size){
-        mMaxSize=max_size;
-    }
-    ~Queue(){}
 
-    QueueEnum::PushResult push(const Message &msg){
-        if (mMessages.size()>=mMaxSize)
-            return QueueEnum::PushExceededMaximumSize;
-        mMessages.push_back(msg);
-        return QueueEnum::PushSucceeded;
-    }
-
-    const Message& front() const{
-        return mMessages.front();
-    }
-    Message& front() {
-        return mMessages.front();
-    }
-    Message pop(){
-        Message m;
-        std::swap(m,mMessages.front());
-        mMessages.pop_front();
-        return m;
-    }
-    bool empty() const{
-        return mMessages.empty();
-    }
-
-    std::deque<Message>& messages() {
-        return mMessages;
-    }
-
-};
-
-template<class MessageQueue> class Weight {
-public:
-    template <class MessageType> uint32 operator()(const MessageQueue&mq,const MessageType*nil)const {
-        return mq.empty()?nil->size():mq.front()->size();
-    }
-};
-template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairMessageQueue {
+template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class LossyFairMessageQueue {
 public:
     struct ServerQueueInfo {
         ServerQueueInfo():nextFinishTime(0) {
@@ -105,13 +61,12 @@ public:
         Time nextFinishTime;
     };
 
-
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
     unsigned int mEmptyQueueMessageLength;
     bool mRenormalizeWeight;
     int64 mLeftoverBytes;
     typedef Queue<Message*> MessageQueue;
-    FairMessageQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
+    LossyFairMessageQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
         :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
          mLeftoverBytes(0),
@@ -124,12 +79,20 @@ public:
          mServerQueues(),
          bytes_sent(0){}
 
-    ~FairMessageQueue(){
+    ~LossyFairMessageQueue(){
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
         for(; it != mServerQueues.end(); it++) {
             ServerQueueInfo* queue_info = &it->second;
             delete queue_info->messageQueue;
         }
+    }
+
+    void getQueues(std::vector<MessageQueue*>& queue) {
+        for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
+	  ServerQueueInfo* queue_info = &it->second;
+	  
+	  queue.push_back(queue_info->messageQueue);
+	}
     }
 
     void addQueue(MessageQueue *mq, Key server, float weight){
@@ -168,10 +131,10 @@ public:
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
         }
         return queue_info->messageQueue->push(msg);
-    }
+    }    
 
     // returns a list of messages which should be delivered immediately
-    std::vector<Message*> tick(const Time& t){
+    std::vector<Message*> tick(const Time& t) {
         Duration since_last = t - mCurrentTime;
         mCurrentTime = t;
         double renormalized_rate=mRate;
@@ -206,12 +169,12 @@ public:
                 // Find the non-empty queue with the earliest finish time
                 ServerQueueInfo* min_queue_info = NULL;
                 for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-                    ServerQueueInfo* queue_info = &it->second;
+  		    ServerQueueInfo* queue_info = &it->second;  		  
                     if (queue_info->messageQueue->empty()&&!serviceEmptyQueue) continue;
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                         min_queue_info = queue_info;
                 }
-                
+
                 // If we actually have something to deliver, deliver it
                 if (min_queue_info) {
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
@@ -251,7 +214,7 @@ public:
 
         return msgs;
     }
-protected:
+private:
     // because I *CAN*
     Time FinnishTime(uint32 size, float weight) const{
         return finishTime(size,weight);
@@ -264,7 +227,6 @@ protected:
         return mCurrentVirtualTime + transmitTime;
     }
 
-protected:
     uint32 mRate;
     uint32 mTotalWeight;
     Time mCurrentTime;
@@ -274,8 +236,9 @@ protected:
     ServerQueueInfoMap mServerQueues;
 
     uint32 bytes_sent;
-}; // class FairMessageQueue
+
+}; // class LossyFairMessageQueue
 
 } // namespace Cobra
 
-#endif //_FAIR_MESSAGE_QUEUE_HPP_
+#endif //_LOSSY_FAIR_MESSAGE_QUEUE_HPP_

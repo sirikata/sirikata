@@ -156,6 +156,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOSendQueue.cpp
   ${CBR_SOURCE_DIR}/FairSendQueue.cpp
+  ${CBR_SOURCE_DIR}/LossyFairSendQueue.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
