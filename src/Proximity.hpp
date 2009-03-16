@@ -42,8 +42,8 @@ namespace CBR {
 class ProximityEventInfo {
 public:
     enum Type {
-        Entered,
-        Exited
+        Entered = 1,
+        Exited = 2
     };
 
     ProximityEventInfo(const UUID& q, const UUID& obj, Type t)

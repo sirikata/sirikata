@@ -133,7 +133,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(prox_msg, prox_msg->destObject());
               else {
-                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->type() == ProximityMessage::Entered) ? true : false );
+                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false );
                   dest_obj->proximityMessage(prox_msg);
               }
           }
@@ -264,6 +264,7 @@ void Server::proximityTick(const Time& t) {
                 (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
             );
         route(msg, evt.query());
+
         proximity_events.pop();
     }
 }
@@ -284,10 +285,11 @@ void Server::checkObjectMigrations() {
 
         if (new_server_id != mID) {
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
+/*
 	    printf("migrating object %s due to position %s \n",
 		   obj_id.readableHexData().c_str(),
 		   obj_pos.toString().c_str());
-
+*/
   	    route( migrate_msg , new_server_id);
 	    migrated_objects.push_back(obj_id);
         }

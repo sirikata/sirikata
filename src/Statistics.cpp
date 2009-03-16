@@ -155,7 +155,7 @@ void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, 
 }
 
 void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
-    data.write( &LocationTag, sizeof(ProximityTag) );
+    data.write( &LocationTag, sizeof(LocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
@@ -163,7 +163,7 @@ void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, c
 }
 
 void ObjectTrace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
-    data.write( &SubscriptionTag, sizeof(ProximityTag) );
+    data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
