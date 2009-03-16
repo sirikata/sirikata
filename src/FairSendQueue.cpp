@@ -20,6 +20,9 @@ bool FairSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&m
 }
 void FairSendQueue::service(const Time&t){
     bool freeClientTicks=true;
+
+    aggregateLocationMessages();
+
     if (mClientServerBuffer.empty()) {
         freeClientTicks=false;
         mClientServerBuffer=mClientQueues.tick(t);

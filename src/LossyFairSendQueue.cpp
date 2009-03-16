@@ -39,7 +39,7 @@ LocationMessage* LossyFairSendQueue::extractSoleLocationMessage(Network::Chunk& 
 
 void LossyFairSendQueue::aggregateLocationMessages() {
     std::vector< Queue<ServerMessagePair*>* > queues;
-    mClientQueues.getQueues(queues);
+    mClientQueues.getQueues(queues); 
 
     for (uint32 i=0; i < queues.size(); i++) {
       Queue<ServerMessagePair*>* q = queues[i];
@@ -69,7 +69,7 @@ void LossyFairSendQueue::aggregateLocationMessages() {
 	    locMsg2->destObject() == locMsg->destObject() && locMsg2->location().time() <= latestTime) 
 	  {
 	    markedForDeletion.push_back(j);
-	    printf("Marked for deletion; j=%d, time=%d, latestTime=%d\n", j, locMsg2->location().time().raw(), latestTime.raw());
+	    //printf("Marked for deletion; j=%d, time=%d, latestTime=%d\n", j, locMsg2->location().time().raw(), latestTime.raw());
 	  }
       }
 
@@ -109,7 +109,7 @@ void LossyFairSendQueue::aggregateLocationMessages() {
 	    locMsg2->destObject() == locMsg->destObject() && locMsg2->location().time() <= latestTime) 
 	  {
 	    markedForDeletion.push_back(j);
-	    printf("Marked for deletion; locMsg=%x, locMsg2=%x, j=%d, time=%d, latestTime=%d\n", locMsg, locMsg2, j, locMsg2->location().time().raw(), latestTime.raw());
+	    //printf("Marked for deletion; locMsg=%x, locMsg2=%x, j=%d, time=%d, latestTime=%d\n", locMsg, locMsg2, j, locMsg2->location().time().raw(), latestTime.raw());
 	  }
       }
 

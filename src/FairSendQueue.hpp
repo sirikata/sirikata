@@ -49,6 +49,10 @@ public:
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
     virtual void service(const Time&t);
+
+protected:
+    virtual void aggregateLocationMessages() { }
+
 };
 }
 #endif

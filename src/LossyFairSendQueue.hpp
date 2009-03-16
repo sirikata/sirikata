@@ -36,8 +36,10 @@ class LossyFairSendQueue:public FairSendQueue {
 public:
     LossyFairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats) ;
 
+protected:
+    virtual void aggregateLocationMessages();
+
 private:
-    void aggregateLocationMessages();
     LocationMessage* extractSoleLocationMessage(Network::Chunk& chunk);
 
     LossyFairMessageQueue<ServerMessagePair,UUID> mClientQueues;
