@@ -67,6 +67,7 @@ void InitOptions() {
 
         .addOption(new OptionValue("time-server", "ntp.ubuntu.com", Sirikata::OptionValueType<String>(), "The server to sync with"))
         .addOption(new OptionValue("wait-until","",Sirikata::OptionValueType<String>(),"The date to wait until before starting"))
+        .addOption(new OptionValue("wait-additional","0",Sirikata::OptionValueType<float>(),"How many additional seconds after date has passed to wait until before starting"))
 
         .addOption(new OptionValue(MAX_EXTRAPOLATOR_DIST, "1.0", Sirikata::OptionValueType<float64>(), "The maximum distance an object is permitted to deviate from the predictions by other objects before an update is sent out."))
      ;
