@@ -320,11 +320,18 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
 
     return migrate_msg;
 }
-
+void rateLog(ServerID src , ServerID dst, double rate) {
+    char rateFile[1024];
+    sprintf(rateFile,"rate-%d.txt",src);
+    FILE * fp=fopen(rateFile,"a");
+    fprintf(fp,"Rate to %d: %f\n",dst,rate);
+    fclose(fp);
+}
 ServerID Server::lookup(const Vector3f& pos) {
     ServerID sid = mServerMap->lookup(pos);
     if (mID!=sid&&!mSendQueue->hasServerRegistered(sid)) {
-        double rate=mServerMap->serverBandwidthRate(mID,sid);
+        double rate=mServerMap->serverBandwidthRate(mID,sid,ServerMap::NORMALIZE_BY_RECEIVE_RATE);
+        rateLog(mID,sid,rate);
         //printf ("Rate to %d: %f\n",sid,rate);
         mSendQueue->registerServer(sid,rate);
     }
@@ -334,7 +341,8 @@ ServerID Server::lookup(const Vector3f& pos) {
 ServerID Server::lookup(const UUID& obj_id) {
   ServerID sid = mServerMap->lookup(obj_id);
   if (sid!=mID&&!mSendQueue->hasServerRegistered(sid)) {
-      double rate=mServerMap->serverBandwidthRate(mID,sid);
+      double rate=mServerMap->serverBandwidthRate(mID,sid,ServerMap::NORMALIZE_BY_RECEIVE_RATE);
+      rateLog(mID,sid,rate);
       //printf ("Rate to %d: %f\n",sid,rate);
       mSendQueue->registerServer(sid,rate);
   }

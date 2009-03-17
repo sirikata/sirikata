@@ -49,8 +49,8 @@ public:
     virtual ServerID lookup(const Vector3f& pos);
     virtual ServerID lookup(const UUID& obj_id);
     virtual double serverBandwidthRate(ServerID source, ServerID destination, BandwidthNormalization)const;
-private:
     void serverRegionLookup(ServerID sid, Vector3d& retmin, Vector3d &retmax)const;
+private:
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;
 };

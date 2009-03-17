@@ -121,7 +121,14 @@ int main(int argc, char** argv) {
         region,
         layout
     );
-
+/*
+    for (int i=1;i<=9;++i) {
+        Vector3d minn;
+        Vector3d mixx;
+        static_cast<UniformServerMap*>(server_map)->serverRegionLookup(i,minn,mixx);
+        std::cout << minn << " - " << mixx  <<std::endl;
+    }
+*/
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);

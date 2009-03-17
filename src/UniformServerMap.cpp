@@ -51,6 +51,7 @@ UniformServerMap::UniformServerMap(LocationService* loc_service, const Bandwidth
 UniformServerMap::~UniformServerMap() {
 }
 void UniformServerMap::serverRegionLookup(ServerID sid, Vector3d &retmin, Vector3d&retmax)const {
+    sid-=1;
     Vector3i32 server_dim_indices(sid%mServersPerDim.x,
                                   (sid/mServersPerDim.x)%mServersPerDim.y,
                                   (sid/mServersPerDim.x/mServersPerDim.y)%mServersPerDim.z);
