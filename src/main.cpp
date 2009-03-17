@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
         float delay;
         int ip[4];
         if (3==fscanf(ntp,"server %*s stratum %d, offset %f, delay %f\n",&stratum,&offset,&delay)) {
-            printf ("Match offset %f\n",offset);
+            //printf ("Match offset %f\n",offset);
             Timer::setSystemClockOffset(Duration::seconds((float32)offset));
         }
         fclose(ntp);
