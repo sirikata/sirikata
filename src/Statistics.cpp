@@ -146,12 +146,13 @@ const char ObjectTrace::ProximityTag = 'p';
 const char ObjectTrace::LocationTag = 'l';
 const char ObjectTrace::SubscriptionTag = 's';
 
-void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered) {
+void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &entered, sizeof(entered) );
+    data.write( &loc, sizeof(loc) );
 }
 
 void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {

@@ -176,11 +176,12 @@ uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
 
 
 
-ProximityMessage::ProximityMessage(const ServerID& src_server, const UUID& dst_object, const UUID& nbr, EventType evt)
+ProximityMessage::ProximityMessage(const ServerID& src_server, const UUID& dst_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc)
  : Message(src_server, true),
    mDestObject(dst_object),
    mNeighbor(nbr),
-   mEvent(evt)
+   mEvent(evt),
+   mLocation(loc)
 {
 }
 
@@ -202,6 +203,21 @@ ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset, u
     memcpy( &raw_evt_type, &wire[offset], 1 );
     offset += 1;
     mEvent = (EventType)raw_evt_type;
+
+    Time t(0);
+    Vector3f pos;
+    Vector3f vel;
+
+    memcpy( &t, &wire[offset], sizeof(Time) );
+    offset += sizeof(Time);
+
+    memcpy( &pos, &wire[offset], sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    memcpy( &vel, &wire[offset], sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    mLocation = TimedMotionVector3f( t, MotionVector3f(pos, vel) );
 }
 
 MessageType ProximityMessage::type() const {
@@ -216,6 +232,10 @@ const UUID& ProximityMessage::neighbor() const {
     return mNeighbor;
 }
 
+const TimedMotionVector3f& ProximityMessage::location() const {
+    return mLocation;
+}
+
 const ProximityMessage::EventType ProximityMessage::event() const {
     return mEvent;
 }
@@ -225,6 +245,8 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
     uint32 prox_part_size = 2 * UUID::static_size + 1;
     wire.resize( wire.size() + prox_part_size );
+    uint32 loc_part_size = sizeof(Time) + 2 * sizeof(Vector3f);
+    wire.resize( wire.size() + loc_part_size );
 
     memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
     offset += UUID::static_size;
@@ -235,6 +257,16 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
     uint8 evt_type = (uint8)mEvent;
     memcpy( &wire[offset], &evt_type, 1 );
     offset += 1;
+
+    Time t = mLocation.time();
+    memcpy( &wire[offset], &t, sizeof(Time) );
+    offset += sizeof(Time);
+
+    memcpy( &wire[offset], &mLocation.value().position(), sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
+
+    memcpy( &wire[offset], &mLocation.value().velocity(), sizeof(Vector3f) );
+    offset += sizeof(Vector3f);
 
     return offset;
 }

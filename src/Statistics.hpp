@@ -110,7 +110,7 @@ public:
     static const char LocationTag;
     static const char SubscriptionTag;
 
-    void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered);
+    void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 

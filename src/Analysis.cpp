@@ -59,6 +59,7 @@ struct ObjectEventTimeComparator {
 
 struct ProximityEvent : public ObjectEvent {
     bool entered;
+    TimedMotionVector3f loc;
 };
 
 struct LocationEvent : public ObjectEvent {
@@ -84,6 +85,7 @@ ObjectEvent* ObjectEvent::read(std::istream& is) {
         is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
         is.read( (char*)&pevt->source, sizeof(pevt->source) );
         is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
+        is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
         evt = pevt;
     }
     else if (tag == ObjectTrace::LocationTag) {
@@ -195,17 +197,14 @@ static bool event_matches_loc(ObjectEvent* evt) {
 double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const {
     /* In this method we run through all the updates, tracking the real path along the way.
      * The main loop iterates over all the updates received, focusing on those dealing with
-     * the specified target object.  We have 3 states we can be in
-     * 1) Searching for a proximity update indicating the object has entered our region
-     * 2) Searching for the first location update after getting that proximity update from
-     *    part 1.  Note we also need to see if we get a proximity update indicating the object
-     *    exited our region.
-     * 3) Sampling.  In this mode, we're progressing forward in time and sampling.  At each event,
+     * the specified target object.  We have 2 states we can be in
+     * 1) Searching for a proximity update indicating the object has entered our region,
+     *    which will also contain the initial location update
+     * 2) Sampling.  In this mode, we're progressing forward in time and sampling.  At each event,
      *    we stop to see if we need to update the prediction or if the object has exited our proximity.
      */
     enum Mode {
         SEARCHING_PROX,
-        SEARCHING_FIRST_LOC,
         SAMPLING
     };
 
@@ -227,16 +226,10 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
         if (!(cur_event->source == seen)) continue;
 
         if (mode == SEARCHING_PROX) {
-            if (event_matches_prox_entered(cur_event))
-                mode = SEARCHING_FIRST_LOC;
-        }
-        else if (mode == SEARCHING_FIRST_LOC) {
-            if (event_matches_prox_exited(cur_event))
-                mode = SEARCHING_PROX;
-            else if (event_matches_loc(cur_event)) {
-                LocationEvent* loc = dynamic_cast<LocationEvent*>(cur_event);
-                pred_motion = loc->loc;
-                cur_time = loc->time;
+            if (event_matches_prox_entered(cur_event)) {
+                ProximityEvent* prox = dynamic_cast<ProximityEvent*>(cur_event);
+                pred_motion = prox->loc;
+                cur_time = prox->time;
                 mode = SAMPLING;
             }
         }

@@ -106,13 +106,14 @@ public:
         Exited = 2
     };
 
-    ProximityMessage(const ServerID& src_server, const UUID& dest_object, const UUID& nbr, EventType evt);
+    ProximityMessage(const ServerID& src_server, const UUID& dest_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc);
 
     virtual MessageType type() const;
 
     const UUID& destObject() const;
     const UUID& neighbor() const;
     const EventType event() const;
+    const TimedMotionVector3f& location() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
@@ -122,6 +123,7 @@ private:
     UUID mDestObject;
     UUID mNeighbor;
     EventType mEvent;
+    TimedMotionVector3f mLocation;
 }; // class ProximityMessage
 
 

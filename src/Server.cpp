@@ -133,7 +133,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(prox_msg, prox_msg->destObject());
               else {
-                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false );
+                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
                   dest_obj->proximityMessage(prox_msg);
               }
           }
@@ -261,7 +261,8 @@ void Server::proximityTick(const Time& t) {
                 id(),
                 evt.query(),
                 evt.object(),
-                (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited
+                (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited,
+                mLocationService->location(evt.query())
             );
         route(msg, evt.query());
 
