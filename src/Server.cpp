@@ -321,6 +321,7 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
     return migrate_msg;
 }
 void rateLog(ServerID src , ServerID dst, double rate) {
+    return;
     char rateFile[1024];
     sprintf(rateFile,"rate-%d.txt",src);
     FILE * fp=fopen(rateFile,"a");
