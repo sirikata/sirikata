@@ -276,6 +276,22 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
     return (sample_count == 0) ? 0 : error_sum / sample_count;
 }
 
+double LocationErrorAnalysis::globalAverageError(const Duration& sampling_rate, ObjectFactory* obj_factory) const {
+    double total_error = 0.0;
+    uint32 total_pairs = 0;
+    for(ObjectFactory::iterator observer_it = obj_factory->begin(); observer_it != obj_factory->end(); observer_it++) {
+        for(ObjectFactory::iterator seen_it = obj_factory->begin(); seen_it != obj_factory->end(); seen_it++) {
+            if (*observer_it == *seen_it) continue;
+            if (observed(*observer_it, *seen_it)) {
+                double error = averageError(*observer_it, *seen_it, sampling_rate, obj_factory);
+                total_error += error;
+                total_pairs++;
+            }
+        }
+    }
+    return (total_pairs == 0) ? 0 : total_error / total_pairs;
+}
+
 LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID& observer) const {
     ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
     if (event_lists_it == mEventLists.end()) return NULL;

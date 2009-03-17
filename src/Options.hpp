@@ -43,6 +43,8 @@
 #define STATS_OBJECT_TRACE_FILE "stats.object-trace-filename"
 #define STATS_SYNC_FILE      "stats.sync-filename"
 
+#define ANALYSIS_LOC         "analysis.loc"
+
 namespace CBR {
 
 void InitOptions();

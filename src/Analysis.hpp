@@ -53,6 +53,8 @@ public:
 
     // Return the average error in the approximation of an object over its observed period, sampled at the given rate.
     double averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const;
+    // Return the average error in object position approximation over all observers and observed objects, sampled at the given rate.
+    double globalAverageError(const Duration& sampling_rate, ObjectFactory* obj_factory) const;
 private:
     typedef std::vector<ObjectEvent*> EventList;
     typedef std::map<UUID, EventList*> ObjectEventListMap;

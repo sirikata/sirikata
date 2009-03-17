@@ -107,21 +107,13 @@ int main(int argc, char** argv) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-/*
-    {
+
+    if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_OBJECT_TRACE_FILE, 2);
-        for(ObjectFactory::iterator observer_it = obj_factory->begin(); observer_it != obj_factory->end(); observer_it++) {
-            for(ObjectFactory::iterator seen_it = obj_factory->begin(); seen_it != obj_factory->end(); seen_it++) {
-                if (*observer_it == *seen_it) continue;
-                if (lea.observed(*observer_it, *seen_it)) {
-                    double error = lea.averageError(*observer_it, *seen_it, Duration::milliseconds((uint32)10), obj_factory);
-                    printf("%s observed %s: %f\n", observer_it->readableHexData().c_str(), seen_it->readableHexData().c_str(), error);
-                }
-            }
-        }
+        printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
         exit(0);
     }
-*/
+
     LocationService* loc_service = new OracleLocationService(obj_factory);
     ServerMap* server_map = new UniformServerMap(
         loc_service,
