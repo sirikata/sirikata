@@ -193,6 +193,8 @@ static bool event_matches_loc(ObjectEvent* evt) {
 }
 
 
+#define APPARENT_ERROR 1
+
 // Return the average error in the approximation of an object over its observed period, sampled at the given rate.
 double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& seen, const Duration& sampling_rate, ObjectFactory* obj_factory) const {
     /* In this method we run through all the updates, tracking the real path along the way.
@@ -216,6 +218,12 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
 
     EventList* events = getEventList(observer);
     TimedMotionVector3f pred_motion;
+
+#if APPARENT_ERROR
+    MotionPath* observer_path = obj_factory->motion(observer);
+    TimedMotionVector3f observer_motion = observer_path->initial();
+    const TimedMotionVector3f* next_observer_motion = observer_path->nextUpdate(observer_motion.time());
+#endif
 
     Time cur_time(0);
     Mode mode = SEARCHING_PROX;
@@ -248,7 +256,23 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
                 // get the predicted position
                 Vector3f pred_pos = pred_motion.extrapolate(cur_time).position();
 
+#if APPARENT_ERROR
+                // update the observer position if necessary
+                while(next_observer_motion != NULL && next_observer_motion->time() < cur_time) {
+                    observer_motion = *next_observer_motion;
+                    next_observer_motion = observer_path->nextUpdate(observer_motion.time());
+                }
+                Vector3f observer_pos = observer_motion.extrapolate(cur_time).position();
+
+                Vector3f to_true = (true_pos - observer_pos).normal();
+                Vector3f to_pred = (pred_pos - observer_pos).normal();
+                float dot_val = to_true.dot(to_pred);
+                if (dot_val > 1.0f) dot_val = 1.0f;
+                if (dot_val < 1.0f) dot_val = -1.0f;
+                error_sum += acos(dot_val);
+#else
                 error_sum += (true_pos - pred_pos).length();
+#endif
                 sample_count++;
 
                 cur_time += sampling_rate;
