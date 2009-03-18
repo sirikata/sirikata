@@ -101,6 +101,7 @@ int main(int argc, char** argv) {
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
+    uint32 nservers = layout.x * layout.y * layout.z;
     Duration duration = GetOption("duration")->as<Duration>();
 
     srand( GetOption("rand-seed")->as<uint32>() );
@@ -108,8 +109,12 @@ int main(int argc, char** argv) {
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
-        LocationErrorAnalysis lea(STATS_TRACE_FILE, 2);
+        LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
+        BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
         exit(0);
     }
 
@@ -120,14 +125,7 @@ int main(int argc, char** argv) {
         region,
         layout
     );
-/*
-    for (int i=1;i<=9;++i) {
-        Vector3d minn;
-        Vector3d mixx;
-        static_cast<UniformServerMap*>(server_map)->serverRegionLookup(i,minn,mixx);
-        std::cout << minn << " - " << mixx  <<std::endl;
-    }
-*/
+
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);

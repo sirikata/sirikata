@@ -43,6 +43,7 @@
 #define STATS_SYNC_FILE      "stats.sync-filename"
 
 #define ANALYSIS_LOC         "analysis.loc"
+#define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
 
 namespace CBR {
 

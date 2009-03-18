@@ -39,7 +39,7 @@
 namespace CBR {
 
 struct Event {
-    static Event* read(std::istream& is);
+    static Event* read(std::istream& is, const ServerID& trace_server_id);
 
     Event()
      : time(0)
@@ -75,7 +75,8 @@ struct SubscriptionEvent : public ObjectEvent {
 
 
 struct PacketEvent : public Event {
-    ServerID server;
+    ServerID source;
+    ServerID dest;
     uint32 id;
     uint32 size;
 };
@@ -89,7 +90,7 @@ struct PacketSentEvent : public PacketEvent {
 struct PacketReceivedEvent : public PacketEvent {
 };
 
-Event* Event::read(std::istream& is) {
+Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
     char tag;
     is.read( &tag, sizeof(tag) );
 
@@ -133,7 +134,8 @@ Event* Event::read(std::istream& is) {
           {
               PacketQueuedEvent* pqevt = new PacketQueuedEvent;
               is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
-              is.read( (char*)&pqevt->server, sizeof(pqevt->server) );
+              pqevt->source = trace_server_id;
+              is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
               is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
               is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
               evt = pqevt;
@@ -143,7 +145,8 @@ Event* Event::read(std::istream& is) {
           {
               PacketSentEvent* psevt = new PacketSentEvent;
               is.read( (char*)&psevt->time, sizeof(psevt->time) );
-              is.read( (char*)&psevt->server, sizeof(psevt->server) );
+              psevt->source = trace_server_id;
+              is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
               is.read( (char*)&psevt->id, sizeof(psevt->id) );
               is.read( (char*)&psevt->size, sizeof(psevt->size) );
               evt = psevt;
@@ -153,7 +156,8 @@ Event* Event::read(std::istream& is) {
           {
               PacketReceivedEvent* prevt = new PacketReceivedEvent;
               is.read( (char*)&prevt->time, sizeof(prevt->time) );
-              is.read( (char*)&prevt->server, sizeof(prevt->server) );
+              is.read( (char*)&prevt->source, sizeof(prevt->source) );
+              prevt->dest = trace_server_id;
               is.read( (char*)&prevt->id, sizeof(prevt->id) );
               is.read( (char*)&prevt->size, sizeof(prevt->size) );
               evt = prevt;
@@ -175,7 +179,7 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            Event* evt = Event::read(is);
+            Event* evt = Event::read(is, server_id);
             if (evt == NULL)
                 break;
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
@@ -370,6 +374,78 @@ double LocationErrorAnalysis::globalAverageError(const Duration& sampling_rate, 
 
 LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID& observer) const {
     ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
+    if (event_lists_it == mEventLists.end()) return NULL;
+
+    return event_lists_it->second;
+}
+
+
+
+
+
+
+
+
+BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers) {
+    // read in all our data
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
+            if (packet_evt == NULL)
+                continue;
+
+            // put it in the source queue
+            ServerEventListMap::iterator source_it = mEventLists.find( packet_evt->source );
+            if (source_it == mEventLists.end()) {
+                mEventLists[ packet_evt->source ] = new EventList;
+                source_it = mEventLists.find( packet_evt->source );
+            }
+            assert( source_it != mEventLists.end() );
+
+            EventList* evt_list = source_it->second;
+            evt_list->push_back(packet_evt);
+
+            // put it in the dest queue
+            ServerEventListMap::iterator dest_it = mEventLists.find( packet_evt->dest );
+            if (dest_it == mEventLists.end()) {
+                mEventLists[ packet_evt->dest ] = new EventList;
+                dest_it = mEventLists.find( packet_evt->dest );
+            }
+            assert( dest_it != mEventLists.end() );
+
+            evt_list = dest_it->second;
+            evt_list->push_back(packet_evt);
+        }
+    }
+
+    for(ServerEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+        EventList* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
+    }
+
+}
+
+BandwidthAnalysis::~BandwidthAnalysis() {
+    for(ServerEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+        ServerID server_id = event_lists_it->first;
+        EventList* event_list = event_lists_it->second;
+        for(EventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
+            // each event is put in both the source and the dest server event lists,
+            // to avoid double deleting, only delete if this is the event's source list
+            if ((*events_it)->source == server_id)
+                delete *events_it;
+        }
+    }
+}
+
+BandwidthAnalysis::EventList* BandwidthAnalysis::getEventList(const ServerID& server) {
+    ServerEventListMap::const_iterator event_lists_it = mEventLists.find(server);
     if (event_lists_it == mEventLists.end()) return NULL;
 
     return event_lists_it->second;

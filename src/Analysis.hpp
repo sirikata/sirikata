@@ -66,6 +66,22 @@ private:
     ObjectEventListMap mEventLists;
 }; // class LocationErrorAnalysis
 
+/** Does analysis of bandwidth, e.g. checking total bandwidth in and out of a server,
+ *  checking relative bandwidths when under load, etc.
+ */
+class BandwidthAnalysis {
+public:
+    BandwidthAnalysis(const char* opt_name, const uint32 nservers);
+    ~BandwidthAnalysis();
+private:
+    typedef std::vector<PacketEvent*> EventList;
+    typedef std::map<ServerID, EventList*> ServerEventListMap;
+
+    EventList* getEventList(const ServerID& server);
+
+    ServerEventListMap mEventLists;
+}; // class BandwidthAnalysis
+
 
 } // namespace CBR
 
