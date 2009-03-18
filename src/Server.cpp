@@ -107,6 +107,8 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
         mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
 
     if (dest_server==id()) {
+        if (!is_forward)
+            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset);
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }else {
         bool failed = (src_uuid.isNil()) ?
