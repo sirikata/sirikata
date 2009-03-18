@@ -43,7 +43,7 @@
 
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, BandwidthStatistics* bstats, ObjectTrace* otrace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
@@ -52,8 +52,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mNetwork(net),
    mSendQueue(sq),
    mCurrentTime(0),
-   mBandwidthStats(bstats),
-   mObjectTrace(otrace)
+   mTrace(trace)
 {
     // start the network listening
     mNetwork->listen(mID);
@@ -105,7 +104,7 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
     offset = msg->serialize(msg_serialized, offset);
 
     if (!is_forward || dest_server != id())
-        mBandwidthStats->queued(dest_server, msg->id(), offset, mCurrentTime);
+        mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
 
     if (dest_server==id()) {
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
@@ -133,7 +132,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(prox_msg, prox_msg->destObject());
               else {
-                  mObjectTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
+                  mTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
                   dest_obj->proximityMessage(prox_msg);
               }
           }
@@ -147,7 +146,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(loc_msg, loc_msg->destObject());
               else {
-                  mObjectTrace->loc(mCurrentTime, loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
+                  mTrace->loc(mCurrentTime, loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
                   dest_obj->locationMessage(loc_msg);
               }
           }
@@ -161,7 +160,7 @@ void Server::deliver(Message* msg) {
               if (dest_obj == NULL)
                   forward(subs_msg, subs_msg->destObject());
               else {
-                  mObjectTrace->subscription(mCurrentTime, subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
+                  mTrace->subscription(mCurrentTime, subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                   dest_obj->subscriptionMessage(subs_msg);
               }
           }
@@ -209,7 +208,7 @@ void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {
         offset=Message::deserialize(chunk,offset,&result);
 
         if (!forwarded_self_msg)
-            mBandwidthStats->received(hdr.sourceServer(), result->id(), offset, mCurrentTime);
+            mTrace->packetReceived(mCurrentTime, hdr.sourceServer(), result->id(), offset);
 
         deliver(result);
     }while (offset<chunk.size());

@@ -38,23 +38,26 @@
 
 namespace CBR {
 
-struct ObjectEvent {
-    static ObjectEvent* read(std::istream& is);
+struct Event {
+    static Event* read(std::istream& is);
 
-    ObjectEvent()
+    Event()
      : time(0)
     {}
-    virtual ~ObjectEvent() {}
+    virtual ~Event() {}
 
     Time time;
-    UUID receiver;
-    UUID source;
 };
 
-struct ObjectEventTimeComparator {
-    bool operator()(const ObjectEvent* lhs, const ObjectEvent* rhs) const {
+struct EventTimeComparator {
+    bool operator()(const Event* lhs, const Event* rhs) const {
         return (lhs->time < rhs->time);
     }
+};
+
+struct ObjectEvent : public Event {
+    UUID receiver;
+    UUID source;
 };
 
 struct ProximityEvent : public ObjectEvent {
@@ -71,41 +74,94 @@ struct SubscriptionEvent : public ObjectEvent {
 };
 
 
-ObjectEvent* ObjectEvent::read(std::istream& is) {
+struct PacketEvent : public Event {
+    ServerID server;
+    uint32 id;
+    uint32 size;
+};
+
+struct PacketQueuedEvent : public PacketEvent {
+};
+
+struct PacketSentEvent : public PacketEvent {
+};
+
+struct PacketReceivedEvent : public PacketEvent {
+};
+
+Event* Event::read(std::istream& is) {
     char tag;
     is.read( &tag, sizeof(tag) );
 
     if (!is) return NULL;
 
-    ObjectEvent* evt = NULL;
+    Event* evt = NULL;
 
-    if (tag == ObjectTrace::ProximityTag) {
-        ProximityEvent* pevt = new ProximityEvent;
-        is.read( (char*)&pevt->time, sizeof(pevt->time) );
-        is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
-        is.read( (char*)&pevt->source, sizeof(pevt->source) );
-        is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
-        is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
-        evt = pevt;
-    }
-    else if (tag == ObjectTrace::LocationTag) {
-        LocationEvent* levt = new LocationEvent;
-        is.read( (char*)&levt->time, sizeof(levt->time) );
-        is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
-        is.read( (char*)&levt->source, sizeof(levt->source) );
-        is.read( (char*)&levt->loc, sizeof(levt->loc) );
-        evt = levt;
-    }
-    else if (tag == ObjectTrace::SubscriptionTag) {
-        SubscriptionEvent* sevt = new SubscriptionEvent;
-        is.read( (char*)&sevt->time, sizeof(sevt->time) );
-        is.read( (char*)&sevt->receiver, sizeof(sevt->receiver) );
-        is.read( (char*)&sevt->source, sizeof(sevt->source) );
-        is.read( (char*)&sevt->started, sizeof(sevt->started) );
-        evt = sevt;
-    }
-    else {
+    switch(tag) {
+      case Trace::ProximityTag:
+          {
+              ProximityEvent* pevt = new ProximityEvent;
+              is.read( (char*)&pevt->time, sizeof(pevt->time) );
+              is.read( (char*)&pevt->receiver, sizeof(pevt->receiver) );
+              is.read( (char*)&pevt->source, sizeof(pevt->source) );
+              is.read( (char*)&pevt->entered, sizeof(pevt->entered) );
+              is.read( (char*)&pevt->loc, sizeof(pevt->loc) );
+              evt = pevt;
+          }
+          break;
+      case Trace::LocationTag:
+          {
+              LocationEvent* levt = new LocationEvent;
+              is.read( (char*)&levt->time, sizeof(levt->time) );
+              is.read( (char*)&levt->receiver, sizeof(levt->receiver) );
+              is.read( (char*)&levt->source, sizeof(levt->source) );
+              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              evt = levt;
+          }
+          break;
+      case Trace::SubscriptionTag:
+          {
+              SubscriptionEvent* sevt = new SubscriptionEvent;
+              is.read( (char*)&sevt->time, sizeof(sevt->time) );
+              is.read( (char*)&sevt->receiver, sizeof(sevt->receiver) );
+              is.read( (char*)&sevt->source, sizeof(sevt->source) );
+              is.read( (char*)&sevt->started, sizeof(sevt->started) );
+              evt = sevt;
+          }
+          break;
+      case Trace::PacketQueuedTag:
+          {
+              PacketQueuedEvent* pqevt = new PacketQueuedEvent;
+              is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
+              is.read( (char*)&pqevt->server, sizeof(pqevt->server) );
+              is.read( (char*)&pqevt->id, sizeof(pqevt->id) );
+              is.read( (char*)&pqevt->size, sizeof(pqevt->size) );
+              evt = pqevt;
+          }
+          break;
+      case Trace::PacketSentTag:
+          {
+              PacketSentEvent* psevt = new PacketSentEvent;
+              is.read( (char*)&psevt->time, sizeof(psevt->time) );
+              is.read( (char*)&psevt->server, sizeof(psevt->server) );
+              is.read( (char*)&psevt->id, sizeof(psevt->id) );
+              is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              evt = psevt;
+          }
+          break;
+      case Trace::PacketReceivedTag:
+          {
+              PacketReceivedEvent* prevt = new PacketReceivedEvent;
+              is.read( (char*)&prevt->time, sizeof(prevt->time) );
+              is.read( (char*)&prevt->server, sizeof(prevt->server) );
+              is.read( (char*)&prevt->id, sizeof(prevt->id) );
+              is.read( (char*)&prevt->size, sizeof(prevt->size) );
+              evt = prevt;
+          }
+          break;
+      default:
         assert(false);
+        break;
     }
 
     return evt;
@@ -119,25 +175,28 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         std::ifstream is(loc_file.c_str(), std::ios::in);
 
         while(is) {
-            ObjectEvent* evt = ObjectEvent::read(is);
+            Event* evt = Event::read(is);
             if (evt == NULL)
                 break;
+            ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
+            if (obj_evt == NULL)
+                continue;
 
-            ObjectEventListMap::iterator it = mEventLists.find( evt->receiver );
+            ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
             if (it == mEventLists.end()) {
-                mEventLists[ evt->receiver ] = new EventList;
-                it = mEventLists.find( evt->receiver );
+                mEventLists[ obj_evt->receiver ] = new EventList;
+                it = mEventLists.find( obj_evt->receiver );
             }
             assert( it != mEventLists.end() );
 
             EventList* evt_list = it->second;
-            evt_list->push_back(evt);
+            evt_list->push_back(obj_evt);
         }
     }
 
     for(ObjectEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
         EventList* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), ObjectEventTimeComparator());
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
     }
 }
 

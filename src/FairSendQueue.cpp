@@ -4,8 +4,8 @@
 #include "Message.hpp"
 
 namespace CBR{
-FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats)
- : SendQueue(bstats),
+FairSendQueue::FairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace)
+ : SendQueue(trace),
    mClientQueues(bytes_per_second,0,false),
    mServerQueues(bytes_per_second,0,renormalizeWeights),
    mNetwork(net)
@@ -53,7 +53,7 @@ void FairSendQueue::service(const Time&t){
          i!=ie;
          ++i) {
         mNetwork->send((*i)->dest(),(*i)->data(),false,true,1);
-        mBandwidthStats->sent( (*i)->dest(), GetMessageUniqueID((*i)->data()), (*i)->data().size(), t);
+        mTrace->packetSent(t, (*i)->dest(), GetMessageUniqueID((*i)->data()), (*i)->data().size());
     }
     finalSendMessages.resize(0);
     for (;count<mClientServerBuffer.size();++count) {

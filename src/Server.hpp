@@ -50,9 +50,7 @@ class Message;
 class ObjectToObjectMessage;
 class SendQueue;
 class Network;
-class BandwidthStatistics;
-class LocationStatistics;
-class ObjectTrace;
+class Trace;
 class MigrateMessage;
 
 /** Handles all the basic services provided for objects by a server,
@@ -62,7 +60,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, BandwidthStatistics* bstats, ObjectTrace* otrace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, Trace* trace);
     ~Server();
 
     const ServerID& id() const;
@@ -120,8 +118,7 @@ private:
     std::deque<SelfMessage>mSelfMessages;
 
     Time mCurrentTime;
-    BandwidthStatistics* mBandwidthStats;
-    ObjectTrace* mObjectTrace;
+    Trace* mTrace;
 }; // class Server
 
 } // namespace CBR

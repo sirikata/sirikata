@@ -31,7 +31,7 @@ class FIFOSendQueue:public SendQueue {
     uint32 mRemainderBytes;
     Time mLastTime;
 public:
-    FIFOSendQueue(Network* net, uint32 bytes_per_second, BandwidthStatistics* bstats);
+    FIFOSendQueue(Network* net, uint32 bytes_per_second, Trace* trace);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
     virtual void service(const Time& t);

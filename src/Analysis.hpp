@@ -39,7 +39,9 @@
 
 namespace CBR {
 
+struct Event;
 struct ObjectEvent;
+struct PacketEvent;
 class ObjectFactory;
 
 /** Error of observed vs. true object locations over simulation period. */

@@ -61,8 +61,7 @@ void InitOptions() {
 
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
-        .addOption(new OptionValue(STATS_BANDWIDTH_FILE, "bandwidth.txt", Sirikata::OptionValueType<String>(), "The filename to save bandwidth stats to"))
-        .addOption(new OptionValue(STATS_OBJECT_TRACE_FILE, "objecttrace.txt", Sirikata::OptionValueType<String>(), "The filename to save object trace to"))
+        .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
         .addOption(new OptionValue(STATS_SYNC_FILE, "sync.txt", Sirikata::OptionValueType<String>(), "The filename to save clock sync data"))
 
         .addOption(new OptionValue("time-server", "ntp.ubuntu.com", Sirikata::OptionValueType<String>(), "The server to sync with"))

@@ -38,7 +38,7 @@ protected:
     Network * mNetwork;
 public:
 
-    FairSendQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats);
+    FairSendQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace);
 
     bool hasServerRegistered(ServerID sid)const;
     void registerServer(ServerID, float weight);

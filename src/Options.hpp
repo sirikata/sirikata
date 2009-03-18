@@ -39,8 +39,7 @@
 
 #define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
 
-#define STATS_BANDWIDTH_FILE "stats.bandwidth-filename"
-#define STATS_OBJECT_TRACE_FILE "stats.object-trace-filename"
+#define STATS_TRACE_FILE     "stats.trace-filename"
 #define STATS_SYNC_FILE      "stats.sync-filename"
 
 #define ANALYSIS_LOC         "analysis.loc"

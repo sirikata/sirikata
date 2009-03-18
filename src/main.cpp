@@ -96,8 +96,7 @@ int main(int argc, char** argv) {
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
-    BandwidthStatistics* bandwidth_stats = new BandwidthStatistics();
-    ObjectTrace* object_trace = new ObjectTrace();
+    Trace* trace = new Trace();
 
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
@@ -109,7 +108,7 @@ int main(int argc, char** argv) {
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
-        LocationErrorAnalysis lea(STATS_OBJECT_TRACE_FILE, 2);
+        LocationErrorAnalysis lea(STATS_TRACE_FILE, 2);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
         exit(0);
     }
@@ -135,11 +134,11 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), bandwidth_stats);
+    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
     obj_factory->createObjectQueues(sq);
 
     ServerID server_id = GetOption("id")->as<ServerID>();
-    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, bandwidth_stats, object_trace);
+    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, trace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -192,13 +191,9 @@ int main(int argc, char** argv) {
     delete obj_factory;
 
 
-    String bandwidth_file = GetPerServerFile(STATS_BANDWIDTH_FILE, server_id);
-    if (!bandwidth_file.empty()) bandwidth_stats->save(bandwidth_file);
-    delete bandwidth_stats;
-
-    String object_trace_file = GetPerServerFile(STATS_OBJECT_TRACE_FILE, server_id);
-    if (!object_trace_file.empty()) object_trace->save(object_trace_file);
-    delete object_trace;
+    String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
+    if (!trace_file.empty()) trace->save(trace_file);
+    delete trace;
 
     String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
     if (!sync_file.empty()) {

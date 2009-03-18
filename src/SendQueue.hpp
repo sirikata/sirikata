@@ -8,8 +8,8 @@
 namespace CBR{
 class SendQueue {
 public:
-    SendQueue(BandwidthStatistics* bstats)
-     : mBandwidthStats(bstats)
+    SendQueue(Trace* trace)
+     : mTrace(trace)
     {}
 
     virtual ~SendQueue(){}
@@ -23,7 +23,7 @@ public:
     virtual void registerClient(UUID oid,float weight=1) = 0;
 
 protected:
-    BandwidthStatistics* mBandwidthStats;
+    Trace* mTrace;
 };
 }
 #endif

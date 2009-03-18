@@ -37,84 +37,6 @@
 
 namespace CBR {
 
-std::ostream& BandwidthStatistics::Packet::write(std::ostream& os) {
-    os << server << " " << GetUniqueIDServerID(id) << " " << GetUniqueIDMessageID(id) << " " << size << " " << time.raw() << std::endl;
-    return os;
-}
-
-BandwidthStatistics::~BandwidthStatistics() {
-    for(std::vector<PacketBatch*>::iterator it = queuedBatches.begin(); it != queuedBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        delete pb;
-    }
-    queuedBatches.clear();
-
-    for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        delete pb;
-    }
-    sentBatches.clear();
-
-    for(std::vector<PacketBatch*>::iterator it = receivedBatches.begin(); it != receivedBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        delete pb;
-    }
-    receivedBatches.clear();
-}
-
-void BandwidthStatistics::queued(const ServerID& dest, uint32 id, uint32 size, const Time& t) {
-    if (queuedBatches.empty() || queuedBatches.back()->full())
-        queuedBatches.push_back( new PacketBatch() );
-
-    PacketBatch* pb = queuedBatches.back();
-    pb->items[pb->size] = Packet(dest, id, size, t);
-    pb->size++;
-}
-
-void BandwidthStatistics::sent(const ServerID& dest, uint32 id, uint32 size, const Time& t) {
-    if (sentBatches.empty() || sentBatches.back()->full())
-        sentBatches.push_back( new PacketBatch() );
-
-    PacketBatch* pb = sentBatches.back();
-    pb->items[pb->size] = Packet(dest, id, size, t);
-    pb->size++;
-}
-
-void BandwidthStatistics::received(const ServerID& src, uint32 id, uint32 size, const Time& t) {
-    if (receivedBatches.empty() || receivedBatches.back()->full())
-        receivedBatches.push_back( new PacketBatch() );
-
-    PacketBatch* pb = receivedBatches.back();
-    pb->items[pb->size] = Packet(src, id, size, t);
-    pb->size++;
-}
-
-void BandwidthStatistics::save(const String& filename) {
-    std::ofstream of(filename.c_str(), std::ios::out);
-
-    of << "Queued" << std::endl;
-    of << "DestServer ServerID MessageID Size Time" << std::endl;
-    for(std::vector<PacketBatch*>::iterator it = queuedBatches.begin(); it != queuedBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        pb->write(of);
-    }
-
-    of << "Sent" << std::endl;
-    of << "DestServer ServerID MessageID Size Time" << std::endl;
-    for(std::vector<PacketBatch*>::iterator it = sentBatches.begin(); it != sentBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        pb->write(of);
-    }
-
-    of << "Received" << std::endl;
-    of << "SourceServer ServerID MessageID Size Time" << std::endl;
-    for(std::vector<PacketBatch*>::iterator it = receivedBatches.begin(); it != receivedBatches.end(); it++) {
-        PacketBatch* pb = *it;
-        pb->write(of);
-    }
-}
-
-
 // write the specified number of bytes from the pointer to the buffer
 void BatchedBuffer::write(const void* buf, uint32 nbytes) {
     const uint8* bufptr = (const uint8*)buf;
@@ -142,11 +64,14 @@ void BatchedBuffer::write(std::ostream& os) {
 }
 
 
-const char ObjectTrace::ProximityTag = 'p';
-const char ObjectTrace::LocationTag = 'l';
-const char ObjectTrace::SubscriptionTag = 's';
+const uint8 Trace::ProximityTag;
+const uint8 Trace::LocationTag;
+const uint8 Trace::SubscriptionTag;
+const uint8 Trace::PacketQueuedTag;
+const uint8 Trace::PacketSentTag;
+const uint8 Trace::PacketReceivedTag;
 
-void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
+void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -155,7 +80,7 @@ void ObjectTrace::prox(const Time& t, const UUID& receiver, const UUID& source, 
     data.write( &loc, sizeof(loc) );
 }
 
-void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
+void Trace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
     data.write( &LocationTag, sizeof(LocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -163,7 +88,7 @@ void ObjectTrace::loc(const Time& t, const UUID& receiver, const UUID& source, c
     data.write( &loc, sizeof(loc) );
 }
 
-void ObjectTrace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
+void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
     data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -171,7 +96,31 @@ void ObjectTrace::subscription(const Time& t, const UUID& receiver, const UUID& 
     data.write( &start, sizeof(start) );
 }
 
-void ObjectTrace::save(const String& filename) {
+void Trace::packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+    data.write( &PacketQueuedTag, sizeof(PacketQueuedTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &dest, sizeof(dest) );
+    data.write( &id, sizeof(id) );
+    data.write( &size, sizeof(size) );
+}
+
+void Trace::packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+    data.write( &PacketSentTag, sizeof(PacketSentTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &dest, sizeof(dest) );
+    data.write( &id, sizeof(id) );
+    data.write( &size, sizeof(size) );
+}
+
+void Trace::packetReceived(const Time& t, const ServerID& src, uint32 id, uint32 size) {
+    data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &src, sizeof(src) );
+    data.write( &id, sizeof(id) );
+    data.write( &size, sizeof(size) );
+}
+
+void Trace::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
 
     data.write(of);

@@ -34,7 +34,7 @@ class LossyFairSendQueue:public FairSendQueue {
     };
 
 public:
-    LossyFairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, BandwidthStatistics* bstats) ;
+    LossyFairSendQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace);
 
 protected:
     virtual void aggregateLocationMessages();

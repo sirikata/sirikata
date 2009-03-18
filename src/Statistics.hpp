@@ -58,43 +58,8 @@ struct Batch {
     }
 };
 
-
-class BandwidthStatistics {
-public:
-    ~BandwidthStatistics();
-
-    void queued(const ServerID& dest, uint32 id, uint32 size, const Time& t);
-    void sent(const ServerID& dest, uint32 id, uint32 size, const Time& t);
-    void received(const ServerID& src, uint32 id, uint32 size, const Time& t);
-
-    void save(const String& filename);
-private:
-    struct Packet {
-        Packet()
-         : server(0), id(0), size(0), time(0) {}
-
-        Packet(const ServerID& _server, uint32 _id, uint32 _size, const Time& _time)
-         : server(_server), id(_id), size(_size), time(_time) {}
-
-        std::ostream& write(std::ostream& os);
-
-        ServerID server;
-        uint32 id;
-        uint32 size;
-        Time time;
-    };
-
-    typedef Batch<Packet> PacketBatch;
-
-    std::vector<PacketBatch*> queuedBatches;
-    std::vector<PacketBatch*> sentBatches;
-    std::vector<PacketBatch*> receivedBatches;
-
-}; // class BandwidthStatistics
-
 class BatchedBuffer {
 public:
-
     // write the specified number of bytes from the pointer to the buffer
     void write(const void* buf, uint32 nbytes);
     // write the buffer to an ostream
@@ -104,20 +69,28 @@ private:
     std::vector<ByteBatch*> batches;
 };
 
-class ObjectTrace {
+
+class Trace {
 public:
-    static const char ProximityTag;
-    static const char LocationTag;
-    static const char SubscriptionTag;
+    static const uint8 ProximityTag = 0;
+    static const uint8 LocationTag = 1;
+    static const uint8 SubscriptionTag = 2;
+    static const uint8 PacketQueuedTag = 3;
+    static const uint8 PacketSentTag = 4;
+    static const uint8 PacketReceivedTag = 5;
 
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
+    void packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
+    void packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size);
+    void packetReceived(const Time& t, const ServerID& src, uint32 id, uint32 size);
+
     void save(const String& filename);
 private:
     BatchedBuffer data;
-}; // class ObjectTrace
+}; // class Trace
 
 } // namespace CBR
 

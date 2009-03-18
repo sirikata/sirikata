@@ -6,8 +6,8 @@
 
 namespace CBR {
 
-FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, BandwidthStatistics* bstats)
- : SendQueue(bstats),
+FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, Trace* trace)
+ : SendQueue(trace),
    mNetwork(net),
    mRate(bytes_per_second),
    mRemainderBytes(0),
@@ -31,7 +31,7 @@ void FIFOSendQueue::service(const Time& t){
         bool ok=mNetwork->send(mQueue.front().dest(),mQueue.front().data(),false,true,1);
         free_bytes -= mQueue.front().data().size();
         assert(ok&&"Network Send Failed");
-        mBandwidthStats->sent( mQueue.front().dest(), GetMessageUniqueID(mQueue.front().data()), mQueue.front().data().size(), t);
+        mTrace->packetSent(t, mQueue.front().dest(), GetMessageUniqueID(mQueue.front().data()), mQueue.front().data().size());
         mQueue.pop();
     }
 
