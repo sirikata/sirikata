@@ -40,7 +40,7 @@ namespace CBR {
 class Duration;
 
 class Time {
-    
+
 public:
     Time(uint64 since_epoch);
     Time(const Time& cpy);
@@ -59,6 +59,7 @@ public:
     bool operator<=(const Time& rhs) const;
     bool operator>=(const Time& rhs) const;
     bool operator==(const Time& rhs) const;
+    bool operator!=(const Time& rhs) const;
 
     uint64 raw() const { return mSinceEpoch; }
 private:

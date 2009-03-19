@@ -87,7 +87,11 @@ bool Time::operator>=(const Time& rhs) const {
 }
 
 bool Time::operator==(const Time& rhs) const {
-    return mSinceEpoch < rhs.mSinceEpoch;
+    return mSinceEpoch == rhs.mSinceEpoch;
+}
+
+bool Time::operator!=(const Time& rhs) const {
+    return mSinceEpoch != rhs.mSinceEpoch;
 }
 
 } // namespace CBR

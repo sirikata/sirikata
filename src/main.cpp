@@ -115,6 +115,18 @@ int main(int argc, char** argv) {
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
+        printf("Send rates\n");
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                ba.computeSendRate(sender, receiver);
+            }
+        }
+        printf("Receive rates\n");
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                ba.computeReceiveRate(sender, receiver);
+            }
+        }
         exit(0);
     }
 

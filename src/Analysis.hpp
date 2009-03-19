@@ -73,11 +73,14 @@ class BandwidthAnalysis {
 public:
     BandwidthAnalysis(const char* opt_name, const uint32 nservers);
     ~BandwidthAnalysis();
+
+    void computeSendRate(const ServerID& sender, const ServerID& receiver) const;
+    void computeReceiveRate(const ServerID& sender, const ServerID& receiver) const;
 private:
     typedef std::vector<PacketEvent*> EventList;
     typedef std::map<ServerID, EventList*> ServerEventListMap;
 
-    EventList* getEventList(const ServerID& server);
+    EventList* getEventList(const ServerID& server) const;
 
     ServerEventListMap mEventLists;
 }; // class BandwidthAnalysis
