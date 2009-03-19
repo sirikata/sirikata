@@ -49,7 +49,6 @@ Plugin::~Plugin() {
     // Destroy and unload just in case.
     while(mDestroy && mInitialized)
         destroy();
-    unload();
 }
 
 bool Plugin::load() {
@@ -69,7 +68,6 @@ bool Plugin::unload() {
     mDestroy = NULL;
     mName = NULL;
     mRefCount = NULL;
-
     return mDL.unload();
 }
 

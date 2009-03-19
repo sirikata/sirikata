@@ -33,7 +33,7 @@
 #include <oh/Platform.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
-#include <oh/ProxyManager.hpp>
+#include "DemoProxyManager.hpp"
 #include <oh/SimulationFactory.hpp>
 namespace Sirikata {
 //InitializeOptions main_options("verbose",
@@ -67,18 +67,21 @@ int main(int argc,const char**argv) {
 #endif
         );
     OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new ProxyManager;
+    ProxyManager * pm=new DemoProxyManager;
     Provider<ProxyCreationListener*>*provider=pm;
     String graphicsCommandArguments;
     String graphicsPluginName("ogregraphics");
     TimeSteppedSimulation *graphicsSystem=
         SimulationFactory::getSingleton()
           .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
+    pm->initialize();
     graphicsSystem->tick();
     graphicsSystem->tick();
     graphicsSystem->tick();
     for (int i=0;i<4096;++i)
         graphicsSystem->tick();
+
+    pm->destroy();
     delete graphicsSystem;
     delete pm;
     plugins.gc();

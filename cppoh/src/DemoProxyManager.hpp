@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata
+ *  main.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2008, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,17 +29,22 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+#ifndef _DEMO_PROXY_MANAGER_HPP_
+#define _DEMO_PROXY_MANAGER_HPP_
+#include <oh/ProxyManager.hpp>
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
+class DemoProxyManager :public ProxyManager{
 public:
-    ProxyManager();
-    ~ProxyManager();
-    ///Called after providers attached
-    virtual void initialize()=0;
-    ///Called before providers detatched
-    virtual void destroy()=0;
+    DemoProxyManager(){
+        
+    }
+    void initialize(){
+        
+    }
+    void destroy() {
 
+    }
 };
+
 }
+#endif

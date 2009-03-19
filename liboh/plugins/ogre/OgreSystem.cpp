@@ -32,6 +32,7 @@
 #include <oh/Platform.hpp>
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
+#include "OgrePlugin.hpp"
 #include <OgreRoot.h>
 #include <OgrePlugin.h>
 #include <OgreTextureManager.h>
@@ -54,6 +55,7 @@ std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
 OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
 {
+    increfcount();
     mRenderTarget=NULL;
     mSceneManager=NULL;
     mRenderTarget=NULL;
@@ -373,6 +375,7 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
+    decrefcount();
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()
              ;iter!=sActiveOgreScenes.end();) {
         if (*iter==this) {

@@ -68,6 +68,11 @@ public:
      *  result will be relative to the current path.
      */
     static String filename(const String& name);
+    /**
+     * Actually unloads program code of module in use
+     * Useful to wait until relevant global variables are purged (c.f. Options)
+     */
+    static void gc(DL_HANDLE handle=NULL);
 private:
     /** Returns true if the library's filename matches the pattern required
      *  for shared libraries on this platform.

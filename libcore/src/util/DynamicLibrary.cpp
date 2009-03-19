@@ -47,10 +47,31 @@ DynamicLibrary::DynamicLibrary(const String& path)
    mHandle(NULL)
 {
 }
-
+static bool unloadLibrary(DL_HANDLE lib) {
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+    bool success = !FreeLibrary(lib);
+#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+    bool success = dlclose(lib)==0;
+#endif
+    return success;
+}
+void DynamicLibrary::gc(DL_HANDLE handle) {
+    static std::vector<DL_HANDLE> *sHandles=new std::vector<DL_HANDLE>;
+    if (handle) {
+        if (sHandles==NULL)
+            sHandles=new std::vector<DL_HANDLE>;
+        sHandles->push_back(handle);
+    }else if(sHandles){
+        for (std::vector<DL_HANDLE>::iterator i=sHandles->begin();i!=sHandles->end();++i) {
+            unloadLibrary(*i);
+        }
+        delete sHandles;
+        sHandles=NULL;
+    }
+}
 DynamicLibrary::~DynamicLibrary() {
     if (mHandle != NULL)
-        unload();
+        gc(mHandle);
 }
 
 bool DynamicLibrary::load() {
@@ -80,12 +101,7 @@ bool DynamicLibrary::load() {
 bool DynamicLibrary::unload() {
     if (mHandle == NULL)
         return true;
-
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-    bool success = !FreeLibrary(mHandle);
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
-    bool success = dlclose(mHandle);
-#endif
+    bool success=unloadLibrary(mHandle);
     mHandle=NULL;
     return success;
 }

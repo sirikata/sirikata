@@ -92,8 +92,14 @@ void PluginManager::load(const String& filename) {
 void PluginManager::gc() {
     for(PluginInfoList::iterator it = mPlugins.begin(); it != mPlugins.end();) {
         PluginInfo* pi = *it;
-        if (pi->plugin != NULL && pi->plugin->refcount() == 0) {
-            delete pi->plugin;//deleting the pulgin destroys() then unloads() it
+        if (pi->plugin != NULL && pi->plugin->refcount() <= 1) {
+            if (pi->plugin->refcount()==0) {
+                pi->plugin->destroy();
+                pi->plugin->unload();//unload plugin straight away, no outstanding variables
+            }else {
+                pi->plugin->destroy();//destroy the plugin, but leave program code for outstanding destructors
+            }
+            delete pi->plugin;
             pi->plugin = NULL;
             delete pi;
             PluginInfoList::iterator eraseme=it;

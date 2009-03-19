@@ -35,9 +35,11 @@
 #include "OgreSystem.hpp"
 #undef nil
 #include <util/UUID.hpp>
+#include <oh/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
+
 namespace Sirikata {
 typedef Vector4f ColorAlpha;
 typedef Vector3f Color;
@@ -91,7 +93,8 @@ inline Sirikata::Color fromOgreRGB(const Ogre::ColourValue &rgba) {
     return Sirikata::Color(rgba.r,rgba.g,rgba.b);
 }
 class OgreSystem;
-class Entity {
+
+class Entity : public ProxyObjectListener{
     virtual void created() = 0;
     virtual void destroyed() = 0;
 

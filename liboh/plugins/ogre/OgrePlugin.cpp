@@ -13,17 +13,27 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     core_plugin_refcount++;
 }
 
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++core_plugin_refcount;
+}
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(core_plugin_refcount>0);
+    return --core_plugin_refcount;
+}
+
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    core_plugin_refcount--;
-    if (core_plugin_refcount==0)
-        SimulationFactory::getSingleton().unregisterConstructor("ogregraphics",true);
+    if (core_plugin_refcount>0) {
+        core_plugin_refcount--;
+        assert(core_plugin_refcount==0);
+        if (core_plugin_refcount==0)
+            SimulationFactory::getSingleton().unregisterConstructor("ogregraphics",true);
+    }
 }
 
 SIRIKATA_PLUGIN_EXPORT_C const char* name() {
     return "ogregraphics";
 }
-
 SIRIKATA_PLUGIN_EXPORT_C int refcount() {
     return core_plugin_refcount;
 }

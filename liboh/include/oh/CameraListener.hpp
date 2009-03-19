@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  ProxyManager.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  ListenerProvider.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,17 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedSimulation.hpp"
+#ifndef _SIRIKATA_CAMERA_LISTENER_HPP_
+#define _SIRIKATA_CAMERA_LISTENER_HPP_
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
+class CameraListener {
 public:
-    ProxyManager();
-    ~ProxyManager();
-    ///Called after providers attached
-    virtual void initialize()=0;
-    ///Called before providers detatched
-    virtual void destroy()=0;
-
+    virtual ~CameraListener() {}
+    virtual void attach (const String&renderTargetName,
+                         uint32 width,
+                         uint32 height) =0;
+    virtual void detatch()=0;
 };
+typedef CameraListener* CameraListenerPtr;
 }
+#endif
