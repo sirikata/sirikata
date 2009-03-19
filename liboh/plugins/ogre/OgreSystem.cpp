@@ -197,7 +197,7 @@ Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 widt
         }
     }
 }
-bool OgreSystem::initialize(Provider<TimeSteppedSimulation*>*proxyManager, const String&options) {
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     mProxyManager=proxyManager;
     ++sNumOgreSystems;
     proxyManager->addListener(this);

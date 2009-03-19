@@ -565,7 +565,7 @@ ENDIF()
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
 SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
                   ${LIBOH_SOURCE_DIR}/ProxyManager.cpp 
-                  ${LIBOH_SOURCE_DIR}/GraphicsFactory.cpp )
+                  ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
 

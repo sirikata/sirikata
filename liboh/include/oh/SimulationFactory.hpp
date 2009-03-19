@@ -38,14 +38,14 @@
 namespace Sirikata{
 
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT GraphicsFactory
-    : public AutoSingleton<GraphicsFactory>,
+class SIRIKATA_OH_EXPORT SimulationFactory
+    : public AutoSingleton<SimulationFactory>,
       public Factory2<TimeSteppedSimulation*,
-                      Provider<TimeSteppedSimulation*>*,//the ProxyManager
+                      Provider<ProxyCreationListener*>*,//the ProxyManager
                       const String&> //options string for the graphics system
 {
 public:
-    static GraphicsFactory&getSingleton();
+    static SimulationFactory&getSingleton();
     static void destroy();
 };
     

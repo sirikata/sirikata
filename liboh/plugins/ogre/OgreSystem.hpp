@@ -57,10 +57,10 @@ class OgreSystem: public TimeSteppedSimulation {
     static uint32 sNumOgreSystems;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
-    Provider<TimeSteppedSimulation*>*mProxyManager;
+    Provider<ProxyCreationListener*>*mProxyManager;
     bool loadBuiltinPlugins();
     OgreSystem();
-    bool initialize(Provider<TimeSteppedSimulation*>*proxyManager,
+    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     void renderOneFrame(Duration frameTime);
     ///all the things that should happen just before the frame
@@ -75,7 +75,7 @@ public:
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
-    static TimeSteppedSimulation* create(Provider<TimeSteppedSimulation*>*proxyManager,
+    static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options){
         OgreSystem*os= new OgreSystem;
         if (os->initialize(proxyManager,options))
