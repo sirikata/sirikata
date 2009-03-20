@@ -193,6 +193,7 @@ int main(int argc, char** argv) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
+            cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);
         }
     }
