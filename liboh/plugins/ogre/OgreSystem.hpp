@@ -36,12 +36,15 @@
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedSimulation.hpp>
+#include <oh/ProxyObject.hpp>
 #include <OgrePrerequisites.h>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
-namespace Sirikata { namespace Graphics {
 
+namespace Sirikata { namespace Graphics {
+class Entity;
 class OgreSystem: public TimeSteppedSimulation {
+    std::tr1::unordered_map<SpaceObjectReference,Entity*,UUID::Hasher> mSceneObjects;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
@@ -52,6 +55,7 @@ class OgreSystem: public TimeSteppedSimulation {
     OptionValue* mOgreRootDir;
     ///How many seconds we aim to spend in each frame
     OptionValue*mFrameDuration;
+    OptionSet*mOptions;
     Time mLastFrameTime;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
@@ -71,6 +75,12 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
 public:
+    OptionSet*getOptions(){
+        return mOptions;
+    }
+    const OptionSet*getOptions()const{
+        return mOptions;
+    }
     const Vector3d& getOffset()const {return mFloatingPointOffset;}
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem

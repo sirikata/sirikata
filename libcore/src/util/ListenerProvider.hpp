@@ -59,6 +59,17 @@ protected:
      *  This function notifies all listeners. Listeners may add other listeners or remove themselves, 
      *  though undefined behavior results from removing other listeners during the call.
      *  \param func which must be a member function of ListenerPtr gets called on all listeners
+     */
+    template <typename T> void notify(T func){
+        for (int32 i=(int32)mListeners.size()-1;
+             i>=0&&i<(int32)mListeners.size();
+             --i) {
+            ((&*mListeners[i])->*func)();
+        }
+    }    /**
+     *  This function notifies all listeners. Listeners may add other listeners or remove themselves, 
+     *  though undefined behavior results from removing other listeners during the call.
+     *  \param func which must be a member function of ListenerPtr gets called on all listeners
      *  \param newA is the singular argument passed to func
      */
     template <typename T, typename A> void notify(T func, A newA){

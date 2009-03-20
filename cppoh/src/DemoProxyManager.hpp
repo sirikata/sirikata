@@ -32,17 +32,24 @@
 #ifndef _DEMO_PROXY_MANAGER_HPP_
 #define _DEMO_PROXY_MANAGER_HPP_
 #include <oh/ProxyManager.hpp>
+#include <oh/ProxyCameraObject.hpp>
 namespace Sirikata {
 class DemoProxyManager :public ProxyManager{
+    std::tr1::shared_ptr<ProxyCameraObject> mCamera;
 public:
     DemoProxyManager(){
         
     }
     void initialize(){
+        std::tr1::shared_ptr<ProxyCameraObject> pco(new ProxyCameraObject);
+        mCamera=pco;
         
+        notify(&ProxyCreationListener::createProxy,pco);
+        mCamera->attach("",0,0);
     }
     void destroy() {
-
+        mCamera->detatch();
+        notify(&ProxyCreationListener::destroyProxy,mCamera);
     }
 };
 

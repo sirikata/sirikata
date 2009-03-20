@@ -32,6 +32,7 @@
 #include <util/ListenerProvider.hpp>
 #include "TimeSteppedSimulation.hpp"
 namespace Sirikata {
+
 class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
 public:
     ProxyManager();

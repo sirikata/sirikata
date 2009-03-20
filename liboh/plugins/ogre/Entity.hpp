@@ -95,10 +95,10 @@ inline Sirikata::Color fromOgreRGB(const Ogre::ColourValue &rgba) {
 class OgreSystem;
 
 class Entity : public ProxyObjectListener{
+protected:
     virtual void created() = 0;
     virtual void destroyed() = 0;
 
-protected:
     OgreSystem *const mScene;
 
     UUID mId;

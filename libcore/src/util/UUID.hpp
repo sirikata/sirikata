@@ -75,6 +75,11 @@ public:
         return retval;
     }
     unsigned int hash() const;
+    class Hasher{public:
+        size_t operator() (const UUID&uuid) const {
+            return uuid.hash();
+        }
+    };
     std::string rawHexData()const;
     std::string readableHexData()const;
 };

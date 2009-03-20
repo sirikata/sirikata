@@ -30,9 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <oh/Platform.hpp>
+
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
+#include <oh/ProxyCameraObject.hpp>
+#include "Camera.hpp"
 #include <OgreRoot.h>
 #include <OgrePlugin.h>
 #include <OgreTextureManager.h>
@@ -40,6 +43,8 @@
 #include <OgreRenderTexture.h>
 #include <OgreHardwarePixelBuffer.h>
 #include <OgreWindowEventUtilities.h>
+#include <OgreMaterialManager.h>
+#include <OgreConfigFile.h>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -154,7 +159,7 @@ Ogre::RenderTarget*OgreSystem::createRenderTarget(String name, uint32 width, uin
     if (name.length()==0&&mRenderTarget)
         name=mRenderTarget->getName();
     if (width==0) width=mWindowWidth->as<uint32>();
-    if (height==0) width=mWindowHeight->as<uint32>();
+    if (height==0) height=mWindowHeight->as<uint32>();
     return createRenderTarget(name,width,height,true,mWindowDepth->as<Ogre::PixelFormat>());
 }
 Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf) {
@@ -199,6 +204,28 @@ Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 widt
         }
     }
 }
+void    setupResources(const String &filename){
+    using namespace Ogre;
+    ConfigFile cf;
+    cf.load(filename);    // Go through all sections & settings in the file
+    ConfigFile::SectionIterator seci = cf.getSectionIterator();
+
+    String secName, typeName, archName;
+    while (seci.hasMoreElements()) {
+        secName = seci.peekNextKey();
+        ConfigFile::SettingsMultiMap *settings = seci.getNext();
+        ConfigFile::SettingsMultiMap::iterator i;
+        for (i = settings->begin(); i != settings->end(); ++i)
+        {
+            typeName = i->first;
+            archName = i->second;
+
+            ResourceGroupManager::getSingleton().addResourceLocation(archName, typeName, secName);
+        }
+    }
+
+    ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although the override is optional, this is mandatory
+}
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     mProxyManager=proxyManager;
     ++sNumOgreSystems;
@@ -232,11 +259,13 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
                            mFrameDuration=new OptionValue("fps","60",FrequencyType(),"Target framerate"),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
-                           shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float>(),"The distance away a shadowcaster may hide the light"),
+                           shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float32>(),"The distance away a shadowcaster may hide the light"),
+                           new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
+                           new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
                            NULL);
     bool userAccepted=true;
 
-    OptionSet::getOptions("ogregraphics",this)->parse(options);
+    (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
@@ -276,8 +305,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             throw e;
     }
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
-    mSceneManager->setShadowFarDistance(shadowFarDistance->as<float>());
+    mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     sActiveOgreScenes.push_back(this);
+    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
+    //just to test if the cam is setup ok ==> mSceneManager->setSkyBox(true,"Examples/SpaceSkyBox",50);
     return true;
 }
 namespace {
@@ -395,10 +426,25 @@ OgreSystem::~OgreSystem() {
 }
 
 void OgreSystem::createProxy(ProxyObjectPtr p){
-    assert(false&&"Need to implement create proxy");
+    {
+        std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
+        if (camera) {
+            Camera *cam=new Camera(this,UUID::random());
+            mSceneObjects[camera->getObjectReference()]=cam;
+            //FIXME: should camera be responsible for adding and removing listeners
+            camera->addListener(cam);
+        }
+        
+    }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
-    assert(false&&"Need to destroy create proxy");
+    std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
+    if (camera) {
+        //FIXME: should camera be responsible for adding and removing listeners
+        camera->removeListener(dynamic_cast<Camera*>(mSceneObjects[camera->getObjectReference()]));
+        mSceneObjects.erase(mSceneObjects.find(camera->getObjectReference()));
+        //FIXME inefficient double lookup, no error checking
+    }
 }
 Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();

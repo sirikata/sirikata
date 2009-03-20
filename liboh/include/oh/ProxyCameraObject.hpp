@@ -1,7 +1,7 @@
-/*  Sirikata Graphical Object Host
- *  Entity.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  ProxyCameraObject.hpp
  *
- *  Copyright (c) 2009, Patrick Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,40 +29,24 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
-#define SIRIKATA_GRAPHICS_CAMERA_HPP__
-#include "Entity.hpp"
-#include <oh/CameraListener.hpp>
-#include <OgreMovableObject.h>
-#include <OgreRenderable.h>
-#include <OgreRenderTarget.h>
 
+#ifndef _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
+#define _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
+#include "CameraListener.hpp"
+#include "ProxyObject.hpp"
 namespace Sirikata {
-namespace Graphics {
-
-class Camera : public Entity, public CameraListener {
-    Ogre::Camera *mCamera;
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::Viewport *mViewport;
-protected:
-    void created();
-    void destroyed();
+class SIRIKATA_OH_EXPORT ProxyCameraObject:public Provider<CameraListenerPtr>, public ProxyObject{
 public:
-    virtual void attach (const String&renderTargetName,
-                         const uint32 width,
-                         const uint32 height);
-    virtual void detatch();
-    Camera(OgreSystem *scene,
-           const UUID &id,
-           String cameraName=String());
-
-    virtual ~Camera();
-    Ogre::Viewport* getViewport(){
-        return mViewport;
+    ProxyCameraObject(){}
+    void attach(const String&renderTargetName,
+                uint32 width,
+                uint32 height) {
+        this->Provider<CameraListenerPtr>::notify(&CameraListener::attach,renderTargetName,width,height);
     }
+    void detatch() {
+        this->Provider<CameraListenerPtr>::notify(&CameraListener::detatch);
+    }
+    
 };
-
 }
-}
-
 #endif
