@@ -1,6 +1,6 @@
 #ifndef _CBR_FAIRSENDQUEUE_HPP
 #define _CBR_FAIRSENDQUEUE_HPP
-#include "SendQueue.hpp"
+#include "ServerMessageQueue.hpp"
 #include "FairMessageQueue.hpp"
 namespace CBR {
 class FairSendQueue:public SendQueue {

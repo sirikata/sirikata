@@ -34,10 +34,9 @@
 #include "Duration.hpp"
 #include "BoundingBox.hpp"
 
-#include "FairSendQueue.hpp"
 
 namespace CBR {
-
+class ObjectMessageQueue;
 class MotionPath;
 class Object;
 class Server;
@@ -72,7 +71,7 @@ public:
     Object* object(const UUID& id, Server* server);
     void destroyObject(const UUID& id);
 
-    void createObjectQueues(SendQueue* sq);
+    void createObjectQueues(ObjectMessageQueue* sq);
 
 private:
     ObjectIDSet mObjectIDs;

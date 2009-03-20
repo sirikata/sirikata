@@ -1,8 +1,8 @@
 #ifndef _CBR_FIFOSENDQUEUE_HPP
 #define _CBR_FIFOSENDQUEUE_HPP
-#include "SendQueue.hpp"
+#include "ServerMessageQueue.hpp"
 namespace CBR {
-class FIFOSendQueue:public SendQueue {
+class FIFOServerMessageQueue:public ServerMessageQueue {
     class ServerMessagePair {
     private:
         std::pair<ServerID,Network::Chunk> mPair;
@@ -31,13 +31,11 @@ class FIFOSendQueue:public SendQueue {
     uint32 mRemainderBytes;
     Time mLastTime;
 public:
-    FIFOSendQueue(Network* net, uint32 bytes_per_second, Trace* trace);
+    FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, Trace* trace);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
     virtual void service(const Time& t);
 
     virtual void setServerWeight(ServerID sid, float weight);
-    virtual void registerClient(UUID,float weight);
 };
 }
 #endif

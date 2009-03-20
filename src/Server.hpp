@@ -48,7 +48,8 @@ class ServerIDMap;
 class CoordinateSegmentation;
 class Message;
 class ObjectToObjectMessage;
-class SendQueue;
+class ServerMessageQueue;
+class ObjectMessageQueue;
 class Network;
 class Trace;
 class MigrateMessage;
@@ -60,7 +61,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, SendQueue*sq, Trace* trace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, ObjectMessageQueue*sq, ServerMessageQueue*sq, Trace* trace);
     ~Server();
 
     const ServerID& id() const;
@@ -106,7 +107,8 @@ private:
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
     Network * mNetwork;
-    SendQueue* mSendQueue;
+    ObjectMessageQueue* mObjectMessageQueue;
+    ServerMessageQueue* mServerMessageQueue;
 
     struct SelfMessage {
         SelfMessage(const Network::Chunk& d, bool f)

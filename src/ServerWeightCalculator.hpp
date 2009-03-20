@@ -35,7 +35,7 @@
 
 #include "Utility.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "SendQueue.hpp"
+#include "ServerMessageQueue.hpp"
 
 namespace CBR {
 
@@ -50,7 +50,7 @@ public:
 
     typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
 
-    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, SendQueue* sq);
+    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq);
     ~ServerWeightCalculator();
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 private:
@@ -59,7 +59,7 @@ private:
     ServerID mServerID;
     CoordinateSegmentation* mCSeg;
     WeightFunction mWeightFunc;
-    SendQueue* mSendQueue;
+    ServerMessageQueue* mSendQueue;
 }; // class ServerWeightCalculator
 
 } // namespace CBR

@@ -34,7 +34,7 @@
 
 namespace CBR {
 
-ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, SendQueue* sq)
+ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq)
  : mServerID(id),
    mCSeg(cseg),
    mWeightFunc(weightFunc),

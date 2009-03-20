@@ -36,7 +36,7 @@
 #include "Random.hpp"
 
 #include "QuakeMotionPath.hpp"
-
+#include "ObjectMessageQueue.hpp"
 namespace CBR {
 
 ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration) {
@@ -123,7 +123,7 @@ void ObjectFactory::destroyObject(const UUID& id) {
     mObjects.erase(id);
 }
 
-void ObjectFactory::createObjectQueues(SendQueue* sq) {
+void ObjectFactory::createObjectQueues(ObjectMessageQueue* sq) {
     for(ObjectSet::iterator it = mObjectIDs.begin(); it != mObjectIDs.end(); it++) {
         UUID id = *it;
         sq->registerClient(id, 1);

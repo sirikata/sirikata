@@ -1,13 +1,13 @@
 #include "Utility.hpp"
 #include "Network.hpp"
 #include "Server.hpp"
-#include "FIFOSendQueue.hpp"
+#include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"
 
 namespace CBR {
 
-FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, Trace* trace)
- : SendQueue(trace),
+FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, Trace* trace)
+ : ServerMessageQueue(trace),
    mNetwork(net),
    mRate(bytes_per_second),
    mRemainderBytes(0),
@@ -15,15 +15,11 @@ FIFOSendQueue::FIFOSendQueue(Network* net, uint32 bytes_per_second, Trace* trace
 {
 }
 
-bool FIFOSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
+bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     mQueue.push(ServerMessagePair(destinationServer,msg));
     return true;
 }
-bool FIFOSendQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj){
-    mQueue.push(ServerMessagePair(destinationServer,msg));
-    return true;
-}
-void FIFOSendQueue::service(const Time& t){
+void FIFOServerMessageQueue::service(const Time& t){
     Duration sinceLast = t - mLastTime;
     uint32 free_bytes = mRemainderBytes + (uint32)(sinceLast.seconds() * mRate);
 
@@ -40,12 +36,9 @@ void FIFOSendQueue::service(const Time& t){
     mLastTime = t;
 }
 
-void FIFOSendQueue::setServerWeight(ServerID sid, float weight) {
+void FIFOServerMessageQueue::setServerWeight(ServerID sid, float weight) {
 }
 
-void FIFOSendQueue::registerClient(UUID sid, float weight) {
-
-}
 
 
 }

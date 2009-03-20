@@ -480,7 +480,7 @@ void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& 
         last_bytes += ps_evt->size;
     }
 
-    printf("%d to %d: %d total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
+    printf("%ld to %ld: %d total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {

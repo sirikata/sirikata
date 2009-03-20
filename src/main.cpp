@@ -45,9 +45,9 @@
 #include "OracleLocationService.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
-#include "FairSendQueue.hpp"
-#include "LossyFairSendQueue.hpp"
-#include "FIFOSendQueue.hpp"
+//#include "LossyFairSendQueue.hpp"
+#include "FIFOObjectMessageQueue.hpp"
+#include "FIFOServerMessageQueue.hpp"
 
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
@@ -143,8 +143,10 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
-    obj_factory->createObjectQueues(sq);
+    //SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
+    ServerMessageQueue* sq=new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), trace);
+    ObjectMessageQueue* oq=new FIFOObjectMessageQueue(trace,sq);
+    obj_factory->createObjectQueues(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(
             server_id,
@@ -154,7 +156,7 @@ int main(int argc, char** argv) {
         );
 
 
-    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, network, sq, trace);
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, network, oq, sq, trace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();

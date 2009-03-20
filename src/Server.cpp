@@ -37,20 +37,21 @@
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
-#include "SendQueue.hpp"
+#include "ServerMessageQueue.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
-
+#include "ObjectMessageQueue.hpp"
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, SendQueue * sq, Trace* trace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, ObjectMessageQueue*omq, ServerMessageQueue * sq, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
    mNetwork(net),
-   mSendQueue(sq),
+   mObjectMessageQueue(omq),
+   mServerMessageQueue(sq),
    mCurrentTime(0),
    mTrace(trace)
 {
@@ -112,8 +113,8 @@ void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uu
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }else {
         bool failed = (src_uuid.isNil()) ?
-            !mSendQueue->addMessage(dest_server, msg_serialized) :
-            !mSendQueue->addMessage(dest_server, msg_serialized, src_uuid);
+            !mServerMessageQueue->addMessage(dest_server, msg_serialized) :
+            !mObjectMessageQueue->addMessage(dest_server, msg_serialized, src_uuid);
         assert(!failed);
     }
     delete msg;
@@ -216,7 +217,8 @@ void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {
     }while (offset<chunk.size());
 }
 void Server::networkTick(const Time&t) {
-    mSendQueue->service(t);
+    mObjectMessageQueue->service(t);
+    mServerMessageQueue->service(t);
 
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
