@@ -40,8 +40,7 @@ void FIFOSendQueue::service(const Time& t){
     mLastTime = t;
 }
 
-void FIFOSendQueue::registerServer(ServerID sid, float weight) {
-
+void FIFOSendQueue::setServerWeight(ServerID sid, float weight) {
 }
 
 void FIFOSendQueue::registerClient(UUID sid, float weight) {

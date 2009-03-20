@@ -140,6 +140,15 @@ public:
         mTotalWeight += weight;
         mServerQueues[server] = queue_info;
     }
+    void setQueueWeight(Key server, float weight) {
+        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
+        bool retval=( where != mServerQueues.end() );
+        if (where != mServerQueues.end()) {
+            mTotalWeight -= where->second.weight;
+            mTotalWeight += weight;
+            where->second.weight = weight;
+        }
+    }
     bool removeQueue(Key server) {
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
         bool retval=( where != mServerQueues.end() );
@@ -211,7 +220,7 @@ public:
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                         min_queue_info = queue_info;
                 }
-                
+
                 // If we actually have something to deliver, deliver it
                 if (min_queue_info) {
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
@@ -225,7 +234,7 @@ public:
                         }
                     }else {
                         if (mLeftoverBytes<mMessageBeingSent->size())
-                            break;                        
+                            break;
                     }
                     uint32 message_size = mMessageBeingSent->size();
                     assert(message_size<=mLeftoverBytes);

@@ -34,7 +34,7 @@
 #include "Proximity.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
-#include "ServerMap.hpp"
+#include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 #include "SendQueue.hpp"
@@ -43,11 +43,11 @@
 
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue * sq, Trace* trace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, SendQueue * sq, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
-   mServerMap(server_map),
+   mCSeg(cseg),
    mProximity(prox),
    mNetwork(net),
    mSendQueue(sq),
@@ -321,33 +321,15 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
 
     return migrate_msg;
 }
-void rateLog(ServerID src , ServerID dst, double rate) {
-    return;
-    char rateFile[1024];
-    sprintf(rateFile,"rate-%d.txt",src);
-    FILE * fp=fopen(rateFile,"a");
-    fprintf(fp,"Rate to %d: %f\n",dst,rate);
-    fclose(fp);
-}
+
 ServerID Server::lookup(const Vector3f& pos) {
-    ServerID sid = mServerMap->lookup(pos);
-    if (mID!=sid&&!mSendQueue->hasServerRegistered(sid)) {
-        double rate=mServerMap->serverBandwidthRate(mID,sid,ServerMap::NORMALIZE_BY_RECEIVE_RATE);
-        rateLog(mID,sid,rate);
-        //printf ("Rate to %d: %f\n",sid,rate);
-        mSendQueue->registerServer(sid,rate);
-    }
+    ServerID sid = mCSeg->lookup(pos);
     return sid;
 }
 
 ServerID Server::lookup(const UUID& obj_id) {
-  ServerID sid = mServerMap->lookup(obj_id);
-  if (sid!=mID&&!mSendQueue->hasServerRegistered(sid)) {
-      double rate=mServerMap->serverBandwidthRate(mID,sid,ServerMap::NORMALIZE_BY_RECEIVE_RATE);
-      rateLog(mID,sid,rate);
-      //printf ("Rate to %d: %f\n",sid,rate);
-      mSendQueue->registerServer(sid,rate);
-  }
+    Vector3f pos = mLocationService->currentPosition(obj_id);
+  ServerID sid = mCSeg->lookup(pos);
   return sid;
 }
 

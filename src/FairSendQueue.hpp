@@ -40,8 +40,7 @@ public:
 
     FairSendQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace);
 
-    bool hasServerRegistered(ServerID sid)const;
-    void registerServer(ServerID, float weight);
+    void setServerWeight(ServerID, float weight);
     void removeServer(ServerID);
     void registerClient(UUID,float weight);
     void removeClient(UUID);

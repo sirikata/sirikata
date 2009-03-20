@@ -1,5 +1,5 @@
 /*  cbr
- *  UniformServerMap.hpp
+ *  CoordinateSegmentation.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,31 +30,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UNIFORM_SERVER_MAP_HPP_
-#define _CBR_UNIFORM_SERVER_MAP_HPP_
+#ifndef _CBR_COORDINATE_SEGMENTATION_HPP_
+#define _CBR_COORDINATE_SEGMENTATION_HPP_
 
-#include "ServerMap.hpp"
+#include "Utility.hpp"
 #include "BoundingBox.hpp"
 
 namespace CBR {
 
-/* An implementation of ServerMap based on a uniform grid layout of
- * servers, a la Second Life.
+/** Handles the segmentation of the space into regions handled by servers.
+ *  Answers queries of the type
+ *   position -> ServerID
+ *   ServerID -> region
  */
-class UniformServerMap : public ServerMap {
+class CoordinateSegmentation {
 public:
-    UniformServerMap(LocationService* loc_service, const BandwidthFunction&bw, const BoundingBox3f& region, const Vector3ui32& perside);
-    virtual ~UniformServerMap();
+    /** Listens for updates about the coordinate segmentation. */
+    class Listener {
+    public:
+        virtual ~Listener() {}
 
-    virtual ServerID lookup(const Vector3f& pos);
-    virtual ServerID lookup(const UUID& obj_id);
-    virtual double serverBandwidthRate(ServerID source, ServerID destination, BandwidthNormalization)const;
-    void serverRegionLookup(ServerID sid, Vector3d& retmin, Vector3d &retmax)const;
+        struct SegmentationInfo {
+            ServerID server;
+            BoundingBox3f region;
+        };
+        virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) = 0;
+    }; // class Listener
+
+
+    virtual ~CoordinateSegmentation() {}
+
+    virtual ServerID lookup(const Vector3f& pos) const = 0;
+    virtual BoundingBox3f serverRegion(const ServerID& server) const = 0;
+    virtual BoundingBox3f region() const = 0;
+    virtual uint32 numServers() const = 0;
+
+    void addListener(Listener* listener);
+    void removeListener(Listener* listener);
+
+    virtual void tick(const Time& t) = 0;
+
+protected:
+    void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
 private:
-    BoundingBox3f mRegion;
-    Vector3ui32 mServersPerDim;
-};
+    std::set<Listener*> mListeners;
+}; // class CoordinateSegmentation
 
 } // namespace CBR
 
-#endif //_CBR_UNIFORM_SERVER_MAP_HPP_
+#endif

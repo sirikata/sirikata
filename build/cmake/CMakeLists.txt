@@ -152,6 +152,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Duration.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOSendQueue.cpp
@@ -168,11 +169,12 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
+  ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Time.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/UniformServerMap.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )

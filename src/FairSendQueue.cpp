@@ -70,13 +70,12 @@ void FairSendQueue::service(const Time&t){
     }
 }
 
-bool FairSendQueue::hasServerRegistered(ServerID sid) const{
-    return mServerQueues.hasQueue(sid);
-}
-
-void FairSendQueue::registerServer(ServerID sid, float weight) {
+void FairSendQueue::setServerWeight(ServerID sid, float weight) {
     if (!mServerQueues.hasQueue(sid)) {
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+    }
+    else {
+        mServerQueues.setQueueWeight(sid, weight);
     }
 }
 void FairSendQueue::removeServer(ServerID sid) {

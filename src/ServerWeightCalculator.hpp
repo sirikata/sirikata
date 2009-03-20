@@ -1,5 +1,5 @@
 /*  cbr
- *  ServerMap.hpp
+ *  ServerWeightCalculator.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,43 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_SERVER_MAP_HPP_
-#define _CBR_SERVER_MAP_HPP_
+#ifndef _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
+#define _CBR_SERVER_WEIGHT_CALCULATOR_HPP_
 
 #include "Utility.hpp"
-#include "LocationService.hpp"
-#include "Server.hpp"
+#include "CoordinateSegmentation.hpp"
+#include "SendQueue.hpp"
 
 namespace CBR {
 
-/* Represents the layout of servers.  Allows you to map objects or positions
- * to the server that handles them.
- */
-class ServerMap {
+class ServerWeightCalculator : public CoordinateSegmentation::Listener {
 public:
-    ////map from xyxmin,  xyxmax,  uvwmin,  uvwmax  to  bandwidth
-    typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> BandwidthFunction;
-    ServerMap(LocationService* loc_service, const BandwidthFunction&bandwidthIntegral)
-     : mLocationService(loc_service)
-      ,mBandwidthCap(bandwidthIntegral)
-    {}
-    virtual ~ServerMap() {}
-
-    virtual ServerID lookup(const Vector3f& pos) = 0;
-    virtual ServerID lookup(const UUID& obj_id) = 0;
-    enum BandwidthNormalization{
+    enum Normalization{
         NORMALIZE_BY_SEND_RATE,
         NORMALIZE_BY_RECEIVE_RATE,
         NORMALIZE_BY_MIN_SEND_AND_RECEIVE_RATE,
         DO_NOT_NORMALIZE
     };
-    virtual double serverBandwidthRate(ServerID source, ServerID destination, BandwidthNormalization bn=NORMALIZE_BY_RECEIVE_RATE)const=0;
-protected:
 
-    LocationService* mLocationService;
-    BandwidthFunction mBandwidthCap;
-};
+    typedef std::tr1::function<double(const Vector3d&,const Vector3d&,const Vector3d&, const Vector3d&)> WeightFunction;
+
+    ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, SendQueue* sq);
+    ~ServerWeightCalculator();
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
+private:
+    void calculateWeight(ServerID source, ServerID dest, Normalization norm);
+
+    ServerID mServerID;
+    CoordinateSegmentation* mCSeg;
+    WeightFunction mWeightFunc;
+    SendQueue* mSendQueue;
+}; // class ServerWeightCalculator
 
 } // namespace CBR
 
-#endif //_CBR_SERVER_MAP_HPP_
+#endif // _CBR_SERVER_WEIGHT_CALCULATOR_HPP_

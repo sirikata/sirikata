@@ -45,7 +45,7 @@ class Proximity;
 class Object;
 class ObjectFactory;
 class ServerIDMap;
-class ServerMap;
+class CoordinateSegmentation;
 class Message;
 class ObjectToObjectMessage;
 class SendQueue;
@@ -60,7 +60,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, ServerMap* server_map, Proximity* prox, Network* net, SendQueue*sq, Trace* trace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, SendQueue*sq, Trace* trace);
     ~Server();
 
     const ServerID& id() const;
@@ -103,7 +103,7 @@ private:
     ObjectMap mObjects;
     ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
-    ServerMap* mServerMap;
+    CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
     Network * mNetwork;
     SendQueue* mSendQueue;

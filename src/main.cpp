@@ -35,7 +35,6 @@
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "LocationService.hpp"
-#include "ServerMap.hpp"
 #include "Proximity.hpp"
 #include "Server.hpp"
 
@@ -44,7 +43,6 @@
 #include "Analysis.hpp"
 
 #include "OracleLocationService.hpp"
-#include "UniformServerMap.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
 #include "FairSendQueue.hpp"
@@ -53,6 +51,10 @@
 
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
+
+#include "UniformCoordinateSegmentation.hpp"
+
+#include "ServerWeightCalculator.hpp"
 
 int main(int argc, char** argv) {
     using namespace CBR;
@@ -130,13 +132,10 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
+    ServerID server_id = GetOption("id")->as<ServerID>();
+
     LocationService* loc_service = new OracleLocationService(obj_factory);
-    ServerMap* server_map = new UniformServerMap(
-        loc_service,
-        std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),_1,_2,_3,_4),
-        region,
-        layout
-    );
+    CoordinateSegmentation* cseg = new UniformCoordinateSegmentation(region, layout);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
@@ -146,9 +145,16 @@ int main(int argc, char** argv) {
 
     SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
     obj_factory->createObjectQueues(sq);
+    ServerWeightCalculator* weight_calc =
+        new ServerWeightCalculator(
+            server_id,
+            cseg,
+            std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),_1,_2,_3,_4),
+            sq
+        );
 
-    ServerID server_id = GetOption("id")->as<ServerID>();
-    Server* server = new Server(server_id, obj_factory, loc_service, server_map, prox, network, sq, trace);
+
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, network, sq, trace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -196,7 +202,8 @@ int main(int argc, char** argv) {
     delete prox;
     delete network;
     delete server_id_map;
-    delete server_map;
+    delete weight_calc;
+    delete cseg;
     delete loc_service;
     delete obj_factory;
 
