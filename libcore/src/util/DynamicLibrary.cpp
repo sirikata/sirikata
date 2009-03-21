@@ -83,7 +83,7 @@ bool DynamicLibrary::load() {
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     mHandle = LoadLibrary(mPath.c_str());
-    if (dddmHandle == NULL) {
+    if (mHandle == NULL) {
         DWORD errnum = GetLastError();
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
     }

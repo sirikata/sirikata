@@ -30,19 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
-#define _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
-#include "CameraListener.hpp"
-#include "ProxyObject.hpp"
+#include <oh/Platform.hpp>
+#include <util/ListenerProvider.hpp>
+#include <oh/ProxyCameraObject.hpp>
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyCameraObject:public Provider<CameraListenerPtr>, public ProxyObject{
-public:
-    ProxyCameraObject();
-    void attach(const String&renderTargetName,
+ProxyCameraObject::ProxyCameraObject(){}
+void ProxyCameraObject::attach(const String&renderTargetName,
                 uint32 width,
-                uint32 height);
-    void detatch();
-    
-};
+                uint32 height) {
+        this->Provider<CameraListenerPtr>::notify(&CameraListener::attach,renderTargetName,width,height);
 }
-#endif
+void ProxyCameraObject::detatch() {
+        this->Provider<CameraListenerPtr>::notify(&CameraListener::detatch);
+}
+
+}

@@ -20,8 +20,8 @@ void Camera::destroyed() {
 }
 
 void Camera::attach (const String&renderTargetName,
-                     const uint32 width,
-                     const uint32 height){
+                     uint32 width,
+                     uint32 height){
     detatch();
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
