@@ -48,7 +48,8 @@
 //#include "LossyFairSendQueue.hpp"
 #include "FIFOObjectMessageQueue.hpp"
 #include "FIFOServerMessageQueue.hpp"
-
+#include "FairServerMessageQueue.hpp"
+#include "FairObjectMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
 
@@ -143,9 +144,10 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    //SendQueue* sq=new FairSendQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
-    ServerMessageQueue* sq=new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), trace);
-    ObjectMessageQueue* oq=new FIFOObjectMessageQueue(trace,sq);
+    ServerMessageQueue* sq=new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
+    ObjectMessageQueue* oq=new FairObjectMessageQueue(GetOption("bandwidth")->as<uint32>(),trace,sq);
+    //ServerMessageQueue* sq=new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), trace);
+    //ObjectMessageQueue* oq=new FIFOObjectMessageQueue(trace,sq);
     obj_factory->createObjectQueues(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(

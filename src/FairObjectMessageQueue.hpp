@@ -1,9 +1,9 @@
-#ifndef _CBR_FAIRSENDQUEUE_HPP
-#define _CBR_FAIRSENDQUEUE_HPP
+#ifndef _CBR_FAIROBJECTMESSAGEQUEUE_HPP
+#define _CBR_FAIROBJECTMESSAGEQUEUE_HPP
+#include "ObjectMessageQueue.hpp"
 #include "ServerMessageQueue.hpp"
-#include "FairMessageQueue.hpp"
 namespace CBR {
-class FairSendQueue:public SendQueue {
+class FairObjectMessageQueue:public ObjectMessageQueue {
 protected:
 
     class ServerMessagePair {
@@ -32,20 +32,18 @@ protected:
             return mPair.second;
         }
     };
-    FairMessageQueue<ServerMessagePair,UUID> mClientQueues;
-    std::vector<ServerMessagePair*> mClientServerBuffer;
-    FairMessageQueue<ServerMessagePair, ServerID > mServerQueues;
+    FairQueue<ServerMessagePair,UUID> mClientQueues;
     Network * mNetwork;
 public:
 
-    FairSendQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace);
+    FairObjectMessageQueue(uint32 bytes_per_second, Trace* trace, ServerMessageQueue*sm);
 
     void setServerWeight(ServerID, float weight);
     void removeServer(ServerID);
     void registerClient(UUID,float weight);
     void removeClient(UUID);
 
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
+
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
     virtual void service(const Time&t);
 

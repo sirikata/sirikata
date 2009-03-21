@@ -1,5 +1,5 @@
 /*  cobra
- *  FairMessageQueue.hpp
+ *  FairQueue.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -90,7 +90,7 @@ public:
         return mq.empty()?nil->size():mq.front()->size();
     }
 };
-template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairMessageQueue {
+template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairQueue {
 public:
     struct ServerQueueInfo {
         ServerQueueInfo():nextFinishTime(0) {
@@ -111,7 +111,7 @@ public:
     bool mRenormalizeWeight;
     int64 mLeftoverBytes;
     typedef Queue<Message*> MessageQueue;
-    FairMessageQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
+    FairQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
         :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
          mLeftoverBytes(0),
@@ -124,7 +124,7 @@ public:
          mServerQueues(),
          bytes_sent(0){}
 
-    ~FairMessageQueue(){
+    ~FairQueue(){
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
         for(; it != mServerQueues.end(); it++) {
             ServerQueueInfo* queue_info = &it->second;
@@ -283,7 +283,7 @@ protected:
     ServerQueueInfoMap mServerQueues;
 
     uint32 bytes_sent;
-}; // class FairMessageQueue
+}; // class FairQueue
 
 } // namespace Cobra
 
