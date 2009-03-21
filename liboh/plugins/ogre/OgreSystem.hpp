@@ -44,7 +44,7 @@
 namespace Sirikata { namespace Graphics {
 class Entity;
 class OgreSystem: public TimeSteppedSimulation {
-    std::tr1::unordered_map<SpaceObjectReference,Entity*,UUID::Hasher> mSceneObjects;
+    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> mSceneObjects;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;

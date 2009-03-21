@@ -102,6 +102,12 @@ public:
         static Array nil=*nix.memcpy(nothing,static_size);
         return nil;
     }
+    template <class InputIterator> static Array construct(InputIterator begin,
+                                                          InputIterator end) {
+        Array retval;
+        retval.initialize(begin,end);
+        return retval;
+    }
     bool operator <(const Array &other)const {
         if (integral_type) {
             return std::memcmp(mElems,other.mElems,static_size*sizeof(T))<0;

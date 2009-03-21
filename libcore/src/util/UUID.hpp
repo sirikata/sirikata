@@ -39,7 +39,7 @@ class uuid;
 }
 
 namespace Sirikata {
-class SIRIKATA_EXPORT UUID {
+class SIRIKATA_EXPORT UUID :public TotallyOrdered<UUID> {
 public:
     enum {static_size=16};
     typedef unsigned char byte;
@@ -56,6 +56,11 @@ public:
         mData.memcpy(data,length);
     }
     UUID(const Data data):mData(data) {
+    }
+    static const UUID& null() {
+        static unsigned char data[static_size]={0};
+        static UUID retval(data,static_size);
+        return retval;
     }
     /**
      * Interprets the human readable UUID string using boost functions

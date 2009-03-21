@@ -200,6 +200,7 @@ typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
 
 } // namespace Sirikata
+#include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
 #include "Factory.hpp"
 #include "Vector4.hpp"
