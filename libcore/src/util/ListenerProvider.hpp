@@ -210,7 +210,7 @@ public:
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 1 argument
  */
-template<typename ListenerPtr, class A> class MarkovianProvider1:protected Provider<ListenerPtr> {
+template<typename ListenerPtr, class A> class MarkovianProvider1:public Provider<ListenerPtr> {
     A mA;
 protected:
     void notify(const A&a) {
@@ -237,7 +237,7 @@ public:
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 2 arguments
  */
-template<typename ListenerPtr, class A, class B> class MarkovianProvider2:protected Provider<ListenerPtr> {
+template<typename ListenerPtr, class A, class B> class MarkovianProvider2:public Provider<ListenerPtr> {
     A mA;
     B mB;
 protected:
@@ -266,7 +266,7 @@ public:
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 3 arguments
  */
-template<typename ListenerPtr, class A, class B, class C> class MarkovianProvider3:protected Provider<ListenerPtr> {
+template<typename ListenerPtr, class A, class B, class C> class MarkovianProvider3:public Provider<ListenerPtr> {
     A mA;
     B mB;
     C mC;
@@ -297,7 +297,7 @@ public:
  * The markovian provider recalls the last item sent to a listener and notifies new listeners withthis value
  * The provider only supports a single Listener function called notify which takes 4 arguments
  */
-template<typename ListenerPtr, class A, class B, class C, class D> class MarkovianProvider4:protected Provider<ListenerPtr> {
+template<typename ListenerPtr, class A, class B, class C, class D> class MarkovianProvider4:public Provider<ListenerPtr> {
     A mA;
     B mB;
     C mC;
@@ -330,7 +330,7 @@ public:
  * The provider only supports a single Listener function called notify which takes 5 arguments
  */
 template<typename ListenerPtr, class A, class B, class C, class D, class E> 
- class MarkovianProvider5:protected Provider<ListenerPtr> {
+ class MarkovianProvider5:public Provider<ListenerPtr> {
     A mA;
     B mB;
     C mC;
@@ -366,7 +366,7 @@ public:
  * The provider only supports a single Listener function called notify which takes 6 arguments
  */
 template<typename ListenerPtr, class A, class B, class C, class D, class E, class F> 
- class MarkovianProvider6:protected Provider<ListenerPtr> {
+ class MarkovianProvider6:public Provider<ListenerPtr> {
     A mA;
     B mB;
     C mC;

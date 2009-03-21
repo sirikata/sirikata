@@ -40,6 +40,9 @@ public:
     virtual void notify(int i) {
         total*=i;
     }
+    virtual void notify0() {
+        total+=1;
+    }
 };
 
 class ListenerTest :  public CxxTest::TestSuite
@@ -90,11 +93,12 @@ public:
             this->notify(&ListenerTestClass::notify,2);
             this->removeListener(d);
             this->notify(&ListenerTestClass::notify,1);
+            this->notify(&ListenerTestClass::notify0);
             this->removeListener(c);
             this->notify(&ListenerTestClass::notify,16);
             TS_ASSERT_EQUALS(a->total,dynamic_cast<Test*>(&*a)?8:8);
             TS_ASSERT_EQUALS(b->total,dynamic_cast<Test*>(&*b)?12:32);
-            TS_ASSERT_EQUALS(c->total,dynamic_cast<Test*>(&*c)?15:64);
+            TS_ASSERT_EQUALS(c->total,dynamic_cast<Test*>(&*c)?16:65);
             TS_ASSERT_EQUALS(d->total,dynamic_cast<Test*>(&*d)?6:8);
             TS_ASSERT_EQUALS(callCount,4+4*16+256+256*16);
             return *this;
@@ -127,11 +131,12 @@ public:
         this->notify(2);
         this->removeListener(d);
         this->notify(1);
+        this->Provider<ListenerTestClass*>::notify(&ListenerTestClass::notify0);
         this->removeListener(c);
         this->notify(16);
         TS_ASSERT_EQUALS(a->total,18);
         TS_ASSERT_EQUALS(b->total,22);
-        TS_ASSERT_EQUALS(c->total,25);
+        TS_ASSERT_EQUALS(c->total,26);
         TS_ASSERT_EQUALS(d->total,14);
         delete a;delete b;delete c; delete d;
     }
