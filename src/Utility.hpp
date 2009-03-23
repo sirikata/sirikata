@@ -146,12 +146,18 @@ public:
     Value extrapolate(const TimeType&t) const {
         return mValue.extrapolate(t);
     }
+    const Value&lastValue() const{
+        return mValue.value();
+    }
     TimeType lastUpdateTime()const{
         return mValue.time();
     }
     SimpleExtrapolatorBase& updateValue(const TimeType&t, const Value&l) {
         mValue = TemporalValueType(t,l);
         return *this;
+    }
+    bool propertyHolds(const TimeType&when, const std::tr1::function<bool(const Value&)>&f)const{
+        return f(mValue.extrapolate(when));
     }
 };
 
