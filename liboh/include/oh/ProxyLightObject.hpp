@@ -10,7 +10,7 @@ class SIRIKATA_OH_EXPORT ProxyLightObject
   : public MarkovianProvider1<LightListenerPtr,LightInfo>,
     public ProxyPositionObject {
 public:
-    ProxyLightObject():MarkovianProvider1<LightListenerPtr,LightInfo>(LightInfo()){}
+    ProxyLightObject(const SpaceObjectReference&id):MarkovianProvider1<LightListenerPtr,LightInfo>(LightInfo()),ProxyPositionObject(id){}
     void update(const LightInfo &li) {
         notify(li);
     }

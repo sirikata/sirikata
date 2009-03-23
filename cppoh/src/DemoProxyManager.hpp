@@ -40,11 +40,13 @@ class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     std::tr1::shared_ptr<ProxyLightObject> mLight;
     std::tr1::shared_ptr<ProxyMeshObject> mMesh;
+    //noncopyable
+    DemoProxyManager(const DemoProxyManager&cpy){}
 public:
     DemoProxyManager()
-        : mCamera(new ProxyCameraObject),
-          mLight(new ProxyLightObject),
-          mMesh(new ProxyMeshObject) {
+        : mCamera(new ProxyCameraObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
+        mLight(new ProxyLightObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
+         mMesh(new ProxyMeshObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
         
     }
     void initialize(){

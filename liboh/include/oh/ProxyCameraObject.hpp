@@ -39,7 +39,7 @@ class SIRIKATA_OH_EXPORT ProxyCameraObject
   : public Provider<CameraListenerPtr>,
     public ProxyPositionObject {
 public:
-    ProxyCameraObject();
+    ProxyCameraObject(const SpaceObjectReference&id);
     void attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height);

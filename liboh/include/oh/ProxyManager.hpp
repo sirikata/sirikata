@@ -36,7 +36,7 @@ namespace Sirikata {
 class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
 public:
     ProxyManager();
-    ~ProxyManager();
+    virtual ~ProxyManager();
     ///Called after providers attached
     virtual void initialize()=0;
     ///Called before providers detatched

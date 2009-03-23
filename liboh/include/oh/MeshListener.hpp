@@ -32,7 +32,7 @@
 #ifndef _SIRIKATA_MESH_LISTENER_HPP_
 #define _SIRIKATA_MESH_LISTENER_HPP_
 
-#include "transfer/URI.hpp";
+#include "transfer/URI.hpp"
 
 namespace Sirikata {
 

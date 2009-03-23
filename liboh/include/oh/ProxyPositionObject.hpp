@@ -27,7 +27,7 @@ class SIRIKATA_OH_EXPORT ProxyPositionObject : public ProxyObject {
     };
      TimedWeightedExtrapolator<Location,UpdateNeeded> mLocation;
 public:
-     ProxyPositionObject():mLocation(Duration::seconds(.1),TemporalValue<Location>::Time::null(),Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),Vector3f(0,0,0),Vector3f(0,1,0),0),UpdateNeeded()) {
+     ProxyPositionObject(const SpaceObjectReference&id):ProxyObject(id),mLocation(Duration::seconds(.1),TemporalValue<Location>::Time::null(),Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),Vector3f(0,0,0),Vector3f(0,1,0),0),UpdateNeeded()) {
     }
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     const Vector3d& getPosition() const{

@@ -34,7 +34,7 @@
 #include <util/ListenerProvider.hpp>
 #include <oh/ProxyCameraObject.hpp>
 namespace Sirikata {
-ProxyCameraObject::ProxyCameraObject(){}
+ProxyCameraObject::ProxyCameraObject(const SpaceObjectReference&id):ProxyPositionObject(id){}
 void ProxyCameraObject::attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height) {

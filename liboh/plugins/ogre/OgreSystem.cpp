@@ -415,6 +415,7 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
+    assert(mSceneObjects.empty());
     decrefcount();
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()
              ;iter!=sActiveOgreScenes.end();) {
@@ -471,23 +472,22 @@ void OgreSystem::destroyProxy(ProxyObjectPtr p){
     if (camera) {
         //FIXME: should camera be responsible for adding and removing listeners
         camera->removeListener(dynamic_cast<Camera*>(mSceneObjects[camera->getObjectReference()]));
-        mSceneObjects.erase(mSceneObjects.find(camera->getObjectReference()));
-        //FIXME inefficient double lookup, no error checking
     }
     std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
     if (light) {
         //FIXME: should camera be responsible for adding and removing listeners
         light->removeListener(dynamic_cast<Light*>(mSceneObjects[light->getObjectReference()]));
-        mSceneObjects.erase(mSceneObjects.find(light->getObjectReference()));
-        //FIXME inefficient double lookup, no error checking
     }
     std::tr1::shared_ptr<ProxyMeshObject> mesh=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
     if (mesh) {
         //FIXME: should camera be responsible for adding and removing listeners
         mesh->removeListener(dynamic_cast<MeshObject*>(mSceneObjects[mesh->getObjectReference()]));
-        mSceneObjects.erase(mSceneObjects.find(mesh->getObjectReference()));
-        //FIXME inefficient double lookup, no error checking
     }
+    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher>::iterator where=mSceneObjects.find(p->getObjectReference());
+    assert(where!=mSceneObjects.end());
+    //delete where->second;
+    mSceneObjects.erase(where);
+    
 }
 Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();

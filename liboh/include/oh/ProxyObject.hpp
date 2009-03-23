@@ -14,7 +14,7 @@ namespace Sirikata {
 class SIRIKATA_OH_EXPORT ProxyObject{
     SpaceObjectReference mID;
 public:
-    ProxyObject(){}
+    ProxyObject(const SpaceObjectReference&ref):mID(ref){}
     virtual ~ProxyObject(){}
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     const SpaceObjectReference&getObjectReference() const{

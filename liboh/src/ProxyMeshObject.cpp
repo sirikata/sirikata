@@ -34,7 +34,7 @@
 #include <util/ListenerProvider.hpp>
 #include <oh/ProxyMeshObject.hpp>
 namespace Sirikata {
-ProxyMeshObject::ProxyMeshObject(){}
+ProxyMeshObject::ProxyMeshObject(const SpaceObjectReference&id):ProxyPositionObject(id){}
 void ProxyMeshObject::setMesh(const URI&meshFile) {
         this->Provider<MeshListenerPtr>::notify(&MeshListener::meshChanged,meshFile);
 }
