@@ -123,6 +123,7 @@ public:
       if (obj) {
         init(obj);
       }
+      addToScene(NULL);
     }
 
     virtual ~Entity() {

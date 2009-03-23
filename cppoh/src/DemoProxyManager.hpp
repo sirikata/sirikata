@@ -59,7 +59,7 @@ public:
         li.setLightPower(1);
         mLight->update(li);
         mLight->setPosition(Time::now(), Vector3d(0,0,1000.), Quaternion::identity());
-        mMesh->setMesh("file:///Cube.mesh");
+        mMesh->setMesh("file:///razor.mesh");
         mMesh->setPosition(Time::now(), Vector3d(0,0,0), Quaternion::identity());
     }
     void destroy() {
