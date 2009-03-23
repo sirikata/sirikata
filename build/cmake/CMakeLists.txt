@@ -565,6 +565,8 @@ ENDIF()
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
 SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
                   ${LIBOH_SOURCE_DIR}/ProxyMeshObject.cpp
+                  ${LIBOH_SOURCE_DIR}/ProxyLightObject.cpp
+                  ${LIBOH_SOURCE_DIR}/ProxyPositionObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyManager.cpp 
                   ${LIBOH_SOURCE_DIR}/ProxyCameraObject.cpp 
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp )

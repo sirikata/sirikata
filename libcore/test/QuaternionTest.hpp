@@ -37,8 +37,8 @@ class QuaternionTest : public CxxTest::TestSuite
 public:
     void testAdd( void )
     {
-        Quaternion a(1,2,3,4);
-        Quaternion b(5,6,8,7);
+        Quaternion a(1,2,3,4,Quaternion::XYZW());
+		Quaternion b(5,6,8,7,Quaternion::XYZW());
         Quaternion c=a+b;
         TS_ASSERT_EQUALS(c.x,a.x+b.x);
         TS_ASSERT_EQUALS(c.y,a.y+b.y);
@@ -47,9 +47,9 @@ public:
     }
     void testToString( void )
     {
-        Quaternion a(1,2,3.25,4.125);
+        Quaternion a(1,2,3.25,4.125,Quaternion::XYZW());
         std::string akey("<1,2,3.25,4.125>");
-        Quaternion b(-4,-.25,-.0625,1.25);
+        Quaternion b(-4,-.25,-.0625,1.25,Quaternion::XYZW());
         std::string bkey("<-4,-0.25,-0.0625,1.25>");
         TS_ASSERT_EQUALS(a.toString(),akey);
         TS_ASSERT_EQUALS(b.toString(),bkey);

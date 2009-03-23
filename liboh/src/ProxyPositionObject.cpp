@@ -1,7 +1,7 @@
-/*  Sirikata Graphical Object Host
- *  MeshObject.cpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  ProxyPositionObject.cpp
  *
- *  Copyright (c) 2009, Patrick Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,41 +29,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "MeshObject.hpp"
-#include <OgreMeshManager.h>
-#include <OgreResourceGroupManager.h>
 namespace Sirikata {
-namespace Graphics {
 
-MeshObject::MeshObject(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
-               const UUID &id)
-        : Entity(scene,
-                 pmo,
-                 id,
-                 scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
-{}
-
-void MeshObject::meshChanged(const URI &meshFile) {
-    mMeshURI = meshFile;
-    //scene->getDependencyManager()->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
-    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    created(ogreMesh);
-}
-
-void MeshObject::created(const Ogre::MeshPtr &mesh) {
-    getScene()->getSceneManager()->destroyMovableObject(mOgreObject);
-    mOgreObject=NULL;
-    Ogre::MovableObject *meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
-                                                                               mesh->getName());
-    init(meshObj);
-}
-
-MeshObject::~MeshObject() {
-    init(NULL);
-    getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
-    getProxy().removeListener(this);
-}
-
-}
 }
