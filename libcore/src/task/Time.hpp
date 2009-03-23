@@ -60,6 +60,18 @@ public:
 	DeltaTime(double t) {
 		this->mDeltaTime = t;
 	}
+    static DeltaTime seconds(double s) {
+        return DeltaTime(s);
+    }
+    static DeltaTime milliseconds(double ms) {
+        return DeltaTime(ms/1000.);
+    }
+    static DeltaTime microseconds(double us) {
+        return DeltaTime(us/1000000.);
+    }
+    static DeltaTime nanoseconds(double ns) {
+        return DeltaTime(ns/1000000000.);
+    }
 
 	/// Simple helper function -- returns "AbsTime::now() + (*this)".
 	class AbsTime fromNow() const;

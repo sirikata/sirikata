@@ -43,7 +43,9 @@ public:
     virtual bool needsUpdate(const TimeType&now, const Value&actualValue)const=0;
     virtual Value extrapolate(const TimeType&now)const=0;
     virtual TimeType lastUpdateTime()const=0;
+    virtual const Value& lastValue()const=0;
     virtual ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&now, const Value&actualValue)=0;
+    virtual bool propertyHolds(const TimeType&time, const std::tr1::function<bool(const Value&)>&)const=0;
 };
 
 template<typename Value>
@@ -74,7 +76,7 @@ public:
         return (*mNeedsUpdate)(actualValue, extrapolate(now));
     }
     Value extrapolate(const TimeType&t) const {
-        DurationType timeSinceUpdate=t-mValuePresent.time();
+        DurationType timeSinceUpdate=t-lastUpdateTime();
         if (mFadeTime<timeSinceUpdate) {
             return mValuePresent.extrapolate(t);
         }else{
@@ -83,6 +85,9 @@ public:
                        (float64)timeSinceUpdate/(float64)mFadeTime);
         }
     }
+    const Value& lastValue() const {
+        return mValuePresent.value();
+    }
     TimeType lastUpdateTime()const{
         return mValuePresent.time();
     }
@@ -90,6 +95,17 @@ public:
         mValuePast=mValuePresent;
         mValuePresent.updateValue(t,l);
         return *this;
+    }
+    template <class Functor> bool templatedPropertyHolds(const TimeType&t, const Functor &f)const{
+        DurationType timeSinceUpdate=t-lastUpdateTime();
+        if (timeSinceUpdate<mFadeTime) {
+            return f(mValuePast.value())&&f(mValuePresent.value());
+        }else {
+            return f(mValuePresent.value());
+        }
+    }
+    virtual bool propertyHolds(const TimeType&time, const std::tr1::function<bool(const Value&)>&f)const{
+        return templatedPropertyHolds(time,f);
     }
 };
 
