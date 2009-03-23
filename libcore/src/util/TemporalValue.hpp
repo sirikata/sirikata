@@ -39,6 +39,7 @@ namespace Sirikata {
 template <typename Value, typename TimeType>
 class TemporalValueBase {
 public:
+    typedef TimeType Time;
     Value mCurrentValue;
     TimeType mWhen;
 public:

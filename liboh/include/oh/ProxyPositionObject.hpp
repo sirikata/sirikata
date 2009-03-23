@@ -1,6 +1,8 @@
 #ifndef _SIRIKATA_PROXY_POSITION_OBJECT_HPP_
 #define _SIRIKATA_PROXY_POSITION_OBJECT_HPP_
+#include <util/TemporalValue.hpp>
 #include "ProxyObject.hpp"
+
 namespace Sirikata {
 
   typedef double AbsTime;
@@ -13,58 +15,47 @@ namespace Sirikata {
  * and appropriate listeners be registered.
  */
 class SIRIKATA_OH_EXPORT ProxyPositionObject : public ProxyObject {
-    Vector3d mPosition;
-    Quaternion mOrientation;
-    Vector3f mPositionPerSecond;
-    Quaternion mOrientationPerSecond;
-    AbsTime mLastUpdated;
+    TemporalValue<Location> mLocation;
 public:
-    ProxyPositionObject()
-        : mPosition(-1,-1,-1),
-          mOrientation(-1,-1,-1,-1),
-          mPositionPerSecond(0,0,0),
-          mOrientationPerSecond(0,0,0,0),
-          mLastUpdated(0.) {
+    ProxyPositionObject():mLocation(TemporalValue<Location>::Time::null(),Location(Vector3d(0,0,0),Quaternion(0,0,0,1),Vector3f(0,0,0),Vector3f(0,1,0),0)) {
     }
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     const Vector3d&getPosition() const{
-        return mPosition;
+        return mLocation.value().getPosition();
     }
     const Quaternion&getOrientation() const{
-        return mOrientation;
+        return mLocation.value().getOrientation();
     }
-    AbsTime getLastUpdated() const {
-        return mLastUpdated;
+    TemporalValue<Location>::Time getLastUpdated() const {
+        return mLocation.time();
     }
-    bool isStatic() {
-      return mPositionPerSecond.lengthSquared()==0 &&
-        mOrientationPerSecond.lengthSquared()==0;
+    bool isStatic() const {
+        return mLocation.value().getVelocity()==Vector3f(0,0,0) &&
+            mLocation.value().getAngularSpeed()==0;
     }
-    void setPosition(AbsTime timeStamp,
-            const Vector3d &newPos,
-            const Quaternion &newOri) {
-        mPosition = newPos;
-        mOrientation = newOri;
-        mLastUpdated = timeStamp;
-        mPositionPerSecond = Vector3f(0,0,0);
-        mOrientationPerSecond = Quaternion(0,0,0,0);
+    void setPosition(TemporalValue<Location>::Time timeStamp,
+                     const Vector3d &newPos,
+                     const Quaternion &newOri) {
+        mLocation.updateValue(timeStamp,
+                              Location(newPos,
+                                       newOri,
+                                       mLocation.value().getVelocity(),
+                                       mLocation.value().getAxisOfRotation(),
+                                       mLocation.value().getAngularSpeed()));
     }
-    void setPositionVelocity(AbsTime timeStamp,
-            const Vector3d &newPos,
-            const Quaternion &newOri,
-            const Vector3f &newVel,
-            const Quaternion &newAngVel) {
-        mPosition = newPos;
-        mOrientation = newOri;
-        mLastUpdated = timeStamp;
-        mPositionPerSecond = newVel;
-        mOrientationPerSecond = newAngVel;
+    void setPositionVelocity(TemporalValue<Location>::Time timeStamp,
+                             const Location&location) {
+        mLocation.updateValue(timeStamp,
+                              location);
     }
-    Vector3d extrapolatePosition(AbsTime current) const {
-      return mPosition + (mPositionPerSecond * (current - mLastUpdated)).convert<Vector3d>();
+    Vector3d extrapolatePosition(TemporalValue<Location>::Time current) const {
+        return mLocation.extrapolate(current).getPosition();
     }
-    Quaternion extrapolateOrientation(AbsTime current) const {
-        return mOrientation + (mOrientationPerSecond * (current - mLastUpdated));
+    Quaternion extrapolateOrientation(TemporalValue<Location>::Time current) const {
+        return mLocation.extrapolate(current).getOrientation();
+    }
+    Location extrapolateLocation(TemporalValue<Location>::Time current) const {
+        return mLocation.extrapolate(current);
     }
 };
 }
