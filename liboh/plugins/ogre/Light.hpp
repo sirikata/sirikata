@@ -43,10 +43,10 @@ class Light
     : public Entity,
       public LightListener {
 public:
-    const ProxyLightObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<const ProxyLightObject>(mProxy);
+    ProxyLightObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<ProxyLightObject>(mProxy);
     }
-    Light(OgreSystem *scene, const std::tr1::shared_ptr<const ProxyLightObject> &plo, const UUID &id)
+    Light(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const UUID &id)
         : Entity(scene,
                  plo,
                  id,
@@ -54,8 +54,9 @@ public:
     }
 
     virtual ~Light() {
-        mSceneNode->detachAllObjects();
+        init(NULL);
         mScene->getSceneManager()->destroyLight(mId.readableHexData());
+        getProxy().removeListener(this);
     }
 
     inline Ogre::Light &light() {

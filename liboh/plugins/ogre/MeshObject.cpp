@@ -36,7 +36,7 @@ namespace Sirikata {
 namespace Graphics {
 
 MeshObject::MeshObject(OgreSystem *scene,
-               const std::tr1::shared_ptr<const ProxyMeshObject> &pmo,
+               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
                const UUID &id)
         : Entity(scene,
                  pmo,
@@ -61,6 +61,7 @@ void MeshObject::created(const Ogre::MeshPtr &mesh) {
 MeshObject::~MeshObject() {
     init(NULL);
     getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
+    getProxy().removeListener(this);
 }
 
 }

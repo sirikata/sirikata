@@ -4,7 +4,7 @@
 namespace Sirikata {
 namespace Graphics {
 Camera::Camera(OgreSystem *scene,
-           const std::tr1::shared_ptr<const ProxyCameraObject> &pco,
+           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
            const UUID &id)
     : Entity(scene,
              pco,
@@ -55,8 +55,12 @@ void Camera::detach() {
 }
 
 Camera::~Camera() {
-    mSceneNode->detachAllObjects();
+    if ((!mViewport) || (mViewport && mRenderTarget)) {
+        detach();
+    }
+    init(NULL);
     mScene->getSceneManager()->destroyCamera(mId.readableHexData());
+    getProxy().removeListener(this);
 }
 
 

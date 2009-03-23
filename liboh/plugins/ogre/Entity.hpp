@@ -98,7 +98,7 @@ class OgreSystem;
 class Entity : public ProxyObjectListener{
 protected:
     OgreSystem *const mScene;
-    const std::tr1::shared_ptr<const ProxyPositionObject> mProxy;
+    const std::tr1::shared_ptr<ProxyPositionObject> mProxy;
 
     UUID mId;
 
@@ -108,6 +108,11 @@ protected:
     void init(Ogre::MovableObject *obj) {
         if (mOgreObject) {
             mSceneNode->detachObject(mOgreObject);
+            if (!obj) {
+                removeFromScene();
+            }
+        } else if (obj) {
+            addToScene(NULL);
         }
         mOgreObject = obj;
         if (obj) {
@@ -119,7 +124,7 @@ public:
         return *mProxy;
     }
     Entity(OgreSystem *scene,
-           const std::tr1::shared_ptr<const ProxyPositionObject> &ppo,
+           const std::tr1::shared_ptr<ProxyPositionObject> &ppo,
            const UUID &id,
            Ogre::MovableObject *obj=NULL)
           : mScene(scene),
@@ -130,11 +135,11 @@ public:
       if (obj) {
         init(obj);
       }
-      addToScene(NULL);
     }
 
     virtual ~Entity() {
         init(NULL);
+        mSceneNode->detachAllObjects();
         mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
     }
 

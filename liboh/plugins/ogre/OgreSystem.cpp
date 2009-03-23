@@ -468,24 +468,9 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
-    std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
-    if (camera) {
-        //FIXME: should camera be responsible for adding and removing listeners
-        camera->removeListener(dynamic_cast<Camera*>(mSceneObjects[camera->getObjectReference()]));
-    }
-    std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
-    if (light) {
-        //FIXME: should camera be responsible for adding and removing listeners
-        light->removeListener(dynamic_cast<Light*>(mSceneObjects[light->getObjectReference()]));
-    }
-    std::tr1::shared_ptr<ProxyMeshObject> mesh=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-    if (mesh) {
-        //FIXME: should camera be responsible for adding and removing listeners
-        mesh->removeListener(dynamic_cast<MeshObject*>(mSceneObjects[mesh->getObjectReference()]));
-    }
     std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher>::iterator where=mSceneObjects.find(p->getObjectReference());
     assert(where!=mSceneObjects.end());
-    //delete where->second;
+    delete where->second;
     mSceneObjects.erase(where);
     
 }

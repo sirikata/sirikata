@@ -60,11 +60,11 @@ class MeshObject
     }
 
 public:
-    const ProxyMeshObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<const ProxyMeshObject>(mProxy);
+    ProxyMeshObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
     }
     MeshObject(OgreSystem *scene,
-               const std::tr1::shared_ptr<const ProxyMeshObject> &pmo,
+               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
                const UUID &id);
 
     virtual ~MeshObject();
