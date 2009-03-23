@@ -19,6 +19,12 @@ bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network
     mQueue.push(ServerMessagePair(destinationServer,msg));
     return true;
 }
+
+Network::Chunk* FIFOServerMessageQueue::receive() {
+    Network::Chunk* c = mNetwork->receiveOne();
+    return c;
+}
+
 void FIFOServerMessageQueue::service(const Time& t){
     Duration sinceLast = t - mLastTime;
     uint32 free_bytes = mRemainderBytes + (uint32)(sinceLast.seconds() * mRate);

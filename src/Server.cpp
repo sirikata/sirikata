@@ -49,14 +49,13 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
-   mNetwork(net),
    mObjectMessageQueue(omq),
    mServerMessageQueue(sq),
    mCurrentTime(0),
    mTrace(trace)
 {
     // start the network listening
-    mNetwork->listen(mID);
+    net->listen(mID);
 
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
@@ -228,7 +227,7 @@ void Server::networkTick(const Time&t) {
     }
 
     Sirikata::Network::Chunk *c=NULL;
-    while((c=mNetwork->receiveOne())) {
+    while((c=mServerMessageQueue->receive())) {
         processChunk(*c, false);
         delete c;
     }

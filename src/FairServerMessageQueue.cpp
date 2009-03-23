@@ -14,6 +14,12 @@ FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_se
 bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     return mServerQueues.queueMessage(destinationServer,new ServerMessagePair(destinationServer,msg))==QueueEnum::PushSucceeded;
 }
+
+Network::Chunk* FairServerMessageQueue::receive() {
+    Network::Chunk* c = mNetwork->receiveOne();
+    return c;
+}
+
 void FairServerMessageQueue::service(const Time&t){
 
 

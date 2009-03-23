@@ -33,6 +33,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
 public:
     FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, Trace* trace);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
+    virtual Network::Chunk* receive();
     virtual void service(const Time& t);
 
     virtual void setServerWeight(ServerID sid, float weight);

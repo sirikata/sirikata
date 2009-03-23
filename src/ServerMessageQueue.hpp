@@ -14,6 +14,7 @@ public:
 
     virtual ~ServerMessageQueue(){}
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg)=0;
+    virtual Network::Chunk* receive() = 0;
     virtual void service(const Time& t)=0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;

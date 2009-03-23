@@ -106,7 +106,6 @@ private:
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
-    Network * mNetwork;
     ObjectMessageQueue* mObjectMessageQueue;
     ServerMessageQueue* mServerMessageQueue;
 
