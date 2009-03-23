@@ -4,13 +4,20 @@
 namespace Sirikata {
 namespace Graphics {
 Camera::Camera(OgreSystem *scene,
-           const UUID &id,
-           String cameraName)
+           const UUID &id)
     : Entity(scene,
              id,
-             scene->getSceneManager()->hasCamera(cameraName=id.readableHexData())?mCamera=scene->getSceneManager()->getCamera(cameraName):mCamera=scene->getSceneManager()->createCamera(cameraName)),mRenderTarget(NULL),mViewport(NULL) {
-    mCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
-    mCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
+             NULL),
+      mRenderTarget(NULL),
+      mViewport(NULL) {
+    String cameraName = id.readableHexData();
+    if (scene->getSceneManager()->hasCamera(cameraName)) {
+        init(scene->getSceneManager()->getCamera(cameraName));
+    } else {
+        init(scene->getSceneManager()->createCamera(cameraName));
+    }
+    getOgreCamera()->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
+    getOgreCamera()->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
 
 void Camera::attach (const String&renderTargetName,
@@ -20,9 +27,9 @@ void Camera::attach (const String&renderTargetName,
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
                                                height);
-    mViewport= mRenderTarget->addViewport(mCamera);
+    mViewport= mRenderTarget->addViewport(getOgreCamera());
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
-    mCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
+    getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
 }
 void Camera::detach() {
     if (mViewport&&mRenderTarget) {

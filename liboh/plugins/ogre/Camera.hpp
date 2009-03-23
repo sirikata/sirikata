@@ -41,17 +41,19 @@ namespace Sirikata {
 namespace Graphics {
 
 class Camera : public Entity, public CameraListener {
-    Ogre::Camera *mCamera;
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
+
+    Ogre::Camera *getOgreCamera() {
+        return static_cast<Ogre::Camera*const>(mOgreObject);
+    }
 public:
     virtual void attach (const String&renderTargetName,
                          uint32 width,
                          uint32 height);
     virtual void detach();
     Camera(OgreSystem *scene,
-           const UUID &id,
-           String cameraName=String());
+           const UUID &id);
 
     virtual ~Camera();
     Ogre::Viewport* getViewport(){

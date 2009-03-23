@@ -31,6 +31,7 @@
  */
 #include "MeshObject.hpp"
 #include <OgreMeshManager.h>
+#include <OgreResourceGroupManager.h>
 namespace Sirikata {
 namespace Graphics {
 
@@ -44,7 +45,7 @@ MeshObject::MeshObject(OgreSystem *scene,
 void MeshObject::meshChanged(const URI &meshFile) {
     mMeshURI = meshFile;
     //scene->getDependencyManager()->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
-    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), meshFile.toString());
+    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
     created(ogreMesh);
 }
 

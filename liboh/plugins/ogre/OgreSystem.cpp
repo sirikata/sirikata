@@ -229,6 +229,7 @@ void    setupResources(const String &filename){
             ResourceGroupManager::getSingleton().addResourceLocation(archName, typeName, secName);
         }
     }
+    ResourceGroupManager::getSingleton().addResourceLocation(".", typeName, secName);
 
     ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although the override is optional, this is mandatory
 }
@@ -313,7 +314,9 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     sActiveOgreScenes.push_back(this);
-    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
+    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
+
+    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
     //just to test if the cam is setup ok ==> mSceneManager->setSkyBox(true,"Examples/SpaceSkyBox",50);
     return true;
 }
