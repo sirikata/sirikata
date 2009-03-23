@@ -32,24 +32,26 @@
 #ifndef SIRIKATA_GRAPHICS_LIGHT_HPP__
 #define SIRIKATA_GRAPHICS_LIGHT_HPP__
 
-#include "LightListener.hpp"
+#include <oh/LightListener.hpp>
+#include "Entity.hpp"
+#include <OgreLight.h>
 
 namespace Sirikata {
-namespace GraphicsOH {
+namespace Graphics {
 
 class Light
     : public Entity,
       public LightListener {
 public:
-    Light(const OgreScene &scene, const UUID &id)
+    Light(OgreSystem *scene, const UUID &id)
         : Entity(scene,
-                 scene->mOgreScene->getSceneManager()->createLight(id)) {
-        mSceneNode->attachObject(mOgreObject);
+                 id,
+                 scene->getSceneManager()->createLight(id.readableHexData())) {
     }
 
     virtual ~Light() {
         mSceneNode->detachAllObjects();
-        mScene->mOgreScene->destroyLight(mId);
+        mScene->getSceneManager()->destroyLight(mId.readableHexData());
     }
 
     inline Ogre::Light &light() {
@@ -59,7 +61,8 @@ public:
     float computeClosestPower(
             const Color &target,
             const Color &source) {
-        return target.;
+      //minimize sqrt((source.r*power - target.r)^2 + (source.g*power - target.g) + (source.b*power - target.b));
+      return source.dot(target) / source.lengthSquared();
     }
 
     virtual void notify(const LightInfo& linfo){
@@ -76,17 +79,32 @@ public:
             toOgreRGBA(linfo.mSpecularColor, shadowPower));
         light().setSpecularColour(specular_shadow);
 
-        light().setPowerStale(linfo.mPower);
-
-        light().setAttenuation(
-            linfo.mLightRange,
-            linfo.mConstantFalloff,
-            linfo.mLinearFalloff,
-            linfo.mQuadraticFalloff);
-        light().setSpotlightRange(
-            Ogre::Radian(linfo.mConeInnerRadians),
-            Ogre::Radian(linfo.mConeOuterRadians),
-            linfo.mConeFalloff);
+        light().setPowerScale(linfo.mPower);
+        switch (linfo.mType) {
+          case LightInfo::POINT:
+            light().setType(Ogre::Light::LT_POINT);
+            break;
+          case LightInfo::SPOTLIGHT:
+            light().setType(Ogre::Light::LT_SPOTLIGHT);
+            break;
+          case LightInfo::DIRECTIONAL:
+            light().setType(Ogre::Light::LT_DIRECTIONAL);
+            break;
+          default:break;
+        }
+        if (linfo.mType!=LightInfo::DIRECTIONAL) {
+            light().setAttenuation(
+                linfo.mLightRange,
+                linfo.mConstantFalloff,
+                linfo.mLinearFalloff,
+                linfo.mQuadraticFalloff);
+        }
+        if (linfo.mType==LightInfo::SPOTLIGHT) {
+            light().setSpotlightRange(
+                Ogre::Radian(linfo.mConeInnerRadians),
+                Ogre::Radian(linfo.mConeOuterRadians),
+                linfo.mConeFalloff);
+        }
         light().setCastShadows(linfo.mCastsShadow);
     }
 };

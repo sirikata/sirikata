@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Sirikata Listener Pattern
- *  CameraListener.hpp
+ *  ListenerProvider.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,17 +29,22 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_CAMERA_LISTENER_HPP_
-#define _SIRIKATA_CAMERA_LISTENER_HPP_
+#ifndef _SIRIKATA_MESH_LISTENER_HPP_
+#define _SIRIKATA_MESH_LISTENER_HPP_
+
+#include "transfer/URI.hpp";
+
 namespace Sirikata {
-class CameraListener {
+
+using Transfer::URI;
+
+class MeshListener {
 public:
-    virtual ~CameraListener() {}
-    virtual void attach (const String&renderTargetName,
-                         uint32 width,
-                         uint32 height) =0;
-    virtual void detach()=0;
+    virtual ~MeshListener() {}
+    virtual void meshChanged (const URI &newMesh) =0;
+    virtual void setScale (const Vector3f &newScale) = 0;
 };
-typedef CameraListener* CameraListenerPtr;
+typedef MeshListener* MeshListenerPtr;
+
 }
 #endif

@@ -31,11 +31,13 @@
  */
 #ifndef _SIRIKATA_LIGHT_LISTENER_HPP_
 #define _SIRIKATA_LIGHT_LISTENER_HPP_
-
+#include "LightInfo.hpp"
+namespace Sirikata {
 class LightListener {
 public:
     virtual ~LightListener() {}
     virtual void notify (const LightInfo&) =0;
 };
 typedef LightListener* LightListenerPtr;
+}
 #endif

@@ -33,23 +33,40 @@
 #define _DEMO_PROXY_MANAGER_HPP_
 #include <oh/ProxyManager.hpp>
 #include <oh/ProxyCameraObject.hpp>
+#include <oh/ProxyLightObject.hpp>
+#include <oh/ProxyMeshObject.hpp>
 namespace Sirikata {
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
+    std::tr1::shared_ptr<ProxyLightObject> mLight;
+    std::tr1::shared_ptr<ProxyMeshObject> mMesh;
 public:
-    DemoProxyManager(){
+    DemoProxyManager()
+        : mCamera(new ProxyCameraObject),
+          mLight(new ProxyLightObject),
+          mMesh(new ProxyMeshObject) {
         
     }
     void initialize(){
-        std::tr1::shared_ptr<ProxyCameraObject> pco(new ProxyCameraObject);
-        mCamera=pco;
-        
-        notify(&ProxyCreationListener::createProxy,pco);
+        notify(&ProxyCreationListener::createProxy,mCamera);
+        notify(&ProxyCreationListener::createProxy,mLight);
+        notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
+        mCamera->setPosition(Time::now(), Vector3d(-100,0,0), Quaternion(0,0,0,1));
+        LightInfo li;
+        li.setLightDiffuseColor(Color(1,.5,.5));
+        li.setLightAmbientColor(Color(.3,.3,.3));
+        li.setLightPower(1);
+        mLight->update(li);
+        mLight->setPosition(Time::now(), Vector3d(0,0,1000.), Quaternion(0,0,0,1));
+        mMesh->setMesh("file:///Cube.mesh");
+        mMesh->setPosition(Time::now(), Vector3d(0,0,0), Quaternion(0,0,0,1));
     }
     void destroy() {
-        mCamera->detatch();
+        mCamera->detach();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
+        notify(&ProxyCreationListener::destroyProxy,mLight);
+        notify(&ProxyCreationListener::destroyProxy,mMesh);
     }
 };
 

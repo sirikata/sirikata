@@ -33,15 +33,17 @@
 #ifndef _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
 #define _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
 #include "CameraListener.hpp"
-#include "ProxyObject.hpp"
+#include "ProxyPositionObject.hpp"
 namespace Sirikata {
-class SIRIKATA_OH_EXPORT ProxyCameraObject:public Provider<CameraListenerPtr>, public ProxyObject{
+class SIRIKATA_OH_EXPORT ProxyCameraObject
+  : public Provider<CameraListenerPtr>,
+    public ProxyPositionObject {
 public:
     ProxyCameraObject();
     void attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height);
-    void detatch();
+    void detach();
     
 };
 }

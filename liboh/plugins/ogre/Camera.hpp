@@ -44,14 +44,11 @@ class Camera : public Entity, public CameraListener {
     Ogre::Camera *mCamera;
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
-protected:
-    void created();
-    void destroyed();
 public:
     virtual void attach (const String&renderTargetName,
                          uint32 width,
                          uint32 height);
-    virtual void detatch();
+    virtual void detach();
     Camera(OgreSystem *scene,
            const UUID &id,
            String cameraName=String());

@@ -40,8 +40,8 @@ void ProxyCameraObject::attach(const String&renderTargetName,
                 uint32 height) {
         this->Provider<CameraListenerPtr>::notify(&CameraListener::attach,renderTargetName,width,height);
 }
-void ProxyCameraObject::detatch() {
-        this->Provider<CameraListenerPtr>::notify(&CameraListener::detatch);
+void ProxyCameraObject::detach() {
+        this->Provider<CameraListenerPtr>::notify(&CameraListener::detach);
 }
 
 }

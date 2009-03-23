@@ -34,23 +34,26 @@
 #define _SIRIKATA_LIGHT_INFO_HPP_
 
 namespace Sirikata {
+typedef Vector3f Color;
 class LightInfo {
+public:
     enum LightTypes {
-        POINT_LIGHT,SPOTLIGHT_LIGHT,DIRECTIONAL_LIGHT,NUM_LIGHT_TYPES//defaults to point=0?
+        POINT,SPOTLIGHT,DIRECTIONAL,NUM_TYPES//defaults to point=0?
     };
+private:
     enum Fields {
         NONE=0,
         DIFFUSE_COLOR=1,
         SPECULAR_COLOR=2,
         POWER=8,
-        AMBIENT_POWER=16,
-        SHADOW_POWER=32,
+        AMBIENT_COLOR=16,
+        SHADOW_COLOR=32,
         LIGHT_RANGE=64,
         FALLOFF=128,
         CONE=256,
         TYPE=512,
         CAST_SHADOW=1024
-    }
+    };
     int32 mWhichFields;
 public:
     LightInfo() :
@@ -87,6 +90,7 @@ public:
     LightInfo& setLightDiffuseColor(const Color&c){
         mWhichFields|=DIFFUSE_COLOR;
         mDiffuseColor=c;
+        return *this;
     }
     LightInfo& setLightSpecularColor(const Color&c) {
         mWhichFields|=SPECULAR_COLOR;
@@ -99,7 +103,7 @@ public:
         return *this;
     }
     ///ogre only looks at the absolute value of this
-    LightInfo& setLightAmbientPower(const Color&c){
+    LightInfo& setLightAmbientColor(const Color&c){
         mWhichFields|=AMBIENT_COLOR;
         mAmbientColor=c;
         return *this;
@@ -177,15 +181,16 @@ public:
             mWhichFields|=CONE;
         }
         if (other.mWhichFields&TYPE) {
-            mType=type;
+            mType=other.mType;
             mWhichFields|=TYPE;
         }
         if (other.mWhichFields&CAST_SHADOW) {
-            mCastsShadow=shouldCastShadow;
+            mCastsShadow=other.mCastsShadow;
             mWhichFields|=CAST_SHADOW;
         }
+        return *this;
     }
-}
+};
 }
 
 #endif

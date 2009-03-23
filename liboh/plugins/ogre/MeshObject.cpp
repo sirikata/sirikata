@@ -1,7 +1,7 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  CameraListener.hpp
+/*  Sirikata Graphical Object Host
+ *  MeshObject.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,17 +29,36 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_CAMERA_LISTENER_HPP_
-#define _SIRIKATA_CAMERA_LISTENER_HPP_
+#include "MeshObject.hpp"
+#include <OgreMeshManager.h>
 namespace Sirikata {
-class CameraListener {
-public:
-    virtual ~CameraListener() {}
-    virtual void attach (const String&renderTargetName,
-                         uint32 width,
-                         uint32 height) =0;
-    virtual void detach()=0;
-};
-typedef CameraListener* CameraListenerPtr;
+namespace Graphics {
+
+MeshObject::MeshObject(OgreSystem *scene,
+               const UUID &id)
+        : Entity(scene,
+                 id,
+                 scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
+{}
+
+void MeshObject::meshChanged(const URI &meshFile) {
+    mMeshURI = meshFile;
+    //scene->getDependencyManager()->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
+    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), meshFile.toString());
+    created(ogreMesh);
 }
-#endif
+
+void MeshObject::created(const Ogre::MeshPtr &mesh) {
+    getScene()->getSceneManager()->destroyEntity(id().readableHexData());
+    Ogre::MovableObject *meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
+                                                                               mesh->getName());
+    init(meshObj);
+}
+
+MeshObject::~MeshObject() {
+    init(NULL);
+    getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
+}
+
+}
+}

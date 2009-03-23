@@ -96,29 +96,52 @@ class OgreSystem;
 
 class Entity : public ProxyObjectListener{
 protected:
-    virtual void created() = 0;
-    virtual void destroyed() = 0;
-
     OgreSystem *const mScene;
 
     UUID mId;
 
     Ogre::MovableObject *mOgreObject;
     Ogre::SceneNode *mSceneNode;
-public:
 
+    void init(Ogre::MovableObject *obj) {
+        if (mOgreObject) {
+            mSceneNode->detachObject(mOgreObject);
+        }
+        mOgreObject = obj;
+        if (obj) {
+            mSceneNode->attachObject(obj);
+        }
+    }
+public:
     Entity(OgreSystem *scene,
            const UUID &id,
            Ogre::MovableObject *obj=NULL)
           : mScene(scene),
             mId(id),
-            mOgreObject(obj),
+            mOgreObject(NULL),
            mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())) {
-        scene->getSceneManager()->getRootSceneNode()->addChild(mSceneNode);
+      if (obj) {
+        init(obj);
+      }
     }
 
     virtual ~Entity() {
+        init(NULL);
         mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
+    }
+
+    void removeFromScene() {
+        Ogre::SceneNode *oldParent = mSceneNode->getParentSceneNode();
+        if (oldParent) {
+            oldParent->removeChild(mSceneNode);
+        }
+    }
+    void addToScene(Ogre::SceneNode *newParent=NULL) {
+        removeFromScene();
+        if (newParent == NULL) {
+            newParent = mScene->getSceneManager()->getRootSceneNode();
+        }
+        newParent->addChild(mSceneNode);
     }
 
     OgreSystem *getScene() {
@@ -142,7 +165,9 @@ public:
     virtual bool setSelected(bool selected) {
       return false;
     }
-
+    const UUID&id()const{
+        return mId;
+    }
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

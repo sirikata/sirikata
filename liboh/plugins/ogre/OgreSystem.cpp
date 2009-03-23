@@ -34,8 +34,13 @@
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
+
 #include <oh/ProxyCameraObject.hpp>
+#include <oh/ProxyMeshObject.hpp>
+#include <oh/ProxyLightObject.hpp>
 #include "Camera.hpp"
+#include "MeshObject.hpp"
+#include "Light.hpp"
 #include <OgreRoot.h>
 #include <OgrePlugin.h>
 #include <OgreTextureManager.h>
@@ -45,6 +50,7 @@
 #include <OgreWindowEventUtilities.h>
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
+
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -436,6 +442,26 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         }
         
     }
+    {
+        std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
+        if (light) {
+            Light *lig=new Light(this,UUID::random());
+            mSceneObjects[light->getObjectReference()]=lig;
+            //FIXME: should camera be responsible for adding and removing listeners
+            light->addListener(lig);
+        }
+        
+    }
+    {
+        std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
+        if (meshpxy) {
+            MeshObject *mesh=new MeshObject(this,UUID::random());
+            mSceneObjects[meshpxy->getObjectReference()]=mesh;
+            //FIXME: should camera be responsible for adding and removing listeners
+            meshpxy->addListener(mesh);
+        }
+        
+    }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
     std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
@@ -443,6 +469,20 @@ void OgreSystem::destroyProxy(ProxyObjectPtr p){
         //FIXME: should camera be responsible for adding and removing listeners
         camera->removeListener(dynamic_cast<Camera*>(mSceneObjects[camera->getObjectReference()]));
         mSceneObjects.erase(mSceneObjects.find(camera->getObjectReference()));
+        //FIXME inefficient double lookup, no error checking
+    }
+    std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
+    if (light) {
+        //FIXME: should camera be responsible for adding and removing listeners
+        light->removeListener(dynamic_cast<Light*>(mSceneObjects[light->getObjectReference()]));
+        mSceneObjects.erase(mSceneObjects.find(light->getObjectReference()));
+        //FIXME inefficient double lookup, no error checking
+    }
+    std::tr1::shared_ptr<ProxyMeshObject> mesh=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
+    if (mesh) {
+        //FIXME: should camera be responsible for adding and removing listeners
+        mesh->removeListener(dynamic_cast<MeshObject*>(mSceneObjects[mesh->getObjectReference()]));
+        mSceneObjects.erase(mSceneObjects.find(mesh->getObjectReference()));
         //FIXME inefficient double lookup, no error checking
     }
 }

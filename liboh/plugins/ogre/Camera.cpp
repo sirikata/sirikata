@@ -12,17 +12,11 @@ Camera::Camera(OgreSystem *scene,
     mCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
     mCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
-void Camera::created() {
-
-}
-void Camera::destroyed() {
-
-}
 
 void Camera::attach (const String&renderTargetName,
                      uint32 width,
                      uint32 height){
-    detatch();
+    this->detach();
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
                                                height);
@@ -30,7 +24,7 @@ void Camera::attach (const String&renderTargetName,
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
     mCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
 }
-void Camera::detatch() {
+void Camera::detach() {
     if (mViewport&&mRenderTarget) {
         mRenderTarget->removeViewport(mViewport->getZOrder());
 /*

@@ -41,6 +41,12 @@
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
 
+//Thank you Apple:
+// /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
+#ifdef nil
+#undef nil
+#endif
+
 namespace Sirikata { namespace Graphics {
 class Entity;
 class OgreSystem: public TimeSteppedSimulation {

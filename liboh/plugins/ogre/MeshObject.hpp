@@ -32,10 +32,18 @@
 #ifndef SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
 #define SIRIKATA_GRAPHICS_MESHOBJECT_HPP__
 
-#include "LightListener.hpp"
+#include <oh/Platform.hpp>
+
+#include "options/Options.hpp"
+#include "OgreSystem.hpp"
+#include "OgrePlugin.hpp"
+
+#include <oh/MeshListener.hpp>
+#include "Entity.hpp"
+#include <OgreEntity.h>
 
 namespace Sirikata {
-namespace GraphicsOH {
+namespace Graphics {
 
 class MeshObject
     : public Entity,
@@ -43,31 +51,26 @@ class MeshObject
 
     URI mMeshURI;
 
-    void created() {
-        mSceneNode->attachObject(mOgreObject);
+
+    void created(const Ogre::MeshPtr &mesh);
+
+    Ogre::Entity *getOgreEntity() const {
+        return static_cast<Ogre::Entity*const>(mOgreObject);
     }
 
 public:
-    MeshObject(OgreScene *scene,
-               const UUID &id,
-               const URI &meshFile)
-        : Entity(scene,
-                 id,
-                 scene->mOgreScene->createEntity(id, Ogre::SceneManager::PT_CUBE)),
-          mMeshURI(meshFile) {
-        scene->mDependencyManager->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
-    }
+    MeshObject(OgreSystem *scene,
+               const UUID &id);
 
-    virtual ~MeshObject() {
-        mSceneNode->detachAllObjects();
-        mScene->mOgreScene->destroyLight(mId);
-    }
+    virtual ~MeshObject();
 
-    Vector3f getScale() {
-        return fromOgre(renderable->getScale());
+    void meshChanged(const URI&meshFile);
+
+    Vector3f getScale() const {
+        return Vector3f(0,0,0);//fromOgre(getOgreEntity()->getScale());
     }
-    void setScale(Vector3f &scale) {
-        renderable->setScale(toOgre(scale));
+    void setScale(const Vector3f &scale) {
+        //getOgreEntity()->setScale(toOgre(scale));
     }
 
   /*
