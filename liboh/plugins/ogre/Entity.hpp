@@ -35,6 +35,7 @@
 #include "OgreSystem.hpp"
 #undef nil
 #include <util/UUID.hpp>
+#include <oh/ProxyPositionObject.hpp>
 #include <oh/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
@@ -97,6 +98,7 @@ class OgreSystem;
 class Entity : public ProxyObjectListener{
 protected:
     OgreSystem *const mScene;
+    const std::tr1::shared_ptr<const ProxyPositionObject> mProxy;
 
     UUID mId;
 
@@ -113,10 +115,15 @@ protected:
         }
     }
 public:
+    const ProxyPositionObject &getProxy() const {
+        return *mProxy;
+    }
     Entity(OgreSystem *scene,
+           const std::tr1::shared_ptr<const ProxyPositionObject> &ppo,
            const UUID &id,
            Ogre::MovableObject *obj=NULL)
           : mScene(scene),
+            mProxy(ppo),
             mId(id),
             mOgreObject(NULL),
            mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())) {
@@ -143,6 +150,7 @@ public:
             newParent = mScene->getSceneManager()->getRootSceneNode();
         }
         newParent->addChild(mSceneNode);
+        setLastLocation();
     }
 
     OgreSystem *getScene() {
@@ -152,15 +160,23 @@ public:
     Vector3d getPosition() {
         return Vector3d(fromOgre(mSceneNode->getPosition()))+ getScene()->getOffset();
     }
-    void setPosition(Vector3d &pos) {
+    void setPosition(const Vector3d &pos) {
         mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
     }
 
     Quaternion getOrientation() {
         return fromOgre(mSceneNode->getOrientation());
     }
-    void setOrientation(Quaternion &orient) {
+    void setOrientation(const Quaternion &orient) {
         mSceneNode->setOrientation(toOgre(orient));
+    }
+    void extrapolateLocation(TemporalValue<Location>::Time current) {
+        setPosition(getProxy().extrapolatePosition(current));
+        setOrientation(getProxy().extrapolateOrientation(current));
+    }
+    void setLastLocation() {
+        setPosition(getProxy().getPosition());
+        setOrientation(getProxy().getOrientation());
     }
 
     virtual bool setSelected(bool selected) {

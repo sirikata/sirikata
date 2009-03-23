@@ -38,6 +38,7 @@
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 
+#include <oh/ProxyMeshObject.hpp>
 #include <oh/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
@@ -59,7 +60,11 @@ class MeshObject
     }
 
 public:
+    const ProxyMeshObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<const ProxyMeshObject>(mProxy);
+    }
     MeshObject(OgreSystem *scene,
+               const std::tr1::shared_ptr<const ProxyMeshObject> &pmo,
                const UUID &id);
 
     virtual ~MeshObject();

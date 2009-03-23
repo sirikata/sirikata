@@ -36,8 +36,10 @@ namespace Sirikata {
 namespace Graphics {
 
 MeshObject::MeshObject(OgreSystem *scene,
+               const std::tr1::shared_ptr<const ProxyMeshObject> &pmo,
                const UUID &id)
         : Entity(scene,
+                 pmo,
                  id,
                  scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
 {}

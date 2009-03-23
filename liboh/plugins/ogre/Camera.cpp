@@ -4,8 +4,10 @@
 namespace Sirikata {
 namespace Graphics {
 Camera::Camera(OgreSystem *scene,
+           const std::tr1::shared_ptr<const ProxyCameraObject> &pco,
            const UUID &id)
     : Entity(scene,
+             pco,
              id,
              NULL),
       mRenderTarget(NULL),

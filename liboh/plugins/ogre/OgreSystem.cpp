@@ -438,7 +438,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
-            Camera *cam=new Camera(this,UUID::random());
+            Camera *cam=new Camera(this,camera,UUID::random());
             mSceneObjects[camera->getObjectReference()]=cam;
             //FIXME: should camera be responsible for adding and removing listeners
             camera->addListener(cam);
@@ -448,7 +448,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
-            Light *lig=new Light(this,UUID::random());
+            Light *lig=new Light(this,light,UUID::random());
             mSceneObjects[light->getObjectReference()]=lig;
             //FIXME: should camera be responsible for adding and removing listeners
             light->addListener(lig);
@@ -458,7 +458,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
-            MeshObject *mesh=new MeshObject(this,UUID::random());
+            MeshObject *mesh=new MeshObject(this,meshpxy,UUID::random());
             mSceneObjects[meshpxy->getObjectReference()]=mesh;
             //FIXME: should camera be responsible for adding and removing listeners
             meshpxy->addListener(mesh);

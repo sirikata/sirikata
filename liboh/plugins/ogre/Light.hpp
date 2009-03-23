@@ -35,7 +35,7 @@
 #include <oh/LightListener.hpp>
 #include "Entity.hpp"
 #include <OgreLight.h>
-
+#include <oh/ProxyLightObject.hpp>
 namespace Sirikata {
 namespace Graphics {
 
@@ -43,8 +43,12 @@ class Light
     : public Entity,
       public LightListener {
 public:
-    Light(OgreSystem *scene, const UUID &id)
+    const ProxyLightObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<const ProxyLightObject>(mProxy);
+    }
+    Light(OgreSystem *scene, const std::tr1::shared_ptr<const ProxyLightObject> &plo, const UUID &id)
         : Entity(scene,
+                 plo,
                  id,
                  scene->getSceneManager()->createLight(id.readableHexData())) {
     }
