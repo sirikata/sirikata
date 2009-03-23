@@ -106,10 +106,18 @@ private:
             *apkQuat[k] = (kRot(k,i)+kRot(i,k))*fRoot;
         }
     }
+    Quaternion(scalar x,scalar y, scalar z, scalar w):Vector4<scalar>(x,y,z,w) {
+
+    }
 
 public:
     Quaternion(){}
-    Quaternion(scalar x,scalar y, scalar z, scalar w):Vector4<scalar>(x,y,z,w) {
+    class XYZW{};
+    class WXYZ{};
+    Quaternion(scalar x,scalar y, scalar z, scalar w, XYZW convention):Vector4<scalar>(x,y,z,w) {
+
+    }
+    Quaternion(scalar w, scalar x,scalar y, scalar z, WXYZ convention):Vector4<scalar>(x,y,z,w) {
 
     }
     Quaternion(const Vector3<scalar>&axis, scalar angle){
@@ -128,6 +136,12 @@ public:
                                                          zAxis,
                                                          COLUMNS()));
 
+    }
+    static Quaternion identity() {
+        Quaternion retval;
+        retval.w=1.0;
+        retval.x=retval.y=retval.z=0.0;
+        return retval;
     }
     void toAngleAxis (scalar& returnAngleRadians,
                       Vector3<scalar>& returnAxis) const{

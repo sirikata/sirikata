@@ -74,7 +74,7 @@ inline Ogre::ColourValue toOgreRGBA(const Sirikata::Color &rgb, float32 alpha) {
 }
 
 inline Sirikata::Quaternion fromOgre(const Ogre::Quaternion &quat) {
-    return Sirikata::Quaternion(quat.x,quat.y,quat.z,quat.w);
+    return Sirikata::Quaternion(quat.x,quat.y,quat.z,quat.w,Quaternion::XYZW());
 }
 
 inline Sirikata::Vector3f fromOgre(const Ogre::Vector3 &pos) {

@@ -17,7 +17,7 @@ namespace Sirikata {
 class SIRIKATA_OH_EXPORT ProxyPositionObject : public ProxyObject {
     TemporalValue<Location> mLocation;
 public:
-    ProxyPositionObject():mLocation(TemporalValue<Location>::Time::null(),Location(Vector3d(0,0,0),Quaternion(0,0,0,1),Vector3f(0,0,0),Vector3f(0,1,0),0)) {
+    ProxyPositionObject():mLocation(TemporalValue<Location>::Time::null(),Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),Vector3f(0,0,0),Vector3f(0,1,0),0)) {
     }
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     const Vector3d&getPosition() const{

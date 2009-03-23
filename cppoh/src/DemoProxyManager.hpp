@@ -52,15 +52,15 @@ public:
         notify(&ProxyCreationListener::createProxy,mLight);
         notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
-        mCamera->setPosition(Time::now(), Vector3d(-100,0,0), Quaternion(0,0,0,1));
+        mCamera->setPosition(Time::now(), Vector3d(-100,0,0), Quaternion::identity());
         LightInfo li;
         li.setLightDiffuseColor(Color(1,.5,.5));
         li.setLightAmbientColor(Color(.3,.3,.3));
         li.setLightPower(1);
         mLight->update(li);
-        mLight->setPosition(Time::now(), Vector3d(0,0,1000.), Quaternion(0,0,0,1));
+        mLight->setPosition(Time::now(), Vector3d(0,0,1000.), Quaternion::identity());
         mMesh->setMesh("file:///Cube.mesh");
-        mMesh->setPosition(Time::now(), Vector3d(0,0,0), Quaternion(0,0,0,1));
+        mMesh->setPosition(Time::now(), Vector3d(0,0,0), Quaternion::identity());
     }
     void destroy() {
         mCamera->detach();
