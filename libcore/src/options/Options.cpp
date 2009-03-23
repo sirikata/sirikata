@@ -200,6 +200,12 @@ namespace {
 namespace {
 template <class T>class Stash{
     ThreadSafeQueue<std::pair<String,T*> > mQueue;
+    class PairHasher{
+    public:
+        size_t operator()(const std::pair<String,T*>&toBeHashed)const{
+            return std::tr1::hash<T*>()(toBeHashed.second);
+        }
+    };
 public:
     void hideUntilQuit(String s, T*ov) {
         if (ov!=NULL) {
@@ -207,7 +213,7 @@ public:
         }
     }
     void purgeUnused() {
-        std::tr1::unordered_set<std::pair<String,T*> > alreadyDestroyed;
+        std::tr1::unordered_set<std::pair<String,T*>, PairHasher > alreadyDestroyed;
         std::deque<std::pair<String,T*> > toDestroy;
         mQueue.swap(toDestroy);
         while(!toDestroy.empty()) {
