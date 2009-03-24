@@ -4,23 +4,37 @@
 #include "Utility.hpp"
 #include "Network.hpp"
 #include "Statistics.hpp"
+#include "LocationService.hpp"
+#include "CoordinateSegmentation.hpp"
 
 namespace CBR{
 class ServerMessageQueue;
+class ObjectToObjectMessage;
+
 class ObjectMessageQueue {
 public:
-    ObjectMessageQueue(Trace* trace, ServerMessageQueue*sm)
-      : mServerMessageQueue(sm),mTrace(trace)
+    ObjectMessageQueue(ServerMessageQueue*sm, LocationService* loc, CoordinateSegmentation* cseg, Trace* trace)
+      : mServerMessageQueue(sm),
+        mLocationService(loc),
+        mCSeg(cseg),
+        mTrace(trace)
     {}
 
     virtual ~ObjectMessageQueue(){}
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg, const  UUID&src_uuid)=0;
+    virtual bool send(ObjectToObjectMessage* msg) = 0;
     virtual void service(const Time& t)=0;
 
     virtual void registerClient(UUID oid,float weight=1) = 0;
 
 protected:
+    ServerID lookup(const UUID& obj_id) {
+        Vector3f pos = mLocationService->currentPosition(obj_id);
+        return mCSeg->lookup(pos);
+    }
+
     ServerMessageQueue *mServerMessageQueue;
+    LocationService* mLocationService;
+    CoordinateSegmentation* mCSeg;
     Trace* mTrace;
 };
 }

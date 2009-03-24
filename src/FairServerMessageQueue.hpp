@@ -34,10 +34,10 @@ protected:
     };
     std::vector<ServerMessagePair*> mClientServerBuffer;
     FairQueue<ServerMessagePair, ServerID > mServerQueues;
-    Network * mNetwork;
+    std::queue<Network::Chunk*> mReceiveQueue;
 public:
 
-    FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, Trace* trace);
+    FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, Trace* trace);
 
     void setServerWeight(ServerID, float weight);
     void removeServer(ServerID);

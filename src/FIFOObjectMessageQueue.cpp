@@ -8,9 +8,16 @@
 namespace CBR {
 
 
-bool FIFOObjectMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj){
-    return mServerMessageQueue->addMessage(destinationServer,msg);
+bool FIFOObjectMessageQueue::send(ObjectToObjectMessage* msg) {
+    UUID dest_uuid = msg->destObject();
+    ServerID dest_server_id = lookup(dest_uuid);
+
+    Network::Chunk msg_serialized;
+    msg->serialize(msg_serialized, 0);
+
+    return mServerMessageQueue->addMessage(dest_server_id, msg_serialized);
 }
+
 void FIFOObjectMessageQueue::service(const Time& t){
 
 }

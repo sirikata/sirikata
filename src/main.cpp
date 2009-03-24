@@ -144,11 +144,11 @@ int main(int argc, char** argv) {
     Network* network=new RaknetNetwork(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    ServerMessageQueue* sq=new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), trace);
-    ObjectMessageQueue* oq=new FairObjectMessageQueue(GetOption("bandwidth")->as<uint32>(),trace,sq);
-    //ServerMessageQueue* sq=new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), trace);
-    //ObjectMessageQueue* oq=new FIFOObjectMessageQueue(trace,sq);
-    obj_factory->createObjectQueues(oq);
+    ServerMessageQueue* sq=new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, trace);
+    ObjectMessageQueue* oq=new FairObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+    //ServerMessageQueue* sq=new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), server_id, trace);
+    //ObjectMessageQueue* oq=new FIFOObjectMessageQueue(sq, loc_service, cseg, trace);
+    obj_factory->setObjectMessageQueue(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(
             server_id,

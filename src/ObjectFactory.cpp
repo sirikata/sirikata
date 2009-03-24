@@ -39,7 +39,9 @@
 #include "ObjectMessageQueue.hpp"
 namespace CBR {
 
-ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration) {
+ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)
+ : mObjectMessageQueue(NULL)
+{
     Time start(0);
     Time end = start + duration;
     Vector3f region_extents = region.extents();
@@ -103,13 +105,15 @@ float ObjectFactory::proximityRadius(const UUID& id) {
     return mInputs[id]->proximityRadius;
 }
 
-Object* ObjectFactory::object(const UUID& id, Server* server) {
+Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
 
     ObjectMap::iterator it = mObjects.find(id);
     if (it != mObjects.end()) return it->second;
 
-    Object* new_obj = new Object(server, id, motion(id), proximityRadius(id));
+    assert( mObjectMessageQueue != NULL);
+
+    Object* new_obj = new Object(server_id, id, mObjectMessageQueue, motion(id), proximityRadius(id));
     mObjects[id] = new_obj;
     return new_obj;
 }
@@ -123,10 +127,11 @@ void ObjectFactory::destroyObject(const UUID& id) {
     mObjects.erase(id);
 }
 
-void ObjectFactory::createObjectQueues(ObjectMessageQueue* sq) {
+void ObjectFactory::setObjectMessageQueue(ObjectMessageQueue* omq) {
+    mObjectMessageQueue = omq;
     for(ObjectSet::iterator it = mObjectIDs.begin(); it != mObjectIDs.end(); it++) {
         UUID id = *it;
-        sq->registerClient(id, 1);
+        mObjectMessageQueue->registerClient(id, 1);
     }
 }
 

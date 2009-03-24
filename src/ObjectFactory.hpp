@@ -33,13 +33,12 @@
 #include "Utility.hpp"
 #include "Duration.hpp"
 #include "BoundingBox.hpp"
-
+#include "Server.hpp"
 
 namespace CBR {
 class ObjectMessageQueue;
 class MotionPath;
 class Object;
-class Server;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.
  *  First, it generates MotionPaths for every object that will exist in the
@@ -68,15 +67,16 @@ public:
 
     MotionPath* motion(const UUID& id);
     float proximityRadius(const UUID& id);
-    Object* object(const UUID& id, Server* server);
+    Object* object(const UUID& id, const ServerID& server);
     void destroyObject(const UUID& id);
 
-    void createObjectQueues(ObjectMessageQueue* sq);
+    void setObjectMessageQueue(ObjectMessageQueue* sq);
 
 private:
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
     ObjectMap mObjects;
+    ObjectMessageQueue* mObjectMessageQueue;
 }; // class ObjectFactory
 
 } // namespace CBR

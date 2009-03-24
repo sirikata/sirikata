@@ -36,7 +36,7 @@ protected:
     Network * mNetwork;
 public:
 
-    FairObjectMessageQueue(uint32 bytes_per_second, Trace* trace, ServerMessageQueue*sm);
+    FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
 
     void setServerWeight(ServerID, float weight);
     void removeServer(ServerID);
@@ -44,7 +44,7 @@ public:
     void removeClient(UUID);
 
 
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj);
+    virtual bool send(ObjectToObjectMessage* msg);
     virtual void service(const Time&t);
 
 protected:

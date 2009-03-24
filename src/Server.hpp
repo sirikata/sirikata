@@ -37,7 +37,7 @@
 #include "Time.hpp"
 #include "Proximity.hpp"
 #include "LocationService.hpp"
-
+#include "Network.hpp"
 
 namespace CBR {
 
@@ -66,11 +66,10 @@ public:
 
     const ServerID& id() const;
 
-    // Routing interface for objects.  Destination server will come from the message.
-    // Servers should use the private route method which follows different rules.
-    void route(ObjectToObjectMessage* msg);
-
     void tick(const Time& t);
+
+    ServerID lookup(const Vector3f&);
+    ServerID lookup(const UUID&);
 private:
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
@@ -83,8 +82,6 @@ private:
     // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
     void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
     void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
-    void route(Message* msg, const ServerID& dest_server, const UUID& src_uuid, bool is_forward = false);
-
     // Delivery interface.  This should be used to deliver received messages to the correct location -
     // the server or object it is addressed to.
     void deliver(Message* msg);
@@ -95,9 +92,6 @@ private:
     void forward(Message* msg, const UUID& dest);
 
     MigrateMessage* wrapObjectStateForMigration(Object* obj);
-
-    ServerID lookup(const Vector3f&);
-    ServerID lookup(const UUID&);
 
     typedef std::map<UUID, Object*> ObjectMap;
     ServerID mID;

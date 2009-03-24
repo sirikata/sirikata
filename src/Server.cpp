@@ -64,7 +64,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
 
         if (lookup(start_pos) == mID) {
             // Instantiate object
-            Object* obj = mObjectFactory->object(obj_id, this);
+            Object* obj = mObjectFactory->object(obj_id, this->id());
             mObjects[obj_id] = obj;
             // Register proximity query
             mProximity->addQuery(obj_id, 100.f); // FIXME how to set proximity radius?
@@ -79,48 +79,39 @@ const ServerID& Server::id() const {
     return mID;
 }
 
-void Server::route(ObjectToObjectMessage* msg) {
-    assert(msg != NULL);
-
-    UUID src_uuid = msg->sourceObject();
-    UUID dest_uuid = msg->destObject();
-    ServerID destServerID=lookup(dest_uuid);
-
-    route(msg, destServerID, src_uuid, false);
-}
-
 void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
-    route(msg, dest_server, UUID::nil(), is_forward);
-}
-
-void Server::route(Message* msg, const ServerID& dest_server, const UUID& src_uuid, bool is_forward) {
     assert(msg != NULL);
-
-    ServerMessageHeader server_header(this->id(), dest_server);
-
-    uint32 offset = 0;
-    Network::Chunk msg_serialized;
-    offset=server_header.serialize(msg_serialized, offset);
-    offset = msg->serialize(msg_serialized, offset);
-
-    if (!is_forward || dest_server != id())
-        mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
 
     if (dest_server==id()) {
-        if (!is_forward)
-            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset);
-        mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
+        // receiving messages expects full message, with header
+        ServerMessageHeader server_header(this->id(), dest_server);
+        uint32 offset_with_header = 0;
+        Network::Chunk with_header;
+        offset_with_header = server_header.serialize(with_header, offset_with_header);
+        offset_with_header = msg->serialize(with_header, offset_with_header);
+
+        if (!is_forward) {
+            mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset_with_header);
+            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset_with_header);
+        }
+
+        mSelfMessages.push_back( SelfMessage(with_header, is_forward) );
     }else {
-        bool failed = (src_uuid.isNil()) ?
-            !mServerMessageQueue->addMessage(dest_server, msg_serialized) :
-            !mObjectMessageQueue->addMessage(dest_server, msg_serialized, src_uuid);
+        uint32 offset = 0;
+        Network::Chunk msg_serialized;
+        offset = msg->serialize(msg_serialized, offset);
+
+        mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
+
+        bool failed = !mServerMessageQueue->addMessage(dest_server, msg_serialized);
         assert(!failed);
     }
     delete msg;
 }
 
 void Server::route(Message* msg, const UUID& dest_obj, bool is_forward) {
-    route(msg, lookup(dest_obj), is_forward);
+    ServerID dest_server_id = lookup(dest_obj);
+    route(msg, dest_server_id, is_forward);
 }
 
 void Server::deliver(Message* msg) {
@@ -174,7 +165,7 @@ void Server::deliver(Message* msg) {
 
 	      const UUID obj_id = migrate_msg->object();
 
-	      Object* obj = mObjectFactory->object(obj_id, this);
+	      Object* obj = mObjectFactory->object(obj_id, this->id());
 	      obj->migrateMessage(migrate_msg);
 
 	      mObjects[obj_id] = obj;
@@ -198,7 +189,8 @@ Object* Server::object(const UUID& dest) const {
 }
 
 void Server::forward(Message* msg, const UUID& dest) {
-    route(msg, dest, true);
+    ServerID dest_server_id = lookup(dest);
+    route(msg, dest_server_id, true);
 }
 
 void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {

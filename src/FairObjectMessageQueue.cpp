@@ -5,15 +5,23 @@
 #include "Message.hpp"
 
 namespace CBR{
-FairObjectMessageQueue::FairObjectMessageQueue(uint32 bytes_per_second, Trace *trace, ServerMessageQueue*sm)
-    : ObjectMessageQueue(trace,sm),
-      mClientQueues(bytes_per_second,0,false)
+FairObjectMessageQueue::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
+ : ObjectMessageQueue(sm, loc, cseg, trace),
+   mClientQueues(bytes_per_second,0,false)
 {
 }
 
-bool FairObjectMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg,const UUID &src_obj){
-    return mClientQueues.queueMessage(src_obj,new ServerMessagePair(destinationServer,msg))==QueueEnum::PushSucceeded;
+bool FairObjectMessageQueue::send(ObjectToObjectMessage* msg) {
+    UUID src_uuid = msg->sourceObject();
+    UUID dest_uuid = msg->destObject();
+    ServerID dest_server_id = lookup(dest_uuid);
+
+    Network::Chunk msg_serialized;
+    msg->serialize(msg_serialized, 0);
+
+    return mClientQueues.queueMessage(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
 }
+
 void FairObjectMessageQueue::service(const Time&t){
     bool freeClientTicks=true;
 

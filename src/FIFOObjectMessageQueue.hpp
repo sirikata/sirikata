@@ -5,15 +5,16 @@
 #include "Network.hpp"
 #include "Statistics.hpp"
 #include "ObjectMessageQueue.hpp"
+
 namespace CBR{
 class FIFOObjectMessageQueue:public ObjectMessageQueue {
 public:
-    FIFOObjectMessageQueue(Trace* trace, ServerMessageQueue*sm)
-        : ObjectMessageQueue(trace,sm)
+    FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, Trace* trace)
+     : ObjectMessageQueue(sm, loc, cseg, trace)
     {}
 
     virtual ~FIFOObjectMessageQueue(){}
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg, const UUID&src_obj);
+    virtual bool send(ObjectToObjectMessage* msg);
     virtual void service(const Time& t);
 
     virtual void registerClient(UUID oid,float weight=1);
