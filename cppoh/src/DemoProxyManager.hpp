@@ -54,15 +54,21 @@ public:
         notify(&ProxyCreationListener::createProxy,mLight);
         notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
-        mCamera->setPosition(Time::now(), Vector3d(-100,0,0), Quaternion::identity());
         LightInfo li;
         li.setLightDiffuseColor(Color(1,.5,.5));
         li.setLightAmbientColor(Color(.3,.3,.3));
         li.setLightPower(1);
         mLight->update(li);
-        mLight->setPosition(Time::now(), Vector3d(0,0,1000.), Quaternion::identity());
         mMesh->setMesh("file:///razor.mesh");
-        mMesh->setPosition(Time::now(), Vector3d(0,0,0), Quaternion::identity());
+        mCamera->resetPositionVelocity(Time::now(),
+                             Location(Vector3d(0,0,100.), Quaternion::identity(),
+                                      Vector3f::nil(), Vector3f::nil(), 0.));
+        mLight->resetPositionVelocity(Time::now(),
+                             Location(Vector3d(0,1000.,0), Quaternion::identity(),
+                                      Vector3f::nil(), Vector3f::nil(), 0.));
+        mMesh->resetPositionVelocity(Time::now(),
+                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                                      Vector3f(0,1,0), Vector3f(0.71,0.71,0), 0.5));
     }
     void destroy() {
         mCamera->detach();

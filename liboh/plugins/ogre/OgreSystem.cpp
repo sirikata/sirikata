@@ -478,30 +478,35 @@ Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();
 }
 
-void OgreSystem::renderOneFrame(Duration frameTime) {
+void OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
-        (*iter++)->preFrame(frameTime);
+        (*iter++)->preFrame(curFrameTime, deltaTime);
     }    
     Ogre::WindowEventUtilities::messagePump();
-    Ogre::Root::getSingleton().renderOneFrame();    
+    Ogre::Root::getSingleton().renderOneFrame();
+    Time postFrameTime = Time::now();
+    Duration postFrameDelta = postFrameTime-mLastFrameTime;
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
-        (*iter++)->postFrame(Time::now()-mLastFrameTime);
+        (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
 }
 void OgreSystem::tick(){
     Time curFrameTime(Time::now());
     Duration frameTime=curFrameTime-mLastFrameTime;
     if (mRenderTarget==sRenderTarget)
-        renderOneFrame(frameTime);
+        renderOneFrame(curFrameTime, frameTime);
     else if (sRenderTarget==NULL) {
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
 }
-void OgreSystem::preFrame(Duration frameTime) {
-
+void OgreSystem::preFrame(Time current, Duration frameTime) {
+    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher>::iterator iter;
+    for (iter = mSceneObjects.begin(); iter != mSceneObjects.end(); ++iter) {
+        (*iter).second->extrapolateLocation(current);
+    }
 }
-void OgreSystem::postFrame(Duration frameTime) {
+void OgreSystem::postFrame(Time current, Duration frameTime) {
 
 }
 

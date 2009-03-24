@@ -72,11 +72,11 @@ class OgreSystem: public TimeSteppedSimulation {
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    void renderOneFrame(Duration frameTime);
+    void renderOneFrame(Time, Duration frameTime);
     ///all the things that should happen just before the frame
-    void preFrame(Duration);
+    void preFrame(Time, Duration);
     ///all the things that should happen once the frame finishes
-    void postFrame(Duration);
+    void postFrame(Time, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;

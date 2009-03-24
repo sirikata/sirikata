@@ -66,6 +66,11 @@ public:
         mLocation.updateValue(timeStamp,
                               location);
     }
+    void resetPositionVelocity(TemporalValue<Location>::Time timeStamp,
+                               const Location&location) {
+        mLocation.resetValue(timeStamp,
+                             location);
+    }
     Vector3d extrapolatePosition(TemporalValue<Location>::Time current) const {
         return mLocation.extrapolate(current).getPosition();
     }
