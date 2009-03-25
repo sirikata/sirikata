@@ -493,11 +493,13 @@ void OgreSystem::tick(){
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
 }
-void OgreSystem::preFrame(Time current, Duration frameTime) {
+void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
-    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); ++iter) {
-        SILOG(ogre,debug,"Extrapolating "<<((void*)(*iter))<<" for time "<<(float64)(current-debugStartTime));
-        (*iter)->extrapolateLocation(current);
+    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
+        Entity *current = *iter;
+        ++iter;
+        SILOG(ogre,debug,"Extrapolating "<<current<<" for time "<<(float64)(currentTime-debugStartTime));
+        current->extrapolateLocation(currentTime);
     }
 }
 void OgreSystem::postFrame(Time current, Duration frameTime) {
