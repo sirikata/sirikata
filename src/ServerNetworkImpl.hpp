@@ -1,5 +1,5 @@
 /*  cbr
- *  CoordinateSegmentation.hpp
+ *  ServerNetworkImpl.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,53 +30,65 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_COORDINATE_SEGMENTATION_HPP_
+#ifndef _CBR_SERVER_NETWORK_IMPL_HPP_
+#define _CBR_SERVER_NETWORK_IMPL_HPP_
 
-#include "Utility.hpp"
-#include "BoundingBox.hpp"
 #include "ServerNetwork.hpp"
 
 namespace CBR {
 
-/** Handles the segmentation of the space into regions handled by servers.
- *  Answers queries of the type
- *   position -> ServerID
- *   ServerID -> region
- */
-class CoordinateSegmentation {
+// Server to server routing header
+class ServerMessageHeader {
 public:
-    /** Listens for updates about the coordinate segmentation. */
-    class Listener {
-    public:
-        virtual ~Listener() {}
+    ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server)
+     : mSourceServer(src_server),
+       mDestServer(dest_server)
+    {
+    }
 
-        struct SegmentationInfo {
-            ServerID server;
-            BoundingBox3f region;
-        };
-        virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) = 0;
-    }; // class Listener
+    const ServerID& sourceServer() const {
+        return mSourceServer;
+    }
 
+    const ServerID& destServer() const {
+        return mDestServer;
+    }
 
-    virtual ~CoordinateSegmentation() {}
+    // Serialize this header into the network chunk, starting at the given offset.
+    // Returns the ending offset of the header.
+    uint32 serialize(Network::Chunk& wire, uint32 offset) {
+        if (wire.size() < offset + 2 * sizeof(ServerID) )
+            wire.resize( offset + 2 * sizeof(ServerID) );
 
-    virtual ServerID lookup(const Vector3f& pos) const = 0;
-    virtual BoundingBox3f serverRegion(const ServerID& server) const = 0;
-    virtual BoundingBox3f region() const = 0;
-    virtual uint32 numServers() const = 0;
+        memcpy( &wire[offset], &mSourceServer, sizeof(ServerID) );
+        offset += sizeof(ServerID);
 
-    void addListener(Listener* listener);
-    void removeListener(Listener* listener);
+        memcpy( &wire[offset], &mDestServer, sizeof(ServerID) );
+        offset += sizeof(ServerID);
 
-    virtual void tick(const Time& t) = 0;
+        return offset;
+    }
 
-protected:
-    void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
+    static ServerMessageHeader deserialize(const Network::Chunk& wire, uint32 &offset) {
+        ServerID raw_source;
+        ServerID raw_dest;
+
+        memcpy( &raw_source, &wire[offset], sizeof(ServerID) );
+        offset += sizeof(ServerID);
+
+        memcpy( &raw_dest, &wire[offset], sizeof(ServerID) );
+        offset += sizeof(ServerID);
+
+        return ServerMessageHeader(raw_source, raw_dest);
+    }
 private:
-    std::set<Listener*> mListeners;
-}; // class CoordinateSegmentation
+    ServerMessageHeader();
+
+    ServerID mSourceServer;
+    ServerID mDestServer;
+}; // class ServerMessageHeader
+
 
 } // namespace CBR
 
-#endif
+#endif //_CBR_SERVER_NETWORK_IMPL_HPP_

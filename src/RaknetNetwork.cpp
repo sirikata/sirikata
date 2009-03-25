@@ -6,13 +6,11 @@
        #include <arpa/inet.h>
 
 namespace CBR {
-RaknetNetwork::RaknetNetwork (ServerIDMap*idmap):Network(idmap),mListener(RakNetworkFactory::GetRakPeerInterface()){
+RaknetNetwork::RaknetNetwork ():Network(),mListener(RakNetworkFactory::GetRakPeerInterface()){
 }
 
-void RaknetNetwork::listen(const ServerID& as_server) {
-    Address4* addr = mServerIDMap->lookup(as_server);
-    assert(addr != NULL);
-    SocketDescriptor socketDescriptor(addr->getPort(),0);
+void RaknetNetwork::listen(const Address4& as_server) {
+    SocketDescriptor socketDescriptor(as_server.getPort(),0);
     bool starting=mListener->Startup(16383,30,&socketDescriptor,1);
        mListener->SetMaximumIncomingConnections(16383);
     assert(starting);
@@ -38,7 +36,7 @@ void ConnectTo(RakPeerInterface*ri,const SystemAddress &sa) {
     assert(evenTried);
 
 }
-bool RaknetNetwork::sendTo(const Address4&addy, const Sirikata::Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
+bool RaknetNetwork::send(const Address4&addy, const Sirikata::Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
     if (toSend.size()==0)
         return false;
     SystemAddress sa=MakeAddress(addy);

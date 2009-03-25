@@ -34,9 +34,9 @@ class RaknetNetwork :public Network{
     bool sendRemainingItems(SystemAddress address);
 
 public:
-    virtual bool sendTo(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
-    RaknetNetwork(ServerIDMap*sidm);
-    virtual void listen (const ServerID& as_server);
+    virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
+    RaknetNetwork();
+    virtual void listen (const Address4& as_server);
     virtual Sirikata::Network::Chunk*receiveOne();
 
 };

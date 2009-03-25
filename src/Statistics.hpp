@@ -36,6 +36,8 @@
 #include "Utility.hpp"
 #include "Time.hpp"
 #include "MotionVector.hpp"
+#include "Network.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 
@@ -84,6 +86,7 @@ public:
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     void packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
+    void packetSent(const Time& t, const ServerID& dest, const Network::Chunk& data);
     void packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size);
     void packetReceived(const Time& t, const ServerID& src, uint32 id, uint32 size);
 

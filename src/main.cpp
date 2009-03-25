@@ -141,15 +141,15 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    Network* network=new RaknetNetwork(server_id_map);
+    Network* network=new RaknetNetwork();
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), server_id, trace);
+        sq = new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, trace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, trace);
+        sq = new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
     else {
         assert(false);
         exit(-1);
@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
         );
 
 
-    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, network, oq, sq, trace);
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, trace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();

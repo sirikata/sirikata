@@ -42,7 +42,7 @@ protected:
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
 
-    FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, Trace* trace);
+    FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
 
     void setServerWeight(ServerID, float weight);
     void removeServer(ServerID);

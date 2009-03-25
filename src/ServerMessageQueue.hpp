@@ -3,16 +3,24 @@
 
 #include "Utility.hpp"
 #include "Network.hpp"
+#include "ServerNetwork.hpp"
+#include "ServerIDMap.hpp"
 #include "Statistics.hpp"
 
 namespace CBR{
 class ServerMessageQueue {
 public:
-    ServerMessageQueue(Network* net, const ServerID& sid, Trace* trace)
+    ServerMessageQueue(Network* net, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
      : mNetwork(net),
        mSourceServer(sid),
+       mServerIDMap(sidmap),
        mTrace(trace)
-    {}
+    {
+        // start the network listening
+        Address4* listen_addy = mServerIDMap->lookup(mSourceServer);
+        assert(listen_addy != NULL);
+        net->listen(*listen_addy);
+    }
 
     virtual ~ServerMessageQueue(){}
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg)=0;
@@ -24,6 +32,7 @@ public:
 protected:
     Network* mNetwork;
     ServerID mSourceServer;
+    ServerIDMap* mServerIDMap;
     Trace* mTrace;
 };
 }

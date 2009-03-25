@@ -2,7 +2,6 @@
 #define _CBR_OBJECT_MESSAGE_QUEUE_HPP
 
 #include "Utility.hpp"
-#include "Network.hpp"
 #include "Statistics.hpp"
 #include "LocationService.hpp"
 #include "CoordinateSegmentation.hpp"

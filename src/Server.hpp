@@ -38,6 +38,7 @@
 #include "Proximity.hpp"
 #include "LocationService.hpp"
 #include "Network.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 
@@ -61,7 +62,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, ObjectMessageQueue*sq, ServerMessageQueue*sq, Trace* trace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue*sq, ServerMessageQueue*sq, Trace* trace);
     ~Server();
 
     const ServerID& id() const;

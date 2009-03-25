@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "Time.hpp"
 #include "MotionVector.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 

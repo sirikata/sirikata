@@ -43,7 +43,7 @@
 #include "ObjectMessageQueue.hpp"
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, Network* net, ObjectMessageQueue*omq, ServerMessageQueue * sq, Trace* trace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue*omq, ServerMessageQueue * sq, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
@@ -54,9 +54,6 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mCurrentTime(0),
    mTrace(trace)
 {
-    // start the network listening
-    net->listen(mID);
-
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
         UUID obj_id = *it;
@@ -240,11 +237,14 @@ void Server::proximityTick(const Time& t) {
     std::queue<ProximityEventInfo> proximity_events;
     mProximity->evaluate(t, proximity_events);
 
+    OriginID origin;
+    origin.id = (uint32)id();
+
     while(!proximity_events.empty()) {
         ProximityEventInfo& evt = proximity_events.front();
         ProximityMessage* msg =
             new ProximityMessage(
-                id(),
+                origin,
                 evt.query(),
                 evt.object(),
                 (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited,
@@ -290,7 +290,10 @@ void Server::checkObjectMigrations() {
 MigrateMessage* Server::wrapObjectStateForMigration(Object* obj) {
     const UUID& obj_id = obj->uuid();
 
-    MigrateMessage* migrate_msg = new MigrateMessage(id(),
+    OriginID origin;
+    origin.id = (uint32)id();
+
+    MigrateMessage* migrate_msg = new MigrateMessage(origin,
                                                     obj_id,
 						    obj->proximityRadius(),
 						    obj->subscriberSet().size());

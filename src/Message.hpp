@@ -35,8 +35,7 @@
 
 #include "Utility.hpp"
 #include "Network.hpp"
-
-#include "Server.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
 
@@ -48,29 +47,11 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_MIGRATE      4
 #define MESSAGE_TYPE_COUNT        5
 
-uint32 GetMessageUniqueID(const Network::Chunk& msg);
+struct OriginID {
+    uint32 id;
+};
 
-// Server to server routing header
-class ServerMessageHeader {
-public:
-    ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server);
-
-    const ServerID& sourceServer() const;
-    const ServerID& destServer() const;
-
-    // Serialize this header into the network chunk, starting at the given offset.
-    // Returns the ending offset of the header.
-    uint32 serialize(Network::Chunk& wire, uint32 offset);
-    static ServerMessageHeader deserialize(const Network::Chunk& wire, uint32 &offset);
-private:
-    ServerMessageHeader();
-
-    ServerID mSourceServer;
-    ServerID mDestServer;
-}; // class ServerMessageHeader
-
-
-uint32 GetUniqueIDServerID(uint32 uid);
+OriginID GetUniqueIDOriginID(uint32 uid);
 uint32 GetUniqueIDMessageID(uint32 uid);
 
 /** Base class for messages that go over the network.  Must provide
@@ -86,7 +67,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
 protected:
-    Message(const ServerID& src_server, bool x); // note the bool is here to make the signature different than the next constructor
+    Message(const OriginID& origin, bool x); // note the bool is here to make the signature different than the next constructor
     Message(uint32 id);
 
     // takes care of serializing the header information properly, will overwrite
@@ -106,7 +87,7 @@ public:
         Exited = 2
     };
 
-    ProximityMessage(const ServerID& src_server, const UUID& dest_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc);
+    ProximityMessage(const OriginID& origin, const UUID& dest_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc);
 
     virtual MessageType type() const;
 
@@ -130,7 +111,7 @@ private:
 // Base class for object to object messages.  Mostly saves a bit of serialization code
 class ObjectToObjectMessage : public Message {
 public:
-    ObjectToObjectMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object);
+    ObjectToObjectMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object);
 
     const UUID& sourceObject() const;
     const UUID& destObject() const;
@@ -147,7 +128,7 @@ private:
 
 class LocationMessage : public ObjectToObjectMessage {
 public:
-    LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc);
+    LocationMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc);
 
     virtual MessageType type() const;
 
@@ -169,7 +150,7 @@ public:
         Unsubscribe = 2
     };
 
-    SubscriptionMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const Action& act);
+    SubscriptionMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const Action& act);
 
     virtual MessageType type() const;
 
@@ -185,7 +166,7 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const ServerID& src_server, const UUID& obj, float proxRadius, uint16_t subscriberCount);
+    MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount);
 
     ~MigrateMessage();
 

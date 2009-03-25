@@ -1,13 +1,14 @@
 #include "Utility.hpp"
 #include "Network.hpp"
+#include "ServerNetworkImpl.hpp"
 #include "Server.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"
 
 namespace CBR {
 
-FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, Trace* trace)
- : ServerMessageQueue(net, sid, trace),
+FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
+ : ServerMessageQueue(net, sid, sidmap, trace),
    mRate(bytes_per_second),
    mRemainderBytes(0),
    mLastTime(0)
@@ -56,10 +57,12 @@ void FIFOServerMessageQueue::service(const Time& t){
     uint32 free_bytes = mRemainderBytes + (uint32)(sinceLast.seconds() * mRate);
 
     while(!mQueue.empty() && mQueue.front().data().size() <= free_bytes) {
-        bool ok=mNetwork->send(mQueue.front().dest(),mQueue.front().data(),false,true,1);
+        Address4* addy = mServerIDMap->lookup(mQueue.front().dest());
+        assert(addy != NULL);
+        bool ok=mNetwork->send(*addy,mQueue.front().data(),false,true,1);
         free_bytes -= mQueue.front().data().size();
         assert(ok&&"Network Send Failed");
-        mTrace->packetSent(t, mQueue.front().dest(), GetMessageUniqueID(mQueue.front().data()), mQueue.front().data().size());
+        mTrace->packetSent(t, mQueue.front().dest(), mQueue.front().data());
         mQueue.pop();
     }
 

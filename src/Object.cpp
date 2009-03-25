@@ -31,7 +31,6 @@
  */
 
 #include "Object.hpp"
-#include "Server.hpp"
 #include "Message.hpp"
 #include "ObjectMessageQueue.hpp"
 
@@ -39,12 +38,12 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
-Object::Object(const ServerID& server_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius)
+Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius)
  : mID(id),
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mServerID(server_id),
+   mOriginID(origin_id),
    mObjectMessageQueue(obj_msg_q),
    mProximityRadius(prox_radius)
 {
@@ -78,7 +77,7 @@ void Object::checkPositionUpdate(const Time& t) {
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             LocationMessage* loc_msg =
                 new LocationMessage(
-                    mServerID,
+                    mOriginID,
                     mID,
                     *it,
                     mLocation
@@ -97,9 +96,9 @@ void Object::locationMessage(LocationMessage* loc_msg) {
 void Object::proximityMessage(ProximityMessage* prox_msg) {
     SubscriptionMessage* subs_msg = NULL;
     if (prox_msg->event() == ProximityMessage::Entered)
-        subs_msg = new SubscriptionMessage(mServerID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Subscribe);
+        subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Subscribe);
     else
-        subs_msg = new SubscriptionMessage(mServerID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
+        subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
 
     mObjectMessageQueue->send(subs_msg);
 

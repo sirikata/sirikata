@@ -37,76 +37,29 @@ namespace CBR {
 #define MESSAGE_ID_SERVER_SHIFT 20
 #define MESSAGE_ID_SERVER_BITS 0xFFF00000
 
-static uint32 GenerateUniqueID(const ServerID& server, uint32 id_src) {
-    uint32 server_int = (uint32)server;
+static uint32 GenerateUniqueID(const OriginID& origin, uint32 id_src) {
+    uint32 server_int = (uint32)origin.id;
     uint32 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
     assert( (server_shifted & ~MESSAGE_ID_SERVER_BITS) == 0 );
     return (server_shifted & MESSAGE_ID_SERVER_BITS) | (id_src & ~MESSAGE_ID_SERVER_BITS);
 }
 
-uint32 GetUniqueIDServerID(uint32 uid) {
-    return ( uid & MESSAGE_ID_SERVER_BITS ) >> MESSAGE_ID_SERVER_SHIFT;
+OriginID GetUniqueIDOriginID(uint32 uid) {
+    uint32 server_int = ( uid & MESSAGE_ID_SERVER_BITS ) >> MESSAGE_ID_SERVER_SHIFT;
+    OriginID id;
+    id.id = server_int;
+    return id;
 }
 
 uint32 GetUniqueIDMessageID(uint32 uid) {
     return ( uid & ~MESSAGE_ID_SERVER_BITS );
 }
 
-uint32 GetMessageUniqueID(const Network::Chunk& msg) {
-    uint32 offset = 0;
-    offset += 2 * sizeof(ServerID); // size of ServerMessageHeader
-    offset += 1; // size of msg type
-
-    uint32 uid;
-    memcpy(&uid, &msg[offset], sizeof(uint32));
-    return uid;
-}
-
-ServerMessageHeader::ServerMessageHeader(const ServerID& src_server, const ServerID& dest_server)
- : mSourceServer(src_server),
-   mDestServer(dest_server)
-{
-}
-
-const ServerID& ServerMessageHeader::sourceServer() const {
-    return mSourceServer;
-}
-
-const ServerID& ServerMessageHeader::destServer() const {
-    return mDestServer;
-}
-
-uint32 ServerMessageHeader::serialize(Network::Chunk& wire, uint32 offset) {
-    if (wire.size() < offset + 2 * sizeof(ServerID) )
-        wire.resize( offset + 2 * sizeof(ServerID) );
-
-    memcpy( &wire[offset], &mSourceServer, sizeof(ServerID) );
-    offset += sizeof(ServerID);
-
-    memcpy( &wire[offset], &mDestServer, sizeof(ServerID) );
-    offset += sizeof(ServerID);
-
-    return offset;
-}
-
-ServerMessageHeader ServerMessageHeader::deserialize(const Network::Chunk& wire, uint32 &offset) {
-    ServerID raw_source;
-    ServerID raw_dest;
-
-    memcpy( &raw_source, &wire[offset], sizeof(ServerID) );
-    offset += sizeof(ServerID);
-
-    memcpy( &raw_dest, &wire[offset], sizeof(ServerID) );
-    offset += sizeof(ServerID);
-
-    return ServerMessageHeader(raw_source, raw_dest);
-}
-
 
 uint32 Message::sIDSource = 0;
 
-Message::Message(const ServerID& src_server, bool x)
- : mID( GenerateUniqueID(src_server, sIDSource++) )
+Message::Message(const OriginID& origin, bool x)
+ : mID( GenerateUniqueID(origin, sIDSource++) )
 {
 }
 
@@ -176,8 +129,8 @@ uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
 
 
 
-ProximityMessage::ProximityMessage(const ServerID& src_server, const UUID& dst_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc)
- : Message(src_server, true),
+ProximityMessage::ProximityMessage(const OriginID& origin, const UUID& dst_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc)
+ : Message(origin, true),
    mDestObject(dst_object),
    mNeighbor(nbr),
    mEvent(evt),
@@ -273,8 +226,8 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-ObjectToObjectMessage::ObjectToObjectMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object)
- : Message(src_server, true),
+ObjectToObjectMessage::ObjectToObjectMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object)
+ : Message(origin, true),
    mSourceObject(src_object),
    mDestObject(dest_object)
 {
@@ -319,8 +272,8 @@ uint32 ObjectToObjectMessage::serializeSourceDest(Network::Chunk& wire, uint32 o
 
 
 
-LocationMessage::LocationMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc)
- : ObjectToObjectMessage(src_server, src_object, dest_object),
+LocationMessage::LocationMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc)
+ : ObjectToObjectMessage(origin, src_object, dest_object),
    mLocation(loc)
 {
 }
@@ -375,8 +328,8 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-SubscriptionMessage::SubscriptionMessage(const ServerID& src_server, const UUID& src_object, const UUID& dest_object, const Action& act)
- : ObjectToObjectMessage(src_server, src_object, dest_object),
+SubscriptionMessage::SubscriptionMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const Action& act)
+ : ObjectToObjectMessage(origin, src_object, dest_object),
    mAction(act)
 {
 }
@@ -415,8 +368,8 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-MigrateMessage::MigrateMessage(const ServerID& src_server, const UUID& obj, float proxRadius, uint16_t subscriberCount)
- : Message(src_server, true),
+MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount)
+ : Message(origin, true),
    mObject(obj),
    mProximityRadius(proxRadius),
    mCountSubscribers(subscriberCount)

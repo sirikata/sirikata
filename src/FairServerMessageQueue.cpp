@@ -1,11 +1,12 @@
 #include "Network.hpp"
 #include "Server.hpp"
+#include "ServerNetworkImpl.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "Message.hpp"
 
 namespace CBR{
-FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, Trace* trace)
- : ServerMessageQueue(net, sid, trace),
+FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
+ : ServerMessageQueue(net, sid, sidmap, trace),
    mServerQueues(bytes_per_second,0,renormalizeWeights)
 {
 }
@@ -45,14 +46,14 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 }
 
 void FairServerMessageQueue::service(const Time&t){
-
-
     std::vector<ServerMessagePair*> finalSendMessages=mServerQueues.tick(t);
     for (std::vector<ServerMessagePair*>::iterator i=finalSendMessages.begin(),ie=finalSendMessages.end();
          i!=ie;
          ++i) {
-        mNetwork->send((*i)->dest(),(*i)->data(),false,true,1);
-        mTrace->packetSent(t, (*i)->dest(), GetMessageUniqueID((*i)->data()), (*i)->data().size());
+        Address4* addy = mServerIDMap->lookup((*i)->dest());
+        assert(addy != NULL);
+        mNetwork->send(*addy,(*i)->data(),false,true,1);
+        mTrace->packetSent(t, (*i)->dest(), (*i)->data());
     }
     finalSendMessages.resize(0);
 

@@ -40,6 +40,8 @@
 
 namespace CBR {
 
+class ObjectMessageQueue;
+
 typedef std::set<UUID> ObjectSet;
 
 struct MaxDistUpdatePredicate {
@@ -51,7 +53,7 @@ struct MaxDistUpdatePredicate {
 
 class Object {
 public:
-    Object(const ServerID& server_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius);
+    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius);
 
     const UUID& uuid() {
         return mID;
@@ -82,7 +84,7 @@ private:
     MotionPath* mMotion;
     TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
-    ServerID mServerID;
+    OriginID mOriginID;
     ObjectMessageQueue* mObjectMessageQueue;
     ObjectSet mSubscribers;
     float mProximityRadius;

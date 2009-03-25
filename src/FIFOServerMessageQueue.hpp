@@ -36,7 +36,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     };
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
-    FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, Trace* trace);
+    FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service(const Time& t);

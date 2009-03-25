@@ -35,6 +35,8 @@
 #include "Options.hpp"
 #include <iostream>
 
+#include "ServerNetworkImpl.hpp"
+
 namespace CBR {
 
 // write the specified number of bytes from the pointer to the buffer
@@ -71,6 +73,19 @@ const uint8 Trace::PacketQueuedTag;
 const uint8 Trace::PacketSentTag;
 const uint8 Trace::PacketReceivedTag;
 
+
+static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
+    uint32 offset = 0;
+    offset += sizeof(ServerMessageHeader);
+    offset += 1; // size of msg type
+
+    uint32 uid;
+    memcpy(&uid, &msg[offset], sizeof(uint32));
+    return uid;
+}
+
+
+
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
@@ -102,6 +117,13 @@ void Trace::packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
+}
+
+void Trace::packetSent(const Time& t, const ServerID& dest, const Network::Chunk& data) {
+    uint32 id = GetMessageUniqueID(data);
+    uint32 size = data.size();
+
+    packetSent(t, dest, id, size);
 }
 
 void Trace::packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size) {

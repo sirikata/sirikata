@@ -76,7 +76,6 @@ typedef std::string String;
 typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
 typedef Sirikata::InitializeClassOptions InitializeOptions;
-typedef uint32 ServerID;
 
 
 class Time;

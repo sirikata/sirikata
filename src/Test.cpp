@@ -6,8 +6,8 @@ namespace CBR {
 
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
     std::stringstream strst( std::string(hostname) + ":" + std::string(listenport) + std::string("\n") );
-    RaknetNetwork rn(new TabularServerIDMap(strst));
-    rn.listen(ServerID(1));
+    RaknetNetwork rn;
+    rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")));
     bool canSend=!server;
     unsigned int mine=0;
     unsigned int theirs=0;
@@ -30,7 +30,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
             unsigned int network=htonl(mine);
             mine+=offset;
             memcpy(&*toSend.begin(),&network,4);
-            rn.sendTo(Address4(Sirikata::Network::Address(hostname,port)),toSend,true,true,0);
+            rn.send(Address4(Sirikata::Network::Address(hostname,port)),toSend,true,true,0);
         }
     }
     sleep (1);
