@@ -35,8 +35,11 @@
 #include "MeshListener.hpp"
 #include "ProxyPositionObject.hpp"
 namespace Sirikata {
+
+typedef Provider<MeshListener*> MeshProvider;
+
 class SIRIKATA_OH_EXPORT ProxyMeshObject
-  : public Provider<MeshListenerPtr>,
+  : public MeshProvider,
     public ProxyPositionObject {
 public:
     ProxyMeshObject(const SpaceObjectReference&id);

@@ -36,10 +36,10 @@
 namespace Sirikata {
 ProxyMeshObject::ProxyMeshObject(const SpaceObjectReference&id):ProxyPositionObject(id){}
 void ProxyMeshObject::setMesh(const URI&meshFile) {
-        this->Provider<MeshListenerPtr>::notify(&MeshListener::meshChanged,meshFile);
+    MeshProvider::notify(&MeshListener::meshChanged,meshFile);
 }
 void ProxyMeshObject::setScale(const Vector3f&scale) {
-        this->Provider<MeshListenerPtr>::notify(&MeshListener::setScale,scale);
+    MeshProvider::notify(&MeshListener::setScale,scale);
 }
 
 }

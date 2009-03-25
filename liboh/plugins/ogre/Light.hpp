@@ -51,12 +51,13 @@ public:
                  plo,
                  id,
                  scene->getSceneManager()->createLight(id.readableHexData())) {
+        getProxy().LightProvider::addListener(this);
     }
 
     virtual ~Light() {
         init(NULL);
         mScene->getSceneManager()->destroyLight(mId.readableHexData());
-        getProxy().removeListener(this);
+        getProxy().LightProvider::removeListener(this);
     }
 
     inline Ogre::Light &light() {

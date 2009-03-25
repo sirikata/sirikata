@@ -38,13 +38,11 @@ namespace Sirikata {
 
 using Transfer::URI;
 
-class MeshListener {
+class SIRIKATA_OH_EXPORT MeshListener {
 public:
     virtual ~MeshListener() {}
     virtual void meshChanged (const URI &newMesh) =0;
     virtual void setScale (const Vector3f &newScale) = 0;
 };
-typedef MeshListener* MeshListenerPtr;
-
 }
 #endif

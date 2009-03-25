@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Sirikata Listener Pattern
- *  ProxyCameraObject.hpp
+ *  ListenerProvider.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,25 +29,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_POSITION_LISTENER_HPP_
+#define _SIRIKATA_POSITION_LISTENER_HPP_
 
-#ifndef _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
-#define _SIRIKATA_PROXY_CAMERA_OBJECT_HPP_
-#include "CameraListener.hpp"
-#include "ProxyPositionObject.hpp"
 namespace Sirikata {
 
-typedef Provider<CameraListener*> CameraProvider;
-
-class SIRIKATA_OH_EXPORT ProxyCameraObject
-  : public CameraProvider,
-    public ProxyPositionObject {
+class SIRIKATA_OH_EXPORT PositionListener {
 public:
-    ProxyCameraObject(const SpaceObjectReference&id);
-    void attach(const String&renderTargetName,
-                uint32 width,
-                uint32 height);
-    void detach();
-    
+    virtual ~PositionListener() {}
+    virtual void resetLocation  (Time timestamp, const Location &newLocation) = 0;
+    virtual void updateLocation (Time timestamp, const Location &newLocation) = 0;
 };
 }
 #endif

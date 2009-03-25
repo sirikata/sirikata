@@ -2,10 +2,13 @@
 #define _SIRIKATA_PROXY_POSITION_OBJECT_HPP_
 #include <util/Extrapolation.hpp>
 #include "ProxyObject.hpp"
+#include "PositionListener.hpp"
 
 namespace Sirikata {
 
-  typedef double AbsTime;
+typedef double AbsTime;
+
+typedef Provider<PositionListener*> PositionProvider;
 
 /**
  * This class represents a generic object on a remote server
@@ -14,7 +17,11 @@ namespace Sirikata {
  * This class should be casted to the various subclasses (ProxyLightObject,etc)
  * and appropriate listeners be registered.
  */
-class SIRIKATA_OH_EXPORT ProxyPositionObject : public ProxyObject {
+class SIRIKATA_OH_EXPORT ProxyPositionObject
+  : public PositionProvider,
+    public ProxyObject   
+{
+
     class UpdateNeeded {
     public:
         bool operator()(const Location&updatedValue, const Location&predictedValue) const{
@@ -54,7 +61,7 @@ public:
                      const Vector3d &newPos,
                      const Quaternion &newOri) {
         Location soon=mLocation.extrapolate(timeStamp);
-        mLocation.updateValue(timeStamp,
+        setPositionVelocity(timeStamp,
                               Location(newPos,
                                        newOri,
                                        soon.getVelocity(),
@@ -65,11 +72,13 @@ public:
                              const Location&location) {
         mLocation.updateValue(timeStamp,
                               location);
+        PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
     }
     void resetPositionVelocity(TemporalValue<Location>::Time timeStamp,
                                const Location&location) {
         mLocation.resetValue(timeStamp,
                              location);
+        PositionProvider::notify(&PositionListener::resetLocation, timeStamp, location);
     }
     Vector3d extrapolatePosition(TemporalValue<Location>::Time current) const {
         return mLocation.extrapolate(current).getPosition();

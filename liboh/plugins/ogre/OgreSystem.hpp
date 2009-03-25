@@ -50,10 +50,13 @@
 namespace Sirikata { namespace Graphics {
 class Entity;
 class OgreSystem: public TimeSteppedSimulation {
-    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> mSceneObjects;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
+//    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> mSceneObjects;
+    std::list<Entity*> mSceneEntities;
+    std::list<Entity*> mMovingEntities;
+    friend class Entity; //Entity will insert/delete itself from these arrays.
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
     OptionValue*mWindowDepth;

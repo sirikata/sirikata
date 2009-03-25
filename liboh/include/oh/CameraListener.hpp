@@ -32,7 +32,8 @@
 #ifndef _SIRIKATA_CAMERA_LISTENER_HPP_
 #define _SIRIKATA_CAMERA_LISTENER_HPP_
 namespace Sirikata {
-class CameraListener {
+
+class SIRIKATA_OH_EXPORT CameraListener {
 public:
     virtual ~CameraListener() {}
     virtual void attach (const String&renderTargetName,
@@ -40,6 +41,5 @@ public:
                          uint32 height) =0;
     virtual void detach()=0;
 };
-typedef CameraListener* CameraListenerPtr;
 }
 #endif

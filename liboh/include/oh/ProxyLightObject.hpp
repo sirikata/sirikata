@@ -3,11 +3,14 @@
 #include "LightListener.hpp"
 #include "ProxyPositionObject.hpp"
 namespace Sirikata {
+
+typedef MarkovianProvider1<LightListener*,LightInfo> LightProvider;
+
 /**
  * This class represents a ProxyObject that holds a LightInfo
  */
 class SIRIKATA_OH_EXPORT ProxyLightObject
-  : public MarkovianProvider1<LightListenerPtr,LightInfo>,
+  : public LightProvider,
     public ProxyPositionObject {
 public:
     ProxyLightObject(const SpaceObjectReference&id);

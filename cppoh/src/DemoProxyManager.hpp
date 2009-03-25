@@ -63,10 +63,16 @@ public:
         mCamera->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,100.), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
-        mLight->resetPositionVelocity(Time::now(),
+        mLight->resetPositionVelocity(Time::now()-.5,
+                             Location(Vector3d(0,1000.,0), Quaternion::identity(),
+                                      Vector3f(-1,0,0), Vector3f(0,1,0), 0.5));
+        mLight->setPositionVelocity(Time::now()+.5,
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
-        mMesh->resetPositionVelocity(Time::now(),
+        mMesh->resetPositionVelocity(Time::now()-1,
+                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                                      Vector3f(0,0,0), Vector3f(0,0,0), 0.));
+        mMesh->setPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
                                       Vector3f(0,1,0), Vector3f(0.71,0.71,0), 0.5));
     }

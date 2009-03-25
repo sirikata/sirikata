@@ -33,12 +33,12 @@
 #define _SIRIKATA_PROXY_OBJECT_LISTENER_HPP_
 namespace Sirikata {
 class ProxyObject;
-typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+
 class SIRIKATA_OH_EXPORT ProxyObjectListener {
 public:
     virtual ~ProxyObjectListener(){}
-    //FIXME listens for updates to proxyobjects
+
+    virtual void destroyed() = 0;
 };
-typedef ProxyObjectListener* ProxyObjectListenerPtr;
 }
 #endif

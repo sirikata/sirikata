@@ -12,6 +12,7 @@ Camera::Camera(OgreSystem *scene,
              NULL),
       mRenderTarget(NULL),
       mViewport(NULL) {
+    getProxy().CameraProvider::addListener(this);
     String cameraName = id.readableHexData();
     if (scene->getSceneManager()->hasCamera(cameraName)) {
         init(scene->getSceneManager()->getCamera(cameraName));
@@ -60,7 +61,7 @@ Camera::~Camera() {
     }
     init(NULL);
     mScene->getSceneManager()->destroyCamera(mId.readableHexData());
-    getProxy().removeListener(this);
+    getProxy().CameraProvider::removeListener(this);
 }
 
 

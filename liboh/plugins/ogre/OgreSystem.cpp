@@ -415,7 +415,12 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
-    assert(mSceneObjects.empty());
+    for (std::list<Entity*>::iterator iter = mSceneEntities.begin();
+         iter != mSceneEntities.end();) {
+        std::list<Entity*>::iterator current = iter;
+        ++iter;
+        delete *current; // should remove it from this list.
+    }
     decrefcount();
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()
              ;iter!=sActiveOgreScenes.end();) {
@@ -440,9 +445,6 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
             Camera *cam=new Camera(this,camera,UUID::random());
-            mSceneObjects[camera->getObjectReference()]=cam;
-            //FIXME: should camera be responsible for adding and removing listeners
-            camera->addListener(cam);
         }
         
     }
@@ -450,9 +452,6 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
             Light *lig=new Light(this,light,UUID::random());
-            mSceneObjects[light->getObjectReference()]=lig;
-            //FIXME: should camera be responsible for adding and removing listeners
-            light->addListener(lig);
         }
         
     }
@@ -460,19 +459,12 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
             MeshObject *mesh=new MeshObject(this,meshpxy,UUID::random());
-            mSceneObjects[meshpxy->getObjectReference()]=mesh;
-            //FIXME: should camera be responsible for adding and removing listeners
-            meshpxy->addListener(mesh);
         }
         
     }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
-    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher>::iterator where=mSceneObjects.find(p->getObjectReference());
-    assert(where!=mSceneObjects.end());
-    delete where->second;
-    mSceneObjects.erase(where);
-    
+
 }
 Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();
@@ -481,7 +473,7 @@ Duration OgreSystem::desiredTickRate()const{
 void OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
         (*iter++)->preFrame(curFrameTime, deltaTime);
-    }    
+    }
     Ogre::WindowEventUtilities::messagePump();
     Ogre::Root::getSingleton().renderOneFrame();
     Time postFrameTime = Time::now();
@@ -490,6 +482,7 @@ void OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
         (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
 }
+static Time debugStartTime = Time::now();
 void OgreSystem::tick(){
     Time curFrameTime(Time::now());
     Duration frameTime=curFrameTime-mLastFrameTime;
@@ -501,9 +494,10 @@ void OgreSystem::tick(){
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
 }
 void OgreSystem::preFrame(Time current, Duration frameTime) {
-    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher>::iterator iter;
-    for (iter = mSceneObjects.begin(); iter != mSceneObjects.end(); ++iter) {
-        (*iter).second->extrapolateLocation(current);
+    std::list<Entity*>::iterator iter;
+    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); ++iter) {
+        SILOG(ogre,debug,"Extrapolating "<<((void*)(*iter))<<" for time "<<(float64)(current-debugStartTime));
+        (*iter)->extrapolateLocation(current);
     }
 }
 void OgreSystem::postFrame(Time current, Duration frameTime) {

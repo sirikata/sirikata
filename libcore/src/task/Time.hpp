@@ -170,6 +170,9 @@ public:
 	inline AbsTime operator+ (const DeltaTime &otherDelta) const {
 		return AbsTime(mTime + (double)otherDelta);
 	}
+	inline AbsTime operator- (const DeltaTime &otherDelta) const {
+		return (*this) + (-otherDelta);
+	}
 
 	/**
 	 * The only public construction function for absolute times.

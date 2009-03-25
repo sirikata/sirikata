@@ -38,10 +38,10 @@ ProxyCameraObject::ProxyCameraObject(const SpaceObjectReference&id):ProxyPositio
 void ProxyCameraObject::attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height) {
-        this->Provider<CameraListenerPtr>::notify(&CameraListener::attach,renderTargetName,width,height);
+        CameraProvider::notify(&CameraListener::attach,renderTargetName,width,height);
 }
 void ProxyCameraObject::detach() {
-        this->Provider<CameraListenerPtr>::notify(&CameraListener::detach);
+        CameraProvider::notify(&CameraListener::detach);
 }
 
 }

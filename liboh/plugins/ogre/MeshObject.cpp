@@ -42,7 +42,9 @@ MeshObject::MeshObject(OgreSystem *scene,
                  pmo,
                  id,
                  scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
-{}
+{
+    getProxy().MeshProvider::addListener(this);
+}
 
 void MeshObject::meshChanged(const URI &meshFile) {
     mMeshURI = meshFile;
@@ -52,17 +54,18 @@ void MeshObject::meshChanged(const URI &meshFile) {
 }
 
 void MeshObject::created(const Ogre::MeshPtr &mesh) {
-    getScene()->getSceneManager()->destroyMovableObject(mOgreObject);
-    mOgreObject=NULL;
-    Ogre::MovableObject *meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
-                                                                               mesh->getName());
+    Ogre::MovableObject *meshObj = mOgreObject;
+    init(NULL);
+    getScene()->getSceneManager()->destroyMovableObject(meshObj);
+    meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
+                                                          mesh->getName());
     init(meshObj);
 }
 
 MeshObject::~MeshObject() {
     init(NULL);
     getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
-    getProxy().removeListener(this);
+    getProxy().MeshProvider::removeListener(this);
 }
 
 }
