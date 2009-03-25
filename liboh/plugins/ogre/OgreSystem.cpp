@@ -38,9 +38,9 @@
 #include <oh/ProxyCameraObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyLightObject.hpp>
-#include "Camera.hpp"
-#include "MeshObject.hpp"
-#include "Light.hpp"
+#include "CameraEntity.hpp"
+#include "MeshEntity.hpp"
+#include "LightEntity.hpp"
 #include <OgreRoot.h>
 #include <OgrePlugin.h>
 #include <OgreTextureManager.h>
@@ -444,21 +444,21 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
-            Camera *cam=new Camera(this,camera,UUID::random());
+            CameraEntity *cam=new CameraEntity(this,camera,UUID::random());
         }
         
     }
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
-            Light *lig=new Light(this,light,UUID::random());
+            LightEntity *lig=new LightEntity(this,light,UUID::random());
         }
         
     }
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
-            MeshObject *mesh=new MeshObject(this,meshpxy,UUID::random());
+            MeshEntity *mesh=new MeshEntity(this,meshpxy,UUID::random());
         }
         
     }

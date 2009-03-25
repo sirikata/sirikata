@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  Entity.hpp
+ *  MeshObject.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,44 +29,44 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
-#define SIRIKATA_GRAPHICS_CAMERA_HPP__
-#include "Entity.hpp"
-#include <oh/CameraListener.hpp>
-#include <OgreMovableObject.h>
-#include <OgreRenderable.h>
-#include <OgreRenderTarget.h>
-#include <oh/ProxyCameraObject.hpp>
-
+#include "MeshEntity.hpp"
+#include <OgreMeshManager.h>
+#include <OgreResourceGroupManager.h>
 namespace Sirikata {
 namespace Graphics {
 
-class Camera : public Entity, public CameraListener {
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::Viewport *mViewport;
+MeshEntity::MeshEntity(OgreSystem *scene,
+               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
+               const UUID &id)
+        : Entity(scene,
+                 pmo,
+                 id,
+                 scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
+{
+    getProxy().MeshProvider::addListener(this);
+}
 
-    Ogre::Camera *getOgreCamera() {
-        return static_cast<Ogre::Camera*const>(mOgreObject);
-    }
-public:
-    ProxyCameraObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<ProxyCameraObject>(mProxy);
-    }
-    virtual void attach (const String&renderTargetName,
-                         uint32 width,
-                         uint32 height);
-    virtual void detach();
-    Camera(OgreSystem *scene,
-           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
-           const UUID &id);
+void MeshEntity::meshChanged(const URI &meshFile) {
+    mMeshURI = meshFile;
+    //scene->getDependencyManager()->loadMesh(id, meshFile, std::tr1::bind(&MeshEntity::created, this, _1));
+    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    created(ogreMesh);
+}
 
-    virtual ~Camera();
-    Ogre::Viewport* getViewport(){
-        return mViewport;
-    }
-};
+void MeshEntity::created(const Ogre::MeshPtr &mesh) {
+    Ogre::MovableObject *meshObj = mOgreObject;
+    init(NULL);
+    getScene()->getSceneManager()->destroyMovableObject(meshObj);
+    meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
+                                                          mesh->getName());
+    init(meshObj);
+}
+
+MeshEntity::~MeshEntity() {
+    init(NULL);
+    getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
+    getProxy().MeshProvider::removeListener(this);
+}
 
 }
 }
-
-#endif

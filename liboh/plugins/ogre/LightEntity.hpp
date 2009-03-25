@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  MeshObject.cpp
+ *  LightEntity.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,44 +29,39 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "MeshObject.hpp"
-#include <OgreMeshManager.h>
-#include <OgreResourceGroupManager.h>
+#ifndef SIRIKATA_GRAPHICS_LIGHTENTITY_HPP__
+#define SIRIKATA_GRAPHICS_LIGHTENTITY_HPP__
+
+#include <oh/LightListener.hpp>
+#include "Entity.hpp"
+#include <OgreLight.h>
+#include <oh/ProxyLightObject.hpp>
 namespace Sirikata {
 namespace Graphics {
 
-MeshObject::MeshObject(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
-               const UUID &id)
-        : Entity(scene,
-                 pmo,
-                 id,
-                 scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
-{
-    getProxy().MeshProvider::addListener(this);
-}
+class LightEntity
+    : public Entity,
+      public LightListener {
+public:
+    ProxyLightObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<ProxyLightObject>(mProxy);
+    }
+    LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const UUID &id);
 
-void MeshObject::meshChanged(const URI &meshFile) {
-    mMeshURI = meshFile;
-    //scene->getDependencyManager()->loadMesh(id, meshFile, std::tr1::bind(&MeshObject::created, this, _1));
-    Ogre::MeshPtr ogreMesh = Ogre::MeshManager::getSingleton().load(meshFile.filename(), Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-    created(ogreMesh);
-}
+    virtual ~LightEntity();
 
-void MeshObject::created(const Ogre::MeshPtr &mesh) {
-    Ogre::MovableObject *meshObj = mOgreObject;
-    init(NULL);
-    getScene()->getSceneManager()->destroyMovableObject(meshObj);
-    meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
-                                                          mesh->getName());
-    init(meshObj);
-}
+    inline Ogre::Light &light() {
+        return *static_cast<Ogre::Light*>(mOgreObject);
+    }
 
-MeshObject::~MeshObject() {
-    init(NULL);
-    getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
-    getProxy().MeshProvider::removeListener(this);
-}
+    float computeClosestPower(
+            const Color &target,
+            const Color &source);
+
+    virtual void notify(const LightInfo& linfo);
+};
 
 }
 }
+
+#endif

@@ -46,7 +46,7 @@
 namespace Sirikata {
 namespace Graphics {
 
-class MeshObject
+class MeshEntity
     : public Entity,
       public MeshListener {
 
@@ -63,11 +63,11 @@ public:
     ProxyMeshObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
     }
-    MeshObject(OgreSystem *scene,
+    MeshEntity(OgreSystem *scene,
                const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
                const UUID &id);
 
-    virtual ~MeshObject();
+    virtual ~MeshEntity();
 
     void meshChanged(const URI&meshFile);
 

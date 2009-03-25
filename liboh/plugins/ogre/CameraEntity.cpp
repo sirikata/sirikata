@@ -1,9 +1,9 @@
 #include <oh/Platform.hpp>
-#include "Camera.hpp"
+#include "CameraEntity.hpp"
 #include <options/Options.hpp>
 namespace Sirikata {
 namespace Graphics {
-Camera::Camera(OgreSystem *scene,
+CameraEntity::CameraEntity(OgreSystem *scene,
            const std::tr1::shared_ptr<ProxyCameraObject> &pco,
            const UUID &id)
     : Entity(scene,
@@ -23,7 +23,7 @@ Camera::Camera(OgreSystem *scene,
     getOgreCamera()->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
 
-void Camera::attach (const String&renderTargetName,
+void CameraEntity::attach (const String&renderTargetName,
                      uint32 width,
                      uint32 height){
     this->detach();
@@ -34,7 +34,7 @@ void Camera::attach (const String&renderTargetName,
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
     getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
 }
-void Camera::detach() {
+void CameraEntity::detach() {
     if (mViewport&&mRenderTarget) {
         mRenderTarget->removeViewport(mViewport->getZOrder());
 /*
@@ -55,7 +55,7 @@ void Camera::detach() {
     }
 }
 
-Camera::~Camera() {
+CameraEntity::~CameraEntity() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
     }

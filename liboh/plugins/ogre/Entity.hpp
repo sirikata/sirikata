@@ -33,7 +33,6 @@
 #define SIRIKATA_GRAPHICS_ENTITY_HPP__
 
 #include "OgreSystem.hpp"
-#undef nil
 #include <util/UUID.hpp>
 #include <oh/ProxyPositionObject.hpp>
 #include <oh/ProxyObjectListener.hpp>
@@ -113,20 +112,7 @@ protected:
     const UUID mId;
     std::list<Entity*>::iterator mSceneIter, mMovingIter;
 
-    void init(Ogre::MovableObject *obj) {
-        if (mOgreObject) {
-            mSceneNode->detachObject(mOgreObject);
-            if (!obj) {
-                removeFromScene();
-            }
-        } else if (obj) {
-            addToScene(NULL);
-        }
-        mOgreObject = obj;
-        if (obj) {
-            mSceneNode->attachObject(obj);
-        }
-    }
+    void init(Ogre::MovableObject *obj);
 
     void setOgrePosition(const Vector3d &pos) {
         mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
@@ -134,21 +120,7 @@ protected:
     void setOgreOrientation(const Quaternion &orient) {
         mSceneNode->setOrientation(toOgre(orient));
     }
-    void setStatic(bool isStatic) {
-        const std::list<Entity*>::iterator end = mScene->mMovingEntities.end();
-        if (isStatic) {
-            if (mMovingIter != end) {
-                SILOG(ogre,debug,"Removed "<<this<<" from moving entities queue.");
-                mScene->mMovingEntities.erase(mMovingIter);
-                mMovingIter = end;
-            }
-        } else {
-            if (mMovingIter == end) {
-                SILOG(ogre,debug,"Added "<<this<<" to moving entities queue.");
-                mMovingIter = mScene->mMovingEntities.insert(end, this);
-            }
-        }
-    }
+    void setStatic(bool isStatic);
 public:
     ProxyPositionObject &getProxy() const {
         return *mProxy;
@@ -156,73 +128,21 @@ public:
     Entity(OgreSystem *scene,
            const std::tr1::shared_ptr<ProxyPositionObject> &ppo,
            const UUID &id,
-           Ogre::MovableObject *obj=NULL)
-          : mScene(scene),
-            mProxy(ppo),
-            mOgreObject(NULL),
-            mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())),
-            mId(id),
-            mSceneIter(scene->mSceneEntities.end()),
-            mMovingIter(scene->mMovingEntities.end())
-    {
-        if (obj) {
-            init(obj);
-        }
-        mSceneIter = scene->mSceneEntities.insert(mSceneIter, this);
-        
-        ppo->ProxyObjectProvider::addListener(this);
-        ppo->PositionProvider::addListener(this);
-    }
+           Ogre::MovableObject *obj=NULL);
 
-    virtual ~Entity() {
-        mScene->mSceneEntities.erase(mSceneIter);
-        if (mMovingIter != mScene->mMovingEntities.end()) {
-            mScene->mMovingEntities.erase(mMovingIter);
-        }
-        getProxy().ProxyObjectProvider::removeListener(this);
-        getProxy().PositionProvider::removeListener(this);
-        init(NULL);
-        mSceneNode->detachAllObjects();
-        mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
-    }
+    virtual ~Entity();
 
-    void removeFromScene() {
-        Ogre::SceneNode *oldParent = mSceneNode->getParentSceneNode();
-        if (oldParent) {
-            oldParent->removeChild(mSceneNode);
-        }
-        setStatic(true);
-    }
-    void addToScene(Ogre::SceneNode *newParent=NULL) {
-        if (newParent == NULL) {
-            newParent = mScene->getSceneManager()->getRootSceneNode();
-        }
-        removeFromScene();
-        newParent->addChild(mSceneNode);
-        setStatic(false); // May get set to true after the next frame has drawn.
-    }
+    void removeFromScene();
+    void addToScene(Ogre::SceneNode *newParent=NULL);
 
     OgreSystem *getScene() {
         return mScene;
     }
 
-    void updateLocation(Time ti, const Location &newLocation) {
-        SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.getPosition());
-        if (!getProxy().isStatic(ti)) {
-            setStatic(false);
-        }
-    }
+    virtual void updateLocation(Time ti, const Location &newLocation);
+    virtual void resetLocation(Time ti, const Location &newLocation);
 
-    void resetLocation(Time ti, const Location &newLocation) {
-        SILOG(ogre,debug,"ResetLocation "<<this<<" to "<<newLocation.getPosition());
-        if (!getProxy().isStatic(ti)) {
-            setStatic(false);
-        }
-    }
-
-    void destroyed() {
-        delete this;
-    }
+    virtual void destroyed();
 
     Vector3d getOgrePosition() {
         return fromOgre(mSceneNode->getPosition(), getScene()->getOffset());
@@ -230,12 +150,7 @@ public:
     Quaternion getOgreOrientation() {
         return fromOgre(mSceneNode->getOrientation());
     }
-
-    void extrapolateLocation(TemporalValue<Location>::Time current) {
-        setOgrePosition(getProxy().extrapolatePosition(current));
-        setOgreOrientation(getProxy().extrapolateOrientation(current));
-        setStatic(getProxy().isStatic(current));
-    }
+    void extrapolateLocation(TemporalValue<Location>::Time current);
 
     virtual bool setSelected(bool selected) {
       return false;
