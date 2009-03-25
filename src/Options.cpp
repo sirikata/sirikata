@@ -72,6 +72,9 @@ void InitOptions() {
 
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))
+
+        .addOption(new OptionValue(OBJECT_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
+        .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
      ;
 }
 

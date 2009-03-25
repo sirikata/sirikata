@@ -45,6 +45,9 @@
 #define ANALYSIS_LOC         "analysis.loc"
 #define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
 
+#define OBJECT_QUEUE         "object.queue"
+#define SERVER_QUEUE         "server.queue"
+
 namespace CBR {
 
 void InitOptions();
