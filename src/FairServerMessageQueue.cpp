@@ -11,28 +11,37 @@ FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_se
 }
 
 bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
-    ServerMessageHeader server_header(mSourceServer, destinationServer);
+    // If its just coming back here, skip routing and just push the payload onto the receive queue
+    if (mSourceServer == destinationServer) {
+        ChunkSourcePair csp;
+        csp.chunk = new Network::Chunk(msg);
+        csp.source = mSourceServer;
+
+        mReceiveQueue.push(csp);
+        return true;
+    }
 
     uint32 offset = 0;
     Network::Chunk with_header;
+    ServerMessageHeader server_header(mSourceServer, destinationServer);
     offset = server_header.serialize(with_header, offset);
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
 
-    if (mSourceServer == destinationServer) {
-        mReceiveQueue.push(new Network::Chunk(with_header));
-        return true;
-    }
-
     return mServerQueues.queueMessage(destinationServer,new ServerMessagePair(destinationServer,with_header))==QueueEnum::PushSucceeded;
 }
 
-Network::Chunk* FairServerMessageQueue::receive() {
-    if (mReceiveQueue.empty()) return NULL;
+bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {
+    if (mReceiveQueue.empty()) {
+        *chunk_out = NULL;
+        return false;
+    }
 
-    Network::Chunk* c = mReceiveQueue.front();
+    *chunk_out = mReceiveQueue.front().chunk;
+    *source_server_out = mReceiveQueue.front().source;
     mReceiveQueue.pop();
-    return c;
+
+    return true;
 }
 
 void FairServerMessageQueue::service(const Time&t){
@@ -48,8 +57,20 @@ void FairServerMessageQueue::service(const Time&t){
     finalSendMessages.resize(0);
 
     // no limit on receive bandwidth
-    while( Network::Chunk* c = mNetwork->receiveOne() )
-        mReceiveQueue.push(c);
+    while( Network::Chunk* c = mNetwork->receiveOne() ) {
+        uint32 offset = 0;
+        ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
+        assert(hdr.destServer() == mSourceServer);
+        Network::Chunk* payload = new Network::Chunk;
+        payload->insert(payload->begin(), c->begin() + offset, c->end());
+        delete c;
+
+        ChunkSourcePair csp;
+        csp.chunk = payload;
+        csp.source = hdr.sourceServer();
+
+        mReceiveQueue.push(csp);
+    }
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {

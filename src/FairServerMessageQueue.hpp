@@ -34,7 +34,12 @@ protected:
     };
     std::vector<ServerMessagePair*> mClientServerBuffer;
     FairQueue<ServerMessagePair, ServerID > mServerQueues;
-    std::queue<Network::Chunk*> mReceiveQueue;
+
+    struct ChunkSourcePair {
+        Network::Chunk* chunk;
+        ServerID source;
+    };
+    std::queue<ChunkSourcePair> mReceiveQueue;
 public:
 
     FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, Trace* trace);
@@ -43,7 +48,7 @@ public:
     void removeServer(ServerID);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
-    virtual Network::Chunk* receive();
+    virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service(const Time&t);
 
 protected:

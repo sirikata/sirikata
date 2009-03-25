@@ -82,25 +82,18 @@ const ServerID& Server::id() const {
 void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
     assert(msg != NULL);
 
-    if (dest_server==id()) {
-        // receiving messages expects full message, with header
-        ServerMessageHeader server_header(this->id(), dest_server);
-        uint32 offset_with_header = 0;
-        Network::Chunk with_header;
-        offset_with_header = server_header.serialize(with_header, offset_with_header);
-        offset_with_header = msg->serialize(with_header, offset_with_header);
+    uint32 offset = 0;
+    Network::Chunk msg_serialized;
+    offset = msg->serialize(msg_serialized, offset);
 
+    if (dest_server==id()) {
         if (!is_forward) {
-            mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset_with_header);
-            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset_with_header);
+            mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
+            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset);
         }
 
-        mSelfMessages.push_back( SelfMessage(with_header, is_forward) );
+        mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }else {
-        uint32 offset = 0;
-        Network::Chunk msg_serialized;
-        offset = msg->serialize(msg_serialized, offset);
-
         mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
 
         bool failed = !mServerMessageQueue->addMessage(dest_server, msg_serialized);
@@ -193,16 +186,14 @@ void Server::forward(Message* msg, const UUID& dest) {
     route(msg, dest_server_id, true);
 }
 
-void Server::processChunk(const Network::Chunk&chunk, bool forwarded_self_msg) {
+void Server::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg) {
     Message* result;
     unsigned int offset=0;
     do {
-        ServerMessageHeader hdr=ServerMessageHeader::deserialize(chunk,offset);
-        assert(hdr.destServer() == id());
-        offset=Message::deserialize(chunk,offset,&result);
+        offset = Message::deserialize(chunk,offset,&result);
 
         if (!forwarded_self_msg)
-            mTrace->packetReceived(mCurrentTime, hdr.sourceServer(), result->id(), offset);
+            mTrace->packetReceived(mCurrentTime, source_server, result->id(), offset);
 
         deliver(result);
     }while (offset<chunk.size());
@@ -214,13 +205,14 @@ void Server::networkTick(const Time&t) {
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty()) {
-        processChunk(self_messages.front().data, self_messages.front().forwarded);
+        processChunk(self_messages.front().data, this->id(), self_messages.front().forwarded);
         self_messages.pop_front();
     }
 
     Sirikata::Network::Chunk *c=NULL;
-    while((c=mServerMessageQueue->receive())) {
-        processChunk(*c, false);
+    ServerID source_server;
+    while(mServerMessageQueue->receive(&c, &source_server)) {
+        processChunk(*c, source_server, false);
         delete c;
     }
 }

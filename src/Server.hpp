@@ -74,7 +74,7 @@ private:
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
-    void processChunk(const Sirikata::Network::Chunk&chunk, bool forwarded_self_msg);
+    void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
     // Routing interface for servers.  This is used to route messages that originate from
     // a server provided service, and thus don't have a source object.  Messages may be destined
     // for either servers or objects.  The second form will simply automatically do the destination
