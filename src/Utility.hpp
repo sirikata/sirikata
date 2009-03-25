@@ -155,6 +155,10 @@ public:
         mValue = TemporalValueType(t,l);
         return *this;
     }
+    SimpleExtrapolatorBase& resetValue(const TimeType&t, const Value&l) {
+        mValue = TemporalValueType(t,l);
+        return *this;
+    }
     bool propertyHolds(const TimeType&when, const std::tr1::function<bool(const Value&)>&f)const{
         return f(mValue.extrapolate(when));
     }
