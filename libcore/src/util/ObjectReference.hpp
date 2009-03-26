@@ -106,6 +106,11 @@ class ObjectReference : TotallyOrdered<ObjectReference>{
 
 };
 
+inline std::ostream &operator << (std::ostream &os, const ObjectReference&objRef) {
+    os << objRef.toString();
+    return os;
+}
+
 } // namespace Sirikata
 
 #endif //_OBJECT_REFERENCE_HPP_

@@ -123,7 +123,7 @@ protected:
     template <typename T, typename A, typename B, typename C, typename D> 
       void notify(T func, A newA, B newB, C newC, D newD){
         for (int32 i=(int32)mListeners.size()-1;
-             i>=0&&i<mListeners.size();
+             i>=0&&i<(int32)mListeners.size();
              --i) {
             ((&*mListeners[i])->*func)(newA,newB,newC,newD);
         }

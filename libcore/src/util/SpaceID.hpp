@@ -106,6 +106,11 @@ class SpaceID : TotallyOrdered<SpaceID>{
 
 };
 
+inline std::ostream &operator << (std::ostream &os, const SpaceID&sor) {
+    os << sor.toString();
+    return os;
+}
+
 } // namespace Sirikata
 
 #endif //_OBJECT_REFERENCE_HPP_

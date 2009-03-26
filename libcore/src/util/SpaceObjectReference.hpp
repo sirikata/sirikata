@@ -128,6 +128,11 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
 
 };
 
+inline std::ostream &operator << (std::ostream &os, const SpaceObjectReference&sor) {
+    os << sor.space() << ":" << sor.object();
+    return os;
+}
+
 } // namespace Sirikata
 
 #endif //_OBJECT_REFERENCE_HPP_
