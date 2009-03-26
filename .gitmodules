@@ -4,3 +4,6 @@
 [submodule "externals/prox"]
 	path = externals/prox
 	url = git://github.com/danielrh/prox.git
+[submodule "externals/awesomium"]
+	path = externals/awesomium
+	url = git://github.com/pathorn/awesomium.git
