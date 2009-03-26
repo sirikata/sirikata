@@ -75,7 +75,7 @@ public:
         return Vector3f(0,0,0);//fromOgre(getOgreEntity()->getScale());
     }
     void setScale(const Vector3f &scale) {
-        //getOgreEntity()->setScale(toOgre(scale));
+        mSceneNode->setScale(toOgre(scale));
     }
 
   /*

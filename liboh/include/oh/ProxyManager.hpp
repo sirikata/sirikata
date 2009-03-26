@@ -31,6 +31,7 @@
  */
 #include <util/ListenerProvider.hpp>
 #include "TimeSteppedSimulation.hpp"
+#include "ProxyObject.hpp"
 namespace Sirikata {
 
 class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
@@ -41,6 +42,9 @@ public:
     virtual void initialize()=0;
     ///Called before providers detatched
     virtual void destroy()=0;
+
+    /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
+    virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
 
 };
 }

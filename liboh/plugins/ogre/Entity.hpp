@@ -110,7 +110,7 @@ protected:
     Ogre::SceneNode *mSceneNode;
 
     const UUID mId;
-    std::list<Entity*>::iterator mSceneIter, mMovingIter;
+    std::list<Entity*>::iterator mMovingIter;
 
     void init(Ogre::MovableObject *obj);
 
@@ -126,7 +126,7 @@ public:
         return *mProxy;
     }
     Entity(OgreSystem *scene,
-           const std::tr1::shared_ptr<ProxyPositionObject> &ppo,
+           const ProxyPositionObjectPtr &ppo,
            const UUID &id,
            Ogre::MovableObject *obj=NULL);
 
@@ -141,6 +141,8 @@ public:
 
     virtual void updateLocation(Time ti, const Location &newLocation);
     virtual void resetLocation(Time ti, const Location &newLocation);
+    virtual void setParent(const ProxyPositionObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
+    virtual void unsetParent(Time ti, const Location &newLocation);
 
     virtual void destroyed();
 

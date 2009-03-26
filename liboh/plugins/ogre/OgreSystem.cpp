@@ -415,11 +415,14 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
-    for (std::list<Entity*>::iterator iter = mSceneEntities.begin();
-         iter != mSceneEntities.end();) {
-        std::list<Entity*>::iterator current = iter;
-        ++iter;
-        delete *current; // should remove it from this list.
+    {
+        SceneEntitiesMap toDelete;
+        toDelete.swap(mSceneEntities);
+        SceneEntitiesMap::iterator iter;
+        for (iter = toDelete.begin(); iter != toDelete.end(); ++iter) {
+            Entity* current = (*iter).second;
+            delete current;
+        }
     }
     decrefcount();
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()

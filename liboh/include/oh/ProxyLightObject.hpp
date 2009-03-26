@@ -13,7 +13,7 @@ class SIRIKATA_OH_EXPORT ProxyLightObject
   : public LightProvider,
     public ProxyPositionObject {
 public:
-    ProxyLightObject(const SpaceObjectReference&id);
+    ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id);
     void update(const LightInfo &li);
 };
 }

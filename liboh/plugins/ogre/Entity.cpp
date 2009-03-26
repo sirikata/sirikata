@@ -38,7 +38,7 @@ namespace Sirikata {
 namespace Graphics {
 
 Entity::Entity(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyPositionObject> &ppo,
+               const ProxyPositionObjectPtr &ppo,
                const UUID &id,
                Ogre::MovableObject *obj)
   : mScene(scene),
@@ -46,20 +46,28 @@ Entity::Entity(OgreSystem *scene,
     mOgreObject(NULL),
     mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())),
     mId(id),
-    mSceneIter(scene->mSceneEntities.end()),
     mMovingIter(scene->mMovingEntities.end())
 {
+    mSceneNode->setInheritScale(false);
     if (obj) {
         init(obj);
     }
-    mSceneIter = scene->mSceneEntities.insert(mSceneIter, this);
-        
+    bool successful = scene->mSceneEntities.insert(
+        OgreSystem::SceneEntitiesMap::value_type(mProxy->getObjectReference(), this)).second;
+
+    assert (successful == true);
+
     ppo->ProxyObjectProvider::addListener(this);
     ppo->PositionProvider::addListener(this);
 }
 
 Entity::~Entity() {
-    mScene->mSceneEntities.erase(mSceneIter);
+    OgreSystem::SceneEntitiesMap::iterator iter =
+        mScene->mSceneEntities.find(mProxy->getObjectReference());
+    if (iter != mScene->mSceneEntities.end()) {
+        // will fail while in the OgreSystem destructor.
+        mScene->mSceneEntities.erase(iter);
+    }
     if (mMovingIter != mScene->mMovingEntities.end()) {
         mScene->mMovingEntities.erase(mMovingIter);
     }
@@ -67,6 +75,10 @@ Entity::~Entity() {
     getProxy().PositionProvider::removeListener(this);
     init(NULL);
     mSceneNode->detachAllObjects();
+    /* detaches all children from the scene.
+       There should be none, as the server should have adjusted their parents.
+     */
+    mSceneNode->removeAllChildren();
     mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
 }
 
@@ -129,6 +141,21 @@ void Entity::resetLocation(Time ti, const Location &newLocation) {
     if (!getProxy().isStatic(ti)) {
         setStatic(false);
     }
+}
+
+void Entity::setParent(const ProxyPositionObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation)
+{
+    Entity *parentEntity = mScene->getEntity(parent);
+    if (!parentEntity) {
+        SILOG(ogre,fatal,"No Entity has been created for proxy " << parent->getObjectReference() << 
+              " which is to become parent of "<<getProxy().getObjectReference());
+        return;
+    }
+    addToScene(parentEntity->mSceneNode);
+}
+
+void Entity::unsetParent(Time ti, const Location &newLocation) {
+    addToScene(NULL);
 }
 
 void Entity::destroyed() {

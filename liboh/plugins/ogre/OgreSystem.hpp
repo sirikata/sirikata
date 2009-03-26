@@ -53,8 +53,8 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
-//    std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> mSceneObjects;
-    std::list<Entity*> mSceneEntities;
+    typedef std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> SceneEntitiesMap;
+    SceneEntitiesMap mSceneEntities;
     std::list<Entity*> mMovingEntities;
     friend class Entity; //Entity will insert/delete itself from these arrays.
     OptionValue*mWindowWidth;
@@ -101,6 +101,17 @@ public:
             return os;
         delete os;
         return NULL;
+    }
+    Entity* getEntity(const SpaceObjectReference &proxyId) const {
+        SceneEntitiesMap::const_iterator iter = mSceneEntities.find(proxyId);
+        if (iter != mSceneEntities.end()) {
+            return (*iter).second;
+        } else {
+            return NULL;
+        }
+    }
+    Entity* getEntity(const ProxyObjectPtr &proxy) const {
+        return getEntity(proxy->getObjectReference());
     }
     virtual Duration desiredTickRate()const;
     virtual void tick();

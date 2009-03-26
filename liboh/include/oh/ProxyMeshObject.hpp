@@ -42,7 +42,7 @@ class SIRIKATA_OH_EXPORT ProxyMeshObject
   : public MeshProvider,
     public ProxyPositionObject {
 public:
-    ProxyMeshObject(const SpaceObjectReference&id);
+    ProxyMeshObject(ProxyManager *man, const SpaceObjectReference&id);
     void setMesh(const URI &newMesh);
     void setScale (const Vector3f &newScale);
     

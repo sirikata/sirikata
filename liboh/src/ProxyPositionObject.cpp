@@ -1,7 +1,7 @@
 /*  Sirikata Utilities -- Sirikata Listener Pattern
  *  ProxyPositionObject.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,64 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include <oh/Platform.hpp>
+#include <util/Extrapolation.hpp>
+#include <oh/ProxyPositionObject.hpp>
+#include <oh/PositionListener.hpp>
+#include <oh/ProxyManager.hpp>
+
 namespace Sirikata {
+
+void ProxyPositionObject::setPosition(TemporalValue<Location>::Time timeStamp,
+                     const Vector3d &newPos,
+                     const Quaternion &newOri) {
+    Location soon=mLocation.extrapolate(timeStamp);
+    setPositionVelocity(timeStamp,
+                        Location(newPos,
+                                 newOri,
+                                 soon.getVelocity(),
+                                 soon.getAxisOfRotation(),
+                                 soon.getAngularSpeed()));
+}
+void ProxyPositionObject::setPositionVelocity(TemporalValue<Location>::Time timeStamp,
+                             const Location&location) {
+    mLocation.updateValue(timeStamp,
+                          location);
+    PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
+}
+void ProxyPositionObject::resetPositionVelocity(TemporalValue<Location>::Time timeStamp,
+                             const Location&location) {
+    mLocation.resetValue(timeStamp,
+                         location);
+    PositionProvider::notify(&PositionListener::resetLocation, timeStamp, location);
+}
+void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
+               TemporalValue<Location>::Time timeStamp,
+               const Location &absLocation,
+               const Location &relLocation) {
+    mParentId = parent->getObjectReference();
+    mLocation.resetValue(timeStamp,
+                         relLocation);
+    PositionProvider::notify(&PositionListener::setParent,
+                             parent,
+                             timeStamp,
+                             absLocation,
+                             relLocation);
+}
+void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp,
+               const Location &absLocation) {
+    mParentId = SpaceObjectReference::null();
+    mLocation.resetValue(timeStamp,
+                         absLocation);
+    PositionProvider::notify(&PositionListener::unsetParent,
+                             timeStamp,
+                             absLocation);
+}
+
+ProxyPositionObjectPtr ProxyPositionObject::getParentProxy() const {
+    ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject(getParent()));
+    return std::tr1::dynamic_pointer_cast<ProxyPositionObject>(parentProxy);
+}
 
 }

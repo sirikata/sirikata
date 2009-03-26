@@ -39,19 +39,21 @@ namespace Sirikata {
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     std::tr1::shared_ptr<ProxyLightObject> mLight;
-    std::tr1::shared_ptr<ProxyMeshObject> mMesh;
+    std::tr1::shared_ptr<ProxyMeshObject> mAttachedMesh, mMesh;
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy){}
 public:
     DemoProxyManager()
-        : mCamera(new ProxyCameraObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-        mLight(new ProxyLightObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-         mMesh(new ProxyMeshObject(SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+      : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
+        mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
+        mAttachedMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
+        mMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
         
     }
     void initialize(){
         notify(&ProxyCreationListener::createProxy,mCamera);
         notify(&ProxyCreationListener::createProxy,mLight);
+        notify(&ProxyCreationListener::createProxy,mAttachedMesh);
         notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
         LightInfo li;
@@ -59,7 +61,16 @@ public:
         li.setLightAmbientColor(Color(.3,.3,.3));
         li.setLightPower(1);
         mLight->update(li);
+
+/*
+        li.setLightDiffuseColor(Color(.7,0,1));
+        li.setLightAmbientColor(Color(1,1,0));
+        li.setLightPower(100);
+        mAttachedLight->update(li);
+*/
         mMesh->setMesh("file:///razor.mesh");
+        mAttachedMesh->setMesh("file:///cube.mesh");
+        mAttachedMesh->setScale(Vector3f(.1,.1,.1));
         mCamera->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,100.), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
@@ -69,6 +80,14 @@ public:
         mLight->setPositionVelocity(Time::now()+.5,
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
+        mAttachedMesh->setParent(mMesh, Time::now(),
+                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
+                                      Vector3f(0,-3,0), Vector3f::nil(), 0.),
+                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
+                                      Vector3f(0,-3,0), Vector3f(.71,.71,0), 3.14));
+        /*mAttachedMesh->setPositionVelocity(Time::now(),
+                             Location(Vector3d(25,50.,-100), Quaternion::identity(),
+                                      Vector3f(0,-1,0), Vector3f::nil(), 0.));*/
         mMesh->resetPositionVelocity(Time::now()-1,
                              Location(Vector3d(0,0,0), Quaternion::identity(),
                                       Vector3f(0,0,0), Vector3f(0,0,0), 0.));
@@ -79,8 +98,22 @@ public:
     void destroy() {
         mCamera->detach();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
+        notify(&ProxyCreationListener::destroyProxy,mAttachedMesh);
         notify(&ProxyCreationListener::destroyProxy,mLight);
         notify(&ProxyCreationListener::destroyProxy,mMesh);
+    }
+    ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const {
+        if (id == mCamera->getObjectReference()) {
+            return mCamera;
+        } else if (id == mLight->getObjectReference()) {
+            return mLight;
+        } else if (id == mAttachedMesh->getObjectReference()) {
+            return mAttachedMesh;
+        } else if (id == mMesh->getObjectReference()) {
+            return mMesh;
+        } else {
+            return ProxyObjectPtr();
+        }
     }
 };
 
