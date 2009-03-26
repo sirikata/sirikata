@@ -138,7 +138,7 @@ public:
      *  This class is passed into any newSubstreamCallback functions so they may 
      *  immediately setup callbacks for connetion events and possibly start sending immediate responses.     
      */
-    class SetCallbacks{
+    class SetCallbacks : Noncopyable{
     public:
         virtual ~SetCallbacks(){}
         /**
@@ -172,11 +172,8 @@ public:
         const BytesReceivedCallback&chunkReceivedCallback)=0;
     ///Creates a stream of the same type as this stream
     virtual Stream*factory()=0;
-    ///Makes this stream a clone of stream "s" if they are of the same type
-    virtual bool cloneFrom(Stream*s,
-        const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback)=0;
-    
+    ///Makes this stream a clone of stream "s" if they are of the same type and immediately calls the callback 
+    virtual Stream* clone(const SubstreamCallback&cb)=0;
     
     ///Send a chunk of data to the receiver
     virtual void send(const Chunk&data,StreamReliability)=0;

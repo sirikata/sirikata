@@ -426,6 +426,13 @@ public:
         }
         
     }
+    static void noopSubstream(Stream *stream, Stream::SetCallbacks&scb) {
+        scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived);
+    }
+    void testSubstream(Stream* stream, Stream::SetCallbacks&scb) {
+        scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
+            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1));
+    }
     void testConnectSend (void )
     {
         Stream*z=NULL;
@@ -440,22 +447,18 @@ public:
 
                 {
                     Stream*zz=r.factory();        
-                    if (zz->cloneFrom(&r,
-                                      &Stream::ignoreConnectionStatus,
-                                      &Stream::ignoreBytesReceived)) {
+                    zz = r.clone(&SstTest::noopSubstream);
+                    if (zz) {
                         runRoutine(zz);
                         zz->close();
-                    }else {
-                        //dont need to increment count since main stream will increment it twice in leu of this stream
                     }
                     delete zz;
                 }
-                tcpz=(TCPStream*)(z=r.factory());
                 using std::tr1::placeholders::_1;
                 using std::tr1::placeholders::_2;
-                if (z->cloneFrom(&r,
-                                 std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-                                 std::tr1::bind(&SstTest::connectorDataRecvCallback,this,z,-2000000000,_1))) {
+                z=r.clone(std::tr1::bind(&SstTest::testSubstream,this,_1,_2));
+                if (z) {
+                    tcpz=(TCPStream*)z;
                     runRoutine(z);
                 }else {
                     ++mDisconCount;

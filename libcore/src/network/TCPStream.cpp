@@ -140,25 +140,21 @@ void TCPStream::connect(const Address&addy,
                                                 mSendStatus));
     mSocket->connect(addy,3);
 }
-Stream* TCPStream::factory() {
+Stream*TCPStream::factory(){
     return new TCPStream(*mIO);
 }
-bool TCPStream::cloneFrom(Stream*otherStream,
-                          const ConnectionCallback &connectionCallback,
-                          const BytesReceivedCallback&bytesReceivedCallback) {
-    TCPStream * toBeCloned=dynamic_cast<TCPStream*>(otherStream);
-    if (NULL==toBeCloned)
-        return false;
-    mSocket=toBeCloned->mSocket;
+Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
     if (!mSocket) {
-        return false;
+        return NULL;
     }
+    TCPStream *retval=new TCPStream(*mIO);
+    retval->mSocket=mSocket;
+
     StreamID newID=mSocket->getNewID();
-    mID=newID;
-    //check from addCallbacks if the socket is already disconnected--if so let the user know
-    return mSocket->addCallbacks(newID,new Callbacks(connectionCallback,
-                                                     bytesReceivedCallback,
-                                                     mSendStatus))!=MultiplexedSocket::DISCONNECTED;
+    retval->mID=newID;
+    TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
+    cloneCallback(retval,setCallbackFunctor);
+    return retval;
 }
 
 

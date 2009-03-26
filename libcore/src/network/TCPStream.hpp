@@ -140,6 +140,7 @@ public:
     TCPStream(IOService&);
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
+    virtual Stream*factory();
     ///Implementation of send interface
     virtual void send(const Chunk&data,StreamReliability);
     ///Implementation of connect interface
@@ -148,12 +149,8 @@ public:
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
         const BytesReceivedCallback&chunkReceivedCallback);
-    ///Creates a stream of the same type as this stream, with the same IO factory
-    virtual Stream* factory();
     ///Creates a new substream on this connection
-    virtual bool cloneFrom(Stream*,
-        const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback);
+    virtual Stream* clone(const SubstreamCallback&cb);
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
 };
