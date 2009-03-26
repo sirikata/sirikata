@@ -241,7 +241,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*pluginFile;
     OptionValue*configFile;
     OptionValue*ogreLogFile;
-    OptionValue*restoreConfig;
+    OptionValue*purgeConfig;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*autoCreateWindow;
@@ -253,7 +253,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
-                           restoreConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
+                           purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            autoCreateWindow=new OptionValue("autowindow","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -276,7 +276,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
-                         &&((restoreConfig->as<bool>()&&getRoot()->restoreConfig()) 
+                         &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig()) 
                             || (userAccepted=getRoot()->showConfigDialog())));
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
