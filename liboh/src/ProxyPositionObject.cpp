@@ -89,8 +89,15 @@ void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
         unsetParent(timeStamp, absLocation);
         return;
     }
+    ProxyObjectPtr oldParent (getParentProxy());
+    if (oldParent) {
+        oldParent->ProxyObjectProvider::removeListener(this);
+    }
+    parent->ProxyObjectProvider::addListener(this);
+
     // Using now() should best allow a linear extrapolation to work.
     Location lastPosition(globalLocation(timeStamp));
+
     mParentId = parent->getObjectReference();
     Location newparentLastGlobal(parent->globalLocation(timeStamp));
 /*
@@ -114,6 +121,11 @@ void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp) {
 
 void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp,
                const Location &absLocation) {
+
+    ProxyObjectPtr oldParent (getParentProxy());
+    if (oldParent) {
+        oldParent->ProxyObjectProvider::removeListener(this);
+    }
 
     Location lastPosition(globalLocation(timeStamp));
     mParentId = SpaceObjectReference::null();

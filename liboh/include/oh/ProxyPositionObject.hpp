@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_PROXY_POSITION_OBJECT_HPP_
 #define _SIRIKATA_PROXY_POSITION_OBJECT_HPP_
 #include <util/Extrapolation.hpp>
+#include "ProxyObjectListener.hpp"
 #include "ProxyObject.hpp"
 #include "PositionListener.hpp"
 
@@ -51,7 +52,8 @@ typedef Provider<PositionListener*> PositionProvider;
  */
 class SIRIKATA_OH_EXPORT ProxyPositionObject
   : public PositionProvider,
-    public ProxyObject   
+    public ProxyObject,
+    protected ProxyObjectListener // For destruction notifications of its parent
 {
 
     class UpdateNeeded {
@@ -66,6 +68,12 @@ class SIRIKATA_OH_EXPORT ProxyPositionObject
     };
     TimedWeightedExtrapolator<Location,UpdateNeeded> mLocation;
     SpaceObjectReference mParentId;
+protected:
+    // Notification that the Parent has been destroyed.
+    virtual void destroyed() {
+        unsetParent(TemporalValue<Location>::Time::now());
+    }
+
 public:
     ProxyPositionObject(ProxyManager *man, const SpaceObjectReference&id)
       : ProxyObject(man, id),

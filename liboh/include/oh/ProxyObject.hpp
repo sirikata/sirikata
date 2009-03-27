@@ -29,8 +29,11 @@ public:
         mManager(manager) {
     }
     virtual ~ProxyObject(){}
-    void destroy() {
+
+    /// Subclasses can do any necessary cleanup first.
+    virtual void destroy() {
         ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
+        //FIXME mManager->notify(&ProxyCreationListener::destroyProxy);
     }
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     const SpaceObjectReference&getObjectReference() const{

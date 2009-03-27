@@ -111,13 +111,17 @@ public:
 */
     }
     void fiveSeconds() {
-        mAttachedMesh->setParent(mMesh, Time::now());
+        mMesh->destroy();
+//        mAttachedMesh->setParent(mMesh, Time::now());
     }
     void tenSeconds() {
         mAttachedMesh->unsetParent(Time::now());
     }
     void destroy() {
-        mCamera->detach();
+        mCamera->destroy();
+        mLight->destroy();
+        mAttachedMesh->destroy();
+        //mMesh->destroy();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
         notify(&ProxyCreationListener::destroyProxy,mAttachedMesh);
         notify(&ProxyCreationListener::destroyProxy,mLight);

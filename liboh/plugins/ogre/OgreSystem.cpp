@@ -505,6 +505,11 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
         current->extrapolateLocation(currentTime);
     }
 }
+/*
+}}
+#include "../../../cppoh/src/DemoProxyManager.hpp"
+namespace Sirikata{namespace Graphics{
+*/
 void OgreSystem::postFrame(Time current, Duration frameTime) {
 /*
     if (current >= debugStartTime+2 && current < debugStartTime+3) {

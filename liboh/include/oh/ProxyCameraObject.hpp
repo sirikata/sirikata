@@ -43,6 +43,10 @@ class SIRIKATA_OH_EXPORT ProxyCameraObject
     public ProxyPositionObject {
 public:
     ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id);
+    virtual void destroy() {
+        detach();
+        ProxyPositionObject::destroy();
+    }
     void attach(const String&renderTargetName,
                 uint32 width,
                 uint32 height);
