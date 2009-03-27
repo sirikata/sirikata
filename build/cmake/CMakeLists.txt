@@ -540,6 +540,7 @@ SET(SIRIKATA_CORE_SOURCES
 
 #precompiled header
 IF(NOT WIN32)
+ IF(${CMAKE_COMPILER_IS_GNUCXX})
   SET(SIRIKATA_CORE_SOURCES
      ${LIBCORE_SOURCE_DIR}/util/Standard.hh.gch ${SIRIKATA_CORE_SOURCES})
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
@@ -557,9 +558,33 @@ IF(NOT WIN32)
   ADD_CUSTOM_COMMAND(OUTPUT ${PCH_OUTPUT}
                      COMMAND ${FINAL_COMMAND}
                      DEPENDS ${PCH_INPUT}
+ ${LIBCORE_SOURCE_DIR}/options/OptionValue.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Any.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Array.hpp
+ ${LIBCORE_SOURCE_DIR}/util/BoundingBox.hpp
+ ${LIBCORE_SOURCE_DIR}/util/BoundingSphere.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Factory.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Location.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Logging.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Matrix3x3.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Noncopyable.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Platform.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Quaternion.hpp
+ ${LIBCORE_SOURCE_DIR}/util/SelfWeakPtr.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Singleton.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Standard.hh
+ ${LIBCORE_SOURCE_DIR}/util/TotallyOrdered.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Transform.hpp
+ ${LIBCORE_SOURCE_DIR}/util/UUID.cpp
+ ${LIBCORE_SOURCE_DIR}/util/UUID.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp
+ ${LIBCORE_SOURCE_DIR}/util/Vector4.hpp
+ ${LIBCORE_SOURCE_DIR}/util/boost_sha1.hpp
+ ${LIBCORE_SOURCE_DIR}/util/boost_uuid.hpp
+ ${LIBCORE_SOURCE_DIR}/util/valgrind.h
                      COMMENT "${FINAL_COMMAND}")
 #  ADD_DEPENDENCIES(${SIRIKATA_CORE_LIB} ${PCH_OUTPUT})
-
+ ENDIF()
 ENDIF()
 
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
