@@ -1,3 +1,6 @@
+#ifndef _RAKNET_NETWORK_HPP_
+#define _RAKNET_NETWORK_HPP_
+
 #include "Network.hpp"
 #include "raknet/MessageIdentifiers.h"
 #include "raknet/RakNetworkFactory.h"
@@ -42,3 +45,5 @@ public:
 };
 
 }
+
+#endif //_RAKNET_NETWORK_HPP_
