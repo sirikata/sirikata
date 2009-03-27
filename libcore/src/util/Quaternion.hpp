@@ -106,10 +106,6 @@ private:
             *apkQuat[k] = (kRot(k,i)+kRot(i,k))*fRoot;
         }
     }
-    Quaternion(scalar x,scalar y, scalar z, scalar w):Vector4<scalar>(x,y,z,w) {
-
-    }
-
 public:
     Quaternion(){}
     class XYZW{};
@@ -142,6 +138,9 @@ public:
         retval.w=1.0;
         retval.x=retval.y=retval.z=0.0;
         return retval;
+    }
+    static Quaternion zero() {
+        return Quaternion(0,0,0,0,WXYZ());
     }
     void toAngleAxis (scalar& returnAngleRadians,
                       Vector3<scalar>& returnAxis) const{
@@ -196,14 +195,14 @@ public:
             w*other.w - x*other.x - y*other.y - z*other.z,
             w*other.x + x*other.w + y*other.z - z*other.y,
             w*other.y + y*other.w + z*other.x - x*other.z,
-            w*other.z + z*other.w + x*other.y - y*other.x);
+            w*other.z + z*other.w + x*other.y - y*other.x, WXYZ());
     }
 
-    template<typename real>
-    Vector3<real> operator *(const Vector3<real>&other)const {
-        Vector3<real> quat_axis(x,y,z);
-        Vector3<real>uv = quat_axis.cross(other);
-        Vector3<real>uuv= quat_axis.cross(uv);
+    template<typename myscalar>
+    Vector3<myscalar> operator *(const Vector3<myscalar>&other)const {
+        Vector3<myscalar> quat_axis(x,y,z);
+        Vector3<myscalar>uv = quat_axis.cross(other);
+        Vector3<myscalar>uuv= quat_axis.cross(uv);
         uv *=(2.0*w);
         uuv*=2.0;
         return other + uv + uuv;
@@ -212,9 +211,9 @@ public:
     Quaternion inverse() const {
         scalar len=lengthSquared();
         if (len>1e-8) {
-            return Quaternion(w/len,-x/len,-y/len,-z/len);
+            return Quaternion(w/len,-x/len,-y/len,-z/len,WXYZ());
         }
-        return Quaternion(0.,0.,0.,0.);
+        return zero();
     }
     Vector3<scalar> xAxis() const{
         //scalar fTx  = 2.0*x;
@@ -267,10 +266,10 @@ public:
     }
 };
 inline Quaternion operator *(Quaternion::scalar s,const Quaternion&q) {
-    return Quaternion(s*q.x,s*q.y,s*q.z,s*q.w);
+    return Quaternion(s*q.x,s*q.y,s*q.z,s*q.w,Quaternion::XYZW());
 }
 inline Quaternion operator /(Quaternion::scalar s,const Quaternion&q) {
-    return Quaternion(s/q.x,s/q.y,s/q.z,s/q.w);
+    return Quaternion(s/q.x,s/q.y,s/q.z,s/q.w,Quaternion::XYZW());
 }
 }
 #endif

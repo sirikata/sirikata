@@ -33,6 +33,7 @@
 #include <cxxtest/TestSuite.h>
 class QuaternionTest : public CxxTest::TestSuite
 {
+    typedef Sirikata::Vector3f Vector3f;
     typedef Sirikata::Quaternion Quaternion;
 public:
     void testAdd( void )
@@ -56,5 +57,44 @@ public:
         std::ostringstream oss;
         oss<<a<<b;
         TS_ASSERT_EQUALS(oss.str(),akey+bkey);
+    }
+
+    void assert_near(const Vector3f &a, const Vector3f &b) {
+        TS_ASSERT_DELTA(a.x, b.x, 1e-6);
+        TS_ASSERT_DELTA(a.y, b.y, 1e-6);
+        TS_ASSERT_DELTA(a.z, b.z, 1e-6);
+    }
+    void assert_near(const Quaternion &a,const Quaternion &b) {
+        TS_ASSERT_DELTA(a.w, b.w, 1e-6);
+        assert_near(Vector3f(a.x,a.y,a.z),Vector3f(b.x,b.y,b.z));
+    }
+
+    void testIdentityOps( void) {
+        Quaternion id = Quaternion::identity();
+        Quaternion test(Vector3f(1,0,0),0.5);
+        TS_ASSERT_EQUALS(test*id, test);
+        TS_ASSERT_EQUALS(id*test, test);
+        assert_near(id.normal(), id);
+
+        Quaternion inverseid = id.inverse();
+        TS_ASSERT_EQUALS(inverseid, id);
+
+    }
+
+    void testInverseCompose( void) {
+        Quaternion id = Quaternion::identity();
+        Quaternion test(Vector3f(1,0,0),0.5);
+        assert_near(test * test.inverse(), id);
+        assert_near(test.inverse() * test, id);
+    }
+    void testAngleAxis(void) {
+        float origAngle = 1.234;
+        Vector3f origAxis = Vector3f(.5,.5,1).normal();
+        Quaternion test2(origAxis,origAngle);
+        float angle;
+        Vector3f axis;
+        test2.toAngleAxis(angle,axis);
+        TS_ASSERT_DELTA(origAngle, angle, 1e-6);
+        assert_near(origAxis,axis);
     }
 };

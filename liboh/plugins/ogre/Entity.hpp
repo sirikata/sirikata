@@ -45,7 +45,12 @@ typedef Vector4f ColorAlpha;
 typedef Vector3f Color;
 namespace Graphics {
 inline Ogre::Quaternion toOgre(const Sirikata::Quaternion &quat) {
-    return quat.convert<Ogre::Quaternion>();
+    Ogre::Quaternion ret;
+    ret.w = quat.w;
+    ret.x = quat.x;
+    ret.y = quat.y;
+    ret.z = quat.z;
+    return ret;
 }
 
 inline Ogre::Vector3 toOgre(const Sirikata::Vector3f &pos) {
