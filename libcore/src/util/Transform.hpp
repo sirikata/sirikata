@@ -91,12 +91,30 @@ public:
     void setOrientation(const Quaternion&orientation) {
         mOrientation=orientation;
     }
+    /// Alters this Transformation.
+    Transform toWorld(const Transform &reference) const {
+        return Transform(reference.getPosition() +
+                             reference.getOrientation() * getPosition(),
+                         reference.getOrientation() * getOrientation());
+    }
+    Transform toLocal(const Transform &reference) const {
+        Quaternion inverseOtherOrientation (reference.getOrientation().inverse());
+        return Transform(inverseOtherOrientation * (
+                             getPosition() - reference.getPosition()),
+                         inverseOtherOrientation * getOrientation());
+    }
     Transform blend(const Transform&newTransform,float32 percentNew) const{
         float32 percentOld=(1.0f-percentNew);
         return Transform (newTransform.getPosition()*percentNew+getPosition()*percentOld,
                          (newTransform.getOrientation()*percentNew+getOrientation()*percentOld).normal());
     }
 };
+
+inline std::ostream &operator<< (std::ostream &os, const Transform &trans) {
+    os << "(" << trans.getPosition() << "; orientation " <<
+        trans.getOrientation() << ")";
+    return os;
+}
 
 
 

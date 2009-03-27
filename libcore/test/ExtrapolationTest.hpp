@@ -31,12 +31,17 @@
  */
 #include <cxxtest/TestSuite.h>
 #include "util/Extrapolation.hpp"
-
+#include "util/Location.hpp"
 class ExtrapolationTest : public CxxTest::TestSuite
 {
-    typedef Sirikata::Extrapolator<Sirikata::Location> ExtrapolatorBase;
-    typedef Sirikata::Location::ErrorPredicate ErrorPredicate;
-    typedef Sirikata::TimedWeightedExtrapolator<Sirikata::Location,ErrorPredicate> Extrapolator;
+    typedef Sirikata::Location Location;
+    typedef Sirikata::Transform Transform;
+    typedef Sirikata::Vector3d Vector3d;
+    typedef Sirikata::Quaternion Quaternion;
+    typedef Sirikata::Vector3f Vector3f;
+    typedef Sirikata::Extrapolator<Location> ExtrapolatorBase;
+    typedef Location::ErrorPredicate ErrorPredicate;
+    typedef Sirikata::TimedWeightedExtrapolator<Location,ErrorPredicate> Extrapolator;
 public:
     void testPredict( void )
     {
@@ -73,4 +78,145 @@ public:
                                   0));
         delete base;
     }
+
+    template <class T>
+    bool check_near(T a, T b) {
+        float delta = 1e-5;
+        return ((b > a-delta) && (b < a+delta));
+    }
+
+    template <class T>
+    bool check_near(const Sirikata::Vector3<T> &a, const Sirikata::Vector3<T> &b) {
+        return check_near(a.x, b.x) &&
+            check_near(a.y, b.y) &&
+            check_near(a.z, b.z);
+    }
+    bool check_near(const Sirikata::Quaternion &a,const Sirikata::Quaternion &b) {
+        return check_near(a.w, b.w) &&
+            check_near(Vector3f(a.x,a.y,a.z),Vector3f(b.x,b.y,b.z));
+    }
+
+    void assert_near(const Transform &a,const Transform &b) {
+        assert_near(
+            Location(a.getPosition(),
+                     a.getOrientation(),
+                     Vector3f::nil(),Vector3f::nil(),0),
+            Location(b.getPosition(),
+                     b.getOrientation(),
+                     Vector3f::nil(),Vector3f::nil(),0));
+    }
+    void assert_near(const Location &a,const Location &b) {
+        bool fail=false;
+        std::ostringstream str;
+        if (!check_near(a.getPosition(), b.getPosition())) {
+            str << "Positions "<<a.getPosition()<<" and "<<
+                b.getPosition()<<" differ."<<std::endl;
+            fail=true;
+        }
+        if (!check_near(a.getOrientation(), b.getOrientation())) {
+            str << "Orientations "<<a.getOrientation()<<" and "<<
+                b.getOrientation()<<" differ."<<std::endl;
+            fail=true;
+        }
+        if (!check_near(a.getVelocity(), b.getVelocity())) {
+            str << "Velocities "<<a.getVelocity()<<" and "<<
+                b.getVelocity()<<" differ."<<std::endl;
+            fail=true;
+        }
+        if (!check_near(a.getAxisOfRotation(), b.getAxisOfRotation())) {
+            str << "Axes "<<a.getAxisOfRotation()<<" and "<<
+                b.getAxisOfRotation()<<" differ."<<std::endl;
+            fail=true;
+        }
+        if (!check_near(a.getAngularSpeed(), b.getAngularSpeed())) {
+            str << "Rotation speeds "<<a.getAngularSpeed()<<" and "<<
+                b.getAngularSpeed()<<" differ."<<std::endl;
+            fail=true;
+        }
+        if (fail) {
+            TS_FAIL(str.str());
+        }
+    }
+
+
+    void testTransformIdentity(void) {
+        Transform frameOfReference(Vector3d(1,0,0),
+                                  Quaternion(0,0,0,1, Quaternion::XYZW()));
+        Transform testObject(Vector3d(1,0,0),
+                                  Quaternion(0,0,0,1, Quaternion::XYZW()));
+        Transform worldCoords(testObject.toWorld(frameOfReference).toLocal(frameOfReference));
+        assert_near(worldCoords,testObject);
+    }
+
+    void testWorldCoordinates_position() {
+        Location frameOfReference(Vector3d(1,0,0),
+                                  Quaternion(0,0,0,1, Quaternion::XYZW()),
+                                  Vector3f(0,100,0),
+                                  Vector3f(0,0,0),0);
+        Location testObject(Vector3d(1,0,0),
+                                  Quaternion(0,0,0,1, Quaternion::XYZW()),
+                                  Vector3f(0,200,100),
+                                  Vector3f(0,0,0),0);
+        Transform worldCoords(testObject);
+        worldCoords = worldCoords.toWorld(frameOfReference);
+        worldCoords = worldCoords.toLocal(frameOfReference);
+        assert_near(worldCoords, testObject);
+    }
+    void testWorldCoordinates_orientation() {
+        Location frameOfReference(Vector3d(0,0,0),
+                                  Quaternion(Vector3f(0,1,0),0.77),
+                                  Vector3f(0,0,0),
+                                  Vector3f(0,0,0),0);
+        Location testObject(Vector3d(1,0,1),
+                                  Quaternion(Vector3f(1,0,1),0),
+                                  Vector3f(0,100,50),
+                                  Vector3f(0,0,1),1);
+        Location worldCoords(testObject);
+        worldCoords = worldCoords.toWorld(frameOfReference);
+        worldCoords = worldCoords.toLocal(frameOfReference);
+        assert_near(worldCoords, testObject);
+    }
+    void testWorldCoordinates_positionorientation() {
+        Location frameOfReference(Vector3d(10,20,0),
+                                  Quaternion(Vector3f(0,1,0),0.77),
+                                  Vector3f(1000,50,50),
+                                  Vector3f(0,0,0),0);
+        Location testObject(Vector3d(1,0,1),
+                                  Quaternion(Vector3f(1,0,1),0),
+                                  Vector3f(0,100,50),
+                                  Vector3f(0,0,1),1);
+        Location worldCoords(testObject);
+        worldCoords = worldCoords.toWorld(frameOfReference);
+        worldCoords = worldCoords.toLocal(frameOfReference);
+        assert_near(worldCoords, testObject);
+    }
+    void testWorldCoordinates_angvel() {
+        Location frameOfReference(Vector3d(10,20,0),
+                                  Quaternion(Vector3f(0,1,0),0.77),
+                                  Vector3f(1000,50,50),
+                                  Vector3f(0,0.71,0.71),-2);
+        Location testObject(Vector3d(1,0,1),
+                                  Quaternion(Vector3f(1,0,1),0),
+                                  Vector3f(0,100,50),
+                                  Vector3f(0,0,0),0);
+        Location worldCoords(testObject);
+        worldCoords = worldCoords.toWorld(frameOfReference);
+        worldCoords = worldCoords.toLocal(frameOfReference);
+        assert_near(worldCoords, testObject);
+    }
+    void testWorldCoordinates_all() {
+        Location frameOfReference(Vector3d(10,20,0),
+                                  Quaternion(Vector3f(0,1,0),0.77),
+                                  Vector3f(1000,50,50),
+                                  Vector3f(0,0.71,0.71),-2);
+        Location testObject(Vector3d(1,0,1),
+                                  Quaternion(Vector3f(1,0,1),0),
+                                  Vector3f(0,100,50),
+                                  Vector3f(0,0,1),10);
+        Location worldCoords(testObject);
+        worldCoords = worldCoords.toWorld(frameOfReference);
+        worldCoords = worldCoords.toLocal(frameOfReference);
+        assert_near(worldCoords, testObject);
+    }
+
 };

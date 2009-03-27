@@ -40,6 +40,30 @@ class Location: public Transform {
     Vector3<float32> mVelocity;
     Vector3<float32> mAxisOfRotation;
     float32 mAngularSpeed;
+
+    void changeToWorld(const Location &reference) {
+        setVelocity(reference.getVelocity() + reference.getOrientation() * getVelocity());
+        addAngularRotation(reference.getAxisOfRotation(), reference.getAngularSpeed());
+        setVelocity(getVelocity() +
+                    reference.getAngularSpeed() * (
+                        reference.getAxisOfRotation().cross(Vector3<float32>(getPosition()))));
+
+        Transform temp = Transform::toWorld(reference);
+        setPosition(temp.getPosition());
+        setOrientation(temp.getOrientation());
+    }
+    void changeToLocal(const Location &reference) {
+        Transform temp = Transform::toLocal(reference);
+        setPosition(temp.getPosition());
+        setOrientation(temp.getOrientation());
+
+        setVelocity(getVelocity() -
+                    reference.getAngularSpeed() * (
+                        reference.getAxisOfRotation().cross(Vector3<float32>(getPosition()))));
+        addAngularRotation(reference.getAxisOfRotation(), -reference.getAngularSpeed());
+        Quaternion inverseOtherOrientation (reference.getOrientation().inverse());
+        setVelocity(inverseOtherOrientation * (getVelocity() - reference.getVelocity()));
+    }
 public:
     Location(){}
     Location(const Vector3<float64>&position, 
@@ -62,6 +86,9 @@ public:
     void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
     } 
+    const Transform &getTransform() const {
+        return *this;
+    }
     const Vector3<float32>&getAxisOfRotation() const {
         return mAxisOfRotation;
     }
@@ -92,6 +119,16 @@ public:
                          angAxis,
                          angSpeed);
     }
+    Location toWorld(const Location &reference) const {
+        Location copy(*this);
+        copy.changeToWorld(reference);
+        return copy;
+    }
+    Location toLocal(const Location &reference) const {
+        Location copy(*this);
+        copy.changeToLocal(reference);
+        return copy;
+    }
     template<class TimeDuration> Location extrapolate(const TimeDuration&dt)const {
         return Location(getPosition()+Vector3<float64>(getVelocity())*(float64)dt,
                         getAngularSpeed() 
@@ -103,8 +140,12 @@ public:
                         getAngularSpeed());
     }
 };
-
-
+inline std::ostream &operator<< (std::ostream &os, const Location &loc) {
+    os << "[" << loc.getTransform() << "; vel=" <<
+        loc.getVelocity() << "; angVel = " << loc.getAngularSpeed() <<
+        " around " << loc.getAxisOfRotation() << "]";
+    return os;
+}
 
 }
 #endif
