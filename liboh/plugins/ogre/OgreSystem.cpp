@@ -501,12 +501,21 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
         Entity *current = *iter;
         ++iter;
-        SILOG(ogre,debug,"Extrapolating "<<current<<" for time "<<(float64)(currentTime-debugStartTime));
+//        SILOG(ogre,debug,"Extrapolating "<<current<<" for time "<<(float64)(currentTime-debugStartTime));
         current->extrapolateLocation(currentTime);
     }
 }
 void OgreSystem::postFrame(Time current, Duration frameTime) {
-
+/*
+    if (current >= debugStartTime+2 && current < debugStartTime+3) {
+        debugStartTime-=1;
+        ((DemoProxyManager*)mProxyManager)->fiveSeconds();
+    }
+    if (current >= debugStartTime+6 && current < debugStartTime+7) {
+        debugStartTime-=1;
+        ((DemoProxyManager*)mProxyManager)->tenSeconds();
+    }
+*/
 }
 
 }

@@ -118,6 +118,20 @@ public:
     void unsetParent(TemporalValue<Location>::Time timeStamp,
                const Location &absLocation);
 
+    void setParent(const ProxyPositionObjectPtr &parent,
+               TemporalValue<Location>::Time timeStamp);
+    void unsetParent(TemporalValue<Location>::Time timeStamp);
+
+    Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
+        ProxyPositionObjectPtr ppop = getParentProxy();
+        if (ppop) {
+            return extrapolateLocation(timeStamp).
+                toWorld(ppop->globalLocation(timeStamp));
+        } else {
+            return extrapolateLocation(timeStamp);
+        }
+    }
+
     Vector3d extrapolatePosition(TemporalValue<Location>::Time current) const {
         return mLocation.extrapolate(current).getPosition();
     }

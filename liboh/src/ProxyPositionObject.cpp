@@ -62,29 +62,74 @@ void ProxyPositionObject::resetPositionVelocity(TemporalValue<Location>::Time ti
     PositionProvider::notify(&PositionListener::resetLocation, timeStamp, location);
 }
 void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
+               TemporalValue<Location>::Time timeStamp) {
+    if (!parent) {
+        unsetParent(timeStamp);
+        return;
+    }
+    Location globalParent (parent->globalLocation(timeStamp));
+    Location globalLoc (globalLocation(timeStamp));
+
+//    std::cout << "Extrapolated = "<<extrapolateLocation(timeStamp)<<std::endl;
+
+    Location localLoc (globalLoc.toLocal(globalParent));
+/*
+    std::cout<<" Setting parent "<<std::endl<<globalParent<<std::endl<<
+        "global loc = "<<std::endl<<globalLoc<<
+        std::endl<<"local loc = "<<std::endl<<localLoc<<std::endl;
+*/
+    setParent(parent, timeStamp, globalLoc, localLoc);
+}
+
+void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
                TemporalValue<Location>::Time timeStamp,
                const Location &absLocation,
                const Location &relLocation) {
+    if (!parent) {
+        unsetParent(timeStamp, absLocation);
+        return;
+    }
+    // Using now() should best allow a linear extrapolation to work.
+    Location lastPosition(globalLocation(timeStamp));
     mParentId = parent->getObjectReference();
-    mLocation.resetValue(timeStamp,
-                         relLocation);
+    Location newparentLastGlobal(parent->globalLocation(timeStamp));
+/*
+    std::cout<<" Last parent global "<<std::endl<<newparentLastGlobal<<std::endl<<
+        "global loc = "<<std::endl<<lastPosition<<
+        std::endl<<"local loc = "<<std::endl<<lastPosition.toLocal(newparentLastGlobal)<<std::endl;
+*/
+    mLocation.resetValue(timeStamp, lastPosition.toLocal(newparentLastGlobal));
+    mLocation.updateValue(timeStamp, relLocation);
+
     PositionProvider::notify(&PositionListener::setParent,
                              parent,
                              timeStamp,
                              absLocation,
                              relLocation);
 }
+
+void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp) {
+    unsetParent(timeStamp, globalLocation(timeStamp));
+}
+
 void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp,
                const Location &absLocation) {
+
+    Location lastPosition(globalLocation(timeStamp));
     mParentId = SpaceObjectReference::null();
-    mLocation.resetValue(timeStamp,
-                         absLocation);
+
+    mLocation.resetValue(timeStamp, lastPosition);
+    mLocation.updateValue(timeStamp, absLocation);
+
     PositionProvider::notify(&PositionListener::unsetParent,
                              timeStamp,
                              absLocation);
 }
 
 ProxyPositionObjectPtr ProxyPositionObject::getParentProxy() const {
+    if (getParent() == SpaceObjectReference::null()) {
+        return ProxyPositionObjectPtr();
+    }
     ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject(getParent()));
     return std::tr1::dynamic_pointer_cast<ProxyPositionObject>(parentProxy);
 }

@@ -69,8 +69,8 @@ public:
         mAttachedLight->update(li);
 */
         mMesh->setMesh("file:///razor.mesh");
-        mAttachedMesh->setMesh("file:///cube.mesh");
-        mAttachedMesh->setScale(Vector3f(.1,.1,.1));
+        mAttachedMesh->setMesh("file:///razor.mesh");
+        //mAttachedMesh->setScale(Vector3f(.1,.1,.1));
         mCamera->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,100.), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
@@ -80,20 +80,41 @@ public:
         mLight->setPositionVelocity(Time::now()+.5,
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
+
+        mMesh->resetPositionVelocity(Time::now()-1,
+                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                                      Vector3f(0,0,0), Vector3f(0,0,0), 0.));
+
+/*
+        mMesh->setPositionVelocity(Time::now(),
+                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                                      Vector3f(0,1,0), Vector3f(0.71,0.71,0), 0.5));
+*/
         mAttachedMesh->setParent(mMesh, Time::now(),
                              Location(Vector3d(2.5,5.,0), Quaternion::identity(),
                                       Vector3f(0,-3,0), Vector3f::nil(), 0.),
                              Location(Vector3d(2.5,5.,0), Quaternion::identity(),
                                       Vector3f(0,-3,0), Vector3f(.71,.71,0), 3.14));
-        /*mAttachedMesh->setPositionVelocity(Time::now(),
-                             Location(Vector3d(25,50.,-100), Quaternion::identity(),
-                                      Vector3f(0,-1,0), Vector3f::nil(), 0.));*/
-        mMesh->resetPositionVelocity(Time::now()-1,
+/*
+        mAttachedMesh->resetPositionVelocity(Time::now(),
+                             Location(Vector3d(-10,0,0), Quaternion::identity(),
+                                      Vector3f(0,0,0), Vector3f::nil(), 0.));
+*/
+        mMesh->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(0,0,0), Vector3f(0,0,0), 0.));
-        mMesh->setPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(0,1,0), Vector3f(0.71,0.71,0), 0.5));
+                                      Vector3f(2,0,0), Vector3f(0.71,0.71,0),.77));
+//        mAttachedMesh->unsetParent(Time::now());
+/*
+        mAttachedMesh->unsetParent(Time::now(),
+                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
+                                      Vector3f(0,-3,0), Vector3f::nil(), 0.));
+*/
+    }
+    void fiveSeconds() {
+        mAttachedMesh->setParent(mMesh, Time::now());
+    }
+    void tenSeconds() {
+        mAttachedMesh->unsetParent(Time::now());
     }
     void destroy() {
         mCamera->detach();

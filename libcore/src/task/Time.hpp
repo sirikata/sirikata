@@ -153,6 +153,15 @@ public:
 	inline bool operator< (const AbsTime &other) const {
 		return (mTime < other.mTime);
 	}
+	inline bool operator<= (const AbsTime &other) const {
+		return (mTime <= other.mTime);
+	}
+	inline bool operator> (const AbsTime &other) const {
+		return (mTime > other.mTime);
+	}
+	inline bool operator>= (const AbsTime &other) const {
+		return (mTime >= other.mTime);
+	}
 
 	/**
 	 * Takes the difference of two absolute times.
@@ -172,6 +181,12 @@ public:
 	}
 	inline AbsTime operator- (const DeltaTime &otherDelta) const {
 		return (*this) + (-otherDelta);
+	}
+	inline void operator+= (const DeltaTime &otherDelta) {
+		mTime += (double)otherDelta;
+	}
+	inline void operator-= (const DeltaTime &otherDelta) {
+		(*this) += (-otherDelta);
 	}
 
 	/**

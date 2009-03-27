@@ -93,7 +93,7 @@ public:
         return mValuePresent.time();
     }
     ExtrapolatorBase<Value, TimeType>& updateValue(const TimeType&t, const Value&l) {
-        mValuePast=mValuePresent;
+        mValuePast=TemporalValueType(t,extrapolate(t));
         mValuePresent.updateValue(t,l);
         return *this;
     }
