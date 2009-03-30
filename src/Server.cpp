@@ -43,14 +43,14 @@
 #include "ObjectMessageQueue.hpp"
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue*omq, ServerMessageQueue * sq, Trace* trace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
    mObjectMessageQueue(omq),
-   mServerMessageQueue(sq),
+   mServerMessageQueue(smq),
    mCurrentTime(0),
    mTrace(trace)
 {
