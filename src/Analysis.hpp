@@ -78,8 +78,8 @@ public:
     void computeSendRate(const ServerID& sender, const ServerID& receiver) const;
     void computeReceiveRate(const ServerID& sender, const ServerID& receiver) const;
 
-    void computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const;
-    void computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const;
+    void computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+    void computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
 private:
     typedef std::vector<PacketEvent*> EventList;
     typedef std::map<ServerID, EventList*> ServerEventListMap;
@@ -164,15 +164,14 @@ private:
     }
 
     template<typename PacketEventType>
-    void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const ServerID& filter, const Duration& window, const Duration& sample_rate) const {
-
+    void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const ServerID& filter, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
         PacketIterator<PacketEventType> event_it(sender, receiver, begin(filter), end(filter));
         std::queue<PacketEventType*> window_events;
 
         uint64 bytes = 0;
         double max_bandwidth = 0;
 
-        for(Time window_center = 0; window_center < Time(0) + Duration::seconds((uint32)100); window_center += sample_rate) {
+        for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
             Time window_end = window_center + window / 2.f;
 
             // add in any new packets that now fit in the window

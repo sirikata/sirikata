@@ -459,12 +459,12 @@ void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerI
     computeRate<PacketReceivedEvent>(sender, receiver, receiver);
 }
 
-void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const {
-    computeWindowedRate<PacketSentEvent>(sender, receiver, sender, window, sample_rate);
+void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+    computeWindowedRate<PacketSentEvent>(sender, receiver, sender, window, sample_rate, start_time, end_time);
 }
 
-void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const {
-    computeWindowedRate<PacketReceivedEvent>(sender, receiver, receiver, window, sample_rate);
+void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+    computeWindowedRate<PacketReceivedEvent>(sender, receiver, receiver, window, sample_rate, start_time, end_time);
 }
 
 } // namespace CBR

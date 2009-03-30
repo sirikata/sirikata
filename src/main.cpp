@@ -152,16 +152,18 @@ void *main_loop(void *) {
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
+        Time start_time(0);
+        Time end_time = start_time + duration;
         printf("Send rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                ba.computeWindowedSendRate(sender, receiver, window, sample_rate);
+                ba.computeWindowedSendRate(sender, receiver, window, sample_rate, start_time, end_time);
             }
         }
         printf("Receive rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                ba.computeWindowedReceiveRate(sender, receiver, window, sample_rate);
+                ba.computeWindowedReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
             }
         }
         exit(0);
