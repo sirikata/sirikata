@@ -108,6 +108,15 @@ Duration& Duration::operator*=(float s) {
     return *this;
 }
 
+Duration Duration::operator/(float s) const {
+    return Duration((uint64)(mMicrosecs / s));
+}
+
+Duration& Duration::operator/=(float s) {
+    mMicrosecs = (uint64)(mMicrosecs / s);
+    return *this;
+}
+
 bool Duration::operator<(const Duration& rhs) const {
     return mMicrosecs < rhs.mMicrosecs;
 }

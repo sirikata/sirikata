@@ -45,6 +45,9 @@
 
 #define ANALYSIS_LOC         "analysis.loc"
 #define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
+#define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
+#define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
+#define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
 
 #define OBJECT_QUEUE         "object.queue"
 #define SERVER_QUEUE         "server.queue"

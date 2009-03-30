@@ -65,6 +65,9 @@ public:
     Duration operator*(float s) const;
     Duration& operator*=(float s);
 
+    Duration operator/(float s) const;
+    Duration& operator/=(float s);
+
     bool operator<(const Duration& rhs) const;
     bool operator<=(const Duration& rhs) const;
     bool operator>(const Duration& rhs) const;

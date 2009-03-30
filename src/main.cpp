@@ -133,6 +133,24 @@ int main(int argc, char** argv) {
         }
         exit(0);
     }
+    else if ( GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<bool>() ) {
+        Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
+        Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
+        BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
+        printf("Send rates\n");
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                ba.computeWindowedSendRate(sender, receiver, window, sample_rate);
+            }
+        }
+        printf("Receive rates\n");
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                ba.computeWindowedReceiveRate(sender, receiver, window, sample_rate);
+            }
+        }
+        exit(0);
+    }
 
     ServerID server_id = GetOption("id")->as<ServerID>();
 

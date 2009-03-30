@@ -452,67 +452,19 @@ BandwidthAnalysis::EventList* BandwidthAnalysis::getEventList(const ServerID& se
 }
 
 void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& receiver) const {
-    EventList* sender_events = getEventList(sender);
-
-    uint64 total_bytes = 0;
-    uint32 last_bytes = 0;
-    Duration last_duration;
-    Time last_time(0);
-    double max_bandwidth = 0;
-    for(EventList::iterator event_it = sender_events->begin(); event_it != sender_events->end(); event_it++) {
-        PacketEvent* event = *event_it;
-        PacketSentEvent* ps_evt = dynamic_cast<PacketSentEvent*>(event);
-        if (ps_evt == NULL) continue;
-        if (ps_evt->source != sender || ps_evt->dest != receiver) continue;
-
-        total_bytes += ps_evt->size;
-
-        if (ps_evt->time != last_time) {
-            double bandwidth = (double)last_bytes / last_duration.seconds();
-            if (bandwidth > max_bandwidth)
-                max_bandwidth = bandwidth;
-
-            last_bytes = 0;
-            last_duration = ps_evt->time - last_time;
-            last_time = ps_evt->time;
-        }
-
-        last_bytes += ps_evt->size;
-    }
-
-    printf("%ld to %ld: %d total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
+    computeRate<PacketSentEvent>(sender, receiver, sender);
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
-    EventList* receiver_events = getEventList(receiver);
+    computeRate<PacketReceivedEvent>(sender, receiver, receiver);
+}
 
-    uint64 total_bytes = 0;
-    uint32 last_bytes = 0;
-    Duration last_duration;
-    Time last_time(0);
-    double max_bandwidth = 0;
-    for(EventList::iterator event_it = receiver_events->begin(); event_it != receiver_events->end(); event_it++) {
-        PacketEvent* event = *event_it;
-        PacketReceivedEvent* pr_evt = dynamic_cast<PacketReceivedEvent*>(event);
-        if (pr_evt == NULL) continue;
-        if (pr_evt->source != sender || pr_evt->dest != receiver) continue;
+void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const {
+    computeWindowedRate<PacketSentEvent>(sender, receiver, sender, window, sample_rate);
+}
 
-        total_bytes += pr_evt->size;
-
-        if (pr_evt->time != last_time) {
-            double bandwidth = (double)last_bytes / last_duration.seconds();
-            if (bandwidth > max_bandwidth)
-                max_bandwidth = bandwidth;
-
-            last_bytes = 0;
-            last_duration = pr_evt->time - last_time;
-            last_time = pr_evt->time;
-        }
-
-        last_bytes += pr_evt->size;
-    }
-
-    printf("%d to %d: %d total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
+void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate) const {
+    computeWindowedRate<PacketReceivedEvent>(sender, receiver, receiver, window, sample_rate);
 }
 
 } // namespace CBR
