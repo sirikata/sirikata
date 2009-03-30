@@ -45,6 +45,7 @@
 #include "OracleLocationService.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
+#include "SSTNetwork.hpp"
 //#include "LossyFairSendQueue.hpp"
 #include "FIFOObjectMessageQueue.hpp"
 #include "FIFOServerMessageQueue.hpp"
@@ -141,7 +142,12 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    Network* network=new RaknetNetwork();
+    Network* network = NULL;
+    String network_type = GetOption(NETWORK_TYPE)->as<String>();
+    if (network_type == "raknet")
+        network = new RaknetNetwork();
+    else if (network_type == "sst")
+        network = new SSTNetwork();
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
     ServerMessageQueue* sq = NULL;
@@ -215,6 +221,7 @@ int main(int argc, char** argv) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
+            network->service(tbegin + elapsed);
             cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);
         }

@@ -49,6 +49,8 @@
 #define OBJECT_QUEUE         "object.queue"
 #define SERVER_QUEUE         "server.queue"
 
+#define NETWORK_TYPE         "net"
+
 namespace CBR {
 
 void InitOptions();

@@ -1,7 +1,7 @@
-# Searches for an installation of the Sirikata core library. On success, it sets the following variables:
+# Searches for an installation of the SST core library. On success, it sets the following variables:
 #
 #   SST_FOUND              Set to true to indicate the Sirikata core library was found
-#   SST_INCLUDE_DIRS       The directory containing the header file sirikata/util/Platform.hpp
+#   SST_INCLUDE_DIRS       The directory containing the header file sst/stream.h
 #   SST_LIBRARIES          The libraries needed to use the Sirikata core library
 #
 # To specify an additional directory to search, set SST_ROOT.
@@ -53,6 +53,7 @@ IF(SST_INCLUDE_DIRS)
 ENDIF(SST_INCLUDE_DIRS)
 
 IF(SST_FOUND)
+  SET(SST_INCLUDE_DIRS ${SST_INCLUDE_DIRS}/sst) #sst includes are broken, so we need to use the include/sst directory
   IF(NOT SST_FIND_QUIETLY)
     MESSAGE(STATUS "Found SST: headers at ${SST_INCLUDE_DIRS}, libraries at ${SST_LIBRARY_DIRS}")
   ENDIF(NOT SST_FIND_QUIETLY)

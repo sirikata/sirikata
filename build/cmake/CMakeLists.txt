@@ -60,7 +60,7 @@ MARK_AS_ADVANCED(
 
 #project global flags
 
-PROJECT(cbr CXX)
+PROJECT(cbr C CXX)
 
 IF(NOT TOP_LEVEL)
   SET(TOP_LEVEL ${CMAKE_CURRENT_SOURCE_DIR}/../..)
@@ -137,6 +137,10 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(Raknet REQUIRED)
 
+#dependency: qt
+FIND_PACKAGE(Qt4 REQUIRED)
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+
 #dependency: sst
 IF(EXISTS ${DEPENDENCIES_ROOT}/installed-sst)
   SET(SST_ROOT ${DEPENDENCIES_ROOT}/installed-sst)
@@ -154,7 +158,10 @@ INCLUDE_DIRECTORIES(BEFORE
         ${GLUT_INCLUDE_DIR}
         ${SirikataCore_INCLUDE_DIRS}
         ${SirikataCore_INCLUDE_DIRS}/sirikata #FIXME libcore doesn't have a proper library layout yet
-        ${Raknet_INCLUDE_DIRS})
+        ${Raknet_INCLUDE_DIRS}
+        ${QT_INCLUDES}
+        ${SST_INCLUDE_DIRS}
+        )
 
 #source files
 SET(CBR_SOURCES
@@ -179,6 +186,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
+  ${CBR_SOURCE_DIR}/SSTNetwork.cpp
+  ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Time.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
@@ -187,15 +196,24 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/main.cpp
 )
 
+SET(CBR_MOC_HEADERS
+  ${CBR_SOURCE_DIR}/SSTNetworkImpl.h
+)
+
+QT4_WRAP_CPP(CBR_MOC_SOURCES ${CBR_MOC_HEADERS})
+
 #link flags
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
 
 #binaries
-ADD_EXECUTABLE(cbr ${CBR_SOURCES})
+ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
-        ${Raknet_LIBRARIES})
+        ${Raknet_LIBRARIES}
+        ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
+        ${SST_LIBRARIES}
+        )

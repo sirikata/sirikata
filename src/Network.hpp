@@ -28,7 +28,9 @@ public:
     bool operator ==(const Address4&other)const {
         return ip==other.ip&&port==other.port;
     }
-
+    bool operator<(const Address4& other) const {
+        return (ip < other.ip) || (ip == other.ip && port < other.port);
+    }
     uint16 getPort() const {
         return port;
     }
@@ -41,6 +43,7 @@ public:
     virtual ~Network() {}
     virtual void listen (const Address4&)=0;
     virtual Sirikata::Network::Chunk*receiveOne()=0;
+    virtual void service(const Time& t) {}
 };
 }
 #endif //_CBR_NETWORK_HPP_
