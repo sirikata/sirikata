@@ -314,11 +314,15 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 misc["currentGLContext"] = String("True");                    
                 Ogre::RenderWindow *rw;
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+                rw->setVisible(true);
+                
             }else {
                 sRenderTarget=mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
         } else if (createWindow->as<bool>()) {
-            mRenderTarget=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+            Ogre::RenderWindow *rw;
+            mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+            rw->setVisible(true);            
             if (sRenderTarget==NULL)
                 sRenderTarget=mRenderTarget;
         }else {
@@ -347,9 +351,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
 
     Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
-    Ogre::RenderWindow* rw=dynamic_cast<Ogre::RenderWindow*>(mRenderTarget);
-    if (rw)
-        rw->setVisible(true);
 
     return true;
 }
