@@ -35,7 +35,7 @@
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
 namespace Sirikata {
-UUID::UUID(const std::string & other) {
+UUID::UUID(const std::string & other,HumanReadable ) {
     boost_::uuid parsed_string(other);
     mData.initialize(parsed_string.begin(),parsed_string.end());
 }

@@ -56,7 +56,7 @@ class SpaceID : TotallyOrdered<SpaceID>{
     enum {static_size=UUID::static_size};
     SpaceID(){}
     explicit SpaceID(const UUID& id):mID(id){}
-    explicit SpaceID(const String& str):mID(str){}
+    explicit SpaceID(const String& str):mID(str,UUID::HumanReadable()){}
     explicit SpaceID(const UUID::Data &data):mID(data){}
 
     UUID::Data toRawBytes() const

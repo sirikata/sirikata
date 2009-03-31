@@ -65,7 +65,12 @@ public:
     /**
      * Interprets the human readable UUID string using boost functions
      */
-    UUID(const std::string&);
+    class HumanReadable{};
+    class BinaryString{};
+    UUID(const std::string&,HumanReadable );
+    UUID(const std::string&s,BinaryString ){
+        mData.memcpy(s.data(),s.length());
+    }
     class Random{};
     UUID(Random);
     static UUID random();

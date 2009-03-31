@@ -69,6 +69,9 @@ public:
     static DeltaTime microseconds(double us) {
         return DeltaTime(us/1000000.);
     }
+    static DeltaTime microseconds(int64 us) {
+        return DeltaTime(us/1000000.);
+    }
     static DeltaTime nanoseconds(double ns) {
         return DeltaTime(ns/1000000000.);
     }
@@ -188,6 +191,10 @@ public:
 	inline void operator-= (const DeltaTime &otherDelta) {
 		(*this) += (-otherDelta);
 	}
+
+    static AbsTime microseconds(int64 abstime){
+        return AbsTime(abstime/1000000.);
+    }
 
 	/**
 	 * The only public construction function for absolute times.

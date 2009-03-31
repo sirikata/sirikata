@@ -102,7 +102,7 @@ public:
         return retval;
     }
     static OptionSet*getOptions(const std::string&s, const void *context);
-    static OptionSet*getOptions(const std::string&s){return getOptions(s,NULL);}
+    static OptionSet*getOptions(const std::string&s);
 };
 }
 

@@ -56,7 +56,7 @@ class ObjectReference : TotallyOrdered<ObjectReference>{
     enum {static_size=UUID::static_size};
     ObjectReference(){}
     explicit ObjectReference(const UUID& id):mID(id){}
-    explicit ObjectReference(const String& str):mID(str){}
+    explicit ObjectReference(const String& str):mID(str,UUID::HumanReadable()){}
     explicit ObjectReference(const UUID::Data &data):mID(data){}
 
     UUID::Data toRawBytes() const
