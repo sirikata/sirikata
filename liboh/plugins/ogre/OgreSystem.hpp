@@ -49,7 +49,9 @@
 
 namespace Sirikata { namespace Graphics {
 class Entity;
+class SDLInputManager;
 class OgreSystem: public TimeSteppedSimulation {
+    SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
@@ -75,7 +77,7 @@ class OgreSystem: public TimeSteppedSimulation {
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    void renderOneFrame(Time, Duration frameTime);
+    bool renderOneFrame(Time, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Time, Duration);
     ///all the things that should happen once the frame finishes
@@ -114,7 +116,8 @@ public:
         return getEntity(proxy->getObjectReference());
     }
     virtual Duration desiredTickRate()const;
-    virtual void tick();
+    ///returns if rendering should continue
+    virtual bool tick();
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

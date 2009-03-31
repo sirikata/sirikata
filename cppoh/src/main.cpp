@@ -75,12 +75,9 @@ int main(int argc,const char**argv) {
         SimulationFactory::getSingleton()
           .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
     pm->initialize();
-    graphicsSystem->tick();
-    graphicsSystem->tick();
-    graphicsSystem->tick();
-    for (int i=0;i<4096;++i)
-        graphicsSystem->tick();
+    while (graphicsSystem->tick()) {
 
+    }
     pm->destroy();
     delete graphicsSystem;
     delete pm;

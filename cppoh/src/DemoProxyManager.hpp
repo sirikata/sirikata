@@ -103,6 +103,7 @@ public:
         mMesh->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
                                       Vector3f(2,0,0), Vector3f(0.71,0.71,0),.77));
+        mMesh->destroy();
 //        mAttachedMesh->unsetParent(Time::now());
 /*
         mAttachedMesh->unsetParent(Time::now(),

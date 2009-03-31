@@ -50,7 +50,7 @@
 #include <OgreWindowEventUtilities.h>
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
-
+#include "SDLInputManager.hpp"
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -244,18 +244,18 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*purgeConfig;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
-    OptionValue*autoCreateWindow;
     OptionValue*windowTitle;    
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
+    OptionValue*grabCursor;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
-                           autoCreateWindow=new OptionValue("autowindow","true",OptionValueType<bool>(),"Render to a onscreen window"),
+                           grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
                            mOgreRootDir=new OptionValue("ogretoplevel",".",OptionValueType<String>(),"Directory with ogre plugins"),
                            ogreSceneManager=new OptionValue("scenemanager","OctreeSceneManager",OptionValueType<String>(),"Which scene manager to use to arrange objects"),
@@ -280,10 +280,39 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                             || (userAccepted=getRoot()->showConfigDialog())));
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
-            bool doAutoWindow=autoCreateWindow->as<bool>();
+            bool doAutoWindow=
+#if _WIN32
+                true
+#else
+                false
+#endif
+                ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
+#ifdef _WIN32
+            {
+                HWND hWnd;
+                char tmp[64];
+                mWindow->getCustomAttribute("WINDOW",&hWnd);
+                sprintf(tmp, "SDL_WINDOWID=%u", (unsigned long)hWnd);
+                _putenv(tmp);
+            }
+                mInputManager=new SDLInputManager(getRoot()->getAutoCreatedWindow()->getWidth(),
+                                                  getRoot()->getAutoCreatedWindow()->getHeight(),
+                                                  getRoot()->getAutoCreatedWindow()->isFullScreen(),
+                                                  mWindowDepth->as<Ogre::PixelFormat>(),
+                                                  grabCursor->as<bool>());
+#else
+                mInputManager=new SDLInputManager(mWindowWidth->as<uint32>(),
+                                                  mWindowHeight->as<uint32>(),
+                                                  mFullScreen->as<bool>(),
+                                                  mWindowDepth->as<Ogre::PixelFormat>(),
+                                                  grabCursor->as<bool>());
+#endif
             if (!doAutoWindow) {
-                sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>()));
+                Ogre::NameValuePairList misc;
+                misc["currentGLContext"] = String("True");                    
+                Ogre::RenderWindow *rw;
+                sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
             }else {
                 sRenderTarget=mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
@@ -473,7 +502,7 @@ Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();
 }
 
-void OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
+bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
         (*iter++)->preFrame(curFrameTime, deltaTime);
     }
@@ -481,20 +510,34 @@ void OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
     Ogre::Root::getSingleton().renderOneFrame();
     Time postFrameTime = Time::now();
     Duration postFrameDelta = postFrameTime-mLastFrameTime;
+    bool continueRendering=mInputManager->tick(postFrameTime,postFrameDelta);
+    if (!continueRendering) {
+        printf("ERRAH");
+    }
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
         (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
+    static int counter=0;
+    counter++;
+    if (!continueRendering) {
+        printf("AH");
+        printf ("Counter %d %lx",counter,&continueRendering);
+    }
+
+    return continueRendering;
 }
 static Time debugStartTime = Time::now();
-void OgreSystem::tick(){
+bool OgreSystem::tick(){
+    bool continueRendering=true;
     Time curFrameTime(Time::now());
     Duration frameTime=curFrameTime-mLastFrameTime;
     if (mRenderTarget==sRenderTarget)
-        renderOneFrame(curFrameTime, frameTime);
+        continueRendering=renderOneFrame(curFrameTime, frameTime);
     else if (sRenderTarget==NULL) {
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
+    return continueRendering;
 }
 void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
@@ -511,6 +554,11 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
 namespace Sirikata{namespace Graphics{
 */
 void OgreSystem::postFrame(Time current, Duration frameTime) {
+#ifndef _WIN32
+    Ogre::RenderWindow* rw=dynamic_cast<Ogre::RenderWindow*>(mRenderTarget);
+    if (rw)
+        rw->setVisible(true);
+#endif
 /*
     if (current >= debugStartTime+2 && current < debugStartTime+3) {
         debugStartTime-=1;

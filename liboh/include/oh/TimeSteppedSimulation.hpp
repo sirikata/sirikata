@@ -39,7 +39,8 @@ namespace Sirikata {
 class TimeSteppedSimulation: public ProxyCreationListener{
 public:
     virtual Duration desiredTickRate()const=0;
-    virtual void tick()=0;
+    ///returns true if simulation should continue (false quits app)
+    virtual bool tick()=0;
 };
 
 }
