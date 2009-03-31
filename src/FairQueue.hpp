@@ -275,6 +275,10 @@ protected:
                     *bytes -= message_size;
 
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
+
+                    // update the next finish time if there's anything in the queue
+                    if (serviceEmptyQueue)
+                        min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,mNullMessage), min_queue_info->weight);
                 }
             }
         }
