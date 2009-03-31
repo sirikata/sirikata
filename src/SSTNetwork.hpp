@@ -9,7 +9,7 @@ class CBRSST;
 
 class SSTNetwork : public Network {
 public:
-    SSTNetwork(int argc, char**argv);
+    SSTNetwork();
     virtual ~SSTNetwork();
     virtual bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
     virtual void listen (const Address4&);
@@ -17,7 +17,7 @@ public:
     virtual void service(const Time& t);
     virtual void init(void* (*)(void*));
 private:
-    
+
     CBRSST* mImpl;
 };
 

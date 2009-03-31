@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
     if (network_type == "raknet")
         gNetwork = new RaknetNetwork();
     else if (network_type == "sst")
-        gNetwork = new SSTNetwork(argc,argv);
+        gNetwork = new SSTNetwork();
     gNetwork->init(&main_loop);
     return 0;
 }

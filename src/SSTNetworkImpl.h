@@ -15,7 +15,7 @@ namespace CBR {
 class CBRSST : public QObject {
     Q_OBJECT
 public:
-    CBRSST(int argc, char**argv);
+    CBRSST();
     ~CBRSST();
     void listen(uint32 port);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
@@ -44,7 +44,7 @@ private:
     StreamMap mSendConnections;
     StreamMap mReceiveConnections;
     ChunkQueue mReceiveQueue;
-    
+
 }; // class CBRSST
 
 } // namespace CBR

@@ -7,9 +7,9 @@
 
 namespace CBR {
 
-CBRSST::CBRSST(int argc,char **argv)
+CBRSST::CBRSST()
 {
-    mApp = new QApplication(argc, argv);
+    mApp = new QApplication(0, 0);
 }
 
 CBRSST::~CBRSST() {

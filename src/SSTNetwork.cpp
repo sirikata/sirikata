@@ -3,10 +3,10 @@
 
 namespace CBR {
 
-SSTNetwork::SSTNetwork(int argc, char**argv)
+SSTNetwork::SSTNetwork()
  : Network()
 {
-    mImpl = new CBRSST(argc,argv);
+    mImpl = new CBRSST();
 }
 
 SSTNetwork::~SSTNetwork() {
