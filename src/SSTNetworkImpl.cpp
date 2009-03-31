@@ -16,6 +16,7 @@ CBRSST::~CBRSST() {
 }
 void CBRSST::handleInit() {
     this->mMainCallback(NULL);
+    mApp->exit();
 }
 
 void CBRSST::init(void* (*x)(void*)){
