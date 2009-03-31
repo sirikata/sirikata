@@ -290,10 +290,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
 #ifdef _WIN32
+            HWND hWnd;
             {
-                HWND hWnd;
                 char tmp[64];
-                mWindow->getCustomAttribute("WINDOW",&hWnd);
+                getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
                 sprintf(tmp, "SDL_WINDOWID=%u", (unsigned long)hWnd);
                 _putenv(tmp);
             }
@@ -301,7 +301,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                                                   getRoot()->getAutoCreatedWindow()->getHeight(),
                                                   getRoot()->getAutoCreatedWindow()->isFullScreen(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
-                                                  grabCursor->as<bool>());
+                                                  grabCursor->as<bool>(),
+						  hWnd);
 #else
                 mInputManager=new SDLInputManager(mWindowWidth->as<uint32>(),
                                                   mWindowHeight->as<uint32>(),

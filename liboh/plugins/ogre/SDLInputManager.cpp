@@ -33,6 +33,9 @@
 #include <OgreRenderWindow.h>
 #include <SDL.h>
 #include <SDL_video.h>
+#ifdef _WIN32
+#include <SDL_syswm.h>
+#endif
 #include <util/Time.hpp>
 #include "SDLInputManager.hpp"
 #include "SDLEvents.hpp"
@@ -49,7 +52,7 @@ class PressedJoyButtons {public:
     std::vector <std::tr1::unordered_map<int,SDL_JoyButtonEvent> >mPressed;
 
 };
-SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor){
+SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *currentWindow){
     mScreen=NULL;
     mPressedKeys=new PressedKeys;
     mPressedMouseButtons=new PressedMouseButtons;
@@ -59,7 +62,8 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     }
 
 #ifdef WIN32
-   if (!fullscreen)
+    mScreen=NULL;SDL_CreateWindowFrom(currentWindow);
+   if(0)if (!fullscreen)
    {
       // the window is not fullscreen:
 
@@ -113,7 +117,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
 #endif
     SDL_Event event[16];
     bool continueRendering=true;
-    {
+    if (0) {
         size_t i;
         for (i=0;i<mPressedKeys->mPressed.size();++i){
             for (std::tr1::unordered_map<SDLKey,SDL_KeyboardEvent>::iterator j=mPressedKeys->mPressed[i].begin();
@@ -139,7 +143,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     }
     while(SDL_PollEvent(&event[0]))
     {
-       
+       SILOG(ogre,debug,"Event type "<<(int)event->type);
         switch(event->type)
         { 
           case SDL_KEYDOWN:
@@ -233,6 +237,10 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             
           case SDL_WINDOWEVENT:
             fire(Task::EventPtr(new WindowChange(event->window)));
+			if (event->window.event==13) {
+              SILOG(ogre,debug,"quitting\n");  
+              continueRendering=false;
+			}
             break;
             
           case SDL_QUIT:

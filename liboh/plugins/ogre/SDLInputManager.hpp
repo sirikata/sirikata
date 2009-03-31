@@ -45,7 +45,8 @@ public:
                     unsigned int height,
                     bool fullscreen,
                     const Ogre::PixelFormat&fmt,
-                    bool grabCursor);
+                    bool grabCursor,
+		    void *currentWindowData=NULL);
     bool tick(Time currentTime, Duration frameTime);
     ~SDLInputManager();
 };
