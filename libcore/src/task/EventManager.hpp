@@ -159,7 +159,8 @@ private:
 		//}
 	};
 
-	typedef HashMap<IdPair::Secondary, PartiallyOrderedListenerList*,
+	typedef std::tr1::unordered_map<IdPair::Secondary, 
+				PartiallyOrderedListenerList*,
 				IdPair::Secondary::Hasher> SecondaryListenerMap;
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo*> PrimaryListenerMap;
@@ -189,7 +190,7 @@ private:
 			 secondaryMap(slm), secondaryId(slmKey) {
 		}
 	};
-	typedef HashMap<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
+	typedef std::tr1::unordered_map<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
 
 	struct SIRIKATA_EXPORT ListenerRequest {
 		SubscriptionId listenerId;

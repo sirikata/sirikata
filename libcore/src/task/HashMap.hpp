@@ -32,9 +32,9 @@
 
 #ifndef SIRIKATA_HashMap_HPP__
 #define SIRIKATA_HashMap_HPP__
-
-#define HashMap std::tr1::unordered_map
-#define HASH std::tr1::hash
-
+namespace Sirikata {
+//typedef std::tr1::unordered_map HashMap;
+//typedef std::tr1::hash HASH;
+}
 
 #endif

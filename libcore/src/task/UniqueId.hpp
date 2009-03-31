@@ -110,9 +110,9 @@ public:
 	/// Hasher functor to be used in a hash_map.
 	struct Hasher {
 		std::size_t operator() (const FunctionId &sid) const{
-			return HASH<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
-				HASH<std::string>() (sid.mClassId) * 41 +
-				HASH<std::string>() (sid.mUniqueId.c_str());
+			return std::tr1::hash<intptr_t>() ((intptr_t)sid.mThisPtr) * 43 +
+				std::tr1::hash<std::string>() (sid.mClassId) * 41 +
+				std::tr1::hash<std::string>() (sid.mUniqueId.c_str());
 		}
 	};
 };
@@ -198,9 +198,9 @@ typedef SubscriptionIdClass::Type SubscriptionId;
 struct SubscriptionIdHasher {
 	std::size_t operator() (SubscriptionId sid) const{
 #ifdef __APPLE__
-		return HASH<unsigned int>()(((unsigned int)(sid>>32))^(unsigned int)sid);
+		return std::tr1::hash<unsigned int>()(((unsigned int)(sid>>32))^(unsigned int)sid);
 #else
-		return HASH<SubscriptionId>()(sid);
+		return std::tr1::hash<SubscriptionId>()(sid);
 #endif
 	}
 };

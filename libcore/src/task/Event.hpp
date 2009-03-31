@@ -79,9 +79,16 @@ public:
 		 * string is equal to Secondary(0) or Secondary::null(). */
 
 		Secondary(const std::string &str) :
-				mIntValue(str.empty() ? 0 : HASH<std::string>()(str)),
+                mIntValue(str.empty() ? 0 : std::tr1::hash<std::string>()(str)),
 				mStrValue(str) {}
+        /**
+		 * Create a Secondary ID from a string and an integer.  This will first
+		 * compute the hash and store that in the integer value,
+		 * and then store the string in mStrValue. Note that an empty
+		 * string is equal to Secondary(0) or Secondary::null(). */
 
+        Secondary(const std::string&str,
+                  intptr_t i):mIntValue(i),mStrValue(str) {}
 		/**
 		 * Displays string value (up to 60 chars), or integer
 		 * value if the string is empty.
@@ -128,10 +135,10 @@ public:
 		/// Hasher functor to be used in a hash_map.
 		struct Hasher {
 			size_t operator() (const Secondary &sec) const{
-				return HASH<intptr_t>()(sec.mIntValue); // mIntValue is already hashed.
+				return std::tr1::hash<intptr_t>()(sec.mIntValue); // mIntValue is already hashed.
 
-				/*return HASH<std::string>()(sec.mStrValue) * 37 +
-					HASH<intptr_t>()(sec.mIntValue) * 31;*/
+				/*return std::tr1::hash<std::string>()(sec.mStrValue) * 37 +
+					std::tr1::hash<intptr_t>()(sec.mIntValue) * 31;*/
 			}
 		};
 	};
