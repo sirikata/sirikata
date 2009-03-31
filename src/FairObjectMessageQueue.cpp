@@ -22,7 +22,7 @@ bool FairObjectMessageQueue::send(ObjectToObjectMessage* msg) {
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
 
-    return mClientQueues.queueMessage(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
+    return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
 }
 
 void FairObjectMessageQueue::service(const Time&t){
@@ -31,19 +31,14 @@ void FairObjectMessageQueue::service(const Time&t){
     aggregateLocationMessages();
 
     uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
-    uint64 leftover_bytes = 0;
 
-    std::vector<ServerMessagePair*> finalSendMessages = mClientQueues.tick(bytes, &leftover_bytes);
-    size_t count=0;
-    for (count=0;count<finalSendMessages.size();++count) {
-        if (mServerMessageQueue->addMessage(finalSendMessages[count]->dest(),
-                                            finalSendMessages[count]->data())) {
-        }else {
+    ServerMessagePair* next_msg = NULL;
+    while( bytes > 0 && (next_msg = mClientQueues.pop(&bytes)) != NULL ) {
+        if (!mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data()))
             assert(false&&"out of queue space");
-        }
     }
 
-    mRemainderBytes = mClientQueues.empty() ? 0 : leftover_bytes;
+    mRemainderBytes = mClientQueues.empty() ? 0 : bytes;
     mLastTime = t;
 }
 
