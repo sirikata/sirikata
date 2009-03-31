@@ -7,6 +7,7 @@
 
 namespace Sirikata { namespace Graphics {
 SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor){
+    mScreen=NULL;
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
         SILOG(ogre,error,"Couldn't initialize SDL: "<<SDL_GetError());
     }
@@ -84,12 +85,14 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
         default:
           SILOG(ogre,error,"I don't know what this event is!\n");
      }
-     if (!continueRendering) {
-         printf("AH");
-     }
     }
     return continueRendering;
      
 }
+SDLInputManager::~SDLInputManager(){
+    if (mScreen)
+        SDL_FreeSurface(mScreen);
+    SDL_Quit();
 
+}
 } }

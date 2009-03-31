@@ -67,6 +67,7 @@ uint32 OgreSystem::sNumOgreSystems=0;
 OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
 {
     increfcount();
+    mInputManager=NULL;
     mRenderTarget=NULL;
     mSceneManager=NULL;
     mRenderTarget=NULL;
@@ -470,6 +471,7 @@ OgreSystem::~OgreSystem() {
         OGRE_DELETE sRoot;
         sRoot=NULL;
     }
+    delete mInputManager;
 }
 
 void OgreSystem::createProxy(ProxyObjectPtr p){
@@ -511,19 +513,11 @@ bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
     Time postFrameTime = Time::now();
     Duration postFrameDelta = postFrameTime-mLastFrameTime;
     bool continueRendering=mInputManager->tick(postFrameTime,postFrameDelta);
-    if (!continueRendering) {
-        printf("ERRAH");
-    }
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin();iter!=sActiveOgreScenes.end();) {
         (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
     static int counter=0;
     counter++;
-    if (!continueRendering) {
-        printf("AH");
-        printf ("Counter %d %lx",counter,&continueRendering);
-    }
-
     return continueRendering;
 }
 static Time debugStartTime = Time::now();
