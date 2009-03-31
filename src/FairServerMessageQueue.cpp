@@ -53,10 +53,15 @@ void FairServerMessageQueue::service(const Time&t){
     uint64 bytes = (t - mLastTime).seconds() * mRate + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
-    while( bytes > 0 && (next_msg = mServerQueues.pop(&bytes)) != NULL ) {
+    while( bytes > 0 && (next_msg = mServerQueues.front(&bytes)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
         assert(addy != NULL);
-        mNetwork->send(*addy,next_msg->data(),false,true,1);
+        bool sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
+
+        if (!sent_success) break;
+
+        ServerMessagePair* next_msg_popped = mServerQueues.pop(&bytes);
+        assert(next_msg_popped == next_msg);
 
         uint32 packet_size = next_msg->data().size();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
