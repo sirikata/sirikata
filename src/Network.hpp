@@ -44,6 +44,7 @@ public:
     virtual void listen (const Address4&)=0;
     virtual Sirikata::Network::Chunk*receiveOne()=0;
     virtual void service(const Time& t) {}
+    virtual void init(void*(*)(void*))=0;
 };
 }
 #endif //_CBR_NETWORK_HPP_

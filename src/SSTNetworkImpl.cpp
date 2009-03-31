@@ -7,14 +7,23 @@
 
 namespace CBR {
 
-CBRSST::CBRSST()
+CBRSST::CBRSST(int argc,char **argv)
 {
-    int argc = 1;
-    char* argv[2] = { "cbr", NULL };
-    mApp = new QApplication(argc, argv, false);
+    mApp = new QApplication(argc, argv);
 }
 
 CBRSST::~CBRSST() {
+}
+void CBRSST::handleInit() {
+    this->mMainCallback(NULL);
+}
+
+void CBRSST::init(void* (*x)(void*)){
+    mMainCallback=x;
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(handleInit()));
+    timer->start(0);
+    mApp->exec();
 }
 
 void CBRSST::listen(uint32 port) {

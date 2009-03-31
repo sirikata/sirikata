@@ -57,7 +57,10 @@
 #include "UniformCoordinateSegmentation.hpp"
 
 #include "ServerWeightCalculator.hpp"
-
+namespace {
+CBR::Network* gNetwork = NULL;
+}
+void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -86,6 +89,18 @@ int main(int argc, char** argv) {
         close(ntppipes[0]);
         close(ntppipes[1]);
     }
+
+
+    String network_type = GetOption(NETWORK_TYPE)->as<String>();
+    if (network_type == "raknet")
+        gNetwork = new RaknetNetwork();
+    else if (network_type == "sst")
+        gNetwork = new SSTNetwork(argc,argv);
+    gNetwork->init(&main_loop);
+    return 0;
+}
+void *main_loop(void *) {
+    using namespace CBR;
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
         String server_port = GetOption("server-port")->as<String>();
@@ -160,20 +175,14 @@ int main(int argc, char** argv) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    Network* network = NULL;
-    String network_type = GetOption(NETWORK_TYPE)->as<String>();
-    if (network_type == "raknet")
-        network = new RaknetNetwork();
-    else if (network_type == "sst")
-        network = new SSTNetwork();
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(network,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, trace);
+        sq = new FIFOServerMessageQueue(gNetwork,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, trace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(network, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
+        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
     else {
         assert(false);
         exit(-1);
@@ -239,7 +248,7 @@ int main(int argc, char** argv) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
-            network->service(tbegin + elapsed);
+            gNetwork->service(tbegin + elapsed);
             cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);
         }
@@ -248,7 +257,6 @@ int main(int argc, char** argv) {
     delete server;
     delete sq;
     delete prox;
-    delete network;
     delete server_id_map;
     delete weight_calc;
     delete cseg;
@@ -267,5 +275,7 @@ int main(int argc, char** argv) {
             sos << Timer::getSystemClockOffset().milliseconds() << std::endl;
     }
 
+    delete gNetwork;
+    gNetwork=NULL;
     return 0;
 }

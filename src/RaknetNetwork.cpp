@@ -8,7 +8,9 @@
 namespace CBR {
 RaknetNetwork::RaknetNetwork ():Network(),mListener(RakNetworkFactory::GetRakPeerInterface()){
 }
-
+void RaknetNetwork::init(void*(*x)(void*)){
+        (*x)(NULL);
+}
 void RaknetNetwork::listen(const Address4& as_server) {
     SocketDescriptor socketDescriptor(as_server.getPort(),0);
     bool starting=mListener->Startup(16383,30,&socketDescriptor,1);

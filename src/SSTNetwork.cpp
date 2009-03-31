@@ -3,10 +3,10 @@
 
 namespace CBR {
 
-SSTNetwork::SSTNetwork()
+SSTNetwork::SSTNetwork(int argc, char**argv)
  : Network()
 {
-    mImpl = new CBRSST();
+    mImpl = new CBRSST(argc,argv);
 }
 
 SSTNetwork::~SSTNetwork() {
@@ -28,5 +28,7 @@ Network::Chunk* SSTNetwork::receiveOne() {
 void SSTNetwork::service(const Time& t) {
     mImpl->service();
 }
-
+void SSTNetwork::init(void* (*x)(void*)){
+    mImpl->init(x);
+}
 } // namespace CBR
