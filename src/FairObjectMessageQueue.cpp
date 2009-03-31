@@ -26,16 +26,16 @@ bool FairObjectMessageQueue::send(ObjectToObjectMessage* msg) {
 }
 
 void FairObjectMessageQueue::service(const Time&t){
-    bool freeClientTicks=true;
-
     aggregateLocationMessages();
 
     uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
-    while( bytes > 0 && (next_msg = mClientQueues.pop(&bytes)) != NULL ) {
-        if (!mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data()))
-            assert(false&&"out of queue space");
+    while( bytes > 0 && (next_msg = mClientQueues.front(&bytes)) != NULL ) {
+        if (mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data())) {
+            ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
+            assert(next_msg_popped == next_msg);
+        }
     }
 
     mRemainderBytes = mClientQueues.empty() ? 0 : bytes;

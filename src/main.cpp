@@ -193,7 +193,7 @@ void *main_loop(void *) {
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, trace);
+        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), trace);
     else if (object_queue_type == "fair")
         oq = new FairObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
     else {
