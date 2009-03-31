@@ -86,7 +86,7 @@ void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
     if (dest_server==id()) {
         if (!is_forward) {
             mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
-            mTrace->packetSent(mCurrentTime, dest_server, msg->id(), offset);
+            mTrace->packetSent(mCurrentTime, mCurrentTime, dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
         }
 
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
@@ -190,7 +190,7 @@ void Server::processChunk(const Network::Chunk&chunk, const ServerID& source_ser
         offset = Message::deserialize(chunk,offset,&result);
 
         if (!forwarded_self_msg)
-            mTrace->packetReceived(mCurrentTime, source_server, result->id(), offset);
+            mTrace->packetReceived(mCurrentTime, mCurrentTime, source_server, result->id(), offset);
 
         deliver(result);
     }while (offset<chunk.size());

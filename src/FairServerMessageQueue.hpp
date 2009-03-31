@@ -35,6 +35,11 @@ protected:
     std::vector<ServerMessagePair*> mClientServerBuffer;
     FairQueue<ServerMessagePair, ServerID > mServerQueues;
 
+    Time mLastTime;
+    uint32 mRate;
+    uint32 mRemainderBytes;
+    Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
+
     struct ChunkSourcePair {
         Network::Chunk* chunk;
         ServerID source;

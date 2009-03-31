@@ -33,7 +33,9 @@ protected:
         }
     };
     FairQueue<ServerMessagePair,UUID> mClientQueues;
-    Network * mNetwork;
+    Time mLastTime;
+    uint32 mRate;
+    uint32 mRemainderBytes;
 public:
 
     FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);

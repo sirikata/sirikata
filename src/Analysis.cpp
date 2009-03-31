@@ -85,9 +85,21 @@ struct PacketQueuedEvent : public PacketEvent {
 };
 
 struct PacketSentEvent : public PacketEvent {
+    PacketSentEvent()
+     : PacketEvent(), start_time(0), end_time(0)
+    {}
+
+    Time start_time;
+    Time end_time;
 };
 
 struct PacketReceivedEvent : public PacketEvent {
+    PacketReceivedEvent()
+     : PacketEvent(), start_time(0), end_time(0)
+    {}
+
+    Time start_time;
+    Time end_time;
 };
 
 Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
@@ -149,6 +161,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
               is.read( (char*)&psevt->id, sizeof(psevt->id) );
               is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              is.read( (char*)&psevt->start_time, sizeof(psevt->start_time) );
+              is.read( (char*)&psevt->end_time, sizeof(psevt->end_time) );
               evt = psevt;
           }
           break;
@@ -160,6 +174,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               prevt->dest = trace_server_id;
               is.read( (char*)&prevt->id, sizeof(prevt->id) );
               is.read( (char*)&prevt->size, sizeof(prevt->size) );
+              is.read( (char*)&prevt->start_time, sizeof(prevt->start_time) );
+              is.read( (char*)&prevt->end_time, sizeof(prevt->end_time) );
               evt = prevt;
           }
           break;

@@ -7,7 +7,11 @@
 namespace CBR{
 FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
-   mServerQueues(bytes_per_second,0,renormalizeWeights)
+   mServerQueues(0,renormalizeWeights),
+   mLastTime(0),
+   mRate(bytes_per_second),
+   mRemainderBytes(0),
+   mLastSendEndTime(0)
 {
 }
 
@@ -46,16 +50,37 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 }
 
 void FairServerMessageQueue::service(const Time&t){
-    std::vector<ServerMessagePair*> finalSendMessages=mServerQueues.tick(t);
+    uint64 bytes = (t - mLastTime).seconds() * mRate + mRemainderBytes;
+    uint64 leftover_bytes = 0;
+    std::vector<ServerMessagePair*> finalSendMessages = mServerQueues.tick(bytes, &leftover_bytes);
     for (std::vector<ServerMessagePair*>::iterator i=finalSendMessages.begin(),ie=finalSendMessages.end();
          i!=ie;
          ++i) {
         Address4* addy = mServerIDMap->lookup((*i)->dest());
         assert(addy != NULL);
         mNetwork->send(*addy,(*i)->data(),false,true,1);
-        mTrace->packetSent(t, (*i)->dest(), (*i)->data());
+
+        uint32 packet_size = (*i)->data().size();
+        Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
+        Time start_time = mLastSendEndTime;
+        Time end_time = mLastSendEndTime + send_duration;
+        mLastSendEndTime = end_time;
+
+        mTrace->packetSent(start_time, end_time, (*i)->dest(), (*i)->data());
     }
     finalSendMessages.resize(0);
+
+    if (mServerQueues.empty()) {
+        mRemainderBytes = 0;
+        mLastSendEndTime = t;
+    }
+    else {
+        mRemainderBytes = leftover_bytes;
+        //mLastSendEndTime = already recorded, last end send time
+    }
+
+    mLastTime = t;
+
 
     // no limit on receive bandwidth
     while( Network::Chunk* c = mNetwork->receiveOne() ) {
@@ -72,6 +97,7 @@ void FairServerMessageQueue::service(const Time&t){
 
         mReceiveQueue.push(csp);
     }
+
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {

@@ -86,9 +86,9 @@ public:
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     void packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
-    void packetSent(const Time& t, const ServerID& dest, const Network::Chunk& data);
-    void packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size);
-    void packetReceived(const Time& t, const ServerID& src, uint32 id, uint32 size);
+    void packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data);
+    void packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size);
+    void packetReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size);
 
     void save(const String& filename);
 private:

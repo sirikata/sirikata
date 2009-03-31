@@ -109,20 +109,16 @@ public:
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
     unsigned int mEmptyQueueMessageLength;
     bool mRenormalizeWeight;
-    int64 mLeftoverBytes;
     typedef Queue<Message*> MessageQueue;
-    FairQueue(uint32 bytes_per_second, unsigned int emptyQueueMessageLength, bool renormalizeWeight)
+    FairQueue(unsigned int emptyQueueMessageLength, bool renormalizeWeight)
         :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
-         mLeftoverBytes(0),
-         mRate(bytes_per_second),
          mTotalWeight(0),
-         mCurrentTime(0),
          mCurrentVirtualTime(0),
          mMessageBeingSent(NULL),
-         mMessageSendFinishTime(0),
          mServerQueues(),
-         bytes_sent(0){}
+         bytes_sent(0)
+    {}
 
     ~FairQueue(){
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
@@ -180,33 +176,31 @@ public:
     }
 
     // returns a list of messages which should be delivered immediately
-    std::vector<Message*> tick(const Time& t){
-        Duration since_last = t - mCurrentTime;
-        mCurrentTime = t;
+    std::vector<Message*> tick(const uint64 bytes, uint64* leftover) {
+/*
         double renormalized_rate=mRate;
         if (mRenormalizeWeight)
             renormalized_rate*=mTotalWeight;
-        mLeftoverBytes+=(int64)(((double)since_last.seconds())*renormalized_rate);
+        mLeftoverBytes += (int64)(((double)since_last.seconds())*renormalized_rate);
+*/
+        *leftover = bytes;
+
         std::vector<Message*> msgs;
-        static Message*sNullMessage=new Message(mEmptyQueueMessageLength);
-        static unsigned int serviceEmptyQueue=mEmptyQueueMessageLength;
+        static Message* sNullMessage = new Message(mEmptyQueueMessageLength);
+        static unsigned int serviceEmptyQueue = mEmptyQueueMessageLength;
         bool processed_message = true;
         while( processed_message == true ) {
             processed_message = false;
 
             // If we are currently working on delivering a message, check if it can now be delivered
             if (mMessageBeingSent != NULL) {
-                if ( mCurrentTime > mMessageSendFinishTime ) {
-                    if (mMessageBeingSent!=sNullMessage) {
+                if ( mMessageBeingSent->size() <= *leftover ) {
+                    if (mMessageBeingSent != sNullMessage) {
                         msgs.push_back(mMessageBeingSent);
                     }
                     mMessageBeingSent = NULL;
                     processed_message = true;
                 }
-            } else {
-                // with no processing, update the last finish time to the current time so we don't use
-                // past time for processing a new message
-                mMessageSendFinishTime = mCurrentTime;
             }
 
             // If no message is currently being processed (or we just finished processing one), check for
@@ -226,48 +220,48 @@ public:
                     mCurrentVirtualTime = min_queue_info->nextFinishTime;
                     mMessageBeingSent = sNullMessage;
                     if (!min_queue_info->messageQueue->empty()) {
-                        if (mLeftoverBytes<min_queue_info->messageQueue->front()->size())
+                        if (*leftover < min_queue_info->messageQueue->front()->size())
                             break;
-                        mMessageBeingSent=min_queue_info->messageQueue->pop();
-                        if (min_queue_info->messageQueue->empty()&&!serviceEmptyQueue) {
-                            mTotalWeight-=min_queue_info->weight;
+                        mMessageBeingSent = min_queue_info->messageQueue->pop();
+                        if (min_queue_info->messageQueue->empty() && !serviceEmptyQueue) {
+                            mTotalWeight -= min_queue_info->weight;
                         }
-                    }else {
-                        if (mLeftoverBytes<mMessageBeingSent->size())
+                    } else {
+                        if (*leftover < mMessageBeingSent->size())
                             break;
                     }
                     uint32 message_size = mMessageBeingSent->size();
-                    assert(message_size<=mLeftoverBytes);
-                    mLeftoverBytes-=message_size;
-                    //Duration duration_to_finish_send = Duration::milliseconds(message_size / (mRate/1000.f));
-                    //mMessageSendFinishTime = mMessageSendFinishTime + duration_to_finish_send;
+                    assert (message_size <= *leftover);
+                    *leftover -= message_size;
 
                     // update the next finish time if there's anything in the queue
-                    if (serviceEmptyQueue||!min_queue_info->messageQueue->empty()) {
+                    if (serviceEmptyQueue || !min_queue_info->messageQueue->empty()) {
                         min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,sNullMessage), min_queue_info->weight);
                     }
                 }
             }
         }
 
+/*
         if (msgs.size() > 0) {
             for(uint32 k = 0; k < msgs.size(); k++) {
                 bytes_sent += msgs[k]->size();
             }
             Duration since_start = mCurrentTime - Time(0);
-            //printf("%d / %f = %f bytes per second\n", bytes_sent, since_start.seconds(), bytes_sent / since_start.seconds());
+            printf("%d / %f = %f bytes per second\n", bytes_sent, since_start.seconds(), bytes_sent / since_start.seconds());
         }
-
+*/
         return msgs;
     }
-protected:
-    // because I *CAN*
-    Time FinnishTime(uint32 size, float weight) const{
-        return finishTime(size,weight);
+
+    bool empty() const {
+        return (mMessageBeingSent == NULL);
     }
+
+protected:
     Time finishTime(uint32 size, float weight) const{
         float queue_frac = weight;
-        Duration transmitTime = Duration::seconds( size / (mRate * queue_frac) );
+        Duration transmitTime = Duration::seconds( size / queue_frac );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
 
         return mCurrentVirtualTime + transmitTime;
@@ -276,10 +270,8 @@ protected:
 protected:
     uint32 mRate;
     uint32 mTotalWeight;
-    Time mCurrentTime;
     Time mCurrentVirtualTime;
-    Message *mMessageBeingSent;
-    Time mMessageSendFinishTime;
+    Message* mMessageBeingSent;
     ServerQueueInfoMap mServerQueues;
 
     uint32 bytes_sent;

@@ -29,6 +29,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     uint32 mRate;
     uint32 mRemainderBytes;
     Time mLastTime;
+    Time mLastSendEndTime; // the time at which the last send ended, if there are messages that are too big left in the queue
 
     struct ChunkSourcePair {
         Network::Chunk* chunk;

@@ -169,34 +169,55 @@ private:
         std::queue<PacketEventType*> window_events;
 
         uint64 bytes = 0;
+        uint64 total_bytes = 0;
         double max_bandwidth = 0;
 
         for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
             Time window_end = window_center + window / 2.f;
 
             // add in any new packets that now fit in the window
+            uint32 last_packet_partial_size = 0;
             while(true) {
                 PacketEventType* evt = event_it.current();
-                if (evt == NULL || evt->time > window_end) break;
+                if (evt == NULL) break;
+                if (evt->end_time > window_end) {
+                    if (evt->start_time + window < window_end) {
+                        double packet_frac = (window_end - evt->start_time).seconds() / (evt->end_time - evt->start_time).seconds();
+                        last_packet_partial_size = evt->size * packet_frac;
+                    }
+                    break;
+                }
                 bytes += evt->size;
+                total_bytes += evt->size;
                 window_events.push(evt);
                 event_it.next();
             }
 
             // subtract out any packets that have fallen out of the window
             // note we use event_time + window < window_end because subtracting could underflow the time
-            while(!window_events.empty() && window_events.front()->time + window < window_end) {
-                bytes -= window_events.front()->size;
+            uint32 first_packet_partial_size = 0;
+            while(!window_events.empty()) {
+                PacketEventType* pevt = window_events.front();
+                if (pevt->start_time + window >= window_end) break;
+
+                bytes -= pevt->size;
                 window_events.pop();
+
+                if (pevt->end_time + window >= window_end) {
+                    // note the order of the numerator is important to avoid underflow
+                    double packet_frac = (pevt->end_time + window - window_end).seconds() / (pevt->end_time - pevt->start_time).seconds();
+                    first_packet_partial_size = pevt->size * packet_frac;
+                    break;
+                }
             }
 
             // finally compute the current bandwidth
-            double bandwidth = bytes / window.seconds();
+            double bandwidth = (first_packet_partial_size + bytes + last_packet_partial_size) / window.seconds();
             if (bandwidth > max_bandwidth)
                 max_bandwidth = bandwidth;
         }
 
-        printf("%d to %d: %f max\n", sender, receiver, max_bandwidth);
+        printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
     }
 
 

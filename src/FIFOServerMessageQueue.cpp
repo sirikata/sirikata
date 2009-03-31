@@ -11,7 +11,8 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 bytes_per_se
  : ServerMessageQueue(net, sid, sidmap, trace),
    mRate(bytes_per_second),
    mRemainderBytes(0),
-   mLastTime(0)
+   mLastTime(0),
+   mLastSendEndTime(0)
 {
 }
 
@@ -60,13 +61,28 @@ void FIFOServerMessageQueue::service(const Time& t){
         Address4* addy = mServerIDMap->lookup(mQueue.front().dest());
         assert(addy != NULL);
         bool ok=mNetwork->send(*addy,mQueue.front().data(),false,true,1);
-        free_bytes -= mQueue.front().data().size();
+
+        uint32 packet_size = mQueue.front().data().size();
+        Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
+        Time start_time = mLastSendEndTime;
+        Time end_time = mLastSendEndTime + send_duration;
+        mLastSendEndTime = end_time;
+
+        free_bytes -= packet_size;
+
         assert(ok&&"Network Send Failed");
-        mTrace->packetSent(t, mQueue.front().dest(), mQueue.front().data());
+        mTrace->packetSent(start_time, end_time, mQueue.front().dest(), mQueue.front().data());
         mQueue.pop();
     }
 
-    mRemainderBytes = mQueue.empty() ? 0 : free_bytes;
+    if (mQueue.empty()) {
+        mRemainderBytes = 0;
+        mLastSendEndTime = t;
+    }
+    else {
+        mRemainderBytes = free_bytes;
+        //mLastSendEndTime = current mLastSendEndTime
+    }
 
     mLastTime = t;
 

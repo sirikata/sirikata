@@ -7,7 +7,10 @@
 namespace CBR{
 FairObjectMessageQueue::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
-   mClientQueues(bytes_per_second,0,false)
+   mClientQueues(0,false),
+   mLastTime(0),
+   mRate(bytes_per_second),
+   mRemainderBytes(0)
 {
 }
 
@@ -27,7 +30,10 @@ void FairObjectMessageQueue::service(const Time&t){
 
     aggregateLocationMessages();
 
-    std::vector<ServerMessagePair*> finalSendMessages=mClientQueues.tick(t);
+    uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
+    uint64 leftover_bytes = 0;
+
+    std::vector<ServerMessagePair*> finalSendMessages = mClientQueues.tick(bytes, &leftover_bytes);
     size_t count=0;
     for (count=0;count<finalSendMessages.size();++count) {
         if (mServerMessageQueue->addMessage(finalSendMessages[count]->dest(),
@@ -36,6 +42,9 @@ void FairObjectMessageQueue::service(const Time&t){
             assert(false&&"out of queue space");
         }
     }
+
+    mRemainderBytes = mClientQueues.empty() ? 0 : leftover_bytes;
+    mLastTime = t;
 }
 
 void FairObjectMessageQueue::registerClient(UUID sid, float weight) {

@@ -119,27 +119,31 @@ void Trace::packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 
     data.write( &size, sizeof(size) );
 }
 
-void Trace::packetSent(const Time& t, const ServerID& dest, const Network::Chunk& data) {
+void Trace::packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data) {
     uint32 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
-    packetSent(t, dest, id, size);
+    packetSent(start_time, end_time, dest, id, size);
 }
 
-void Trace::packetSent(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+void Trace::packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size) {
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
-    data.write( &t, sizeof(t) );
+    data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
+    data.write( &start_time, sizeof(start_time) );
+    data.write( &end_time, sizeof(end_time) );
 }
 
-void Trace::packetReceived(const Time& t, const ServerID& src, uint32 id, uint32 size) {
+void Trace::packetReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size) {
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
-    data.write( &t, sizeof(t) );
+    data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &src, sizeof(src) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
+    data.write( &start_time, sizeof(start_time) );
+    data.write( &end_time, sizeof(end_time) );
 }
 
 void Trace::save(const String& filename) {
