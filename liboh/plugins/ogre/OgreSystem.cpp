@@ -347,7 +347,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
 
     Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
-    //just to test if the cam is setup ok ==> mSceneManager->setSkyBox(true,"Examples/SpaceSkyBox",50);
+    Ogre::RenderWindow* rw=dynamic_cast<Ogre::RenderWindow*>(mRenderTarget);
+    if (rw)
+        rw->setVisible(true);
+
     return true;
 }
 namespace {
@@ -548,11 +551,6 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
 namespace Sirikata{namespace Graphics{
 */
 void OgreSystem::postFrame(Time current, Duration frameTime) {
-#ifndef _WIN32
-    Ogre::RenderWindow* rw=dynamic_cast<Ogre::RenderWindow*>(mRenderTarget);
-    if (rw)
-        rw->setVisible(true);
-#endif
 /*
     if (current >= debugStartTime+2 && current < debugStartTime+3) {
         debugStartTime-=1;
