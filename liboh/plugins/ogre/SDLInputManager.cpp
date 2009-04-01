@@ -115,7 +115,11 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
        memset(&info,0,sizeof(SDL_SysWMinfo));
        SDL_VERSION(&info.version);
        SDL_GetWindowWMInfo(mWindowID,&info);
+#ifdef __APPLE__
        currentWindow=(void*)info.data;
+#else
+       currentWindow=(void*)info.info.x11.window;
+#endif
    }
 #endif
 
