@@ -31,6 +31,7 @@
  */
 extern "C" typedef struct SDL_Surface SDL_Surface;
 extern "C" typedef Sirikata::uint32 SDL_WindowID;
+extern "C" typedef void* SDL_GLContext;
 #include <task/EventManager.hpp>
 namespace Sirikata { namespace Graphics {
 class PressedKeys;
@@ -38,6 +39,7 @@ class PressedMouseButtons;
 class PressedJoyButtons;
 class SDLInputManager :public Task::GenEventManager{
     SDL_WindowID mWindowID;
+    SDL_GLContext mWindowContext;
     PressedKeys *mPressedKeys;
     PressedMouseButtons *mPressedMouseButtons;
     PressedJoyButtons *mPressedJoyButtons;

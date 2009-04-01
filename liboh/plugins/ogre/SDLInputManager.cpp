@@ -62,6 +62,7 @@ class PressedJoyButtons {public:
 
 
 SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *currentWindow){
+    mWindowContext=0;
     mPressedKeys=new PressedKeys;
     mPressedMouseButtons=new PressedMouseButtons;
     mPressedJoyButtons=new PressedJoyButtons;
@@ -103,6 +104,9 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
    mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
+   SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
+   SDL_GL_MakeCurrent(mWindowID,ctx);
+   SDL_ShowWindow(mWindowID);
    if (!mWindowID) {
        SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
    }
@@ -262,7 +266,7 @@ SDLInputManager::~SDLInputManager(){
     delete mPressedKeys;    
     delete mPressedMouseButtons;
     delete mPressedJoyButtons;
-
+    SDL_GL_DeleteContext(mWindowContext);
     SDL_DestroyWindow(mWindowID);
     SDL_Quit();
 
