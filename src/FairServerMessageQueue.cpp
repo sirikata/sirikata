@@ -104,14 +104,11 @@ void FairServerMessageQueue::service(const Time&t){
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     if (!mServerQueues.hasQueue(sid)) {
-        mServerQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+        mServerQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
     }
     else {
         mServerQueues.setQueueWeight(sid, weight);
     }
-}
-void FairServerMessageQueue::removeServer(ServerID sid) {
-    mServerQueues.removeQueue(sid);
 }
 
 }

@@ -40,8 +40,6 @@ public:
 
     FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
 
-    void setServerWeight(ServerID, float weight);
-    void removeServer(ServerID);
     void registerClient(UUID,float weight);
     void removeClient(UUID);
 

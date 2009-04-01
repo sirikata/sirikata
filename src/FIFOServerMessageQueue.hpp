@@ -1,6 +1,9 @@
 #ifndef _CBR_FIFOSENDQUEUE_HPP
 #define _CBR_FIFOSENDQUEUE_HPP
+
+#include "FIFOQueue.hpp"
 #include "ServerMessageQueue.hpp"
+
 namespace CBR {
 class FIFOServerMessageQueue:public ServerMessageQueue {
     class ServerMessagePair {
@@ -25,7 +28,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
         }
     };
 
-    std::queue<ServerMessagePair> mQueue;
+    FIFOQueue<ServerMessagePair, ServerID> mQueue;
     uint32 mRate;
     uint32 mRemainderBytes;
     Time mLastTime;

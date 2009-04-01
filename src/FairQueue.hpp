@@ -1,4 +1,4 @@
-/*  cobra
+/*  cbr
  *  FairQueue.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of cobra nor the names of its contributors may
+ *  * Neither the name of cbr nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -34,55 +34,9 @@
 #define _FAIR_MESSAGE_QUEUE_HPP_
 
 #include "Time.hpp"
+#include "Queue.hpp"
 
 namespace CBR {
-
-class Message;
-class Server;
-namespace QueueEnum {
-    enum PushResult {
-        PushSucceeded,
-        PushExceededMaximumSize
-    };
-};
-template <typename Message> class Queue {
-    std::deque<Message> mMessages;
-    uint32 mMaxSize;
-public:
-    typedef Message MessageType;
-    Queue(uint32 max_size){
-        mMaxSize=max_size;
-    }
-    ~Queue(){}
-
-    QueueEnum::PushResult push(const Message &msg){
-        if (mMessages.size()>=mMaxSize)
-            return QueueEnum::PushExceededMaximumSize;
-        mMessages.push_back(msg);
-        return QueueEnum::PushSucceeded;
-    }
-
-    const Message& front() const{
-        return mMessages.front();
-    }
-    Message& front() {
-        return mMessages.front();
-    }
-    Message pop(){
-        Message m;
-        std::swap(m,mMessages.front());
-        mMessages.pop_front();
-        return m;
-    }
-    bool empty() const{
-        return mMessages.empty();
-    }
-
-    std::deque<Message>& messages() {
-        return mMessages;
-    }
-
-};
 
 template<class MessageQueue> class Weight {
 public:
@@ -211,6 +165,8 @@ public:
             assert( *bytes >= result->size() );
             *bytes -= result->size();
 
+            min_queue_info->messageQueue->pop();
+
             uint32 serviceEmptyQueue = mEmptyQueueMessageLength;
             // Remove the weight if the queue is now exhausted
             if (min_queue_info->messageQueue->empty() && !serviceEmptyQueue)
@@ -306,6 +262,6 @@ protected:
     Message* mNullMessage;
 }; // class FairQueue
 
-} // namespace Cobra
+} // namespace CBR
 
 #endif //_FAIR_MESSAGE_QUEUE_HPP_

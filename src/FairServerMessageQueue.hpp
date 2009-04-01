@@ -1,7 +1,9 @@
 #ifndef _CBR_FAIRSENDQUEUE_HPP
 #define _CBR_FAIRSENDQUEUE_HPP
+
 #include "FairQueue.hpp"
 #include "ServerMessageQueue.hpp"
+
 namespace CBR {
 class FairServerMessageQueue:public ServerMessageQueue {
 protected:
@@ -50,7 +52,6 @@ public:
     FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
 
     void setServerWeight(ServerID, float weight);
-    void removeServer(ServerID);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);

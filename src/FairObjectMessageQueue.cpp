@@ -44,7 +44,7 @@ void FairObjectMessageQueue::service(const Time&t){
 
 void FairObjectMessageQueue::registerClient(UUID sid, float weight) {
    if (!mClientQueues.hasQueue(sid)) {
-       mClientQueues.addQueue(new Queue<ServerMessagePair*>(65536),sid,weight);
+       mClientQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
    }
 }
 void FairObjectMessageQueue::removeClient(UUID sid) {
