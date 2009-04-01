@@ -30,13 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 extern "C" typedef struct SDL_Surface SDL_Surface;
+extern "C" typedef Sirikata::uint32 SDL_WindowID;
 #include <task/EventManager.hpp>
 namespace Sirikata { namespace Graphics {
 class PressedKeys;
 class PressedMouseButtons;
 class PressedJoyButtons;
 class SDLInputManager :public Task::GenEventManager{
-    SDL_Surface *mScreen;
+    SDL_WindowID mWindowID;
     PressedKeys *mPressedKeys;
     PressedMouseButtons *mPressedMouseButtons;
     PressedJoyButtons *mPressedJoyButtons;

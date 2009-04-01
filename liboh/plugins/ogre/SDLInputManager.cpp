@@ -62,7 +62,6 @@ class PressedJoyButtons {public:
 
 
 SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *currentWindow){
-    mScreen=NULL;
     mPressedKeys=new PressedKeys;
     mPressedMouseButtons=new PressedMouseButtons;
     mPressedJoyButtons=new PressedJoyButtons;
@@ -71,8 +70,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     }
 
 #ifdef WIN32
-    mScreen=NULL;
-	SDL_WindowID windowID=SDL_CreateWindowFrom(currentWindow);
+	SDL_WindowID windowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
     //SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
 	RAWINPUTDEVICE Rid;
     /* we're telling the window, we want it to report raw input events from mice */
@@ -104,8 +102,8 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
 
    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-   mScreen = SDL_SetVideoMode(width, height, 0, SDL_OPENGL|(fullscreen?SDL_FULLSCREEN:0));
-   if (!mScreen) {
+   mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
+   if (!mWindowID) {
        SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
    }
 #endif
@@ -265,8 +263,7 @@ SDLInputManager::~SDLInputManager(){
     delete mPressedMouseButtons;
     delete mPressedJoyButtons;
 
-    if (mScreen)
-        SDL_FreeSurface(mScreen);
+    SDL_DestroyWindow(mWindowID);
     SDL_Quit();
 
 }
