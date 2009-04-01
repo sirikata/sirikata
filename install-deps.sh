@@ -24,7 +24,7 @@ sh bootstrap
 ./configure --prefix=${deps_dir}/installed-raknet
 make
 make install
-
+cd ..
 
 
 # sst
