@@ -282,21 +282,23 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
             bool doAutoWindow=
-#if _WIN32
+#if defined(_WIN32) //|| defined(__APPLE__)
                 true
 #else
                 false
 #endif
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
+#if defined(_WIN32) //||defined(__APPLE__)
+            void* hWnd;
+            getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
 #ifdef _WIN32
-            HWND hWnd;
             {
                 char tmp[64];
-                getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
                 sprintf(tmp, "SDL_WINDOWID=%u", (unsigned long)hWnd);
                 _putenv(tmp);
             }
+#endif
                 mInputManager=new SDLInputManager(getRoot()->getAutoCreatedWindow()->getWidth(),
                                                   getRoot()->getAutoCreatedWindow()->getHeight(),
                                                   getRoot()->getAutoCreatedWindow()->isFullScreen(),

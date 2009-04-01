@@ -70,8 +70,10 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         SILOG(ogre,error,"Couldn't initialize SDL: "<<SDL_GetError());
     }
 
-#ifdef WIN32
+#if defined(WIN32)
+//||defined(__APPLE__)
 	SDL_WindowID windowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
+#ifdef _WIN32
     //SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
 	RAWINPUTDEVICE Rid;
     /* we're telling the window, we want it to report raw input events from mice */
@@ -94,6 +96,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
    RECT r;
    GetWindowRect(pInfo.window, &r);
    SetWindowPos(pInfo.window, 0, r.left, r.top, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+#endif
 #else
    SDL_Init(SDL_INIT_VIDEO);
    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
@@ -106,7 +109,9 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
    mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
    SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
    SDL_GL_MakeCurrent(mWindowID,ctx);
+#ifndef __APPLE__
    SDL_ShowWindow(mWindowID);
+#endif
    if (!mWindowID) {
        SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
    }
