@@ -30,12 +30,16 @@ bool FIFOObjectMessageQueue::send(ObjectToObjectMessage* msg) {
 void FIFOObjectMessageQueue::service(const Time& t){
     uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
 
-    ServerMessagePair* next_msg = NULL;
-    while( bytes > 0 && (next_msg = mQueue.front(&bytes)) != NULL ) {
-        if (mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data())) {
-            ServerMessagePair* next_msg_popped = mQueue.pop(&bytes);
-            assert(next_msg_popped == next_msg);
-        }
+    while( bytes > 0) {
+        ServerMessagePair* next_msg = mQueue.front(&bytes);
+        if (next_msg == NULL) break;
+
+        bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
+        if (!sent_success) break;
+
+        ServerMessagePair* next_msg_popped = mQueue.pop(&bytes);
+        assert(next_msg_popped == next_msg);
+        delete next_msg;
     }
 
     mRemainderBytes = mQueue.empty() ? 0 : bytes;

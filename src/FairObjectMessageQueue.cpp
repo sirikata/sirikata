@@ -32,10 +32,12 @@ void FairObjectMessageQueue::service(const Time&t){
 
     ServerMessagePair* next_msg = NULL;
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes)) != NULL ) {
-        if (mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data())) {
-            ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
-            assert(next_msg_popped == next_msg);
-        }
+        bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
+        if (!sent_success) break;
+
+        ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
+        assert(next_msg_popped == next_msg);
+        delete next_msg;
     }
 
     mRemainderBytes = mClientQueues.empty() ? 0 : bytes;
