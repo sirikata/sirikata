@@ -93,8 +93,7 @@ void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
     }else {
         mTrace->packetQueued(mCurrentTime, dest_server, msg->id(), offset);
 
-        bool failed = !mServerMessageQueue->addMessage(dest_server, msg_serialized);
-        assert(!failed);
+        mOutgoingMessages.push_back( OutgoingMessage(msg_serialized, dest_server) );
     }
     delete msg;
 }
@@ -196,15 +195,23 @@ void Server::processChunk(const Network::Chunk&chunk, const ServerID& source_ser
     }while (offset<chunk.size());
 }
 void Server::networkTick(const Time&t) {
-    mObjectMessageQueue->service(t);
-    mServerMessageQueue->service(t);
-
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty()) {
         processChunk(self_messages.front().data, this->id(), self_messages.front().forwarded);
         self_messages.pop_front();
     }
+
+    while(!mOutgoingMessages.empty()) {
+        OutgoingMessage& next_msg = mOutgoingMessages.front();
+        bool send_success = mServerMessageQueue->addMessage(next_msg.dest, next_msg.data);
+        if (!send_success) break;
+        mOutgoingMessages.pop_front();
+    }
+
+    mObjectMessageQueue->service(t);
+    mServerMessageQueue->service(t);
+
 
     Sirikata::Network::Chunk *c=NULL;
     ServerID source_server;

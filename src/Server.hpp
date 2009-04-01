@@ -111,7 +111,16 @@ private:
         Network::Chunk data;
         bool forwarded;
     };
-    std::deque<SelfMessage>mSelfMessages;
+    std::deque<SelfMessage> mSelfMessages;
+
+    struct OutgoingMessage {
+        OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest)
+         : data(_data), dest(_dest) {}
+
+        Network::Chunk data;
+        ServerID dest;
+    };
+    std::deque<OutgoingMessage> mOutgoingMessages;
 
     Time mCurrentTime;
     Trace* mTrace;
