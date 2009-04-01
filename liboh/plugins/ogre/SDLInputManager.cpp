@@ -270,6 +270,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             SILOG(ogre,error,"I don't know what this event is!\n");
         }
     }
+    temporary_processEventQueue(Task::AbsTime::now()+.01);
     return continueRendering;
      
 }

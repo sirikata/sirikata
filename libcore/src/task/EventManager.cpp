@@ -395,7 +395,7 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 template <class T>
 void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	AbsTime startTime = AbsTime::now();
-	SILOG(task,debug," >>> Processing events.");
+	SILOG(task,insane," >>> Processing events.");
 
 	// swaps to allow people to keep adding new events
 	typename EventList::NodeIterator processingList(mUnprocessed);
@@ -532,7 +532,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	}
 
 	AbsTime finishTime = AbsTime::now();
-	SILOG(task,debug, "**** Done processing events this round. " <<
+	SILOG(task,insane, "**** Done processing events this round. " <<
 		"Took " << (float)(finishTime-startTime) <<
 		" seconds.");
 }
