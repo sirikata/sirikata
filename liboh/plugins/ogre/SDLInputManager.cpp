@@ -29,7 +29,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#if (_WIN32_WINNT < 0x0501)
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
 #include <oh/Platform.hpp>
+
 #include <OgreRenderWindow.h>
 #include <SDL.h>
 #include <SDL_video.h>
@@ -39,6 +45,7 @@
 #include <util/Time.hpp>
 #include "SDLInputManager.hpp"
 #include "SDLEvents.hpp"
+
 namespace Sirikata { namespace Graphics {
 class PressedKeys {public:
     std::vector <std::tr1::unordered_map<SDLKey,SDL_KeyboardEvent> >mPressed;
@@ -52,6 +59,8 @@ class PressedJoyButtons {public:
     std::vector <std::tr1::unordered_map<int,SDL_JoyButtonEvent> >mPressed;
 
 };
+
+
 SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *currentWindow){
     mScreen=NULL;
     mPressedKeys=new PressedKeys;
@@ -62,23 +71,20 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     }
 
 #ifdef WIN32
-    mScreen=NULL;SDL_CreateWindowFrom(currentWindow);
-   if(0)if (!fullscreen)
-   {
-      // the window is not fullscreen:
-
-      // This is necessary to allow the window to move
-      //  on WIN32 systems. Without this, the window resets
-      //  to the smallest possible size after moving.
-      SDL_SetVideoMode(width, height, 0, 0); // first 0: BitPerPixel, 
-                                             // second 0: flags (fullscreen/...)
-                                             // neither are needed as Ogre sets these
-   }
+    mScreen=NULL;
+	SDL_WindowID windowID=SDL_CreateWindowFrom(currentWindow);
+    //SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
+	RAWINPUTDEVICE Rid;
+    /* we're telling the window, we want it to report raw input events from mice */
+    Rid.usUsagePage = 0x01;
+    Rid.usUsage = 0x02;
+    Rid.dwFlags = RIDEV_INPUTSINK;
+    Rid.hwndTarget = (HWND)currentWindow;
+    RegisterRawInputDevices(&Rid, 1, sizeof(Rid));
 
    static SDL_SysWMinfo pInfo;
    SDL_VERSION(&pInfo.version);
-   SDL_GetWMInfo(&pInfo);
-
+   SDL_GetWindowWMInfo(windowID,&pInfo);
    // Also, SDL keeps an internal record of the window size
    //  and position. Because SDL does not own the window, it
    //  missed the WM_POSCHANGED message and has no record of
