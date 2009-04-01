@@ -51,11 +51,13 @@
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
 #include "SDLInputManager.hpp"
+//#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
 //volatile char assert_malloc_is_gequal_1[OGRE_MEMORY_ALLOCATOR*2-1]={0};
 //volatile char assert_malloc_is_lequal_1[3-OGRE_MEMORY_ALLOCATOR*2]={0};
+
 
 namespace Sirikata {
 namespace Graphics {
@@ -289,8 +291,9 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 #endif
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
-#if defined(_WIN32) //||defined(__APPLE__)
             void* hWnd;
+
+#if defined(_WIN32) //||defined(__APPLE__)
             getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
 #ifdef _WIN32
             {
@@ -304,17 +307,29 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                                                   getRoot()->getAutoCreatedWindow()->isFullScreen(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
-						  hWnd);
+                          						  hWnd);
 #else
                 mInputManager=new SDLInputManager(mWindowWidth->as<uint32>(),
                                                   mWindowHeight->as<uint32>(),
                                                   mFullScreen->as<bool>(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
-                                                  grabCursor->as<bool>());
+                                                  grabCursor->as<bool>(),
+                                                  hWnd);
 #endif
             if (!doAutoWindow) {
                 Ogre::NameValuePairList misc;
+#ifdef __APPLE__
+            {
+                //FIXME: hWnd appears to be a NSWindow* in the default SDL 1.3 implementation
+                //it appears Ogre wants an NSView*  attempts to convert it using a .m file were insufficient to get ogre to use it
+                
+                //misc["externalWindowHandle"] = Ogre::StringConverter::toString((NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);                    
+                //misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+            }
+                
+#else
                 misc["currentGLContext"] = String("True");                    
+#endif
                 Ogre::RenderWindow *rw;
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                 rw->setVisible(true);

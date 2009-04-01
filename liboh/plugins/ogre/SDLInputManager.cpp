@@ -39,9 +39,7 @@
 #include <OgreRenderWindow.h>
 #include <SDL.h>
 #include <SDL_video.h>
-#ifdef _WIN32
 #include <SDL_syswm.h>
-#endif
 #include <util/Time.hpp>
 #include "SDLInputManager.hpp"
 #include "SDLEvents.hpp"
@@ -61,7 +59,7 @@ class PressedJoyButtons {public:
 };
 
 
-SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *currentWindow){
+SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *&currentWindow){
     mWindowContext=0;
     mPressedKeys=new PressedKeys;
     mPressedMouseButtons=new PressedMouseButtons;
@@ -109,11 +107,15 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
    mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
    SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
    SDL_GL_MakeCurrent(mWindowID,ctx);
-#ifndef __APPLE__
    SDL_ShowWindow(mWindowID);
-#endif
    if (!mWindowID) {
        SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
+   }else {
+       SDL_SysWMinfo info;
+       memset(&info,0,sizeof(SDL_SysWMinfo));
+       SDL_VERSION(&info.version);
+       SDL_GetWindowWMInfo(mWindowID,&info);
+       currentWindow=(void*)info.data;
    }
 #endif
 
