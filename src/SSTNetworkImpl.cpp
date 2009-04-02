@@ -48,12 +48,33 @@ bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliabl
     return true;
 }
 
-Network::Chunk* CBRSST::receiveOne() {
-    if (mReceiveQueue.empty())
-        return NULL;
-    Network::Chunk* chunk = mReceiveQueue.front();
-    mReceiveQueue.pop();
-    return chunk;
+Network::Chunk* CBRSST::receiveOne(const Address4& from) {
+    SST::Stream* strm = NULL;
+    uint32 max_size = 100000000;
+
+    if (from == Address4::Null) {
+        // FIXME this should do something smarter than just choosing the first one with data
+        for(StreamMap::iterator it = mReceiveConnections.begin(); it != mReceiveConnections.end(); it++) {
+            if (it->second->hasPendingMessages() && it->second->pendingMessageSize() <= max_size) {
+                strm = it->second;
+                break;
+            }
+        }
+        if (strm == NULL) return NULL;
+    }
+    else {
+        strm = lookupOrConnect(from);
+    }
+
+    if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
+        QByteArray msg = strm->readMessage();
+        if (msg.isEmpty())
+            return NULL;
+
+        return new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
+    }
+
+    return NULL;
 }
 
 void CBRSST::service() {
@@ -99,16 +120,7 @@ void CBRSST::handleConnection() {
 }
 
 void CBRSST::handleReadyReadMessage() {
-    SST::Stream* strm = (SST::Stream*)sender();
-
-    while(true) {
-        QByteArray msg = strm->readMessage();
-        if (msg.isEmpty())
-            return;
-
-        Network::Chunk* chunk = new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
-        mReceiveQueue.push(chunk);
-    }
+    // don't do anything, they'll be serviced on demand in the receive method
 }
 
 void CBRSST::handleReadyReadDatagram() {

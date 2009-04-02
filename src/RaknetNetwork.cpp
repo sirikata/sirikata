@@ -6,7 +6,11 @@
        #include <arpa/inet.h>
 
 namespace CBR {
-RaknetNetwork::RaknetNetwork ():Network(),mListener(RakNetworkFactory::GetRakPeerInterface()){
+RaknetNetwork::RaknetNetwork ()
+ : Network(),
+   mListener(RakNetworkFactory::GetRakPeerInterface()),
+   mOutstandingPacket(NULL)
+{
 }
 void RaknetNetwork::init(void*(*x)(void*)){
         (*x)(NULL);
@@ -36,7 +40,6 @@ void ConnectTo(RakPeerInterface*ri,const SystemAddress &sa) {
                                       0,
                                       0);
     assert(evenTried);
-
 }
 bool RaknetNetwork::send(const Address4&addy, const Sirikata::Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
     if (toSend.size()==0)
@@ -76,10 +79,8 @@ bool RaknetNetwork::send(const Address4&addy, const Sirikata::Network::Chunk& to
     }
 }
 Sirikata::Network::Chunk*RaknetNetwork::makeChunk(RakPeerInterface*i,Packet*p) {
-
     Sirikata::Network::Chunk*retval=new Sirikata::Network::Chunk(0);
     retval->insert(retval->end(),p->data+1,p->data+p->length);
-    i->DeallocatePacket(p);
     return retval;
 }
 bool RaknetNetwork::sendRemainingItems(SystemAddress address) {
@@ -98,9 +99,50 @@ bool RaknetNetwork::sendRemainingItems(SystemAddress address) {
     return false;
 }
 
-Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
-    Packet*p;
-    while ((p=mListener->Receive())) {
+Sirikata::Network::Chunk*RaknetNetwork::receiveOne(const Address4& from) {
+    if (from == Address4::Null) {
+        // choose the most full queue
+        Queue<Chunk*>* most_full = NULL;
+        for(ReceiveQueueMap::iterator it = mReceiveQueues.begin(); it != mReceiveQueues.end(); it++) {
+            Queue<Chunk*>* q = it->second;
+            if (!q->empty() && (most_full == NULL || most_full->size() < q->size()))
+                most_full = q;
+        }
+
+        if (most_full == NULL) return NULL;
+        return most_full->pop();
+    }
+
+    Queue<Chunk*>* q = getReceiveQueue(from);
+    if (q == NULL || q->empty()) return NULL;
+    return q->pop();
+}
+
+Packet* RaknetNetwork::nextPacket() {
+    if (mOutstandingPacket != NULL) {
+        Packet* result = mOutstandingPacket;
+        mOutstandingPacket = NULL;
+        return result;
+    }
+
+    return mListener->Receive();
+}
+
+Queue<Network::Chunk*>* RaknetNetwork::getReceiveQueue(const Address4& addr) {
+    ReceiveQueueMap::iterator it = mReceiveQueues.find(addr);
+
+    if (it == mReceiveQueues.end()) {
+        Queue<Chunk*>* new_queue = new Queue<Chunk*>(64*1024); //FIXME constant
+        mReceiveQueues[addr] = new_queue;
+        return new_queue;
+    }
+
+    return it->second;
+}
+
+void RaknetNetwork::service(const Time& t) {
+    Packet* p = NULL;
+    while ((p = nextPacket())) {
         unsigned char packetIdentifier = p->data[0];
         //fprintf (stderr,"GOT SOMETHING!!!%d\n",packetIdentifier);
         switch (packetIdentifier) {
@@ -131,14 +173,27 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne() {
             sendRemainingItems(p->systemAddress);
             break;
           case ID_USER_PACKET_ENUM:
-            return makeChunk(mListener,p);
+              {
+                  Address4 sourceAddr = MakeAddress(p->systemAddress);
+                  Chunk* rchunk = makeChunk(mListener,p);
+                  // try to insert the chunk
+                  Queue<Chunk*>* rqueue = getReceiveQueue(sourceAddr);
+                  if (rqueue->push(rchunk) == QueueEnum::PushSucceeded) { // push succeeded, so we can just proceed normally
+                  }
+                  else { // we couldn't handle this packet, so we need to stop processing and try again later
+                      delete rchunk;
+                      mOutstandingPacket = p;
+                      return;
+                  }
+              }
+              break;
           default:
             fprintf(stderr,"New unknown error message: %d\n",ID_USER_PACKET_ENUM);
             break;
         }
-    }
-    return  NULL;
-}
 
+        mListener->DeallocatePacket(p);
+    }
+}
 
 }

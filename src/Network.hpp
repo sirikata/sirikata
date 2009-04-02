@@ -34,17 +34,22 @@ public:
     uint16 getPort() const {
         return port;
     }
+
+    static Address4 Null;
 };
 
 class Network {
 public:
-    virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority)=0;
     typedef Sirikata::Network::Chunk Chunk;
+
     virtual ~Network() {}
-    virtual void listen (const Address4&)=0;
-    virtual Sirikata::Network::Chunk*receiveOne()=0;
-    virtual void service(const Time& t) {}
+
     virtual void init(void*(*)(void*))=0;
+
+    virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
+    virtual void listen (const Address4&)=0;
+    virtual Chunk* receiveOne(const Address4& from = Address4::Null)=0;
+    virtual void service(const Time& t) {}
 };
 }
 #endif //_CBR_NETWORK_HPP_

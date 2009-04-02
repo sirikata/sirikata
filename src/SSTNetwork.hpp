@@ -13,7 +13,7 @@ public:
     virtual ~SSTNetwork();
     virtual bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
     virtual void listen (const Address4&);
-    virtual Network::Chunk* receiveOne();
+    virtual Network::Chunk* receiveOne(const Address4& from);
     virtual void service(const Time& t);
     virtual void init(void* (*)(void*));
 private:

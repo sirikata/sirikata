@@ -19,7 +19,7 @@ public:
     ~CBRSST();
     void listen(uint32 port);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
-    Network::Chunk* receiveOne();
+    Network::Chunk* receiveOne(const Address4& from);
     void service();
     void init(void* (*x)(void*));
 private slots:
@@ -34,7 +34,6 @@ private slots:
     void handleInit();
 private:
     typedef std::map<Address4, SST::Stream*> StreamMap;
-    typedef std::queue<Network::Chunk*> ChunkQueue;
 
     SST::Stream* lookupOrConnect(const Address4& addy);
     void *(*mMainCallback)(void*);
@@ -43,7 +42,6 @@ private:
     SST::StreamServer* mAcceptor;
     StreamMap mSendConnections;
     StreamMap mReceiveConnections;
-    ChunkQueue mReceiveQueue;
 
 }; // class CBRSST
 

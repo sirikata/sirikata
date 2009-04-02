@@ -96,6 +96,10 @@ public:
         return mElements.empty();
     }
 
+    uint32 size() const {
+        return mSize;
+    }
+
 /** FIXME this is unsafe since we need to track the size of all messages
     std::deque<ElementType>& messages() {
         return mElements;

@@ -8,6 +8,7 @@
 #include "raknet/RakNetStatistics.h"
 #include "raknet/RakNetTypes.h"
 #include "raknet/BitStream.h"
+#include "Queue.hpp"
 
 namespace CBR {
 
@@ -36,13 +37,20 @@ class RaknetNetwork :public Network{
     ConnectingMap mConnectingSockets;
     bool sendRemainingItems(SystemAddress address);
 
+    typedef std::map<Address4, Queue<Chunk*>*> ReceiveQueueMap;
+    ReceiveQueueMap mReceiveQueues;
+    Packet* mOutstandingPacket; // raknet doesn't allow us to peek at the front packet
+
+    Packet* nextPacket();
+    Queue<Chunk*>* getReceiveQueue(const Address4& addr);
 public:
-    virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
     RaknetNetwork();
+
+    virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual void init(void*(*)(void*));
     virtual void listen (const Address4& as_server);
-    virtual Sirikata::Network::Chunk*receiveOne();
-
+    virtual Sirikata::Network::Chunk* receiveOne(const Address4& from);
+    virtual void service(const Time& t);
 };
 
 }

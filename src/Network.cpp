@@ -3,6 +3,8 @@
 #include <netdb.h>
 namespace CBR{
 
+Address4 Address4::Null = Address4(0,0);
+
 Address4::Address4(const Sirikata::Network::Address&a){
     hostent*addrs=gethostbyname(a.getHostName().c_str());
     if (addrs) {
