@@ -35,8 +35,11 @@ if [ -e installed-sst ]; then
   rm -rf installed-sst
 fi
 
-svn co svn://svn.pdos.csail.mit.edu/uia/trunk/uia/sst
+#svn co svn://svn.pdos.csail.mit.edu/uia/trunk/uia/sst
+git clone git@ahoy:sst.git
 cd sst
+git branch stanford origin/stanford
+git checkout stanford
 misc/setup
 ./configure --prefix=${deps_dir}/installed-sst
 make
