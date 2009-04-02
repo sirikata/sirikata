@@ -30,64 +30,78 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_QUEUE_HPP_
-#define _CBR_QUEUE_HPP_
+#ifndef _CBR_POLIST_HPP_
+#define _CBR_POLIST_HPP_
 
 #include "Utility.hpp"
 
 namespace CBR {
 
-namespace QueueEnum {
-    enum PushResult {
-        PushSucceeded,
-        PushExceededMaximumSize
-    };
-};
-
 /** Functor to retrieve the size of an object via a size() method. */
 template<typename ElementType>
-struct MethodSizeFunctor {
+struct PartiallyOrderedMethodSizeFunctor {
     uint32 operator()(const ElementType& e) const {
         return e->size();
     }
 };
+template<typename ElementType, typename Destination>
+struct ElementDestinationFunctor {
+    Destination operator()(const ElementType& e) const {
+        return e->dest();
+    }
+};
 
 /** Queue with maximum bytes of storage. */
-template <typename ElementType, typename SizeFunctorType = MethodSizeFunctor<ElementType> >
-class Queue {
-    std::deque<ElementType> mElements;
-    SizeFunctorType mSizeFunctor;
+template <typename ElementType, typename Destination, typename ElementDestinationType = ElementDestinationFunctor<ElementType, Destination>, typename SizeFunctorType = PartiallyOrderedMethodSizeFunctor<ElementType> >
+class PartiallyOrderedList {
+    std::map<Destination,std::deque<ElementType> > mLists;
+    std::deque<Destination> mElements;
     uint32 mMaxSize;
     uint32 mSize;
 public:
-    Queue(uint32 max_size){
+    PartiallyOrderedList(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;
     }
-    ~Queue(){}
+    ~PartiallyOrderedList(){}
 
     QueueEnum::PushResult push(const ElementType &msg){
-        uint32 msg_size = mSizeFunctor(msg);
+        uint32 msg_size = SizeFunctorType()(msg);
         if (mSize + msg_size > mMaxSize)
             return QueueEnum::PushExceededMaximumSize;
-        mElements.push_back(msg);
+        Destination dst=ElementDestinationType()(msg);
+        if (mLists.find(dst)==mLists.end()) {
+            mElements.push_back(dst);
+        }
+        mLists[dst].push_back(msg);
         mSize += msg_size;
         return QueueEnum::PushSucceeded;
     }
-    void deprioritize(){}
+    void deprioritize(){
+        mElements.push_back(mElements.front());
+        mElements.pop_front();
+    }
     const ElementType& front() const{
-        return mElements.front();
+        return mLists.find(mElements.front())->second.front();
     }
 
     ElementType& front() {
-        return mElements.front();
+        return mLists[mElements.front()].front();
     }
 
     ElementType pop(){
         ElementType m;
-        std::swap(m,mElements.front());
-        mElements.pop_front();
-        uint32 m_size = mSizeFunctor(m);
+        std::deque<ElementType>*items=&mLists[mElements.front()];
+        
+        std::swap(m,items->front());
+        items->pop_front();
+        if (items->empty()) {
+            mLists.erase(mLists.find(mElements.front()));
+            mElements.pop_front();
+        }else {
+            deprioritize();
+        }
+        uint32 m_size = SizeFunctorType()(m);
         mSize -= m_size;
         return m;
     }

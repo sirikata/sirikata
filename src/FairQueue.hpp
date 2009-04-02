@@ -44,26 +44,29 @@ public:
         return mq.empty()?nil->size():mq.front()->size();
     }
 };
-template <class Message,class Key,class WeightFunction=Weight<Queue<Message*> > > class FairQueue {
+template <class Message,class Key,class TQueue, class WeightFunction=Weight<TQueue > > class FairQueue {
 public:
     struct ServerQueueInfo {
+    private:
         ServerQueueInfo():nextFinishTime(0) {
             messageQueue=NULL;
             weight=1.0;
         }
-        ServerQueueInfo(Queue<Message*>* queue, float w)
-         : messageQueue(queue), weight(w), nextFinishTime(0) {}
+    public:
+        ServerQueueInfo(Key serverName, TQueue* queue, float w)
+          : messageQueue(queue), weight(w), nextFinishTime(0),mKey(serverName) {}
 
-        Queue<Message*>* messageQueue;
+        TQueue* messageQueue;
         float weight;
         Time nextFinishTime;
+        Key mKey;
     };
 
 
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
     unsigned int mEmptyQueueMessageLength;
     bool mRenormalizeWeight;
-    typedef Queue<Message*> MessageQueue;
+    typedef TQueue MessageQueue;
     FairQueue(unsigned int emptyQueueMessageLength, bool renormalizeWeight)
         :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
@@ -85,10 +88,10 @@ public:
     void addQueue(MessageQueue *mq, Key server, float weight){
         assert(mq->empty());
 
-        ServerQueueInfo queue_info (mq, weight);
+        ServerQueueInfo queue_info (server, mq, weight);
 
         mTotalWeight += weight;
-        mServerQueues[server] = queue_info;
+        mServerQueues.insert(std::pair<Key,ServerQueueInfo>(server, queue_info));
     }
     void setQueueWeight(Key server, float weight) {
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
@@ -98,6 +101,25 @@ public:
             mTotalWeight += weight;
             where->second.weight = weight;
         }
+    }
+    bool deprioritize(Key server,float factor, float affine, float minval,float maxval) {
+        return changepriority(server,factor,affine,minval,maxval,true);
+    }
+    bool reprioritize(Key server,float factor, float affine, float minval,float maxval) {
+        return changepriority(server,factor,affine,minval,maxval,false);
+    }
+    bool changepriority(Key server,float factor, float affine, float minval,float maxval, bool passOnDeprioritize) {
+        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
+        if ( where == mServerQueues.end() )
+            return false;
+        float oldweight=where->second.weight;
+        oldweight*=factor;
+        oldweight+=affine;
+        if (oldweight<minval){
+            oldweight=minval;
+        }
+        this->setQueueWeight(server,oldweight);
+        return true;
     }
     bool removeQueue(Key server) {
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
@@ -112,7 +134,9 @@ public:
     bool hasQueue(Key server) const{
         return ( mServerQueues.find(server) != mServerQueues.end() );
     }
-
+    unsigned int numQueues() const {
+        return (unsigned int)mServerQueues.size();
+    }
     QueueEnum::PushResult push(Key dest_server, Message *msg){
         typename ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
 
@@ -133,14 +157,15 @@ public:
     // \param bytes number of bytes available; updated appropriately for intermediate null messages when returns
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allocated
-    Message* front(uint64* bytes) {
+    Message* front(uint64* bytes, Key*keyAtFront) {
         Message* result = NULL;
         Time vftime(0);
         ServerQueueInfo* min_queue_info = NULL;
-
+        
         nextMessage(bytes, &result, &vftime, &min_queue_info);
         if (result != NULL) {
             assert( *bytes >= result->size() );
+            *keyAtFront=min_queue_info->mKey;
             return result;
         }
 

@@ -35,7 +35,7 @@ protected:
         }
     };
 
-    FairQueue<ServerMessagePair, ServerID > mServerQueues;
+    FairQueue<ServerMessagePair, ServerID, Queue<ServerMessagePair*> > mServerQueues;
 
     Time mLastTime;
     uint32 mRate;

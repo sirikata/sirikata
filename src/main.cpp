@@ -53,7 +53,7 @@
 #include "FairObjectMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
-
+#include "PartiallyOrderedList.hpp"
 #include "UniformCoordinateSegmentation.hpp"
 
 #include "ServerWeightCalculator.hpp"
@@ -194,8 +194,10 @@ void *main_loop(void *) {
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
         oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), trace);
-    else if (object_queue_type == "fair")
-        oq = new FairObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+    else if (object_queue_type == "fairfifo")
+        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+    else if (object_queue_type == "fairreorder")
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
     else {
         assert(false);
         exit(-1);

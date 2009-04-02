@@ -2,10 +2,9 @@
 #define _CBR_FAIROBJECTMESSAGEQUEUE_HPP
 #include "ObjectMessageQueue.hpp"
 #include "ServerMessageQueue.hpp"
+#include "PartiallyOrderedList.hpp"
 namespace CBR {
-class FairObjectMessageQueue:public ObjectMessageQueue {
-protected:
-
+namespace FairObjectMessageNamespace {
     class ServerMessagePair {
     private:
         std::pair<ServerID,Network::Chunk> mPair;
@@ -32,7 +31,13 @@ protected:
             return mPair.second;
         }
     };
-    FairQueue<ServerMessagePair,UUID> mClientQueues;
+}
+
+template <class TQueue=Queue<FairObjectMessageNamespace::ServerMessagePair*> >
+class FairObjectMessageQueue:public ObjectMessageQueue {
+protected:
+    typedef FairObjectMessageNamespace::ServerMessagePair ServerMessagePair;
+    FairQueue<ServerMessagePair,UUID,TQueue > mClientQueues;
     Time mLastTime;
     uint32 mRate;
     uint32 mRemainderBytes;

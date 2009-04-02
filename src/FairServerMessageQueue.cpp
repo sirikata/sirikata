@@ -53,7 +53,8 @@ void FairServerMessageQueue::service(const Time&t){
     uint64 bytes = (t - mLastTime).seconds() * mRate + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
-    while( bytes > 0 && (next_msg = mServerQueues.front(&bytes)) != NULL ) {
+    ServerID sid;
+    while( bytes > 0 && (next_msg = mServerQueues.front(&bytes,&sid)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
         assert(addy != NULL);
         bool sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
