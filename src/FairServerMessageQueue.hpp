@@ -34,7 +34,7 @@ protected:
             return mPair.second;
         }
     };
-    std::vector<ServerMessagePair*> mClientServerBuffer;
+
     FairQueue<ServerMessagePair, ServerID > mServerQueues;
 
     Time mLastTime;
@@ -42,6 +42,8 @@ protected:
     uint32 mRemainderBytes;
     Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
 
+    typedef std::set<ServerID> ReceiveServerList;
+    ReceiveServerList mSourceServers;
     struct ChunkSourcePair {
         Network::Chunk* chunk;
         ServerID source;

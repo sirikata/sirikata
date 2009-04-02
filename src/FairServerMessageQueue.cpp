@@ -87,21 +87,24 @@ void FairServerMessageQueue::service(const Time&t){
 
 
     // no limit on receive bandwidth
-    while( Network::Chunk* c = mNetwork->receiveOne(Address4::Null, 1000000) ) {
-        uint32 offset = 0;
-        ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
-        assert(hdr.destServer() == mSourceServer);
-        Network::Chunk* payload = new Network::Chunk;
-        payload->insert(payload->begin(), c->begin() + offset, c->end());
-        delete c;
+    for(ReceiveServerList::iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
+        Address4* addr = mServerIDMap->lookup(*it);
+        assert(addr != NULL);
+        while( Network::Chunk* c = mNetwork->receiveOne(*addr, 1000000) ) {
+            uint32 offset = 0;
+            ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
+            assert(hdr.destServer() == mSourceServer);
+            Network::Chunk* payload = new Network::Chunk;
+            payload->insert(payload->begin(), c->begin() + offset, c->end());
+            delete c;
 
-        ChunkSourcePair csp;
-        csp.chunk = payload;
-        csp.source = hdr.sourceServer();
+            ChunkSourcePair csp;
+            csp.chunk = payload;
+            csp.source = hdr.sourceServer();
 
-        mReceiveQueue.push(csp);
+            mReceiveQueue.push(csp);
+        }
     }
-
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
@@ -111,6 +114,8 @@ void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     else {
         mServerQueues.setQueueWeight(sid, weight);
     }
+
+    mSourceServers.insert(sid);
 }
 
 }

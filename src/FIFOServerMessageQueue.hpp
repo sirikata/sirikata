@@ -34,6 +34,8 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     Time mLastTime;
     Time mLastSendEndTime; // the time at which the last send ended, if there are messages that are too big left in the queue
 
+    typedef std::set<ServerID> ReceiveServerList;
+    ReceiveServerList mSourceServers;
     struct ChunkSourcePair {
         Network::Chunk* chunk;
         ServerID source;
