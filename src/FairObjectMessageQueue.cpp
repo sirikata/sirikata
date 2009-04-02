@@ -1,5 +1,7 @@
 #include "Network.hpp"
 #include "Server.hpp"
+#include "Queue.hpp"
+#include "LossyQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "FairObjectMessageQueue.hpp"
 #include "Message.hpp"
@@ -62,4 +64,5 @@ template <class Queue> void FairObjectMessageQueue<Queue>::removeClient(UUID sid
 }
 template class FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID> >;
 template class FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> >;
+template class FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> >;
 }

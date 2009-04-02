@@ -46,7 +46,7 @@
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
 #include "SSTNetwork.hpp"
-//#include "LossyFairSendQueue.hpp"
+#include "LossyQueue.hpp"
 #include "FIFOObjectMessageQueue.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
@@ -196,6 +196,8 @@ void *main_loop(void *) {
         oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), trace);
     else if (object_queue_type == "fairfifo")
         oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+    else if (object_queue_type == "fairlossy")
+        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
     else if (object_queue_type == "fairreorder")
         oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
     else {
