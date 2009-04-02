@@ -48,7 +48,7 @@ public:
 
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
     virtual void listen (const Address4&)=0;
-    virtual Chunk* receiveOne(const Address4& from = Address4::Null)=0;
+    virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
     virtual void service(const Time& t) {}
 };
 }

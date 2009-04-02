@@ -99,13 +99,13 @@ bool RaknetNetwork::sendRemainingItems(SystemAddress address) {
     return false;
 }
 
-Sirikata::Network::Chunk*RaknetNetwork::receiveOne(const Address4& from) {
+Sirikata::Network::Chunk*RaknetNetwork::receiveOne(const Address4& from, uint32 max_size) {
     if (from == Address4::Null) {
         // choose the most full queue
         Queue<Chunk*>* most_full = NULL;
         for(ReceiveQueueMap::iterator it = mReceiveQueues.begin(); it != mReceiveQueues.end(); it++) {
             Queue<Chunk*>* q = it->second;
-            if (!q->empty() && (most_full == NULL || most_full->size() < q->size()))
+            if (!q->empty() && (most_full == NULL || most_full->size() < q->size()) && q->front()->size() <= max_size)
                 most_full = q;
         }
 
@@ -114,7 +114,7 @@ Sirikata::Network::Chunk*RaknetNetwork::receiveOne(const Address4& from) {
     }
 
     Queue<Chunk*>* q = getReceiveQueue(from);
-    if (q == NULL || q->empty()) return NULL;
+    if (q == NULL || q->empty() || q->front()->size() > max_size) return NULL;
     return q->pop();
 }
 

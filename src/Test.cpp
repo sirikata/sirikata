@@ -16,7 +16,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
     unsigned int maxval=65637;
     while (mine<maxval||theirs<maxval) {
         Sirikata::Network::Chunk *c;
-        while ((c=rn.receiveOne(Address4::Null))) {
+        while ((c=rn.receiveOne(Address4::Null, 1000000))) {
             canSend=true;
             unsigned int network;
             if (c->size()>=4) {

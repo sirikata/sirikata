@@ -19,7 +19,7 @@ public:
     ~CBRSST();
     void listen(uint32 port);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
-    Network::Chunk* receiveOne(const Address4& from);
+    Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     void service();
     void init(void* (*x)(void*));
 private slots:

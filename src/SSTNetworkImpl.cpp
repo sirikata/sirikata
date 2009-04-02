@@ -48,9 +48,8 @@ bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliabl
     return true;
 }
 
-Network::Chunk* CBRSST::receiveOne(const Address4& from) {
+Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
     SST::Stream* strm = NULL;
-    uint32 max_size = 100000000;
 
     if (from == Address4::Null) {
         // FIXME this should do something smarter than just choosing the first one with data

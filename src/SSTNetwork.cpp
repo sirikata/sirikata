@@ -21,8 +21,8 @@ void SSTNetwork::listen(const Address4& as_server) {
     mImpl->listen(as_server.getPort());
 }
 
-Network::Chunk* SSTNetwork::receiveOne(const Address4& from) {
-    return mImpl->receiveOne(from);
+Network::Chunk* SSTNetwork::receiveOne(const Address4& from, uint32 max_size) {
+    return mImpl->receiveOne(from, max_size);
 }
 
 void SSTNetwork::service(const Time& t) {

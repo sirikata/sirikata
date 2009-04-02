@@ -87,7 +87,7 @@ void FairServerMessageQueue::service(const Time&t){
 
 
     // no limit on receive bandwidth
-    while( Network::Chunk* c = mNetwork->receiveOne() ) {
+    while( Network::Chunk* c = mNetwork->receiveOne(Address4::Null, 1000000) ) {
         uint32 offset = 0;
         ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
         assert(hdr.destServer() == mSourceServer);
