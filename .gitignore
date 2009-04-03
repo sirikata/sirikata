@@ -1,0 +1,21 @@
+
+# CMake files
+build/cmake/CMakeCache.txt
+build/cmake/CMakeFiles
+build/cmake/Makefile
+build/cmake/cmake_install.cmake
+
+# build products
+build/cmake/cbr
+
+# config files
+build/cmake/serverip*
+# trace files
+build/cmake/sync*
+build/cmake/trace*
+
+# moc files
+build/cmake/moc*
+
+# dependencies directory
+dependencies
