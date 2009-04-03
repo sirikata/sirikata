@@ -33,6 +33,8 @@ private slots:
     void handleReset();
     void handleInit();
 private:
+    void trySendCurrentChunk();
+
     typedef std::map<Address4, SST::Stream*> StreamMap;
 
     SST::Stream* lookupOrConnect(const Address4& addy);
@@ -40,9 +42,16 @@ private:
     QApplication* mApp;
     SST::Host* mHost;
     SST::StreamServer* mAcceptor;
-    StreamMap mSendConnections;
-    StreamMap mReceiveConnections;
 
+    struct NetworkChunk {
+        Address4 addr;
+        Network::Chunk data;
+        uint32 bytes_sent;
+    };
+    NetworkChunk* mCurrentSendChunk;
+    StreamMap mSendConnections;
+
+    StreamMap mReceiveConnections;
 }; // class CBRSST
 
 } // namespace CBR

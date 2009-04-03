@@ -10,6 +10,7 @@ namespace CBR {
 CBRSST::CBRSST()
 {
     mApp = new QApplication(0, 0);
+    mCurrentSendChunk = NULL;
 }
 
 CBRSST::~CBRSST() {
@@ -40,10 +41,32 @@ void CBRSST::listen(uint32 port) {
         this, SLOT(handleConnection()));
 }
 
-bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority) {
-    Stream* strm = lookupOrConnect(addy);
+void CBRSST::trySendCurrentChunk() {
+    // try to service the most recent
+    if (mCurrentSendChunk == NULL) return;
 
-    strm->writeMessage((const char*)&data[0], data.size());
+    Stream* strm = lookupOrConnect(mCurrentSendChunk->addr);
+    uint32 new_bytes_sent = strm->writeMessage((const char*)&mCurrentSendChunk->data[mCurrentSendChunk->bytes_sent], mCurrentSendChunk->data.size() - mCurrentSendChunk->bytes_sent);
+    mCurrentSendChunk->bytes_sent += new_bytes_sent;
+
+    if (mCurrentSendChunk->bytes_sent == mCurrentSendChunk->data.size()) {
+        delete mCurrentSendChunk;
+        mCurrentSendChunk = NULL;
+    }
+}
+
+bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority) {
+    trySendCurrentChunk();
+
+    if (mCurrentSendChunk != NULL)
+        return false;
+
+    mCurrentSendChunk = new NetworkChunk();
+    mCurrentSendChunk->addr = addy;
+    mCurrentSendChunk->data = data;
+    mCurrentSendChunk->bytes_sent = 0;
+
+    trySendCurrentChunk();
 
     return true;
 }
