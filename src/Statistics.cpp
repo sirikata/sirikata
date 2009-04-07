@@ -69,9 +69,9 @@ void BatchedBuffer::write(std::ostream& os) {
 const uint8 Trace::ProximityTag;
 const uint8 Trace::LocationTag;
 const uint8 Trace::SubscriptionTag;
-const uint8 Trace::PacketQueuedTag;
-const uint8 Trace::PacketSentTag;
-const uint8 Trace::PacketReceivedTag;
+const uint8 Trace::ServerDatagramQueuedTag;
+const uint8 Trace::ServerDatagramSentTag;
+const uint8 Trace::ServerDatagramReceivedTag;
 
 
 static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -111,23 +111,23 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 }
 
-void Trace::packetQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
-    data.write( &PacketQueuedTag, sizeof(PacketQueuedTag) );
+void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+    data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
 }
 
-void Trace::packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data) {
+void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data) {
     uint32 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
-    packetSent(start_time, end_time, dest, id, size);
+    serverDatagramSent(start_time, end_time, dest, id, size);
 }
 
-void Trace::packetSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size) {
-    data.write( &PacketSentTag, sizeof(PacketSentTag) );
+void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size) {
+    data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
@@ -136,8 +136,8 @@ void Trace::packetSent(const Time& start_time, const Time& end_time, const Serve
     data.write( &end_time, sizeof(end_time) );
 }
 
-void Trace::packetReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size) {
-    data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
+void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size) {
+    data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &src, sizeof(src) );
     data.write( &id, sizeof(id) );

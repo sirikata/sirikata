@@ -70,7 +70,7 @@ void FairServerMessageQueue::service(const Time&t){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mTrace->packetSent(start_time, end_time, next_msg->dest(), next_msg->data());
+        mTrace->serverDatagramSent(start_time, end_time, next_msg->dest(), next_msg->data());
 
         delete next_msg;
     }

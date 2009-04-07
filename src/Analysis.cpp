@@ -74,28 +74,28 @@ struct SubscriptionEvent : public ObjectEvent {
 };
 
 
-struct PacketEvent : public Event {
+struct ServerDatagramEvent : public Event {
     ServerID source;
     ServerID dest;
     uint32 id;
     uint32 size;
 };
 
-struct PacketQueuedEvent : public PacketEvent {
+struct ServerDatagramQueuedEvent : public ServerDatagramEvent {
 };
 
-struct PacketSentEvent : public PacketEvent {
-    PacketSentEvent()
-     : PacketEvent(), start_time(0), end_time(0)
+struct ServerDatagramSentEvent : public ServerDatagramEvent {
+    ServerDatagramSentEvent()
+     : ServerDatagramEvent(), start_time(0), end_time(0)
     {}
 
     Time start_time;
     Time end_time;
 };
 
-struct PacketReceivedEvent : public PacketEvent {
-    PacketReceivedEvent()
-     : PacketEvent(), start_time(0), end_time(0)
+struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
+    ServerDatagramReceivedEvent()
+     : ServerDatagramEvent(), start_time(0), end_time(0)
     {}
 
     Time start_time;
@@ -142,9 +142,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = sevt;
           }
           break;
-      case Trace::PacketQueuedTag:
+      case Trace::ServerDatagramQueuedTag:
           {
-              PacketQueuedEvent* pqevt = new PacketQueuedEvent;
+              ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
               is.read( (char*)&pqevt->time, sizeof(pqevt->time) );
               pqevt->source = trace_server_id;
               is.read( (char*)&pqevt->dest, sizeof(pqevt->dest) );
@@ -153,9 +153,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = pqevt;
           }
           break;
-      case Trace::PacketSentTag:
+      case Trace::ServerDatagramSentTag:
           {
-              PacketSentEvent* psevt = new PacketSentEvent;
+              ServerDatagramSentEvent* psevt = new ServerDatagramSentEvent;
               is.read( (char*)&psevt->time, sizeof(psevt->time) );
               psevt->source = trace_server_id;
               is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
@@ -166,9 +166,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = psevt;
           }
           break;
-      case Trace::PacketReceivedTag:
+      case Trace::ServerDatagramReceivedTag:
           {
-              PacketReceivedEvent* prevt = new PacketReceivedEvent;
+              ServerDatagramReceivedEvent* prevt = new ServerDatagramReceivedEvent;
               is.read( (char*)&prevt->time, sizeof(prevt->time) );
               is.read( (char*)&prevt->source, sizeof(prevt->source) );
               prevt->dest = trace_server_id;
@@ -412,7 +412,7 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
             Event* evt = Event::read(is, server_id);
             if (evt == NULL)
                 break;
-            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
+            ServerDatagramEvent* packet_evt = dynamic_cast<ServerDatagramEvent*>(evt);
             if (packet_evt == NULL)
                 continue;
 
@@ -468,19 +468,19 @@ BandwidthAnalysis::EventList* BandwidthAnalysis::getEventList(const ServerID& se
 }
 
 void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& receiver) const {
-    computeRate<PacketSentEvent>(sender, receiver, sender);
+    computeRate<ServerDatagramSentEvent>(sender, receiver, sender);
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
-    computeRate<PacketReceivedEvent>(sender, receiver, receiver);
+    computeRate<ServerDatagramReceivedEvent>(sender, receiver, receiver);
 }
 
 void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
-    computeWindowedRate<PacketSentEvent>(sender, receiver, sender, window, sample_rate, start_time, end_time);
+    computeWindowedRate<ServerDatagramSentEvent>(sender, receiver, sender, window, sample_rate, start_time, end_time);
 }
 
 void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
-    computeWindowedRate<PacketReceivedEvent>(sender, receiver, receiver, window, sample_rate, start_time, end_time);
+    computeWindowedRate<ServerDatagramReceivedEvent>(sender, receiver, receiver, window, sample_rate, start_time, end_time);
 }
 
 } // namespace CBR
