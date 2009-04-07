@@ -108,6 +108,11 @@ public:
         retval.initialize(begin,end);
         return retval;
     }
+    template <class InputIterator> static Array construct(InputIterator begin) {
+        Array retval;
+        retval.initialize(begin,begin+static_size);
+        return retval;
+    }
     bool operator <(const Array &other)const {
         if (integral_type) {
             return std::memcmp(mElems,other.mElems,static_size*sizeof(T))<0;
