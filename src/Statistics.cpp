@@ -72,6 +72,8 @@ const uint8 Trace::SubscriptionTag;
 const uint8 Trace::ServerDatagramQueuedTag;
 const uint8 Trace::ServerDatagramSentTag;
 const uint8 Trace::ServerDatagramReceivedTag;
+const uint8 Trace::PacketSentTag;
+const uint8 Trace::PacketReceivedTag;
 
 
 static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -144,6 +146,20 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
     data.write( &size, sizeof(size) );
     data.write( &start_time, sizeof(start_time) );
     data.write( &end_time, sizeof(end_time) );
+}
+
+void Trace::packetSent(const Time& t, const ServerID& dest, uint32 size) {
+    data.write( &PacketSentTag, sizeof(PacketSentTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &dest, sizeof(dest) );
+    data.write( &size, sizeof(size) );
+}
+
+void Trace::packetReceived(const Time& t, const ServerID& src, uint32 size) {
+    data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &src, sizeof(src) );
+    data.write( &size, sizeof(size) );
 }
 
 void Trace::save(const String& filename) {

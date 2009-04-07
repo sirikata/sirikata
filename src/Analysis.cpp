@@ -102,6 +102,22 @@ struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
     Time end_time;
 };
 
+
+
+struct PacketEvent : public Event {
+    ServerID source;
+    ServerID dest;
+    uint32 size;
+};
+
+struct PacketSentEvent : public PacketEvent {
+};
+
+struct PacketReceivedEvent : public PacketEvent {
+};
+
+
+
 Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
     char tag;
     is.read( &tag, sizeof(tag) );
@@ -176,6 +192,26 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&prevt->size, sizeof(prevt->size) );
               is.read( (char*)&prevt->start_time, sizeof(prevt->start_time) );
               is.read( (char*)&prevt->end_time, sizeof(prevt->end_time) );
+              evt = prevt;
+          }
+          break;
+      case Trace::PacketSentTag:
+          {
+              PacketSentEvent* psevt = new PacketSentEvent;
+              is.read( (char*)&psevt->time, sizeof(psevt->time) );
+              psevt->source = trace_server_id;
+              is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
+              is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              evt = psevt;
+          }
+          break;
+      case Trace::PacketReceivedTag:
+          {
+              PacketReceivedEvent* prevt = new PacketReceivedEvent;
+              is.read( (char*)&prevt->time, sizeof(prevt->time) );
+              is.read( (char*)&prevt->source, sizeof(prevt->source) );
+              prevt->dest = trace_server_id;
+              is.read( (char*)&prevt->size, sizeof(prevt->size) );
               evt = prevt;
           }
           break;
