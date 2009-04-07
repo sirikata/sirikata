@@ -45,6 +45,8 @@ public:
     virtual ~Network() {}
 
     virtual void init(void*(*)(void*))=0;
+    // Called right before we start the simulation, useful for syncing network timing info to Time(0)
+    virtual void start() = 0;
 
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
     virtual void listen (const Address4&)=0;

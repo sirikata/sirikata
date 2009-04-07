@@ -12,6 +12,17 @@ using namespace SST;
 
 namespace CBR {
 
+class SSTStatsListener : public SST::StreamStatListener {
+public:
+    SSTStatsListener(const QTime& start);
+    virtual ~SSTStatsListener() {}
+
+    void packetSent(qint32 size);
+    void packetReceived(qint32 size);
+private:
+    const QTime& mStartTime;
+};
+
 class CBRSST : public QObject {
     Q_OBJECT
 public:
@@ -22,6 +33,7 @@ public:
     Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     void service();
     void init(void* (*x)(void*));
+    void start();
 private slots:
     void handleConnection();
 
@@ -35,11 +47,16 @@ private slots:
 private:
     void trySendCurrentChunk();
 
-    typedef std::map<Address4, SST::Stream*> StreamMap;
+    struct StreamInfo {
+        SST::Stream* stream;
+        SSTStatsListener* stats;
+    };
+    typedef std::map<Address4, StreamInfo> StreamMap;
 
-    SST::Stream* lookupOrConnect(const Address4& addy);
+    StreamInfo lookupOrConnect(const Address4& addy);
     void *(*mMainCallback)(void*);
     QApplication* mApp;
+    QTime mStartTime;
     SST::Host* mHost;
     SST::StreamServer* mAcceptor;
 

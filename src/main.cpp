@@ -249,6 +249,7 @@ void *main_loop(void *) {
     else {
         Timer timer;
         timer.start();
+        gNetwork->start();
 
         while( true ) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;

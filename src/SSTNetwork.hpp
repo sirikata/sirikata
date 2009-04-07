@@ -16,6 +16,7 @@ public:
     virtual Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     virtual void service(const Time& t);
     virtual void init(void* (*)(void*));
+    virtual void start();
 private:
 
     CBRSST* mImpl;

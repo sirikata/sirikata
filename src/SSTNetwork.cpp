@@ -28,7 +28,13 @@ Network::Chunk* SSTNetwork::receiveOne(const Address4& from, uint32 max_size) {
 void SSTNetwork::service(const Time& t) {
     mImpl->service();
 }
+
 void SSTNetwork::init(void* (*x)(void*)){
     mImpl->init(x);
 }
+
+void SSTNetwork::start() {
+    mImpl->start();
+}
+
 } // namespace CBR

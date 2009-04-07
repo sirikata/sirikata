@@ -7,6 +7,22 @@
 
 namespace CBR {
 
+SSTStatsListener::SSTStatsListener(const QTime& start)
+ : mStartTime(start)
+{
+}
+
+void SSTStatsListener::packetSent(qint32 size) {
+    qint32 msecs = mStartTime.elapsed();
+    //printf("packet sent: %d at %d\n", size, msecs);
+}
+
+void SSTStatsListener::packetReceived(qint32 size) {
+    qint32 msecs = mStartTime.elapsed();
+    //printf("packet received: %d at %d\n", size, msecs);
+}
+
+
 CBRSST::CBRSST()
 {
     mApp = new QApplication(0, 0);
@@ -28,6 +44,10 @@ void CBRSST::init(void* (*x)(void*)){
     mApp->exec();
 }
 
+void CBRSST::start() {
+    mStartTime.start();
+}
+
 void CBRSST::listen(uint32 port) {
     mHost = new SST::Host(NULL, port);
     mAcceptor = new SST::StreamServer(mHost);
@@ -45,7 +65,8 @@ void CBRSST::trySendCurrentChunk() {
     // try to service the most recent
     if (mCurrentSendChunk == NULL) return;
 
-    Stream* strm = lookupOrConnect(mCurrentSendChunk->addr);
+    StreamInfo si = lookupOrConnect(mCurrentSendChunk->addr);
+    Stream* strm = si.stream;
     uint32 new_bytes_sent = strm->writeMessage((const char*)&mCurrentSendChunk->data[mCurrentSendChunk->bytes_sent], mCurrentSendChunk->data.size() - mCurrentSendChunk->bytes_sent);
     mCurrentSendChunk->bytes_sent += new_bytes_sent;
 
@@ -77,15 +98,16 @@ Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
     if (from == Address4::Null) {
         // FIXME this should do something smarter than just choosing the first one with data
         for(StreamMap::iterator it = mReceiveConnections.begin(); it != mReceiveConnections.end(); it++) {
-            if (it->second->hasPendingMessages() && it->second->pendingMessageSize() <= max_size) {
-                strm = it->second;
+            Stream* it_strm = it->second.stream;
+            if (it_strm->hasPendingMessages() && it_strm->pendingMessageSize() <= max_size) {
+                strm = it_strm;
                 break;
             }
         }
         if (strm == NULL) return NULL;
     }
     else {
-        strm = lookupOrConnect(from);
+        strm = lookupOrConnect(from).stream;
     }
 
     if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
@@ -136,8 +158,16 @@ void CBRSST::handleConnection() {
             this, SLOT(handleNewSubstream()), Qt::QueuedConnection);
 
         Address4 remote_addy(remote_ip, remote_port);
+
+        SSTStatsListener* stats_listener = new SSTStatsListener(mStartTime);
+        strm->setStatListener( stats_listener );
+
+        StreamInfo si;
+        si.stream = strm;
+        si.stats = stats_listener;
+
         assert( mReceiveConnections.find(remote_addy) == mReceiveConnections.end() );
-        mReceiveConnections[remote_addy] = strm;
+        mReceiveConnections[remote_addy] = si;
     }
 }
 
@@ -159,7 +189,7 @@ void CBRSST::handleReset() {
 }
 
 
-SST::Stream* CBRSST::lookupOrConnect(const Address4& addy) {
+CBRSST::StreamInfo CBRSST::lookupOrConnect(const Address4& addy) {
     // If we have one, just return it
     StreamMap::iterator it = mSendConnections.find(addy);
     if (it != mSendConnections.end())
@@ -169,8 +199,17 @@ SST::Stream* CBRSST::lookupOrConnect(const Address4& addy) {
     SST::Stream* strm = new SST::Stream(mHost, this);
     quint32 addy_ip = htonl(addy.ip);
     strm->connectTo(SST::Ident::fromIpAddress(QHostAddress(addy_ip),addy.port).id(), SERVICE_NAME, PROTOCOL_NAME);
-    mSendConnections[addy] = strm;
-    return strm;
+
+    SSTStatsListener* stats_listener = new SSTStatsListener(mStartTime);
+    strm->setStatListener( stats_listener );
+
+    StreamInfo si;
+    si.stream = strm;
+    si.stats = stats_listener;
+
+    mSendConnections[addy] = si;
+
+    return si;
 }
 
 } // namespace CBR

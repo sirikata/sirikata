@@ -48,6 +48,7 @@ public:
 
     virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual void init(void*(*)(void*));
+    virtual void start();
     virtual void listen (const Address4& as_server);
     virtual Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     virtual void service(const Time& t);
