@@ -55,7 +55,9 @@ private:
     };
     typedef std::map<Address4, StreamInfo> StreamMap;
 
-    StreamInfo& lookupOrConnect(const Address4& addy);
+    StreamInfo* lookupOrConnectSend(const Address4& addy);
+    StreamInfo* lookupReceive(const Address4& addy);
+
     void *(*mMainCallback)(void*);
     QApplication* mApp;
     QTime mStartTime;

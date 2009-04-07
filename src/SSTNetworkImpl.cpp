@@ -67,8 +67,8 @@ void CBRSST::trySendCurrentChunk() {
     // try to service the most recent
     if (mCurrentSendChunk == NULL) return;
 
-    StreamInfo si = lookupOrConnect(mCurrentSendChunk->addr);
-    Stream* strm = si.stream;
+    StreamInfo* si = lookupOrConnectSend(mCurrentSendChunk->addr);
+    Stream* strm = si->stream;
     uint32 new_bytes_sent = strm->writeMessage((const char*)&mCurrentSendChunk->data[mCurrentSendChunk->bytes_sent], mCurrentSendChunk->data.size() - mCurrentSendChunk->bytes_sent);
     mCurrentSendChunk->bytes_sent += new_bytes_sent;
 
@@ -96,20 +96,21 @@ bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliabl
 
 Network::Chunk* CBRSST::front(const Address4& from, uint32 max_size) {
     assert(from != Address4::Null);
+    assert(false);
+    StreamInfo* si = lookupReceive(from);
+    if (si == NULL) return NULL;
 
-    StreamInfo& si = lookupOrConnect(from);
+    if (si->peek != NULL) return si->peek;
 
-    if (si.peek != NULL) return si.peek;
-
-    SST::Stream* strm = si.stream;
+    SST::Stream* strm = si->stream;
 
     if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
         QByteArray msg = strm->peekMessage();
         if (msg.isEmpty())
             return NULL;
 
-        si.peek = new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
-        return si.peek;
+        si->peek = new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
+        return si->peek;
     }
 
     return NULL;
@@ -118,17 +119,19 @@ Network::Chunk* CBRSST::front(const Address4& from, uint32 max_size) {
 Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
     assert(from != Address4::Null);
 
-    StreamInfo& si = lookupOrConnect(from);
-    SST::Stream* strm = si.stream;
+    StreamInfo* si = lookupReceive(from);
+    if (si == NULL) return NULL;
+
+    SST::Stream* strm = si->stream;
 
     if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
         QByteArray msg = strm->readMessage();
 
-        Network::Chunk* result = si.peek;
+        Network::Chunk* result = si->peek;
 
         if (result) {
             assert( result->size() == msg.size() );
-            si.peek = NULL;
+            si->peek = NULL;
             return result;
         }
 
@@ -161,8 +164,8 @@ void CBRSST::handleConnection() {
         uint16 remote_port;
         memcpy(&remote_ip, remote_id.constData() + 1, 4);
         memcpy(&remote_port, remote_id.constData() + 5, 2);
-        remote_ip = ntohl(remote_ip);
-        remote_port = ntohs(remote_port);
+        //remote_ip = ntohl(remote_ip); // FIXME why is this reversed?
+        remote_port = ntohs(remote_port); // but this isn't?
 
         qDebug() << "remote ip: " << remote_ip << "  remote port: " << remote_port;
 
@@ -187,6 +190,7 @@ void CBRSST::handleConnection() {
         StreamInfo si;
         si.stream = strm;
         si.stats = stats_listener;
+        si.peek = NULL;
 
         assert( mReceiveConnections.find(remote_addy) == mReceiveConnections.end() );
         mReceiveConnections[remote_addy] = si;
@@ -211,11 +215,11 @@ void CBRSST::handleReset() {
 }
 
 
-CBRSST::StreamInfo& CBRSST::lookupOrConnect(const Address4& addy) {
+CBRSST::StreamInfo* CBRSST::lookupOrConnectSend(const Address4& addy) {
     // If we have one, just return it
     StreamMap::iterator it = mSendConnections.find(addy);
     if (it != mSendConnections.end())
-        return it->second;
+        return &(it->second);
 
     // Otherwise we need to connect
     SST::Stream* strm = new SST::Stream(mHost, this);
@@ -233,7 +237,15 @@ CBRSST::StreamInfo& CBRSST::lookupOrConnect(const Address4& addy) {
     mSendConnections[addy] = si;
 
     it = mSendConnections.find(addy);
-    return it->second;
+    return &(it->second);
+}
+
+CBRSST::StreamInfo* CBRSST::lookupReceive(const Address4& addy) {
+    // If we have one, just return it
+    StreamMap::iterator it = mReceiveConnections.find(addy);
+    if (it != mReceiveConnections.end())
+        return &(it->second);
+    return NULL;
 }
 
 } // namespace CBR
