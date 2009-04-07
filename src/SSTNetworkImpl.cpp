@@ -25,7 +25,9 @@ void SSTStatsListener::packetReceived(qint32 size) {
 
 CBRSST::CBRSST()
 {
-    mApp = new QApplication(0, 0);
+    int argc = 0;
+    char** argv = NULL;
+    mApp = new QApplication((int&)argc, (char**)argv);
     mCurrentSendChunk = NULL;
 }
 
