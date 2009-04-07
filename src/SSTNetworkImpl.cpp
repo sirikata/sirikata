@@ -92,30 +92,50 @@ bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliabl
     return true;
 }
 
-Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
-    SST::Stream* strm = NULL;
+Network::Chunk* CBRSST::front(const Address4& from, uint32 max_size) {
+    assert(from != Address4::Null);
 
-    if (from == Address4::Null) {
-        // FIXME this should do something smarter than just choosing the first one with data
-        for(StreamMap::iterator it = mReceiveConnections.begin(); it != mReceiveConnections.end(); it++) {
-            Stream* it_strm = it->second.stream;
-            if (it_strm->hasPendingMessages() && it_strm->pendingMessageSize() <= max_size) {
-                strm = it_strm;
-                break;
-            }
-        }
-        if (strm == NULL) return NULL;
-    }
-    else {
-        strm = lookupOrConnect(from).stream;
-    }
+    StreamInfo& si = lookupOrConnect(from);
+
+    if (si.peek != NULL) return si.peek;
+
+    SST::Stream* strm = si.stream;
 
     if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
-        QByteArray msg = strm->readMessage();
+        QByteArray msg = strm->peekMessage();
         if (msg.isEmpty())
             return NULL;
 
-        return new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
+        si.peek = new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
+        return si.peek;
+    }
+
+    return NULL;
+}
+
+Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
+    assert(from != Address4::Null);
+
+    StreamInfo& si = lookupOrConnect(from);
+    SST::Stream* strm = si.stream;
+
+    if (strm->hasPendingMessages() && strm->pendingMessageSize() <= max_size) {
+        QByteArray msg = strm->readMessage();
+
+        Network::Chunk* result = si.peek;
+
+        if (result) {
+            assert( result->size() == msg.size() );
+            si.peek = NULL;
+            return result;
+        }
+
+        if (msg.isEmpty())
+            return NULL;
+
+        result = new Network::Chunk( (const uint8*)msg.constData(), (const uint8*)msg.constData() + msg.size() );
+
+        return result;
     }
 
     return NULL;
@@ -189,7 +209,7 @@ void CBRSST::handleReset() {
 }
 
 
-CBRSST::StreamInfo CBRSST::lookupOrConnect(const Address4& addy) {
+CBRSST::StreamInfo& CBRSST::lookupOrConnect(const Address4& addy) {
     // If we have one, just return it
     StreamMap::iterator it = mSendConnections.find(addy);
     if (it != mSendConnections.end())
@@ -206,10 +226,12 @@ CBRSST::StreamInfo CBRSST::lookupOrConnect(const Address4& addy) {
     StreamInfo si;
     si.stream = strm;
     si.stats = stats_listener;
+    si.peek = NULL;
 
     mSendConnections[addy] = si;
 
-    return si;
+    it = mSendConnections.find(addy);
+    return it->second;
 }
 
 } // namespace CBR

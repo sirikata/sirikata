@@ -28,6 +28,9 @@ public:
     bool operator ==(const Address4&other)const {
         return ip==other.ip&&port==other.port;
     }
+    bool operator!=(const Address4& other) const {
+        return ip != other.ip || port != other.port;
+    }
     bool operator<(const Address4& other) const {
         return (ip < other.ip) || (ip == other.ip && port < other.port);
     }
@@ -50,6 +53,7 @@ public:
 
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
     virtual void listen (const Address4&)=0;
+    virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
     virtual void service(const Time& t) {}
 };

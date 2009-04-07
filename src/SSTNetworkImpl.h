@@ -30,6 +30,7 @@ public:
     ~CBRSST();
     void listen(uint32 port);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
+    Network::Chunk* front(const Address4& from, uint32 max_size);
     Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     void service();
     void init(void* (*x)(void*));
@@ -50,10 +51,11 @@ private:
     struct StreamInfo {
         SST::Stream* stream;
         SSTStatsListener* stats;
+        Network::Chunk* peek;
     };
     typedef std::map<Address4, StreamInfo> StreamMap;
 
-    StreamInfo lookupOrConnect(const Address4& addy);
+    StreamInfo& lookupOrConnect(const Address4& addy);
     void *(*mMainCallback)(void*);
     QApplication* mApp;
     QTime mStartTime;
