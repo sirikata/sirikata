@@ -5,11 +5,12 @@
 #include "Message.hpp"
 
 namespace CBR{
-FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
+FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
    mServerQueues(0,renormalizeWeights),
    mLastTime(0),
-   mRate(bytes_per_second),
+   mRate(send_bytes_per_second),
+   mRecvRate(recv_bytes_per_second),
    mRemainderBytes(0),
    mLastSendEndTime(0)
 {
@@ -84,14 +85,17 @@ void FairServerMessageQueue::service(const Time&t){
         //mLastSendEndTime = already recorded, last end send time
     }
 
-    mLastTime = t;
-
 
     // no limit on receive bandwidth
     for(ReceiveServerList::iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
-        Address4* addr = mServerIDMap->lookup(*it);
+        Address4* addr = mServerIDMap->lookup(it->first);
         assert(addr != NULL);
-        while( Network::Chunk* c = mNetwork->receiveOne(*addr, 1000000) ) {
+        int64 bytes = (int64)((t - mLastTime).seconds() * mRecvRate) + it->second.mRemainderBytes;
+        if (bytes<=0) {
+            it->second.mRemainderBytes=bytes;
+        }else while( Network::Chunk* c = mNetwork->receiveOne(*addr, 1000000) ) {
+
+            bytes-=c->size();
             uint32 offset = 0;
             ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
             assert(hdr.destServer() == mSourceServer);
@@ -104,8 +108,14 @@ void FairServerMessageQueue::service(const Time&t){
             csp.source = hdr.sourceServer();
 
             mReceiveQueue.push(csp);
+            it->second.mRemainderBytes=0;
+            if (bytes<=0) {
+                it->second.mRemainderBytes=bytes; 
+                break;
+            }
         }
     }
+    mLastTime = t;
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
@@ -116,7 +126,7 @@ void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
         mServerQueues.setQueueWeight(sid, weight);
     }
 
-    mSourceServers.insert(sid);
+    mSourceServers[sid];
 }
 
 }

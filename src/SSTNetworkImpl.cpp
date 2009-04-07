@@ -145,7 +145,7 @@ void CBRSST::handleConnection() {
         qDebug() << "remote ip: " << remote_ip << "  remote port: " << remote_port;
 
         //strm->setChildReceiveBuffer(sizeof(qint32));
-        strm->listen(SST::Stream::BufLimit);
+        strm->listen(SST::Stream::Reject);
 
         strm->setParent(this);
         connect(strm, SIGNAL(readyReadMessage()),

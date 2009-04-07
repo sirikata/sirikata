@@ -184,7 +184,7 @@ void *main_loop(void *) {
     if (server_queue_type == "fifo")
         sq = new FIFOServerMessageQueue(gNetwork,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, trace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
+        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
     else {
         assert(false);
         exit(-1);

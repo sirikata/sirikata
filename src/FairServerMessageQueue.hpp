@@ -39,10 +39,17 @@ protected:
 
     Time mLastTime;
     uint32 mRate;
+    uint32 mRecvRate;
     uint32 mRemainderBytes;
     Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
 
-    typedef std::set<ServerID> ReceiveServerList;
+    ///map from ServerID to RemainderBytes
+    class ReceiveServerProperties {
+    public:
+        int32 mRemainderBytes;
+        ReceiveServerProperties(){mRemainderBytes=0;}
+    };
+    typedef std::map<ServerID,ReceiveServerProperties> ReceiveServerList;
     ReceiveServerList mSourceServers;
     struct ChunkSourcePair {
         Network::Chunk* chunk;
@@ -51,7 +58,7 @@ protected:
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
 
-    FairServerMessageQueue(Network*net, uint32 bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
+    FairServerMessageQueue(Network*net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
 
     void setServerWeight(ServerID, float weight);
 
