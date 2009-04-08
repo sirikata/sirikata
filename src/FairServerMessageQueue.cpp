@@ -8,6 +8,7 @@ namespace CBR{
 FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
    mServerQueues(0,renormalizeWeights),
+   mReceiveQueues(0,false),
    mLastTime(0),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),

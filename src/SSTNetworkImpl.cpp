@@ -1,5 +1,4 @@
 #include "SSTNetworkImpl.h"
-
 #define SERVICE_NAME "cbr"
 #define SERVICE_DESC "Constant Bit Rate Service"
 #define PROTOCOL_NAME "cbr1.0"
@@ -167,7 +166,7 @@ void CBRSST::handleConnection() {
         //remote_ip = ntohl(remote_ip); // FIXME why is this reversed?
         remote_port = ntohs(remote_port); // but this isn't?
 
-        qDebug() << "remote ip: " << remote_ip << "  remote port: " << remote_port;
+        //qDebug() << "remote ip: " << remote_ip << "  remote port: " << remote_port;
 
         //strm->setChildReceiveBuffer(sizeof(qint32));
         strm->listen(SST::Stream::Reject);

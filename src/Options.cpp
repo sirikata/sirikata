@@ -80,7 +80,7 @@ void InitOptions() {
         .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
 
-        .addOption(new OptionValue(NETWORK_TYPE, "raknet", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
+        .addOption(new OptionValue(NETWORK_TYPE, "sst", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
      ;
 }
 
