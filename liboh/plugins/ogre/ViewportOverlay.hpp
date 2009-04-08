@@ -35,62 +35,10 @@
 
 #include "Ogre.h"
 #include "OgrePanelOverlayElement.h"
+#include <oh/OverlayPosition.hpp>
 
 namespace Sirikata {
 namespace Graphics {
-
-/**
-* An enumeration of relative positions for OverlayPosition.
-*/
-enum RelativePosition
-{
-	RP_LEFT,
-	RP_TOPLEFT,
-	RP_TOPCENTER,
-	RP_TOPRIGHT,
-	RP_RIGHT,
-	RP_BOTTOMRIGHT,
-	RP_BOTTOMCENTER,
-	RP_BOTTOMLEFT,
-	RP_CENTER
-};
-
-/**
-* An object that holds position-data for a ViewportOverlay.
-*/
-class OverlayPosition
-{
-public:
-	/**
-	* Creates a relatively-positioned OverlayPosition object.
-	*
-	* @param	relPosition		The position of the ViewportOverlay in relation to the Viewport
-	*
-	* @param	offsetLeft	How many pixels from the left to offset the ViewportOverlay from the relative position.
-	*
-	* @param	offsetTop	How many pixels from the top to offset the ViewportOverlay from the relative position.
-	*/
-	OverlayPosition(const RelativePosition &relPosition, short offsetLeft = 0, short offsetTop = 0);
-
-	/**
-	* Creates an absolutely-positioned OverlayPosition object.
-	*
-	* @param	absoluteLeft	The number of pixels from the left of the Viewport
-	*
-	* @param	absoluteTop		The number of pixels from the top of the Viewport.
-	*/
-	OverlayPosition(short absoluteLeft, short absoluteTop);
-
-protected:
-	bool usingRelative;
-	union {
-		struct { RelativePosition position; short x; short y; } rel;
-		struct { short left; short top; } abs;
-	} data;
-
-	friend class ViewportOverlay;
-	OverlayPosition();
-};
 
 /**
 * An enumeration of the three tiers ViewportOverlays can reside in.
@@ -117,6 +65,8 @@ public:
 	ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, const OverlayPosition& pos, 
 		const Ogre::String& matName, Ogre::uchar zOrder, Tier tier);
 	~ViewportOverlay();
+
+	void setViewport(Ogre::Viewport* newViewport);
 
 	void move(int deltaX, int deltaY);
 	void setPosition(const OverlayPosition& position);

@@ -37,6 +37,8 @@
 #include "WebViewManager.hpp"
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
+#include <oh/WebViewListener.hpp>
+#include <oh/ProxyWebViewObject.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -49,9 +51,11 @@ namespace Graphics {
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated 
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
-	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener
+	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener
 	{
 	public:
+
+		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 
 		/**
 		* Loads a URL into the main frame.
@@ -104,6 +108,8 @@ namespace Graphics {
 		*		this from the page using Javascript: document.write("The color is " + Client.color);
 		*/
 		void setProperty(const std::string& name, const Awesomium::JSValue& value);
+
+		void setViewport(Ogre::Viewport* newViewport);
 
 		void setTransparent(bool isTransparent);
 
@@ -188,23 +194,27 @@ namespace Graphics {
 		*/
 		void resetPosition();
 
+		void hide();
+
 		/**
 		* Hides this WebView.
 		*
-		* @param	fade	Whether or not to fade this WebView down. (Optional, default is false)
+		* @param	fade	Whether or not to fade this WebView down.
 		*
 		* @param	fadeDurationMS	If fading, the number of milliseconds to fade for.
 		*/
-		void hide(bool fade = false, unsigned short fadeDurationMS = 300);
+		void hide(bool fade, unsigned short fadeDurationMS = 300);
+
+		void show();
 
 		/**
 		* Shows this WebView.
 		*
-		* @param	fade	Whether or not to fade the WebView up. (Optional, default is false)
+		* @param	fade	Whether or not to fade the WebView up.
 		*
 		* @param	fadeDurationMS	If fading, the number of milliseconds to fade for.
 		*/
-		void show(bool fade = false, unsigned short fadeDurationMS = 300);
+		void show(bool fade, unsigned short fadeDurationMS = 300);
 
 		/**
 		* 'Focuses' this WebView by popping it to the front of all other WebViews. (not applicable to WebViews created as materials)
@@ -362,6 +372,8 @@ namespace Graphics {
 		std::map<std::string, JSDelegate> delegateMap;
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
+
+		std::tr1::shared_ptr<ProxyWebViewObject> proxyObject;
 
 		friend class WebViewManager;
 

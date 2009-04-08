@@ -329,6 +329,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             new ResourceManager(mTransferManager);
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
+			new WebViewManager(0, "");
+
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
@@ -618,6 +620,15 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
             created = true;
         }
     }
+    {
+        std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
+        if (webviewpxy) {
+			WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 100, 100, OverlayPosition());
+			view->setProxyObject(webviewpxy);
+        }
+        
+    }
+
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
 
@@ -775,14 +786,11 @@ bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
 
 	if(WebViewManager::getSingletonPtr())
 	{
-		WebViewManager::getSingletonPtr()->Update();
-		return continueRendering;
+		if(counter == 1)
+			WebViewManager::getSingleton().setDefaultViewport(mRenderTarget->getViewport(0));
+
+		WebViewManager::getSingleton().Update();
 	}
-
-	WebViewManager* mgr = new WebViewManager(mRenderTarget->getViewport(0), "");
-
-	WebView* view = mgr->createWebView("test", 400, 300, OverlayPosition(RP_BOTTOMRIGHT));
-	view->loadURL("http://google.com");
 	
     return continueRendering;
 }

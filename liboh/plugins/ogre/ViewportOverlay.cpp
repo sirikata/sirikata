@@ -37,28 +37,6 @@ using namespace Ogre;
 namespace Sirikata {
 namespace Graphics {
 
-OverlayPosition::OverlayPosition()
-{
-	usingRelative = false;
-	data.abs.left = 0;
-	data.abs.top = 0;
-}
-
-OverlayPosition::OverlayPosition(const RelativePosition &relPosition, short offsetLeft, short offsetTop)
-{
-	usingRelative = true;
-	data.rel.position = relPosition;
-	data.rel.x = offsetLeft;
-	data.rel.y = offsetTop;
-}
-
-OverlayPosition::OverlayPosition(short absoluteLeft, short absoluteTop)
-{
-	usingRelative = false;
-	data.abs.left = absoluteLeft;
-	data.abs.top = absoluteTop;
-}
-
 ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, 
 	const OverlayPosition& pos, const Ogre::String& matName, Ogre::uchar zOrder, Tier tier)
 : viewport(viewport), width(width), height(height), position(pos), isVisible(true), zOrder(zOrder), tier(tier)
@@ -79,18 +57,36 @@ ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewp
 	setZOrder(zOrder);
 	resetPosition();
 
-	viewport->getTarget()->addListener(this);
+	if(viewport)
+		viewport->getTarget()->addListener(this);
 }
 
 ViewportOverlay::~ViewportOverlay()
 {
-	viewport->getTarget()->removeListener(this);
+	if(viewport)
+		viewport->getTarget()->removeListener(this);
 
 	if(overlay)
 	{
 		overlay->remove2D(panel);
 		OverlayManager::getSingletonPtr()->destroyOverlayElement(panel);
 		OverlayManager::getSingletonPtr()->destroy(overlay);
+	}
+}
+
+void ViewportOverlay::setViewport(Ogre::Viewport* newViewport)
+{
+	overlay->hide();
+
+	if(viewport)
+		viewport->getTarget()->removeListener(this);
+
+	viewport = newViewport;
+
+	if(viewport)
+	{
+		viewport->getTarget()->addListener(this);
+		resetPosition();
 	}
 }
 
@@ -107,6 +103,12 @@ void ViewportOverlay::setPosition(const OverlayPosition& position)
 
 void ViewportOverlay::resetPosition()
 {
+	if(!viewport)
+	{
+		panel->setPosition(0, 0);
+		return;
+	}
+
 	int viewWidth = viewport->getActualWidth();
 	int viewHeight = viewport->getActualHeight();
 
@@ -199,26 +201,33 @@ Ogre::uchar ViewportOverlay::getZOrder()
 
 int ViewportOverlay::getX()
 {
-	return viewport->getActualLeft() + panel->getLeft();
+	return viewport? viewport->getActualLeft() + panel->getLeft() : 0;
 }
 
 int ViewportOverlay::getY()
 {
-	return viewport->getActualTop() + panel->getTop();
+	return viewport? viewport->getActualTop() + panel->getTop() : 0;
 }
 
 int ViewportOverlay::getRelativeX(int absX)
 {
-	return absX - viewport->getActualLeft() - panel->getLeft();
+	return viewport? absX - viewport->getActualLeft() - panel->getLeft() : 0;
 }
 
 int ViewportOverlay::getRelativeY(int absY)
 {
-	return absY - viewport->getActualTop() - panel->getTop();
+	return viewport? absY - viewport->getActualTop() - panel->getTop() : 0;
 }
 
 bool ViewportOverlay::isWithinBounds(int absX, int absY)
 {
+	if(!viewport)
+		return false;
+
+	if(absX < viewport->getActualLeft() || absX > viewport->getActualWidth() + viewport->getActualLeft() ||
+		absY < viewport->getActualTop() || absY > viewport->getActualHeight() + viewport->getActualTop())
+		return false;
+
 	int localX = getRelativeX(absX);
 	int localY = getRelativeY(absY);
 

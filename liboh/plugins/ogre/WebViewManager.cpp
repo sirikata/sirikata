@@ -386,6 +386,18 @@ void WebViewManager::deFocusAllWebViews()
 	isDraggingFocusedWebView = false;
 }
 
+void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
+{
+	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
+	{
+		if(iter->second->overlay)
+			if(iter->second->overlay->viewport == defaultViewport)
+				iter->second->overlay->setViewport(newViewport);
+	}
+
+	defaultViewport = newViewport;
+}
+
 void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args)
 {
 	if(args.size() != 2)

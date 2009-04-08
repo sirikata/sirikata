@@ -207,6 +207,8 @@ public:
 	*/
 	void deFocusAllWebViews();
 
+	void setDefaultViewport(Ogre::Viewport* newViewport);
+
 protected:
 	friend class WebView; // Our very close friend <3
 

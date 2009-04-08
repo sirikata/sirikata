@@ -128,6 +128,20 @@ WebView::~WebView()
 	MaterialManager::getSingletonPtr()->remove(viewName + "Material");
 	TextureManager::getSingletonPtr()->remove(viewName + "Texture");
 	if(usingMask) TextureManager::getSingletonPtr()->remove(viewName + "MaskTexture");
+
+	if(proxyObject.use_count())
+		proxyObject->WebViewProvider::removeListener(this);
+}
+
+void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
+{
+	if(this->proxyObject.use_count())
+		proxyObject->WebViewProvider::removeListener(this);
+
+	this->proxyObject = proxyObject;
+
+	if(this->proxyObject.use_count())
+		proxyObject->WebViewProvider::addListener(this);
 }
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
@@ -272,7 +286,7 @@ bool WebView::isPointOverMe(int x, int y)
 {
 	if(isMaterialOnly())
 		return false;
-	if(!overlay->isVisible)
+	if(!overlay->isVisible || !overlay->viewport)
 		return false;
 
 	int localX = overlay->getRelativeX(x);
@@ -353,6 +367,12 @@ void WebView::bind(const std::string& name, JSDelegate callback)
 void WebView::setProperty(const std::string& name, const Awesomium::JSValue& value)
 {
 	webView->setProperty(name, value);
+}
+
+void WebView::setViewport(Ogre::Viewport* newViewport)
+{
+	if(overlay)
+		overlay->setViewport(newViewport);
 }
 
 void WebView::setTransparent(bool isTransparent)
@@ -542,6 +562,11 @@ void WebView::resetPosition()
 		overlay->resetPosition();
 }
 
+void WebView::hide()
+{
+	hide(false, 0);
+}
+
 void WebView::hide(bool fade, unsigned short fadeDurationMS)
 {
 	updateFade();
@@ -558,6 +583,11 @@ void WebView::hide(bool fade, unsigned short fadeDurationMS)
 		fadeValue = 0;
 		overlay->hide();
 	}
+}
+
+void WebView::show()
+{
+	show(false, 0);
 }
 
 void WebView::show(bool fade, unsigned short fadeDurationMS)
