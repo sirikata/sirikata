@@ -224,6 +224,53 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 }
 
 
+template<typename EventType, typename IteratorType>
+class EventIterator {
+public:
+    typedef EventType event_type;
+    typedef IteratorType iterator_type;
+
+    EventIterator(const ServerID& sender, const ServerID& receiver, IteratorType begin, IteratorType end)
+     : mSender(sender), mReceiver(receiver), mRangeCurrent(begin), mRangeEnd(end)
+    {
+        if (!currentMatches())
+            next();
+    }
+
+    EventType* current() {
+        if (mRangeCurrent == mRangeEnd)
+            return NULL;
+
+        EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
+        assert(event != NULL);
+        return event;
+    }
+
+    EventType* next() {
+        if (mRangeCurrent == mRangeEnd) return NULL;
+        do {
+            mRangeCurrent++;
+        } while(mRangeCurrent != mRangeEnd && !currentMatches());
+        return current();
+    }
+
+private:
+    bool currentMatches() {
+        EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
+        if (event == NULL) return false;
+        if (event->source != mSender || event->dest != mReceiver) return false;
+        return true;
+    }
+
+    ServerID mSender;
+    ServerID mReceiver;
+    IteratorType mRangeCurrent;
+    IteratorType mRangeEnd;
+};
+
+
+
+
 LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
@@ -554,6 +601,51 @@ BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const 
     return event_lists_it->second;
 }
 
+BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramBegin(const ServerID& server) const {
+    return getDatagramEventList(server)->begin();
+}
+
+BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramEnd(const ServerID& server) const {
+    return getDatagramEventList(server)->end();
+}
+
+BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetBegin(const ServerID& server) const {
+    return getPacketEventList(server)->begin();
+}
+
+BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetEnd(const ServerID& server) const {
+    return getPacketEventList(server)->end();
+}
+
+template<typename EventType, typename EventIteratorType>
+void computeRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end) {
+    uint64 total_bytes = 0;
+    uint32 last_bytes = 0;
+    Duration last_duration;
+    Time last_time(0);
+    double max_bandwidth = 0;
+    for(EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end); event_it.current() != NULL; event_it.next() ) {
+        EventType* p_evt = event_it.current();
+
+        total_bytes += p_evt->size;
+
+        if (p_evt->time != last_time) {
+            double bandwidth = (double)last_bytes / last_duration.seconds();
+            if (bandwidth > max_bandwidth)
+                max_bandwidth = bandwidth;
+
+            last_bytes = 0;
+            last_duration = p_evt->time - last_time;
+            last_time = p_evt->time;
+        }
+
+        last_bytes += p_evt->size;
+    }
+
+    printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
+}
+
+
 void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& receiver) const {
     computeRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
 }
@@ -561,6 +653,65 @@ void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
     computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
+
+
+template<typename EventType, typename EventIteratorType>
+void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) {
+    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
+    std::queue<EventType*> window_events;
+
+    uint64 bytes = 0;
+    uint64 total_bytes = 0;
+    double max_bandwidth = 0;
+
+    for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
+        Time window_end = window_center + window / 2.f;
+
+        // add in any new packets that now fit in the window
+        uint32 last_packet_partial_size = 0;
+        while(true) {
+            EventType* evt = event_it.current();
+            if (evt == NULL) break;
+            if (evt->end_time > window_end) {
+                if (evt->start_time + window < window_end) {
+                    double packet_frac = (window_end - evt->start_time).seconds() / (evt->end_time - evt->start_time).seconds();
+                    last_packet_partial_size = evt->size * packet_frac;
+                }
+                break;
+            }
+            bytes += evt->size;
+            total_bytes += evt->size;
+            window_events.push(evt);
+            event_it.next();
+        }
+
+        // subtract out any packets that have fallen out of the window
+        // note we use event_time + window < window_end because subtracting could underflow the time
+        uint32 first_packet_partial_size = 0;
+        while(!window_events.empty()) {
+            EventType* pevt = window_events.front();
+            if (pevt->start_time + window >= window_end) break;
+
+            bytes -= pevt->size;
+            window_events.pop();
+
+            if (pevt->end_time + window >= window_end) {
+                // note the order of the numerator is important to avoid underflow
+                double packet_frac = (pevt->end_time + window - window_end).seconds() / (pevt->end_time - pevt->start_time).seconds();
+                first_packet_partial_size = pevt->size * packet_frac;
+                break;
+            }
+        }
+
+        // finally compute the current bandwidth
+        double bandwidth = (first_packet_partial_size + bytes + last_packet_partial_size) / window.seconds();
+        if (bandwidth > max_bandwidth)
+            max_bandwidth = bandwidth;
+    }
+
+    printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
+}
+
 
 void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
     computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time);
