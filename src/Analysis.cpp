@@ -448,46 +448,90 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
             Event* evt = Event::read(is, server_id);
             if (evt == NULL)
                 break;
-            ServerDatagramEvent* packet_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (packet_evt == NULL)
-                continue;
 
-            // put it in the source queue
-            ServerEventListMap::iterator source_it = mEventLists.find( packet_evt->source );
-            if (source_it == mEventLists.end()) {
-                mEventLists[ packet_evt->source ] = new EventList;
-                source_it = mEventLists.find( packet_evt->source );
+            ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
+            if (datagram_evt != NULL) {
+                // put it in the source queue
+                ServerDatagramEventListMap::iterator source_it = mDatagramEventLists.find( datagram_evt->source );
+                if (source_it == mDatagramEventLists.end()) {
+                    mDatagramEventLists[ datagram_evt->source ] = new DatagramEventList;
+                    source_it = mDatagramEventLists.find( datagram_evt->source );
+                }
+                assert( source_it != mDatagramEventLists.end() );
+
+                DatagramEventList* evt_list = source_it->second;
+                evt_list->push_back(datagram_evt);
+
+                // put it in the dest queue
+                ServerDatagramEventListMap::iterator dest_it = mDatagramEventLists.find( datagram_evt->dest );
+                if (dest_it == mDatagramEventLists.end()) {
+                    mDatagramEventLists[ datagram_evt->dest ] = new DatagramEventList;
+                    dest_it = mDatagramEventLists.find( datagram_evt->dest );
+                }
+                assert( dest_it != mDatagramEventLists.end() );
+
+                evt_list = dest_it->second;
+                evt_list->push_back(datagram_evt);
             }
-            assert( source_it != mEventLists.end() );
 
-            EventList* evt_list = source_it->second;
-            evt_list->push_back(packet_evt);
+            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
+            if (packet_evt != NULL) {
+                // put it in the source queue
+                ServerPacketEventListMap::iterator source_it = mPacketEventLists.find( packet_evt->source );
+                if (source_it == mPacketEventLists.end()) {
+                    mPacketEventLists[ packet_evt->source ] = new PacketEventList;
+                    source_it = mPacketEventLists.find( packet_evt->source );
+                }
+                assert( source_it != mPacketEventLists.end() );
 
-            // put it in the dest queue
-            ServerEventListMap::iterator dest_it = mEventLists.find( packet_evt->dest );
-            if (dest_it == mEventLists.end()) {
-                mEventLists[ packet_evt->dest ] = new EventList;
-                dest_it = mEventLists.find( packet_evt->dest );
+                PacketEventList* evt_list = source_it->second;
+                evt_list->push_back(packet_evt);
+
+                // put it in the dest queue
+                ServerPacketEventListMap::iterator dest_it = mPacketEventLists.find( packet_evt->dest );
+                if (dest_it == mPacketEventLists.end()) {
+                    mPacketEventLists[ packet_evt->dest ] = new PacketEventList;
+                    dest_it = mPacketEventLists.find( packet_evt->dest );
+                }
+                assert( dest_it != mPacketEventLists.end() );
+
+                evt_list = dest_it->second;
+                evt_list->push_back(packet_evt);
             }
-            assert( dest_it != mEventLists.end() );
 
-            evt_list = dest_it->second;
-            evt_list->push_back(packet_evt);
         }
     }
 
-    for(ServerEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
-        EventList* event_list = event_lists_it->second;
+    // Sort datagram events by time
+    for(ServerDatagramEventListMap::iterator event_lists_it = mDatagramEventLists.begin(); event_lists_it != mDatagramEventLists.end(); event_lists_it++) {
+        DatagramEventList* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
+    }
+
+    // Sort packet events by time
+    for(ServerPacketEventListMap::iterator event_lists_it = mPacketEventLists.begin(); event_lists_it != mPacketEventLists.end(); event_lists_it++) {
+        PacketEventList* event_list = event_lists_it->second;
         std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
     }
 
 }
 
 BandwidthAnalysis::~BandwidthAnalysis() {
-    for(ServerEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+    for(ServerDatagramEventListMap::iterator event_lists_it = mDatagramEventLists.begin(); event_lists_it != mDatagramEventLists.end(); event_lists_it++) {
         ServerID server_id = event_lists_it->first;
-        EventList* event_list = event_lists_it->second;
-        for(EventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
+        DatagramEventList* event_list = event_lists_it->second;
+        for(DatagramEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
+            // each event is put in both the source and the dest server event lists,
+            // to avoid double deleting, only delete if this is the event's source list
+            if ((*events_it)->source == server_id)
+                delete *events_it;
+        }
+    }
+
+    for(ServerPacketEventListMap::iterator event_lists_it = mPacketEventLists.begin(); event_lists_it != mPacketEventLists.end(); event_lists_it++) {
+        ServerID server_id = event_lists_it->first;
+        PacketEventList* event_list = event_lists_it->second;
+        for(PacketEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
             // each event is put in both the source and the dest server event lists,
             // to avoid double deleting, only delete if this is the event's source list
             if ((*events_it)->source == server_id)
@@ -496,27 +540,34 @@ BandwidthAnalysis::~BandwidthAnalysis() {
     }
 }
 
-BandwidthAnalysis::EventList* BandwidthAnalysis::getEventList(const ServerID& server) const {
-    ServerEventListMap::const_iterator event_lists_it = mEventLists.find(server);
-    if (event_lists_it == mEventLists.end()) return NULL;
+BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventList(const ServerID& server) const {
+    ServerDatagramEventListMap::const_iterator event_lists_it = mDatagramEventLists.find(server);
+    if (event_lists_it == mDatagramEventLists.end()) return NULL;
+
+    return event_lists_it->second;
+}
+
+BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const ServerID& server) const {
+    ServerPacketEventListMap::const_iterator event_lists_it = mPacketEventLists.find(server);
+    if (event_lists_it == mPacketEventLists.end()) return NULL;
 
     return event_lists_it->second;
 }
 
 void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& receiver) const {
-    computeRate<ServerDatagramSentEvent>(sender, receiver, sender);
+    computeRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
-    computeRate<ServerDatagramReceivedEvent>(sender, receiver, receiver);
+    computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
 void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
-    computeWindowedRate<ServerDatagramSentEvent>(sender, receiver, sender, window, sample_rate, start_time, end_time);
+    computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time);
 }
 
 void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
-    computeWindowedRate<ServerDatagramReceivedEvent>(sender, receiver, receiver, window, sample_rate, start_time, end_time);
+    computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time);
 }
 
 } // namespace CBR

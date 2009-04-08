@@ -82,29 +82,34 @@ public:
     void computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
     void computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
 private:
-    typedef std::vector<ServerDatagramEvent*> EventList;
-    typedef std::map<ServerID, EventList*> ServerEventListMap;
+    typedef std::vector<PacketEvent*> PacketEventList;
+    typedef std::map<ServerID, PacketEventList*> ServerPacketEventListMap;
+    typedef std::vector<ServerDatagramEvent*> DatagramEventList;
+    typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
 
-    template<typename ServerDatagramEventType>
-    class ServerDatagramIterator {
+    template<typename EventType, typename IteratorType>
+    class EventIterator {
     public:
-        ServerDatagramIterator(const ServerID& sender, const ServerID& receiver, EventList::iterator begin, EventList::iterator end)
+        typedef EventType event_type;
+        typedef IteratorType iterator_type;
+
+        EventIterator(const ServerID& sender, const ServerID& receiver, IteratorType begin, IteratorType end)
          : mSender(sender), mReceiver(receiver), mRangeCurrent(begin), mRangeEnd(end)
         {
             if (!currentMatches())
                 next();
         }
 
-        ServerDatagramEventType* current() {
+        EventType* current() {
             if (mRangeCurrent == mRangeEnd)
                 return NULL;
 
-            ServerDatagramEventType* event = dynamic_cast<ServerDatagramEventType*>(*mRangeCurrent);
+            EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
             assert(event != NULL);
             return event;
         }
 
-        ServerDatagramEventType* next() {
+        EventType* next() {
             if (mRangeCurrent == mRangeEnd) return NULL;
             do {
                 mRangeCurrent++;
@@ -114,7 +119,7 @@ private:
 
     private:
         bool currentMatches() {
-            ServerDatagramEventType* event = dynamic_cast<ServerDatagramEventType*>(*mRangeCurrent);
+            EventType* event = dynamic_cast<EventType*>(*mRangeCurrent);
             if (event == NULL) return false;
             if (event->source != mSender || event->dest != mReceiver) return false;
             return true;
@@ -122,29 +127,38 @@ private:
 
         ServerID mSender;
         ServerID mReceiver;
-        EventList::iterator mRangeCurrent;
-        EventList::iterator mRangeEnd;
+        IteratorType mRangeCurrent;
+        IteratorType mRangeEnd;
     };
 
-    EventList::iterator begin(const ServerID& server) const {
-        return getEventList(server)->begin();
+
+    DatagramEventList::const_iterator datagramBegin(const ServerID& server) const {
+        return getDatagramEventList(server)->begin();
     }
-    EventList::iterator end(const ServerID& server) const {
-        return getEventList(server)->end();
+    DatagramEventList::const_iterator datagramEnd(const ServerID& server) const {
+        return getDatagramEventList(server)->end();
     }
 
-    EventList* getEventList(const ServerID& server) const;
+    PacketEventList::const_iterator packetBegin(const ServerID& server) const {
+        return getPacketEventList(server)->begin();
+    }
+    PacketEventList::const_iterator packetEnd(const ServerID& server) const {
+        return getPacketEventList(server)->end();
+    }
+
+    DatagramEventList* getDatagramEventList(const ServerID& server) const;
+    PacketEventList* getPacketEventList(const ServerID& server) const;
 
 
-    template<typename ServerDatagramEventType>
-    void computeRate(const ServerID& sender, const ServerID& receiver, const ServerID& filter) const {
+    template<typename EventType, typename EventIteratorType>
+    void computeRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end) const {
         uint64 total_bytes = 0;
         uint32 last_bytes = 0;
         Duration last_duration;
         Time last_time(0);
         double max_bandwidth = 0;
-        for(ServerDatagramIterator<ServerDatagramEventType> event_it(sender, receiver, begin(filter), end(filter)); event_it.current() != NULL; event_it.next() ) {
-            ServerDatagramEventType* p_evt = event_it.current();
+        for(EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end); event_it.current() != NULL; event_it.next() ) {
+            EventType* p_evt = event_it.current();
 
             total_bytes += p_evt->size;
 
@@ -164,10 +178,10 @@ private:
         printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
     }
 
-    template<typename ServerDatagramEventType>
-    void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const ServerID& filter, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
-        ServerDatagramIterator<ServerDatagramEventType> event_it(sender, receiver, begin(filter), end(filter));
-        std::queue<ServerDatagramEventType*> window_events;
+    template<typename EventType, typename EventIteratorType>
+    void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+        EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
+        std::queue<EventType*> window_events;
 
         uint64 bytes = 0;
         uint64 total_bytes = 0;
@@ -179,7 +193,7 @@ private:
             // add in any new packets that now fit in the window
             uint32 last_packet_partial_size = 0;
             while(true) {
-                ServerDatagramEventType* evt = event_it.current();
+                EventType* evt = event_it.current();
                 if (evt == NULL) break;
                 if (evt->end_time > window_end) {
                     if (evt->start_time + window < window_end) {
@@ -198,7 +212,7 @@ private:
             // note we use event_time + window < window_end because subtracting could underflow the time
             uint32 first_packet_partial_size = 0;
             while(!window_events.empty()) {
-                ServerDatagramEventType* pevt = window_events.front();
+                EventType* pevt = window_events.front();
                 if (pevt->start_time + window >= window_end) break;
 
                 bytes -= pevt->size;
@@ -221,8 +235,8 @@ private:
         printf("%d to %d: %ld total, %f max\n", sender, receiver, total_bytes, max_bandwidth);
     }
 
-
-    ServerEventListMap mEventLists;
+    ServerPacketEventListMap mPacketEventLists;
+    ServerDatagramEventListMap mDatagramEventLists;
 }; // class BandwidthAnalysis
 
 
