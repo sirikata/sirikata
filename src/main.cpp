@@ -151,6 +151,12 @@ void *main_loop(void *) {
     else if ( !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ) {
         String windowed_analysis_type = GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>();
 
+        String windowed_analysis_filename = "windowed_bandwidth_";
+        windowed_analysis_filename += windowed_analysis_type;
+        windowed_analysis_filename += ".dat";
+
+        std::ofstream windowed_analysis_file(windowed_analysis_filename.c_str());
+
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
@@ -160,18 +166,18 @@ void *main_loop(void *) {
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
                 if (windowed_analysis_type == "datagram")
-                    ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time);
+                    ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_file);
                 else if (windowed_analysis_type == "packet")
-                    ba.computeWindowedPacketSendRate(sender, receiver, window, sample_rate, start_time, end_time);
+                    ba.computeWindowedPacketSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_file);
             }
         }
         printf("Receive rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
                 if (windowed_analysis_type == "datagram")
-                    ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
+                    ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_file);
                 else if (windowed_analysis_type == "packet")
-                    ba.computeWindowedPacketReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
+                    ba.computeWindowedPacketReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_file);
             }
         }
         exit(0);
