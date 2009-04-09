@@ -37,6 +37,8 @@
 
 #include "ServerNetworkImpl.hpp"
 
+#include "ServerIDMap.hpp"
+
 namespace CBR {
 
 // write the specified number of bytes from the pointer to the buffer
@@ -87,6 +89,14 @@ static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
 }
 
 
+Trace::Trace()
+ : mServerIDMap(NULL)
+{
+}
+
+void Trace::setServerIDMap(ServerIDMap* sidmap) {
+    mServerIDMap = sidmap;
+}
 
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
     data.write( &ProximityTag, sizeof(ProximityTag) );
@@ -148,17 +158,23 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
     data.write( &end_time, sizeof(end_time) );
 }
 
-void Trace::packetSent(const Time& t, const ServerID& dest, uint32 size) {
+void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
-    data.write( &dest, sizeof(dest) );
+    assert(mServerIDMap);
+    ServerID* dest_server_id = mServerIDMap->lookup(dest);
+    assert(dest_server_id);
+    data.write( dest_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
 }
 
-void Trace::packetReceived(const Time& t, const ServerID& src, uint32 size) {
+void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
-    data.write( &src, sizeof(src) );
+    assert(mServerIDMap);
+    ServerID* src_server_id = mServerIDMap->lookup(src);
+    assert(src_server_id);
+    data.write( src_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
 }
 

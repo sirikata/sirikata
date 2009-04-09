@@ -59,6 +59,7 @@
 #include "ServerWeightCalculator.hpp"
 namespace {
 CBR::Network* gNetwork = NULL;
+CBR::Trace* gTrace = NULL;
 }
 void *main_loop(void *);
 int main(int argc, char** argv) {
@@ -90,12 +91,13 @@ int main(int argc, char** argv) {
         close(ntppipes[1]);
     }
 
+    gTrace = new Trace();
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "raknet")
         gNetwork = new RaknetNetwork();
     else if (network_type == "sst")
-        gNetwork = new SSTNetwork();
+        gNetwork = new SSTNetwork(gTrace);
     gNetwork->init(&main_loop);
     return 0;
 }
@@ -114,8 +116,6 @@ void *main_loop(void *) {
     }
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
-
-    Trace* trace = new Trace();
 
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
@@ -148,7 +148,9 @@ void *main_loop(void *) {
         }
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<bool>() ) {
+    else if ( !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ) {
+        String windowed_analysis_type = GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>();
+
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
@@ -157,13 +159,19 @@ void *main_loop(void *) {
         printf("Send rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                ba.computeWindowedSendRate(sender, receiver, window, sample_rate, start_time, end_time);
+                if (windowed_analysis_type == "datagram")
+                    ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time);
+                else if (windowed_analysis_type == "packet")
+                    ba.computeWindowedPacketSendRate(sender, receiver, window, sample_rate, start_time, end_time);
             }
         }
         printf("Receive rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                ba.computeWindowedReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
+                if (windowed_analysis_type == "datagram")
+                    ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
+                else if (windowed_analysis_type == "packet")
+                    ba.computeWindowedPacketReceiveRate(sender, receiver, window, sample_rate, start_time, end_time);
             }
         }
         exit(0);
@@ -177,14 +185,15 @@ void *main_loop(void *) {
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    gTrace->setServerIDMap(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(gNetwork,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, trace);
+        sq = new FIFOServerMessageQueue(gNetwork,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, gTrace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, trace);
+        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
     else {
         assert(false);
         exit(-1);
@@ -193,13 +202,13 @@ void *main_loop(void *) {
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), trace);
+        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), gTrace);
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),trace);
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
     else {
         assert(false);
         exit(-1);
@@ -215,7 +224,7 @@ void *main_loop(void *) {
         );
 
 
-    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, trace);
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, gTrace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -270,11 +279,6 @@ void *main_loop(void *) {
     delete loc_service;
     delete obj_factory;
 
-
-    String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    if (!trace_file.empty()) trace->save(trace_file);
-    delete trace;
-
     String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
     if (!sync_file.empty()) {
         std::ofstream sos(sync_file.c_str(), std::ios::out);
@@ -282,7 +286,15 @@ void *main_loop(void *) {
             sos << Timer::getSystemClockOffset().milliseconds() << std::endl;
     }
 
+
+    String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
+    if (!trace_file.empty()) gTrace->save(trace_file);
+    delete gTrace;
+    gTrace = NULL;
+
+
     delete gNetwork;
     gNetwork=NULL;
+
     return 0;
 }

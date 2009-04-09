@@ -79,8 +79,12 @@ public:
     void computeSendRate(const ServerID& sender, const ServerID& receiver) const;
     void computeReceiveRate(const ServerID& sender, const ServerID& receiver) const;
 
-    void computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
-    void computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+    void computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+    void computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+
+    void computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+    void computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const;
+
 private:
     typedef std::vector<PacketEvent*> PacketEventList;
     typedef std::map<ServerID, PacketEventList*> ServerPacketEventListMap;

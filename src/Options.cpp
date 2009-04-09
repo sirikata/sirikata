@@ -73,7 +73,7 @@ void InitOptions() {
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))
 
-        .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a windowed bandwidth analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH, "", Sirikata::OptionValueType<String>(), "Do a windowed bandwidth analysis of the specified type: datagram, packet"))
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW, "1000ms", Sirikata::OptionValueType<Duration>(), "Size of the window in windowed bandwidth analysis"))
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_RATE, "10ms", Sirikata::OptionValueType<Duration>(), "Frequency of samples in windowed bandwidth analysis, i.e. how much to slide the window by"))
 

@@ -3,10 +3,10 @@
 
 namespace CBR {
 
-SSTNetwork::SSTNetwork()
+SSTNetwork::SSTNetwork(Trace* trace)
  : Network()
 {
-    mImpl = new CBRSST();
+    mImpl = new CBRSST(trace);
 }
 
 SSTNetwork::~SSTNetwork() {

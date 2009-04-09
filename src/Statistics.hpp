@@ -72,6 +72,8 @@ private:
 };
 
 
+class ServerIDMap;
+
 class Trace {
 public:
     static const uint8 ProximityTag = 0;
@@ -83,6 +85,10 @@ public:
     static const uint8 PacketSentTag = 6;
     static const uint8 PacketReceivedTag = 7;
 
+    Trace();
+
+    void setServerIDMap(ServerIDMap* sidmap);
+
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
@@ -92,12 +98,13 @@ public:
     void serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size);
 
-    void packetSent(const Time& t, const ServerID& dest, uint32 size);
-    void packetReceived(const Time& t, const ServerID& src, uint32 size);
+    void packetSent(const Time& t, const Address4& dest, uint32 size);
+    void packetReceived(const Time& t, const Address4& src, uint32 size);
 
     void save(const String& filename);
 private:
     BatchedBuffer data;
+    ServerIDMap* mServerIDMap;
 }; // class Trace
 
 } // namespace CBR

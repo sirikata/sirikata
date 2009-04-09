@@ -2,6 +2,7 @@
 #define _CBR_SST_NETWORK_IMPL_H_
 
 #include "Network.hpp"
+#include "Statistics.hpp"
 #include "stream.h"
 #include "host.h"
 #include <QApplication>
@@ -14,19 +15,21 @@ namespace CBR {
 
 class SSTStatsListener : public SST::StreamStatListener {
 public:
-    SSTStatsListener(const QTime& start);
+    SSTStatsListener(Trace* trace, const QTime& start, const Address4& remote);
     virtual ~SSTStatsListener() {}
 
     void packetSent(qint32 size);
     void packetReceived(qint32 size);
 private:
+    Trace* mTrace;
     const QTime& mStartTime;
+    Address4 mRemote;
 };
 
 class CBRSST : public QObject {
     Q_OBJECT
 public:
-    CBRSST();
+    CBRSST(Trace* trace);
     ~CBRSST();
     void listen(uint32 port);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
@@ -57,6 +60,8 @@ private:
 
     StreamInfo* lookupOrConnectSend(const Address4& addy);
     StreamInfo* lookupReceive(const Address4& addy);
+
+    Trace* mTrace;
 
     void *(*mMainCallback)(void*);
     QApplication* mApp;

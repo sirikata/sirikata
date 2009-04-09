@@ -6,10 +6,11 @@
 namespace CBR {
 
 class CBRSST;
+class Trace;
 
 class SSTNetwork : public Network {
 public:
-    SSTNetwork();
+    SSTNetwork(Trace* trace);
     virtual ~SSTNetwork();
     virtual bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
     virtual void listen (const Address4&);

@@ -6,23 +6,28 @@
 
 namespace CBR {
 
-SSTStatsListener::SSTStatsListener(const QTime& start)
- : mStartTime(start)
+SSTStatsListener::SSTStatsListener(Trace* trace, const QTime& start, const Address4& remote)
+ : mTrace(trace),
+   mStartTime(start),
+   mRemote(remote)
 {
 }
 
 void SSTStatsListener::packetSent(qint32 size) {
     qint32 msecs = mStartTime.elapsed();
-    //printf("packet sent: %d at %d\n", size, msecs);
+
+    mTrace->packetSent( Time(0) + Duration::milliseconds((uint32)msecs), mRemote, size);
 }
 
 void SSTStatsListener::packetReceived(qint32 size) {
     qint32 msecs = mStartTime.elapsed();
-    //printf("packet received: %d at %d\n", size, msecs);
+
+    mTrace->packetReceived( Time(0) + Duration::milliseconds((uint32)msecs), mRemote, size);
 }
 
 
-CBRSST::CBRSST()
+CBRSST::CBRSST(Trace* trace)
+ : mTrace(trace)
 {
     int argc = 0;
     char** argv = NULL;
@@ -183,7 +188,7 @@ void CBRSST::handleConnection() {
 
         Address4 remote_addy(remote_ip, remote_port);
 
-        SSTStatsListener* stats_listener = new SSTStatsListener(mStartTime);
+        SSTStatsListener* stats_listener = new SSTStatsListener(mTrace, mStartTime, remote_addy);
         strm->setStatListener( stats_listener );
 
         StreamInfo si;
@@ -225,7 +230,7 @@ CBRSST::StreamInfo* CBRSST::lookupOrConnectSend(const Address4& addy) {
     quint32 addy_ip = htonl(addy.ip);
     strm->connectTo(SST::Ident::fromIpAddress(QHostAddress(addy_ip),addy.port).id(), SERVICE_NAME, PROTOCOL_NAME);
 
-    SSTStatsListener* stats_listener = new SSTStatsListener(mStartTime);
+    SSTStatsListener* stats_listener = new SSTStatsListener(mTrace, mStartTime, addy);
     strm->setStatListener( stats_listener );
 
     StreamInfo si;

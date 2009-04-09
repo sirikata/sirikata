@@ -47,6 +47,13 @@ struct Event {
     virtual ~Event() {}
 
     Time time;
+
+    virtual Time begin_time() const {
+        return time;
+    }
+    virtual Time end_time() const {
+        return time;
+    }
 };
 
 struct EventTimeComparator {
@@ -86,20 +93,34 @@ struct ServerDatagramQueuedEvent : public ServerDatagramEvent {
 
 struct ServerDatagramSentEvent : public ServerDatagramEvent {
     ServerDatagramSentEvent()
-     : ServerDatagramEvent(), start_time(0), end_time(0)
+     : ServerDatagramEvent(), _start_time(0), _end_time(0)
     {}
 
-    Time start_time;
-    Time end_time;
+    virtual Time begin_time() const {
+        return _start_time;
+    }
+    virtual Time end_time() const {
+        return _end_time;
+    }
+
+    Time _start_time;
+    Time _end_time;
 };
 
 struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
     ServerDatagramReceivedEvent()
-     : ServerDatagramEvent(), start_time(0), end_time(0)
+     : ServerDatagramEvent(), _start_time(0), _end_time(0)
     {}
 
-    Time start_time;
-    Time end_time;
+    virtual Time begin_time() const {
+        return _start_time;
+    }
+    virtual Time end_time() const {
+        return _end_time;
+    }
+
+    Time _start_time;
+    Time _end_time;
 };
 
 
@@ -177,8 +198,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
               is.read( (char*)&psevt->id, sizeof(psevt->id) );
               is.read( (char*)&psevt->size, sizeof(psevt->size) );
-              is.read( (char*)&psevt->start_time, sizeof(psevt->start_time) );
-              is.read( (char*)&psevt->end_time, sizeof(psevt->end_time) );
+              is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
+              is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
               evt = psevt;
           }
           break;
@@ -190,8 +211,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               prevt->dest = trace_server_id;
               is.read( (char*)&prevt->id, sizeof(prevt->id) );
               is.read( (char*)&prevt->size, sizeof(prevt->size) );
-              is.read( (char*)&prevt->start_time, sizeof(prevt->start_time) );
-              is.read( (char*)&prevt->end_time, sizeof(prevt->end_time) );
+              is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
+              is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
           }
           break;
@@ -672,9 +693,9 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         while(true) {
             EventType* evt = event_it.current();
             if (evt == NULL) break;
-            if (evt->end_time > window_end) {
-                if (evt->start_time + window < window_end) {
-                    double packet_frac = (window_end - evt->start_time).seconds() / (evt->end_time - evt->start_time).seconds();
+            if (evt->end_time() > window_end) {
+                if (evt->begin_time() + window < window_end) {
+                    double packet_frac = (window_end - evt->begin_time()).seconds() / (evt->end_time() - evt->begin_time()).seconds();
                     last_packet_partial_size = evt->size * packet_frac;
                 }
                 break;
@@ -690,14 +711,14 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         uint32 first_packet_partial_size = 0;
         while(!window_events.empty()) {
             EventType* pevt = window_events.front();
-            if (pevt->start_time + window >= window_end) break;
+            if (pevt->begin_time() + window >= window_end) break;
 
             bytes -= pevt->size;
             window_events.pop();
 
-            if (pevt->end_time + window >= window_end) {
+            if (pevt->end_time() + window >= window_end) {
                 // note the order of the numerator is important to avoid underflow
-                double packet_frac = (pevt->end_time + window - window_end).seconds() / (pevt->end_time - pevt->start_time).seconds();
+                double packet_frac = (pevt->end_time() + window - window_end).seconds() / (pevt->end_time() - pevt->begin_time()).seconds();
                 first_packet_partial_size = pevt->size * packet_frac;
                 break;
             }
@@ -713,12 +734,20 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
 }
 
 
-void BandwidthAnalysis::computeWindowedSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
     computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time);
 }
 
-void BandwidthAnalysis::computeWindowedReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+void BandwidthAnalysis::computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
     computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time);
+}
+
+void BandwidthAnalysis::computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+    computeWindowedRate<PacketSentEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(sender), packetEnd(sender), window, sample_rate, start_time, end_time);
+}
+
+void BandwidthAnalysis::computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time) const {
+    computeWindowedRate<PacketReceivedEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(receiver), packetEnd(receiver), window, sample_rate, start_time, end_time);
 }
 
 } // namespace CBR
