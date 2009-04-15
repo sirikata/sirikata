@@ -294,7 +294,7 @@ ENDIF()
 #dependency: mono
 IF(NOT MONO_ROOT)
   IF(WIN32)
-    SET(MONO_ROOT ${PLATFORM_LIBS}/mono_2.4)
+    SET(MONO_ROOT ${PLATFORM_LIBS}/mono-2.4)
   ELSEIF(APPLE)
     # TODO: Add path to some prebuilt version of Mono for Macs
   ELSE()
