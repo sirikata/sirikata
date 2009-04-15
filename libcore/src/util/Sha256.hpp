@@ -134,11 +134,11 @@ public:
     /**
      * Fills the SHA256 with array of entirely 0's.
      */
-    static const SHA256&nil(){
-        static SHA256 nil;
+    static const SHA256&null(){
+        static SHA256 null0;
         static char empty_array[static_size]={0};
-        static void* result=std::memcpy(nil.mData.data(),empty_array,static_size);
-        return nil;
+        static void* result=std::memcpy(null0.mData.data(),empty_array,static_size);
+        return result?null0:null0;
     }
     /**
      * Computes the digest of an empty file and returns that digest
