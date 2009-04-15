@@ -67,11 +67,12 @@ IF(ANTLR_INCLUDE_DIRS)
     ENDIF(EXISTS "${ANTLR_LIBRARY_DIRS}/lib")
 
     IF(WIN32) # must distinguish debug and release builds
-        FIND_LIBRARY(ANTLR_DEBUG_LIBRARY NAMES libantlr3cd libanltr3cd_dll
-                                 PATH_SUFFIXES "" Debug PATHS ${ANTLR_LIBRARY_DIRS} NO_DEFAULT_PATH)
-        FIND_LIBRARY(ANTLR_RELEASE_LIBRARY NAMES libantlr3c libanltr3c_dll
-                                 PATH_SUFFIXES "" Release PATHS ${ANTLR_LIBRARY_DIRS} NO_DEFAULT_PATH)
 
+        FIND_LIBRARY(ANTLR_DEBUG_LIBRARY NAMES antlr3cd anltr3cd_dll libantlr3cd libanltr3cd_dll
+                                 PATH_SUFFIXES "" Debug PATHS ${ANTLR_LIBRARY_DIRS} NO_DEFAULT_PATH)
+        FIND_LIBRARY(ANTLR_RELEASE_LIBRARY NAMES antlr3c anltr3c_dll libantlr3c libanltr3c_dll
+                                 PATH_SUFFIXES "" Release PATHS ${ANTLR_LIBRARY_DIRS} NO_DEFAULT_PATH)
+MESSAGE(STATUS "TEST ${ANTLR_LIBRARY_DIRS} ${ANTLR_DEBUG_LIBRARY} ${ANTLR_RELEASE_LIBRARY}")
         SET(ANTLR_LIBRARIES)
         IF(ANTLR_DEBUG_LIBRARY AND ANTLR_RELEASE_LIBRARY)
             SET(ANTLR_LIBRARIES debug ${ANTLR_DEBUG_LIBRARY} optimized ${ANTLR_RELEASE_LIBRARY})
