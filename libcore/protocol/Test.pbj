@@ -8,11 +8,12 @@ message TestMessage {
   repeated string xxss=25;
   repeated bytes xxbb=26;
   repeated float xxff=27;
+  repeated normal xxnn=29;
   required float xxfr=28;
   optional normal n=1;
   optional vector2f v2f=2;
   optional vector2d v2d=3;
-  optional vector3f v3f=4;
+  required vector3f v3f=4;
   optional vector3d v3d=5;
   optional vector4f v4f=6;
   optional vector4d v4d=7;
@@ -47,8 +48,21 @@ message TestMessage {
   optional boundingbox3f3f bbf=17;
   optional boundingbox3d3f bbd=18;
   optional Enum32 e32=19;
+
+  message SubMessage {
+     optional uuid subuuid=1;
+     optional vector3d subvector=2;
+     optional duration subduration=3;
+     optional normal subnormal=4;
+  }
+  optional SubMessage submes=30;
+  repeated SubMessage submessers=31;
+  optional sha256 sha=32; 
+  repeated sha256 shas=33; 
+
   extensions 100 to 199;
 }
 extend TestMessage {
-  optional boundingbox3f3f bbox=100;
+  optional boundingbox3f3f extensionbbox=100;
+  optional vector3f extensionvector=101;
 }
