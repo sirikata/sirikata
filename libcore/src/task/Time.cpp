@@ -47,9 +47,12 @@ Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	ULARGE_INTEGER uli;
 	uli.LowPart = ft.dwLowDateTime;
 	uli.HighPart = ft.dwHighDateTime;
-	__int64 time64 = uli.QuadPart;
-
-	return AbsTime(((double)time64)/10000000); // 100-nanosecond.
+	ULONGLONG time64 = uli.QuadPart;
+    ULONGLONG wholeTime= time64/10000000-12884268218;//HACK until we switch officially to int64's
+	ULONGLONG partTime=time64%10000000;
+	double doubleTime=wholeTime;
+	doubleTime+=partTime/10000000.;
+	return AbsTime(doubleTime); // 100-nanosecond.
 }
 
 #else
