@@ -64,8 +64,8 @@ public:
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
     }
     MeshEntity(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
-               const UUID &id);
+               const std::tr1::shared_ptr<ProxyMeshObject> &pmo, 
+               const std::string&ogre_id=std::string());
 
     virtual ~MeshEntity();
 
@@ -77,7 +77,8 @@ public:
     void setScale(const Vector3f &scale) {
         mSceneNode->setScale(toOgre(scale));
     }
-
+    static std::string ogreMeshName(const SpaceObjectReference&ref);
+    virtual std::string ogreMovableName()const;
   /*
     virtual bool loadMesh(const String&name){
         return false;

@@ -57,13 +57,15 @@ public:
                          uint32 height);
     virtual void detach();
     CameraEntity(OgreSystem *scene,
-           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
-           const UUID &id);
+                 const std::tr1::shared_ptr<ProxyCameraObject> &pco,
+                 std::string id=std::string());
 
     virtual ~CameraEntity();
     Ogre::Viewport* getViewport(){
         return mViewport;
     }
+    static std::string ogreCameraName(const SpaceObjectReference&ref);
+    virtual std::string ogreMovableName() const;
 };
 
 }

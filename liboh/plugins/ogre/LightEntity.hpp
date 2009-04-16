@@ -46,12 +46,12 @@ public:
     ProxyLightObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyLightObject>(mProxy);
     }
-    LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const UUID &id);
+    LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const std::string &id=std::string());
 
     virtual ~LightEntity();
 
-    inline Ogre::Light &light() {
-        return *static_cast<Ogre::Light*>(mOgreObject);
+    inline Ogre::Light *getOgreLight() {
+        return static_cast<Ogre::Light*>(mOgreObject);
     }
 
     float computeClosestPower(
@@ -59,6 +59,8 @@ public:
             const Color &source);
 
     virtual void notify(const LightInfo& linfo);
+    static std::string ogreLightName(const SpaceObjectReference&ref);
+    virtual std::string ogreMovableName() const;
 };
 
 }

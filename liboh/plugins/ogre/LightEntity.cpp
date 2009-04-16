@@ -39,17 +39,18 @@
 namespace Sirikata {
 namespace Graphics {
 
-LightEntity::LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const UUID &id)
+LightEntity::LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const std::string &id)
     : Entity(scene,
              plo,
-             id,
-             scene->getSceneManager()->createLight(id.readableHexData())) {
+             id.length()?id:ogreLightName(plo->getObjectReference()),
+             scene->getSceneManager()->createLight(id.length()?id:ogreLightName(plo->getObjectReference()))) {
     getProxy().LightProvider::addListener(this);
 }
 
-LightEntity::~LightEntity() {
+LightEntity::~LightEntity() {    
+    Ogre::Light *toDestroy=getOgreLight();
     init(NULL);
-    mScene->getSceneManager()->destroyLight(mId.readableHexData());
+    mScene->getSceneManager()->destroyLight(toDestroy);
     getProxy().LightProvider::removeListener(this);
 }
 
@@ -68,39 +69,45 @@ void LightEntity::notify(const LightInfo& linfo){
                                       linfo.mShadowColor * linfo.mPower);
     Ogre::ColourValue diffuse_ambient (
         toOgreRGBA(linfo.mDiffuseColor, ambientPower));
-    light().setDiffuseColour(diffuse_ambient);
+    getOgreLight()->setDiffuseColour(diffuse_ambient);
     
     Ogre::ColourValue specular_shadow (
         toOgreRGBA(linfo.mSpecularColor, shadowPower));
-    light().setSpecularColour(specular_shadow);
+    getOgreLight()->setSpecularColour(specular_shadow);
     
-    light().setPowerScale(linfo.mPower);
+    getOgreLight()->setPowerScale(linfo.mPower);
     switch (linfo.mType) {
       case LightInfo::POINT:
-        light().setType(Ogre::Light::LT_POINT);
+        getOgreLight()->setType(Ogre::Light::LT_POINT);
         break;
       case LightInfo::SPOTLIGHT:
-        light().setType(Ogre::Light::LT_SPOTLIGHT);
+        getOgreLight()->setType(Ogre::Light::LT_SPOTLIGHT);
         break;
       case LightInfo::DIRECTIONAL:
-        light().setType(Ogre::Light::LT_DIRECTIONAL);
+        getOgreLight()->setType(Ogre::Light::LT_DIRECTIONAL);
         break;
       default:break;
     }
     if (linfo.mType!=LightInfo::DIRECTIONAL) {
-        light().setAttenuation(
+        getOgreLight()->setAttenuation(
             linfo.mLightRange,
             linfo.mConstantFalloff,
             linfo.mLinearFalloff,
             linfo.mQuadraticFalloff);
     }
     if (linfo.mType==LightInfo::SPOTLIGHT) {
-        light().setSpotlightRange(
+        getOgreLight()->setSpotlightRange(
             Ogre::Radian(linfo.mConeInnerRadians),
             Ogre::Radian(linfo.mConeOuterRadians),
             linfo.mConeFalloff);
     }
-    light().setCastShadows(linfo.mCastsShadow);
+    getOgreLight()->setCastShadows(linfo.mCastsShadow);
+}
+std::string LightEntity::ogreLightName(const SpaceObjectReference&ref) {
+    return "Light:"+ref.toString();
+}
+std::string LightEntity::ogreMovableName()const{
+    return ogreLightName(id());
 }
 
 }

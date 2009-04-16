@@ -4,16 +4,16 @@
 namespace Sirikata {
 namespace Graphics {
 CameraEntity::CameraEntity(OgreSystem *scene,
-           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
-           const UUID &id)
+                           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
+                           std::string ogreName)
     : Entity(scene,
              pco,
-             id,
+             ogreName.length()?ogreName:ogreName=ogreCameraName(pco->getObjectReference()),
              NULL),
       mRenderTarget(NULL),
       mViewport(NULL) {
     getProxy().CameraProvider::addListener(this);
-    String cameraName = id.readableHexData();
+    String cameraName = ogreName;
     if (scene->getSceneManager()->hasCamera(cameraName)) {
         init(scene->getSceneManager()->getCamera(cameraName));
     } else {
@@ -59,9 +59,16 @@ CameraEntity::~CameraEntity() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
     }
+    Ogre::Camera*toDestroy=getOgreCamera();
     init(NULL);
-    mScene->getSceneManager()->destroyCamera(mId.readableHexData());
+    mScene->getSceneManager()->destroyCamera(toDestroy);
     getProxy().CameraProvider::removeListener(this);
+}
+std::string CameraEntity::ogreCameraName(const SpaceObjectReference&ref) {
+    return "Camera:"+ref.toString();
+}
+std::string CameraEntity::ogreMovableName()const{
+    return ogreCameraName(id());
 }
 
 

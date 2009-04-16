@@ -39,13 +39,12 @@ namespace Graphics {
 
 Entity::Entity(OgreSystem *scene,
                const ProxyPositionObjectPtr &ppo,
-               const UUID &id,
+               const std::string &ogreId,
                Ogre::MovableObject *obj)
   : mScene(scene),
     mProxy(ppo),
     mOgreObject(NULL),
-    mSceneNode(scene->getSceneManager()->createSceneNode(id.readableHexData())),
-    mId(id),
+    mSceneNode(scene->getSceneManager()->createSceneNode(ogreId)),
     mMovingIter(scene->mMovingEntities.end())
 {
     mSceneNode->setInheritScale(false);
@@ -79,7 +78,7 @@ Entity::~Entity() {
        There should be none, as the server should have adjusted their parents.
      */
     mSceneNode->removeAllChildren();
-    mScene->getSceneManager()->destroySceneNode(mId.readableHexData());
+    mScene->getSceneManager()->destroySceneNode(mSceneNode);
 }
 
 void Entity::init(Ogre::MovableObject *obj) {
@@ -161,7 +160,6 @@ void Entity::unsetParent(Time ti, const Location &newLocation) {
 void Entity::destroyed() {
     delete this;
 }
-
 void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
     setOgrePosition(getProxy().extrapolatePosition(current));
     setOgreOrientation(getProxy().extrapolateOrientation(current));

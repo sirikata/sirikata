@@ -500,21 +500,21 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
-            CameraEntity *cam=new CameraEntity(this,camera,UUID::random());
+            CameraEntity *cam=new CameraEntity(this,camera);
         }
         
     }
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
-            LightEntity *lig=new LightEntity(this,light,UUID::random());
+            LightEntity *lig=new LightEntity(this,light);
         }
         
     }
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
-            MeshEntity *mesh=new MeshEntity(this,meshpxy,UUID::random());
+            MeshEntity *mesh=new MeshEntity(this,meshpxy);
         }
         
     }

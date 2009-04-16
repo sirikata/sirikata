@@ -36,12 +36,12 @@ namespace Sirikata {
 namespace Graphics {
 
 MeshEntity::MeshEntity(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
-               const UUID &id)
+                       const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
+                       const std::string &id)
         : Entity(scene,
                  pmo,
-                 id,
-                 scene->getSceneManager()->createEntity(id.readableHexData(), Ogre::SceneManager::PT_CUBE))
+                 id.length()?id:ogreMeshName(pmo->getObjectReference()),
+                 scene->getSceneManager()->createEntity(id.length()?id:ogreMeshName(pmo->getObjectReference()), Ogre::SceneManager::PT_CUBE))
 {
     getProxy().MeshProvider::addListener(this);
 }
@@ -57,14 +57,20 @@ void MeshEntity::created(const Ogre::MeshPtr &mesh) {
     Ogre::MovableObject *meshObj = mOgreObject;
     init(NULL);
     getScene()->getSceneManager()->destroyMovableObject(meshObj);
-    meshObj = getScene()->getSceneManager()->createEntity(id().readableHexData(),
+    meshObj = getScene()->getSceneManager()->createEntity(ogreMovableName(),
                                                           mesh->getName());
     init(meshObj);
 }
-
+std::string MeshEntity::ogreMeshName(const SpaceObjectReference&ref) {
+    return "Mesh:"+ref.toString();
+}
+std::string MeshEntity::ogreMovableName()const{
+    return ogreMeshName(id());
+}
 MeshEntity::~MeshEntity() {
+    Ogre::Entity * toDestroy=getOgreEntity();
     init(NULL);
-    getScene()->getSceneManager()->destroyEntity(mId.readableHexData());
+    getScene()->getSceneManager()->destroyEntity(toDestroy);
     getProxy().MeshProvider::removeListener(this);
 }
 
