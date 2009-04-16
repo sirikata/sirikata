@@ -44,6 +44,7 @@
 #define STATS_SYNC_FILE      "stats.sync-filename"
 
 #define ANALYSIS_LOC         "analysis.loc"
+#define ANALYSIS_LOCVIS         "analysis.locvis"
 #define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
 #define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
 #define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"

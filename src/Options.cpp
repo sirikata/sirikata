@@ -71,6 +71,8 @@ void InitOptions() {
         .addOption(new OptionValue(MAX_EXTRAPOLATOR_DIST, "1.0", Sirikata::OptionValueType<float64>(), "The maximum distance an object is permitted to deviate from the predictions by other objects before an update is sent out."))
 
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_LOCVIS, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
+
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))
 
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH, "", Sirikata::OptionValueType<String>(), "Do a windowed bandwidth analysis of the specified type: datagram, packet"))
@@ -85,12 +87,12 @@ void InitOptions() {
 }
 
 void ParseOptions(int argc, char** argv) {
-    OptionSet* options = OptionSet::getOptions(CBR_MODULE);
+    OptionSet* options = OptionSet::getOptions(CBR_MODULE,NULL);
     options->parse(argc, argv);
 }
 
 OptionValue* GetOption(const char* name) {
-    OptionSet* options = OptionSet::getOptions(CBR_MODULE);
+    OptionSet* options = OptionSet::getOptions(CBR_MODULE,NULL);
     return options->referenceOption(name);
 }
 

@@ -41,7 +41,7 @@
 #include "Options.hpp"
 #include "Statistics.hpp"
 #include "Analysis.hpp"
-
+#include "Visualization.hpp"
 #include "OracleLocationService.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
@@ -130,6 +130,11 @@ void *main_loop(void *) {
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
+        LocationVisualization lea(STATS_TRACE_FILE, nservers);
+        lea.displayRandomViewerError(5, Duration::milliseconds((uint32)30), obj_factory);
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
