@@ -65,8 +65,8 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
             mSpace=SpaceID::null();
             throw std::invalid_argument("Unable to find colon separator in SpaceObjectReference");
         }else {
-            mSpace=SpaceID(humanReadable.substr(0,where));
-            mObject=ObjectReference(humanReadable.substr(where+1));
+            mObject=ObjectReference(humanReadable.substr(0,where));
+            mSpace=SpaceID(humanReadable.substr(where+1));
         }
     }
     explicit SpaceObjectReference(const void * data,
@@ -93,7 +93,7 @@ class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
     }
 
     String toString() const{
-        return space().toString()+':'+object().toString();
+        return object().toString()+':'+space().toString();
     }
     unsigned int hash() const{
         return object().hash()^space().hash();
