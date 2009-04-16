@@ -57,7 +57,7 @@ public:
 };
 class KeyPressed :public KeyEvent {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("KeyPressed");
         return retval;
     }
@@ -66,7 +66,7 @@ public:
 };
 class KeyReleased :public KeyEvent {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("KeyReleased");
         return retval;
     }
@@ -75,7 +75,7 @@ public:
 };
 class KeyChanged :public KeyEvent {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("KeyChanged");
         return retval;
     }
@@ -86,7 +86,7 @@ public:
 
 class KeyDown :public KeyEvent {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("KeyDown");
         return retval;
     }
@@ -120,7 +120,7 @@ public:
 };
 class MouseButtonPressed :public ButtonEvent<SDL_MouseButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("MouseButtonPressed");
         return retval;
     }
@@ -129,7 +129,7 @@ public:
 };
 class MouseButtonReleased :public ButtonEvent<SDL_MouseButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("MouseButtonReleased");
         return retval;
     }
@@ -138,7 +138,7 @@ public:
 };
 class MouseButtonChanged :public ButtonEvent<SDL_MouseButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("MouseButtonChanged");
         return retval;
     }
@@ -149,7 +149,7 @@ public:
 
 class MouseButtonDown :public ButtonEvent<SDL_MouseButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("MouseButtonDown");
         return retval;
     }
@@ -159,7 +159,7 @@ public:
 
 class JoyButtonPressed :public ButtonEvent<SDL_JoyButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("JoyButtonPressed");
         return retval;
     }
@@ -168,7 +168,7 @@ public:
 };
 class JoyButtonReleased :public ButtonEvent<SDL_JoyButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("JoyButtonReleased");
         return retval;
     }
@@ -177,7 +177,7 @@ public:
 };
 class JoyButtonChanged :public ButtonEvent<SDL_JoyButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("JoyButtonChanged");
         return retval;
     }
@@ -188,7 +188,7 @@ public:
 
 class JoyButtonDown :public ButtonEvent<SDL_JoyButtonEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("JoyButtonDown");
         return retval;
     }
@@ -199,7 +199,7 @@ public:
 
 class JoyHatDown :public ButtonEvent<SDL_JoyHatEvent> {
 public:
-    const IdPair::Primary& getEventId(){
+    static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("JoyHatDown");
         return retval;
     }
