@@ -47,19 +47,17 @@ Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	ULARGE_INTEGER uli;
 	uli.LowPart = ft.dwLowDateTime;
 	uli.HighPart = ft.dwHighDateTime;
-	ULONGLONG time64 = uli.QuadPart;
-    ULONGLONG wholeTime= time64/10000000-12884268218;//HACK until we switch officially to int64's
-	ULONGLONG partTime=time64%10000000;
-	double doubleTime=wholeTime;
-	doubleTime+=partTime/10000000.;
-	return AbsTime(doubleTime); // 100-nanosecond.
+	ULONGLONG time64 = uli.QuadPart/100;
+	return AbsTime::microseconds(time64);
 }
 
 #else
 Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	struct timeval tv = {0, 0};
 	gettimeofday(&tv, NULL);
-
-	return AbsTime((double)tv.tv_sec + ((double)tv.tv_usec)/1000000);
+    uint64 total_time=tv.tv_sec;
+    total_time*=1000000;
+    total_time+=tv.tv_usec;
+	return AbsTime::microseconds(total_time);
 }
 #endif

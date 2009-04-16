@@ -83,7 +83,7 @@ public:
         }else{
             return mValuePast.extrapolate(t)
                 .blend(mValuePresent.extrapolate(t),
-                       (float64)timeSinceUpdate/(float64)mFadeTime);
+                       timeSinceUpdate/mFadeTime);
         }
     }
     const Value& lastValue() const {

@@ -83,7 +83,7 @@ class FrequencyType{public:
         ss>>val;
         if (val==0.)
             val=60.;
-        return Duration(1./val);
+        return Duration::seconds(1./val);
     }
 };
 class ShadowType{public:

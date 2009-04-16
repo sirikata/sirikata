@@ -533,7 +533,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 
 	AbsTime finishTime = AbsTime::now();
 	SILOG(task,insane, "**** Done processing events this round. " <<
-		"Took " << (float)(finishTime-startTime) <<
+          "Took " << (finishTime-startTime).toSeconds() <<
 		" seconds.");
 }
 

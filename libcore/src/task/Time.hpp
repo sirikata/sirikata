@@ -53,27 +53,34 @@ namespace Task {
  * @see AbsTime
  */
 class SIRIKATA_EXPORT DeltaTime {
-	double mDeltaTime;
-
-public:
-	/// Construct from a floating point number of seconds.
-	DeltaTime(double t) {
-		this->mDeltaTime = t;
+	int64 mDeltaTime;
+    	/// Construct from a floating point number of seconds.
+	DeltaTime(double s):mDeltaTime((int64)(s*1000000.)){
+    
 	}
+    DeltaTime(int64 us):mDeltaTime(us) {
+    }
+public:
+    inline double operator/ (const DeltaTime&other)const {
+        return (double)(mDeltaTime/other.mDeltaTime)+(double)(mDeltaTime%other.mDeltaTime)/(double)other.mDeltaTime;
+    }
+    operator double()const {
+        return (double)mDeltaTime/1000000.;
+    }
     static DeltaTime seconds(double s) {
         return DeltaTime(s);
     }
     static DeltaTime milliseconds(double ms) {
         return DeltaTime(ms/1000.);
     }
-    static DeltaTime microseconds(double us) {
-        return DeltaTime(us/1000000.);
+    static DeltaTime milliseconds(int64 ms) {
+        return DeltaTime(ms*1000);
     }
     static DeltaTime microseconds(int64 us) {
-        return DeltaTime(us/1000000.);
+        return DeltaTime(us);
     }
-    static DeltaTime nanoseconds(double ns) {
-        return DeltaTime(ns/1000000000.);
+    static DeltaTime nanoseconds(int64 ns) {
+        return DeltaTime(ns/1000);
     }
 
 	/// Simple helper function -- returns "AbsTime::now() + (*this)".
@@ -91,23 +98,20 @@ public:
 	inline DeltaTime operator- () const {
 		return DeltaTime(-mDeltaTime);
 	}
-
-	/// Convert to a floating point representation.
-	inline operator double() const {
-		return mDeltaTime;
-	}
-	/// A float operator (may truncate some decimal places).
-	inline operator float() const {
-		return (float)mDeltaTime;
-	}
-
+    double toSeconds () {
+        return mDeltaTime/1000000.;
+    }
 	/// Convert to an integer in milliseconds.
-	int64 toMilli() const {
+	int64 toMilliseconds() const {
 		return (int64)(mDeltaTime*1000);
 	}
 	/// Convert to an integer in microseconds.
-	int64 toMicro() const {
+	int64 toMicroseconds() const {
 		return (int64)(mDeltaTime*1000000);
+	}
+	/// Convert to an integer in microseconds.
+	int64 toMicro() const {
+        return toMicroseconds();
 	}
 
 	/// Equality comparison
@@ -134,10 +138,10 @@ public:
  */
 class SIRIKATA_EXPORT AbsTime {
 
-	double mTime;
+	uint64 mTime;
 
 	/// Private constructor-- Use "now()" to create an AbsTime.
-	explicit AbsTime(double t) {
+	explicit AbsTime(uint64 t) {
 		this->mTime = t;
 	}
 
@@ -146,7 +150,6 @@ class SIRIKATA_EXPORT AbsTime {
 	static void updateFrameTime();
 */
 public:
-
 	/// Equality comparison (same as (*this - other) == 0)
 	inline bool operator== (const AbsTime &other) const {
 		return (mTime == other.mTime);
@@ -172,7 +175,7 @@ public:
 	 * @returns a DeltaTime that can be cast to a double in seconds.
 	 */
 	inline DeltaTime operator- (const AbsTime &other) const {
-		return DeltaTime(mTime - other.mTime);
+		return DeltaTime::microseconds((int64)mTime - (int64)other.mTime);
 	}
 	/**
 	 * Adds a time difference to a given absolute time.
@@ -180,20 +183,20 @@ public:
 	 * @returns a new absolute time--does not modify the existing one.
 	 */
 	inline AbsTime operator+ (const DeltaTime &otherDelta) const {
-		return AbsTime(mTime + (double)otherDelta);
+		return AbsTime(mTime + otherDelta.toMicro());
 	}
 	inline AbsTime operator- (const DeltaTime &otherDelta) const {
 		return (*this) + (-otherDelta);
 	}
 	inline void operator+= (const DeltaTime &otherDelta) {
-		mTime += (double)otherDelta;
+		mTime += otherDelta.toMicro();
 	}
 	inline void operator-= (const DeltaTime &otherDelta) {
 		(*this) += (-otherDelta);
 	}
 
     static AbsTime microseconds(int64 abstime){
-        return AbsTime(abstime/1000000.);
+        return AbsTime(abstime);
     }
 
 	/**
