@@ -47,7 +47,7 @@ Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	ULARGE_INTEGER uli;
 	uli.LowPart = ft.dwLowDateTime;
 	uli.HighPart = ft.dwHighDateTime;
-	ULONGLONG time64 = uli.QuadPart/100;
+	ULONGLONG time64 = uli.QuadPart/10;
 	return AbsTime::microseconds(time64);
 }
 

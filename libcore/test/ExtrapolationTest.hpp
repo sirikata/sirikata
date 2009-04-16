@@ -48,8 +48,8 @@ public:
         using namespace Sirikata;
         ErrorPredicate ep(Location::Error(3,3));
         Time now=Time::now();
-        Duration inc(.25);
-        Duration hinc(.125);
+		Duration inc=Duration::seconds(.25);
+		Duration hinc=Duration::seconds(.125);
         ExtrapolatorBase * base=new Extrapolator(inc,
                                                  now,
                                                  Location(Vector3d(256,16,1),
