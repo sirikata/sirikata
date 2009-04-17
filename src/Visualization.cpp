@@ -20,6 +20,9 @@ void LocationVisualization::mainLoop(){
         if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
             if (pe->entered) {
                 mVisible[pe->source]=pe->loc;
+                if (mInvisible.find(pe->source)!=mInvisible.end()) {
+                    mInvisible.erase(mInvisible.find(pe->source));
+                }
             }else {
                 mVisible.erase(mVisible.find(pe->source));
             }
@@ -28,6 +31,7 @@ void LocationVisualization::mainLoop(){
         if ((le=dynamic_cast<LocationEvent*>(oe))) {
             VisibilityMap::iterator where=mVisible.find(le->source);
             if (where==mVisible.end()) {
+                mInvisible[le->source]=le->loc;
                 std::cerr<<"Guy "<<le->source.readableHexData()<<"not visible who gave update to "<<le->receiver.readableHexData()<<"\n";
             }else {
                 where->second=le->loc;
@@ -81,8 +85,21 @@ void LocationVisualization::mainLoop(){
             VisibilityMap::iterator where;
             if ((where=mVisible.find(*it))==mVisible.end()) {
                 glColor3f(0,.5,0);
+                if ((where=mInvisible.find(*it))!=mInvisible.end()) {
+                    Vector3f twhere=where->second.extrapolate(mCurTime).position();
+                    glColor3f(.25,0,0);
+                    glVertex2f(twhere.x,twhere.y);
+                    glEnd();
+                    glColor3f(.25,0,0);
+                    glBegin(GL_LINES);
+                    glVertex2f(twhere.x,twhere.y);
+                    glVertex2f(pos.x,pos.y);
+                    glEnd();
+                    glBegin(GL_POINTS);
+                    glColor3f(.5,0,0);
+                }
             }else {
-                glColor3f(1,1,1);
+                glColor3f(.5,.5,.5);
                 Vector3f twhere=where->second.extrapolate(mCurTime).position();
                 glVertex2f(twhere.x,twhere.y);
                 glEnd();
@@ -92,7 +109,7 @@ void LocationVisualization::mainLoop(){
                 glVertex2f(pos.x,pos.y);
                 glEnd();
                 glBegin(GL_POINTS);
-                glColor3f(.5,.5,.5);
+                glColor3f(1,1,1);
             }
         }
         glVertex2f(pos.x,pos.y);
