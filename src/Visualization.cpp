@@ -18,13 +18,21 @@ void LocationVisualization::mainLoop(){
 
         ProximityEvent*pe;
         if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
+            VisibilityMap::iterator where;
             if (pe->entered) {
                 mVisible[pe->source]=pe->loc;
-                if (mInvisible.find(pe->source)!=mInvisible.end()) {
-                    mInvisible.erase(mInvisible.find(pe->source));
+                if ((where=mInvisible.find(pe->source))!=mInvisible.end()) {
+                    mInvisible.erase(where);
                 }
             }else {
-                mVisible.erase(mVisible.find(pe->source));
+                if ((where=mVisible.find(pe->source))!=mVisible.end()) {
+                    mVisible.erase(where);
+                }else {
+                    std::cerr<<"Guy "<<pe->source.readableHexData()<<"not got erased from visibility\n";
+                    if ((where=mInvisible.find(pe->source))!=mInvisible.end()) {
+                        mInvisible.erase(where);
+                    }
+                }
             }
         }
         LocationEvent*le;
