@@ -1,4 +1,19 @@
 package Sirikata.PB;
+message ExternalMessage {
+  message SubMessage {
+     optional uuid subuuid=1;
+     optional vector3d subvector=2;
+     optional duration subduration=3;
+     optional normal subnormal=4;
+  }
+  optional vector2f v2f=2;
+  optional SubMessage submes=30;
+  repeated SubMessage submessers=31;
+  optional sha256 sha=32; 
+  repeated sha256 shas=33; 
+  required vector3f v3f=4;
+  repeated vector3f v3ff=5;
+}
 message TestMessage {
   optional double xxd =20 [default=10.3];
   optional float xxf=21;
@@ -61,6 +76,9 @@ message TestMessage {
   repeated sha256 shas=33; 
 
   extensions 100 to 199;
+  optional ExternalMessage extmes=34;
+  repeated ExternalMessage extmessers=35;
+  required ExternalMessage extmesser=36;
 }
 extend TestMessage {
   optional boundingbox3f3f extensionbbox=100;
