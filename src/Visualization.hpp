@@ -13,6 +13,9 @@ class LocationVisualization :public LocationErrorAnalysis {
     EventList* mObservedEvents;
     EventList::iterator mCurEvent;
     Time mCurTime;
+    Duration mSamplingRate;
+    typedef std::tr1::unordered_map<UUID,TimedMotionVector3f,UUID::Hasher> VisibilityMap;
+    VisibilityMap mVisible;
 public:
     void mainLoop();
     LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*obj_factory, LocationService*loc_serv, CoordinateSegmentation*cseg);

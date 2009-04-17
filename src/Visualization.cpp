@@ -8,15 +8,35 @@
 namespace CBR {
 static LocationVisualization*gVis=NULL;
 void LocationVisualization::mainLoop(){
-    if (mCurEvent!=mObservedEvents->end()) {
+    mCurTime+=mSamplingRate;
+    while (mCurEvent!=mObservedEvents->end()) {
         ObjectEvent*oe=*mCurEvent;
-        mLoc->tick(oe->end_time());
-        Duration d=oe->end_time()-mCurTime;
-        mCurTime=oe->end_time();
-        usleep(d.milliseconds()*1000);
+        if (oe->end_time()>mCurTime) {
+            break;
+        }
+        
+
+        ProximityEvent*pe;
+        if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
+            if (pe->entered) {
+                mVisible[pe->source]=pe->loc;
+            }else {
+                mVisible.erase(mVisible.find(pe->source));
+            }
+        }
+        LocationEvent*le;
+        if ((le=dynamic_cast<LocationEvent*>(oe))) {
+            VisibilityMap::iterator where=mVisible.find(le->source);
+            if (where==mVisible.end()) {
+                std::cerr<<"Guy "<<le->source.readableHexData()<<"not visible who gave update to "<<le->receiver.readableHexData()<<"\n";
+            }else {
+                where->second=le->loc;
+            }
+
+        }        
         ++mCurEvent;
     }
-   
+    mLoc->tick(mCurTime);
     glClear(GL_COLOR_BUFFER_BIT);		/* clear the display */
     uint32 i;
 
@@ -55,12 +75,28 @@ void LocationVisualization::mainLoop(){
         if (*it==mObserver) {
             glColor3f(1,0,0);
         }else {
-            glColor3f(0,1,1);
+            VisibilityMap::iterator where;
+            if ((where=mVisible.find(*it))==mVisible.end()) {
+                glColor3f(0,.5,0);
+            }else {
+                glColor3f(1,1,1);
+                Vector3f twhere=where->second.extrapolate(mCurTime).position();
+                glVertex2f(twhere.x,twhere.y);
+                glEnd();
+                glColor3f(.25,.25,.25);
+                glBegin(GL_LINES);
+                glVertex2f(twhere.x,twhere.y);
+                glVertex2f(pos.x,pos.y);
+                glEnd();
+                glBegin(GL_POINTS);
+                glColor3f(.5,.5,.5);
+            }
         }
         glVertex2f(pos.x,pos.y);
     }
     glEnd();
     glutSwapBuffers();				/* Complete any pending operations */
+    usleep((int)(mSamplingRate.milliseconds()*1000));
 }
 void main_loop() {
   static LocationVisualization*sVis=gVis;
@@ -72,7 +108,7 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
     mFactory=factory;
     mLoc=loc_serv;
     mSeg=cseg;
-
+    mSamplingRate=Duration::milliseconds(30.0f);
 }
 
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
@@ -88,6 +124,7 @@ void LocationVisualization::displayError(const UUID&observer, const Duration&sam
     this->mObserver=observer;
     mObservedEvents = getEventList(observer);
     mCurEvent=mObservedEvents->begin();
+    mSamplingRate=sampling_rate;
     if (mCurEvent!=mObservedEvents->end()) {
         mCurTime=(*mCurEvent)->begin_time();
     }
