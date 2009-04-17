@@ -35,8 +35,11 @@ void LocationVisualization::mainLoop(){
 
         }        
         ++mCurEvent;
+
     }
-    mLoc->tick(mCurTime);
+    if (mCurEvent!=mObservedEvents->end())
+        mLoc->tick(mCurTime);
+
     glClear(GL_COLOR_BUFFER_BIT);		/* clear the display */
     uint32 i;
 
