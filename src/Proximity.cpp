@@ -100,7 +100,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
 
         for(ObjectSet::iterator it = added_objs.begin(); it != added_objs.end(); it++)
-            events.push(ProximityEventInfo(query_id, *it, ProximityEventInfo::Entered));
+            events.push(ProximityEventInfo(query_id, *it, mLocationService->location(*it), ProximityEventInfo::Entered));
 
         for(ObjectSet::iterator it = removed_objs.begin(); it != removed_objs.end(); it++)
             events.push(ProximityEventInfo(query_id, *it, ProximityEventInfo::Exited));

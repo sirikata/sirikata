@@ -255,7 +255,7 @@ void Server::proximityTick(const Time& t) {
                 evt.query(),
                 evt.object(),
                 (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited,
-                mLocationService->location(evt.query())
+                evt.location()
             );
         route(msg, evt.query());
 

@@ -46,11 +46,17 @@ public:
         Exited = 2
     };
 
+    ProximityEventInfo(const UUID& q, const UUID& obj, TimedMotionVector3f location,Type t)
+      : mQuery(q), mObject(obj), mLocation(location), mType(t) {}
+
     ProximityEventInfo(const UUID& q, const UUID& obj, Type t)
-     : mQuery(q), mObject(obj), mType(t) {}
+        : mQuery(q), mObject(obj), mType(t) {assert(t==Exited);}
 
     const UUID& query() const {
         return mQuery;
+    }
+    const TimedMotionVector3f& location() const {
+        return mLocation;
     }
 
     const UUID& object() const {
@@ -65,6 +71,7 @@ private:
 
     UUID mQuery;
     UUID mObject;
+    TimedMotionVector3f mLocation;
     Type mType;
 }; // class ProximityEvent
 
