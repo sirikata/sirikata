@@ -126,6 +126,8 @@ void *main_loop(void *) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    LocationService* loc_service = new OracleLocationService(obj_factory);
+    CoordinateSegmentation* cseg = new UniformCoordinateSegmentation(region, layout);
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
@@ -133,8 +135,8 @@ void *main_loop(void *) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
-        LocationVisualization lea(STATS_TRACE_FILE, nservers);
-        lea.displayRandomViewerError(5, Duration::milliseconds((uint32)30), obj_factory);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,loc_service,cseg);
+        lea.displayRandomViewerError(5, Duration::milliseconds((uint32)30));
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
@@ -194,8 +196,6 @@ void *main_loop(void *) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
 
-    LocationService* loc_service = new OracleLocationService(obj_factory);
-    CoordinateSegmentation* cseg = new UniformCoordinateSegmentation(region, layout);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());

@@ -110,7 +110,9 @@ public:
             vol *= diag[i];
         return vol;
     }
-
+    CoordType diag()const {
+        return mMax-mMin;
+    }
     CoordType clamp(const CoordType& v) const {
         return v.max(min()).min(max());
     }

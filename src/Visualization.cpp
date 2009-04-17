@@ -1,24 +1,81 @@
 #include "Analysis.hpp"
 #include "Visualization.hpp"
+#include "CoordinateSegmentation.hpp"
+#include "LocationService.hpp"
+#include "ObjectFactory.hpp"
+#include "AnalysisEvents.hpp"
 #include <GL/glut.h>
 namespace CBR {
+static LocationVisualization*gVis=NULL;
+void LocationVisualization::mainLoop(){
+    if (mCurEvent!=mObservedEvents->end()) {
+        ObjectEvent*oe=*mCurEvent;
+        mLoc->tick(oe->end_time());
+        Duration d=oe->end_time()-mCurTime;
+        mCurTime=oe->end_time();
+        usleep(d.milliseconds()*1000);
+        ++mCurEvent;
+    }
+   
+    glClear(GL_COLOR_BUFFER_BIT);		/* clear the display */
+    uint32 i;
+
+    uint32 minServerID=1;
+    uint32 maxServerID=mSeg->numServers()+1;
+    BoundingBox3f bboxwidest;
+    for (i=minServerID;i<maxServerID;++i) {
+        BoundingBox3f bbox=mSeg->serverRegion(i);
+        if (i==minServerID) {
+            bboxwidest=bbox;
+        }else {
+            bboxwidest.mergeIn(bbox);
+        }
+    }
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    Vector3f centre=bboxwidest.min()+bboxwidest.diag()*.5f;
+    //glScalef(1,1,1);
+    glScalef(2.0/bboxwidest.diag().x,2.0/bboxwidest.diag().y,2.0);
+    glTranslatef(-centre.x,-centre.y,0);
+    
+    glBegin(GL_QUADS);
+    for (i=minServerID;i<maxServerID;++i) {
+        BoundingBox3f bbox=mSeg->serverRegion(i);
+        glColor3f(0,0, (i/(float)maxServerID));		/* set current color to white */
+        glVertex2f(bbox.min().x,bbox.min().y);
+        glVertex2f(bbox.min().x,bbox.max().y);
+        glVertex2f(bbox.max().x,bbox.max().y);
+        glVertex2f(bbox.max().x,bbox.min().y);
+    }   
+    glEnd();
+    glPointSize(2);
+    glBegin(GL_POINTS);
+    for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
+        Vector3f pos=mLoc->currentPosition(*it);
+        if (*it==mObserver) {
+            glColor3f(1,0,0);
+        }else {
+            glColor3f(0,1,1);
+        }
+        glVertex2f(pos.x,pos.y);
+    }
+    glEnd();
+    glutSwapBuffers();				/* Complete any pending operations */
+}
 void main_loop() {
-  glClear(GL_COLOR_BUFFER_BIT);		/* clear the display */
-  glColor3f(1.0, 1.0, 1.0);		/* set current color to white */
-  glBegin(GL_TRIANGLES);
-  glVertex2f(.5,.5);
-  glVertex2f(.5,.75);
-  glVertex2f(.75,.5);
-  glEnd();
-  glutSwapBuffers();				/* Complete any pending operations */
-
+  static LocationVisualization*sVis=gVis;
+  sVis->mainLoop();
+  
 }
-LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers):
-    LocationErrorAnalysis(opt_name,nservers){
+LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*factory, LocationService*loc_serv, CoordinateSegmentation*cseg):
+    LocationErrorAnalysis(opt_name,nservers),mCurTime(0){
+    mFactory=factory;
+    mLoc=loc_serv;
+    mSeg=cseg;
 
 }
 
-void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate, ObjectFactory*obj_factory) {
+void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
     
     int argc=1; char argvv[]="test";
     char*argv=&argvv[0];
@@ -27,18 +84,25 @@ void LocationVisualization::displayError(const UUID&observer, const Duration&sam
     glutInitWindowSize(1024,768);
     glViewport(0,0,1024,768);
     int win=glutCreateWindow("Viewer");
+    gVis=this;
+    this->mObserver=observer;
+    mObservedEvents = getEventList(observer);
+    mCurEvent=mObservedEvents->begin();
+    if (mCurEvent!=mObservedEvents->end()) {
+        mCurTime=(*mCurEvent)->begin_time();
+    }
     glutIdleFunc(&main_loop);
-    glutDisplayFunc(&main_loop);
+    glutDisplayFunc(&main_loop);    
     glutMainLoop();
 }
 
-void LocationVisualization::displayRandomViewerError(int seed, const Duration&sampling_rate, ObjectFactory*obj_factory) {
+void LocationVisualization::displayRandomViewerError(int seed, const Duration&sampling_rate) {
     unsigned int which=seed;
     which=which%mEventLists.size();
     ObjectEventListMap::iterator iter=mEventLists.begin();
     for (unsigned int i=0;i<which;++i,++iter) {
     }
-    displayError(iter->first,sampling_rate,obj_factory);
+    displayError(iter->first,sampling_rate);
 
 }
 
