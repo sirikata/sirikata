@@ -6,8 +6,9 @@ message ExternalMessage {
      optional duration subduration=3;
      optional normal subnormal=4;
   }
+  optional bool is_true=40 [default=true];
   optional vector2f v2f=2;
-  optional SubMessage submes=30;
+  optional SubMessage sub_mes=30;
   repeated SubMessage submessers=31;
   optional sha256 sha=32; 
   repeated sha256 shas=33; 

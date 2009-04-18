@@ -1,0 +1,58 @@
+package Sirikata.Protocol;
+
+message Message {
+    enum ReturnStatus {
+      SUCCESS = 0;
+      NETWORK = 1;
+      SECURITY = 2;
+    }
+    optional uuid dest = 1;//the destination ObjectReference (space is implicit) if omitted, space is destination
+    optional uuid src = 2;//the source ObjectReference (space is implicit)
+    optional uuid space = 3;//the spaceID for the message (in case we have a space to route
+    optional int64 id = 4;//the client's ID for the function call request
+    repeated string function=5;//the name of the function(s) to call
+    repeated bytes argument=6;//message to be decoded by the function(s)
+    optional ReturnStatus return_status=7;//if not present, message is successful
+}
+
+message InitializeObjectConnection {
+    optional uuid object_uuid_evidence=2;
+}
+message InitializeObjectConnectionReturn {//return value for InitializeObjectConnection message
+    optional bytes object_reference = 2;
+}
+message DisconnectObject {
+}
+
+message UpdateObjectLocation {
+    flags8 UpdateFlags{
+           FORCE=1;
+    }
+    required time timestamp = 2;
+    required vector3d position = 3;
+    required quaternion orientation = 4;
+    optional vector3f velocity = 5;
+    optional normal rotational_axis = 7;
+    optional float angular_speed = 8;
+    optional UpdateFlags update_flags = 6;
+}
+message RegisterProximityQuery {
+    required uint32 query_id=2;
+    optional vector3f relative_center=3;
+    optional vector3d absolute_center=4;
+    optional float max_radius=5;
+    optional angle min_angle=6;
+}
+message ProximityQueryCallback {
+    enum ProximityEvent {
+        EXITED_PROXIMITY=0;
+        ENTERED_PROXIMITY=1;
+        STATELESS_PROXIMITY=2;
+    }
+    required uint32 query_id=2;
+    required ProximityEvent proximity_event=3;//if false, entered if absent this is stateless information about a proximity
+    required uuid proximate_object=4;
+}
+message UnregisterProximityQuery {
+    optional uint32 query_id=2;  
+}

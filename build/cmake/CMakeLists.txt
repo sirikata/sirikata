@@ -564,7 +564,7 @@ ENDFOREACH(INCLUDE_NONCE)
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Test
+  Test Sirikata
 )
 
 SET(SirikataProtobufFile ${LIBCORE_SOURCE_DIR}/protobuf.cc)

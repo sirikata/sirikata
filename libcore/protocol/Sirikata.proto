@@ -1,9 +1,0 @@
-message boundingbox3d3f {
-    required double minx=1;
-    required double miny=2;
-    required double minz=3;
-    required float lengthx=4;
-    required float lengthy=5;
-    required float lengthz=6;
-}
-
