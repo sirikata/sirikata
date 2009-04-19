@@ -1,58 +1,157 @@
+/*  Sirikata Serialization Protocol
+ *  Sirikata.pbj
+ *
+ *  Copyright (c) 2009, Daniel Reiter Horn
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package Sirikata.Protocol;
 
+/////////////Standard Message Container///////////////
+
+//This is the standard message container. All items sent over the wire should be of type Message
 message Message {
+
+    //the destination ObjectReference (space is implicit) if omitted, space is destination
+    optional uuid destination_object = 1;
+
+    //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
+
+    optional uuid destination_space = 2;
+
+    //the source ObjectReference (space is implicit)
+    optional uuid source_object = 3;
+
+    //the spaceID origin message (in case we have a space routing messages)
+    optional uuid source_space = 4;
+
+    //the message id for the function call request, so out of order messages may be detected and return values may be paired.  
+    optional int64 id = 5;
+
+    //the name of the function(s) to call
+    repeated string message_names=6;
+
+    //message to be decoded by the function(s). Length must match the number of strings unless return_status set and function's length is 0
+    repeated bytes message_arguments=7;
+
+    //the message is a response to a previous message.
     enum ReturnStatus {
       SUCCESS = 0;
-      NETWORK = 1;
-      SECURITY = 2;
+      NETWORK_FAILURE = 1;
+      SECURITY_FAILURE = 2;
     }
-    optional uuid dest = 1;//the destination ObjectReference (space is implicit) if omitted, space is destination
-    optional uuid src = 2;//the source ObjectReference (space is implicit)
-    optional uuid space = 3;//the spaceID for the message (in case we have a space to route
-    optional int64 id = 4;//the client's ID for the function call request
-    repeated string function=5;//the name of the function(s) to call
-    repeated bytes argument=6;//message to be decoded by the function(s)
-    optional ReturnStatus return_status=7;//if not present, message is successful
+    optional ReturnStatus return_status=8;
 }
 
+/////////////Built-in messages///////////////
+
+//New Streams can establish an ObjectConnection
 message InitializeObjectConnection {
+    ///key to indicate how an object's ObjectReference should be restored
     optional uuid object_uuid_evidence=2;
 }
-message InitializeObjectConnectionReturn {//return value for InitializeObjectConnection message
+//This will be in the argument for the return value of the InitializeObjectConnection function
+message ReturnObjectConnection {
+    //return value for InitializeObjectConnection message
     optional bytes object_reference = 2;
 }
+//This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
 message DisconnectObject {
 }
 
+//This message is from a space to an object updating its position and orientation (returns void)
 message UpdateObjectLocation {
+
+    //time that the update was sent out
+    required time timestamp = 2;
+
+    //position of source object
+    required vector3d position = 3;
+
+    //orientation of source object
+    required quaternion orientation = 4;
+
+    //velocity of the source object at snapsot
+    optional vector3f velocity = 5;
+
+    //axis of rotation of source object
+    optional normal rotational_axis = 7;
+
+    //speed of rotation around axis (may be negative)
+    optional float angular_speed = 8;
+
+    //Force update send out even if last update is within range (often useful for final resting pos)
     flags8 UpdateFlags{
            FORCE=1;
     }
-    required time timestamp = 2;
-    required vector3d position = 3;
-    required quaternion orientation = 4;
-    optional vector3f velocity = 5;
-    optional normal rotational_axis = 7;
-    optional float angular_speed = 8;
+    //options for this update, right now only force is the option
     optional UpdateFlags update_flags = 6;
 }
 message RegisterProximityQuery {
+
+    //the client chosen id for this query
     required uint32 query_id=2;
-    optional vector3f relative_center=3;
-    optional vector3d absolute_center=4;
-    optional float max_radius=5;
-    optional angle min_angle=6;
+
+    //If present and set to true, the query is fired once, the relevant items are returned and the query is forgotten
+    optional bool stateless=3;
+
+    //the relative offset from the source object
+    optional vector3f relative_center=4;
+
+    //an absolute query center...this ignores the source object
+    optional vector3d absolute_center=5;
+
+    //query returns all objects within this many meters
+    optional float max_radius=6;
+
+    //query returns all objects that occupy at least this many steradians
+    optional angle min_solid_angle=7;
 }
 message ProximityQueryCallback {
+
+    //the id of the query
+    required uint32 query_id=2;
+
+    //the object falling within (or falling out) of range
+    required uuid proximate_object=3;
+
+    //the type of proximity callback we are getting
     enum ProximityEvent {
         EXITED_PROXIMITY=0;
         ENTERED_PROXIMITY=1;
         STATELESS_PROXIMITY=2;
     }
-    required uint32 query_id=2;
-    required ProximityEvent proximity_event=3;//if false, entered if absent this is stateless information about a proximity
-    required uuid proximate_object=4;
+    required ProximityEvent proximity_event=4;
 }
+
+// used to unregister a proximity query.
+// May be sent back as a return value if space does not support standing queries
 message UnregisterProximityQuery {
+    //delete a query by client id
     optional uint32 query_id=2;  
 }
