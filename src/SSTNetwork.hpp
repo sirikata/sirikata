@@ -19,6 +19,8 @@ public:
     virtual void service(const Time& t);
     virtual void init(void* (*)(void*));
     virtual void start();
+
+    virtual void reportQueueInfo(const Time& t) const;
 private:
 
     CBRSST* mImpl;

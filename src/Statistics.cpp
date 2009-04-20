@@ -71,9 +71,11 @@ void BatchedBuffer::write(std::ostream& os) {
 const uint8 Trace::ProximityTag;
 const uint8 Trace::LocationTag;
 const uint8 Trace::SubscriptionTag;
+const uint8 Trace::ServerDatagramQueueInfoTag;
 const uint8 Trace::ServerDatagramQueuedTag;
 const uint8 Trace::ServerDatagramSentTag;
 const uint8 Trace::ServerDatagramReceivedTag;
+const uint8 Trace::PacketQueueInfoTag;
 const uint8 Trace::PacketSentTag;
 const uint8 Trace::PacketReceivedTag;
 
@@ -123,6 +125,16 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 }
 
+void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued) {
+    data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &dest, sizeof(dest) );
+    data.write( &send_size, sizeof(send_size) );
+    data.write( &send_queued, sizeof(send_queued) );
+    data.write( &receive_size, sizeof(receive_size) );
+    data.write( &receive_queued, sizeof(receive_queued) );
+}
+
 void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
     data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
@@ -157,6 +169,18 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
     data.write( &size, sizeof(size) );
     data.write( &start_time, sizeof(start_time) );
     data.write( &end_time, sizeof(end_time) );
+}
+
+void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued) {
+    data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
+    data.write( &t, sizeof(t) );
+    ServerID* dest_server_id = mServerIDMap->lookup(dest);
+    assert(dest_server_id);
+    data.write( dest_server_id, sizeof(ServerID) );
+    data.write( &send_size, sizeof(send_size) );
+    data.write( &send_queued, sizeof(send_queued) );
+    data.write( &receive_size, sizeof(receive_size) );
+    data.write( &receive_queued, sizeof(receive_queued) );
 }
 
 void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {

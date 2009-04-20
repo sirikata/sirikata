@@ -173,7 +173,7 @@ public:
         Message* result = NULL;
         Time vftime(0);
         ServerQueueInfo* min_queue_info = NULL;
-        
+
         nextMessage(bytes, &result, &vftime, &min_queue_info);
         if (result != NULL) {
             assert( *bytes >= result->size() );
@@ -225,6 +225,20 @@ public:
                 return false;
         }
         return true;
+    }
+
+    // Returns the total amount of space that can be allocated for the destination
+    uint32 maxSize(Key dest) const {
+        typename ServerQueueInfoMap::const_iterator it = mServerQueues.find(dest);
+        if (it == mServerQueues.end()) return 0;
+        return it->second.messageQueue->maxSize();
+    }
+
+    // Returns the total amount of space currently used for the destination
+    uint32 size(Key dest) const {
+        typename ServerQueueInfoMap::const_iterator it = mServerQueues.find(dest);
+        if (it == mServerQueues.end()) return 0;
+        return it->second.messageQueue->size();
     }
 
 protected:

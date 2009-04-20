@@ -112,7 +112,7 @@ void FairServerMessageQueue::service(const Time&t){
             mReceiveQueue.push(csp);
             it->second.mRemainderBytes=0;
             if (bytes<=0) {
-                it->second.mRemainderBytes=bytes; 
+                it->second.mRemainderBytes=bytes;
                 break;
             }
         }
@@ -139,5 +139,12 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
     return 0;
 }
 
+void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
+    for(ReceiveServerList::const_iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
+        uint32 tx_size = mServerQueues.maxSize(it->first), tx_used = mServerQueues.size(it->first);
+        uint32 rx_size = mReceiveQueues.maxSize(it->first), rx_used = mReceiveQueues.size(it->first);
+        mTrace->serverDatagramQueueInfo(t, it->first, tx_size, tx_used, rx_size, rx_used);
+    }
+}
 
 }

@@ -195,6 +195,8 @@ void Server::processChunk(const Network::Chunk&chunk, const ServerID& source_ser
     }while (offset<chunk.size());
 }
 void Server::networkTick(const Time&t) {
+    mServerMessageQueue->reportQueueInfo(t);
+
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty()) {

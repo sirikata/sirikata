@@ -134,7 +134,7 @@ Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
         Network::Chunk* result = si->peek;
 
         if (result) {
-            assert( result->size() == msg.size() );
+            assert( (uint32)result->size() == (uint32)msg.size() );
             si->peek = NULL;
             return result;
         }
@@ -152,6 +152,21 @@ Network::Chunk* CBRSST::receiveOne(const Address4& from, uint32 max_size) {
 
 void CBRSST::service() {
     mApp->processEvents();
+}
+
+void CBRSST::reportQueueInfo(const Time& t) const {
+    for(StreamMap::const_iterator it = mSendConnections.begin(); it != mSendConnections.end(); it++) {
+        uint32 tx_size = it->second.stream->getTransmitBuffer();
+        uint32 tx_used = it->second.stream->getTransmitBufferUsed();
+        uint32 rx_size = 0;
+        uint32 rx_used = 0;
+        StreamMap::const_iterator rx_it = mReceiveConnections.find(it->first);
+        if (rx_it != mReceiveConnections.end()) {
+            rx_size = rx_it->second.stream->getReceiveBuffer();
+            rx_used = rx_it->second.stream->getReceiveBufferUsed();
+        }
+        mTrace->packetQueueInfo(t, it->first, tx_size, tx_used, rx_size, rx_used);
+    }
 }
 
 

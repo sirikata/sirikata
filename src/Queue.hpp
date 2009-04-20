@@ -48,6 +48,13 @@ namespace QueueEnum {
 template<typename ElementType>
 struct MethodSizeFunctor {
     uint32 operator()(const ElementType& e) const {
+        return e.size();
+    }
+};
+
+template<typename ElementType>
+struct MethodSizeFunctor<ElementType*> {
+    uint32 operator()(const ElementType* e) const {
         return e->size();
     }
 };
@@ -94,6 +101,10 @@ public:
 
     bool empty() const{
         return mElements.empty();
+    }
+
+    uint32 maxSize() const {
+        return mMaxSize;
     }
 
     uint32 size() const {

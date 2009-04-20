@@ -140,6 +140,9 @@ Queue<Network::Chunk*>* RaknetNetwork::getReceiveQueue(const Address4& addr) {
     return it->second;
 }
 
+void RaknetNetwork::reportQueueInfo(const Time& t) const {
+}
+
 void RaknetNetwork::service(const Time& t) {
     Packet* p = NULL;
     while ((p = nextPacket())) {

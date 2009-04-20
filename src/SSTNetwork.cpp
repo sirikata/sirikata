@@ -41,4 +41,8 @@ void SSTNetwork::start() {
     mImpl->start();
 }
 
+void SSTNetwork::reportQueueInfo(const Time& t) const {
+    mImpl->reportQueueInfo(t);
+}
+
 } // namespace CBR

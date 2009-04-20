@@ -36,6 +36,7 @@
 #include "MotionPath.hpp"
 #include "ObjectFactory.hpp"
 #include "AnalysisEvents.hpp"
+
 namespace CBR {
 
 
@@ -80,6 +81,19 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = sevt;
           }
           break;
+      case Trace::ServerDatagramQueueInfoTag:
+          {
+              ServerDatagramQueueInfoEvent* pqievt = new ServerDatagramQueueInfoEvent;
+              is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
+              pqievt->source = trace_server_id;
+              is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
+              is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
+              is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
+              is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
+              is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
+              evt = pqievt;
+          }
+          break;
       case Trace::ServerDatagramQueuedTag:
           {
               ServerDatagramQueuedEvent* pqevt = new ServerDatagramQueuedEvent;
@@ -116,6 +130,19 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&prevt->_start_time, sizeof(prevt->_start_time) );
               is.read( (char*)&prevt->_end_time, sizeof(prevt->_end_time) );
               evt = prevt;
+          }
+          break;
+      case Trace::PacketQueueInfoTag:
+          {
+              PacketQueueInfoEvent* pqievt = new PacketQueueInfoEvent;
+              is.read( (char*)&pqievt->time, sizeof(pqievt->time) );
+              pqievt->source = trace_server_id;
+              is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
+              is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
+              is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
+              is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
+              is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
+              evt = pqievt;
           }
           break;
       case Trace::PacketSentTag:
@@ -585,7 +612,7 @@ void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerI
         printf("%d to %d: unknown total, unknown max\n", sender, receiver);
 	return;
     }
-    
+
     computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
@@ -686,7 +713,7 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
 
 
 
-void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {    
+void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
     computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out);
 }
 

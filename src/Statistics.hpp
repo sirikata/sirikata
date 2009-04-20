@@ -79,11 +79,13 @@ public:
     static const uint8 ProximityTag = 0;
     static const uint8 LocationTag = 1;
     static const uint8 SubscriptionTag = 2;
-    static const uint8 ServerDatagramQueuedTag = 3;
-    static const uint8 ServerDatagramSentTag = 4;
-    static const uint8 ServerDatagramReceivedTag = 5;
-    static const uint8 PacketSentTag = 6;
-    static const uint8 PacketReceivedTag = 7;
+    static const uint8 ServerDatagramQueueInfoTag = 3;
+    static const uint8 ServerDatagramQueuedTag = 4;
+    static const uint8 ServerDatagramSentTag = 5;
+    static const uint8 ServerDatagramReceivedTag = 6;
+    static const uint8 PacketQueueInfoTag = 7;
+    static const uint8 PacketSentTag = 8;
+    static const uint8 PacketReceivedTag = 9;
 
     Trace();
 
@@ -93,11 +95,13 @@ public:
     void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
+    void serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued);
     void serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data);
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size);
 
+    void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
 

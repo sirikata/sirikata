@@ -53,6 +53,8 @@ public:
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Network::Chunk* receiveOne(const Address4& from, uint32 max_size);
     virtual void service(const Time& t);
+
+    virtual void reportQueueInfo(const Time& t) const;
 };
 
 }

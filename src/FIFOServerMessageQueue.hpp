@@ -48,6 +48,8 @@ public:
     virtual void service(const Time& t);
 
     virtual void setServerWeight(ServerID sid, float weight);
+
+    virtual void reportQueueInfo(const Time& t) const;
 };
 }
 #endif

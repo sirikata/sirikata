@@ -38,6 +38,8 @@ public:
     void service();
     void init(void* (*x)(void*));
     void start();
+
+    void reportQueueInfo(const Time& t) const;
 private slots:
     void handleConnection();
 

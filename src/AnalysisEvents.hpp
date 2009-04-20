@@ -42,6 +42,16 @@ struct SubscriptionEvent : public ObjectEvent {
 };
 
 
+struct ServerDatagramQueueInfoEvent : public Event {
+    ServerID source;
+    ServerID dest;
+    uint32 send_size;
+    uint32 send_queued;
+    uint32 receive_size;
+    uint32 receive_queued;
+};
+
+
 struct ServerDatagramEvent : public Event {
     ServerID source;
     ServerID dest;
@@ -65,7 +75,7 @@ struct ServerDatagramSentEvent : public ServerDatagramEvent {
     }
 
     float weight;
- 
+
     Time _start_time;
     Time _end_time;
 };
@@ -86,6 +96,15 @@ struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
     Time _end_time;
 };
 
+
+struct PacketQueueInfoEvent : public Event {
+    ServerID source;
+    ServerID dest;
+    uint32 send_size;
+    uint32 send_queued;
+    uint32 receive_size;
+    uint32 receive_queued;
+};
 
 
 struct PacketEvent : public Event {

@@ -40,6 +40,25 @@ namespace CBR {
 
 template <class MessageType, class Key>
 class FIFOQueue {
+protected:
+    struct KeyMessagePair {
+        KeyMessagePair()
+         : key(), msg(NULL) {}
+
+        KeyMessagePair(Key k, MessageType* m)
+         : key(k), msg(m) {}
+
+        uint32 size() const {
+            return msg->size();
+        }
+
+        Key key;
+        MessageType* msg;
+    };
+
+    typedef Queue<KeyMessagePair> MessageQueue;
+    typedef std::map<Key, uint32> SizeMap;
+
 public:
     FIFOQueue()
      : mMessages(1024*1024) // FIXME
@@ -50,7 +69,10 @@ public:
     }
 
     QueueEnum::PushResult push(Key dest_server, MessageType* msg) {
-        return mMessages.push(msg);
+        QueueEnum::PushResult retval = mMessages.push(KeyMessagePair(dest_server, msg));
+        if (retval == QueueEnum::PushSucceeded)
+            mDestSizes[dest_server] = size(dest_server) + msg->size();
+        return retval;
     }
 
     // Returns the next message to deliver, given the number of bytes available for transmission
@@ -60,10 +82,10 @@ public:
     MessageType* front(uint64* bytes) {
         if (mMessages.empty()) return NULL;
 
-        MessageType* result = mMessages.front();
-        if (result->size() > *bytes) return NULL;
+        KeyMessagePair result = mMessages.front();
+        if (result.msg->size() > *bytes) return NULL;
 
-        return result;
+        return result.msg;
     }
 
     // Returns the next message to deliver, given the number of bytes available for transmission
@@ -73,22 +95,36 @@ public:
     MessageType* pop(uint64* bytes) {
         if (mMessages.empty()) return NULL;
 
-        MessageType* result = mMessages.front();
-        if (result->size() > *bytes) return NULL;
+        KeyMessagePair result = mMessages.front();
+        if (result.msg->size() > *bytes) return NULL;
 
-        *bytes -= result->size();
+        *bytes -= result.msg->size();
         mMessages.pop();
+        mDestSizes[result.key] = size(result.key) - result.msg->size();
 
-        return result;
+        return result.msg;
     }
 
     bool empty() const {
         return mMessages.empty();
     }
 
+    // Returns the total amount of space that can be allocated for the destination
+    uint32 maxSize(Key dest) const {
+        return mMessages.maxSize();
+    }
+
+    // Returns the total amount of space currently used for the destination
+    uint32 size(Key dest) const {
+        typename SizeMap::const_iterator it = mDestSizes.find(dest);
+        if (it == mDestSizes.end())
+            return 0;
+        return it->second;
+    }
+
 protected:
-    typedef Queue<MessageType*> MessageQueue;
     MessageQueue mMessages;
+    SizeMap mDestSizes;
 }; // class FIFOQueue
 
 } // namespace CBR

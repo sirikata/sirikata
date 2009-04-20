@@ -29,6 +29,8 @@ public:
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
     ServerID getSourceServer()const{return mSourceServer;}
+
+    virtual void reportQueueInfo(const Time& t) const = 0;
 protected:
     Network* mNetwork;
     ServerID mSourceServer;

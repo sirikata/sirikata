@@ -114,6 +114,12 @@ void FIFOServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     mSourceServers.insert(sid);
 }
 
-
+void FIFOServerMessageQueue::reportQueueInfo(const Time& t) const {
+    for(ReceiveServerList::const_iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
+        uint32 tx_size = mQueue.maxSize(*it), tx_used = mQueue.size(*it);
+        uint32 rx_size = 0, rx_used = 0; // no values make sense here since we're not limiting at all
+        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, rx_size, rx_used);
+    }
+}
 
 }
