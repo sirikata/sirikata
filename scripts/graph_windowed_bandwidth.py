@@ -77,14 +77,15 @@ for line in fp:
         graph_command = begin_graph(graph_command)
 
     if (server2 != curserver2):
-        graph_command = begin_curve(graph_command, server2, "Server " + server2)
+        if (server1 != server2):
+            graph_command = begin_curve(graph_command, server2, "Server " + server2)
 
     curserver1 = server1
     curserver2 = server2
 
-    update_sum(sum, time, bandwidth)
-
-    graph_command = graph_command + time + " " + str(bandwidth) + "\n"
+    if (curserver1 != curserver2):
+        update_sum(sum, time, bandwidth)
+        graph_command = graph_command + time + " " + str(bandwidth) + "\n"
 
 # the last graph needs to be output still since the last one won't have a next line with a server change
 out_fname = get_output_filename(dat_filename, curserver1)
