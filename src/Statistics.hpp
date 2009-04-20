@@ -94,8 +94,8 @@ public:
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     void serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
-    void serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data);
-    void serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size);
+    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data);
+    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size);
 
     void packetSent(const Time& t, const Address4& dest, uint32 size);

@@ -37,6 +37,13 @@
 
 namespace CBR {
 
+struct LayoutChangeEntry {
+  uint64 time;
+
+  Vector3ui32 layout;
+};
+
+
 /** Uniform grid implementation of CoordinateSegmentation. */
 class UniformCoordinateSegmentation : public CoordinateSegmentation {
 public:
@@ -52,6 +59,10 @@ public:
 private:
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;
+
+    std::vector<LayoutChangeEntry> mLayoutChangeEntries;
+    uint32 lastLayoutChangeIdx;
+
 }; // class CoordinateSegmentation
 
 } // namespace CBR

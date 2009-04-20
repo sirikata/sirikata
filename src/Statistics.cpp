@@ -131,19 +131,20 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id,
     data.write( &size, sizeof(size) );
 }
 
-void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, const Network::Chunk& data) {
+void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data) {
     uint32 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
-    serverDatagramSent(start_time, end_time, dest, id, size);
+    serverDatagramSent(start_time, end_time, weight, dest, id, size);
 }
 
-void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, const ServerID& dest, uint32 id, uint32 size) {
+void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size) {
     data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
+    data.write( &weight, sizeof(weight));
     data.write( &start_time, sizeof(start_time) );
     data.write( &end_time, sizeof(end_time) );
 }

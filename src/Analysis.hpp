@@ -85,6 +85,8 @@ public:
     void computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     void computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
 
+   void computeJFI(const ServerID& server_id) const;
+
 private:
     typedef std::vector<PacketEvent*> PacketEventList;
     typedef std::map<ServerID, PacketEventList*> ServerPacketEventListMap;
@@ -99,9 +101,13 @@ private:
     DatagramEventList* getDatagramEventList(const ServerID& server) const;
     PacketEventList* getPacketEventList(const ServerID& server) const;
 
+    template<typename EventType, typename EventIteratorType>
+    void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
     ServerPacketEventListMap mPacketEventLists;
     ServerDatagramEventListMap mDatagramEventLists;
+
+    uint32_t mNumberOfServers;
 }; // class BandwidthAnalysis
 
 

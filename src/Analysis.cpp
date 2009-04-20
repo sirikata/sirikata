@@ -99,6 +99,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&psevt->dest, sizeof(psevt->dest) );
               is.read( (char*)&psevt->id, sizeof(psevt->id) );
               is.read( (char*)&psevt->size, sizeof(psevt->size) );
+              is.read( (char*)&psevt->weight, sizeof(psevt->weight) );
               is.read( (char*)&psevt->_start_time, sizeof(psevt->_start_time) );
               is.read( (char*)&psevt->_end_time, sizeof(psevt->_end_time) );
               evt = psevt;
@@ -409,6 +410,8 @@ LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID
 
 BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
+    mNumberOfServers = nservers;
+
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -569,10 +572,20 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
 
 
 void BandwidthAnalysis::computeSendRate(const ServerID& sender, const ServerID& receiver) const {
+    if (getDatagramEventList(sender) == NULL ) {
+        printf("%d to %d: unknown total, unknown max\n", sender, receiver);
+	return;
+    }
+
     computeRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender));
 }
 
 void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerID& receiver) const {
+    if (getDatagramEventList(receiver) == NULL ) {
+        printf("%d to %d: unknown total, unknown max\n", sender, receiver);
+	return;
+    }
+    
     computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
@@ -636,8 +649,44 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
     summary_out << sender << " to " << receiver << ": " << total_bytes << " total, " << max_bandwidth << " max" << std::endl;
 }
 
+template<typename EventType, typename EventIteratorType>
+void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filter) const {
+      uint64 total_bytes = 0;
 
-void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+      float sum = 0;
+      float sum_of_squares = 0;
+
+      for (uint32 receiver = 1; receiver <= mNumberOfServers; receiver++) {
+        if (receiver != sender) {
+          total_bytes = 0;
+          float weight = 0;
+          if (getDatagramEventList(receiver) == NULL) continue;
+
+          for (EventIterator<EventType, EventIteratorType> event_it(sender, receiver, datagramBegin(receiver), datagramEnd(receiver)); event_it.current() != NULL; event_it.next() )
+            {
+              EventType* p_evt = event_it.current();
+
+              total_bytes += p_evt->size;
+
+              weight = p_evt->weight;
+            }
+
+          sum += total_bytes*weight;
+          sum_of_squares += (total_bytes*weight) * (total_bytes*weight);
+        }
+      }
+
+      if ( (mNumberOfServers-1)*sum_of_squares != 0) {
+          printf("JFI for sender %d is %f\n", sender, (sum*sum/((mNumberOfServers-1)*sum_of_squares) ) );
+      }
+      else {
+          printf("JFI for sender %d cannot be computed\n", sender);
+      }
+}
+
+
+
+void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {    
     computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out);
 }
 
@@ -652,5 +701,10 @@ void BandwidthAnalysis::computeWindowedPacketSendRate(const ServerID& sender, co
 void BandwidthAnalysis::computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
     computeWindowedRate<PacketReceivedEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(receiver), packetEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out);
 }
+
+void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
+  computeJFI<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
+}
+
 
 } // namespace CBR

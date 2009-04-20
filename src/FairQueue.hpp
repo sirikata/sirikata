@@ -102,6 +102,18 @@ public:
             where->second.weight = weight;
         }
     }
+    float getQueueWeight(Key server) {
+        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
+
+        if (where != mServerQueues.end()) {
+          return where->second.weight;
+        }
+
+        return 0;
+    }
+
+
+
     bool deprioritize(Key server,float factor, float affine, float minval,float maxval) {
         return changepriority(server,factor,affine,minval,maxval,true);
     }

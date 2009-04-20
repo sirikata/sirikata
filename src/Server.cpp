@@ -86,7 +86,7 @@ void Server::route(Message* msg, const ServerID& dest_server, bool is_forward) {
     if (dest_server==id()) {
         if (!is_forward) {
             mTrace->serverDatagramQueued(mCurrentTime, dest_server, msg->id(), offset);
-            mTrace->serverDatagramSent(mCurrentTime, mCurrentTime, dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
+            mTrace->serverDatagramSent(mCurrentTime, mCurrentTime, 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
         }
 
         mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );

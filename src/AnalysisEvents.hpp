@@ -64,6 +64,8 @@ struct ServerDatagramSentEvent : public ServerDatagramEvent {
         return _end_time;
     }
 
+    float weight;
+ 
     Time _start_time;
     Time _end_time;
 };

@@ -129,6 +129,8 @@ void *main_loop(void *) {
     LocationService* loc_service = new OracleLocationService(obj_factory);
     CoordinateSegmentation* cseg = new UniformCoordinateSegmentation(region, layout);
 
+    ServerID server_id = GetOption("id")->as<ServerID>();
+
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -153,6 +155,8 @@ void *main_loop(void *) {
                 ba.computeReceiveRate(sender, receiver);
             }
         }
+
+        ba.computeJFI(server_id);
         exit(0);
     }
     else if ( !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ) {
@@ -193,8 +197,6 @@ void *main_loop(void *) {
         }
         exit(0);
     }
-
-    ServerID server_id = GetOption("id")->as<ServerID>();
 
 
     String filehandle = GetOption("serverips")->as<String>();

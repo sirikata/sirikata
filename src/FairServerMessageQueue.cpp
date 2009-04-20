@@ -72,7 +72,8 @@ void FairServerMessageQueue::service(const Time&t){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mTrace->serverDatagramSent(start_time, end_time, next_msg->dest(), next_msg->data());
+        mTrace->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
+                                   next_msg->dest(), next_msg->data());
 
         delete next_msg;
     }
@@ -129,5 +130,14 @@ void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
 
     mSourceServers[sid];
 }
+
+float FairServerMessageQueue::getServerWeight(ServerID sid) {
+    if (mServerQueues.hasQueue(sid)) {
+        return mServerQueues.getQueueWeight(sid);
+    }
+
+    return 0;
+}
+
 
 }
