@@ -20,10 +20,12 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
     ServerID dest_server_id = lookup(dest_uuid);
-
+   
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
-
+    if (dest_server_id==mServerMessageQueue->getSourceServer()) {
+        return mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
+    }
     return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
 }
 

@@ -27,7 +27,7 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
         mReceiveQueue.push(csp);
         return true;
     }
-
+    assert(destinationServer!=mSourceServer);
     uint32 offset = 0;
     Network::Chunk with_header;
     ServerMessageHeader server_header(mSourceServer, destinationServer);

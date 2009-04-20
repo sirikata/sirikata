@@ -2,17 +2,6 @@ import sys
 import os
 import math
 nservers=int(sys.argv[1]);
-duration=float(sys.argv[2]);
-flatness=float(sys.argv[3]);
-bandwidth=float(sys.argv[4]);
-if len(sys.argv)>5:
-    waitadditional=sys.argv[5];
-else:
-    waitadditional="8"
-if len(sys.argv)>6:
-    shouldcapbandwidth=sys.argv[6];
-else:
-    shouldcapbandwidth="false"
 
 xservers=nservers
 yservers=1
@@ -38,6 +27,6 @@ for i in range(0,xservers):
         shouldwait=os.P_NOWAIT
         if i+1==xservers and j+1==yservers:
             shouldwait=os.P_WAIT
+        #print ["./cbr","--id="+str(sid),"--layout=<"+str(xservers)+','+str(yservers)+",1>","--serverips="+serveripfile,"--wait-until="+datestr]+sys.argv[2:]
         #in the future you want to change this to ssh to the appropriate machine and run the command below as an argument to ssh
-        os.spawnl(shouldwait,"./cbr","./cbr","--id="+str(sid),"--layout=<"+str(xservers)+','+str(yservers)+",1>","--duration="+str(duration)+'s',"--serverips="+serveripfile,"--flatness="+str(flatness),"--bandwidth="+str(bandwidth),"--capexcessbandwidth="+shouldcapbandwidth,"--wait-until="+datestr+"","--wait-additional="+waitadditional);
-    
+        print os.spawnl(shouldwait,"./cbr",*(["./cbr","--id="+str(sid),"--layout=<"+str(xservers)+','+str(yservers)+",1>","--serverips="+serveripfile,"--wait-until="+datestr]+sys.argv[2:]));

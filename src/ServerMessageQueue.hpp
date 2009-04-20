@@ -28,7 +28,7 @@ public:
     virtual void service(const Time& t)=0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
-
+    ServerID getSourceServer()const{return mSourceServer;}
 protected:
     Network* mNetwork;
     ServerID mSourceServer;
