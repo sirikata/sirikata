@@ -432,8 +432,40 @@ LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID
 
 
 
+template<typename EventType, typename EventListType, typename EventListMapType>
+void insert_event(EventType* evt, EventListMapType& lists) {
+    assert(evt != NULL);
 
+    // put it in the source queue
+    typename EventListMapType::iterator source_it = lists.find( evt->source );
+    if (source_it == lists.end()) {
+        lists[ evt->source ] = new EventListType;
+        source_it = lists.find( evt->source );
+    }
+    assert( source_it != lists.end() );
 
+    EventListType* evt_list = source_it->second;
+    evt_list->push_back(evt);
+
+    // put it in the dest queue
+    typename EventListMapType::iterator dest_it = lists.find( evt->dest );
+    if (dest_it == lists.end()) {
+        lists[ evt->dest ] = new EventListType;
+        dest_it = lists.find( evt->dest );
+    }
+    assert( dest_it != lists.end() );
+
+    evt_list = dest_it->second;
+    evt_list->push_back(evt);
+}
+
+template<typename EventListType, typename EventListMapType>
+void sort_events(EventListMapType& lists) {
+    for(typename EventListMapType::iterator event_lists_it = lists.begin(); event_lists_it != lists.end(); event_lists_it++) {
+        EventListType* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
+    }
+}
 
 BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
@@ -449,70 +481,29 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
                 break;
 
             ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (datagram_evt != NULL) {
-                // put it in the source queue
-                ServerDatagramEventListMap::iterator source_it = mDatagramEventLists.find( datagram_evt->source );
-                if (source_it == mDatagramEventLists.end()) {
-                    mDatagramEventLists[ datagram_evt->source ] = new DatagramEventList;
-                    source_it = mDatagramEventLists.find( datagram_evt->source );
-                }
-                assert( source_it != mDatagramEventLists.end() );
-
-                DatagramEventList* evt_list = source_it->second;
-                evt_list->push_back(datagram_evt);
-
-                // put it in the dest queue
-                ServerDatagramEventListMap::iterator dest_it = mDatagramEventLists.find( datagram_evt->dest );
-                if (dest_it == mDatagramEventLists.end()) {
-                    mDatagramEventLists[ datagram_evt->dest ] = new DatagramEventList;
-                    dest_it = mDatagramEventLists.find( datagram_evt->dest );
-                }
-                assert( dest_it != mDatagramEventLists.end() );
-
-                evt_list = dest_it->second;
-                evt_list->push_back(datagram_evt);
-            }
+            if (datagram_evt != NULL)
+                insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
 
             PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
-            if (packet_evt != NULL) {
-                // put it in the source queue
-                ServerPacketEventListMap::iterator source_it = mPacketEventLists.find( packet_evt->source );
-                if (source_it == mPacketEventLists.end()) {
-                    mPacketEventLists[ packet_evt->source ] = new PacketEventList;
-                    source_it = mPacketEventLists.find( packet_evt->source );
-                }
-                assert( source_it != mPacketEventLists.end() );
+            if (packet_evt != NULL)
+                insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
 
-                PacketEventList* evt_list = source_it->second;
-                evt_list->push_back(packet_evt);
+            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
+            if (datagram_qi_evt != NULL)
+                insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
 
-                // put it in the dest queue
-                ServerPacketEventListMap::iterator dest_it = mPacketEventLists.find( packet_evt->dest );
-                if (dest_it == mPacketEventLists.end()) {
-                    mPacketEventLists[ packet_evt->dest ] = new PacketEventList;
-                    dest_it = mPacketEventLists.find( packet_evt->dest );
-                }
-                assert( dest_it != mPacketEventLists.end() );
-
-                evt_list = dest_it->second;
-                evt_list->push_back(packet_evt);
-            }
-
+            PacketQueueInfoEvent* packet_qi_evt = dynamic_cast<PacketQueueInfoEvent*>(evt);
+            if (packet_qi_evt != NULL)
+                insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
         }
     }
 
-    // Sort datagram events by time
-    for(ServerDatagramEventListMap::iterator event_lists_it = mDatagramEventLists.begin(); event_lists_it != mDatagramEventLists.end(); event_lists_it++) {
-        DatagramEventList* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
-    }
+    // Sort all lists of events by time
+    sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
+    sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
 
-    // Sort packet events by time
-    for(ServerPacketEventListMap::iterator event_lists_it = mPacketEventLists.begin(); event_lists_it != mPacketEventLists.end(); event_lists_it++) {
-        PacketEventList* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
-    }
-
+    sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
+    sort_events<PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(mPacketQueueInfoEventLists);
 }
 
 BandwidthAnalysis::~BandwidthAnalysis() {
@@ -553,6 +544,21 @@ BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const 
     return event_lists_it->second;
 }
 
+
+BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatagramQueueInfoEventList(const ServerID& server) const {
+    ServerDatagramQueueInfoEventListMap::const_iterator event_lists_it = mDatagramQueueInfoEventLists.find(server);
+    if (event_lists_it == mDatagramQueueInfoEventLists.end()) return NULL;
+
+    return event_lists_it->second;
+}
+
+BandwidthAnalysis::PacketQueueInfoEventList* BandwidthAnalysis::getPacketQueueInfoEventList(const ServerID& server) const {
+    ServerPacketQueueInfoEventListMap::const_iterator event_lists_it = mPacketQueueInfoEventLists.find(server);
+    if (event_lists_it == mPacketQueueInfoEventLists.end()) return NULL;
+
+    return event_lists_it->second;
+}
+
 BandwidthAnalysis::DatagramEventList::const_iterator BandwidthAnalysis::datagramBegin(const ServerID& server) const {
     return getDatagramEventList(server)->begin();
 }
@@ -567,6 +573,22 @@ BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetBegi
 
 BandwidthAnalysis::PacketEventList::const_iterator BandwidthAnalysis::packetEnd(const ServerID& server) const {
     return getPacketEventList(server)->end();
+}
+
+BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoBegin(const ServerID& server) const {
+    return getDatagramQueueInfoEventList(server)->begin();
+}
+
+BandwidthAnalysis::DatagramQueueInfoEventList::const_iterator BandwidthAnalysis::datagramQueueInfoEnd(const ServerID& server) const {
+    return getDatagramQueueInfoEventList(server)->end();
+}
+
+BandwidthAnalysis::PacketQueueInfoEventList::const_iterator BandwidthAnalysis::packetQueueInfoBegin(const ServerID& server) const {
+    return getPacketQueueInfoEventList(server)->begin();
+}
+
+BandwidthAnalysis::PacketQueueInfoEventList::const_iterator BandwidthAnalysis::packetQueueInfoEnd(const ServerID& server) const {
+    return getPacketQueueInfoEventList(server)->end();
 }
 
 template<typename EventType, typename EventIteratorType>
@@ -733,5 +755,25 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
   computeJFI<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, sender);
 }
 
+
+template<typename EventType, typename EventIteratorType>
+void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
+}
+
+void BandwidthAnalysis::dumpDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+    dumpQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
+}
+
+void BandwidthAnalysis::dumpDatagramReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+    dumpQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(receiver), datagramQueueInfoEnd(receiver), summary_out, detail_out);
+}
+
+void BandwidthAnalysis::dumpPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+    dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(sender), packetQueueInfoEnd(sender), summary_out, detail_out);
+}
+
+void BandwidthAnalysis::dumpPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+    dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(receiver), packetQueueInfoEnd(receiver), summary_out, detail_out);
+}
 
 } // namespace CBR

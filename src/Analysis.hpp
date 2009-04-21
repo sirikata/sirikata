@@ -43,7 +43,9 @@ namespace CBR {
 struct Event;
 struct ObjectEvent;
 struct ServerDatagramEvent;
+struct ServerDatagramQueueInfoEvent;
 struct PacketEvent;
+struct PacketQueueInfoEvent;
 class ObjectFactory;
 
 /** Error of observed vs. true object locations over simulation period. */
@@ -85,6 +87,11 @@ public:
     void computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
     void computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out);
 
+    void dumpDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
+    void dumpDatagramReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
+    void dumpPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
+    void dumpPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out);
+
    void computeJFI(const ServerID& server_id) const;
 
 private:
@@ -93,19 +100,35 @@ private:
     typedef std::vector<ServerDatagramEvent*> DatagramEventList;
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
 
+    typedef std::vector<PacketQueueInfoEvent*> PacketQueueInfoEventList;
+    typedef std::map<ServerID, PacketQueueInfoEventList*> ServerPacketQueueInfoEventListMap;
+    typedef std::vector<ServerDatagramQueueInfoEvent*> DatagramQueueInfoEventList;
+    typedef std::map<ServerID, DatagramQueueInfoEventList*> ServerDatagramQueueInfoEventListMap;
+
     DatagramEventList::const_iterator datagramBegin(const ServerID& server) const;
     DatagramEventList::const_iterator datagramEnd(const ServerID& server) const;
     PacketEventList::const_iterator packetBegin(const ServerID& server) const;
     PacketEventList::const_iterator packetEnd(const ServerID& server) const;
 
+    DatagramQueueInfoEventList::const_iterator datagramQueueInfoBegin(const ServerID& server) const;
+    DatagramQueueInfoEventList::const_iterator datagramQueueInfoEnd(const ServerID& server) const;
+    PacketQueueInfoEventList::const_iterator packetQueueInfoBegin(const ServerID& server) const;
+    PacketQueueInfoEventList::const_iterator packetQueueInfoEnd(const ServerID& server) const;
+
     DatagramEventList* getDatagramEventList(const ServerID& server) const;
     PacketEventList* getPacketEventList(const ServerID& server) const;
+
+    DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
+    PacketQueueInfoEventList* getPacketQueueInfoEventList(const ServerID& server) const;
 
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
 
     ServerPacketEventListMap mPacketEventLists;
     ServerDatagramEventListMap mDatagramEventLists;
+
+    ServerPacketQueueInfoEventListMap mPacketQueueInfoEventLists;
+    ServerDatagramQueueInfoEventListMap mDatagramQueueInfoEventLists;
 
     uint32_t mNumberOfServers;
 }; // class BandwidthAnalysis
