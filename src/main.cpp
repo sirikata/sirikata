@@ -138,7 +138,7 @@ void *main_loop(void *) {
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
         LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,loc_service,cseg);
-        lea.displayRandomViewerError(5, Duration::milliseconds((uint32)30));
+        lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((uint32)30));
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {

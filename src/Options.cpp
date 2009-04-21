@@ -72,6 +72,7 @@ void InitOptions() {
 
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
         .addOption(new OptionValue(ANALYSIS_LOCVIS, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_LOCVIS_SEED, "5", Sirikata::OptionValueType<int>(), "Do a loc analysis on this object"))
 
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))
 

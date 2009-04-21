@@ -64,7 +64,7 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
             Object* obj = mObjectFactory->object(obj_id, this->id());
             mObjects[obj_id] = obj;
             // Register proximity query
-            mProximity->addQuery(obj_id, 100.f); // FIXME how to set proximity radius?
+            mProximity->addQuery(obj_id, mObjectFactory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
         }
     }
 }

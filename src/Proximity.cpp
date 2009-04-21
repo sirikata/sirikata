@@ -67,20 +67,28 @@ void Proximity::removeQuery(UUID obj) {
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
+    UUID u("17988194-72ce-2b8d-4ba7-fa536508b8f2",UUID::HumanReadable());
+    UUID x("9806a31e-f7ad-86cf-522a-4abcacdd2c80",UUID::HumanReadable());
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         QueryState* query_state = query_it->second;
         Vector3f query_pos = mLocationService->currentPosition(query_id);
-
+       
         // generate new neighbor set
         ObjectSet new_neighbors;
         for(ObjectFactory::iterator object_it = mObjectFactory->begin(); object_it != mObjectFactory->end(); object_it++) {
             UUID obj_id = *object_it;
             if (obj_id == query_id) continue;
-
             Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-            if ( (query_pos - obj_pos).lengthSquared() < query_state->radius*query_state->radius )
+            query_pos.z=0;
+            obj_pos.z=0;
+            if ( (query_pos - obj_pos).lengthSquared() < query_state->radius*query_state->radius ) {
                 new_neighbors.insert(obj_id);
+                if (query_id==u&&obj_id==x) {
+                    //printf ("huzzah\n");
+                }
+
+            }
         }
 
         // generate difference set
