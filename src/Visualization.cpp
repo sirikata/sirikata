@@ -88,6 +88,15 @@ void LocationVisualization::mainLoop(){
     for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
         Vector3f pos=mLoc->currentPosition(*it);
         if (*it==mObserver) {
+            glEnd();
+            glColor3f(.125,.125,.125);
+            glBegin(GL_LINE_STRIP);
+            float rad=mFactory->getProximityRadius(*it);
+            for (int i=0;i<180;++i) {
+                glVertex2f(pos.x+rad*cos(3.141526536*i/90),pos.y+rad*sin(3.141526536*i/90));
+            }
+            glEnd();
+            glBegin(GL_POINTS);
             glColor3f(1,0,0);
         }else {
             VisibilityMap::iterator where;

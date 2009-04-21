@@ -56,7 +56,9 @@ class ObjectFactory {
 public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
-
+    float getProximityRadius(UUID obj) {
+        return mInputs[obj]->proximityRadius;
+    }
     ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 

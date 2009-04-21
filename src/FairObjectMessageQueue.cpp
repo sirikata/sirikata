@@ -5,7 +5,7 @@
 #include "FairServerMessageQueue.hpp"
 #include "FairObjectMessageQueue.hpp"
 #include "Message.hpp"
-
+#include "Options.hpp"
 namespace CBR{
 template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
@@ -24,7 +24,9 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
     if (dest_server_id==mServerMessageQueue->getSourceServer()) {
-        return mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
+        static bool isReorder=(GetOption(OBJECT_QUEUE)->as<String>()!="fairfifo");
+        if (!isReorder)
+            return mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
     }
     return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
 }
