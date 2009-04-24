@@ -324,9 +324,11 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 
 //                misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);//(NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);                    
 //                SILOG(ogre,debug,"ext window handle "<<misc["externalWindowHandle"]);
-                misc["macAPI"] = String("cocoa");
-//                misc["macAPICocoaUseNSView"] = String("true");
-                  misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+                if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
+                    misc["macAPI"] = String("cocoa");
+                    //misc["macAPICocoaUseNSView"] = String("true");
+                    misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+                }
             }
                 
 #else

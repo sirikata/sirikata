@@ -173,6 +173,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             fire(Task::EventPtr(new KeyPressed(event->key)));
             fire(Task::EventPtr(new KeyChanged(event->key)));
             fire(Task::EventPtr(new KeyDown(event->key)));
+            if (event->key.keysym.sym==SDLK_ESCAPE) continueRendering=false;
             if (mPressedKeys->mPressed.size()<=event->key.which)
                 mPressedKeys->mPressed.resize(event->key.which+1);
             mPressedKeys->mPressed[event->key.which][event->key.keysym.sym]=event->key;
