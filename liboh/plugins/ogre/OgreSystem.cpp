@@ -284,17 +284,16 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
             bool doAutoWindow=
-#if defined(_WIN32) //|| defined(__APPLE__)
-                true
-#else
+#if defined(__APPLE__)
                 false
+#else
+                true
 #endif
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
-            void* hWnd;
-
-#if defined(_WIN32) //||defined(__APPLE__)
-            getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
+            void* hWnd=NULL;
+            if (doAutoWindow) {
+                getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
 #ifdef _WIN32
             {
                 char tmp[64];
@@ -308,14 +307,14 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
                           						  hWnd);
-#else
+            }else {
                 mInputManager=new SDLInputManager(mWindowWidth->as<uint32>(),
                                                   mWindowHeight->as<uint32>(),
                                                   mFullScreen->as<bool>(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
                                                   hWnd);
-#endif
+            }
             if (!doAutoWindow) {
                 Ogre::NameValuePairList misc;
 #ifdef __APPLE__

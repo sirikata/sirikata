@@ -67,67 +67,69 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
         SILOG(ogre,error,"Couldn't initialize SDL: "<<SDL_GetError());
     }
-
-#if defined(WIN32)
+#if 1//defined(WIN32)
 //||defined(__APPLE__)
-	SDL_WindowID windowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
+    if (currentWindow) {
+        mWindowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
+        SDL_RaiseWindow(mWindowID);
+        SDL_ShowWindow(mWindowID);
 #ifdef _WIN32
-    //SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
-	RAWINPUTDEVICE Rid;
-    /* we're telling the window, we want it to report raw input events from mice */
-    Rid.usUsagePage = 0x01;
-    Rid.usUsage = 0x02;
-    Rid.dwFlags = RIDEV_INPUTSINK;
-    Rid.hwndTarget = (HWND)currentWindow;
-    RegisterRawInputDevices(&Rid, 1, sizeof(Rid));
-
-   static SDL_SysWMinfo pInfo;
-   SDL_VERSION(&pInfo.version);
-   SDL_GetWindowWMInfo(windowID,&pInfo);
-   // Also, SDL keeps an internal record of the window size
-   //  and position. Because SDL does not own the window, it
-   //  missed the WM_POSCHANGED message and has no record of
-   //  either size or position. It defaults to {0, 0, 0, 0},
-   //  which is then used to trap the mouse "inside the 
-   //  window". We have to fake a window-move to allow SDL
-   //  to catch up, after which we can safely grab input.
-   RECT r;
-   GetWindowRect(pInfo.window, &r);
-   SetWindowPos(pInfo.window, 0, r.left, r.top, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        //SDL_SetEventFilter(SDL_CompatEventFilter, NULL);
+        RAWINPUTDEVICE Rid;
+        /* we're telling the window, we want it to report raw input events from mice */
+        Rid.usUsagePage = 0x01;
+        Rid.usUsage = 0x02;
+        Rid.dwFlags = RIDEV_INPUTSINK;
+        Rid.hwndTarget = (HWND)currentWindow;
+        RegisterRawInputDevices(&Rid, 1, sizeof(Rid));
+        
+        static SDL_SysWMinfo pInfo;
+        SDL_VERSION(&pInfo.version);
+        SDL_GetWindowWMInfo(windowID,&pInfo);
+        // Also, SDL keeps an internal record of the window size
+        //  and position. Because SDL does not own the window, it
+        //  missed the WM_POSCHANGED message and has no record of
+        //  either size or position. It defaults to {0, 0, 0, 0},
+        //  which is then used to trap the mouse "inside the 
+        //  window". We have to fake a window-move to allow SDL
+        //  to catch up, after which we can safely grab input.
+        RECT r;
+        GetWindowRect(pInfo.window, &r);
+        SetWindowPos(pInfo.window, 0, r.left, r.top, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 #endif
-#else
-   SDL_Init(SDL_INIT_VIDEO);
-   SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-   SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-   SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-   SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
+    }else {
+        SDL_Init(SDL_INIT_VIDEO);
+        SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+        SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+        SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+        SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
+        
+        SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-   SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-
-   mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
-   SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
-   SDL_GL_MakeCurrent(mWindowID,ctx);
-   SDL_ShowWindow(mWindowID);
-   if (!mWindowID) {
-       SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
-   }else {
-       SDL_SysWMinfo info;
-       memset(&info,0,sizeof(SDL_SysWMinfo));
-       SDL_VERSION(&info.version);
-       SDL_GetWindowWMInfo(mWindowID,&info);
+        mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
+        SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
+        SDL_GL_MakeCurrent(mWindowID,ctx);
+        SDL_ShowWindow(mWindowID);
+        if (!mWindowID) {
+            SILOG(ogre,error,"Couldn't created OpenGL window: "<<SDL_GetError());
+        }else {
+            SDL_SysWMinfo info;
+            memset(&info,0,sizeof(SDL_SysWMinfo));
+            SDL_VERSION(&info.version);
+            SDL_GetWindowWMInfo(mWindowID,&info);
 #ifdef __APPLE__
-       currentWindow=(void*)info.data;
+            currentWindow=(void*)info.data;
 #else
-       currentWindow=(void*)info.info.x11.window;
+            currentWindow=(void*)info.info.x11.window;
 #endif
-   }
+        }
 #endif
-
-   // Grab means: lock the mouse inside our window!
-   SDL_ShowCursor(SDL_DISABLE);   // SDL_ENABLE to show the mouse cursor (default)
-   if (grabCursor) 
-       SDL_WM_GrabInput(SDL_GRAB_ON); // SDL_GRAB_OFF to not grab input (default)
-
+    }   
+    // Grab means: lock the mouse inside our window!
+    SDL_ShowCursor(SDL_DISABLE);   // SDL_ENABLE to show the mouse cursor (default)
+    if (grabCursor) 
+        SDL_SetWindowGrab(mWindowID,SDL_GRAB_ON); // SDL_GRAB_OFF to not grab input (default)
+    
 }
 bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     using namespace Sirikata::Graphics::SDL;
