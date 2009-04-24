@@ -144,7 +144,7 @@ public:
 		wakeCV.notify_one();
 	}
 
-	void simpleLookupCB(const Fingerprint &expected, const RemoteFileId *rfid) {
+	void simpleLookupCB(const Fingerprint &expected, const URI&uri, const RemoteFileId *rfid) {
 		TS_ASSERT(rfid != NULL);
 		if (rfid) {
 			TS_ASSERT_EQUALS(expected, rfid->fingerprint());
@@ -158,7 +158,7 @@ public:
 		//  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::simpleLookupCB, this,
-						Fingerprint::convertFromHex("6934b2638e79135f87d36a3d4f4b53f41f349132172f3248c7c7091b59497551"), _1));
+                               Fingerprint::convertFromHex("6934b2638e79135f87d36a3d4f4b53f41f349132172f3248c7c7091b59497551"), _1,_2));
 
 		waitFor(1);
 	}
@@ -187,11 +187,11 @@ public:
 
 		notifyOne(); // don't forget to do this.
 	}
-	void doTransferAndVerifyCB(const RemoteFileId *rfid) {
+	void doTransferAndVerifyCB(const URI&, const RemoteFileId *rfid) {
 		using std::tr1::placeholders::_1;
 		if (rfid) {
 			mTransferLayer->getData(*rfid, Transfer::Range(true),
-				std::tr1::bind(&NameLookupTest::verifyCB, this, rfid->fingerprint(), _1));
+                                    std::tr1::bind(&NameLookupTest::verifyCB, this, rfid->fingerprint(), _1));
 		} else {
 			TS_FAIL("Name Lookup Failed!");
 			notifyOne();
@@ -201,7 +201,7 @@ public:
 		using std::tr1::placeholders::_1;
         //  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
-				std::tr1::bind(&NameLookupTest::doTransferAndVerifyCB, this, _1));
+                                 std::tr1::bind(&NameLookupTest::doTransferAndVerifyCB, this, _1,_2));
 
 		waitFor(1);
 	}
