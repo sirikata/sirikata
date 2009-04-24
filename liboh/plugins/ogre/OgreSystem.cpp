@@ -322,8 +322,11 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 //FIXME: hWnd appears to be a NSWindow* in the default SDL 1.3 implementation
                 //it appears Ogre wants an NSView*  attempts to convert it using a .m file were insufficient to get ogre to use it
                 
-                //misc["externalWindowHandle"] = Ogre::StringConverter::toString((NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);                    
-                //misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+//                misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);//(NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);                    
+//                SILOG(ogre,debug,"ext window handle "<<misc["externalWindowHandle"]);
+                misc["macAPI"] = String("cocoa");
+//                misc["macAPICocoaUseNSView"] = String("true");
+                  misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
             }
                 
 #else
