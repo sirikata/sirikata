@@ -155,6 +155,7 @@ public:
 	}
 	void testNameLookup() {
 		using std::tr1::placeholders::_1;
+		using std::tr1::placeholders::_2;
 		//  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
 				std::tr1::bind(&NameLookupTest::simpleLookupCB, this,
@@ -199,6 +200,8 @@ public:
 	}
 	void testDownload() {
 		using std::tr1::placeholders::_1;
+		using std::tr1::placeholders::_2;
+
         //  http://graphics.stanford.edu/~danielrh/dns/names/global/ASCII.material;
 		mNameLookups->lookupHash(URI(URIContext(), "meerkat:/ASCII.material"),
                                  std::tr1::bind(&NameLookupTest::doTransferAndVerifyCB, this, _1,_2));
