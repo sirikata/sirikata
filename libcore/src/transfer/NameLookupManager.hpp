@@ -35,6 +35,7 @@
 #define SIRIKATA_NameLookup_HPP__
 
 #include "URI.hpp"
+#include "ServiceManager.hpp"
 #include "ServiceLookup.hpp"
 #include "DownloadHandler.hpp"
 
@@ -46,66 +47,64 @@ namespace Transfer {
  * a hash and a URI to download, possibly from a "cloud". Note that NameLookupHandler
  * is generally a simple UDP-based protocol intended for small transfers. */
 class NameLookupManager {
-	ProtocolRegistry<NameLookupHandler> *mHandlers;
+	ServiceManager<NameLookupHandler> *mNameServ;
 
 	/* NOTE: Is it acceptable to "trust" the client to have the correct hash here?
 	 * If, for example, an attacker downloads "http://myrogueserver.com/0123456789somevalidhashstring"
 	 * then conceivably that rogue data could be cached under any hash, and then any legitimate requests
 	 * will get the rogue data.
 	 */
-	ProtocolRegistry<DownloadHandler> *mDownloadProto; // check if someone referenced a file by hash direct
+	ServiceManager<DownloadHandler> *mDownloadServ; // check if someone referenced a file by hash direct
 
 public:
 	/** Called with a temporary pointer to a fingerprint, or NULL if the lookup failed. */
-	typedef std::tr1::function<void(const RemoteFileId *fingerprint)> Callback;
+	typedef std::tr1::function<void(const URI &namedURI, const RemoteFileId *fingerprint)> Callback;
 
 private:
-	void gotNameLookup(const Callback &cb, const URI &origNamedUri, unsigned int which, ListOfServicesPtr services,
+	void gotNameLookup(const Callback &cb, const URI &origNamedUri, ServiceIterator *services,
 			const Fingerprint &hash, const std::string &str, bool success) {
 		if (!success) {
-			doNameLookup(cb, origNamedUri, which+1, services);
+			doNameLookup(cb, origNamedUri, services, ServiceIterator::GENERAL_ERROR);
 			return;
 		}
 
 		RemoteFileId rfid(hash, URI(origNamedUri.context(), str));
 		addToCache(origNamedUri, rfid);
-		cb(&rfid);
+		cb(origNamedUri, &rfid);
 	}
 
-	void hashedDownload(const Callback &cb, const URI &origNamedUri, ListOfServicesPtr services) {
-		if (services && services->size() > 0) {
+	void hashedDownload(const Callback &cb, const URI &origNamedUri, ServiceIterator *iter) {
+		ServiceParams params;
+		URI uri(origNamedUri);
+		if (iter->tryNext(ServiceIterator::SUCCESS,uri,params)) {
 			// It is safe to cast this URI to a RemoteFileId????
+			delete iter;
 			RemoteFileId rfid(origNamedUri);
-			cb(&rfid);
+			cb(origNamedUri, &rfid);
 		} else {
-			cb(NULL);
+			cb(origNamedUri, NULL);
 		}
 	}
 
-	void doNameLookup(const Callback &cb, const URI &origNamedUri, unsigned int which, ListOfServicesPtr services) {
-		if (!services || which >= services->size()) {
-			SILOG(transfer,error,"None of the " << which << " URIContexts registered for " <<
-					origNamedUri << " were successful for NameLookup.");
-			/// Hashed download.
-			if (mDownloadProto) {
-				mDownloadProto->lookupService(origNamedUri.context(), std::tr1::bind(&NameLookupManager::hashedDownload, this, cb, origNamedUri, _1));
-			} else {
-				cb(NULL);
-			}
-			return;
-		}
-		URI lookupUri ((*services)[which].first, origNamedUri.filename());
-
-
-
+	void doNameLookup(const Callback &cb, const URI &origNamedUri, ServiceIterator *services, ServiceIterator::ErrorType reason) {
+		URI lookupUri;
+		ServiceParams params;
 		std::tr1::shared_ptr<NameLookupHandler> handler;
-		lookupUri.getContext().setProto(mHandlers->lookup(lookupUri.proto(), handler));
-		if (handler) {
+		if (mNameServ->getNextProtocol(services,reason,origNamedUri,lookupUri,params,handler)) {
 			/// FIXME: Need a way of aborting a name lookup that is taking too long.
 			handler->nameLookup(NULL, lookupUri,
-				std::tr1::bind(&NameLookupManager::gotNameLookup, this, cb, origNamedUri, which, services, _1, _2, _3));
+				std::tr1::bind(&NameLookupManager::gotNameLookup, this, cb, origNamedUri, services, _1, _2, _3));
 		} else {
-			doNameLookup(cb, origNamedUri, which+1, services);
+			SILOG(transfer,error,"None of the services registered for " <<
+					origNamedUri << " were successful for NameLookup.");
+			/// Hashed download.
+			if (mDownloadServ) {
+				mDownloadServ->lookupService(origNamedUri.context(),
+					std::tr1::bind(&NameLookupManager::hashedDownload, this, cb, origNamedUri, _1));
+			} else {
+				cb(origNamedUri, NULL);
+			}
+			return;
 		}
 	}
 
@@ -131,8 +130,8 @@ public:
 	 *                       input uri will be cast to a RemoteFileId and returned.
 	 *                       If null, lookupHash returns a NULL RemoteFileId if this is not a named URI.
 	 */
-	NameLookupManager(ProtocolRegistry<NameLookupHandler> *nameProtocols, ProtocolRegistry<DownloadHandler> *downloadProto=NULL)
-			: mHandlers(nameProtocols), mDownloadProto(downloadProto) {
+	NameLookupManager(ServiceManager<NameLookupHandler> *nameServ, ServiceManager<DownloadHandler> *downloadServ=NULL)
+			: mNameServ(nameServ), mDownloadServ(downloadServ) {
 	}
 
 	/// Virtual destructor. Calls serialize().
@@ -145,7 +144,8 @@ public:
 	 * @param namedUri A ServiceURI or a regular URI (depending on if serviceLookup is NULL)
 	 * @param cb       The Callback to be called either on success or failure. */
 	void lookupHash(const URI &namedUri, const Callback &cb) {
-		mHandlers->lookupService(namedUri.context(), std::tr1::bind(&NameLookupManager::doNameLookup, this, cb, namedUri, 0, _1));
+		mNameServ->lookupService(namedUri.context(), std::tr1::bind(&NameLookupManager::doNameLookup,
+			this, cb, namedUri, _1, ServiceIterator::SUCCESS));
 	}
 };
 

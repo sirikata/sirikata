@@ -458,6 +458,10 @@ public:
 		// We can ignore the hash if it references the same URL.
 		return mPath == other.mPath && mContext == other.mContext;
 	}
+	inline bool operator!=(const URI &other) const {
+		// We can ignore the hash if it references the same URL.
+		return !((*this) == other);
+	}
 
 };
 
@@ -491,6 +495,10 @@ public:
 		mHash = Fingerprint::convertFromHex(path);
 	}
 
+	inline std::string toString() const {
+                return mURI.toString();
+	}
+
 	/// accessor for the hashed value
 	inline const Fingerprint &fingerprint() const {
 		return mHash;
@@ -504,6 +512,15 @@ public:
 	inline URI &uri() {
 		return mURI;
 	}
+	inline bool operator== (const RemoteFileId &other) const {
+	       return uri() == other.uri();
+	}
+        inline bool operator!= (const RemoteFileId &other) const {
+               return uri() != other.uri();
+        }
+        inline bool operator< (const RemoteFileId &other) const {
+               return uri() < other.uri();
+        }
 };
 
 }

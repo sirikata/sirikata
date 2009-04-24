@@ -38,6 +38,7 @@
 #include "transfer/ProtocolRegistry.hpp"
 #include "transfer/HTTPDownloadHandler.hpp"
 #include "transfer/CachedServiceLookup.hpp"
+#include "transfer/ServiceManager.hpp"
 #include "transfer/NameLookupManager.hpp"
 #include "transfer/CachedNameLookupManager.hpp"
 
@@ -59,6 +60,8 @@ class NameLookupTest : public CxxTest::TestSuite
 	Transfer::CachedNameLookupManager *mCachedNameLookups;
 	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
 	Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mNameLookupReg;
+	Transfer::ServiceManager<Transfer::DownloadHandler> *mDownloadMgr;
+	Transfer::ServiceManager<Transfer::NameLookupHandler> *mNameLookupMgr;
 	Transfer::CacheLayer *mTransferLayer;
 
 	volatile int finishedTest;
@@ -102,23 +105,27 @@ public:
 				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
-		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);
+		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
-		mNameLookups = new Transfer::NameLookupManager(mNameLookupReg);
-		mCachedNameLookups = new Transfer::CachedNameLookupManager(mNameLookupReg);
+		mNameLookupMgr = new Transfer::ServiceManager<Transfer::NameLookupHandler>(mNameService,mNameLookupReg);
+		mNameLookups = new Transfer::NameLookupManager(mNameLookupMgr);
+		mCachedNameLookups = new Transfer::CachedNameLookupManager(mNameLookupMgr);
 
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
+		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
 		mDownloadReg->setHandler("http", httpHandler);
-		mTransferLayer = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
+		mDownloadMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService,mDownloadReg);
+		mTransferLayer = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
 
 		finishedTest = 0;
 	}
 	void tearDown() {
 		delete mTransferLayer;
+		delete mDownloadMgr;
 		delete mDownloadReg;
 		delete mNameLookups;
 		delete mCachedNameLookups;
+		delete mNameLookupMgr;
 		delete mNameLookupReg;
 		delete mNameService;
 		delete mDownloadService;

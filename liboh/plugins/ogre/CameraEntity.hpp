@@ -44,6 +44,7 @@ namespace Graphics {
 class CameraEntity : public Entity, public CameraListener {
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
+    std::list<CameraEntity*>::iterator mAttachedIter;
 
     Ogre::Camera *getOgreCamera() {
         return static_cast<Ogre::Camera*const>(mOgreObject);

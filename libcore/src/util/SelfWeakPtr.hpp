@@ -30,7 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+#ifndef SIRIKATA_SelfWeakPtr_HPP__
+#define SIRIKATA_SelfWeakPtr_HPP__
 
 namespace Sirikata {
 template <class T>
@@ -47,7 +48,7 @@ protected:
         sharedPtr->mWeakPtr=sharedPtr;
         return retval;
     }
-    
+
 public:
     const std::tr1::weak_ptr<T>& getWeakPtr() const {
         return mWeakPtr;
@@ -56,33 +57,37 @@ public:
         std::tr1::shared_ptr<T> retval(getWeakPtr());
         return retval;
     }
-    template <class U> static std::tr1::shared_ptr<U>construct(){
+    template <class U>
+      static std::tr1::shared_ptr<U>construct(){
         return internalConstruct(new U());
     }
-    template <class A> static std::tr1::shared_ptr<T>construct(A a){
-        return internalConstruct(new T(a));
+    template <class U,class A>
+      static std::tr1::shared_ptr<U>construct(A a){
+        return internalConstruct(new U(a));
     }
-    template <class A,class B> 
-      static std::tr1::shared_ptr<T>construct(A a, B b){
-        return internalConstruct(new T(a,b));
+    template <class U,class A,class B>
+      static std::tr1::shared_ptr<U>construct(A a, B b){
+        return internalConstruct(new U(a,b));
     }
-    template <class A,class B,class C>
-      static std::tr1::shared_ptr<T>construct(A a, B b, C c){
-        return internalConstruct(new T(a,b,c));
+    template <class U,class A,class B,class C>
+      static std::tr1::shared_ptr<U>construct(A a, B b, C c){
+        return internalConstruct(new U(a,b,c));
     }
-    template <class A,class B,class C,class D>
-      static std::tr1::shared_ptr<T>construct(A a, B b, C c, D d){
-        return internalConstruct(new T(a,b,c,d));
+    template <class U,class A,class B,class C,class D>
+      static std::tr1::shared_ptr<U>construct(A a, B b, C c, D d){
+        return internalConstruct(new U(a,b,c,d));
     }
-    template <class A,class B,class C,class D,class E> 
-      static std::tr1::shared_ptr<T>construct(A a,B b,C c,D d,E e){
-        return internalConstruct(new T(a,b,c,d,e));
+    template <class U,class A,class B,class C,class D,class E>
+      static std::tr1::shared_ptr<U>construct(A a,B b,C c,D d,E e){
+        return internalConstruct(new U(a,b,c,d,e));
     }
-    template <class U,class A,class B,class C,class D,class E, class F> 
-      static std::tr1::shared_ptr<T>construct(A a,B b,C c,D d,E e, F f){
-        return internalConstruct(new T(a,b,c,d,e,f));
+    template <class U,class A,class B,class C,class D,class E, class F>
+      static std::tr1::shared_ptr<U>construct(A a,B b,C c,D d,E e, F f){
+        return internalConstruct(new U(a,b,c,d,e,f));
     }
     // add more if you need to, keptain...
 };
 
 }
+
+#endif

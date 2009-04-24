@@ -55,8 +55,8 @@ class EventTransferManager : public TransferManager {
 	NameLookupManager *mNameLookup;
 	Task::GenEventManager *mEventSystem;
 
-	ProtocolRegistry<NameUploadHandler> * mNameUploadReg;
-	ProtocolRegistry<UploadHandler> * mUploadReg;
+	ServiceManager<NameUploadHandler> * mNameUploadServ;
+	ServiceManager<UploadHandler> * mUploadServ;
 
 	volatile bool mCleanup;
 	AtomicValue<int> mPendingCleanup;
@@ -75,7 +75,7 @@ class EventTransferManager : public TransferManager {
 				mActiveTransfers.find(remoteid.fingerprint());
 			while (iter != mActiveTransfers.end() && (*iter).first == remoteid.fingerprint()) {
 				if (downloadedData ?
-						((*iter).second.isContainedBy(*downloadedData)) :
+						downloadedData->contains((*iter).second) :
 						((*iter).second == range)) {
 					// Return value is the iterator immediately following q prior to the erasure.
 					iter = mActiveTransfers.erase(iter);
@@ -100,6 +100,10 @@ class EventTransferManager : public TransferManager {
 	}
 
 	void downloadNameLookupSuccess(const EventListener &listener, const Range &range, const RemoteFileId *remoteid) {
+	        doDownloadByHash(listener, range, remoteid, false);
+	}
+        SubscriptionId doDownloadByHash(const EventListener &listener, const Range &range, const RemoteFileId *remoteid, bool requestID) {
+		SubscriptionId ret = SubscriptionId::null();
 		if (!remoteid) {
 			listener(DownloadEventPtr(new DownloadEvent(FAIL_NAMELOOKUP, RemoteFileId(), NULL)));
 		} else {
@@ -127,7 +131,11 @@ class EventTransferManager : public TransferManager {
 				++iter;
 			}
 			SILOG(transfer,debug,"Getting " << range << " (found = " << found << ")");
-			mEventSystem->subscribe(DownloadEvent::getIdPair(*remoteid), listener);
+			if (requestID) {
+			     ret = mEventSystem->subscribeId(DownloadEvent::getIdPair(*remoteid), listener);
+			} else {
+			     mEventSystem->subscribe(DownloadEvent::getIdPair(*remoteid), listener);
+			}
 			if (!found) {
 				mActiveTransfers.insert(
 					DownloadRangeMap::value_type(remoteid->fingerprint(), range));
@@ -155,6 +163,7 @@ class EventTransferManager : public TransferManager {
 				mCleanupCV.notify_one(); // We are the last one to finish.
 			}
 		}
+		return ret;
 	}
 
 	Task::EventResponse uploadDataFinishedDoName(const URI &name,
@@ -165,7 +174,7 @@ class EventTransferManager : public TransferManager {
 		if (upev->success()) {
 			uploadName(name, hash, listener);
 		} else {
-			listener(ev);
+			listener(Task::EventPtr(new UploadEvent(upev->getStatus(), name, UploadEventId)));
 		}
 		return Task::EventResponse::del();
 	}
@@ -173,55 +182,58 @@ class EventTransferManager : public TransferManager {
 	void doUploadName(
 			const URI &name,
 			const RemoteFileId &hash,
-			unsigned int which,
 			bool success,
 			bool successThisRound,
-			const ListOfServicesPtr &services) {
+			ServiceIterator *services) {
 		success = success && successThisRound;
-		if (!services || which >= services->size()) {
-			if (!services || services->empty()) {
-				success = false;
-			}
+
+		std::tr1::shared_ptr<NameUploadHandler> nameHandler;
+		URI uploadURI;
+		ServiceParams params;
+		if (mNameUploadServ->getNextProtocol(services,
+				successThisRound?ServiceIterator::SUCCESS:ServiceIterator::GENERAL_ERROR,
+				hash.uri(),uploadURI,params,nameHandler)) {
+
+			nameHandler->uploadName(NULL, params, uploadURI, hash,
+					std::tr1::bind(&EventTransferManager::doUploadName, this,
+							name, hash, success, _1, services));
+		} else {
 			Status stat = success ? SUCCESS : FAIL_NAMEUPLOAD;
 			Task::EventPtr ev (new UploadEvent(stat, name, UploadEventId));
 			mEventSystem->fire(ev);
-			return;
 		}
-
-		std::tr1::shared_ptr<NameUploadHandler> nameHandler;
-		std::string proto = mNameUploadReg->lookup((*services)[which].first.proto(), nameHandler);
-		URI uploadURI ((*services)[which].first, name.filename());
-		uploadURI.getContext().setProto(proto);
-		nameHandler->uploadName(NULL, (*services)[which].second, uploadURI, hash,
-				std::tr1::bind(&EventTransferManager::doUploadName, this,
-						name, hash, which+1, success, _1, services));
 	}
 
 	void doUploadData(
 			const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
-			unsigned int which,
 			bool success,
 			bool successThisRound,
-			const ListOfServicesPtr &services) {
+			ServiceIterator *services) {
 		success = success && successThisRound;
-		if (!services || which >= services->size()) {
+
+		std::tr1::shared_ptr<UploadHandler> dataHandler;
+		URI uploadURI;
+		ServiceParams params;
+		if (mUploadServ->getNextProtocol(services,
+				successThisRound?ServiceIterator::SUCCESS:ServiceIterator::GENERAL_ERROR,
+				hash.uri(),uploadURI,params,dataHandler)) {
+
+			dataHandler->upload(NULL, params, uploadURI, toUpload,
+					std::tr1::bind(&EventTransferManager::doUploadData, this,
+							hash, toUpload, success, _1, services));
+		} else {
+		// FIXME: Report FAIL_UPLOAD if services list is empty, or no protocols are supported.
+		// Distinguish from case that all services were uploaded to?? Does success even matter?
+/*
 			if (!services || services->empty()) {
 				success = false;
 			}
+*/
 			Status stat = success ? SUCCESS : FAIL_UPLOAD;
 			Task::EventPtr ev (new UploadEvent(stat, hash.uri(), UploadDataEventId));
 			mEventSystem->fire(ev);
-			return;
 		}
-
-		std::tr1::shared_ptr<UploadHandler> dataHandler;
-		std::string proto = mUploadReg->lookup((*services)[which].first.proto(), dataHandler);
-		URI uploadURI ((*services)[which].first, hash.uri().filename());
-		uploadURI.getContext().setProto(proto);
-		dataHandler->upload(NULL, (*services)[which].second, uploadURI, toUpload,
-				std::tr1::bind(&EventTransferManager::doUploadData, this,
-						hash, toUpload, which+1, success, _1, services));
 	}
 	/*
 	struct RequestInfo {
@@ -239,13 +251,13 @@ public:
 	EventTransferManager(CacheLayer *download,
 				NameLookupManager *nameLookup,
 				Task::GenEventManager *eventSystem,
-				ProtocolRegistry<NameUploadHandler> * uploadNameReg,
-				ProtocolRegistry<UploadHandler> * uploadDataReg)
+				ServiceManager<NameUploadHandler> * uploadNameReg,
+				ServiceManager<UploadHandler> * uploadDataReg)
 			: mFirstTransferLayer(download),
 			  mNameLookup(nameLookup),
 			  mEventSystem(eventSystem),
-			  mNameUploadReg(uploadNameReg),
-			  mUploadReg(uploadDataReg),
+			  mNameUploadServ(uploadNameReg),
+			  mUploadServ(uploadDataReg),
 			  mCleanup(false),
 			  mPendingCleanup(0) {
 	}
@@ -280,20 +292,25 @@ public:
 	virtual void download(const URI &name, const EventListener &listener, const Range &range) {
 		// TODO: Handle multiple name lookups at the same time to the same filename. Is this possible? worth doing?
 		++mPendingCleanup;
-		mNameLookup->lookupHash(name, std::tr1::bind(&EventTransferManager::downloadNameLookupSuccess, this, listener, range, _1));
+		mNameLookup->lookupHash(name, std::tr1::bind(&EventTransferManager::downloadNameLookupSuccess, this, listener, range, _2));
 	}
 
-	virtual void downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
+	virtual SubscriptionId downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
 		// This is the same as if the download() function got a cached name lookup response.
 		++mPendingCleanup;
-		downloadNameLookupSuccess(listener, range, &name);
+		return doDownloadByHash(listener, range, &name, true);
 	}
+
+        virtual void downloadName(const URI &nameURI,
+                const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
+            mNameLookup->lookupHash(nameURI, listener);
+        }
 
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		if (!mNameUploadReg || !mUploadReg) {
+		if (!mNameUploadServ || !mUploadServ) {
 			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 		}
 		/*
@@ -310,29 +327,29 @@ public:
 	virtual void uploadName(const URI &name,
 			const RemoteFileId &hash,
 			const EventListener &listener) {
-		if (!mNameUploadReg) {
+		if (!mNameUploadServ) {
 			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 		}
 		mEventSystem->subscribe(UploadEvent::getIdPair(name, UploadEventId), listener);
 
-		mNameUploadReg->lookupService(
+		mNameUploadServ->lookupService(
 			name.context(),
 			std::tr1::bind(&EventTransferManager::doUploadName, this,
-					name, hash, 0, true, true, _1));
+					name, hash, true, true, _1));
 	}
 
 	virtual void uploadByHash(const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
 			const EventListener &listener) {
-		if (!mUploadReg) {
+		if (!mUploadServ) {
 			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri(), UploadDataEventId)));
 		}
 		mEventSystem->subscribe(UploadEvent::getIdPair(hash.uri(), UploadDataEventId), listener);
 
-		mUploadReg->lookupService(
+		mUploadServ->lookupService(
 			hash.uri().context(),
 			std::tr1::bind(&EventTransferManager::doUploadData, this,
-					hash, toUpload, 0, true, true, _1));
+					hash, toUpload, true, true, _1));
 	}
 
 };

@@ -157,13 +157,20 @@
 #include <set>
 #include <map>
 #include <algorithm>
+
+#ifdef __GNUC__
+// Required for OGRE.
+#if (__GNUC__ == 4 && __GNUC_MINOR__ >= 3) || __GNUC__ > 4
+#define BOOST_HAS_GCC_TR1
+#endif
+#endif
+
 #include <boost/tr1/memory.hpp>
 #include <boost/tr1/array.hpp>
 #include <boost/tr1/functional.hpp>
 #include <boost/tr1/unordered_set.hpp>
 #include <boost/tr1/unordered_map.hpp>
 
-#define tech std::tr1
 namespace Sirikata {
 
 // numeric typedefs to get standardized types

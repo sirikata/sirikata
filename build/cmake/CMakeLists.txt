@@ -375,6 +375,10 @@ ELSE(WIN32)
   STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
   STRING(REPLACE "boost_system" "boost_filesystem" Boost_FILESYSTEM_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
+
+  STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_DEBUG ${Boost_SYSTEM_LIBRARY_DEBUG})
+  STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY_RELEASE ${Boost_SYSTEM_LIBRARY_RELEASE})
 ENDIF(WIN32)
 VERIFY_VERSION(Boost 1 35 0)
 
@@ -523,6 +527,7 @@ SET(INCLUDE_DIRECTORIES
   ${LIBCORE_SOURCE_DIR}
   ${LIBSPACE_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
+  ${LIBOH_DIR}/plugins/ogre/meruCompat #temporary hack
   ${SPACE_SOURCE_DIR}
   ${CPPOH_SOURCE_DIR}
   ${Boost_INCLUDE_DIRS}
@@ -706,6 +711,7 @@ SET(LIBCORE_PLUGIN_SKELETON_DIR ${LIBCORE_PLUGIN_DIR}/skeleton)
 SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterface.cpp)
 
 SET(LIBOH_PLUGIN_OGREGRAPHICS_DIR ${LIBOH_PLUGIN_DIR}/ogre)
+SET(GFX ${LIBOH_PLUGIN_OGREGRAPHICS_DIR})
 SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${SirikataOgreCoreZipCpp}
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystem.cpp
@@ -715,6 +721,40 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/MeshEntity.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/CameraEntity.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgrePlugin.cpp
+${GFX}/meruCompat/DependencyManager.cpp
+${GFX}/meruCompat/DependencyTask.cpp
+${GFX}/meruCompat/Event.cpp
+${GFX}/meruCompat/EventSource.cpp
+${GFX}/meruCompat/MeruDefs.cpp
+${GFX}/meruCompat/SequentialWorkQueue.cpp
+${GFX}/resourceManager/CDNArchive.cpp
+${GFX}/resourceManager/CDNArchiveFactory.cpp
+${GFX}/resourceManager/CDNArchivePlugin.cpp
+${GFX}/resourceManager/GraphicsCamera.cpp
+${GFX}/resourceManager/GraphicsEntity.cpp
+${GFX}/resourceManager/GraphicsLight.cpp
+${GFX}/resourceManager/GraphicsObject.cpp
+${GFX}/resourceManager/GraphicsRenderSettings.cpp
+${GFX}/resourceManager/GraphicsResource.cpp
+${GFX}/resourceManager/GraphicsResourceAsset.cpp
+${GFX}/resourceManager/GraphicsResourceEntity.cpp
+${GFX}/resourceManager/GraphicsResourceManager.cpp
+${GFX}/resourceManager/GraphicsResourceMaterial.cpp
+${GFX}/resourceManager/GraphicsResourceMesh.cpp
+${GFX}/resourceManager/GraphicsResourceName.cpp
+${GFX}/resourceManager/GraphicsResourceShader.cpp
+${GFX}/resourceManager/GraphicsResourceSkeleton.cpp
+${GFX}/resourceManager/GraphicsResourceTexture.cpp
+${GFX}/resourceManager/GraphicsSystem.cpp
+${GFX}/resourceManager/ManualMaterialLoader.cpp
+${GFX}/resourceManager/ReplacingDataStream.cpp
+${GFX}/resourceManager/ResourceDependencyTask.cpp
+${GFX}/resourceManager/ResourceDownloadTask.cpp
+${GFX}/resourceManager/ResourceLoadTask.cpp
+${GFX}/resourceManager/ResourceLoadingQueue.cpp
+${GFX}/resourceManager/ResourceManager.cpp
+${GFX}/resourceManager/ResourceTransfer.cpp
+${GFX}/resourceManager/ResourceUnloadTask.cpp
         )
 
 #test source files
@@ -814,7 +854,8 @@ ADD_PLUGIN_TARGET(ogregraphics
                     TARGET_CXXFLAGS ${OGRE_CFLAGS} ${sdl_CFLAGS}
                     TARGET_LDFLAGS ${OGRE_LDFLAGS} ${sdl_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} 
-                    LIBRARIES ${OGRE_LIBRARIES} ${sdl_LIBRARIES})
+                    LIBRARIES ${OGRE_LIBRARIES} ${sdl_LIBRARIES}
+                              ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}})
 ENDIF(OGRE_FOUND)
 
 

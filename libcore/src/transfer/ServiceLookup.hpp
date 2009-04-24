@@ -88,6 +88,50 @@ typedef std::vector<std::pair<URIContext, ServiceParams> > ListOfServices;
 typedef std::tr1::shared_ptr<ListOfServices> ListOfServicesPtr;
 
 
+class ServiceIterator {
+public:
+	// SUCCESS means that the download was successful (e.g. you are retrying due to a format error)
+	enum ErrorType {SUCCESS, UNSUPPORTED, GENERAL_ERROR, NETWORK_ERROR, NOT_FOUND, FORBIDDEN};
+
+	virtual bool tryNext(ErrorType reason, URI &uri, ServiceParams &outParams) {
+		delete this;
+		return false;
+	}
+
+	virtual ~ServiceIterator() {
+	}
+
+	/** Notification that the download was successful.
+	 * This may help ServiceLookup to pick a better service next time.
+	 */
+	virtual void finished(ErrorType reason=SUCCESS) {
+		delete this;
+	}
+
+};
+
+class SimpleServiceIterator : public ServiceIterator {
+	ListOfServicesPtr mServices;
+	unsigned int mIndex;
+public:
+	// SUCCESS means that the download was successful (e.g. you are retrying due to a format error)
+
+	SimpleServiceIterator(const ListOfServicesPtr &serv) : mServices(serv), mIndex(0) {
+	}
+
+	virtual bool tryNext(ErrorType reason, URI &uri, ServiceParams &outParams) {
+		if (mIndex >= mServices->size()) {
+			delete this;
+			return false;
+		}
+		uri.getContext() = (*mServices)[mIndex].first;
+		outParams = (*mServices)[mIndex].second;
+		mIndex++;
+		return true;
+	}
+
+};
+
 /** A really confusing system that maps a SURI (service URI) to a regular
  * Internet URI that will have a handler in the ProtocolRegistry.
  *
@@ -95,7 +139,7 @@ typedef std::tr1::shared_ptr<ListOfServices> ListOfServicesPtr;
  */
 class ServiceLookup {
 public:
-	typedef std::tr1::function<void(ListOfServicesPtr)> Callback;
+	typedef std::tr1::function<void(ServiceIterator*)> Callback;
 private:
 
 	ServiceLookup* mRespondTo;
@@ -113,10 +157,11 @@ public:
 	 *
 	 * Does nothing except in CachedServiceLookup.
 	 */
-	virtual void addToCache(const URIContext &origService, const ListOfServicesPtr &toCache) {
+	virtual bool addToCache(const URIContext &origService, const ListOfServicesPtr &toCache,const Callback &cb=Callback()) {
 		if (mRespondTo) {
-			mRespondTo->addToCache(origService, toCache);
+			return mRespondTo->addToCache(origService, toCache, cb);
 		}
+		return false;
 	}
 
 	/// Virtual destructor, for subclasses.
@@ -163,8 +208,16 @@ public:
 		} else {
 			SILOG(transfer,error,"ServiceLookup could find no handlers for " <<
 				context);
-			cb(ListOfServicesPtr());
+			cb(new ServiceIterator);
 		}
+	}
+};
+
+class NullServiceLookup : public ServiceLookup {
+	virtual void lookupService(const URIContext &context, const Callback &cb) {
+		ListOfServicesPtr services(new ListOfServices);
+		services->push_back(ListOfServices::value_type(context, ServiceParams()));
+		cb(new SimpleServiceIterator(services));
 	}
 };
 
@@ -185,8 +238,9 @@ public:
 		}
 		const ListOfServices &vec = serviceOptionValue->get()->as<const ListOfServices>();
 		ListOfServicesPtr vecptr(new ListOfServices(vec));
-		addToCache(context, vecptr);
-		cb(vecptr);
+		if (!addToCache(context, vecptr, cb)) {
+			cb(new SimpleServiceIterator(vecptr));
+		}
 	}
 };
 

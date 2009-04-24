@@ -194,6 +194,11 @@ public:
 				const IdPair &id) {
 		return os << "<ID:" << id.mPriId << "; " << id.mSecId << '>';
 	}
+	inline std::string toString() const {
+	       std::ostringstream os;
+	       os << *this;
+	       return os.str();
+	}
 
 	explicit IdPair(const Primary &pri)
 		: mPriId(pri), mSecId(Secondary::null()) {

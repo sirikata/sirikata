@@ -29,6 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_LOGGING_HPP_
+#define _SIRIKATA_LOGGING_HPP_
+
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_defaultLevel;
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_atLeastLevel;
 extern "C" SIRIKATA_EXPORT void* Sirikata_Logging_OptionValue_moduleLevel;
@@ -39,6 +43,7 @@ enum LOGGING_LEVEL {
     fatal=1,
     error=8,
     warning=64,
+    warn=warning,
     info=512,
     debug=4096,
     insane=32768
@@ -64,4 +69,6 @@ enum LOGGING_LEVEL {
 # define SILOGP(module,lvl) false
 # define SILOGNOCR(module,lvl,value)
 # define SILOG(module,lvl,value)
+#endif
+
 #endif

@@ -137,7 +137,7 @@ public:
 	 *
 	 * @see EventResponse
 	 */
-	typedef std::tr1::function<EventResponse(EventPtr)> EventListener;
+	typedef std::tr1::function<EventResponse(const EventPtr&)> EventListener;
 
 private:
 
@@ -159,7 +159,7 @@ private:
 		//}
 	};
 
-	typedef std::tr1::unordered_map<IdPair::Secondary, 
+	typedef std::tr1::unordered_map<IdPair::Secondary,
 				PartiallyOrderedListenerList*,
 				IdPair::Secondary::Hasher> SecondaryListenerMap;
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;

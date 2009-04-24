@@ -114,15 +114,15 @@ public:
                     sparseData.debugPrint(sparsePrintStream);
                     SILOG(transfer,debug,sparsePrintStream.str());
                 }
-				if (requestedRange.isContainedBy(sparseData)) {
+				if (sparseData.contains(requestedRange)) {
 					haveData = true;
 					foundData = sparseData;
 				}
 			}
 		}
 		if (haveData) {
-			for (SparseData::iterator iter = foundData.begin();
-					iter != foundData.end();
+			for (DenseDataList::iterator iter = foundData.DenseDataList::begin();
+					iter != foundData.DenseDataList::end();
 					++iter) {
 				CacheLayer::populateParentCaches(uri.fingerprint(), iter.getPtr());
 			}

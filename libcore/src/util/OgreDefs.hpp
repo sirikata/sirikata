@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host Graphics Interface
- *  GraphicsObject.cpp
+/*  Meru
+ *  OgreDefs.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,11 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _OGRE_DEFS_HPP_
+#define _OGRE_DEFS_HPP_
 
-#include <oh/Platform.hpp>
-#include "GraphicsObject.hpp"
-namespace Sirikata {
-GraphicsObject::GraphicsObject():mCapabilities(HAS_NO_CAPABILITY) {
+#ifdef HAVE_OGRE
 
-}
-}
+// Forward declarations for some Ogre classes
+// that we want compatibility for
+
+// OgrePrerequisites does this for us....
+#include <OgrePrerequisites.h>
+
+#endif //HAVE_OGRE
+
+#endif //_OGRE_DEFS_HPP_

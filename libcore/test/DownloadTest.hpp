@@ -35,6 +35,7 @@
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
 #include "transfer/CachedServiceLookup.hpp"
+#include "transfer/ServiceManager.hpp"
 #include "transfer/CachedNameLookupManager.hpp"
 #include "transfer/NetworkCacheLayer.hpp"
 #include "transfer/MemoryCacheLayer.hpp"
@@ -65,6 +66,8 @@ class DownloadTest : public CxxTest::TestSuite {
 	Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mNameLookupReg;
 	Transfer::ServiceLookup *mNameService;
 	Transfer::ServiceLookup *mDownloadService;
+	Transfer::ServiceManager<Transfer::DownloadHandler> *mDownloadMgr;
+	Transfer::ServiceManager<Transfer::NameLookupHandler> *mNameLookupMgr;
 
 	Task::GenEventManager *mEventSystem;
 
@@ -99,8 +102,10 @@ public:
 	}
 
 	void setUp() {
+		// Make one of everything! Woohoo!
+
 		mEventSystem = new Task::GenEventManager(true);
-		mEventProcessThread = new boost::thread(boost::bind(
+		mEventProcessThread = new boost::thread(std::tr1::bind(
 			&Task::GenEventManager::sleep_processEventQueue, mEventSystem));
 
 		mNameService = new Transfer::CachedServiceLookup;
@@ -119,22 +124,24 @@ public:
 				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash","","",""), Transfer::ListOfServicesPtr(services));
 
-		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mNameService);
+		mNameLookupReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mNameLookupReg->setHandler("http", httpHandler);
-		mNameLookup = new Transfer::NameLookupManager(mNameLookupReg);
+		mNameLookupMgr = new Transfer::ServiceManager<Transfer::NameLookupHandler>(mNameService, mNameLookupReg);
+		mNameLookup = new Transfer::NameLookupManager(mNameLookupMgr);
 
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
+		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
 		mDownloadReg->setHandler("http", httpHandler);
-		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
+		mDownloadMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService, mDownloadReg);
+		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
 
 		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem,NULL,NULL);
 
 		// Uses the same event system, so don't combine the cached and non-cached ones into a single test.
-		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
+		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
 		mMemoryCachePolicy = new Transfer::LRUPolicy(1000000);
 		mMemoryCache = new Transfer::MemoryCacheLayer(mMemoryCachePolicy, mCachedNetworkCache);
-		mCachedNameLookup = new Transfer::CachedNameLookupManager(mNameLookupReg);
+		mCachedNameLookup = new Transfer::CachedNameLookupManager(mNameLookupMgr);
 		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem,NULL,NULL);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
@@ -148,6 +155,7 @@ public:
 		// First delete name lookups
 		delete mNameLookup;
 		delete mCachedNameLookup;
+		delete mNameLookupMgr;
 		delete mNameLookupReg;
 		delete mNameService;
 
@@ -158,7 +166,8 @@ public:
 		delete mMemoryCache;
 		delete mMemoryCachePolicy;
 		delete mCachedNetworkCache; // CacheLayer's deleted from first to last.
-		delete mDownloadReg; // Download registry must be deleted after the NetworkCacheLayer.
+		delete mDownloadMgr; // Download service manager must be deleted after the NetworkCacheLayer.
+		delete mDownloadReg;
 		delete mDownloadService;
 		delete mTransferManager;
 		delete mCachedTransferManager;
@@ -209,7 +218,7 @@ public:
 			TS_FAIL(msg.str());
 			notifyOne();
 			return Task::EventResponse::del();
-		} else if (toCheck.isContainedBy(ev->data())) {
+		} else if (ev->data().contains(toCheck)) {
 			TS_ASSERT_EQUALS(ev->getStatus(), Transfer::TransferManager::SUCCESS);
 			notifyOne();
 			return Task::EventResponse::del();

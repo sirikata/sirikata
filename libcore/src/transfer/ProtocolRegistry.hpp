@@ -35,7 +35,6 @@
 #define SIRIKATA_ProtocolHandler_HPP__
 
 #include "TransferData.hpp"
-#include "ServiceLookup.hpp"
 #include "URI.hpp"
 
 namespace Sirikata {
@@ -75,19 +74,13 @@ public:
  */
 template <class ProtocolType>
 class ProtocolRegistry {
+public:
 	typedef std::tr1::shared_ptr<ProtocolType> HandlerPtr;
+private:
 	typedef std::map<std::string, std::pair<std::string, HandlerPtr> > HandlerMap;
 	HandlerMap mHandlers;
-	ServiceLookup *mServices;
-	bool mAllowNonService;
 
 public:
-	explicit ProtocolRegistry() : mServices(NULL), mAllowNonService(true) {
-	}
-
-	ProtocolRegistry(ServiceLookup *services, bool allowNonService=false)
-		: mServices(services), mAllowNonService(allowNonService) {
-	}
 
 	/** Sets the protocol handler. Note that there can currently be only one
 	 * protocol handler per protocol per ProtocolType.
@@ -121,24 +114,6 @@ public:
 		const std::pair<std::string, HandlerPtr> &protoHandler = (*iter).second;
 		handlerPtr = protoHandler.second;
 		return protoHandler.first;
-	}
-
-	void lookupService(const URIContext &context, const ServiceLookup::Callback &cb, bool allowProto=true) const {
-		if (allowProto && mAllowNonService &&
-				mHandlers.find(context.proto()) != mHandlers.end()) {
-			ListOfServicesPtr services(new ListOfServices);
-			services->push_back(ListOfServices::value_type(context, ServiceParams()));
-			cb(services);
-		} else if (mServices) {
-			mServices->lookupService(context, cb);
-		} else {
-			cb(ListOfServicesPtr());
-			/*
-			ListOfServicesPtr services(new ListOfServices);
-			services->push_back(context);
-			cb(services);
-			*/
-		}
 	}
 };
 

@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cxxtest/TestSuite.h>
+
+namespace tech = std::tr1; // why?
+
 class TR1Test : public CxxTest::TestSuite
 {
 public:

@@ -35,6 +35,7 @@
 #define SIRIKATA_NetworkCacheLayer_HPP__
 
 #include "CacheLayer.hpp"
+#include "ServiceManager.hpp"
 #include "ServiceLookup.hpp"
 #include "DownloadHandler.hpp"
 
@@ -51,50 +52,52 @@ class NetworkCacheLayer : public CacheLayer {
 		TransferCallback callback;
 		RemoteFileId fileId;
 		Range range;
-		ListOfServicesPtr services;
+		ServiceIterator* serviter;
 
 		RequestInfo(const RemoteFileId &fileId, const Range &range, const TransferCallback &cb)
-			: callback(cb), fileId(fileId), range(range) {
+			: callback(cb), fileId(fileId), range(range), serviter(NULL) {
+		}
+
+		~RequestInfo() {
+			if (serviter) {
+				delete serviter;
+			}
 		}
 	};
 
 	volatile bool cleanup;
 	std::list<RequestInfo> mActiveTransfers;
-	ProtocolRegistry<DownloadHandler> *mProtoReg;
+	ServiceManager<DownloadHandler> *mService;
 	boost::mutex mActiveTransferLock; ///< for abort.
 	boost::condition_variable mCleanupCV;
 
-	void httpCallback(
-			std::list<RequestInfo>::iterator iter,
-			unsigned int whichService,
-			DenseDataPtr recvData,
-			bool success) {
-		const RequestInfo &info = *iter;
+	void httpCallback(std::list<RequestInfo>::iterator iter, DenseDataPtr recvData, bool success) {
+		RequestInfo &info = *iter;
 		if (recvData && success) {
 			// Now go back through the chain!
 			CacheLayer::populateParentCaches(info.fileId.fingerprint(), recvData);
 			SparseData data;
 			data.addValidData(recvData);
+			info.serviter->finished(ServiceIterator::SUCCESS);
+			info.serviter = NULL; // avoid double-free in RequestInfo destructor.
 			info.callback(&data);
 
 			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
 			mActiveTransfers.erase(iter);
 			mCleanupCV.notify_one();
 		} else {
-			// don't want to make new queries in this case.
-			doFetch(iter, whichService+1);
+			// todo: add a more specific error code instead of 'bool success'.
+			doFetch(iter, ServiceIterator::GENERAL_ERROR);
 		}
 	}
 
-	void doFetch(
-			std::list<RequestInfo>::iterator iter,
-			unsigned int whichService) {
+	void doFetch(std::list<RequestInfo>::iterator iter, ServiceIterator::ErrorType reason) {
 		/* FIXME: this does not acquire a lock--which will cause a problem
 		 * if this class is destructed while we are executing doFetch.
 		 */
 		RequestInfo &info = *iter;
-		if (cleanup || !info.services || whichService >= info.services->size()) {
-			SILOG(transfer,error,"None of the " << whichService << " download URIContexts registered for " <<
+		if (cleanup || !info.serviter) {
+			SILOG(transfer,error,"None of the services registered for " <<
 					info.fileId.uri() << " were successful.");
 			CacheLayer::getData(info.fileId, info.range, info.callback);
 			boost::unique_lock<boost::mutex> transfer_lock(mActiveTransferLock);
@@ -102,28 +105,29 @@ class NetworkCacheLayer : public CacheLayer {
 			mCleanupCV.notify_one();
 			return;
 		}
-		URI lookupUri ((*info.services)[whichService].first, info.fileId.uri().filename());
+		URI lookupUri;
 		std::tr1::shared_ptr<DownloadHandler> handler;
-		lookupUri.getContext().setProto(mProtoReg->lookup(lookupUri.proto(), handler));
-		if (handler) {
+		ServiceParams params;
+		if (mService->getNextProtocol(info.serviter,reason,info.fileId.uri(),lookupUri,params,handler)) {
 			// info IS GETTING FREED BEFORE download RETURNS TO SET info.httpreq!!!!!!!!!
 			info.httpreq = DownloadHandler::TransferDataPtr();
 			handler->download(&info.httpreq, lookupUri, info.range,
-					std::tr1::bind(&NetworkCacheLayer::httpCallback, this, iter, whichService, _1, _2));
+					std::tr1::bind(&NetworkCacheLayer::httpCallback, this, iter, _1, _2));
 			// info may be deleted by now (not so unlikely as it sounds -- it happens if you connect to localhost)
 		} else {
-			doFetch(iter, whichService+1);
+			info.serviter = NULL; // deleted.
+			doFetch(iter, ServiceIterator::UNSUPPORTED);
 		}
 	}
 
-	void gotServices(std::list<RequestInfo>::iterator iter, const ListOfServicesPtr &services) {
-		(*iter).services = services;
-		doFetch(iter, 0);
+	void gotServices(std::list<RequestInfo>::iterator iter, ServiceIterator *services) {
+		(*iter).serviter = services;
+		doFetch(iter, ServiceIterator::SUCCESS);
 	}
 
 public:
-	NetworkCacheLayer(CacheLayer *next, ProtocolRegistry<DownloadHandler> *protoReg)
-			:CacheLayer(next), mProtoReg(protoReg) {
+	NetworkCacheLayer(CacheLayer *next, ServiceManager<DownloadHandler> *serviceMgr)
+			:CacheLayer(next), mService(serviceMgr) {
 		cleanup = false;
 	}
 
@@ -165,7 +169,7 @@ public:
 			infoIter = mActiveTransfers.insert(mActiveTransfers.end(), info);
 		}
 
-		mProtoReg->lookupService(downloadFileId.uri().context(),
+		mService->lookupService(downloadFileId.uri().context(),
 				std::tr1::bind(&NetworkCacheLayer::gotServices, this, infoIter, _1));
 	}
 };

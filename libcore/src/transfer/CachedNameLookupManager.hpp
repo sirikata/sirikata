@@ -68,8 +68,8 @@ protected:
 	}
 
 public:
-	CachedNameLookupManager(ProtocolRegistry<NameLookupHandler> *nameProtocols)
-		: NameLookupManager(nameProtocols) {
+	CachedNameLookupManager(ServiceManager<NameLookupHandler> *nameProtocols, ServiceManager<DownloadHandler> *downloadServ=NULL)
+		: NameLookupManager(nameProtocols, downloadServ) {
 	}
 
 	virtual void lookupHash(const URI &namedUri, const Callback &cb) {
@@ -80,7 +80,7 @@ public:
 				RemoteFileId rfid ((*iter).second); // copy, because the map could change.
 				lookuplock.unlock();
 
-				cb(&rfid);
+				cb(namedUri, &rfid);
 				return;
 			}
 		}

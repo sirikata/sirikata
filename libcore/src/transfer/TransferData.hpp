@@ -64,6 +64,14 @@ public:
 		return &(mData[0]);
 	}
 
+	inline const unsigned char *begin() const {
+		return data();
+	}
+
+	inline const unsigned char *end() const {
+		return data()+length();
+	}
+
 	/// Returns a non-const data, starting at startbyte().
 	inline unsigned char *writableData() {
 		return &(mData[0]);
@@ -96,145 +104,111 @@ public:
 typedef std::tr1::shared_ptr<DenseData> MutableDenseDataPtr;
 typedef std::tr1::shared_ptr<const DenseData> DenseDataPtr;
 
-/// Represents a series of DenseData.  Often you may have adjacent DenseData.
-class SparseData {
+// Meant to act like an STL list.
+class DenseDataList {
+protected:
 	typedef std::list<DenseDataPtr> ListType;
 
 	///sorted vector of Range/vector pairs
 	ListType mSparseData;
+
+	DenseDataList() {
+	}
+
 public:
 	/// Acts like a STL container.
 	typedef DenseDataPtr value_type;
 
-	SparseData() {
-	}
-
-	SparseData(DenseDataPtr contents) {
-		addValidData(contents);
-	}
-
-	/// Simple stub iterator class for use by Range::isContainedBy()
+    /// Simple stub iterator class for use by Range::isContainedBy()
 	class iterator : public ListType::iterator {
 	public:
 		iterator(const ListType::iterator &e) :
 			ListType::iterator(e) {
 		}
-		inline const DenseData &operator* () {
+		inline const DenseData &operator* () const {
 			return *(this->ListType::iterator::operator*());
 		}
 
-		inline const DenseDataPtr &getPtr() {
+		inline const DenseData *operator-> () const {
+			return &(*(this->ListType::iterator::operator*()));
+		}
+
+		inline const DenseDataPtr &getPtr() const {
 			return this->ListType::iterator::operator*();
 		}
-	};
+    };
 
-	/// Simple iteration functions, to keep compatibility with RangeList.
-	inline iterator begin() {
-		return mSparseData.begin();
-	}
-	/// Simple iteration functions, to keep compatibility with RangeList.
-	inline iterator end() {
-		return mSparseData.end();
-	}
+    /// Simple iteration functions, to keep compatibility with RangeList.
+    inline iterator begin() {
+            return mSparseData.begin();
+    }
+    /// Simple iteration functions, to keep compatibility with RangeList.
+    inline iterator end() {
+            return mSparseData.end();
+    }
 
-	/// Simple stub iterator class for use by Range::isContainedBy()
-	class const_iterator : public ListType::const_iterator {
-	public:
-		const_iterator(const ListType::const_iterator &e) :
-			ListType::const_iterator(e) {
-		}
-		const_iterator(const ListType::iterator &e) :
-			ListType::const_iterator(e) {
-		}
-		inline const DenseData &operator* () const {
-			return *(this->ListType::const_iterator::operator*());
-		}
-	};
-	/// Simple iteration functions, to keep compatibility with RangeList.
-	inline const_iterator begin() const {
-		return mSparseData.begin();
-	}
-	/// Simple iteration functions, to keep compatibility with RangeList.
-	inline const_iterator end() const {
-		return mSparseData.end();
-	}
+    /// Simple stub iterator class for use by Range::isContainedBy()
+    class const_iterator : public ListType::const_iterator {
+    public:
+        const_iterator() {
+        }
+            const_iterator(const ListType::const_iterator &e) :
+                    ListType::const_iterator(e) {
+            }
+            const_iterator(const ListType::iterator &e) :
+                    ListType::const_iterator(e) {
+            }
+            inline const DenseData &operator* () const {
+                    return *(this->ListType::const_iterator::operator*());
+            }
 
-	/// insert into the internal std::list.
-	inline iterator insert(const iterator &iter, const value_type &dd) {
-		return mSparseData.insert(iter, dd);
-	}
+            inline const DenseData *operator-> () const {
+                    return &(*(this->ListType::const_iterator::operator*()));
+            }
+    };
+    /// Simple iteration functions, to keep compatibility with RangeList.
+    inline const_iterator begin() const {
+            return mSparseData.begin();
+    }
+    /// Simple iteration functions, to keep compatibility with RangeList.
+    inline const_iterator end() const {
+            return mSparseData.end();
+    }
 
-	/// delete from the internal std::list.
-	inline void erase(const iterator &iter) {
-		mSparseData.erase(iter);
-	}
+    /// insert into the internal std::list.
+    inline iterator insert(const iterator &iter, const value_type &dd) {
+            return mSparseData.insert(iter, dd);
+    }
 
-	/// Clear all data.
-	inline void clear() {
-		return mSparseData.clear();
-	}
+    /// delete from the internal std::list.
+    inline void erase(const iterator &iter) {
+            mSparseData.erase(iter);
+    }
 
-	/// Is there any data.
-	inline bool empty() const {
-		return mSparseData.empty();
-	}
+    /// Clear all data.
+    inline void clear() {
+            return mSparseData.clear();
+    }
 
-	///adds a range of valid data to the SparseData set.
-	void addValidData(const DenseDataPtr &data) {
-		data->addToList(data, *this);
-	}
+    /// Is there any data.
+    inline bool empty() const {
+            return mSparseData.empty();
+    }
 
-	///gets the space used by the sparse file.
-	inline cache_usize_type getSpaceUsed() const {
-		cache_usize_type length = 0;
-		const_iterator myend = end();
-		for (const_iterator iter = begin(); iter != myend; ++iter) {
-			length += (*iter).length();
-		}
-		return length;
-	}
+    ///adds a range of valid data to the SparseData set.
+    void addValidData(const DenseDataPtr &data) {
+            data->addToList(data, *this);
+    }
 
-	inline cache_usize_type startbyte() const {
-		if (mSparseData.empty()) {
-			return 0;
-		}
-		return mSparseData.front()->startbyte();
-	}
-
-	inline cache_usize_type endbyte() const {
-		if (mSparseData.empty()) {
-			return 0;
-		}
-		return mSparseData.back()->endbyte();
-	}
-
-	inline cache_usize_type length() const {
-		return endbyte() - startbyte();
-	}
-
-	inline bool contiguous() const {
-		if (mSparseData.empty())
-			return true;
-		return Range(startbyte(), endbyte(), BOUNDS).isContainedBy(*this);
-	}
-
-	/** Would be a << operator, but it's inefficient, and should only be
-	 * used for debugging/testing purposes, so it's safer as a different function.
-	 */
-	std::ostream & debugPrint(std::ostream &os) const {
-		Range::base_type position = 0, len;
-		do {
-			const unsigned char *data = dataAt(position, len);
-			if (data) {
-				os<<"{GOT DATA "<<len<<"}";
-				os<<std::string(data, data+len);
-			} else if (len) {
-				os<<"[INVALID:" <<len<< "]";
-			}
-			position += len;
-		} while (len);
-		return os;
-	}
+    ///gets the space used by the sparse file.
+    inline cache_usize_type getSpaceUsed() const {
+            cache_usize_type length = 0;
+            const_iterator myend = end();
+            for (const_iterator iter = begin(); iter != myend; ++iter) {
+                    length += (*iter).length();
+            }
+            return length;
+    }
 
 	/**
 	 * gets a pointer to data starting at offset
@@ -260,6 +234,206 @@ public:
 		}
 		length = 0;
 		return NULL;
+	}
+
+	inline cache_usize_type startbyte() const {
+		if (mSparseData.empty()) {
+			return 0;
+		}
+		return mSparseData.front()->startbyte();
+	}
+
+	inline cache_usize_type endbyte() const {
+		if (mSparseData.empty()) {
+			return 0;
+		}
+		return mSparseData.back()->endbyte();
+	}
+
+	inline bool contiguous() const {
+		if (mSparseData.empty())
+			return true;
+		return Range(startbyte(), endbyte(), BOUNDS).isContainedBy(*this);
+	}
+
+	inline bool contains(const Range &other) const {
+		return other.isContainedBy(*this);
+	}
+};
+
+/// Represents a series of DenseData.  Often you may have adjacent DenseData.
+class SparseData : public DenseDataList {
+public:
+	typedef cache_usize_type size_type;
+	typedef cache_ssize_type difference_type;
+	typedef const unsigned char value_type;
+
+	class const_iterator {
+	public:
+		typedef SparseData::size_type size_type;
+		typedef SparseData::difference_type difference_type;
+		typedef SparseData::value_type value_type;
+		typedef std::random_access_iterator_tag iterator_category;
+		typedef value_type* pointer;
+		typedef value_type& reference;
+
+	private:
+		DenseDataList::const_iterator iter;
+		const SparseData *parent;
+		value_type *data;
+        size_type globalbyte;
+        size_type datastart;
+		size_type dataend;
+
+		void setDataPtr() {
+			if (globalbyte >= parent->endbyte() || iter == (parent->DenseDataList::end())) {
+				data = NULL;
+				dataend = 0;
+				datastart = 0;
+			} else {
+				const DenseData&dd = *iter;
+				data = dd.data();
+				datastart = dd.startbyte();
+				dataend = dd.endbyte();
+			}
+		}
+		void fixData() {
+			while (iter != (parent->DenseDataList::begin()) && globalbyte < datastart) {
+				--iter;
+				setDataPtr();
+			}
+			while (data && globalbyte >= dataend) {
+				++iter;
+				setDataPtr();
+				if (datastart > globalbyte) {
+					throw std::runtime_error("SparseData iterator skipped over some data");
+				}
+			}
+		}
+	public:
+		const_iterator() {
+			parent = NULL;
+			data = NULL;
+			datastart = 0;
+			dataend = 0;
+			globalbyte = 0;
+		}
+		const_iterator (const DenseDataList::const_iterator &iter,
+				const SparseData *parent, SparseData::size_type pos)
+				: iter(iter), parent(parent) {
+			if (!parent->contiguous()) {
+				throw std::domain_error("Cannot create iterator over noncontiguous SparseData");
+			}
+        	globalbyte = pos;
+            setDataPtr();
+		}
+
+		unsigned char operator*() const{
+			return data[globalbyte-datastart];
+		}
+		const_iterator &operator+=(difference_type diff) {
+			globalbyte += diff;
+			if (globalbyte < datastart || globalbyte >= dataend) {
+				fixData();
+			}
+			return *this;
+		}
+		const_iterator &operator-=(difference_type diff) {
+			operator+=(-diff);
+			return *this;
+		}
+		const_iterator &operator++() {
+			++globalbyte;
+			if (globalbyte >= dataend) {
+				fixData();
+			}
+			return *this;
+		}
+		const_iterator &operator--() {
+			--globalbyte;
+			if (globalbyte < datastart) {
+				fixData();
+			}
+			return *this;
+		}
+		const_iterator operator+(difference_type diff) const {
+			const_iterator other (*this);
+			return (other += diff);
+		}
+		const_iterator operator-(difference_type diff) const {
+			const_iterator other (*this);
+			return (other -= diff);
+		}
+
+		difference_type operator-(const const_iterator&other) const {
+			return (globalbyte - other.globalbyte);
+		}
+
+		bool operator<(const const_iterator&other) const {
+			return (other.globalbyte < globalbyte);
+		}
+		bool operator==(const const_iterator&other) const {
+			return (other.parent == parent && other.globalbyte == globalbyte);
+		}
+		bool operator!=(const const_iterator&other) const {
+			return (other.parent != parent || other.globalbyte != globalbyte);
+		}
+	};
+
+	const_iterator begin() const {
+		return const_iterator(DenseDataList::begin(), this, startbyte());
+	}
+	const_iterator end() const {
+		return const_iterator(DenseDataList::end(), this, endbyte());
+	}
+
+	/*// slow: better to use iterators.
+	const char operator[] (cache_usize_type location) {
+		Range::length_type length;
+		const unsigned char *data = dataAt(location, length);
+		if (data == NULL) {
+			return '\0';
+		}
+		if (length == 0) {
+			throw new std::domain_error("byte outside range passed to SparseData::operator[]");
+		}
+		return *data;
+	}
+	*/
+
+	typedef const_iterator iterator; // Only supports read-only operations
+
+	SparseData() {
+	}
+
+	SparseData(DenseDataPtr contents) {
+		addValidData(contents);
+	}
+
+	inline cache_usize_type length() const {
+		return endbyte() - startbyte();
+	}
+
+	inline cache_usize_type size() const {
+		return length();
+	}
+
+	/** Would be a << operator, but it's inefficient, and should only be
+	 * used for debugging/testing purposes, so it's safer as a different function.
+	 */
+	std::ostream & debugPrint(std::ostream &os) const {
+		Range::base_type position = 0, len;
+		do {
+			const unsigned char *data = dataAt(position, len);
+			if (data) {
+				os<<"{GOT DATA "<<len<<"}";
+				os<<std::string(data, data+len);
+			} else if (len) {
+				os<<"[INVALID:" <<len<< "]";
+			}
+			position += len;
+		} while (len);
+		return os;
 	}
 
 	SHA256 computeFingerprint() const {

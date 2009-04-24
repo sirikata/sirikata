@@ -79,7 +79,7 @@ void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     //allocate a packet long enough to take both the length of the packet and the stream id as well as the packet data. totalSize = size of streamID + size of data and
     //packetHeaderLength = the length of the length component of the packet
     toBeSent.data=new Chunk(totalSize+packetHeaderLength);
-    
+
     uint8 *outputBuffer=&(*toBeSent.data)[0];
     std::memcpy(outputBuffer,packetLengthSerialized,packetHeaderLength);
     std::memcpy(outputBuffer+packetHeaderLength,serializedStreamId,streamIdLength);
@@ -107,7 +107,7 @@ void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     int sendStatus=vSendStatus.read();
     bool incd=false;
     if ((sendStatus&(SendStatusClosing*3))==0) {
-        ///FIXME we want to |= here        
+        ///FIXME we want to |= here
         vSendStatus+=SendStatusClosing;
         incd=true;
     }
@@ -115,7 +115,7 @@ void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     while ((sendStatus=vSendStatus.read())!=SendStatusClosing&&
            sendStatus!=2*SendStatusClosing&&
            sendStatus!=3*SendStatusClosing) {
-        
+
     }
 }
 void TCPStream::close() {
@@ -132,7 +132,7 @@ void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
                         const BytesReceivedCallback&bytesReceivedCallback) {
-    mSocket=MultiplexedSocket::construct(mIO,substreamCallback);
+    mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
     *mSendStatus=0;
     mID=StreamID(1);
     mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,

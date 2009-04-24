@@ -58,14 +58,10 @@ class UploadTest : public CxxTest::TestSuite {
 	CacheLayer *mNetworkCache;
 	NameLookupManager *mNameLookup;
 
-	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
-	Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mDownNameReg;
-	Transfer::ProtocolRegistry<Transfer::UploadHandler> *mUploadReg;
-	Transfer::ProtocolRegistry<Transfer::NameUploadHandler> *mUpNameReg;
-	Transfer::ServiceLookup *mDownNameService;
-	Transfer::ServiceLookup *mDownloadService;
-	Transfer::ServiceLookup *mUploadService;
-	Transfer::ServiceLookup *mUpNameService;
+	Transfer::ServiceManager<Transfer::DownloadHandler> *mDownloadServMgr;
+	Transfer::ServiceManager<Transfer::NameLookupHandler> *mDownNameServMgr;
+	Transfer::ServiceManager<Transfer::UploadHandler> *mUploadServMgr;
+	Transfer::ServiceManager<Transfer::NameUploadHandler> *mUpNameServMgr;
 
 	Task::GenEventManager *mEventSystem;
 
@@ -92,11 +88,20 @@ class UploadTest : public CxxTest::TestSuite {
 	void setUp() {
 		Transfer::ListOfServices *services;
 		Transfer::ServiceParams params;
+		Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mDownloadReg;
+		Transfer::ProtocolRegistry<Transfer::NameLookupHandler> *mDownNameReg;
+		Transfer::ProtocolRegistry<Transfer::UploadHandler> *mUploadReg;
+		Transfer::ProtocolRegistry<Transfer::NameUploadHandler> *mUpNameReg;
+		Transfer::ServiceLookup *mDownNameService;
+		Transfer::ServiceLookup *mDownloadService;
+		Transfer::ServiceLookup *mUploadService;
+		Transfer::ServiceLookup *mUpNameService;
+
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpDownHandler(new Transfer::HTTPDownloadHandler);
 		std::tr1::shared_ptr<Transfer::HTTPFormUploadHandler> httpUpHandler(new Transfer::HTTPFormUploadHandler);
 
 		mEventSystem = new Task::GenEventManager(true);
-		mEventProcessThread = new boost::thread(boost::bind(
+		mEventProcessThread = new boost::thread(std::tr1::bind(
 			&Task::GenEventManager::sleep_processEventQueue, mEventSystem));
 
 		mDownNameService = new Transfer::CachedServiceLookup;
@@ -105,7 +110,8 @@ class UploadTest : public CxxTest::TestSuite {
 				URIContext(SERVER "/dns/names/global"),
 				Transfer::ServiceParams()));
 		mDownNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
-		mDownNameReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>(mDownNameService);
+		mDownNameReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
+		mDownNameServMgr = new Transfer::ServiceManager<Transfer::NameLookupHandler>(mDownNameService,mDownNameReg);
 		mDownNameReg->setHandler("http", httpDownHandler);
 
 		mDownloadService = new Transfer::CachedServiceLookup;
@@ -114,7 +120,8 @@ class UploadTest : public CxxTest::TestSuite {
 				URIContext(SERVER "/uploadsystem/files/global"),
 				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
-		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>(mDownloadService);
+		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
+		mDownloadServMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService,mDownloadReg);
 		mDownloadReg->setHandler("http", httpDownHandler);
 
 		//params.set("field:user", "");
@@ -132,7 +139,8 @@ class UploadTest : public CxxTest::TestSuite {
 				URIContext(SERVER "/uploadsystem/index.php"),
 				params));
 		mUploadService->addToCache(URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
-		mUploadReg = new Transfer::ProtocolRegistry<Transfer::UploadHandler>(mUploadService);
+		mUploadReg = new Transfer::ProtocolRegistry<Transfer::UploadHandler>;
+		mUploadServMgr = new Transfer::ServiceManager<Transfer::UploadHandler>(mUploadService,mUploadReg);
 		mUploadReg->setHandler("http", httpUpHandler);
 
 		mUpNameService = new Transfer::CachedServiceLookup;
@@ -144,11 +152,12 @@ class UploadTest : public CxxTest::TestSuite {
 				URIContext(SERVER "/dns/index.php"),
 				params));
 		mUpNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
-		mUpNameReg = new Transfer::ProtocolRegistry<Transfer::NameUploadHandler>(mUpNameService);
+		mUpNameReg = new Transfer::ProtocolRegistry<Transfer::NameUploadHandler>;
+		mUpNameServMgr = new Transfer::ServiceManager<Transfer::NameUploadHandler>(mUpNameService,mUpNameReg);
 		mUpNameReg->setHandler("http", httpUpHandler);
 
-		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadReg);
-		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mUpNameReg, mUploadReg);
+		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadServMgr);
+		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mUpNameServMgr, mUploadServMgr);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
 

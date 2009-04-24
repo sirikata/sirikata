@@ -48,30 +48,85 @@ namespace Transfer {
  * Currently, you can use addToCache to fill the cache.
  */
 class CachedServiceLookup : public ServiceLookup {
-	typedef std::map<URIContext, ListOfServicesPtr> ServiceMap;
+	typedef std::map<URIContext, std::pair<int, ListOfServicesPtr> > ServiceMap;
 	ServiceMap mLookupCache;
 	boost::shared_mutex mMut;
 
+	class CachedServiceIterator : public ServiceIterator {
+		unsigned int mCurrentService;
+		unsigned int mIteration;
+		ListOfServicesPtr mServicesList;
+		CachedServiceLookup *mCache;
+		URIContext origContext;
+	public:
+		virtual bool tryNext(ErrorType reason, URI &uri, ServiceParams &outParams) {
+			unsigned int length = mServicesList->size();
+			if (++mIteration > length) {
+				delete this;
+				return false;
+			}
+			mCurrentService %= length;
+			uri.getContext() = (*mServicesList)[mCurrentService].first;
+			outParams = (*mServicesList)[mCurrentService].second;
+			mCurrentService++;
+			return true;
+		}
+
+		CachedServiceIterator(CachedServiceLookup *parent,
+				unsigned int num,
+				const ListOfServicesPtr &services,
+				const URIContext &origService)
+			: mCurrentService(num), mIteration(0), mServicesList(services), mCache(parent), origContext(origService) {
+		}
+
+		virtual ~CachedServiceIterator() {
+		}
+
+		/** Notification that the download was successful.
+		 * This may help ServiceLookup to pick a better service next time.
+		 */
+		virtual void finished(ErrorType reason=SUCCESS) {
+			if (reason == SUCCESS) {
+				boost::shared_lock<boost::shared_mutex> lookuplock(mCache->mMut);
+				ServiceMap::iterator iter = mCache->mLookupCache.find(origContext);
+				if (iter != mCache->mLookupCache.end()) {
+					(*iter).second.first = mCurrentService-1;
+				}
+			}
+			delete this;
+		}
+	};
+
 public:
-	virtual void addToCache(const URIContext &origService, const ListOfServicesPtr &toCache) {
+	virtual bool addToCache(const URIContext &origService, const ListOfServicesPtr &toCache,const Callback &cb=Callback()) {
 		{
 			boost::unique_lock<boost::shared_mutex> insertlock(mMut);
-			mLookupCache.insert(ServiceMap::value_type(origService, toCache));
+			mLookupCache.insert(ServiceMap::value_type(origService,
+				std::pair<int, ListOfServicesPtr>(0, toCache)));
 		}
-		ServiceLookup::addToCache(origService, toCache);
+		if (!ServiceLookup::addToCache(origService, toCache, cb)) {
+			if (cb) {
+				cb(new CachedServiceIterator(this, 0, toCache, origService));
+			}
+		}
+		return true;
 	}
 
 	virtual void lookupService(const URIContext &context, const Callback &cb) {
 		ListOfServicesPtr found;
+		int num = 0;
 		{
 			boost::shared_lock<boost::shared_mutex> lookuplock(mMut);
 			ServiceMap::const_iterator iter = mLookupCache.find(context);
 			if (iter != mLookupCache.end()) {
-				found = (*iter).second;
+				found = (*iter).second.second;
+				num = (*iter).second.first;
 			}
 		}
 		if (found) {
-			cb(found);
+			if (!ServiceLookup::addToCache(context, found, cb)) {
+				cb(new CachedServiceIterator(this, num, found, context));
+			}
 		} else {
 			ServiceLookup::lookupService(context, cb);
 		}

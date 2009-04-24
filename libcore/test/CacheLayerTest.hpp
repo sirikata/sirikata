@@ -59,6 +59,8 @@ class CacheLayerTestSuite : public CxxTest::TestSuite
 	volatile int finishedTest;
 
 	Transfer::ProtocolRegistry<Transfer::DownloadHandler> *mProtoReg;
+	Transfer::ServiceManager<Transfer::DownloadHandler> *mServiceManager;
+	Transfer::ServiceLookup *mNullService;
 
 	boost::mutex wakeMutex;
 	boost::condition_variable wakeCV;
@@ -72,11 +74,13 @@ public:
 		mProtoReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>();
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
 		mProtoReg->setHandler("http", httpHandler);
+		mNullService = new Transfer::NullServiceLookup();
+		mServiceManager = new Transfer::ServiceManager<Transfer::DownloadHandler>(mNullService,mProtoReg);
 	}
 
 	CacheLayer *createTransferLayer(CacheLayer *next=NULL) {
 		// NULL service lookup--we are using a simple http URL.
-		CacheLayer *layer = new Transfer::NetworkCacheLayer(next, mProtoReg);
+		CacheLayer *layer = new Transfer::NetworkCacheLayer(next, mServiceManager);
 		mCacheLayers.push_back(layer);
 		return layer;
 	}
@@ -131,6 +135,8 @@ public:
 	virtual void tearDown() {
 		tearDownCache();
 		finishedTest = 0;
+		delete mServiceManager;
+		delete mNullService;
 		delete mProtoReg;
 	}
 
@@ -161,8 +167,7 @@ public:
                 myData->debugPrint(dataStringStream);
                 SILOG(transfer,debug,dataStringStream.str());
             }
-			const Transfer::DenseData &densedata = (*myData->begin());
-			TS_ASSERT_EQUALS (SHA256::computeDigest(densedata.data(), (size_t)densedata.length()), uri.fingerprint());
+			TS_ASSERT_EQUALS (myData->computeFingerprint(), uri.fingerprint());
 		} else {
 			SILOG(transfer,error,"fail!");
 		}

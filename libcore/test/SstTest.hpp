@@ -218,7 +218,7 @@ public:
     }
     SstTest():mIO(IOServiceFactory::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
         mPort="9142";
-        mThread= new boost::thread(boost::bind(&SstTest::ioThread,this));
+        mThread= new boost::thread(std::tr1::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
         bool doShortTest=false;
 

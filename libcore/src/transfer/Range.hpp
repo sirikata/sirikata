@@ -47,6 +47,9 @@ public:
 	typedef cache_usize_type base_type;
 	typedef cache_usize_type length_type;
 
+	typedef length_type size_type;
+        typedef cache_ssize_type difference_type;
+
 	//static const length_type npos = (cache_usize_type)-1;
 private:
 	/// A 64-bit starting byte.
@@ -104,6 +107,10 @@ public:
 	inline length_type length() const {
 		return mLength;
 	}
+	inline length_type size() const {
+	       return length();
+	}
+
 	/** The ending byte--again, when goesToEndOfFile() is true, this may be undefined. */
 	inline base_type endbyte() const {
 		return mStart + mLength;

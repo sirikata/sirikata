@@ -50,6 +50,8 @@
 namespace Sirikata { namespace Graphics {
 class Entity;
 class SDLInputManager;
+class CameraEntity;
+
 class OgreSystem: public TimeSteppedSimulation {
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
@@ -59,6 +61,7 @@ class OgreSystem: public TimeSteppedSimulation {
     SceneEntitiesMap mSceneEntities;
     std::list<Entity*> mMovingEntities;
     friend class Entity; //Entity will insert/delete itself from these arrays.
+    friend class CameraEntity; //CameraEntity will insert/delete itself from the scene cameras array.
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
     OptionValue*mWindowDepth;
@@ -68,8 +71,6 @@ class OgreSystem: public TimeSteppedSimulation {
     OptionValue*mFrameDuration;
     OptionSet*mOptions;
     Time mLastFrameTime;
-    static std::list<OgreSystem*> sActiveOgreScenes;
-    static uint32 sNumOgreSystems;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
     Provider<ProxyCreationListener*>*mProxyManager;
@@ -86,6 +87,10 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
 public:
+    static std::list<OgreSystem*> sActiveOgreScenes;
+    static uint32 sNumOgreSystems;
+    std::list<CameraEntity*> mAttachedCameras;
+
     OptionSet*getOptions(){
         return mOptions;
     }

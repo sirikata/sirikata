@@ -75,12 +75,13 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
         }else {
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
-                std::tr1::shared_ptr<MultiplexedSocket> shared_socket(MultiplexedSocket::construct(ioService,context,where->second.mSockets,callback));
+                std::tr1::shared_ptr<MultiplexedSocket> shared_socket(
+                    MultiplexedSocket::construct<MultiplexedSocket>(ioService,context,where->second.mSockets,callback));
                 MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                 sIncompleteStreams.erase(where);
                 Stream::StreamID newID=Stream::StreamID(1);
                 TCPStream * strm=new TCPStream(shared_socket,newID);
-                
+
                 TCPSetCallbacks setCallbackFunctor(&*shared_socket,strm);
                 callback(strm,setCallbackFunctor);
                 if (setCallbackFunctor.mCallbacks==NULL) {
@@ -97,12 +98,12 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
 
 void beginNewStream(TCPSocket * socket, IOService*ioService,const Stream::SubstreamCallback& cb) {
     Array<uint8,TCPStream::TcpSstHeaderSize> *buffer=new Array<uint8,TCPStream::TcpSstHeaderSize>;
-     
-     
+
+
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
                             std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,_1,_2));
 }
 
-} } } 
+} } }

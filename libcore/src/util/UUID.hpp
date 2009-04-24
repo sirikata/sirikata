@@ -92,6 +92,9 @@ public:
     };
     std::string rawHexData()const;
     std::string readableHexData()const;
+    inline std::string toString()const {
+      return readableHexData();
+    }
 };
 
 }

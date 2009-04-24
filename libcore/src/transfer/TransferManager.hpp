@@ -38,6 +38,7 @@
 #include "URI.hpp"
 #include "TransferData.hpp"
 #include "task/EventManager.hpp" // for EventListener
+#include "task/UniqueId.hpp"
 
 namespace Sirikata {
 namespace Transfer {
@@ -56,6 +57,8 @@ static const char *UploadDataEventId = "UploadDataFinished";
 class TransferManager {
 public:
 	typedef Task::GenEventManager::EventListener EventListener;
+	typedef Task::SubscriptionId SubscriptionId;
+        typedef Task::SubscriptionIdClass SubscriptionIdClass;
 
 	/** Very basic status messages--more detailed (permanent/network/temporary)
 	 * statuses should be added to allow for better error handling.
@@ -90,6 +93,10 @@ public:
 		inline const URI &uri() const {
 			return mFileId.uri();
 		}
+                /// @returns The RemoteFileId object.
+                inline const RemoteFileId &getRemoteFileId() const {
+                        return mFileId;
+                }
 
 		/** Gets at least the retrieved SparseData.
 		 *
@@ -201,9 +208,24 @@ public:
 	 * @param listener  An EventListener to receive a DownloadEventPtr with the retrieved data.
 	 * @param range     What part of the file to retrieve, or Range(true) for the whole file.
 	 */
-	virtual void downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
-		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, RemoteFileId(), NULL)));
+	virtual SubscriptionId downloadByHash(const RemoteFileId &name, const EventListener &listener, const Range &range) {
+		listener(DownloadEventPtr(new DownloadEvent(FAIL_UNIMPLEMENTED, name, NULL)));
+		return SubscriptionIdClass::null();
 	}
+
+        virtual void downloadName(const URI &nameURI,
+                const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
+            listener(nameURI, NULL);
+        }
+
+        bool isNameURI(const URI &check) const {
+                std::string::size_type length = check.proto().length();
+                if (length < 4) {
+                        return false;
+                }
+                return check.proto().substr(length-4,4) == "hash";
+        }
+
 
 	/// Like the other upload() function, but avoids recomputing the hash.
 	virtual void upload(const URI &name,

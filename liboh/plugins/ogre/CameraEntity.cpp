@@ -33,6 +33,8 @@ void CameraEntity::attach (const String&renderTargetName,
     mViewport= mRenderTarget->addViewport(getOgreCamera());
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
     getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
+
+    mAttachedIter = mScene->mAttachedCameras.insert(mScene->mAttachedCameras.end(), this);
 }
 void CameraEntity::detach() {
     if (mViewport&&mRenderTarget) {
@@ -53,11 +55,18 @@ void CameraEntity::detach() {
         mScene->destroyRenderTarget(mRenderTarget->getName());
         mRenderTarget=NULL;
     }
+    if (mAttachedIter != mScene->mAttachedCameras.end()) {
+        mScene->mAttachedCameras.erase(mAttachedIter);
+        mAttachedIter = mScene->mAttachedCameras.end();
+    }
 }
 
 CameraEntity::~CameraEntity() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
+    }
+    if (mAttachedIter != mScene->mAttachedCameras.end()) {
+        mScene->mAttachedCameras.erase(mAttachedIter);
     }
     Ogre::Camera*toDestroy=getOgreCamera();
     init(NULL);
