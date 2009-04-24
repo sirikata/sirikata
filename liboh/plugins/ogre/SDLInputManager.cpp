@@ -85,7 +85,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         
         static SDL_SysWMinfo pInfo;
         SDL_VERSION(&pInfo.version);
-        SDL_GetWindowWMInfo(windowID,&pInfo);
+        SDL_GetWindowWMInfo(mWindowID,&pInfo);
         // Also, SDL keeps an internal record of the window size
         //  and position. Because SDL does not own the window, it
         //  missed the WM_POSCHANGED message and has no record of
@@ -122,7 +122,11 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
 #ifdef __APPLE__
             currentWindow=(void*)info.data;
 #else
+#ifdef _WIN32
+			currentWindow=(void*)info.window;
+#else
             currentWindow=(void*)info.info.x11.window;
+#endif
 #endif
         }
 #endif

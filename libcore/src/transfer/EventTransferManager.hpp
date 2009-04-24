@@ -102,8 +102,8 @@ class EventTransferManager : public TransferManager {
 	void downloadNameLookupSuccess(const EventListener &listener, const Range &range, const RemoteFileId *remoteid) {
 	        doDownloadByHash(listener, range, remoteid, false);
 	}
-        SubscriptionId doDownloadByHash(const EventListener &listener, const Range &range, const RemoteFileId *remoteid, bool requestID) {
-		SubscriptionId ret = SubscriptionId::null();
+    Task::SubscriptionId doDownloadByHash(const EventListener &listener, const Range &range, const RemoteFileId *remoteid, bool requestID) {
+		Task::SubscriptionId ret = Task::SubscriptionIdClass::null();
 		if (!remoteid) {
 			listener(DownloadEventPtr(new DownloadEvent(FAIL_NAMELOOKUP, RemoteFileId(), NULL)));
 		} else {
@@ -116,7 +116,7 @@ class EventTransferManager : public TransferManager {
 						mCleanupCV.notify_one(); // We are the last one to finish.
 					}
 				}
-				return;
+				return ret;
 			}
 
 			DownloadRangeMap::const_iterator iter =
