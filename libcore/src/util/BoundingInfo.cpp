@@ -29,6 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "Standard.hh"
 #include "BoundingInfo.hpp"
 #include "BoundingSphere.hpp"
 #include "BoundingBox.hpp"
@@ -36,7 +37,7 @@ namespace Sirikata {
 BoundingInfo::BoundingInfo():mMin(0,0,0),mRadius(0),mMax(0,0,0) {
 
 }
-BoundingInfo::BoundingInfo(UninitializedMemory) {}
+
 
 BoundingInfo::BoundingInfo(const Vector3f& bbmin, const Vector3f& bbmax, float32 radius):mMin(bbmin),mRadius(radius),mMax(bbmax) {}
 static float32 boundingBoxRadius(const Vector3f &bbmin, const Vector3f bbmax) {
@@ -64,7 +65,7 @@ BoundingInfo BoundingInfo::scale(const Vector3f &scale)const {
                         Vector3f(mMax.x*scale.x,mMax.y*scale.y,mMax.z*scale.z),
                         maxscale*mRadius);
 }
-BoundingInfo::BoundingInfo(const BoundingSphere<real>& bs):mMin(bs.center().x-bs.radius(),bs.center().y-bs.radius(),bs.center().z-bs.radius()),mRadius(bs.center().length()+bs.radius()),mMax(bs.center().x+bs.radius(),bs.center().y+bs.radius(),bs.center().z+bs.radius()) {}
+BoundingInfo::BoundingInfo(const BoundingSphere<float32>& bs):mMin(bs.center().x-bs.radius(),bs.center().y-bs.radius(),bs.center().z-bs.radius()),mRadius(bs.center().length()+bs.radius()),mMax(bs.center().x+bs.radius(),bs.center().y+bs.radius(),bs.center().z+bs.radius()) {}
 
 Vector3f BoundingInfo::center() const{
     return (mMin+mMax)*.5f;
@@ -72,11 +73,11 @@ Vector3f BoundingInfo::center() const{
 Vector3f BoundingInfo::diag() const{
     return mMax-mMin;
 }
-BoundingBox BoundingInfo::boundingBox()const {
-    return BoundingBox(Vector3d(mMin.x,mMin.y,mMin.z),
-                       Vector3d(mMax.x,mMax.y,mMax.z));
+BoundingBox<float32> BoundingInfo::boundingBox()const {
+    return BoundingBox<float32>(Vector3f(mMin.x,mMin.y,mMin.z),
+                       Vector3f(mMax.x,mMax.y,mMax.z));
 }
-BoundingInfo BoundingInfo::merge(const BoundingBox<real>& bbox) const{
+BoundingInfo BoundingInfo::merge(const BoundingBox<float32>& bbox) const{
     Vector3f mn(bbox.min().x,bbox.min().y,bbox.min().z);
     Vector3f mx(bbox.max().x,bbox.max().y,bbox.max().z);
     return merge(Vector3f(mn.x,mn.y,mn.z)).

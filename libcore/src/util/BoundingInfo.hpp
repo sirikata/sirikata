@@ -39,7 +39,7 @@
 namespace Sirikata {
 
 /** BoundingInfo represents a 3D axis aligned bounding box and a radius around it.  Used for bounding a centered mesh. Use BoundingBox for spacial information */
-class BoundingInfo {
+class SIRIKATA_EXPORT BoundingInfo {
 public:
     /** Construct a degenerate bounding box. */
     BoundingInfo();

@@ -644,6 +644,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
 	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
+	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
 )
 
 #precompiled header
@@ -683,6 +684,8 @@ IF(NOT WIN32)
  ${LIBCORE_SOURCE_DIR}/util/Standard.hh
  ${LIBCORE_SOURCE_DIR}/util/TotallyOrdered.hpp
  ${LIBCORE_SOURCE_DIR}/util/Transform.hpp
+ ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
+ ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.hpp
  ${LIBCORE_SOURCE_DIR}/util/UUID.cpp
  ${LIBCORE_SOURCE_DIR}/util/UUID.hpp
  ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp

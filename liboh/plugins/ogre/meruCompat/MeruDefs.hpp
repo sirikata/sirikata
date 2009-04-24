@@ -100,7 +100,7 @@ using ::Sirikata::String;
 
 typedef ::Sirikata::Transfer::DenseDataPtr ResourceBuffer;
 
-#if MERU_PLATFORM == MERU_PLATFORM_WINDOWS
+#ifdef _WIN32
 inline bool isblank(int x){ return ((x == ' ') || (x == '\t')); }
 #endif
 ///For when you want to allocate a class that explicitly has uninitialized components

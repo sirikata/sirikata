@@ -29,7 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "precomp.hpp" 
+#include "precomp.hpp"
+#include "MeruDefs.hpp"
 #include "CDNArchiveFactory.hpp"
 #include "CDNArchive.hpp"
 
