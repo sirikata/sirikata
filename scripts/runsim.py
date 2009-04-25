@@ -5,7 +5,7 @@ print sys.argv
 nservers=int(sys.argv[1]);
 if (nservers<0):
     nservers=-nservers;
-    doid=int(sys.argv[2]);
+    doid=1+int(sys.argv[2]);
 else:
     doid=0
 xservers=nservers
