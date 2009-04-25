@@ -22,9 +22,9 @@ for i in range(0,xservers):
             fp.write("localhost:"+str(port)+'\n')
         else:
             if (servercount<5):
-                fp.write("meru0"+str(servercount)+".stanford.edu:"+str(port)+'\n')
+                fp.write("meru0"+str(servercount)+":"+str(port)+'\n')
             else:
-                fp.write("ipatch.stanford.edu:"+str(port)+'\n')
+                fp.write("ipatch:"+str(port)+'\n')
         port+=1
         servercount+=1
 fp.close()
@@ -50,8 +50,7 @@ for i in range(0,xservers):
         if (doid==0):
             args.append("--wait-until="+datestr);
         if (doid!=0):
-            args=sys.argv[3:]#+[sys.argv[len(sys.argv)-3]+sys.argv[len(sys.argv)-2]]
-            print "running with "+str(args)
+            args=args+sys.argv[3:]#+[sys.argv[len(sys.argv)-3]+sys.argv[len(sys.argv)-2]]
         else:
             args=args+sys.argv[2:]
         

@@ -1,4 +1,5 @@
 #!/bin/sh
+export DISPLAY=:0.0
 ssh -Y -l $CLUSTERUSER meru00 $* 0 &
 ssh -Y -l $CLUSTERUSER meru01 $* 1 &
 ssh -Y -l $CLUSTERUSER meru02 $* 2 &
