@@ -48,7 +48,7 @@ public:
         mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
         mAttachedMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
         mMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
-        
+
     }
     void initialize(){
         notify(&ProxyCreationListener::createProxy,mCamera);
@@ -68,8 +68,10 @@ public:
         li.setLightPower(100);
         mAttachedLight->update(li);
 */
-        mMesh->setMesh("file:///razor.mesh");
-        mAttachedMesh->setMesh("file:///razor.mesh");
+//        mMesh->setMesh("file:///razor.mesh");
+//        mAttachedMesh->setMesh("file:///razor.mesh");
+        mAttachedMesh->setMesh("meru://cplatz@/arcade.mesh");
+        //mAttachedMesh->setMesh("meru:///arcade.mesh");
         //mAttachedMesh->setScale(Vector3f(.1,.1,.1));
         mCamera->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,100.), Quaternion::identity(),
@@ -82,7 +84,7 @@ public:
                                       Vector3f::nil(), Vector3f::nil(), 0.));
 
         mMesh->resetPositionVelocity(Time::now()-Duration::seconds(1),
-                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                             Location(Vector3d(0,0,100.), Quaternion::identity(),
                                       Vector3f(0,0,0), Vector3f(0,0,0), 0.));
 
 /*

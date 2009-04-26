@@ -39,7 +39,6 @@
 
 namespace Meru {
 
-  class GraphicsEntity;
   class GraphicsLight;
   class GraphicsInputHandler;
   class GraphicsRenderSettings;

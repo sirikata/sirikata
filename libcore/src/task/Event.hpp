@@ -159,11 +159,14 @@ public:
 		Primary(const std::string &eventName);
 		Primary(const char *eventName);
 
-		/// Currently only displays the integer version of primary ID.
+                /// Returns this ID in string form.
+                std::string toString () const;
+
+		/// Displays the string version of primary ID.
 		inline friend std::ostream& operator << (
 						std::ostream &os,
 						const Primary &id) {
-			return os << id.mId;
+			return os << id.toString();
 		}
 
 		/// Ordering comparison

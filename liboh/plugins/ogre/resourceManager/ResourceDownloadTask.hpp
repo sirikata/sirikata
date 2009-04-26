@@ -42,7 +42,7 @@ class ResourceRequestor {
 public:
     virtual ~ResourceRequestor();
 
-  virtual void setResourceBuffer(ResourceBuffer& buffer) = 0;
+  virtual void setResourceBuffer(const SparseData& buffer) = 0;
 };
 
 class ResourceDownloadQueue {

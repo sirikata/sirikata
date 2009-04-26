@@ -41,7 +41,6 @@
 namespace Meru {
 
 class DependencyManager;
-class GraphicsEntity;
 
 class GraphicsResourceManager : public ManualSingleton<GraphicsResourceManager>
 {

@@ -86,14 +86,14 @@ public:
  		if (ev->success()) {
             if (SILOGP(transfer,debug)) {
                 std::stringstream rangeListStream;
-                Range::printRangeList(rangeListStream, ev->data());
+                Range::printRangeList(rangeListStream, (Transfer::DenseDataList&)(ev->data()));
                 SILOG(transfer,debug,"Transfer " << "finished" <<
                       " (" << ((int)ev->getStatus()) << "): " << ev->uri() << rangeListStream);
             }
 		} else {
             if (SILOGP(transfer,error)) {
                 std::stringstream rangeListStream;
-                Range::printRangeList(rangeListStream, ev->data());
+                Range::printRangeList(rangeListStream, (Transfer::DenseDataList&)(ev->data()));
                 SILOG(transfer,error,"Transfer " << "failed" <<
                       " (" << (int)(ev->getStatus()) << "): " << ev->uri() << rangeListStream);
             }

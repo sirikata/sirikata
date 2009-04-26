@@ -68,12 +68,12 @@ public:
                                            Vector3f(1,0,0),
                                            Vector3f(0,1,0),
                                            0));
-        TS_ASSERT_EQUALS(base->extrapolate(now+inc+hinc),
+        assert_near(base->extrapolate(now+inc+hinc),
                          Location(Vector3d(256,16,1)*.5+
                                   Vector3d(256,16,1)+
                                   Vector3d(.125,0,0)*.5,
-                                  Quaternion(Vector3f(0,1,0),0),                         
-                                  Vector3f(.5,0,0),                                  
+                                  Quaternion(Vector3f(0,1,0),0),
+                                  Vector3f(.5,0,0),
                                   Vector3f(0,0,0),
                                   0));
         delete base;

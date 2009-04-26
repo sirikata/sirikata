@@ -46,8 +46,9 @@ class SIRIKATA_EXPORT SHA256 {
 	friend class SHA256Context;
 public:
     enum {static_size=32,hex_size=64};
+    typedef Array<unsigned char, static_size> Digest;
 private:
-    Array<unsigned char,static_size> mData;
+    Digest mData;
 public:
 	/** Take the first sizeof(size_t) bytes of the SHA256
 	 * as a valid hash for an unordered_map.
@@ -75,17 +76,17 @@ public:
     /**
      * \returns raw SHA256sum
      */
-    const Array<unsigned char, static_size> &rawData()const {
+    const Digest &rawData()const {
         return mData;
     }
 
-	bool operator==(const SHA256& other) const {
+    bool operator==(const SHA256& other) const {
         return mData==other.mData;
     }
-	bool operator!=(const SHA256& other) const {
+    bool operator!=(const SHA256& other) const {
         return !(mData==other.mData);
     }
-	bool operator<(const SHA256& other) const{
+    bool operator<(const SHA256& other) const{
         return mData<other.mData;
     }
     /**
@@ -105,7 +106,7 @@ public:
      * Creates a shasum with these 32 raw bytes
      * \param digest holds the array of bytes
      */
-    static SHA256 convertFromBinary(const Array<unsigned char,static_size>&digest) {
+    static SHA256 convertFromBinary(const Digest&digest) {
         return convertFromBinary(digest.data());
     }
     /**

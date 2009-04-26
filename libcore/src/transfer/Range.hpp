@@ -296,7 +296,7 @@ public:
 				os << "**";
 			}
 			else if (!exact) {
-				if (((Range)(*iter)).isContainedBy(checkFor)) {
+				if ((*iter).isContainedBy(checkFor)) {
 					os << "++";
 				}
 			}

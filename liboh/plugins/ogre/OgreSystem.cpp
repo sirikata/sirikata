@@ -51,6 +51,27 @@
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
 #include "SDLInputManager.hpp"
+
+#include "resourceManager/CDNArchivePlugin.hpp"
+#include "resourceManager/ResourceManager.hpp"
+#include "resourceManager/GraphicsResourceManager.hpp"
+#include "meruCompat/EventSource.hpp"
+#include "meruCompat/SequentialWorkQueue.hpp"
+using Meru::GraphicsResourceManager;
+using Meru::ResourceManager;
+using Meru::CDNArchivePlugin;
+using Meru::SequentialWorkQueue;
+
+#include <transfer/EventTransferManager.hpp>
+#include <transfer/NetworkCacheLayer.hpp>
+#include <transfer/LRUPolicy.hpp>
+#include <transfer/DiskCacheLayer.hpp>
+#include <transfer/MemoryCacheLayer.hpp>
+#include <transfer/CachedNameLookupManager.hpp>
+#include <transfer/CachedServiceLookup.hpp>
+#include <transfer/HTTPDownloadHandler.hpp>
+#include <transfer/ServiceManager.hpp>
+
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
@@ -62,6 +83,7 @@ volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 namespace Sirikata {
 namespace Graphics {
 Ogre::Root *OgreSystem::sRoot;
+Meru::CDNArchivePlugin *OgreSystem::mCDNArchivePlugin=NULL;
 Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
@@ -136,7 +158,7 @@ class OgrePixelFormatParser{public:
             if (value=="8a")
                 return fmt=Ogre::PF_A8R8G8B8;
             return fmt;
-        }        
+        }
 };
 class BugfixRenderTexture:public Ogre::RenderTexture{
     Ogre::HardwarePixelBufferSharedPtr mHardwarePixelBuffer;
@@ -154,7 +176,7 @@ public:
 }
 void OgreSystem::destroyRenderTarget(const String&name) {
     if (mRenderTarget->getName()==name) {
-        
+
     }else {
         Ogre::ResourcePtr renderTargetTexture=Ogre::TextureManager::getSingleton().getByName(name);
         if (!renderTargetTexture.isNull())
@@ -247,7 +269,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*purgeConfig;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
-    OptionValue*windowTitle;    
+    OptionValue*windowTitle;
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
@@ -270,6 +292,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            mFrameDuration=new OptionValue("fps","60",FrequencyType(),"Target framerate"),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
                            shadowFarDistance=new OptionValue("shadowfar","1000",OptionValueType<float32>(),"The distance away a shadowcaster may hide the light"),
+                           mParallaxSteps=new OptionValue("parallax-steps","1.0",OptionValueType<float>(),"Multiplies the per-material parallax steps by this constant (default 1.0)"),
+                           mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
                            NULL);
@@ -279,7 +303,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
-                         &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig()) 
+                         &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig())
                             || (userAccepted=getRoot()->showConfigDialog())));
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
@@ -290,7 +314,59 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 true
 #endif
                 ;
-            sRoot->initialise(doAutoWindow,windowTitle->as<String>());                  
+            sRoot->initialise(doAutoWindow,windowTitle->as<String>());
+
+            Transfer::ServiceManager<Transfer::DownloadHandler> *downServ =
+                new Transfer::ServiceManager<Transfer::DownloadHandler>(
+                    new Transfer::CachedServiceLookup,
+                    new Transfer::ProtocolRegistry<Transfer::DownloadHandler>);
+            Transfer::ListOfServices *services;
+            std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
+            Transfer::ServiceManager<Transfer::NameLookupHandler> *nameServ =
+                new Transfer::ServiceManager<Transfer::NameLookupHandler>(
+                    new Transfer::CachedServiceLookup,
+                    new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>);
+
+            services = new Transfer::ListOfServices;
+            services->push_back(Transfer::ListOfServices::value_type(
+                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global"),
+                            Transfer::ServiceParams()));
+            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru:"), Transfer::ListOfServicesPtr(services));
+            services = new Transfer::ListOfServices;
+            services->push_back(Transfer::ListOfServices::value_type(
+                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global/cplatz"),
+                            Transfer::ServiceParams()));
+            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru://cplatz@/"), Transfer::ListOfServicesPtr(services));
+            services = new Transfer::ListOfServices;
+            services->push_back(Transfer::ListOfServices::value_type(
+                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global/meru"),
+                            Transfer::ServiceParams()));
+            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru://meru@/"), Transfer::ListOfServicesPtr(services));
+            nameServ->getProtocolRegistry()->setHandler("http", httpHandler);
+
+            services = new Transfer::ListOfServices;
+            services->push_back(Transfer::ListOfServices::value_type(
+                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/uploadsystem/files/global"),
+                            Transfer::ServiceParams()));
+            downServ->getServiceLookup()->addToCache(Transfer::URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
+            downServ->getProtocolRegistry()->setHandler("http", httpHandler);
+            new ResourceManager(new Transfer::EventTransferManager(
+                new Transfer::MemoryCacheLayer(
+                        new Transfer::LRUPolicy(50 * 0x100000), // 50 Megabytes
+                        new Transfer::DiskCacheLayer(
+                                new Transfer::LRUPolicy(200 * 0x100000),
+                                "Cache", // 200 Megabytes
+                                new Transfer::NetworkCacheLayer(NULL, downServ))),
+                new Transfer::CachedNameLookupManager(nameServ, downServ),
+                Meru::EventSource::getSingletonPtr(),
+                new Transfer::ServiceManager<Transfer::NameUploadHandler>(NULL,NULL),
+                new Transfer::ServiceManager<Transfer::UploadHandler>(NULL,NULL)
+            ));
+            new GraphicsResourceManager;
+            new SequentialWorkQueue;
+            mCDNArchivePlugin = new CDNArchivePlugin;
+            sRoot->installPlugin(&*mCDNArchivePlugin);
+
             void* hWnd=NULL;
             if (doAutoWindow) {
                 getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
@@ -321,8 +397,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             {
                 //FIXME: hWnd appears to be a NSWindow* in the default SDL 1.3 implementation
                 //it appears Ogre wants an NSView*  attempts to convert it using a .m file were insufficient to get ogre to use it
-                
-//                misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);//(NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);                    
+
+//                misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);//(NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);
 //                SILOG(ogre,debug,"ext window handle "<<misc["externalWindowHandle"]);
                 if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
                     misc["macAPI"] = String("cocoa");
@@ -330,21 +406,21 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                     misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
                 }
             }
-                
+
 #else
-                misc["currentGLContext"] = String("True");                    
+                misc["currentGLContext"] = String("True");
 #endif
                 Ogre::RenderWindow *rw;
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                 rw->setVisible(true);
-                
+
             }else {
                 sRenderTarget=mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
         } else if (createWindow->as<bool>()) {
             Ogre::RenderWindow *rw;
             mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-            rw->setVisible(true);            
+            rw->setVisible(true);
             if (sRenderTarget==NULL)
                 sRenderTarget=mRenderTarget;
         }else {
@@ -363,7 +439,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     }catch (Ogre::Exception &e) {
         if (e.getNumber()==Ogre::Exception::ERR_ITEM_NOT_FOUND) {
             SILOG(ogre,warning,"Cannot find ogre scene manager: "<<ogreSceneManager->as<String>());
-            getRoot()->createSceneManager(0);            
+            getRoot()->createSceneManager(0);
         } else
             throw e;
     }
@@ -489,7 +565,7 @@ OgreSystem::~OgreSystem() {
         }else ++iter;
         assert(iter!=sActiveOgreScenes.end());
     }
-    mProxyManager->removeListener(this);    
+    mProxyManager->removeListener(this);
     --sNumOgreSystems;
     if (sNumOgreSystems==0) {
         OGRE_DELETE sCDNArchivePlugin;
@@ -506,21 +582,21 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         if (camera) {
             CameraEntity *cam=new CameraEntity(this,camera);
         }
-        
+
     }
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
             LightEntity *lig=new LightEntity(this,light);
         }
-        
+
     }
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
         }
-        
+
     }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
@@ -548,8 +624,11 @@ bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
 }
 static Time debugStartTime = Time::now();
 bool OgreSystem::tick(){
-    bool continueRendering=true;
+    GraphicsResourceManager::getSingleton().computeLoadedSet();
     Time curFrameTime(Time::now());
+    Time finishTime(curFrameTime + desiredTickRate()); // arbitrary
+
+    bool continueRendering=true;
     Duration frameTime=curFrameTime-mLastFrameTime;
     if (mRenderTarget==sRenderTarget)
         continueRendering=renderOneFrame(curFrameTime, frameTime);
@@ -557,6 +636,16 @@ bool OgreSystem::tick(){
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
+
+    Meru::EventSource::getSingleton().temporary_processEventQueue(finishTime);
+
+    do {
+    // Guarantee some progress each frame.
+        if (!SequentialWorkQueue::getSingleton().processOneJob()) {
+            break;
+        }
+    } while (Time::now() < finishTime);
+
     return continueRendering;
 }
 void OgreSystem::preFrame(Time currentTime, Duration frameTime) {

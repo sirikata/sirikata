@@ -32,7 +32,6 @@
 #ifndef _GRAPHICS_RESOURCE_ENTITY_HPP_
 #define _GRAPHICS_RESOURCE_ENTITY_HPP_
 
-#include "GraphicsEntity.hpp"
 #include "GraphicsResource.hpp"
 #include "MeruDefs.hpp"
 
@@ -50,6 +49,10 @@ public:
   virtual void fullyParsed();
 
   void setMeshResource(SharedResourcePtr newMeshPtr);
+
+  void entityDestroyed() {
+    mGraphicsEntity = NULL;
+  }
 
 protected:
 

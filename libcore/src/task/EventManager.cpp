@@ -48,7 +48,7 @@ namespace Sirikata {
  * Also includes explicit template instantiations for EventManager<Event>
  */
 
-
+#define insane debug
 
 namespace Task {
 
@@ -395,7 +395,7 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 template <class T>
 void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	AbsTime startTime = AbsTime::now();
-	SILOG(task,insane," >>> Processing events.");
+	//SILOG(task,insane," >>> Processing events.");
 
 	// swaps to allow people to keep adding new events
 	typename EventList::NodeIterator processingList(mUnprocessed);
@@ -403,6 +403,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	// The events are swapped first to guarantee that listeners are at least as up-to-date as events.
 	// Events can be delayed, but we cannot allow any lost subscriptions/unsubscriptions.
 
+        bool didSomething = false;
 	{
 		typename ListenerRequestList::NodeIterator procListeners(mListenerRequests);
 
@@ -411,6 +412,7 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 			if (req->subscription) {
 				SILOG(task,debug," >>>\tDoing subscription listener "<< req->listenerId << " for event " << req->eventId << " (" << req->onlyPrimary <<  ").");
 				doSubscribeId(*req);
+				didSomething = true;
 			} else {
 				SILOGNOCR(task,debug," >>>\t");
 				if (req->notifyListener) {
@@ -418,11 +420,12 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 				}
 				SILOG(task,debug,"UNSUBSCRIBED listener " << req->listenerId << ".");
 				doUnsubscribe(req->listenerId, req->notifyListener);
+				didSomething = true;
 			}
 		}
 	}
 
-	if (SILOGP(task,insane)){
+	if (didSomething && SILOGP(task,insane)){
 		SILOG(task,insane,"==== All Event Subscribers for " << (intptr_t)this << " ====");
 		typename PrimaryListenerMap::const_iterator priIter =
 			mListeners.begin();
@@ -532,9 +535,11 @@ void EventManager<T>::temporary_processEventQueue(AbsTime forceCompletionBy) {
 	}
 
 	AbsTime finishTime = AbsTime::now();
+	/*
 	SILOG(task,insane, "**** Done processing events this round. " <<
           "Took " << (finishTime-startTime).toSeconds() <<
 		" seconds.");
+	*/
 }
 
 template <class T>

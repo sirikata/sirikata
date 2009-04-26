@@ -36,6 +36,7 @@
 
 //below for ResourceBuffer
 #include "ResourceManager.hpp"
+#include <transfer/TransferManager.hpp>
 
 namespace Meru {
 
@@ -91,54 +92,14 @@ struct EqualResourceID {
 
 
 namespace EventTypes {
-	extern const EventType ResourceUploadEvent;
-	extern const EventType ResourceDownloadEvent;
+        using ::Sirikata::Transfer::DownloadEventId;
+        using ::Sirikata::Transfer::UploadEventId;
 } // namespace EventTypes
 
-class TransferEvent : public Event {
-public:
-	TransferEvent(const EventType& type, const URI& rid, bool success)
-		: Event(EventID(type, rid.toString())), mID(rid),mSuccess(success) {}
-    const bool success() const {return mSuccess;}
-	const URI& resourceID() const { return mID; }
-private:
-	URI mID;
-    bool mSuccess;
-};
-typedef std::tr1::shared_ptr<TransferEvent> TransferEventPtr;
-
-class UploadCompleteEvent : public TransferEvent {
-public:
-	UploadCompleteEvent(const URI& rid)
-		: TransferEvent(EventTypes::ResourceUploadEvent, rid,true) {}
-};
-typedef std::tr1::shared_ptr<UploadCompleteEvent> UploadCompleteEventPtr;
-
-class UploadFailedEvent : public TransferEvent {
-public:
-	UploadFailedEvent(const URI& rid)
-		: TransferEvent(EventTypes::ResourceUploadEvent, rid,false) {}
-};
-typedef std::tr1::shared_ptr<UploadFailedEvent> UploadFailedEventPtr;
-
-class DownloadCompleteEvent : public TransferEvent {
-public:
-	DownloadCompleteEvent(const URI& rid,ResourceBuffer rbuffer)
-		: TransferEvent(EventTypes::ResourceDownloadEvent, rid,true),mResourceBuffer(rbuffer) {}
-    ResourceBuffer mResourceBuffer;
-};
-typedef std::tr1::shared_ptr<DownloadCompleteEvent> DownloadCompleteEventPtr;
-
-class DownloadFailedEvent : public TransferEvent {
-public:
-	DownloadFailedEvent(const URI& rid)
-		: TransferEvent(EventTypes::ResourceDownloadEvent, rid,false) {
-        if (rid.toString().length()==0)    {
-            rid.toString();
-        }
-    }
-};
-typedef std::tr1::shared_ptr<DownloadFailedEvent> DownloadFailedEventPtr;
+typedef ::Sirikata::Transfer::TransferManager::UploadEvent UploadCompleteEvent;
+typedef ::Sirikata::Transfer::TransferManager::UploadEvent UploadCompleteEvent;
+typedef ::Sirikata::Transfer::TransferManager::DownloadEvent DownloadCompleteEvent;
+typedef ::Sirikata::Transfer::TransferManager::DownloadEvent DownloadFailedEvent;
 
 } // namespace Meru
 

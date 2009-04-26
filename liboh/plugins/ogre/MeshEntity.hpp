@@ -42,18 +42,21 @@
 #include <oh/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
+#include "resourceManager/GraphicsResourceEntity.hpp"
 
 namespace Sirikata {
 namespace Graphics {
+
 
 class MeshEntity
     : public Entity,
       public MeshListener {
 
+    typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
+
     URI mMeshURI;
-
-
-    void created(const Ogre::MeshPtr &mesh);
+    SharedResourcePtr mResource;
+    BoundingInfo mBoundingInfo;
 
     Ogre::Entity *getOgreEntity() const {
         return static_cast<Ogre::Entity*const>(mOgreObject);
@@ -64,7 +67,7 @@ public:
         return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
     }
     MeshEntity(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo, 
+               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
                const std::string&ogre_id=std::string());
 
     virtual ~MeshEntity();
@@ -79,7 +82,25 @@ public:
     }
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
-  /*
+
+    /** Load the mesh and use it for this entity
+     *  \param meshname the name (ID) of the mesh to use for this entity
+     */
+    void loadMesh(const String& meshname);
+
+    void unloadMesh();
+    ///Returns the scaled bounding info
+    const BoundingInfo& getBoundingInfo()const{
+        return mBoundingInfo;
+    }
+    const SharedResourcePtr &getResource() const {
+        return mResource;
+    }
+    void setResource(const SharedResourcePtr &resourcePtr) {
+        mResource = resourcePtr;
+    }
+
+/*
     virtual bool loadMesh(const String&name){
         return false;
     }

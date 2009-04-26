@@ -93,7 +93,17 @@ class HTTPDownloadHandler :
 			receivedUri.erase(std::remove_if(receivedUri.begin(), receivedUri.end(), IsSpace()), receivedUri.end());
 			URI temp(httpreq->getURI().context(), receivedUri);
 			std::string shasum = temp.filename();
-			callback(Fingerprint::convertFromHex(shasum), receivedUri, true);
+			{
+				Fingerprint fp;
+				bool success = false;
+				try {
+					success = true;
+					fp = Fingerprint::convertFromHex(shasum);
+				} catch (std::invalid_argument &e) {
+					SILOG(transfer,error,"HTTP name lookup gave URI " << httpreq->getURI() << " which is not a hash URI!");
+				}
+				callback(fp, receivedUri, success);
+                        }
 		} else {
 			SILOG(transfer,error,"HTTP name lookup failed for " << httpreq->getURI());
 			callback(Fingerprint(), std::string(), false);

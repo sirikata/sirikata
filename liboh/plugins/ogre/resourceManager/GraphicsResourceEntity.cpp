@@ -29,11 +29,13 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "MeruDefs.hpp"
 #include "GraphicsResourceEntity.hpp"
 #include "GraphicsResourceName.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "../OgreSystem.hpp"
 #include "../CameraEntity.hpp"
+#include "../MeshEntity.hpp"
 
 using std::set;
 
@@ -55,8 +57,11 @@ GraphicsResourceEntity::~GraphicsResourceEntity()
 
 float GraphicsResourceEntity::calcBenefit()
 {
+  if (!mGraphicsEntity) {
+    return 0.0f;
+  }
   if (MESH_DISTANCE_IS_KING || STANDARD_COST_BENEFIT) {
-    const Location& curLoc = mGraphicsEntity->location();
+    const Location& curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Time::now());
 
     /*****************
      *  Loop through all OgreSystem's, and loop through the list of attached cameras
@@ -115,21 +120,27 @@ void GraphicsResourceEntity::doLoad()
   assert(mDependencies.size() > 0);
 
   mLoadTime = CURRENT_TIME;
-  mGraphicsEntity->loadMesh(mMeshID.toString());
+  if (mGraphicsEntity) {
+    mGraphicsEntity->loadMesh(mMeshID.toString());
+  }
   mCurMesh = SharedResourcePtr();
   loaded(true, mLoadEpoch);
 }
 
 void GraphicsResourceEntity::doUnload()
 {
-  mGraphicsEntity->unloadMesh();
+  if (mGraphicsEntity) {
+    mGraphicsEntity->unloadMesh();
+  }
   mLoadTime = Time::now();
   unloaded(true, mLoadEpoch);
 }
 
 void GraphicsResourceEntity::setMeshResource(SharedResourcePtr newMeshPtr)
 {
-  assert(mDependencies.size() == 0);
+  if(mDependencies.size() != 0) {
+    SILOG(resource,warn,"GraphicsResourceEntity::setMeshResource called again before finished loading.");
+  }
   if (mDependencies.size() > 0
    && (mLoadState == LOAD_LOADING || mLoadState == LOAD_LOADED)) {
     mCurMesh = *mDependencies.begin();
@@ -155,7 +166,8 @@ void GraphicsResourceEntity::fullyParsed()
 
 void GraphicsResourceEntity::resolveName(const URI& id, const URI& hash)
 {
-  assert((*mDependencies.begin())->getID() == getID());
+//FIXME!!!!!!!!!!!
+//  assert((*mDependencies.begin())->getID() == getID());
   mMeshID = hash;
 }
 

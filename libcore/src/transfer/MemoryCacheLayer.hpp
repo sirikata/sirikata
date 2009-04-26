@@ -70,7 +70,9 @@ protected:
                     if (SILOGP(transfer,debug)) {
                         SILOGNOCR(transfer,debug,fileId << " already exists: ");
                         std::stringstream rangeListStream;
-                        Range::printRangeList(rangeListStream,cdata->mSparse, (Range)(*respondData));
+                        Range::printRangeList(rangeListStream,
+                            static_cast<DenseDataList&>(cdata->mSparse),
+                            static_cast<Range>(*respondData));
                         SILOGNOCR(transfer,debug,rangeListStream.str());
                     }
 					writer.update(cdata->mSparse.getSpaceUsed());
@@ -110,9 +112,11 @@ public:
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
                 if (SILOGP(transfer,debug)) {
                     SILOGNOCR(transfer,debug,"Found " << uri.fingerprint() << "; ranges=");
-                    std::stringstream sparsePrintStream;
-                    sparseData.debugPrint(sparsePrintStream);
-                    SILOG(transfer,debug,sparsePrintStream.str());
+                        std::stringstream rangeListStream;
+                        Range::printRangeList(rangeListStream,
+                            static_cast<const DenseDataList&>(sparseData),
+                            requestedRange);
+                    SILOG(transfer,debug,rangeListStream.str());
                 }
 				if (sparseData.contains(requestedRange)) {
 					haveData = true;

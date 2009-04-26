@@ -33,7 +33,7 @@
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
 #include "Event.hpp"
-#include "util/ThreadSafeQueue.hpp"
+#include "util/LockFreeQueue.hpp"
 namespace Meru {
 /**
  * This SequentialWorkQueue class allows us to defer nonthreadsafe jobs
@@ -42,17 +42,17 @@ namespace Meru {
  * Use WorkQueue for threadsafe operations
  */
 class SequentialWorkQueue:public ManualSingleton<SequentialWorkQueue>, public Schedulable {
-
+public:
+    typedef std::tr1::function<bool()> WorkItem;
+    typedef ::Sirikata::LockFreeQueue<WorkItem> WorkQueue;
 protected:
     /// A list of work to be processed. Functions return true if they are done, false if they need to be called again
-    std::queue<std::tr1::function<bool()> >mWork;
-    ThreadSafeQueue<std::tr1::function<bool()> > mThreadSafeWorkQueue;
-
-    ///Processes all work in the mWork queue and empties it
-    void processAllWork();
+    WorkQueue mWork;
 
 public:
-    unsigned int numSchedulableJobs();
+    virtual unsigned int numSchedulableJobs() {
+        return mWork.probablyEmpty()?0:1;
+    }
     /**
      * processes a single job in the work queue if one exists
      * \returns true if there are any remaining jobs on the work queue
@@ -67,12 +67,7 @@ public:
     /**
      * Adds a job to the work queue to be run.
      */
-    void queueWork(const std::tr1::function<bool()>&work);
-    /**
-     * Adds a job to the thread safe work queue to be run.
-     * or as it's otherwise known: get back to the main thread, @*&#$ !
-     */
-    void threadSafeQueueWork(const std::tr1::function<bool()>&work);
+    void queueWork(const WorkItem&work);
 };
 
 }

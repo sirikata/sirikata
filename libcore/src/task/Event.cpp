@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
+#include "util/AtomicTypes.hpp"
 
 #include "Event.hpp"
 
@@ -39,15 +40,46 @@ namespace Task {
 /// Stores the map from primary ID to integer--items are never deleted.
 typedef std::map<std::string, int> IDMapType;
 
+typedef std::vector<std::string> IDNameList;
+
 static IDMapType idMap;
+static IDNameList idNames;
 static int max_id = 0;
+
+/* Simple reader-writer lock, meant to have practically no
+ * overhead for reads, since writes are relatively rare.
+ */
+static const int WRITER = 0x100000;
+static AtomicValue<int> readers(0);
+
 int IdPair::Primary::getUniqueId(const std::string &id) {
-	IDMapType::iterator iter = idMap.find(id);
-	if (iter == idMap.end()) {
-		iter = idMap.insert(IDMapType::value_type(id, max_id)).first;
+        int found = -1;
+        {
+                while (++readers < 0) {
+                        --readers;
+                        while (readers < 0) {
+                        }
+                }
+                IDMapType::iterator iter = idMap.find(id);
+                if (iter != idMap.end()) {
+                        found = (*iter).second;
+                }
+                --readers;
+        }
+ 	if (found == -1) {
+ 	        readers -= WRITER;
+ 	        while (readers > -WRITER) {
+ 	        }
+ 	        // Can now safely add this to the map.
+ 	        found = max_id;
+ 	        assert(found == (int)idNames.size());
+		idMap.insert(IDMapType::value_type(id, found));
+		idNames.push_back(id);
 		max_id++;
+
+		readers += WRITER; // done.
 	}
-	return (*iter).second;
+	return found;
 }
 
 IdPair::Primary::Primary (const std::string &id)
@@ -55,6 +87,16 @@ IdPair::Primary::Primary (const std::string &id)
 }
 IdPair::Primary::Primary (const char *id)
 	: mId(getUniqueId(id)) {
+}
+std::string IdPair::Primary::toString() const {
+        while (++readers < 0) {
+                --readers;
+                while (readers < 0) {
+                }
+        }
+        std::string ret = idNames[mId];
+        --readers;
+        return ret;
 }
 void Event::operator() (EventHistory){
     //FIXME should this delete the event?

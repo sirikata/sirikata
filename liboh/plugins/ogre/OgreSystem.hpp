@@ -47,6 +47,10 @@
 #undef nil
 #endif
 
+namespace Meru {
+class CDNArchivePlugin;
+}
+
 namespace Sirikata { namespace Graphics {
 class Entity;
 class SDLInputManager;
@@ -73,6 +77,7 @@ class OgreSystem: public TimeSteppedSimulation {
     Time mLastFrameTime;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
+    static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
     Provider<ProxyCreationListener*>*mProxyManager;
     bool loadBuiltinPlugins();
     OgreSystem();
@@ -87,6 +92,8 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
 public:
+    OptionValue *mParallaxSteps;
+    OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
     std::list<CameraEntity*> mAttachedCameras;

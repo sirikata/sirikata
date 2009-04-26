@@ -53,8 +53,8 @@ public:
 		}
 	}
 
-	DenseData(const std::string &str, bool wholeFile=true)
-			:Range(wholeFile) {
+	DenseData(const std::string &str, Range::base_type start=0, bool wholeFile=true)
+			:Range(start, str.length(), LENGTH, wholeFile) {
 		setLength(str.length(), wholeFile);
 		std::copy(str.begin(), str.end(), writableData());
 	}
@@ -288,8 +288,8 @@ public:
 		void setDataPtr() {
 			if (globalbyte >= parent->endbyte() || iter == (parent->DenseDataList::end())) {
 				data = NULL;
-				dataend = 0;
-				datastart = 0;
+				dataend = globalbyte;
+				datastart = globalbyte;
 			} else {
 				const DenseData&dd = *iter;
 				data = dd.data();
@@ -298,16 +298,19 @@ public:
 			}
 		}
 		void fixData() {
-			while (iter != (parent->DenseDataList::begin()) && globalbyte < datastart) {
+			while (iter != (parent->DenseDataList::begin()) && datastart > globalbyte) {
 				--iter;
 				setDataPtr();
 			}
-			while (data && globalbyte >= dataend) {
+			while (data && dataend <= globalbyte) {
 				++iter;
 				setDataPtr();
 				if (datastart > globalbyte) {
 					throw std::runtime_error("SparseData iterator skipped over some data");
 				}
+			}
+			if (iter == (parent->DenseDataList::end())) {
+				globalbyte = parent->endbyte();
 			}
 		}
 	public:
@@ -321,9 +324,11 @@ public:
 		const_iterator (const DenseDataList::const_iterator &iter,
 				const SparseData *parent, SparseData::size_type pos)
 				: iter(iter), parent(parent) {
+			/* // Caller's responsibility to check if contiguous.
 			if (!parent->contiguous()) {
 				throw std::domain_error("Cannot create iterator over noncontiguous SparseData");
 			}
+			*/
         	globalbyte = pos;
             setDataPtr();
 		}
@@ -370,13 +375,13 @@ public:
 		}
 
 		bool operator<(const const_iterator&other) const {
-			return (other.globalbyte < globalbyte);
+			return (globalbyte < other.globalbyte);
 		}
 		bool operator==(const const_iterator&other) const {
-			return (other.parent == parent && other.globalbyte == globalbyte);
+			return (other.iter == iter && other.globalbyte == globalbyte);
 		}
 		bool operator!=(const const_iterator&other) const {
-			return (other.parent != parent || other.globalbyte != globalbyte);
+			return (other.iter != iter || other.globalbyte != globalbyte);
 		}
 	};
 
@@ -456,32 +461,18 @@ public:
 		return context.get();
 	}
 
-	DenseDataPtr flatten() const {
-		if (mSparseData.size() == 0) {
-			return DenseDataPtr(new DenseData(Range(false)));
-		}
-		if (mSparseData.size() == 1) {
-			return mSparseData.front();
-		}
-		MutableDenseDataPtr denseData (new DenseData(Range(startbyte(),endbyte(),BOUNDS)));
-		const unsigned char *data;
-		unsigned char *outdata = denseData->writableData();
-		Range::length_type length;
-		Range::base_type start = 0;
-
-		while (start < denseData->length()) {
-			data = dataAt(start + startbyte(), length);
-			start += length;
-			if (data == NULL && length == 0) {
-				break;
-			} else if (data == NULL) {
-				std::memset(outdata + start, (unsigned char)0, (size_t)length);
-			} else {
-				std::copy(data, data+length, outdata + start);
-			}
-		}
-		return denseData;
-	}
+        DenseDataPtr flatten() const {
+                if (mSparseData.size() == 0) {
+                        return DenseDataPtr(new DenseData(Range(false)));
+                }
+                if (mSparseData.size() == 1) {
+                        return mSparseData.front();
+                }
+                MutableDenseDataPtr denseData (new DenseData(Range(startbyte(),endbyte(),BOUNDS)));
+                unsigned char *outdata = denseData->writableData();
+                std::copy(begin(), end(), outdata);
+                return denseData;
+        }
 
 };
 //typedef std::tr1::shared_ptr<SparseData> SparseDataPtr;

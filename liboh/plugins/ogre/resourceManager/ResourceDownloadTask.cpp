@@ -54,10 +54,9 @@ ResourceDownloadTask::~ResourceDownloadTask()
 
 EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& event)
 {
-  TransferEventPtr transferEvent = DowncastEvent<TransferEvent>(event);
+  std::tr1::shared_ptr<DownloadCompleteEvent> transferEvent = DowncastEvent<DownloadCompleteEvent>(event);
   if (transferEvent->success()) {
-    DownloadCompleteEventPtr downloadEvent = DowncastEvent<DownloadCompleteEvent>(event);
-    mResourceRequestor->setResourceBuffer(downloadEvent->mResourceBuffer);
+    mResourceRequestor->setResourceBuffer(transferEvent->data());
   }
   else {
     //assert(false); // ???

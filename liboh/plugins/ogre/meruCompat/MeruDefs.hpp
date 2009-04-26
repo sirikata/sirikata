@@ -95,10 +95,12 @@ class EventResponse;
 
 namespace Meru {
 
-typedef ::Sirikata::Transfer::SparseData MemoryBuffer;
-using ::Sirikata::String;
+using ::Sirikata::Transfer::SparseData;
+using ::Sirikata::Transfer::DenseDataPtr;
+typedef SparseData MemoryBuffer;
+typedef DenseDataPtr ResourceBuffer;
 
-typedef ::Sirikata::Transfer::DenseDataPtr ResourceBuffer;
+using ::Sirikata::String;
 
 #ifdef _WIN32
 inline bool isblank(int x){ return ((x == ' ') || (x == '\t')); }
@@ -150,12 +152,12 @@ using ::Sirikata::Task::EventPtr;
 using ::Sirikata::Task::SubscriptionId;
 using ::Sirikata::Task::EventResponse;
 
+typedef MeshEntity GraphicsEntity;
+
 
 using ::Sirikata::UUID;
 using ::Sirikata::URI;
 using ::Sirikata::SHA256;
-using ::Sirikata::Transfer::SparseData;
-using ::Sirikata::Transfer::DenseDataPtr;
 using ::Sirikata::Transfer::DenseData;
 using ::Sirikata::Transfer::RemoteFileId;
 

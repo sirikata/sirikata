@@ -39,35 +39,26 @@ SequentialWorkQueue::SequentialWorkQueue() {
 }
 
 SequentialWorkQueue::~SequentialWorkQueue() {
-    processAllWork();//safe to do in destructor cus the only place this happens is on graphics system init
-}
-
-unsigned int SequentialWorkQueue::numSchedulableJobs() {
-    std::tr1::function<bool()> newwork;
-    while (mThreadSafeWorkQueue.pop(newwork)) {
-        mWork.push(newwork);
-    }
-    return (unsigned int)mWork.size();
-}
-
-void SequentialWorkQueue::processAllWork() {
-    while (!mWork.empty()) {
-        if (mWork.front()()) {
-            mWork.pop();
-        }
+    //safe to do in destructor cus the only place this happens is on graphics system init
+    WorkQueue::NodeIterator iter(mWork);
+    const WorkItem *fn;
+    while ((fn=iter.next()) != NULL) {
+        (*fn)();
     }
 }
 
 bool SequentialWorkQueue::processOneJob() {
-    if (!mWork.empty()) {
-        if (mWork.front()()){
-            mWork.pop();
+    WorkItem fn;
+    if (mWork.pop(fn)) {
+        if (!fn()) {
+            queueWork(fn);
         }
+        return true;
     }
-    return !mWork.empty();
+    return false;
 }
 
-void SequentialWorkQueue::queueWork(const std::tr1::function<bool()>&work) {
+void SequentialWorkQueue::queueWork(const WorkItem&work) {
     mWork.push(work);
 }
 

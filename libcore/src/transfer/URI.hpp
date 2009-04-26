@@ -177,7 +177,7 @@ private:
 			slashpos = identifier.find('/',beginpos);
 			atpos = identifier.rfind('@', slashpos);
 			// Authenticated URI
-			if (atpos != std::string::npos && atpos > beginpos && atpos < slashpos) {
+			if (atpos != std::string::npos && atpos >= beginpos && atpos < slashpos) {
 				mUser = identifier.substr(beginpos, atpos-beginpos);
 				beginpos = atpos+1;
 			}

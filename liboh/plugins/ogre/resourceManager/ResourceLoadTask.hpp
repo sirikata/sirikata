@@ -51,8 +51,8 @@ public:
     signalCompletion();
   }
 
-  virtual void setResourceBuffer(ResourceBuffer& buffer) {
-    mBuffer = buffer;
+  virtual void setResourceBuffer(const SparseData& buffer) {
+    mBuffer = buffer.flatten();
   }
 
   void cancel()
@@ -66,7 +66,7 @@ protected:
 
   SharedResourcePtr mResource;
   String mHash;
-  ResourceBuffer mBuffer;
+  DenseDataPtr mBuffer;
   const unsigned int mEpoch;
   bool mCancelled;
 };

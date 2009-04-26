@@ -76,14 +76,20 @@ private:
 	void hashedDownload(const Callback &cb, const URI &origNamedUri, ServiceIterator *iter) {
 		ServiceParams params;
 		URI uri(origNamedUri);
+
+		RemoteFileId rfid;
+		bool success = false;
 		if (iter->tryNext(ServiceIterator::SUCCESS,uri,params)) {
-			// It is safe to cast this URI to a RemoteFileId????
 			delete iter;
-			RemoteFileId rfid(origNamedUri);
-			cb(origNamedUri, &rfid);
-		} else {
-			cb(origNamedUri, NULL);
+			try {
+        			rfid = RemoteFileId(origNamedUri);
+        			success = true;
+			} catch (std::invalid_argument &e) {
+				SILOG(transfer,error,"Received an exception when trying to parse hash URI " <<
+				    origNamedUri);
+			}
 		}
+		cb(origNamedUri, success ? &rfid : NULL);
 	}
 
 	void doNameLookup(const Callback &cb, const URI &origNamedUri, ServiceIterator *services, ServiceIterator::ErrorType reason) {
@@ -95,7 +101,7 @@ private:
 			handler->nameLookup(NULL, lookupUri,
 				std::tr1::bind(&NameLookupManager::gotNameLookup, this, cb, origNamedUri, services, _1, _2, _3));
 		} else {
-			SILOG(transfer,error,"None of the services registered for " <<
+			SILOG(transfer,warn,"None of the services registered for " <<
 					origNamedUri << " were successful for NameLookup.");
 			/// Hashed download.
 			if (mDownloadServ) {

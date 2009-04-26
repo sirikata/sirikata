@@ -220,6 +220,17 @@ public:
         mFreeNodePool.release((Node*)formerHead);//FIXME volatile cast only allowed if mContent is primitive type of pointer size or less
         return true;
     }
+
+    bool probablyEmpty() {
+        volatile Node* formerHead = mHead;
+        if (formerHead) {
+            if (formerHead->mNext) {
+                // fork() function is operating on mTail.
+                return false;
+            }
+        }
+        return true;
+    }
 };
 }
 

@@ -226,8 +226,9 @@ public:
 	void checkOneDenseDataCallback(const Transfer::SparseData *myData) {
 		TS_ASSERT(myData!=NULL);
 		if (myData) {
-			Transfer::SparseData::const_iterator iter = myData->begin();
-			TS_ASSERT(++iter == myData->end());
+                        const Transfer::DenseDataList *ddl = myData;
+			Transfer::DenseDataList::const_iterator iter = ddl->begin();
+			TS_ASSERT(++iter == ddl->end());
 		}
 		notifyOne();
 	}

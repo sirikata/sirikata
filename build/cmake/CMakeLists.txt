@@ -748,7 +748,6 @@ ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
 ${GFX}/resourceManager/GraphicsCamera.cpp
-${GFX}/resourceManager/GraphicsEntity.cpp
 ${GFX}/resourceManager/GraphicsLight.cpp
 ${GFX}/resourceManager/GraphicsObject.cpp
 ${GFX}/resourceManager/GraphicsRenderSettings.cpp

@@ -47,7 +47,7 @@ public:
 
 	virtual void run() = 0;
 
-  virtual void setResourceBuffer(ResourceBuffer& buffer) {
+  virtual void setResourceBuffer(const SparseData& buffer) {
     mBuffer = buffer;
   }
 
@@ -55,7 +55,7 @@ protected:
 
   WeakResourcePtr mResource;
   String mHash;
-  MemoryBuffer mBuffer;
+  SparseData mBuffer;
 };
 
 }
