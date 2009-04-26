@@ -55,12 +55,14 @@
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceManager.hpp"
 #include "resourceManager/GraphicsResourceManager.hpp"
+#include "resourceManager/ManualMaterialLoader.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 using Meru::GraphicsResourceManager;
 using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
+using Meru::MaterialScriptManager;
 
 #include <transfer/EventTransferManager.hpp>
 #include <transfer/NetworkCacheLayer.hpp>
@@ -364,8 +366,13 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             ));
             new GraphicsResourceManager;
             new SequentialWorkQueue;
+            new MaterialScriptManager;
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
+
+            Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
 
             void* hWnd=NULL;
             if (doAutoWindow) {
@@ -446,9 +453,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     sActiveOgreScenes.push_back(this);
-    Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
-
-    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
 
     return true;
 }

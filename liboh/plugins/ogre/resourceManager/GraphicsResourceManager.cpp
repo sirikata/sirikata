@@ -146,7 +146,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
       mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
       mResources.insert(curSharedPtr.get());
     }
-    catch (std::exception& exc) {
+    catch (std::invalid_argument& exc) {
 
     }
 
@@ -187,7 +187,9 @@ void GraphicsResourceManager::computeLoadedSet()
     mQueue.erase(mQueue.begin());
 
     float cost = resource->cost();
-    assert(cost >= 0);
+    //assert(cost >= 0);
+    SILOG(resource,error,"Cost " << resource->cost() << " for "<<resource->getID()<<" is less than 0.");
+
     if (budgetUsed + cost <= mBudget) {
       GraphicsResource::LoadState loadState = resource->getLoadState();
       if (loadState != GraphicsResource::LOAD_LOADING

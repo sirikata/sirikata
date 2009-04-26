@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "GraphicsResourceManager.hpp"
+#include "GraphicsResourceAsset.hpp"
 #include "GraphicsResourceName.hpp"
 #include "ResourceManager.hpp"
 #include <boost/bind.hpp>
@@ -102,8 +103,15 @@ void GraphicsResourceName::fullyParsed()
   std::set<WeakResourcePtr>::iterator itr;
   for (itr = mDependents.begin(); itr != mDependents.end(); itr++) {
     SharedResourcePtr resourcePtr = itr->lock();
-    if (resourcePtr)
-      resourcePtr->resolveName(mID, (*mDependencies.begin())->getID());
+    if (resourcePtr) {
+      std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
+          std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
+      if (assetPtr) {
+        resourcePtr->resolveName(mID, assetPtr->getURI());
+      } else {
+        resourcePtr->resolveName(mID, (*mDependencies.begin())->getID());
+      }
+    }
   }
 }
 

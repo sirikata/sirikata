@@ -113,6 +113,7 @@ void CDNArchive::addArchiveDataNoLock(unsigned int archiveName, const Ogre::Stri
 
 Ogre::String CDNArchive::canonicalMhashName(const Ogre::String&filename)
 {
+  //return Fingerprint::convertFromHex(URI(filename).filename());
   if (filename.length()>MERU_URI_HASH_PREFIX.size()+2&&memcmp(MERU_URI_HASH_PREFIX.c_str(),filename.data()+1,MERU_URI_HASH_PREFIX.size())==0&&filename[0]=='\"'&&filename[filename.length()-1]=='\"'){
     Ogre::String::size_type endw=filename.rfind("/");
     if (endw!=Ogre::String::npos&&endw+1!=filename.length())

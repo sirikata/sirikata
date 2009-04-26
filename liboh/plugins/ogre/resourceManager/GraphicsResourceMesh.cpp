@@ -218,8 +218,9 @@ MeshLoadTask::MeshLoadTask(DependencyManager *mgr, SharedResourcePtr resourcePtr
 
 void MeshLoadTask::doRun()
 {
-  int archive = CDNArchive::addArchive(mHash, mBuffer);
-  Ogre::MeshManager::getSingleton().load(mHash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+  String hash = mHash; //CDNArchive::canonicalMhashName(mHash);
+  int archive = CDNArchive::addArchive(hash, mBuffer);
+  Ogre::MeshManager::getSingleton().load(hash, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
   CDNArchive::removeArchive(archive);
 
   //Ogre::SkeletonPtr skeletonPtr = Ogre::SkeletonManager::getSingleton().getByName(meshPtr->getSkeletonName());
@@ -252,10 +253,11 @@ void MeshUnloadTask::doRun()
   /*I REALLY wish this were true*/
   // SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshUnloadTask::mainThreadUnload, this, mHash));
 
+  String hash = mHash; //CDNArchive::canonicalMhashName(mHash);
   Ogre::MeshManager* meshManager = Ogre::MeshManager::getSingletonPtr();
-  meshManager->remove(mHash);
+  meshManager->remove(hash);
 
-  Ogre::ResourcePtr meshResource = meshManager->getByName(mHash);
+  Ogre::ResourcePtr meshResource = meshManager->getByName(hash);
   assert(meshResource.isNull());
 
   SharedResourcePtr resource = mResource.lock();

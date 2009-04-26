@@ -51,7 +51,7 @@ template<> Meru::MaterialScriptManager *Ogre::Singleton<Meru::MaterialScriptMana
 namespace Meru {
 
 OptionValue*OPTION_THREADED_OGRE_COMPILER = new OptionValue("threaded-ogre-compiler","true",OptionValueType<bool>(),"Is the Ogre material compiler thread safe");
-OptionValue*OPTION_THREADED_OGRE_GLSL_COMPILER = new OptionValue("threaded-ogre-glsl-compiler","false",OptionValueType<String>(),"Is the Ogre material GLSL compiler thread safe");
+OptionValue*OPTION_THREADED_OGRE_GLSL_COMPILER = new OptionValue("threaded-ogre-glsl-compiler","false",OptionValueType<bool>(),"Is the Ogre material GLSL compiler thread safe");
 
 InitializeGlobalOptions manualmaterialloaderopts("ogregraphics",
     OPTION_THREADED_OGRE_COMPILER,

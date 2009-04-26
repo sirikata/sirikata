@@ -215,7 +215,9 @@ private:
 
 		cleanup(mProto);
 		cleanup(mHost);
-
+                if (mProto.empty()) {
+                        throw std::invalid_argument("mProto is empty for URIContext: "+identifier);
+                }
 	}
 
 public:

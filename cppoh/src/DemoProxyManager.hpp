@@ -94,9 +94,9 @@ public:
 */
         mAttachedMesh->setParent(mMesh, Time::now(),
                              Location(Vector3d(2.5,5.,0), Quaternion::identity(),
-                                      Vector3f(0,-3,0), Vector3f::nil(), 0.),
+                                      Vector3f(0,0,0), Vector3f::nil(), 0.),
                              Location(Vector3d(2.5,5.,0), Quaternion::identity(),
-                                      Vector3f(0,-3,0), Vector3f(.71,.71,0), 3.14));
+                                      Vector3f(0,0,0), Vector3f::nil(), 0.));
 /*
         mAttachedMesh->resetPositionVelocity(Time::now(),
                              Location(Vector3d(-10,0,0), Quaternion::identity(),
@@ -104,7 +104,7 @@ public:
 */
         mMesh->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(2,0,0), Vector3f(0.71,0.71,0),.77));
+                                      Vector3f(2,0,0), Vector3f(0,0,0),0));
         mMesh->destroy();
 //        mAttachedMesh->unsetParent(Time::now());
 /*

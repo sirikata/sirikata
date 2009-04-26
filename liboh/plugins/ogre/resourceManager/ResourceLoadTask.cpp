@@ -30,13 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "ResourceLoadTask.hpp"
+#include "CDNArchive.hpp"
 
 namespace Meru {
 
 ResourceLoadTask::ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String& hash, unsigned int epoch)
 : DependencyTask(mgr, hash),
   mResource(resource),
-  mHash(hash),
+  mHash(CDNArchive::canonicalMhashName(hash)),
   mEpoch(epoch),
   mCancelled(false)
 {
