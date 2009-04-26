@@ -71,21 +71,21 @@ message Message {
 /////////////Built-in messages///////////////
 
 //New Streams can establish an ObjectConnection
-message InitializeObjectConnection {
+message NewObj {
     ///key to indicate how an object's ObjectReference should be restored
     optional uuid object_uuid_evidence=2;
 }
-//This will be in the argument for the return value of the InitializeObjectConnection function
-message ReturnObjectConnection {
-    //return value for InitializeObjectConnection message
+//This will be in the argument for the return value of the NewObj function
+message RetObj {
+    //return value for NewObj message
     optional bytes object_reference = 2;
 }
 //This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
-message DisconnectObject {
+message DelObj {
 }
 
 //This message is from a space to an object updating its position and orientation (returns void)
-message UpdateObjectLocation {
+message ObjLoc {
 
     //time that the update was sent out
     required time timestamp = 2;
@@ -112,7 +112,7 @@ message UpdateObjectLocation {
     //options for this update, right now only force is the option
     optional UpdateFlags update_flags = 6;
 }
-message RegisterProximityQuery {
+message NewProxQuery {
 
     //the client chosen id for this query
     required uint32 query_id=2;
@@ -132,7 +132,7 @@ message RegisterProximityQuery {
     //query returns all objects that occupy at least this many steradians
     optional angle min_solid_angle=7;
 }
-message ProximityQueryCallback {
+message ProxCall {
 
     //the id of the query
     required uint32 query_id=2;
@@ -151,7 +151,7 @@ message ProximityQueryCallback {
 
 // used to unregister a proximity query.
 // May be sent back as a return value if space does not support standing queries
-message UnregisterProximityQuery {
+message DelProxQuery {
     //delete a query by client id
     optional uint32 query_id=2;  
 }
