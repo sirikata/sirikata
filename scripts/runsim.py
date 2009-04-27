@@ -18,7 +18,7 @@ port=6666
 servercount=0;
 for i in range(0,xservers):
     for j in range(0,yservers):
-        if (id==0):
+        if (doid==0):
             fp.write("localhost:"+str(port)+'\n')
         else:
             if (servercount<5):
