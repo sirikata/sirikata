@@ -183,7 +183,7 @@ public:
     EventIterator(const ServerID& sender, const ServerID& receiver, IteratorType begin, IteratorType end)
      : mSender(sender), mReceiver(receiver), mRangeCurrent(begin), mRangeEnd(end)
     {
-        if (!currentMatches())
+        while (mRangeCurrent != mRangeEnd && !currentMatches())
             next();
     }
 
@@ -530,31 +530,31 @@ BandwidthAnalysis::~BandwidthAnalysis() {
     }
 }
 
-BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventList(const ServerID& server) const {
+const BandwidthAnalysis::DatagramEventList* BandwidthAnalysis::getDatagramEventList(const ServerID& server) const {
     ServerDatagramEventListMap::const_iterator event_lists_it = mDatagramEventLists.find(server);
-    if (event_lists_it == mDatagramEventLists.end()) return NULL;
+    if (event_lists_it == mDatagramEventLists.end()) return &mEmptyDatagramEventList;
 
     return event_lists_it->second;
 }
 
-BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const ServerID& server) const {
+const BandwidthAnalysis::PacketEventList* BandwidthAnalysis::getPacketEventList(const ServerID& server) const {
     ServerPacketEventListMap::const_iterator event_lists_it = mPacketEventLists.find(server);
-    if (event_lists_it == mPacketEventLists.end()) return NULL;
+    if (event_lists_it == mPacketEventLists.end()) return &mEmptyPacketEventList;
 
     return event_lists_it->second;
 }
 
 
-BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatagramQueueInfoEventList(const ServerID& server) const {
+const BandwidthAnalysis::DatagramQueueInfoEventList* BandwidthAnalysis::getDatagramQueueInfoEventList(const ServerID& server) const {
     ServerDatagramQueueInfoEventListMap::const_iterator event_lists_it = mDatagramQueueInfoEventLists.find(server);
-    if (event_lists_it == mDatagramQueueInfoEventLists.end()) return NULL;
+    if (event_lists_it == mDatagramQueueInfoEventLists.end()) return &mEmptyDatagramQueueInfoEventList;
 
     return event_lists_it->second;
 }
 
-BandwidthAnalysis::PacketQueueInfoEventList* BandwidthAnalysis::getPacketQueueInfoEventList(const ServerID& server) const {
+const BandwidthAnalysis::PacketQueueInfoEventList* BandwidthAnalysis::getPacketQueueInfoEventList(const ServerID& server) const {
     ServerPacketQueueInfoEventListMap::const_iterator event_lists_it = mPacketQueueInfoEventLists.find(server);
-    if (event_lists_it == mPacketQueueInfoEventLists.end()) return NULL;
+    if (event_lists_it == mPacketQueueInfoEventLists.end()) return &mEmptyPacketQueueInfoEventList;
 
     return event_lists_it->second;
 }

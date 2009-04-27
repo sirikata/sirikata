@@ -97,13 +97,17 @@ public:
 private:
     typedef std::vector<PacketEvent*> PacketEventList;
     typedef std::map<ServerID, PacketEventList*> ServerPacketEventListMap;
+    PacketEventList mEmptyPacketEventList;
     typedef std::vector<ServerDatagramEvent*> DatagramEventList;
     typedef std::map<ServerID, DatagramEventList*> ServerDatagramEventListMap;
+    DatagramEventList mEmptyDatagramEventList;
 
     typedef std::vector<PacketQueueInfoEvent*> PacketQueueInfoEventList;
     typedef std::map<ServerID, PacketQueueInfoEventList*> ServerPacketQueueInfoEventListMap;
+    PacketQueueInfoEventList mEmptyPacketQueueInfoEventList;
     typedef std::vector<ServerDatagramQueueInfoEvent*> DatagramQueueInfoEventList;
     typedef std::map<ServerID, DatagramQueueInfoEventList*> ServerDatagramQueueInfoEventListMap;
+    DatagramQueueInfoEventList mEmptyDatagramQueueInfoEventList;
 
     DatagramEventList::const_iterator datagramBegin(const ServerID& server) const;
     DatagramEventList::const_iterator datagramEnd(const ServerID& server) const;
@@ -115,11 +119,11 @@ private:
     PacketQueueInfoEventList::const_iterator packetQueueInfoBegin(const ServerID& server) const;
     PacketQueueInfoEventList::const_iterator packetQueueInfoEnd(const ServerID& server) const;
 
-    DatagramEventList* getDatagramEventList(const ServerID& server) const;
-    PacketEventList* getPacketEventList(const ServerID& server) const;
+    const DatagramEventList* getDatagramEventList(const ServerID& server) const;
+    const PacketEventList* getPacketEventList(const ServerID& server) const;
 
-    DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
-    PacketQueueInfoEventList* getPacketQueueInfoEventList(const ServerID& server) const;
+    const DatagramQueueInfoEventList* getDatagramQueueInfoEventList(const ServerID& server) const;
+    const PacketQueueInfoEventList* getPacketQueueInfoEventList(const ServerID& server) const;
 
     template<typename EventType, typename EventIteratorType>
     void computeJFI(const ServerID& sender, const ServerID& filter) const;
