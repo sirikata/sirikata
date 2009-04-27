@@ -50,7 +50,7 @@ private:
     };
     static bool compare_and_swap(volatile Node*volatile *target, volatile Node *comperand, volatile Node * exchange){
 #ifdef _WIN32
-        return InterlockedCompareExchangePointer(target, exchange, comperand)==comperand;        
+        return InterlockedCompareExchangePointer((volatile PVOID*)target, (volatile PVOID)exchange, (volatile PVOID)comperand)==comperand;        
 #else
 #ifdef __APPLE__
         if (sizeof(exchange)==4) {
