@@ -169,8 +169,18 @@ void *main_loop(void *) {
         windowed_analysis_receive_filename += windowed_analysis_type;
         windowed_analysis_receive_filename += "_receive.dat";
 
+        String send_queue_info_filename = "send_queue_info_";
+        send_queue_info_filename += windowed_analysis_type;
+        send_queue_info_filename += ".dat";
+        String receive_queue_info_filename = "receive_queue_info_";
+        receive_queue_info_filename += windowed_analysis_type;
+        receive_queue_info_filename += ".dat";
+
         std::ofstream windowed_analysis_send_file(windowed_analysis_send_filename.c_str());
         std::ofstream windowed_analysis_receive_file(windowed_analysis_receive_filename.c_str());
+
+        std::ofstream send_queue_info_file(send_queue_info_filename.c_str());
+        std::ofstream receive_queue_info_file(receive_queue_info_filename.c_str());
 
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
@@ -180,19 +190,27 @@ void *main_loop(void *) {
         printf("Send rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                if (windowed_analysis_type == "datagram")
+                if (windowed_analysis_type == "datagram") {
                     ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_send_file);
-                else if (windowed_analysis_type == "packet")
+                    ba.dumpDatagramSendQueueInfo(sender, receiver, std::cout, send_queue_info_file);
+                }
+                else if (windowed_analysis_type == "packet") {
                     ba.computeWindowedPacketSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_send_file);
+                    ba.dumpPacketSendQueueInfo(sender, receiver, std::cout, send_queue_info_file);
+                }
             }
         }
         printf("Receive rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
-                if (windowed_analysis_type == "datagram")
+                if (windowed_analysis_type == "datagram") {
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
-                else if (windowed_analysis_type == "packet")
+                    ba.dumpDatagramReceiveQueueInfo(sender, receiver, std::cout, receive_queue_info_file);
+                }
+                else if (windowed_analysis_type == "packet") {
                     ba.computeWindowedPacketReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
+                    ba.dumpPacketReceiveQueueInfo(sender, receiver, std::cout, receive_queue_info_file);
+                }
             }
         }
         exit(0);

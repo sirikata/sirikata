@@ -758,6 +758,14 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
 
 template<typename EventType, typename EventIteratorType>
 void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, std::ostream& summary_out, std::ostream& detail_out) {
+    EventType* q_evt = NULL;
+    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
+
+    while((q_evt = event_it.current()) != NULL) {
+        detail_out << sender << " " << receiver << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->send_queued << std::endl;
+        event_it.next();
+    }
+    //summary_out << std::endl;
 }
 
 void BandwidthAnalysis::dumpDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
