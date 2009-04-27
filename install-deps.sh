@@ -18,8 +18,9 @@ fi
 
 mkdir raknet
 cd raknet
-wget http://www.jenkinssoftware.com/raknet/downloads/RakNet-3.401.zip
-unzip RakNet-3.401.zip
+wget http://www.jenkinssoftware.com/raknet/downloads/RakNet-3.51.zip
+unzip RakNet-3.51.zip
+patch -p1 < ../raknet_gcc_4_3.patch
 sh bootstrap
 ./configure --prefix=${deps_dir}/installed-raknet
 make
