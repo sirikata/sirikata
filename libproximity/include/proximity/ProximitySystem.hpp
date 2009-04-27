@@ -53,22 +53,22 @@ public:
      */
     virtual bool processOpaqueProximityMessage(const Sirikata::Protocol::IMessage&,
                                                const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessage=0);
+                                               size_t optionalSerializedMessageSize=0);
 
     /**
-     * Pass the ReturnedObjectConnection info, 
-     * containing an Object UUID to the proximity manager, 
+     * Pass the ReturnedObjectConnection info,
+     * containing an Object UUID to the proximity manager,
      * so the proximity system knows about a new object
      */
     virtual void newObj(const Sirikata::Protocol::INewObj&,
                         const void *optionalSerializedReturnObjectConnection=NULL,
-                        size_t optionalSerializedReturnObjectConnection=0)=0;
+                        size_t optionalSerializedReturnObjectConnectionSize=0)=0;
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread
      */
     virtual void newProxQuery(const ObjectReference&source,
-                              const Sirikata::Protocol::INewProxQuery&, 
+                              const Sirikata::Protocol::INewProxQuery&,
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0)=0;
     /**
@@ -83,7 +83,7 @@ public:
      * The proximity management system must be informed of all position updates
      * Pass an objects position updates to this function
      */
-    virtual void objLoc(const ObjectReference&source, const Sirikata::Protocol::IObjLoc&, const void *optionalSerializedObjLoc=NULL,size_t optionalSerializedObjLoc=0)=0;
+    virtual void objLoc(const ObjectReference&source, const Sirikata::Protocol::IObjLoc&, const void *optionalSerializedObjLoc=NULL,size_t optionalSerializedObjLocSize=0)=0;
 
     /**
      * Objects may lose interest in a particular query
@@ -94,7 +94,7 @@ public:
      * Objects may be destroyed: indicate loss of interest here
      */
     virtual void delObj(const ObjectReference&source, const Sirikata::Protocol::IDelObj&, const void *optionalSerializedDelObj=NULL,size_t optionalSerializedDelObjSize=0)=0;
-   
+
 };
 
 } }
