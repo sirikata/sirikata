@@ -121,7 +121,7 @@ void GraphicsResourceEntity::doLoad()
 
   mLoadTime = CURRENT_TIME;
   if (mGraphicsEntity) {
-    mGraphicsEntity->loadMesh(mMeshID.toString());
+    mGraphicsEntity->loadMesh(mMeshID.filename());
   }
   mCurMesh = SharedResourcePtr();
   loaded(true, mLoadEpoch);
