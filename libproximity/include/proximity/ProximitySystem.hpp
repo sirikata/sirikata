@@ -35,6 +35,9 @@
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
 namespace Sirikata { namespace Proximity {
 class ProximitySystem {
+public:
+
+
     virtual ~ProximitySystem()=0;
     /**
      * Does the proximity system care about messages with this name
@@ -60,14 +63,12 @@ class ProximitySystem {
     virtual void newObj(const Sirikata::Protocol::INewObj&,
                         const void *optionalSerializedReturnObjectConnection=NULL,
                         size_t optionalSerializedReturnObjectConnection=0)=0;
-    typedef std::tr1::function<void(const Sirikata::Protocol::Message&)> ProximityQueryCallback;
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread
      */
     virtual void newProxQuery(const ObjectReference&source,
                               const Sirikata::Protocol::INewProxQuery&, 
-                              const ProximityQueryCallback &cb, 
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0)=0;
     /**
