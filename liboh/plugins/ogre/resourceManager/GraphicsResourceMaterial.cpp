@@ -237,7 +237,7 @@ void MaterialDependencyTask::run()
           Ogre::String dependencyName (start_index,midpoint);
           if (dependencyName.size()) {
             SILOG(resource,debug,"Found LEGACY dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::MATERIAL);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -248,7 +248,7 @@ void MaterialDependencyTask::run()
         Ogre::String dependencyName(start_index, midpoint);
         if (dependencyName.size()) {
           SILOG(resource,debug,"Found Normal dependency "<<dependencyName);
-          SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::MATERIAL);
+          SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
           resourcePtr->addDependency(hashResource);
         }
       }
@@ -261,7 +261,7 @@ void MaterialDependencyTask::run()
           // Add dependency
           if (what[2].matched) {
            SILOG(resource,debug,"Found texture/program dependency "<<dependencyName);
-           SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::TEXTURE);
+           SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
             if (hashResource)
               resourcePtr->addDependency(hashResource);
 
@@ -289,7 +289,7 @@ void MaterialDependencyTask::run()
                     break;//framerate is last, don't add to dependency
                   }
                   SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
-                  SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::TEXTURE);
+                  SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
                   resourcePtr->addDependency(hashResource);
                 }
             }else if (what[2].second-what[2].first>cubic_texture_len
@@ -316,7 +316,7 @@ void MaterialDependencyTask::run()
                       break;
                     }
                     SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
-                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::TEXTURE);
+                    SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
                     resourcePtr->addDependency(hashResource);
                   }
                 }
@@ -325,7 +325,7 @@ void MaterialDependencyTask::run()
           }
           if (what[3].matched) {
             SILOG(resource,debug,"Found what[3] dependency "<<dependencyName);
-            SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::SHADER);
+            SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::SHADER);
             resourcePtr->addDependency(hashResource);
           }
         }
@@ -336,7 +336,7 @@ void MaterialDependencyTask::run()
       if (dependencyName.size()) {
         // this is actually a material reference
         SILOG(resource,debug,"Found material dependency "<<dependencyName);
-        SharedResourcePtr hashResource = grm->getResourceAsset(dependencyName, GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::MATERIAL);
         resourcePtr->addDependency(hashResource);
       }
     }

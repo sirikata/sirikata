@@ -354,7 +354,7 @@ class URI {
 	}
 public:
 	/// Default constructor--calls default constructor for URIContext as well.
-	URI() {
+	explicit URI() {
 	}
 
 	/** Constructs a new URI based on an old context.
@@ -373,7 +373,7 @@ public:
 	 *
 	 * @param uri   An absolute URI.
 	 */
-	URI(const char *url) {
+	explicit URI(const char *url) {
 		findSlash(url);
 	}
 
@@ -382,7 +382,7 @@ public:
 	 *
 	 * @param uri   An absolute URI.
 	 */
-	URI(const std::string &url) {
+	explicit URI(const std::string &url) {
 		findSlash(url);
 	}
 

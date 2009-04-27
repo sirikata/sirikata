@@ -107,9 +107,9 @@ void GraphicsResourceName::fullyParsed()
       std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
           std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
       if (assetPtr) {
-        resourcePtr->resolveName(mID, assetPtr->getURI());
+        resourcePtr->resolveName(mURI, assetPtr->getURI());
       } else {
-        resourcePtr->resolveName(mID, (*mDependencies.begin())->getID());
+        resourcePtr->resolveName(mURI, URI((*mDependencies.begin())->getID()));
       }
     }
   }
@@ -118,7 +118,13 @@ void GraphicsResourceName::fullyParsed()
 void GraphicsResourceName::addDependent(Meru::WeakResourcePtr newParent)
 {
   if (mParseState == PARSE_VALID) {
-    newParent.lock()->resolveName(mID, (*mDependencies.begin())->getID());
+    std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr =
+        std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(*mDependencies.begin());
+    if (assetPtr) {
+      newParent.lock()->resolveName(mURI, assetPtr->getURI());
+    } else {
+      newParent.lock()->resolveName(mURI, URI((*mDependencies.begin())->getID()));
+    }
   }
   GraphicsResource::addDependent(newParent);
 }

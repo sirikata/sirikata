@@ -57,9 +57,9 @@ public:
         notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
         LightInfo li;
-        li.setLightDiffuseColor(Color(1,.5,.5));
-        li.setLightAmbientColor(Color(.3,.3,.3));
-        li.setLightPower(1);
+        li.setLightDiffuseColor(Color(0,0,1));
+        li.setLightAmbientColor(Color(0,0,0));
+        li.setLightPower(0);
         mLight->update(li);
 
 /*
@@ -70,11 +70,11 @@ public:
 */
 //        mMesh->setMesh("file:///razor.mesh");
 //        mAttachedMesh->setMesh("file:///razor.mesh");
-        mAttachedMesh->setMesh("meru://cplatz@/arcade.mesh");
+        mAttachedMesh->setMesh(Transfer::URI("meru://cplatz@/arcade.mesh"));
         //mAttachedMesh->setMesh("meru:///arcade.mesh");
         //mAttachedMesh->setScale(Vector3f(.1,.1,.1));
         mCamera->resetPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,100.), Quaternion::identity(),
+                             Location(Vector3d(0,0,50.), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
         mLight->resetPositionVelocity(Time::now()-Duration::seconds(.5),
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
@@ -84,7 +84,7 @@ public:
                                       Vector3f::nil(), Vector3f::nil(), 0.));
 
         mMesh->resetPositionVelocity(Time::now()-Duration::seconds(1),
-                             Location(Vector3d(0,0,100.), Quaternion::identity(),
+                             Location(Vector3d(0,0,25.), Quaternion::identity(),
                                       Vector3f(0,0,0), Vector3f(0,0,0), 0.));
 
 /*
@@ -104,7 +104,7 @@ public:
 */
         mMesh->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(2,0,0), Vector3f(0,0,0),0));
+                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
         mMesh->destroy();
 //        mAttachedMesh->unsetParent(Time::now());
 /*

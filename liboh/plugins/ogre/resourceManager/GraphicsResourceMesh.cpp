@@ -185,7 +185,7 @@ void MeshDependencyTask::run()
           ++itr;
         }
 
-        SharedResourcePtr hashResource = grm->getResourceAsset(matDep, GraphicsResource::MATERIAL);
+        SharedResourcePtr hashResource = grm->getResourceAsset(URI(matDep), GraphicsResource::MATERIAL);
         resourcePtr->addDependency(hashResource);
       }
     }
