@@ -51,6 +51,7 @@ def get_output_filename(source_fn, sid):
     return source_fn + "." + str(sid) + ".ps"
 
 #generate random colors
+random.seed(0)
 graph_colors = []
 for i in range(1,25):
     r = random.random()
