@@ -317,7 +317,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 #endif
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
-
+            Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             Transfer::ServiceManager<Transfer::DownloadHandler> *downServ =
                 new Transfer::ServiceManager<Transfer::DownloadHandler>(
                     new Transfer::CachedServiceLookup,
@@ -373,20 +373,30 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
-
+            bool ogreCreatedWindow=true;
             void* hWnd=NULL;
-            if (doAutoWindow) {
-                getRoot()->getAutoCreatedWindow()->getCustomAttribute("WINDOW",&hWnd);
-#ifdef _WIN32
-            {
-                char tmp[64];
-                sprintf(tmp, "SDL_WINDOWID=%u", (unsigned long)hWnd);
-                _putenv(tmp);
-            }
+            if (ogreCreatedWindow) {
+                if (!rw) {
+                    Ogre::NameValuePairList misc;
+#ifdef __APPLE__
+                    if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
+                        misc["macAPI"] = String("cocoa");
+                    }
 #endif
-                mInputManager=new SDLInputManager(getRoot()->getAutoCreatedWindow()->getWidth(),
-                                                  getRoot()->getAutoCreatedWindow()->getHeight(),
-                                                  getRoot()->getAutoCreatedWindow()->isFullScreen(),
+                    sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+                    rw->setVisible(true);
+                }
+                rw->getCustomAttribute("WINDOW",&hWnd);
+#ifdef _WIN32
+                {
+                    char tmp[64];
+                    sprintf(tmp, "SDL_WINDOWID=%u", (unsigned long)hWnd);
+                    _putenv(tmp);
+                }
+#endif
+                mInputManager=new SDLInputManager(rw->getWidth(),
+                                                  rw->getHeight(),
+                                                  rw->isFullScreen(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
                           						  hWnd);
@@ -397,33 +407,24 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
                                                   hWnd);
-            }
-            if (!doAutoWindow) {
                 Ogre::NameValuePairList misc;
 #ifdef __APPLE__
-            {
-                //FIXME: hWnd appears to be a NSWindow* in the default SDL 1.3 implementation
-                //it appears Ogre wants an NSView*  attempts to convert it using a .m file were insufficient to get ogre to use it
-
-//                misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);//(NSView*)getContentView((NSWindow*)hWnd)); //String(tmp);
-//                SILOG(ogre,debug,"ext window handle "<<misc["externalWindowHandle"]);
-                if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
-                    misc["macAPI"] = String("cocoa");
-                    //misc["macAPICocoaUseNSView"] = String("true");
-                    misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+                {
+                    if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
+                        misc["macAPI"] = String("cocoa");
+                        //misc["macAPICocoaUseNSView"] = String("true");
+                        misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+                    }
                 }
-            }
-
 #else
                 misc["currentGLContext"] = String("True");
 #endif
-                Ogre::RenderWindow *rw;
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                 rw->setVisible(true);
 
-            }else {
-                sRenderTarget=mRenderTarget=getRoot()->getAutoCreatedWindow();
             }
+            sRenderTarget=mRenderTarget=rw;
+
         } else if (createWindow->as<bool>()) {
             Ogre::RenderWindow *rw;
             mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
