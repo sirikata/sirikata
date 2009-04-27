@@ -202,9 +202,9 @@ public:
 
 	void testSimpleFileDownload() {
 		using std::tr1::placeholders::_1;
-		mTransferManager->download("meerkat:///arcade.mesh",
+		mTransferManager->download(URI("meerkat:///arcade.mesh"),
 			std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
-		mTransferManager->download("meerkat:///arcade.mesh",
+		mTransferManager->download(URI("meerkat:///arcade.mesh"),
 			std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
 		waitFor(2);
 	}
@@ -229,11 +229,11 @@ public:
 
 	void testCombiningRangedFileDownload() {
         using std::tr1::placeholders::_1;
-		mTransferManager->download("meerkat:///arcade.mesh",
+		mTransferManager->download(URI("meerkat:///arcade.mesh"),
 			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(0,3, Transfer::BOUNDS), _1), Range(0,3, Transfer::BOUNDS));
-		mTransferManager->download("meerkat:///arcade.mesh",
+		mTransferManager->download(URI("meerkat:///arcade.mesh"),
 			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(true), _1), Range(true));
-		mTransferManager->download("meerkat:///arcade.mesh",
+		mTransferManager->download(URI("meerkat:///arcade.mesh"),
 			std::tr1::bind(&DownloadTest::downloadCheckRange, this, Range(2, true), _1), Range(2, true));
 		waitFor(3);
 	}
