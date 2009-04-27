@@ -374,6 +374,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
             bool ogreCreatedWindow=true;
+#ifdef __APPLE__
+            if (system("/usr/bin/sw_vers|/usr/bin/grep ProductVersion:.10.4.")==0)
+                ogreCreatedWindow=false;
+#endif
             void* hWnd=NULL;
             if (ogreCreatedWindow) {
                 if (!rw) {
@@ -396,7 +400,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
 #endif
                 mInputManager=new SDLInputManager(rw->getWidth(),
                                                   rw->getHeight(),
-                                                  rw->isFullScreen(),
+                                                  mFullScreen->as<bool>(),
                                                   mWindowDepth->as<Ogre::PixelFormat>(),
                                                   grabCursor->as<bool>(),
                           						  hWnd);
