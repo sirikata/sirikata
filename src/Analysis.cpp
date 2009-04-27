@@ -762,7 +762,7 @@ void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const Event
     EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
 
     while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->send_queued << std::endl;
+        detail_out << sender << " " << receiver << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->receive_queued << std::endl;
         event_it.next();
     }
     //summary_out << std::endl;
