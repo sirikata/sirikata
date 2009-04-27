@@ -46,7 +46,7 @@ class CDNArchive : public Ogre::Archive
 {
   time_t getModifiedTime(const Ogre::String&);
   static void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const ResourceBuffer &rbuffer);
-
+  unsigned int mNativeFileArchive;
 public:
 
   /**
