@@ -205,7 +205,9 @@ typedef double float64;
 typedef uchar byte;
 typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
-
+namespace Network {
+typedef std::vector<uint8> Chunk;
+}
 } // namespace Sirikata
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"

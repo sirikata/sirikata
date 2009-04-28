@@ -78,7 +78,7 @@ message NewObj {
 //This will be in the argument for the return value of the NewObj function
 message RetObj {
     //return value for NewObj message
-    optional bytes object_reference = 2;
+    optional uuid object_reference = 2;
 }
 //This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
 message DelObj {

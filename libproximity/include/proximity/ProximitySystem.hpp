@@ -34,7 +34,7 @@
 #ifndef _PROXIMITY_PROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
 namespace Sirikata { namespace Proximity {
-class ProximitySystem {
+class SIRIKATA_PROXIMITY_EXPORT ProximitySystem {
 public:
 
 
@@ -53,7 +53,7 @@ public:
      */
     virtual bool processOpaqueProximityMessage(const Sirikata::Protocol::IMessage&,
                                                const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0);
+                                               size_t optionalSerializedMessageSize=0)=0;
 
     /**
      * Pass the ReturnedObjectConnection info,

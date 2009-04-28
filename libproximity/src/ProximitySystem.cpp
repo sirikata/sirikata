@@ -1,5 +1,7 @@
 #include "proximity/Platform.hpp"
 #include "proximity/ProximitySystem.hpp"
+//#include "proximity/ObjectSpaceBridgeProximitySystem.hpp"
+//for testing only#include "proximity/BridgeProximitySystem.hpp"
 namespace Sirikata { namespace Proximity {
 bool ProximitySystem::proximityRelevantMessageName(const String&msg){
     return msg=="ObjLoc"||msg=="ProxCall"||msg=="NewProxQuery"||msg=="DelProxQuery"||msg=="RetObj"||msg=="DelObj";

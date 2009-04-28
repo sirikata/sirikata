@@ -36,7 +36,6 @@
 namespace Sirikata {
 /// Network contains Stream and TCPStream.
 namespace Network {
-typedef std::vector<uint8> Chunk;
 
 
 ///Codes indicating if packet sending should be reliable or not,and in order or not
