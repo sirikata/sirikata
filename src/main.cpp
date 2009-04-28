@@ -251,7 +251,11 @@ void *main_loop(void *) {
         new ServerWeightCalculator(
             server_id,
             cseg,
-            std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),_1,_2,_3,_4),
+            std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
+                std::tr1::placeholders::_1,
+                std::tr1::placeholders::_2,
+                std::tr1::placeholders::_3,
+                std::tr1::placeholders::_4),
             sq
         );
 
