@@ -762,26 +762,18 @@ void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const Event
     EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
 
     while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->receive_queued << std::endl;
+        detail_out << sender << " " << receiver << " " << (q_evt->time-Time(0)).milliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->receive_queued << std::endl;
         event_it.next();
     }
     //summary_out << std::endl;
 }
 
-void BandwidthAnalysis::dumpDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+void BandwidthAnalysis::dumpDatagramQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
     dumpQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender), summary_out, detail_out);
 }
 
-void BandwidthAnalysis::dumpDatagramReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator>(sender, receiver, datagramQueueInfoBegin(receiver), datagramQueueInfoEnd(receiver), summary_out, detail_out);
-}
-
-void BandwidthAnalysis::dumpPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
+void BandwidthAnalysis::dumpPacketQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
     dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(sender), packetQueueInfoEnd(sender), summary_out, detail_out);
-}
-
-void BandwidthAnalysis::dumpPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, std::ostream& summary_out, std::ostream& detail_out) {
-    dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(receiver), packetQueueInfoEnd(receiver), summary_out, detail_out);
 }
 
 } // namespace CBR

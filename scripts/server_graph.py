@@ -52,7 +52,7 @@ class ServerGraph:
     def get_output_filename(self, prefix, sid):
         return prefix + "." + str(sid) + ".ps"
 
-    def generate(self, prefix, with_self):
+    def generate(self, prefix, with_self, with_sum):
         for (s1,d1) in self.graph_data.items():
             self.graph_command = ''
             self.begin_graph()
@@ -73,9 +73,10 @@ class ServerGraph:
                     idx = idx + 1
 
             # generate the one last sum curve
-            self.begin_curve(len(d1.items())+1, "Total")
-            for (x,y) in sum:
-                self.graph_command = self.graph_command + x + " " + str(y) + "\n"
+            if with_sum:
+                self.begin_curve(len(d1.items())+1, "Total")
+                for (x,y) in sum:
+                    self.graph_command = self.graph_command + x + " " + str(y) + "\n"
 
             out_fname = self.get_output_filename(prefix, s1)
 
