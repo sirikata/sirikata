@@ -13,9 +13,17 @@ build/cmake/serverip*
 # trace files
 build/cmake/sync*
 build/cmake/trace*
+# analysis files
+build/cmake/*.dat
+build/cmake/*.ps
 
 # moc files
 build/cmake/moc*
+build/cmake/__/
+src/moc*
 
 # dependencies directory
 dependencies
+
+# script by-products
+*.pyc
