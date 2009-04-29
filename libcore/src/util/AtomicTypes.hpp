@@ -182,5 +182,4 @@ public:
 #pragma warning( pop )
 #endif
 }
-
 #endif //_SIRIKATA_ATOMIC_TYPES_HPP_

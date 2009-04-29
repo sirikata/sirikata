@@ -46,8 +46,12 @@ using namespace boost::asio::ip;
 TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
 
 }
-
 void TCPStream::send(const Chunk&data, StreamReliability reliability) {
+    if(!data.empty()) {
+        send(&data[0],data.size(),reliability);
+    }
+}
+void TCPStream::send(const void*data, size_t dataSize, StreamReliability reliability) {
     MultiplexedSocket::RawRequest toBeSent;
     // only allow 3 of the four possibilities because unreliable ordered is tricky and usually useless
     switch(reliability) {
@@ -71,7 +75,7 @@ void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     ///this function should never return something larger than the  MAX_SERIALIZED_LEGNTH
     assert(successLengthNeeded<=streamIdLength);
     streamIdLength=successLengthNeeded;
-    size_t totalSize=data.size();
+    size_t totalSize=dataSize;
     totalSize+=streamIdLength;
     uint30 packetLength=uint30(totalSize);
     uint8 packetLengthSerialized[uint30::MAX_SERIALIZED_LENGTH];
@@ -83,10 +87,10 @@ void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     uint8 *outputBuffer=&(*toBeSent.data)[0];
     std::memcpy(outputBuffer,packetLengthSerialized,packetHeaderLength);
     std::memcpy(outputBuffer+packetHeaderLength,serializedStreamId,streamIdLength);
-    if (data.size())
+    if (dataSize)
         std::memcpy(&outputBuffer[packetHeaderLength+streamIdLength],
-                    &data[0],
-                    data.size());
+                    data,
+                    dataSize);
     bool didsend=false;
     //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);
@@ -154,6 +158,21 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
     retval->mID=newID;
     TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
     cloneCallback(retval,setCallbackFunctor);
+    return retval;
+}
+
+Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
+                         const BytesReceivedCallback&chunkReceivedCallback) { 
+    if (!mSocket) {
+        return NULL;
+    }
+    TCPStream *retval=new TCPStream(*mIO);
+    retval->mSocket=mSocket;
+
+    StreamID newID=mSocket->getNewID();
+    retval->mID=newID;
+    TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
+    setCallbackFunctor(connectionCallback,chunkReceivedCallback);
     return retval;
 }
 

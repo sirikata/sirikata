@@ -73,7 +73,12 @@ class ObjectReference : TotallyOrdered<ObjectReference>{
     String toString() const{
         return mID.readableHexData();
     }
-    unsigned int hash() const{
+    class Hasher {public:
+        size_t operator()(const ObjectReference&objr) const {
+             return objr.hash();
+        }
+    };
+    size_t hash() const{
         return mID.hash();
     }
 

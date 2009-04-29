@@ -54,7 +54,7 @@ protected:
                              const Protocol::IMessage&opaqueMessage,
                              const void *optionalSerializedMessage,
                              size_t optionalSerializedMessageSize) {
-        mProximitySystem->send(source,opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
+        mProximityConnection->send(source,opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
     }
     virtual void readProximityMessage(const ObjectReference&objectConnection,Network::Chunk&msg) {
         if (msg.size()) {
@@ -68,8 +68,9 @@ protected:
         }
     }
 public:
-    ProxNetwork mProximitySystem;
-    BridgeProximitySystem(SpacePtr obj) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj) {
+    ProximityConnection mProximityConnection;
+    BridgeProximitySystem(SpacePtr obj, const Address&addy, Network::IOService&io) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(addy,io,this) {
+        
         //FIXME need the mProximitySystem
     }
     enum MessageBundle{
@@ -107,10 +108,10 @@ public:
      * Objects may be destroyed: indicate loss of interest here
      */
     virtual void delObj(const ObjectReference&source, const Sirikata::Protocol::IDelObj&delObjMsg, const void *optionalSerializedDelObj=NULL,size_t optionalSerializedDelObjSize=0) {
-        mProximitySystem->destroyObjectStream(source);
         Protocol::Message toSend;
         this->constructMessage(toSend,&source,NULL,"DelObj",delObjMsg,optionalSerializedDelObj,optionalSerializedDelObjSize);
         this->sendMessage(toSend);
+        mProximitySystem->deleteObjectStream(source);
     }
    
 };

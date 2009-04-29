@@ -206,7 +206,14 @@ typedef uchar byte;
 typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
 namespace Network {
+class IOService;
+class Stream;
+class Address;
 typedef std::vector<uint8> Chunk;
+}
+namespace Protocol {
+class Message;
+class IMessage;
 }
 } // namespace Sirikata
 #include "TotallyOrdered.hpp"

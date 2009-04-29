@@ -174,7 +174,10 @@ public:
     virtual Stream*factory()=0;
     ///Makes this stream a clone of stream "s" if they are of the same type and immediately calls the callback 
     virtual Stream* clone(const SubstreamCallback&cb)=0;
+    virtual Stream* clone(const ConnectionCallback &connectionCallback,
+                          const BytesReceivedCallback&chunkReceivedCallback)=0;
     
+    virtual void send(const void * data, size_t dataSize, StreamReliability)=0;
     ///Send a chunk of data to the receiver
     virtual void send(const Chunk&data,StreamReliability)=0;
     ///close this stream: if it is the last stream, close the connection as well

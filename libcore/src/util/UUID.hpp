@@ -84,7 +84,7 @@ public:
         static UUID retval(Data::nil());
         return retval;
     }
-    unsigned int hash() const;
+    size_t hash() const;
     class Hasher{public:
         size_t operator() (const UUID&uuid) const {
             return uuid.hash();

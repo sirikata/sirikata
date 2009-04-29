@@ -142,6 +142,8 @@ public:
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
     ///Implementation of send interface
+    virtual void send(const void*data,const size_t dataSize, StreamReliability);
+    ///Implementation of send interface
     virtual void send(const Chunk&data,StreamReliability);
     ///Implementation of connect interface
     virtual void connect(
@@ -151,6 +153,9 @@ public:
         const BytesReceivedCallback&chunkReceivedCallback);
     ///Creates a new substream on this connection
     virtual Stream* clone(const SubstreamCallback&cb);
+    ///Creates a new substream on this connection. This is for when the callbacks do not require the Stream*
+    virtual Stream* clone(const ConnectionCallback &connectionCallback,
+                          const BytesReceivedCallback&chunkReceivedCallback);
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
 };

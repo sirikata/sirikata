@@ -51,7 +51,8 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true for proximity-specific message not of interest to others
      */
-    virtual bool processOpaqueProximityMessage(const Sirikata::Protocol::IMessage&,
+    virtual bool processOpaqueProximityMessage(const ObjectReference*object,
+                                               const Sirikata::Protocol::IMessage&,
                                                const void *optionalSerializedMessage=NULL,
                                                size_t optionalSerializedMessageSize=0)=0;
 

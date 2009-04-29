@@ -708,7 +708,10 @@ IF(NOT WIN32)
 ENDIF()
 
 SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
-SET(LIBPROXIMITY_SOURCES ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystem.cpp )
+SET(LIBPROXIMITY_SOURCES 
+                  ${SirikataProtobufFile}
+                  ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystem.cpp 
+                  ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnection.cpp )
 SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
                   ${LIBOH_SOURCE_DIR}/ProxyMeshObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyLightObject.cpp
