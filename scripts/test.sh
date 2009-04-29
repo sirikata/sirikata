@@ -8,7 +8,7 @@ export duration=100s
 cd ../build/cmake
 cd ../../build/cmake
 cd build/cmake
-python ../../scripts/runsim.py $numnum --duration=$duration --bandwidth=$bandwidth --wait-additional=6 --flatness=.001 --capexcessbandwidth=false --object.queue=fairfifo
+python ../../scripts/runsim.py $numnum --duration=$duration --receive-bandwidth=$bandwidth --wait-additional=6 --flatness=.001 --capexcessbandwidth=false --object.queue=fairfifo
 #    ./cbr --id=1 --serverips=serverip-$num-$num.txt --duration $duration --analysis.loc true >> loc_error.txt
  ./cbr --id=1 "--layout=<$num,$num,1>" --serverips=serverip-$num-$num.txt --duration $duration --analysis.locvis=1 &
 ./cbr --id=1 "--layout=<$num,$num,1>" --serverips=serverip-$num-$num.txt --duration $duration --analysis.bandwidth true

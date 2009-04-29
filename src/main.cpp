@@ -223,9 +223,9 @@ void *main_loop(void *) {
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(gNetwork,GetOption("bandwidth")->as<uint32>(), server_id, server_id_map, gTrace);
+        sq = new FIFOServerMessageQueue(gNetwork,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption("bandwidth")->as<uint32>(),GetOption("bandwidth")->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
+        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
     else {
         assert(false);
         exit(-1);
@@ -234,13 +234,13 @@ void *main_loop(void *) {
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(), gTrace);
+        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(), gTrace);
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption("bandwidth")->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else {
         assert(false);
         exit(-1);

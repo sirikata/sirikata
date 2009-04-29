@@ -56,6 +56,9 @@
 
 #define NETWORK_TYPE         "net"
 
+#define SEND_BANDWIDTH       "send-bandwidth"
+#define RECEIVE_BANDWIDTH       "receive-bandwidth"
+
 namespace CBR {
 
 void InitOptions();
