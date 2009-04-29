@@ -38,7 +38,7 @@ class SIRIKATA_PROXIMITY_EXPORT ProximitySystem {
 public:
 
 
-    virtual ~ProximitySystem()=0;
+    virtual ~ProximitySystem();
     /**
      * Does the proximity system care about messages with this name
      */

@@ -430,6 +430,8 @@ public:
         scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived);
     }
     void testSubstream(Stream* stream, Stream::SetCallbacks&scb) {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
         scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
             std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1));
     }
