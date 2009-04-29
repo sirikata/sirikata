@@ -20,6 +20,7 @@ namespace CBR {
             return mPair.first;
         }
 
+        // FIXME does changing this to return a reference affect anything? this is quite wasteful as is
         const Network::Chunk data() const {
             return mPair.second;
         }

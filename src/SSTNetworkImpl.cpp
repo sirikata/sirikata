@@ -100,7 +100,7 @@ bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliabl
 
 Network::Chunk* CBRSST::front(const Address4& from, uint32 max_size) {
     assert(from != Address4::Null);
-    assert(false);
+
     StreamInfo* si = lookupReceive(from);
     if (si == NULL) return NULL;
 

@@ -40,7 +40,7 @@ namespace CBR {
 
 template<class MessageQueue> class Weight {
 public:
-    template <class MessageType> uint32 operator()(const MessageQueue&mq,const MessageType*nil)const {
+    template <class MessageType> uint32 operator()(MessageQueue&mq,const MessageType*nil)const {
         return mq.empty()?nil->size():mq.front()->size();
     }
 };

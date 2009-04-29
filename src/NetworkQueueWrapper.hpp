@@ -7,6 +7,7 @@ class NetworkQueueWrapper {
     ServerID mServerID;
     uint32 mMaxRecvSize;
     Address4 mServerAddress;
+    ServerMessagePair* mFront;
     typedef Network::Chunk Chunk;
 public:
     NetworkQueueWrapper(ServerID sid, Network*net,ServerIDMap*idmap) {
@@ -14,6 +15,7 @@ public:
         mNetwork=net;
         mMaxRecvSize=(1<<30);
         mServerAddress=*idmap->lookup(sid);
+        mFront = NULL;
     }
     ~NetworkQueueWrapper(){}
 
@@ -21,16 +23,36 @@ public:
         return QueueEnum::PushExceededMaximumSize;
     }
     void deprioritize(){}
-    const Chunk* front() const{
-        return mNetwork->front(mServerAddress,mMaxRecvSize);
+
+    ServerMessagePair* front() {
+        if (mFront == NULL) {
+            Chunk* c = mNetwork->front(mServerAddress, mMaxRecvSize);
+            if (c != NULL)
+                mFront = new ServerMessagePair(mServerID, *c);
+        }
+
+        return mFront;
     }
 
-    Chunk* front() {
-        return mNetwork->front(mServerAddress,mMaxRecvSize);
-    }
+    ServerMessagePair* pop(){
+        Chunk* c = mNetwork->receiveOne(mServerAddress,mMaxRecvSize);
 
-    Chunk* pop(){
-        return mNetwork->receiveOne(mServerAddress,mMaxRecvSize);
+        if (c == NULL) {
+            assert(mFront == NULL);
+            return NULL;
+        }
+
+        ServerMessagePair* result = NULL;
+        if (mFront != NULL) {
+            result = mFront;
+            mFront = NULL;
+        }
+        else {
+            result = new ServerMessagePair(mServerID, *c);
+        }
+
+        delete c;
+        return result;
     }
 
     bool empty() const{
@@ -38,7 +60,8 @@ public:
     }
 
     uint32 size() const {
-        return mNetwork->front(mServerAddress,mMaxRecvSize)?mNetwork->front(mServerAddress,mMaxRecvSize)->size():0;
+        return 0;
+        //return mNetwork->front(mServerAddress,mMaxRecvSize)?mNetwork->front(mServerAddress,mMaxRecvSize)->size():0;
     }
 
     // Returns the total amount of space that can be allocated for the destination

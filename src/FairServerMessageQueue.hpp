@@ -17,17 +17,13 @@ protected:
     Time mLastTime;
     uint32 mRate;
     uint32 mRecvRate;
-    uint32 mRemainderBytes;
+    uint32 mRemainderSendBytes;
+    uint32 mRemainderReceiveBytes;
     Time mLastSendEndTime; // last packet send finish time, if there are still messages waiting
+    Time mLastReceiveEndTime; // last packet receive finish time, if there are still messages waiting
 
-    ///map from ServerID to RemainderBytes
-    class ReceiveServerProperties {
-    public:
-        int32 mRemainderBytes;
-        ReceiveServerProperties(){mRemainderBytes=0;}
-    };
-    typedef std::map<ServerID,ReceiveServerProperties> ReceiveServerList;
-    ReceiveServerList mSourceServers;
+    typedef std::set<ServerID> ReceiveServerSet;
+    ReceiveServerSet mReceiveSet;
     struct ChunkSourcePair {
         Network::Chunk* chunk;
         ServerID source;

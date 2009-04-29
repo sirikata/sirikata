@@ -12,8 +12,10 @@ FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_p
    mLastTime(0),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
-   mRemainderBytes(0),
-   mLastSendEndTime(0)
+   mRemainderSendBytes(0),
+   mRemainderReceiveBytes(0),
+   mLastSendEndTime(0),
+   mLastReceiveEndTime(0)
 {
 }
 
@@ -39,31 +41,35 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
 }
 
 bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {
-    if (mReceiveQueue.empty()) {
-        *chunk_out = NULL;
-        return false;
+    if (!mReceiveQueue.empty()) {
+        ChunkSourcePair csp = mReceiveQueue.front();
+        *chunk_out = csp.chunk;
+        *source_server_out = csp.source;
+        mReceiveQueue.pop();
+        return true;
     }
 
-    *chunk_out = mReceiveQueue.front().chunk;
-    *source_server_out = mReceiveQueue.front().source;
-    mReceiveQueue.pop();
-
-    return true;
+    *chunk_out = NULL;
+    return false;
 }
 
 void FairServerMessageQueue::service(const Time&t){
-    uint64 bytes = (t - mLastTime).seconds() * mRate + mRemainderBytes;
+    uint64 send_bytes = (t - mLastTime).seconds() * mRate + mRemainderSendBytes;
+    uint64 recv_bytes = (t - mLastTime).seconds() * mRecvRate + mRemainderReceiveBytes;
+
+    // Send
 
     ServerMessagePair* next_msg = NULL;
     ServerID sid;
-    while( bytes > 0 && (next_msg = mServerQueues.front(&bytes,&sid)) != NULL ) {
+
+    while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
         assert(addy != NULL);
         bool sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
         if (!sent_success) break;
 
-        ServerMessagePair* next_msg_popped = mServerQueues.pop(&bytes);
+        ServerMessagePair* next_msg_popped = mServerQueues.pop(&send_bytes);
         assert(next_msg_popped == next_msg);
 
         uint32 packet_size = next_msg->data().size();
@@ -79,71 +85,90 @@ void FairServerMessageQueue::service(const Time&t){
     }
 
     if (mServerQueues.empty()) {
-        mRemainderBytes = 0;
+        mRemainderSendBytes = 0;
         mLastSendEndTime = t;
     }
     else {
-        mRemainderBytes = bytes;
+        mRemainderSendBytes = send_bytes;
         //mLastSendEndTime = already recorded, last end send time
     }
 
 
-    // no limit on receive bandwidth
-    for(ReceiveServerList::iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
-        Address4* addr = mServerIDMap->lookup(it->first);
-        assert(addr != NULL);
-        int64 bytes = (int64)((t - mLastTime).seconds() * mRecvRate) + it->second.mRemainderBytes;
-        if (bytes<=0) {
-            it->second.mRemainderBytes=bytes;
-        }else while( Network::Chunk* c = mNetwork->receiveOne(*addr, 1000000) ) {
+    // Receive
 
-            bytes-=c->size();
-            uint32 offset = 0;
-            ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
-            assert(hdr.destServer() == mSourceServer);
-            Network::Chunk* payload = new Network::Chunk;
-            payload->insert(payload->begin(), c->begin() + offset, c->end());
-            delete c;
+    while( recv_bytes > 0 && (next_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
+        ServerMessagePair* next_msg_popped = mReceiveQueues.pop(&recv_bytes);
+        assert(next_msg_popped == next_msg);
 
-            ChunkSourcePair csp;
-            csp.chunk = payload;
-            csp.source = hdr.sourceServer();
+        uint32 packet_size = next_msg->data().size();
+        Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
+        Time start_time = mLastReceiveEndTime;
+        Time end_time = mLastReceiveEndTime + recv_duration;
+        mLastReceiveEndTime = end_time;
 
-            mReceiveQueue.push(csp);
-            it->second.mRemainderBytes=0;
-            if (bytes<=0) {
-                it->second.mRemainderBytes=bytes;
-                break;
-            }
-        }
+        /*
+           FIXME at some point we should record this here instead of in Server.cpp
+        mTrace->serverDatagramReceived();
+        */
+        uint32 offset = 0;
+        ServerMessageHeader hdr = ServerMessageHeader::deserialize(next_msg->data(), offset);
+        assert(hdr.destServer() == mSourceServer);
+        Network::Chunk* payload = new Network::Chunk;
+        Network::Chunk smp_data = next_msg->data(); // BEWARE we unfortunately copy this here because ServerMessagePair won't return a reference, not sure why its that way
+        payload->insert(payload->begin(), smp_data.begin() + offset, smp_data.end());
+        assert( payload->size() == next_msg->data().size() - offset );
+
+        ChunkSourcePair csp;
+        csp.chunk = payload;
+        csp.source = next_msg->dest();
+        mReceiveQueue.push( csp );
+
+        delete next_msg;
     }
+
+    if (mReceiveQueues.empty()) {
+        mRemainderReceiveBytes = 0;
+        mLastReceiveEndTime = t;
+    }
+    else {
+        mRemainderSendBytes = send_bytes;
+        //mLastReceiveEndTime = already recorded, last end send time
+    }
+
+
+
     mLastTime = t;
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
-    if (!mServerQueues.hasQueue(sid)) {
+    // send weight
+    if (!mServerQueues.hasQueue(sid))
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
-    }
-    else {
+    else
         mServerQueues.setQueueWeight(sid, weight);
-    }
 
-    mSourceServers[sid];
+    // receive weight
+    if (!mReceiveQueues.hasQueue(sid))
+        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);
+    else
+        mReceiveQueues.setQueueWeight(sid, weight);
+
+    // add to the receive set
+    mReceiveSet.insert(sid);
 }
 
 float FairServerMessageQueue::getServerWeight(ServerID sid) {
-    if (mServerQueues.hasQueue(sid)) {
+    if (mServerQueues.hasQueue(sid))
         return mServerQueues.getQueueWeight(sid);
-    }
 
     return 0;
 }
 
 void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
-    for(ReceiveServerList::const_iterator it = mSourceServers.begin(); it != mSourceServers.end(); it++) {
-        uint32 tx_size = mServerQueues.maxSize(it->first), tx_used = mServerQueues.size(it->first);
-        uint32 rx_size = mReceiveQueues.maxSize(it->first), rx_used = mReceiveQueues.size(it->first);
-        mTrace->serverDatagramQueueInfo(t, it->first, tx_size, tx_used, rx_size, rx_used);
+    for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
+        uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
+        uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
+        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, rx_size, rx_used);
     }
 }
 
