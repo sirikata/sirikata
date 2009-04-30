@@ -125,14 +125,16 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 }
 
-void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued) {
+void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
     data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
     data.write( &send_size, sizeof(send_size) );
     data.write( &send_queued, sizeof(send_queued) );
+    data.write( &send_weight, sizeof(send_weight) );
     data.write( &receive_size, sizeof(receive_size) );
     data.write( &receive_queued, sizeof(receive_queued) );
+    data.write( &receive_weight, sizeof(receive_weight) );
 }
 
 void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
@@ -171,7 +173,7 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
     data.write( &end_time, sizeof(end_time) );
 }
 
-void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, uint32 receive_size, uint32 receive_queued) {
+void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
     ServerID* dest_server_id = mServerIDMap->lookup(dest);
@@ -179,8 +181,10 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
     data.write( dest_server_id, sizeof(ServerID) );
     data.write( &send_size, sizeof(send_size) );
     data.write( &send_queued, sizeof(send_queued) );
+    data.write( &send_weight, sizeof(send_weight) );
     data.write( &receive_size, sizeof(receive_size) );
     data.write( &receive_queued, sizeof(receive_queued) );
+    data.write( &receive_weight, sizeof(receive_weight) );
 }
 
 void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {

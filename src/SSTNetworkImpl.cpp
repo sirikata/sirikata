@@ -165,7 +165,7 @@ void CBRSST::reportQueueInfo(const Time& t) const {
             rx_size = rx_it->second.stream->getReceiveBuffer();
             rx_used = rx_it->second.stream->getReceiveBufferUsed();
         }
-        mTrace->packetQueueInfo(t, it->first, tx_size, tx_used, rx_size, rx_used);
+        mTrace->packetQueueInfo(t, it->first, tx_size, tx_used, 1, rx_size, rx_used, 1);
     }
 }
 

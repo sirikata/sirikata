@@ -167,8 +167,10 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
 void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
     for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
         uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
+        float tx_weight = mServerQueues.getQueueWeight(*it);
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
-        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, rx_size, rx_used);
+        float rx_weight = mReceiveQueues.getQueueWeight(*it);
+        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     }
 }
 

@@ -102,8 +102,8 @@ public:
             where->second.weight = weight;
         }
     }
-    float getQueueWeight(Key server) {
-        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
+    float getQueueWeight(Key server) const {
+        typename ServerQueueInfoMap::const_iterator where=mServerQueues.find(server);
 
         if (where != mServerQueues.end()) {
           return where->second.weight;

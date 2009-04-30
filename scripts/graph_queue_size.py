@@ -13,7 +13,7 @@ receive_server_graph = server_graph.ServerGraph()
 
 fp = open(dat_filename, 'r')
 for line in fp:
-    [server1, server2, time, send_size, send_queued, receive_size, receive_queued] = line.split(' ')
+    [server1, server2, time, send_size, send_queued, send_weight, receive_size, receive_queued, receive_weight] = line.split(' ')
     send_server_graph.add(server1, server2, time, send_queued)
     receive_server_graph.add(server1, server2, time, receive_queued)
 fp.close()

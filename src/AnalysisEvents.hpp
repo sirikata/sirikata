@@ -47,8 +47,10 @@ struct ServerDatagramQueueInfoEvent : public Event {
     ServerID dest;
     uint32 send_size;
     uint32 send_queued;
+    float send_weight;
     uint32 receive_size;
     uint32 receive_queued;
+    float receive_weight;
 };
 
 
@@ -102,8 +104,10 @@ struct PacketQueueInfoEvent : public Event {
     ServerID dest;
     uint32 send_size;
     uint32 send_queued;
+    float send_weight;
     uint32 receive_size;
     uint32 receive_queued;
+    float receive_weight;
 };
 
 

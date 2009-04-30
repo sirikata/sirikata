@@ -89,8 +89,10 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
               is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
               is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
+              is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
               is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
               is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
+              is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
               evt = pqievt;
           }
           break;
@@ -140,8 +142,10 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read( (char*)&pqievt->dest, sizeof(pqievt->dest) );
               is.read( (char*)&pqievt->send_size, sizeof(pqievt->send_size) );
               is.read( (char*)&pqievt->send_queued, sizeof(pqievt->send_queued) );
+              is.read( (char*)&pqievt->send_weight, sizeof(pqievt->send_weight) );
               is.read( (char*)&pqievt->receive_size, sizeof(pqievt->receive_size) );
               is.read( (char*)&pqievt->receive_queued, sizeof(pqievt->receive_queued) );
+              is.read( (char*)&pqievt->receive_weight, sizeof(pqievt->receive_weight) );
               evt = pqievt;
           }
           break;
@@ -772,7 +776,7 @@ void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const Event
     EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
 
     while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time(0)).milliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->receive_size << " " << q_evt->receive_queued << std::endl;
+        detail_out << sender << " " << receiver << " " << (q_evt->time-Time(0)).milliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << " " << q_evt->receive_size << " " << q_evt->receive_queued << " " << q_evt->receive_weight << std::endl;
         event_it.next();
     }
     //summary_out << std::endl;
