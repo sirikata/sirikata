@@ -131,8 +131,8 @@ void FairServerMessageQueue::service(const Time&t){
         mLastReceiveEndTime = t;
     }
     else {
-        mRemainderSendBytes = send_bytes;
-        //mLastReceiveEndTime = already recorded, last end send time
+        mRemainderReceiveBytes = recv_bytes;
+        //mLastReceiveEndTime = already recorded, last end receive time
     }
 
 
