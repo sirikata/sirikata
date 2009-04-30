@@ -56,10 +56,11 @@ void FIFOServerMessageQueue::service(const Time& t){
     uint64 bytes = (t - mLastTime).seconds() * mRate + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
+    bool sent_success = true;
     while( bytes > 0 && (next_msg = mQueue.front(&bytes)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
         assert(addy != NULL);
-        bool sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
+        sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
         if (!sent_success) break;
 
@@ -77,7 +78,7 @@ void FIFOServerMessageQueue::service(const Time& t){
         delete next_msg;
     }
 
-    if (mQueue.empty()) {
+    if (!sent_success || mQueue.empty()) {
         mRemainderBytes = 0;
         mLastSendEndTime = t;
     }

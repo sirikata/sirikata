@@ -61,11 +61,11 @@ void FairServerMessageQueue::service(const Time&t){
 
     ServerMessagePair* next_msg = NULL;
     ServerID sid;
-
+    bool sent_success = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
         assert(addy != NULL);
-        bool sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
+        sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
         if (!sent_success) break;
 
@@ -84,7 +84,7 @@ void FairServerMessageQueue::service(const Time&t){
         delete next_msg;
     }
 
-    if (mServerQueues.empty()) {
+    if (!sent_success || mServerQueues.empty()) {
         mRemainderSendBytes = 0;
         mLastSendEndTime = t;
     }
