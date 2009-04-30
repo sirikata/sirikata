@@ -183,7 +183,7 @@ public:
     EventIterator(const ServerID& sender, const ServerID& receiver, IteratorType begin, IteratorType end)
      : mSender(sender), mReceiver(receiver), mRangeCurrent(begin), mRangeEnd(end)
     {
-        while (mRangeCurrent != mRangeEnd && !currentMatches())
+        if (mRangeCurrent != mRangeEnd && !currentMatches())
             next();
     }
 
@@ -638,9 +638,9 @@ void BandwidthAnalysis::computeReceiveRate(const ServerID& sender, const ServerI
     computeRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver));
 }
 
-
+// note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
 template<typename EventType, typename EventIteratorType>
-void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out, bool swap_sender_receiver) {
     EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
     std::queue<EventType*> window_events;
 
@@ -692,10 +692,20 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
         if (bandwidth > max_bandwidth)
             max_bandwidth = bandwidth;
 
-        detail_out << sender << " " << receiver << " " << (window_center-Time(0)).milliseconds() << " " << bandwidth << std::endl;
+        // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
+        if (swap_sender_receiver)
+            detail_out << receiver << " " << sender << " ";
+        else
+            detail_out << sender << " " << receiver << " ";
+        detail_out << (window_center-Time(0)).milliseconds() << " " << bandwidth << std::endl;
     }
 
-    summary_out << sender << " to " << receiver << ": " << total_bytes << " total, " << max_bandwidth << " max" << std::endl;
+    // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
+    if (swap_sender_receiver)
+        summary_out << receiver << " from " << sender << ": ";
+    else
+        summary_out << sender << " to " << receiver << ": ";
+    summary_out << total_bytes << " total, " << max_bandwidth << " max" << std::endl;
 }
 
 template<typename EventType, typename EventIteratorType>
@@ -736,19 +746,19 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
 
 
 void BandwidthAnalysis::computeWindowedDatagramSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out);
+    computeWindowedRate<ServerDatagramSentEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(sender), datagramEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
 }
 
 void BandwidthAnalysis::computeWindowedDatagramReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out);
+    computeWindowedRate<ServerDatagramReceivedEvent, DatagramEventList::const_iterator>(sender, receiver, datagramBegin(receiver), datagramEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
 }
 
 void BandwidthAnalysis::computeWindowedPacketSendRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<PacketSentEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(sender), packetEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out);
+    computeWindowedRate<PacketSentEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(sender), packetEnd(sender), window, sample_rate, start_time, end_time, summary_out, detail_out, false);
 }
 
 void BandwidthAnalysis::computeWindowedPacketReceiveRate(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
-    computeWindowedRate<PacketReceivedEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(receiver), packetEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out);
+    computeWindowedRate<PacketReceivedEvent, PacketEventList::const_iterator>(sender, receiver, packetBegin(receiver), packetEnd(receiver), window, sample_rate, start_time, end_time, summary_out, detail_out, true);
 }
 
 void BandwidthAnalysis::computeJFI(const ServerID& sender) const {
