@@ -43,7 +43,7 @@ static double integralExpFunction(double k, double xmin, double xmax, double ymi
 }
 namespace CBR {
 double integralExpFunction(double k, const Vector3d& xymin, const Vector3d& xymax, const Vector3d& uvmin, const Vector3d& uvmax){
-    return ::integralExpFunction(k,xymin.x,xymax.x,xymin.z,xymax.z,uvmin.x,uvmax.x,uvmin.z,uvmax.z);
+    return ::integralExpFunction(k,xymin.x,xymax.x,xymin.y,xymax.y,uvmin.x,uvmax.x,uvmin.y,uvmax.y);
 }
 }
 int maino (int argc, char**argv) {
