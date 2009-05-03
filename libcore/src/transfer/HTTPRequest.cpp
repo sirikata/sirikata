@@ -503,9 +503,9 @@ void HTTPRequest::initCurlHandle() {
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
 	// c_str is guaranteed to remain valid because mURIString is const.
-	mUriString = this->mURI.toString();
+	mURIString = this->mURI.toString();
 	// Curl does not make its own copy of the strings.
-	curl_easy_setopt(mCurlRequest, CURLOPT_URL, mUriString.c_str());
+	curl_easy_setopt(mCurlRequest, CURLOPT_URL, mURIString.c_str());
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;
@@ -526,7 +526,8 @@ void HTTPRequest::initCurlHandle() {
 	}
 
 	if (nontrivialRange) {
-		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, orangestring.str().c_str());
+		mRangeString = orangestring.str();
+		curl_easy_setopt(mCurlRequest, CURLOPT_RANGE, mRangeString.c_str());
 	}
 }
 
@@ -692,7 +693,8 @@ void HTTPRequest::addHeader(const std::string &header) {
 	if (mState >= INPROGRESS) {
 		throw std::logic_error(go_update_error);
 	}
-	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, header.c_str());
+	mHeaderStorage.push_back(header);
+	mHeaders = (void*)curl_slist_append((struct curl_slist *)mHeaders, mHeaderStorage.back().c_str());
 }
 
 void HTTPRequest::setFinalProperties() {
