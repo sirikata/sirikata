@@ -502,10 +502,10 @@ void HTTPRequest::initCurlHandle() {
 	//curl_easy_setopt(mCurlRequest, CURLOPT_SEEKDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(mCurlRequest, CURLOPT_PRIVATE, this);
-	// c_str is guaranteed to remain valid because mURI is const.
-	std::string uriString = this->mURI.toString();
-	// Curl makes its own copy of the strings.
-	curl_easy_setopt(mCurlRequest, CURLOPT_URL, uriString.c_str());
+	// c_str is guaranteed to remain valid because mURIString is const.
+	mUriString = this->mURI.toString();
+	// Curl does not make its own copy of the strings.
+	curl_easy_setopt(mCurlRequest, CURLOPT_URL, mUriString.c_str());
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;

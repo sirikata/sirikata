@@ -59,6 +59,7 @@ private:
 	enum {NEW, INPROGRESS, FINISHED} mState;
 
 	const URI mURI;
+	const std::string mURIString;
 	Range mRequestedRange;
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
