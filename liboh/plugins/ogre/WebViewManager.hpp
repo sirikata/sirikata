@@ -36,11 +36,13 @@
 #include "Ogre.h"
 #include "WebCore.h"
 #include "ViewportOverlay.hpp"
+#include <task/EventManager.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
 class WebView;
+class SDLInputManager;
 
 /**
 * Enumerates internal mouse button IDs. Used by WebViewManager::injectMouseDown, WebViewManager::injectMouseUp
@@ -71,7 +73,7 @@ public:
 	*
 	* @throws	Ogre::Exception::ERR_INTERNAL_ERROR		Throws this when LLMozLib fails initialization
 	*/
-	WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory = "WebViewLocal");
+	WebViewManager(Ogre::Viewport* defaultViewport, SDLInputManager* inputMgr, const std::string &baseDirectory = "WebViewLocal");
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).
@@ -229,6 +231,15 @@ protected:
 	void onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
+#if defined(_WIN32)
+	void handleKeyboardMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
+	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseDown(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseUp(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onKeyDown(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onKeyUp(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onKeyTextInput(Sirikata::Task::EventPtr evt);
 };
 
 }

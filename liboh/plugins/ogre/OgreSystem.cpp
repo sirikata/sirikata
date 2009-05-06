@@ -329,7 +329,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             new ResourceManager(mTransferManager);
             new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
-			new WebViewManager(0, "");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
@@ -435,6 +434,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
+    new WebViewManager(0, mInputManager, ""); ///// FIXME: Initializing singleton class
 
     return true;
 }
