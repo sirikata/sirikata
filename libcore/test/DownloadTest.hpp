@@ -34,6 +34,7 @@
 #include <cxxtest/TestSuite.h>
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
+#include "task/WorkQueue.hpp"
 #include "transfer/CachedServiceLookup.hpp"
 #include "transfer/ServiceManager.hpp"
 #include "transfer/CachedNameLookupManager.hpp"
@@ -42,7 +43,6 @@
 #include "transfer/HTTPDownloadHandler.hpp"
 #include "transfer/URI.hpp"
 #include "transfer/LRUPolicy.hpp"
-
 
 using namespace Sirikata;
 class DownloadTest : public CxxTest::TestSuite {
@@ -69,6 +69,7 @@ class DownloadTest : public CxxTest::TestSuite {
 	Transfer::ServiceManager<Transfer::DownloadHandler> *mDownloadMgr;
 	Transfer::ServiceManager<Transfer::NameLookupHandler> *mNameLookupMgr;
 
+	Task::WorkQueue *mWorkQueue;
 	Task::GenEventManager *mEventSystem;
 
 	boost::thread *mEventProcessThread;
@@ -77,6 +78,7 @@ class DownloadTest : public CxxTest::TestSuite {
 	boost::mutex wakeMutex;
 	boost::condition_variable wakeCV;
 
+	volatile bool mDestroyEventManager;
 
 public:
 
@@ -101,12 +103,21 @@ public:
 		return Task::EventResponse::nop();
 	}
 
+	void sleep_processEventQueue() {
+		while (!mDestroyEventManager) {
+			mWorkQueue->dequeueBlocking();
+		}
+	}
+
 	void setUp() {
 		// Make one of everything! Woohoo!
 
-		mEventSystem = new Task::GenEventManager(true);
+		mDestroyEventManager = false;
+
+		mWorkQueue = new Task::ThreadSafeWorkQueue;
+		mEventSystem = new Task::GenEventManager(mWorkQueue);
 		mEventProcessThread = new boost::thread(std::tr1::bind(
-			&Task::GenEventManager::sleep_processEventQueue, mEventSystem));
+			&DownloadTest::sleep_processEventQueue, this));
 
 		mNameService = new Transfer::CachedServiceLookup;
 
@@ -172,9 +183,12 @@ public:
 		delete mTransferManager;
 		delete mCachedTransferManager;
 
-		delete mEventSystem;
+		mDestroyEventManager = true;
+		mWorkQueue->enqueue(NULL);
 		mEventProcessThread->join();
 		delete mEventProcessThread;
+		delete mEventSystem;
+		delete mWorkQueue;
 
 		finishedTest = 0;
 	}

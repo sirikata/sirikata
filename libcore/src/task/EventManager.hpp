@@ -62,8 +62,7 @@ namespace Task {
 // it may be better to store two copies of the event and have unsubscribe
 // only unsubscribe one of those two (use a multi_map for mRemoveById.
 
-
-//#define USE_LOCK_FREE
+class WorkQueue;
 
 /**
  * Defines the set of return values for an EventListener. An acceptable
@@ -192,80 +191,19 @@ private:
 	};
 	typedef std::tr1::unordered_map<SubscriptionId, EventSubscriptionInfo, SubscriptionIdHasher> RemoveMap;
 
-	struct SIRIKATA_EXPORT ListenerRequest {
-		SubscriptionId listenerId;
-		IdPair eventId;
-		EventListener listenerFunc;
-		EventOrder whichOrder;
-		bool onlyPrimary;
-		bool subscription;
-		bool notifyListener;
-
-		ListenerRequest()
-			: listenerId(SubscriptionIdClass::null()),
-			  eventId(IdPair::Primary("")) {
-		}
-
-		ListenerRequest(SubscriptionId myId,
-				bool notifyListener)
-			: listenerId(myId),
-			  eventId(IdPair::Primary("")),
-			  subscription(false),
-			  notifyListener(notifyListener){
-		}
-
-		ListenerRequest(SubscriptionId myId,
-				const IdPair::Primary &priId,
-				const EventListener &listenerFunc,
-				EventOrder myOrder)
-			: listenerId(myId),
-			  eventId(priId),
-			  listenerFunc(listenerFunc),
-			  whichOrder(myOrder),
-			  onlyPrimary(true),
-			  subscription(true) {
-		}
-
-		ListenerRequest(SubscriptionId myId,
-				const IdPair &fullId,
-				const EventListener &listenerFunc,
-				EventOrder myOrder)
-			: listenerId(myId),
-			  eventId(fullId),
-			  listenerFunc(listenerFunc),
-			  whichOrder(myOrder),
-			  onlyPrimary(false),
-			  subscription(true) {
-		}
-	};
-
-#ifdef USE_LOCK_FREE
-	typedef LockFreeQueue<ListenerRequest> ListenerRequestList;
-	typedef LockFreeQueue<EventPtr> EventList;
-#else
-	typedef ThreadSafeQueue<ListenerRequest> ListenerRequestList;
-	typedef ThreadSafeQueue<EventPtr> EventList;
-#endif
+	struct ListenerSubRequest;
+	struct ListenerUnsubRequest;
+	struct FireEvent;
+	friend struct ListenerSubRequest;
+	friend struct ListenerUnsubRequest;
+	friend struct FireEvent;
 
 	/* MEMBERS */
 
+	WorkQueue *mWorkQueue;
 	PrimaryListenerMap mListeners;
 
-	EventList mUnprocessed;
-	ListenerRequestList mListenerRequests;
-
 	RemoveMap mRemoveById; ///< Used for unsubscribe: always keep in sync.
-
-	/// These listeners need to be called with NULL argument.
-	//std::list<EventListener> mRemovedListeners;
-
-	/// Used for to wake sleep_processEventQueue function.
-	volatile void *mEventCV;
-	/// Used in the sleep_processEventQueue function
-	volatile void *mEventLock;
-	/// Used to notify an event loop that there are no events left to be processed.
-	volatile bool mCleanup;
-	AtomicValue<int> mPendingEvents;
 
 	/* PRIVATE FUNCTIONS */
 
@@ -291,30 +229,14 @@ private:
 				SubscriptionId removeId);
 
 	bool callAllListeners(EventPtr ev,
-				ListenerList *lili,
-				AbsTime forceCompletionBy);
-
-	void doSubscribeId(const ListenerRequest &req);
-	void doUnsubscribe(
-			SubscriptionId removeId,
-			bool notifyListener);
+				ListenerList *lili);
 public:
 
-	EventManager(bool useConditionVariable=false);
+	EventManager(WorkQueue *queue);
 
 	~EventManager();
 
-	/** Sits around and processes events forever; returns when EventManager is destroyed.
-	 * (Useful for tests and utility programs--that is, ones without a main loop)
-	 *
-	 * Requires that true was passed into the EventManager constructor.
-	 * Does not allow waiting on multiple event managers, and has no time constraints.
-	 */
-	void sleep_processEventQueue();
-
-	/* PUBLIC FUNCTIONS */
-	/// FIXME: This is for testing purposes only--do not make public.
-	void temporary_processEventQueue(AbsTime forceCompletionBy);
+	void temporary_processEventQueue(AbsTime until);
 
 	/**
 	 * Subscribes to a specific event. The listener function will receieve

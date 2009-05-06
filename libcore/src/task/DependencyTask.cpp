@@ -30,46 +30,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
-#include "EventManager.hpp"
+#include "WorkQueue.hpp"
 #include "DependencyTask.hpp"
 namespace Sirikata {
 namespace Task {
-namespace {
-IdPair::Primary emptyId("");
-}
-class CallDependencyTask:public Event {
+
+class CallDependencyTask : public WorkItem {
     DependentTask*mDependentTask;
   public:
-    CallDependencyTask(DependentTask*dt):Event(IdPair(emptyId,0)){
+    CallDependencyTask(DependentTask*dt){
         mDependentTask=dt;
     }
 
-    virtual void operator()(EventHistory h) {
+    virtual void operator()() {
         (*mDependentTask)();
-        this->Event::operator() (h);
+		delete this;
     }
 };
-class CallDependencyFailedTask:public Event {
+
+class CallDependencyFailedTask : public WorkItem {
     DependentTask*mDependentTask;
   public:
-    CallDependencyFailedTask(DependentTask *dt):Event(IdPair(emptyId,0)){
+    CallDependencyFailedTask(DependentTask *dt) {
         mDependentTask=dt;
     }
 
-    virtual void operator()(EventHistory h) {
+    virtual void operator()() {
         mDependentTask->finish(false);
-        this->Event::operator() (h);
+		delete this;
     }
 };
 
 void DependentTask::go() {
     if (mNumThisWaitingOn==0) {
         if (mFailure) {
-            std::tr1::shared_ptr<Event> ev(new CallDependencyFailedTask(this));
-            gEventManager->fire(ev);
+            mWorkQueue->enqueue(new CallDependencyFailedTask(this));
         }else {
-            std::tr1::shared_ptr<Event> ev(new CallDependencyTask(this));
-            gEventManager->fire(ev);
+            mWorkQueue->enqueue(new CallDependencyTask(this));
         }
     }
 }
@@ -91,9 +88,11 @@ void DependentTask::finish(bool success) {
     }
     mDependents.resize(0);
 }
-DependentTask::DependentTask() {
-    mFailure=false;
-    mNumThisWaitingOn=0;
+DependentTask::DependentTask(WorkQueue *queue)
+	: mWorkQueue(queue), mNumThisWaitingOn(0), mFailure(false) {
 }
+
+DependentTask::~DependentTask(){}int ooo;
+
 }
 }

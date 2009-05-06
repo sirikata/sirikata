@@ -35,6 +35,7 @@
 
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
+#include "task/WorkQueue.hpp"
 #include "transfer/CachedServiceLookup.hpp"
 #include "transfer/NetworkCacheLayer.hpp"
 #include "transfer/HTTPDownloadHandler.hpp"
@@ -54,6 +55,7 @@ class UploadTest : public CxxTest::TestSuite {
 	typedef Transfer::Range Range;
 	typedef Transfer::URIContext URIContext;
 
+	Task::WorkQueue *mWorkQueue;
 	TransferManager *mTransferManager;
 	CacheLayer *mNetworkCache;
 	NameLookupManager *mNameLookup;
@@ -70,6 +72,7 @@ class UploadTest : public CxxTest::TestSuite {
 	int finishedTest;
 	boost::mutex wakeMutex;
 	boost::condition_variable wakeCV;
+	volatile bool mDestroyEventManager;
 
 	static Task::EventResponse printTransfer(Task::EventPtr evbase) {
 		Transfer::UploadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::UploadEvent> (evbase);
@@ -83,6 +86,12 @@ class UploadTest : public CxxTest::TestSuite {
 		}
 
 		return Task::EventResponse::nop();
+	}
+
+	void sleep_processEventQueue() {
+		while (!mDestroyEventManager) {
+			mWorkQueue->dequeueBlocking();
+		}
 	}
 
 	void setUp() {
@@ -100,9 +109,11 @@ class UploadTest : public CxxTest::TestSuite {
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpDownHandler(new Transfer::HTTPDownloadHandler);
 		std::tr1::shared_ptr<Transfer::HTTPFormUploadHandler> httpUpHandler(new Transfer::HTTPFormUploadHandler);
 
-		mEventSystem = new Task::GenEventManager(true);
+		mDestroyEventManager = false;
+		mWorkQueue = new Task::ThreadSafeWorkQueue;
+		mEventSystem = new Task::GenEventManager(mWorkQueue);
 		mEventProcessThread = new boost::thread(std::tr1::bind(
-			&Task::GenEventManager::sleep_processEventQueue, mEventSystem));
+			&UploadTest::sleep_processEventQueue, this));
 
 		mDownNameService = new Transfer::CachedServiceLookup;
 		services = new Transfer::ListOfServices;
@@ -160,6 +171,37 @@ class UploadTest : public CxxTest::TestSuite {
 		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mUpNameServMgr, mUploadServMgr);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
+
+		finishedTest = 0;
+	}
+
+	void tearDown() {
+		// Deletion order:
+		mTransferManager->cleanup();
+		// First delete name lookups
+		delete mTransferManager;
+		delete mNameLookup;
+		delete mNetworkCache;
+
+		delete mDownloadServMgr->getProtocolRegistry();
+		delete mDownloadServMgr->getServiceLookup();
+		delete mDownloadServMgr;
+		delete mUploadServMgr->getProtocolRegistry();
+		delete mUploadServMgr->getServiceLookup();
+		delete mUploadServMgr;
+		delete mUpNameServMgr->getProtocolRegistry();
+		delete mUpNameServMgr->getServiceLookup();
+		delete mUpNameServMgr;
+		delete mDownNameServMgr->getProtocolRegistry();
+		delete mDownNameServMgr->getServiceLookup();
+		delete mDownNameServMgr;
+
+		mDestroyEventManager = true;
+		mWorkQueue->enqueue(NULL);
+		mEventProcessThread->join();
+		delete mEventProcessThread;
+		delete mEventSystem;
+		delete mWorkQueue;
 
 		finishedTest = 0;
 	}

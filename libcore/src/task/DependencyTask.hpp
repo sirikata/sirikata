@@ -38,19 +38,23 @@
 namespace Sirikata {
 namespace Task {
 
+class WorkQueue;
+
 /// Scheduler interface
-class DependentTask {
+class SIRIKATA_EXPORT DependentTask {
+	WorkQueue *mWorkQueue;
     std::vector <DependentTask*>mDependents;
     unsigned int mNumThisWaitingOn;
     bool mFailure;
 public:
-    DependentTask();
+    DependentTask(WorkQueue *q);
     virtual ~DependentTask();
     void addDepender(DependentTask*);
     void finish(bool success);
-    virtual void operator() ();
+    virtual void operator() () = 0;
     ///checks if mNumWaitingOn is 0 and if so sets the event in motion
     void go();
+
 };
 
 }

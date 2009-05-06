@@ -33,9 +33,9 @@
 
 #ifndef _SIRIKATA_LOCK_FREE_QUEUE_HPP_
 #define _SIRIKATA_LOCK_FREE_QUEUE_HPP_
-#ifdef __APPLE__
-#include <libkern/OSAtomic.h>
-#endif
+
+#include "AtomicTypes.hpp"
+
 /// LockFreeQueue.hpp
 namespace Sirikata {
 
@@ -48,21 +48,6 @@ private:
         Node() :mNext(NULL), mContent() {
         }
     };
-    static bool compare_and_swap(volatile Node*volatile *target, volatile Node *comperand, volatile Node * exchange){
-#ifdef _WIN32
-        return InterlockedCompareExchangePointer((volatile PVOID*)target, (volatile PVOID)exchange, (volatile PVOID)comperand)==comperand;        
-#else
-#ifdef __APPLE__
-        if (sizeof(exchange)==4) {
-            return OSAtomicCompareAndSwap32((int32_t)comperand, (int32_t)exchange, (int32_t*)target);
-        }else {
-            return OSAtomicCompareAndSwap64((int64_t)comperand, (int64_t)exchange, (int64_t*)target);
-        }
-#else
-        return __sync_bool_compare_and_swap (target, comperand, exchange);
-#endif
-#endif
-    }
     class FreeNodePool {
 
         volatile Node *mHead;
@@ -72,10 +57,10 @@ private:
         }
 
         Node* allocate() {
-            volatile Node* node=NULL;
+            volatile Node* node=0;
             do {
                 node = mHead->mNext;
-                if (node == NULL)
+                if (node == 0)
                     return new Node();//FIXME should probably be aligned to size(Node) bytes
             } while (!compare_and_swap(&mHead->mNext, node, node->mNext));
             Node * return_node=(Node*)node;//FIXME volatile cast only allowed if mContent is primitive type of pointer size or less
@@ -150,8 +135,8 @@ private:
 
     	// Acquire "lock" on head, for multiple people fork()ing at once.
     	{
-    		while (oldHead == NULL ||
-						!compare_and_swap(&mHead, oldHead, NULL)) {
+    		while (oldHead == 0 ||
+						!compare_and_swap(&mHead, oldHead, (volatile Node*)0)) {
     			oldHead = mHead;
     		}
     	}
@@ -186,8 +171,8 @@ public:
             formerTailNext = formerTail->mNext;
 
             if (mTail == formerTail) {
-                if (formerTailNext == NULL)
-                    successfulAddNode = compare_and_swap(&mTail->mNext, NULL, newNode);
+                if (formerTailNext == 0)
+                    successfulAddNode = compare_and_swap(&mTail->mNext, (volatile Node*)0, newNode);
                 else
                     compare_and_swap(&mTail, formerTail, formerTailNext);
             }
@@ -233,6 +218,10 @@ public:
         }
         mFreeNodePool.release((Node*)formerHead);//FIXME volatile cast only allowed if mContent is primitive type of pointer size or less
         return true;
+    }
+
+    void blockingPop(T &item) {
+    	throw std::runtime_error(std::string("Blocking Pop not implemented!!!"));
     }
 
     bool probablyEmpty() {

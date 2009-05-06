@@ -68,6 +68,8 @@ private:
 			return;
 		}
 
+		services->finished(ServiceIterator::SUCCESS);
+
 		RemoteFileId rfid(hash, URI(origNamedUri.context(), str));
 		addToCache(origNamedUri, rfid);
 		cb(origNamedUri, &rfid);

@@ -178,6 +178,24 @@ public:
         return (--*this)+(T)1;
     }
 };
+
+template <class Node>
+inline bool compare_and_swap(volatile Node*volatile *target, volatile Node *comperand, volatile Node * exchange){
+#ifdef _WIN32
+        return InterlockedCompareExchangePointer((volatile PVOID*)target, (volatile PVOID)exchange, (volatile PVOID)comperand)==comperand;
+#else
+#ifdef __APPLE__
+        if (sizeof(exchange)==4) {
+            return OSAtomicCompareAndSwap32((int32_t)comperand, (int32_t)exchange, (int32_t*)target);
+        }else {
+            return OSAtomicCompareAndSwap64((int64_t)comperand, (int64_t)exchange, (int64_t*)target);
+        }
+#else
+        return __sync_bool_compare_and_swap (target, comperand, exchange);
+#endif
+#endif
+}
+
 #ifdef _WIN32
 #pragma warning( pop )
 #endif

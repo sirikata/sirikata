@@ -31,13 +31,16 @@
  */
 
 #include <cxxtest/TestSuite.h>
+#include "task/WorkQueue.hpp"
 #include "task/EventManager.hpp"
 #include "task/Time.hpp"
 using namespace Sirikata;
 class EventSystemTestSuite : public CxxTest::TestSuite
 {
+    Task::ThreadSafeWorkQueue mPersistentQueue;
     Task::GenEventManager mPersistentManager;
     Task::GenEventManager *mManager;
+    Task::WorkQueue *mQueue;
     int mCount;
     bool mFail;
 
@@ -68,8 +71,7 @@ class EventSystemTestSuite : public CxxTest::TestSuite
         EventE(float message):Event(Task::IdPair("test",0)),mMessage(message){}
     };
 public:
-    EventSystemTestSuite(){
-
+    EventSystemTestSuite() : mPersistentManager(&mPersistentQueue) {
     }
     static EventSystemTestSuite * createSuite( void ) {
         EventSystemTestSuite * mts=new EventSystemTestSuite();
@@ -82,11 +84,13 @@ public:
     {
         mCount=0;
         mFail=false;
-        mManager= new Task::GenEventManager();
+        mQueue = new Task::ThreadSafeWorkQueue;
+        mManager= new Task::GenEventManager(mQueue);
     }
     void tearDown( void )
     {
         delete mManager;
+        delete mQueue;
     }
     Task::EventResponse doNotCall(Task::GenEventManager::EventPtr){
         TS_FAIL("Called incorrect function");
