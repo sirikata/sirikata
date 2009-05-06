@@ -31,15 +31,17 @@
  */
 #include "ResourceLoadTask.hpp"
 #include "CDNArchive.hpp"
+#include "DependencyManager.hpp"
 
 namespace Meru {
 
 ResourceLoadTask::ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String& hash, unsigned int epoch)
-: DependencyTask(mgr, hash),
+: DependencyTask(mgr->getQueue()),
   mResource(resource),
   mHash(CDNArchive::canonicalMhashName(hash)),
   mEpoch(epoch),
-  mCancelled(false)
+  mCancelled(false),
+  mStarted(false)
 {
 }
 

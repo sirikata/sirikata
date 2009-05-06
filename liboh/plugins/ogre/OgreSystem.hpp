@@ -51,11 +51,15 @@ namespace Meru {
 class CDNArchivePlugin;
 }
 
-namespace Sirikata { namespace Graphics {
+namespace Sirikata {
+/** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
+namespace Graphics {
 class Entity;
 class SDLInputManager;
 class CameraEntity;
 
+
+/** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedSimulation {
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;

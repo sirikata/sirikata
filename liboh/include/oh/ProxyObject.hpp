@@ -5,6 +5,12 @@
 #include <util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
 namespace Sirikata {
+class ProxyObject;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+
+typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
+class ProxyManager;
+
 /**
  * This class represents a generic object on a remote server
  * Every object has a SpaceObjectReference that allows one to communicate
@@ -12,12 +18,6 @@ namespace Sirikata {
  * This class should be casted to the various subclasses (ProxyLightObject,etc)
  * and appropriate listeners be registered.
  */
-class ProxyObject;
-typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-
-typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
-class ProxyManager;
-
 class SIRIKATA_OH_EXPORT ProxyObject
   : public ProxyObjectProvider
 {

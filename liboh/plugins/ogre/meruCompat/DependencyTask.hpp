@@ -34,22 +34,26 @@
 
 #include "MeruDefs.hpp"
 #include <set>
+#include <task/WorkQueue.hpp>
+#include <task/DependencyTask.hpp>
 
 namespace Meru
 {
 class DependencyManager;
+typedef ::Sirikata::Task::DependentTask DependencyTask;
+
 /**
  * Base dependency task class for management by the DependencyManager class.
  *
  * Author: Michael Chung
  */
-class DependencyTask
+class MeruDependencyTask
 {
 public:
 
 	struct DependencyTaskEqualFunctor
 	{
-		bool operator()(const DependencyTask *task1, const DependencyTask *task2) const
+		bool operator()(const MeruDependencyTask *task1, const MeruDependencyTask *task2) const
 		{
 			// TODO: Finish implementing this.
 			return true;
@@ -58,7 +62,7 @@ public:
 
 	struct DependencyTaskLessThanFunctor
 	{
-		bool operator()(const DependencyTask *task1, const DependencyTask *task2) const
+		bool operator()(const MeruDependencyTask *task1, const MeruDependencyTask *task2) const
 		{
 			// TODO: This is temporary pointer comparison. Eventually a hash set should be used, and this should be unnecessary.
 			return (task1 < task2);
@@ -67,14 +71,14 @@ public:
 
 	struct DependencyTaskPriorityLessThanFunctor
 	{
-		bool operator()(const DependencyTask *task1, const DependencyTask *task2) const
+		bool operator()(const MeruDependencyTask *task1, const MeruDependencyTask *task2) const
 		{
 			return (task1->getPriority() < task2->getPriority());
 		}
 	};
 
-	DependencyTask(DependencyManager* mgr, const String &debugName, unsigned int priority = DependencyTask::DEFAULT_PRIORITY);
-	virtual ~DependencyTask();
+	MeruDependencyTask(DependencyManager* mgr, const String &debugName, unsigned int priority = MeruDependencyTask::DEFAULT_PRIORITY);
+	virtual ~MeruDependencyTask();
 
 	/**
 	 * Runs the task - in this base implementation immediately completes.
@@ -93,62 +97,62 @@ public:
   /**
    * Returns all tasks depended on by this task.
    */
-  virtual std::set<DependencyTask *, DependencyTaskLessThanFunctor> *getDependencies();
+  virtual std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *getDependencies();
 
   /**
    * Returns all tasks that depend on this task.
    */
-  virtual std::set<DependencyTask *, DependencyTaskLessThanFunctor> *getDependents();
+  virtual std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *getDependents();
 
   /**
    * Returns all tasks that were depended on by this task (for garbage collection purposes).
    */
-  virtual std::set<DependencyTask *, DependencyTaskLessThanFunctor> *getDisestablishedDependencies();
+  virtual std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *getDisestablishedDependencies();
 
   /**
    * Returns all tasks that used to depend on this task (for garbage collection purposes).
    */
-  virtual std::set<DependencyTask *, DependencyTaskLessThanFunctor> *getDisestablishedDependents();
+  virtual std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *getDisestablishedDependents();
 
   /**
    * Sets given task to be depended on by this task.
    */
-  virtual void addDependency(DependencyTask *dependencyTask);
+  virtual void addDependency(MeruDependencyTask *dependencyTask);
 
   /**
    * Sets given task to no longer be depended upon by this task.
    */
-  virtual void removeDependency(DependencyTask *dependencyTask);
+  virtual void removeDependency(MeruDependencyTask *dependencyTask);
 
   /**
    * Sets given task to depend on this task.
    */
-  virtual void addDependent(DependencyTask *dependentTask);
+  virtual void addDependent(MeruDependencyTask *dependentTask);
 
   /**
    * Sets given task to no longer depend on this task.
    */
-  virtual void removeDependent(DependencyTask *dependentTask);
+  virtual void removeDependent(MeruDependencyTask *dependentTask);
 
   /**
    * Sets given task to be depended on by this task, only for garbage collection purposes.
    */
-  virtual void addDisestablishedDependency(DependencyTask *dependencyTask);
+  virtual void addDisestablishedDependency(MeruDependencyTask *dependencyTask);
 
   /**
    * Sets given task to no longer be depended on by this task, only for garbage collection purposes.
    */
-  virtual void removeDisestablishedDependency(DependencyTask *dependencyTask);
+  virtual void removeDisestablishedDependency(MeruDependencyTask *dependencyTask);
 
   /**
    * Sets given task to depend on this task, only for garbage collection purposes.
    */
-  virtual void addDisestablishedDependent(DependencyTask *dependentTask);
+  virtual void addDisestablishedDependent(MeruDependencyTask *dependentTask);
 
   /**
    * Sets given task to no longer depend on this task, only for garbage collection purposes.
    */
-  virtual void removeDisestablishedDependent(DependencyTask *dependentTask);
+  virtual void removeDisestablishedDependent(MeruDependencyTask *dependentTask);
 
   /**
    * Sets task's priority.
@@ -190,10 +194,10 @@ protected:
 
   String mDebugName;
   DependencyManager* mManager;
-  std::set<DependencyTask *, DependencyTaskLessThanFunctor> *dependencies;
-  std::set<DependencyTask *, DependencyTaskLessThanFunctor> *dependents;
-  std::set<DependencyTask *, DependencyTaskLessThanFunctor> *disestablishedDependencies;
-  std::set<DependencyTask *, DependencyTaskLessThanFunctor> *disestablishedDependents;
+  std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *dependencies;
+  std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *dependents;
+  std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *disestablishedDependencies;
+  std::set<MeruDependencyTask *, DependencyTaskLessThanFunctor> *disestablishedDependents;
   unsigned int priority;
   bool mCompleted;
   bool mStarted;

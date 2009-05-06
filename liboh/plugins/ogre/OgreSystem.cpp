@@ -356,7 +356,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 new Transfer::MemoryCacheLayer(
                         new Transfer::LRUPolicy(50 * 0x100000), // 50 Megabytes
                         new Transfer::DiskCacheLayer(
-                                new Transfer::LRUPolicy(200 * 0x100000),
+                                new Transfer::LRUPolicy(1000 * 0x100000),
                                 "Cache", // 200 Megabytes
                                 new Transfer::NetworkCacheLayer(NULL, downServ))),
                 new Transfer::CachedNameLookupManager(nameServ, downServ),
@@ -364,8 +364,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 new Transfer::ServiceManager<Transfer::NameUploadHandler>(NULL,NULL),
                 new Transfer::ServiceManager<Transfer::UploadHandler>(NULL,NULL)
             ));
-            new GraphicsResourceManager;
-            new SequentialWorkQueue;
+            new GraphicsResourceManager(SequentialWorkQueue::getSingletonPtr());
             new MaterialScriptManager;
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
@@ -646,14 +645,8 @@ bool OgreSystem::tick(){
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
 
-    Meru::EventSource::getSingleton().temporary_processEventQueue(finishTime);
-
-    do {
-    // Guarantee some progress each frame.
-        if (!SequentialWorkQueue::getSingleton().processOneJob()) {
-            break;
-        }
-    } while (Time::now() < finishTime);
+    Meru::SequentialWorkQueue::getSingleton().dequeuePoll();
+    Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
     return continueRendering;
 }
@@ -666,22 +659,8 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
         current->extrapolateLocation(currentTime);
     }
 }
-/*
-}}
-#include "../../../cppoh/src/DemoProxyManager.hpp"
-namespace Sirikata{namespace Graphics{
-*/
+
 void OgreSystem::postFrame(Time current, Duration frameTime) {
-/*
-    if (current >= debugStartTime+2 && current < debugStartTime+3) {
-        debugStartTime-=1;
-        ((DemoProxyManager*)mProxyManager)->fiveSeconds();
-    }
-    if (current >= debugStartTime+6 && current < debugStartTime+7) {
-        debugStartTime-=1;
-        ((DemoProxyManager*)mProxyManager)->tenSeconds();
-    }
-*/
 }
 
 }

@@ -48,7 +48,7 @@ public:
   ShaderDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
   virtual ~ShaderDependencyTask();
 
-  virtual void run();
+  virtual void operator()();
 };
 
 class ShaderLoadTask : public ResourceLoadTask
@@ -119,17 +119,17 @@ ShaderDependencyTask::~ShaderDependencyTask()
 
 }
 
-void ShaderDependencyTask::run()
+void ShaderDependencyTask::operator()()
 {
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
-    signalCompletion(false);
+    finish(false);
     return;
   }
 
   resourcePtr->parsed(true);
 
-  signalCompletion();
+  finish(true);
 }
 
 /***************************** SHADER LOAD TASK *************************/

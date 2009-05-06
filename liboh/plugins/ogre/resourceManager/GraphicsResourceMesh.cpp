@@ -54,7 +54,7 @@ public:
   MeshDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
   virtual ~MeshDependencyTask();
 
-  virtual void run();
+  virtual void operator()();
 };
 
 class MeshLoadTask : public ResourceLoadTask
@@ -154,11 +154,11 @@ MeshDependencyTask::~MeshDependencyTask()
 
 }
 
-void MeshDependencyTask::run()
+void MeshDependencyTask::operator()()
 {
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
-    signalCompletion(false);
+    finish(false);
     return;
   }
 
@@ -194,7 +194,7 @@ void MeshDependencyTask::run()
   resourcePtr->setCost(mBuffer.size());
   resourcePtr->parsed(true);
 
-  signalCompletion();
+  finish(true);
 }
 /*
   if (curResource) {

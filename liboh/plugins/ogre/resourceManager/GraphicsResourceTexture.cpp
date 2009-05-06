@@ -48,7 +48,7 @@ public:
   TextureDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
   virtual ~TextureDependencyTask();
 
-  virtual void run();
+  virtual void operator()();
 };
 
 class TextureLoadTask : public ResourceLoadTask
@@ -118,18 +118,18 @@ TextureDependencyTask::~TextureDependencyTask()
 
 }
 
-void TextureDependencyTask::run()
+void TextureDependencyTask::operator()()
 {
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
-    signalCompletion(false);
+    finish(false);
     return;
   }
 
   resourcePtr->setCost(mBuffer.size());
   resourcePtr->parsed(true);
 
-  signalCompletion();
+  finish(true);
 }
 
 /***************************** TEXTURE LOAD TASK *************************/

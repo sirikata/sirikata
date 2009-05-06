@@ -49,7 +49,7 @@ public:
   MaterialDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash);
   virtual ~MaterialDependencyTask();
 
-  virtual void run();
+  virtual void operator()();
 };
 
 class MaterialLoadTask : public ResourceLoadTask
@@ -184,11 +184,11 @@ MemoryBuffer::const_iterator rfind(MemoryBuffer::const_iterator begin, MemoryBuf
 
 bool next_eol(const MemoryBuffer& input, MemoryBuffer::size_type& where_lexeme_start);
 
-void MaterialDependencyTask::run()
+void MaterialDependencyTask::operator()()
 {
   SharedResourcePtr resourcePtr = mResource.lock();
   if (!resourcePtr) {
-    signalCompletion(false);
+    finish(false);
     return;
   }
 
@@ -344,7 +344,7 @@ void MaterialDependencyTask::run()
 
   resourcePtr->parsed(true);
 
-  signalCompletion();
+  finish(true);
 }
 
 /***************************** MATERIAL LOAD TASK *************************/

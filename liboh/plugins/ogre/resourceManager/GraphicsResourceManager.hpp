@@ -38,6 +38,12 @@
 #include "Singleton.hpp"
 #include "Event.hpp"
 
+namespace Sirikata {
+namespace Task {
+class WorkQueue;
+}
+}
+
 namespace Meru {
 
 class DependencyManager;
@@ -58,7 +64,7 @@ protected:
 
 public:
 
-  GraphicsResourceManager();
+  GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue);
   virtual ~GraphicsResourceManager();
 
   //virtual void loadMesh(WeakProxyPtr proxy, const String &meshName);

@@ -34,6 +34,7 @@
 namespace Sirikata {
 class ProxyObject;
 
+/** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
 class SIRIKATA_OH_EXPORT ProxyObjectListener {
 public:
     virtual ~ProxyObjectListener(){}

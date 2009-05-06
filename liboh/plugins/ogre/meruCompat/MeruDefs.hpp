@@ -93,6 +93,7 @@ class EventResponse;
 }
 }
 
+/** Graphics dependency code borrowed from Meru. */
 namespace Meru {
 
 using ::Sirikata::Transfer::SparseData;

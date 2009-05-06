@@ -34,6 +34,7 @@
 #include "ProxyObject.hpp"
 namespace Sirikata {
 
+/** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
 public:
     ProxyManager();

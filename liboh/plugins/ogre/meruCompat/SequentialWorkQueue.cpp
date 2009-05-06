@@ -34,32 +34,9 @@
 #include "util/Time.hpp"
 #include "EventSource.hpp"
 namespace Meru {
-MANUAL_SINGLETON_STORAGE(SequentialWorkQueue);
-SequentialWorkQueue::SequentialWorkQueue() {
-}
 
-SequentialWorkQueue::~SequentialWorkQueue() {
-    //safe to do in destructor cus the only place this happens is on graphics system init
-    WorkQueue::NodeIterator iter(mWork);
-    const WorkItem *fn;
-    while ((fn=iter.next()) != NULL) {
-        (*fn)();
-    }
-}
-
-bool SequentialWorkQueue::processOneJob() {
-    WorkItem fn;
-    if (mWork.pop(fn)) {
-        if (!fn()) {
-            queueWork(fn);
-        }
-        return true;
-    }
-    return false;
-}
-
-void SequentialWorkQueue::queueWork(const WorkItem&work) {
-    mWork.push(work);
-}
+AUTO_SINGLETON_STORAGE(SequentialWorkQueue);
+// EventSource depends on SequentialWorkQueue.
+AUTO_SINGLETON_STORAGE(EventSource);
 
 }

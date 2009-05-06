@@ -58,7 +58,7 @@ InitializeGlobalOptions graphicsresourcemanageropts("ogregraphics",
     NULL);
 
 
-GraphicsResourceManager::GraphicsResourceManager()
+GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue)
 : mEpoch(0), mEnabled(true)
 {
   this->mTickListener = EventSource::getSingleton().subscribeId(
@@ -66,7 +66,7 @@ GraphicsResourceManager::GraphicsResourceManager()
       EVENT_CALLBACK(GraphicsResourceManager, tick, this)
   );
 
-  mDependencyManager = new DependencyManager();
+  mDependencyManager = new DependencyManager(dependencyQueue);
   mBudget = OPTION_VIDEO_MEMORY_RESOURCE_CACHE_SIZE->as<int>() * 1024 * 1024;
 }
 
@@ -153,9 +153,9 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
     return curSharedPtr;
   }
 }
-DependencyTask * DEBUGME(std::set<DependencyTask*,DependencyTask::DependencyTaskLessThanFunctor>&x) {
+/*DependencyTask * DEBUGME(std::set<DependencyTask*,DependencyTask::DependencyTaskLessThanFunctor>&x) {
     return *x.begin();
-}
+}*/
 SharedResourcePtr DEBUGME(std::set<SharedResourcePtr>&x) {
     return *x.begin();
 }
@@ -188,7 +188,7 @@ void GraphicsResourceManager::computeLoadedSet()
 
     float cost = resource->cost();
     //assert(cost >= 0);
-    SILOG(resource,error,"Cost " << resource->cost() << " for "<<resource->getID()<<" is less than 0.");
+    ////////////////SILOG(resource,error,"Cost " << resource->cost() << " for "<<resource->getID()<<" is less than 0.");
 
     if (budgetUsed + cost <= mBudget) {
       GraphicsResource::LoadState loadState = resource->getLoadState();

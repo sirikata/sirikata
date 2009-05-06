@@ -43,6 +43,7 @@
 #include <util/Time.hpp>
 #include "SDLInputManager.hpp"
 #include "SDLEvents.hpp"
+#include <task/WorkQueue.hpp>
 
 namespace Sirikata { namespace Graphics {
 class PressedKeys {public:
@@ -59,7 +60,8 @@ class PressedJoyButtons {public:
 };
 
 
-SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *&currentWindow){
+SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, const Ogre::PixelFormat&fmt,bool grabCursor, void *&currentWindow)
+: Task::GenEventManager(new Task::ThreadSafeWorkQueue) {
     mWindowContext=0;
     mPressedKeys=new PressedKeys;
     mPressedMouseButtons=new PressedMouseButtons;
@@ -82,7 +84,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         Rid.dwFlags = RIDEV_INPUTSINK;
         Rid.hwndTarget = (HWND)currentWindow;
         RegisterRawInputDevices(&Rid, 1, sizeof(Rid));
-        
+
         static SDL_SysWMinfo pInfo;
         SDL_VERSION(&pInfo.version);
         SDL_GetWindowWMInfo(mWindowID,&pInfo);
@@ -90,7 +92,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         //  and position. Because SDL does not own the window, it
         //  missed the WM_POSCHANGED message and has no record of
         //  either size or position. It defaults to {0, 0, 0, 0},
-        //  which is then used to trap the mouse "inside the 
+        //  which is then used to trap the mouse "inside the
         //  window". We have to fake a window-move to allow SDL
         //  to catch up, after which we can safely grab input.
         RECT r;
@@ -103,7 +105,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
         SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
         SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
-        
+
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
         mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
@@ -130,12 +132,12 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
 #endif
         }
 #endif
-    }   
+    }
     // Grab means: lock the mouse inside our window!
     SDL_ShowCursor(SDL_DISABLE);   // SDL_ENABLE to show the mouse cursor (default)
-    if (grabCursor) 
+    if (grabCursor)
         SDL_SetWindowGrab(mWindowID,SDL_GRAB_ON); // SDL_GRAB_OFF to not grab input (default)
-    
+
 }
 bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     using namespace Sirikata::Graphics::SDL;
@@ -150,21 +152,21 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             for (std::tr1::unordered_map<SDLKey,SDL_KeyboardEvent>::iterator j=mPressedKeys->mPressed[i].begin();
                  j!=mPressedKeys->mPressed[i].end();
                  ++j){
-                fire(Task::EventPtr(new KeyDown(j->second)));    
+                fire(Task::EventPtr(new KeyDown(j->second)));
             }
         }
         for (i=0;i<mPressedMouseButtons->mPressed.size();++i){
             for (std::tr1::unordered_map<int,SDL_MouseButtonEvent>::iterator j=mPressedMouseButtons->mPressed[i].begin();
                  j!=mPressedMouseButtons->mPressed[i].end();
                  ++j){
-                fire(Task::EventPtr(new MouseButtonDown(j->second)));    
+                fire(Task::EventPtr(new MouseButtonDown(j->second)));
             }
         }
         for (i=0;i<mPressedJoyButtons->mPressed.size();++i){
             for (std::tr1::unordered_map<int,SDL_JoyButtonEvent>::iterator j=mPressedJoyButtons->mPressed[i].begin();
                  j!=mPressedJoyButtons->mPressed[i].end();
                  ++j){
-                fire(Task::EventPtr(new JoyButtonDown(j->second)));    
+                fire(Task::EventPtr(new JoyButtonDown(j->second)));
             }
         }
     }
@@ -172,7 +174,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     {
        SILOG(ogre,debug,"Event type "<<(int)event->type);
         switch(event->type)
-        { 
+        {
           case SDL_KEYDOWN:
             fire(Task::EventPtr(new KeyPressed(event->key)));
             fire(Task::EventPtr(new KeyChanged(event->key)));
@@ -191,8 +193,8 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                     mPressedKeys->mPressed[event->key.which].erase(where);
                 }
             } else {
-                SILOG(ogre,error,"Release of key "<<event->key.keysym.sym << " from new keyboard "<<event->key.which); 
-            }        
+                SILOG(ogre,error,"Release of key "<<event->key.keysym.sym << " from new keyboard "<<event->key.which);
+            }
             fire(Task::EventPtr(new KeyChanged(event->key)));
             fire(Task::EventPtr(new KeyReleased(event->key)));
             break;
@@ -215,7 +217,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 }
             } else {
                 SILOG(ogre,error,"Release of button "<<event->button.button << " from new mouse "<<event->button.which);
-            }        
+            }
             fire(Task::EventPtr(new MouseButtonChanged(event->button)));
             fire(Task::EventPtr(new MouseButtonReleased(event->button)));
             break;
@@ -236,43 +238,43 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 }else {
                     mPressedJoyButtons->mPressed[event->jbutton.which].erase(where);
                 }
-            } else {   
+            } else {
                 SILOG(ogre,error,"Release of button "<<event->jbutton.button << " from new joy "<<event->jbutton.which);
-            } 
-    
+            }
+
             fire(Task::EventPtr(new JoyButtonChanged(event->jbutton)));
             fire(Task::EventPtr(new JoyButtonReleased(event->jbutton)));
             break;
-            
+
           case SDL_TEXTINPUT:
             fire(Task::EventPtr(new TextInput(event->text)));
             break;
-          case SDL_MOUSEMOTION: 
+          case SDL_MOUSEMOTION:
             fire(Task::EventPtr(new MouseMotion(event->motion)));
             break;
-          case SDL_MOUSEWHEEL: 
+          case SDL_MOUSEWHEEL:
             fire(Task::EventPtr(new MouseWheel(event->wheel)));
             break;
-          case SDL_JOYAXISMOTION: 
+          case SDL_JOYAXISMOTION:
             fire(Task::EventPtr(new JoyAxis(event->jaxis)));
             break;
-          case SDL_JOYHATMOTION: 
+          case SDL_JOYHATMOTION:
             fire(Task::EventPtr(new JoyHatDown(event->jhat)));
             break;
           case SDL_JOYBALLMOTION:
             fire(Task::EventPtr(new JoyBall(event->jball)));
             break;
-            
+
           case SDL_WINDOWEVENT:
             fire(Task::EventPtr(new WindowChange(event->window)));
 			if (event->window.event==13) {
-              SILOG(ogre,debug,"quitting\n");  
+              SILOG(ogre,debug,"quitting\n");
               continueRendering=false;
 			}
             break;
-            
+
           case SDL_QUIT:
-            SILOG(ogre,debug,"quitting\n");  
+            SILOG(ogre,debug,"quitting\n");
             continueRendering=false;
             break;
           default:
@@ -281,10 +283,10 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     }
     temporary_processEventQueue(Task::AbsTime::now()+Duration::seconds(.01));
     return continueRendering;
-     
+
 }
 SDLInputManager::~SDLInputManager(){
-    delete mPressedKeys;    
+    delete mPressedKeys;
     delete mPressedMouseButtons;
     delete mPressedJoyButtons;
     SDL_GL_DeleteContext(mWindowContext);

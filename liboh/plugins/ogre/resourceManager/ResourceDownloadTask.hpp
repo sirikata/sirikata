@@ -56,11 +56,17 @@ public:
   ResourceDownloadTask(DependencyManager* mgr, const RemoteFileId& hash, ResourceRequestor* resourceRequestor);
   virtual ~ResourceDownloadTask();
 
-  virtual void run();
+  virtual void operator()();
+
+  bool isStarted() {
+    return mStarted;
+  }
 
 protected:
   void requestDownload();
   EventResponse downloadCompleteHandler(const EventPtr &event);
+
+  bool mStarted;
 
   const RemoteFileId mHash;
   SubscriptionId mCurrentDownload;

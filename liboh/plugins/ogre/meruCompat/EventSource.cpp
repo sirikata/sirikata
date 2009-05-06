@@ -31,14 +31,14 @@
  */
 #include "precomp.hpp"
 #include "EventSource.hpp"
+#include "SequentialWorkQueue.hpp"
+#include <task/WorkQueue.hpp>
 
 namespace Meru {
 
-AUTO_SINGLETON_STORAGE(EventSource);
-
 EventSource::EventSource()
-  : AutoSingleton<EventSource>()
-    //EventManager("EventSource")
+  : AutoSingleton<EventSource>(),
+    Sirikata::Task::GenEventManager(SequentialWorkQueue::getSingletonPtr())
 {
 }
 

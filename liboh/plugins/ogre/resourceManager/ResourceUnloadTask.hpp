@@ -43,17 +43,21 @@ public:
   ResourceUnloadTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash, const unsigned int epoch);
   virtual ~ResourceUnloadTask();
 
-  virtual void run()
+  virtual void operator() ()
   {
+    mStarted = true;
     if (!mCancelled)
       doRun();
-    signalCompletion();
+    finish(true);
   }
 
   void cancel()
   {
-    assert(!mStarted);
     mCancelled = true;
+  }
+
+  inline bool isStarted() {
+    return mStarted;
   }
 
 protected:
@@ -64,6 +68,7 @@ protected:
   String mHash;
   const unsigned int mEpoch;
   bool mCancelled;
+  bool mStarted;
 };
 
 

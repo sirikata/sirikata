@@ -60,6 +60,7 @@ void GraphicsResourceAsset::parsed(bool success)
 void GraphicsResourceAsset::loaded(bool success, unsigned int epoch)
 {
   if (mLoadTask && mLoadTask->isStarted())
+  /// FIXME: Um... yeah let's just leak the memory I guess...? -Patrick 2009-05-04
     mLoadTask = NULL;
   GraphicsResource::loaded(success, epoch);
 }

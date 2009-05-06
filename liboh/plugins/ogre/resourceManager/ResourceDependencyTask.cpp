@@ -30,11 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "ResourceDependencyTask.hpp"
+#include "DependencyManager.hpp"
 
 namespace Meru {
 
 ResourceDependencyTask::ResourceDependencyTask(DependencyManager* mgr, WeakResourcePtr resource, const String& hash)
-: DependencyTask(mgr, hash),
+: DependencyTask(mgr->getQueue()),
   mResource(resource),
   mHash(hash)
 {

@@ -33,6 +33,8 @@
 #include "DependencyTask.hpp"
 #include "DependencyManager.hpp"
 
+#define DependencyTask MeruDependencyTask
+
 namespace Meru
 {
 

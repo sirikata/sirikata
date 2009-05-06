@@ -45,7 +45,7 @@ public:
 	ResourceDependencyTask(DependencyManager *mgr, WeakResourcePtr resource, const String& hash);
 	virtual ~ResourceDependencyTask();
 
-	virtual void run() = 0;
+	virtual void operator()() = 0;
 
   virtual void setResourceBuffer(const SparseData& buffer) {
     mBuffer = buffer;

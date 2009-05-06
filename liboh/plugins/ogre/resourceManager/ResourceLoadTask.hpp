@@ -44,11 +44,12 @@ public:
   ResourceLoadTask(DependencyManager *mgr, SharedResourcePtr resource, const String& hash, const unsigned int epoch);
   virtual ~ResourceLoadTask();
 
-  virtual void run()
+  virtual void operator() ()
   {
+    mStarted = true;
     if (!mCancelled)
       doRun();
-    signalCompletion();
+    finish(true);
   }
 
   virtual void setResourceBuffer(const SparseData& buffer) {
@@ -57,8 +58,11 @@ public:
 
   void cancel()
   {
-    assert(!mStarted);
     mCancelled = true;
+  }
+
+  inline bool isStarted() {
+    return mStarted;
   }
 
 protected:
@@ -69,6 +73,7 @@ protected:
   DenseDataPtr mBuffer;
   const unsigned int mEpoch;
   bool mCancelled;
+  bool mStarted;
 };
 
 

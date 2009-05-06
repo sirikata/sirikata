@@ -40,8 +40,15 @@
 #include <vector>
 #include <set>
 
+namespace Sirikata {
+namespace Task {
+class WorkQueue;
+}
+}
+
 namespace Meru
 {
+
 /**
  * Manager class that handles task processing of dependency DAGs.
  *
@@ -49,63 +56,38 @@ namespace Meru
  */
 class DependencyManager
 {
+  Sirikata::Task::WorkQueue *mWorkQueue;
+
 public:
+
+  Sirikata::Task::WorkQueue *getQueue() {
+    return mWorkQueue;
+  }
   /** DependencyManager constructor.
-   *  \param destroy_on_completion if true, the Manager will destroy itself 
+   *  \param destroy_on_completion if true, the Manager will destroy itself
    *         (and all tasks as a result) when all tasks are complete.
    */
-  DependencyManager(bool destroy_on_completion = false);
-  virtual ~DependencyManager();
+  DependencyManager(Sirikata::Task::WorkQueue *wq) : mWorkQueue(wq) {
+  	//bool destroy_on_completion = false);
+  }
+  //virtual ~DependencyManager();
 
 	/**
 	 * Queues given task, which should be the root of its dependency DAG. The given task
 	 * and all of its direct and indirect dependencies will be run in an appropriate
 	 * order.
 	 */
-	virtual void queueDependencyRoot(DependencyTask *task);
+	//void queueDependencyRoot(DependencyTask *task);
+	void handleTaskCompletion(void *task, bool successful) {}
 
-	/**
-	 * Decides which tasks to queue and run in response to the completion of given task.
-	 * The given task which has just completed is deleted.
-	 */
-        virtual void handleTaskCompletion(DependencyTask *task, bool successful = true);
+	void establishDependencyRelationship(DependencyTask *a, DependencyTask *b) {
+		a->addDepender(b);
+	}
 
-	/**
-	 * Establishes a double-link dependent/dependency relationship between two tasks.
-	 */
-	virtual void establishDependencyRelationship(DependencyTask *dependentTask, DependencyTask *dependencyTask);
-
-	/**
-	 * Removes an existing double-link dependent/dependency relationship between two tasks.
-	 */
-	virtual void disestablishDependencyRelationship(DependencyTask *dependentTask, DependencyTask *dependencyTask);
-
-	/**
-	 * Removes an existing double-link dependent/dependency relationship between two tasks.
-	 */
-	virtual void destroyDisestablishedDependencyRelationship(DependencyTask *dependentTask, DependencyTask *dependencyTask);
-
-        virtual bool runQueuedTasksInstance();
-
-protected:
-	static bool runQueuedTasksStatic(DependencyManager *manager);
-
-	virtual void queueTask(DependencyTask *task, bool canRunTasks);
-	virtual void runTask(DependencyTask *task);
-
-        bool mDestroyOnCompletion;
-        bool mWithinRunQueuedTasks;
-	unsigned int numConcurrentTasks;
-	unsigned int maxConcurrentTasks;
-
-  // Queue containing tasks that have yet to be run.
-  //std::queue<DependencyTask *> *startQueue;
-	std::priority_queue<DependencyTask *, std::vector<DependencyTask *>, DependencyTask::DependencyTaskPriorityLessThanFunctor> *startQueue;
-
-  // Set of tasks that are either currently waiting in the startQueue or have been run already.
-  std::set<DependencyTask *, DependencyTask::DependencyTaskLessThanFunctor> *processedTasks;
-
-	static unsigned int DEFAULT_MAX_CONCURRENT_TASKS;
+	// Called when the parent has done its chores, and now needs the children to do work.
+	void queueDependencyRoot(DependencyTask *t) {
+		t->finish(true);
+	}
 };
 
 }

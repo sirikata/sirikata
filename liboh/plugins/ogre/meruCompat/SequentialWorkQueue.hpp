@@ -33,7 +33,9 @@
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
 #include "Event.hpp"
-#include "util/LockFreeQueue.hpp"
+#include <util/LockFreeQueue.hpp>
+#include <task/WorkQueue.hpp>
+
 namespace Meru {
 /**
  * This SequentialWorkQueue class allows us to defer nonthreadsafe jobs
@@ -41,33 +43,48 @@ namespace Meru {
  * perform the operation without resulting in a framerate jitter
  * Use WorkQueue for threadsafe operations
  */
-class SequentialWorkQueue:public ManualSingleton<SequentialWorkQueue>, public Schedulable {
+class SequentialWorkQueue:public AutoSingleton<SequentialWorkQueue>, public Schedulable, public Sirikata::Task::ThreadSafeWorkQueue {
 public:
-    typedef std::tr1::function<bool()> WorkItem;
-    typedef ::Sirikata::LockFreeQueue<WorkItem> WorkQueue;
-protected:
-    /// A list of work to be processed. Functions return true if they are done, false if they need to be called again
-    WorkQueue mWork;
+    class WorkItemClass : public Sirikata::Task::WorkItem {
+    public:
+    	typedef std::tr1::function<bool()> FunctionType;
+    	FunctionType mFunction;
+
+    	WorkItemClass(const FunctionType &func)
+    		: mFunction(func) {
+    	}
+
+    	virtual void operator() () {
+    		AutoPtr deleteThis(this);
+    		mFunction();
+    	}
+    };
 
 public:
     virtual unsigned int numSchedulableJobs() {
-        return mWork.probablyEmpty()?0:1;
+        return probablyEmpty()?0:1;
     }
     /**
      * processes a single job in the work queue if one exists
      * \returns true if there are any remaining jobs on the work queue
      */
-    bool processOneJob();
+    bool processOneJob() {
+    	return dequeuePoll();
+    }
     /**
      * constructs the work queue class
      */
-    SequentialWorkQueue();
+    SequentialWorkQueue() {}
     /// destructs the work queue class, processes remaining tasks and stops it from being a singleton
-    virtual ~SequentialWorkQueue();
+    ~SequentialWorkQueue() {
+    	dequeueAll();
+    }
     /**
      * Adds a job to the work queue to be run.
      */
-    void queueWork(const WorkItem&work);
+    void queueWork(const WorkItemClass::FunctionType &work) {
+    	enqueue(new WorkItemClass(work));
+    }
 };
 
 }

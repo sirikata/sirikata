@@ -33,6 +33,7 @@
 #include "Event.hpp"
 #include "ResourceDownloadTask.hpp"
 #include "ResourceTransfer.hpp"
+#include "DependencyManager.hpp"
 
 namespace Meru {
 
@@ -40,9 +41,9 @@ ResourceRequestor::~ResourceRequestor() {
 }
 
 ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const RemoteFileId &hash, ResourceRequestor* resourceRequestor)
-: DependencyTask(mgr, hash.uri().toString()), mHash(hash), mResourceRequestor(resourceRequestor)
+: DependencyTask(mgr->getQueue()), mHash(hash), mResourceRequestor(resourceRequestor)
 {
-
+  mStarted = false;
 }
 
 ResourceDownloadTask::~ResourceDownloadTask()
@@ -61,12 +62,13 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
   else {
     //assert(false); // ???
   }
-  signalCompletion(transferEvent->success());
+  finish(transferEvent->success());
   return EventResponse::nop();
 }
 
-void ResourceDownloadTask::run()
+void ResourceDownloadTask::operator()()
 {
+  mStarted = true;
   // FIXME: Daniel: the defaultProgressiveDownloadFunctor will not properly deal with textures
   mCurrentDownload = Meru::ResourceManager::getSingleton().request(mHash,
       std::tr1::bind(&ResourceDownloadTask::downloadCompleteHandler, this, _1));

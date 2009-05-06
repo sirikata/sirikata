@@ -29,6 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "DependencyManager.hpp"
 #include "DependencyTask.hpp"
 #include "GraphicsResourceSkeleton.hpp"
 #include <OgreResourceBackgroundQueue.h>
@@ -51,7 +52,7 @@ class SkeletonLoadTask : public DependencyTask, public Ogre::ResourceBackgroundQ
   String mName;
 public:
   SkeletonLoadTask(DependencyManager *mgr, const String &name)
-   : DependencyTask(mgr, SkeletonLoadTaskName), mName(name)
+   : DependencyTask(mgr->getQueue()), mName(name)
   {
   }
 
@@ -62,10 +63,10 @@ public:
   void operationCompleted (Ogre::BackgroundProcessTicket)
   {
     SILOG(resource,insane, "Skeleton Load Task opComplete(), waited " << mName);
-    signalCompletion();
+    finish(true);
   }
 
-  void run()
+  void operator()()
   {
     Meru::ResourceLoadingQueue *queue = &ResourceLoadingQueue::getSingleton();
 
@@ -77,7 +78,7 @@ public:
     }
     else {
       SILOG(resource,insane, "Skeleton Load Task run() AND complete, waited for " << mName << " To queue");
-      signalCompletion();
+      finish(true);
     }
   }
 };

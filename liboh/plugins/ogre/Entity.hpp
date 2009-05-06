@@ -44,6 +44,7 @@ namespace Sirikata {
 namespace Graphics {
 class OgreSystem;
 
+/** Base class for any ProxyObject that has a representation in Ogre. */
 class Entity 
   : public PositionListener,
     public ProxyObjectListener
