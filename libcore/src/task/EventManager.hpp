@@ -164,16 +164,13 @@ private:
 	typedef std::pair<PartiallyOrderedListenerList, SecondaryListenerMap> PrimaryListenerInfo;
 	typedef std::map<IdPair::Primary, PrimaryListenerInfo*> PrimaryListenerMap;
 
-	class SIRIKATA_EXPORT EventSubscriptionInfo {
+	struct SIRIKATA_EXPORT EventSubscriptionInfo {
 		ListenerList *mList;
 		typename ListenerList::iterator mIter;
 
 		// used for garbage collection after unsubscribing.
 		SecondaryListenerMap *secondaryMap;
 		IdPair::Secondary secondaryId;
-
-		friend class EventManager<EventBase>;
-	public:
 
 		EventSubscriptionInfo(ListenerList *list,
 					typename ListenerList::iterator &iter)
