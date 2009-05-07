@@ -34,6 +34,8 @@
 #define SIRIKATA_Scheduler_HPP__
 
 #include "Time.hpp"
+#include "util/AtomicTypes.hpp"
+#include "util/LockFreeQueue.hpp"
 
 namespace Sirikata {
 namespace Task {
@@ -43,9 +45,14 @@ class WorkQueue;
 /// Scheduler interface
 class SIRIKATA_EXPORT DependentTask {
 	WorkQueue *mWorkQueue;
-    std::vector <DependentTask*>mDependents;
-    unsigned int mNumThisWaitingOn;
+    LockFreeQueue <DependentTask*>mDependents;
+    AtomicValue<int> mNumThisWaitingOn;
     bool mFailure;
+
+    class CallFailed;
+    friend class CallFailed;
+    class CallSuccess;
+    friend class CallSuccess;
 public:
     DependentTask(WorkQueue *q);
     virtual ~DependentTask();

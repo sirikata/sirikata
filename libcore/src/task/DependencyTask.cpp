@@ -35,64 +35,68 @@
 namespace Sirikata {
 namespace Task {
 
-class CallDependencyTask : public WorkItem {
+class DependentTask::CallSuccess : public WorkItem {
     DependentTask*mDependentTask;
   public:
-    CallDependencyTask(DependentTask*dt){
+    CallSuccess(DependentTask*dt){
         mDependentTask=dt;
     }
 
     virtual void operator()() {
-        (*mDependentTask)();
-		delete this;
+        assert (mDependentTask->mNumThisWaitingOn==0);
+        {
+            (*mDependentTask)();
+            delete this;
+        }
     }
 };
 
-class CallDependencyFailedTask : public WorkItem {
+class DependentTask::CallFailed : public WorkItem {
     DependentTask*mDependentTask;
   public:
-    CallDependencyFailedTask(DependentTask *dt) {
+    CallFailed(DependentTask *dt) {
         mDependentTask=dt;
     }
 
     virtual void operator()() {
-        mDependentTask->finish(false);
-		delete this;
+        assert (mDependentTask->mNumThisWaitingOn==0);
+        {
+            mDependentTask->finish(false);
+            delete this;
+        }
     }
 };
 
 void DependentTask::go() {
     if (mNumThisWaitingOn==0) {
         if (mFailure) {
-            mWorkQueue->enqueue(new CallDependencyFailedTask(this));
+            mWorkQueue->enqueue(new CallFailed(this));
         }else {
-            mWorkQueue->enqueue(new CallDependencyTask(this));
+            mWorkQueue->enqueue(new CallSuccess(this));
         }
     }
 }
 void DependentTask::addDepender(DependentTask *depender) {
-    depender->mNumThisWaitingOn++;
-    mDependents.push_back(depender);
+    ++depender->mNumThisWaitingOn;
+    mDependents.push(depender);
 }
 void DependentTask::finish(bool success) {
-    std::vector<DependentTask*>::iterator deps=mDependents.begin(),depsend=mDependents.end();
-    for (;
-         deps!=depsend;
-         ++deps) {
-        assert((*deps)->mNumThisWaitingOn>0);
-        --(*deps)->mNumThisWaitingOn;
+    LockFreeQueue<DependentTask*>::NodeIterator depsIter(mDependents);
+    DependentTask** deps;
+    while ((deps = depsIter.next())!=NULL) {
+        assert((*deps)->mNumThisWaitingOn!=0);
         if (!success) {
             (*deps)->mFailure=true;
         }
+        --(*deps)->mNumThisWaitingOn;
         (*deps)->go();
     }
-    mDependents.resize(0);
 }
 DependentTask::DependentTask(WorkQueue *queue)
 	: mWorkQueue(queue), mNumThisWaitingOn(0), mFailure(false) {
 }
 
-DependentTask::~DependentTask(){}int ooo;
+DependentTask::~DependentTask(){}
 
 }
 }

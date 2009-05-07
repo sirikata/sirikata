@@ -252,11 +252,6 @@ EventManager<T>::~EventManager() {
 	mListeners.clear();
 }
 
-template <class T>
-void EventManager<T>::temporary_processEventQueue(AbsTime until) {
-	mWorkQueue->dequeueUntil(until);
-}
-
 
 // ============= SUBSCRIPTION FUNCTIONS ==============
 

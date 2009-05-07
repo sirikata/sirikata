@@ -281,7 +281,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             SILOG(ogre,error,"I don't know what this event is!\n");
         }
     }
-    temporary_processEventQueue(Task::AbsTime::now()+Duration::seconds(.01));
+    getWorkQueue()->dequeueUntil(Task::AbsTime::now()+Duration::seconds(.01));
     return continueRendering;
 
 }
@@ -292,6 +292,6 @@ SDLInputManager::~SDLInputManager(){
     SDL_GL_DeleteContext(mWindowContext);
     SDL_DestroyWindow(mWindowID);
     SDL_Quit();
-
+	delete getWorkQueue();
 }
 } }

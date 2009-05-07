@@ -233,7 +233,9 @@ public:
 
 	~EventManager();
 
-	void temporary_processEventQueue(AbsTime until);
+	inline WorkQueue *getWorkQueue() {
+		return mWorkQueue;
+    }
 
 	/**
 	 * Subscribes to a specific event. The listener function will receieve
