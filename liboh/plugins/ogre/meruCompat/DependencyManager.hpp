@@ -72,22 +72,12 @@ public:
   }
   //virtual ~DependencyManager();
 
-	/**
-	 * Queues given task, which should be the root of its dependency DAG. The given task
-	 * and all of its direct and indirect dependencies will be run in an appropriate
-	 * order.
-	 */
-	//void queueDependencyRoot(DependencyTask *task);
-	void handleTaskCompletion(void *task, bool successful) {}
+//	void handleTaskCompletion(void *task, bool successful) {}
 
 	void establishDependencyRelationship(DependencyTask *a, DependencyTask *b) {
-		a->addDepender(b);
+		b->addDepender(a);
 	}
 
-	// Called when the parent has done its chores, and now needs the children to do work.
-	void queueDependencyRoot(DependencyTask *t) {
-		t->finish(true);
-	}
 };
 
 }

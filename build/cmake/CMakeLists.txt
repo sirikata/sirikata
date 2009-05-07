@@ -740,8 +740,6 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/MeshEntity.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/CameraEntity.cpp
   ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgrePlugin.cpp
-${GFX}/meruCompat/DependencyManager.cpp
-${GFX}/meruCompat/DependencyTask.cpp
 ${GFX}/meruCompat/Event.cpp
 ${GFX}/meruCompat/EventSource.cpp
 ${GFX}/meruCompat/MeruDefs.cpp
