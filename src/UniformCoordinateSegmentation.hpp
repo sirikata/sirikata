@@ -56,6 +56,9 @@ public:
     virtual uint32 numServers() const;
 
     virtual void tick(const Time& t);
+
+    virtual void csegChangeMessage(CSegChangeMessage*);
+
 private:
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;

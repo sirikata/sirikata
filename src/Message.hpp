@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "Network.hpp"
 #include "MotionVector.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 
@@ -46,6 +47,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_SUBSCRIPTION 3
 #define MESSAGE_TYPE_MIGRATE      4
 #define MESSAGE_TYPE_COUNT        5
+#define MESSAGE_TYPE_CSEG_CHANGE  6
 
 struct OriginID {
     uint32 id;
@@ -193,6 +195,28 @@ private:
     UUID* mSubscribers;
 
 }; // class MigrateMessage
+
+class CSegChangeMessage : public Message {
+//assume the server has split into equal-sized two parts, divided along the x-axis.
+//The first part remains with the server, the second part goes to a new server 
+//whose ID is given in the message.
+public:
+  CSegChangeMessage(const OriginID& origin, const ServerID& new_server_id);
+
+  ~CSegChangeMessage();
+
+  virtual MessageType type() const;
+
+  const ServerID newServerID() const;
+
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+private:
+  friend class Message;
+  CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+
+  ServerID mNewServerID;
+};
 
 } // namespace CBR
 

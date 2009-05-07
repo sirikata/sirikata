@@ -55,6 +55,7 @@
 #include "ExpIntegral.hpp"
 #include "PartiallyOrderedList.hpp"
 #include "UniformCoordinateSegmentation.hpp"
+#include "LBCoordinateSegmentation.hpp"
 
 #include "ServerWeightCalculator.hpp"
 namespace {
@@ -125,12 +126,36 @@ void *main_loop(void *) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    LocationService* loc_service = new OracleLocationService(obj_factory);
-    CoordinateSegmentation* cseg = new UniformCoordinateSegmentation(region, layout);
+
 
     ServerID server_id = GetOption("id")->as<ServerID>();
+    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    LocationService* loc_service = new OracleLocationService(obj_factory);
 
+
+
+    String filehandle = GetOption("serverips")->as<String>();
+    std::ifstream ipConfigFileHandle(filehandle.c_str());
+    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    gTrace->setServerIDMap(server_id_map);
+    Proximity* prox = new Proximity(obj_factory, loc_service);
+
+
+
+    ServerMessageQueue* sq = NULL;
+    String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
+    if (server_queue_type == "fifo")
+        sq = new FIFOServerMessageQueue(gNetwork,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
+    else if (server_queue_type == "fair")
+        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
+    else {
+        assert(false);
+        exit(-1);
+    }
+
+    CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq);
+                                 new UniformCoordinateSegmentation(region, layout);
+ 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -214,22 +239,7 @@ void *main_loop(void *) {
     }
 
 
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    gTrace->setServerIDMap(server_id_map);
-    Proximity* prox = new Proximity(obj_factory, loc_service);
 
-    ServerMessageQueue* sq = NULL;
-    String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
-    if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(gNetwork,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
-    else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
-    else {
-        assert(false);
-        exit(-1);
-    }
 
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();

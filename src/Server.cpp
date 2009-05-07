@@ -159,9 +159,17 @@ void Server::deliver(Message* msg) {
 
 	      mObjects[obj_id] = obj;
 
-	      //printf("MESSAGE_TYPE_MIGRATE received from obj_id %s\n", obj_id.readableHexData().c_str());
-
               delete migrate_msg;
+          }
+          break;
+      case MESSAGE_TYPE_CSEG_CHANGE:
+          {
+              CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
+              assert(server_split_msg != NULL);	
+
+	      OriginID id = GetUniqueIDOriginID(server_split_msg->id());
+
+              mCSeg->csegChangeMessage(server_split_msg);
           }
           break;
       default:
@@ -179,6 +187,8 @@ Object* Server::object(const UUID& dest) const {
 
 void Server::forward(Message* msg, const UUID& dest) {
     ServerID dest_server_id = lookup(dest);
+
+    
     route(msg, dest_server_id, true);
 }
 

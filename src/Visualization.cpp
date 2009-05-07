@@ -7,7 +7,7 @@
 #include <GL/glut.h>
 namespace CBR {
 static LocationVisualization*gVis=NULL;
-void LocationVisualization::mainLoop(){
+void LocationVisualization::mainLoop() {
     mCurTime+=mSamplingRate;
     while (mCurEvent!=mObservedEvents->end()) {
         ObjectEvent*oe=*mCurEvent;
@@ -77,11 +77,11 @@ void LocationVisualization::mainLoop(){
     for (i=minServerID;i<maxServerID;++i) {
         BoundingBox3f bbox=mSeg->serverRegion(i);
         glColor3f(0,0, (i/(float)maxServerID));		/* set current color to white */
-        glVertex2f(bbox.min().x,bbox.min().y);
+	glVertex2f(bbox.min().x,bbox.min().y);
         glVertex2f(bbox.min().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.min().y);
-    }   
+    }
     glEnd();
     glPointSize(2);
     glBegin(GL_POINTS);
@@ -151,6 +151,8 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
     
     int argc=1; char argvv[]="test";
+
+    std::cout << "Observer is: "  << observer.readableHexData() << "\n";
     char*argv=&argvv[0];
     glutInit(&argc,&argv);
     glutInitDisplayMode(GLUT_RGB|GLUT_DEPTH|GLUT_DOUBLE);

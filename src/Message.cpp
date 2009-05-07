@@ -100,6 +100,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_MIGRATE:
         msg = new MigrateMessage(wire, offset, _id);
         break;
+      case MESSAGE_TYPE_CSEG_CHANGE:
+        msg = new CSegChangeMessage(wire, offset, _id);
+        break;
       default:
         assert(false);
         break;
@@ -453,6 +456,46 @@ const int MigrateMessage::subscriberCount() const {
 
 UUID* MigrateMessage::subscriberList() const {
   return mSubscribers;
+}
+
+CSegChangeMessage::CSegChangeMessage(const OriginID& origin, const ServerID& server_id)
+ : Message(origin, true),
+   mNewServerID(server_id)   
+{
+
+}
+
+CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+ : Message(_id)
+{
+
+    ServerID newServerID;
+    memcpy(&newServerID, &wire[offset], sizeof(mNewServerID));
+    offset += sizeof(ServerID);
+    mNewServerID = newServerID;
+}
+
+CSegChangeMessage::~CSegChangeMessage() {
+    
+}
+
+MessageType CSegChangeMessage::type() const {
+  return MESSAGE_TYPE_CSEG_CHANGE;
+}
+
+uint32 CSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    
+    wire.resize( wire.size() +  sizeof(mNewServerID) );
+    
+    memcpy( &wire[offset], &mNewServerID, sizeof(mNewServerID) );
+    offset += sizeof(mNewServerID);    
+
+    return offset;
+}
+
+const ServerID CSegChangeMessage::newServerID() const {
+    return mNewServerID;
 }
 
 

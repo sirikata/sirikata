@@ -40,6 +40,8 @@
 #define BBOX_MIN -1e30f
 #define BBOX_MAX 1e30f
 
+#define EPSILON 0.0005
+
 namespace CBR {
 
 template<typename CoordType>
@@ -97,9 +99,17 @@ public:
     }
 
     bool contains(const CoordType& point) const {
-        for(int i = 0; i < size; i++)
-            if (mMin[i] > point[i] || mMax[i] < point[i]) return false;
-        return true;
+      for(int i = 0; i < size; i++) {	
+	if (mMin[i] > point[i] || mMax[i] < point[i]) {
+
+	  if ( fabs(mMin[i] - point[i]) > EPSILON &&
+	       fabs(mMax[i] - point[i]) > EPSILON )
+	  {
+  	      return false;
+	  }
+	}
+      }
+      return true;
     }
 
     real volume() const {

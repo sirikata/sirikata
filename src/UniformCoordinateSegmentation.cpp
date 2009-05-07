@@ -109,7 +109,10 @@ ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
 }
 
 BoundingBox3f UniformCoordinateSegmentation::serverRegion(const ServerID& server) const {
-    assert( server > 0 && server <= mServersPerDim.x * mServersPerDim.y * mServersPerDim.z );
+  //assert( server > 0 && server <= mServersPerDim.x * mServersPerDim.y * mServersPerDim.z );
+    if ( server > mServersPerDim.x * mServersPerDim.y * mServersPerDim.z ) {
+      return BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
+    }
 
     ServerID sid = server - 1;
     Vector3i32 server_dim_indices(sid%mServersPerDim.x,
@@ -136,9 +139,10 @@ uint32 UniformCoordinateSegmentation::numServers() const {
 }
 
 void UniformCoordinateSegmentation::tick(const Time& t) {
-  /* Short-circuited the code for changing the layout at run-time for now  */
+  /* Short-circuited the code for changing the layout at run-time for now
+     but its been tested and it works.
+   */
   return;
-
 
   /* The following code changes the segmentation/layout of the region.*/
 
@@ -170,6 +174,9 @@ void UniformCoordinateSegmentation::tick(const Time& t) {
       break;
     }
   }
+}
+
+void UniformCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
 }
 

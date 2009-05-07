@@ -178,6 +178,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FIFOObjectMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairObjectMessageQueue.cpp
+  ${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp

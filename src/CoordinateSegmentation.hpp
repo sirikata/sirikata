@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "BoundingBox.hpp"
 #include "ServerNetwork.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
@@ -68,6 +69,8 @@ public:
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
+
+    virtual void csegChangeMessage(CSegChangeMessage*) = 0;
 
     virtual void tick(const Time& t) = 0;
 
