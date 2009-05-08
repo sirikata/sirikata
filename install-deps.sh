@@ -85,15 +85,24 @@ if [ ${opt_update} != "true" ]; then
   fi
   git clone git://github.com/sirikata/sirikata.git sirikata
   cd sirikata
+  make depends
 else
   cd sirikata
   git pull origin
 fi
-make depends
 git submodule init
 git submodule update
 cd build/cmake
-cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata .
+# debug
+cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Debug .
+make clean
 make -j2
 make install
+# release
+cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Release .
+make clean
+make -j2
+make install
+# we need to manually copy over the protobuf libs because sirikata doesn't handle this properly yet
+cp ${deps_dir}/sirikata/dependencies/lib/libproto* ${deps_dir}/installed-sirikata/lib/
 cd ../../..
