@@ -53,6 +53,18 @@ struct OriginID {
     uint32 id;
 };
 
+template <typename scalar>
+class SplitRegion {
+public:
+  ServerID mNewServerID;
+  
+  scalar minX, minY, minZ;
+  scalar maxX, maxY, maxZ;
+  
+};
+
+typedef SplitRegion<float> SplitRegionf;
+
 OriginID GetUniqueIDOriginID(uint32 uid);
 uint32 GetUniqueIDMessageID(uint32 uid);
 
@@ -201,13 +213,15 @@ class CSegChangeMessage : public Message {
 //The first part remains with the server, the second part goes to a new server 
 //whose ID is given in the message.
 public:
-  CSegChangeMessage(const OriginID& origin, const ServerID& new_server_id);
+  CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions);
 
   ~CSegChangeMessage();
 
   virtual MessageType type() const;
 
-  const ServerID newServerID() const;
+  const uint8_t numberOfRegions() const;
+
+  SplitRegionf* splitRegions() const;
 
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
@@ -215,7 +229,10 @@ private:
   friend class Message;
   CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
-  ServerID mNewServerID;
+  
+  uint8_t mNumberOfRegions;
+  SplitRegionf* mSplitRegions;
+  
 };
 
 } // namespace CBR

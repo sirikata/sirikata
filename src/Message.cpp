@@ -458,25 +458,31 @@ UUID* MigrateMessage::subscriberList() const {
   return mSubscribers;
 }
 
-CSegChangeMessage::CSegChangeMessage(const OriginID& origin, const ServerID& server_id)
+CSegChangeMessage::CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions)
  : Message(origin, true),
-   mNewServerID(server_id)   
+   mNumberOfRegions(number_of_regions)
 {
-
+  mSplitRegions = new SplitRegion<float>[number_of_regions];
 }
 
 CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
  : Message(_id)
 {
+    uint8_t number_of_regions;
+    memcpy(&number_of_regions, &wire[offset], sizeof(number_of_regions));
+    offset += sizeof(number_of_regions);
+    mNumberOfRegions = number_of_regions;
 
-    ServerID newServerID;
-    memcpy(&newServerID, &wire[offset], sizeof(mNewServerID));
-    offset += sizeof(ServerID);
-    mNewServerID = newServerID;
+    mSplitRegions = new SplitRegionf[number_of_regions];
+    
+    for (int i=0; i < mNumberOfRegions; i++) {
+      memcpy( &mSplitRegions[i], &wire[offset], sizeof(SplitRegion<float>) );
+      offset += sizeof(SplitRegionf);      
+    }
 }
 
 CSegChangeMessage::~CSegChangeMessage() {
-    
+    delete mSplitRegions;
 }
 
 MessageType CSegChangeMessage::type() const {
@@ -486,17 +492,26 @@ MessageType CSegChangeMessage::type() const {
 uint32 CSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
     
-    wire.resize( wire.size() +  sizeof(mNewServerID) );
+    wire.resize( wire.size() +  sizeof(mNumberOfRegions) 
+		 + mNumberOfRegions*sizeof(SplitRegionf) );
     
-    memcpy( &wire[offset], &mNewServerID, sizeof(mNewServerID) );
-    offset += sizeof(mNewServerID);    
+    memcpy( &wire[offset], &mNumberOfRegions, sizeof(mNumberOfRegions) );
+    offset += sizeof(mNumberOfRegions);
+
+    for (int i=0; i < mNumberOfRegions; i++) {
+      memcpy(&wire[offset], &mSplitRegions[i], sizeof(SplitRegionf));
+      offset += sizeof(SplitRegionf);
+    }
 
     return offset;
 }
 
-const ServerID CSegChangeMessage::newServerID() const {
-    return mNewServerID;
+const uint8_t CSegChangeMessage::numberOfRegions() const {
+    return mNumberOfRegions;
 }
 
+SplitRegionf* CSegChangeMessage::splitRegions() const {
+    return mSplitRegions;
+}
 
 } // namespace CBR
