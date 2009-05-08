@@ -45,3 +45,23 @@ misc/setup
 ./configure --prefix=${deps_dir}/installed-sst
 make
 make install
+cd ..
+
+
+# sirikata
+if [ -e sirikata ]; then
+  rm -rf sirikata
+fi
+if [ -e installed-sirikata ]; then
+  rm -rf installed-sirikata
+fi
+
+git clone git://github.com/sirikata/sirikata.git sirikata
+cd sirikata
+make depends
+git submodule init
+git submodule update
+cd build/cmake
+cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata .
+make -j2
+cd ../../..
