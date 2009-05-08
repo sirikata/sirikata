@@ -145,9 +145,7 @@ public:
         //this second firing should be a noop
         mManager->fire(a);
 
-        mManager->temporary_processEventQueue(Task::AbsTime::null()); // FIXME: This function will change.
-        // call twice just to make sure.
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
+        mManager->getWorkQueue()->dequeueAll();
 
         int handler_A_should_have_been_called_exactly_once = mCount;
         TS_ASSERT_EQUALS(handler_A_should_have_been_called_exactly_once,1);
@@ -167,11 +165,7 @@ public:
         mManager->fire(d);
         mManager->fire(e);
 
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
-        mManager->temporary_processEventQueue(Task::AbsTime::null());
+        mManager->getWorkQueue()->dequeueAll();
 
         int unsubscribe_should_be_0 = mCount;
         TS_ASSERT_EQUALS(unsubscribe_should_be_0, 0);
