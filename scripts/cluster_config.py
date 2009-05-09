@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os.path
+
 class ClusterNode:
     def __init__(self, spec_string):
         (self.user, self.node) = spec_string.split('@',1)
@@ -9,12 +11,17 @@ class ClusterNode:
 
 class ClusterConfig:
     def __init__(self):
-        self.nodes = [ ClusterNode("meru@meru00"),
-                       ClusterNode("meru@meru01"),
-                       ClusterNode("meru@meru02"),
-                       ClusterNode("meru@meru03"),
-                       ClusterNode("meru@meru04")]
+        default_path = os.path.expanduser("~/.cluster")
+        self.nodes = []
         self.deploy_nodes = []
+        if (os.path.exists(default_path)):
+            self.parse(default_path)
+        else: # just setup some default nodes that make sense for us
+            self.nodes.append( ClusterNode("meru@meru00") )
+            self.nodes.append( ClusterNode("meru@meru01") )
+            self.nodes.append( ClusterNode("meru@meru02") )
+            self.nodes.append( ClusterNode("meru@meru03") )
+            self.nodes.append( ClusterNode("meru@meru04") )
 
     def generate_deployment(self, count, repeat = True):
         if (self.nodes == None or len(self.nodes) == 0):
@@ -50,7 +57,6 @@ class ClusterConfig:
 
 if __name__ == "__main__":
     testcc = ClusterConfig()
-    print "User: ", testcc.user
     print "Nodes: ", testcc.nodes
     print "2 Deployment: ", testcc.generate_deployment(2)
     print "6 Deployment: ", testcc.generate_deployment(6)
