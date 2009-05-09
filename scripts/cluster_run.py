@@ -53,9 +53,9 @@ def ClusterRun(cc, command):
 
     mts = []
     for node in cc.nodes:
-        node_command = command % {'host' : node}
-        sp = subprocess.Popen(['ssh', '-Y', '-l' , cc.user, node, node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT)
-        mt = NodeMonitorThread(node, sp)
+        node_command = command % {'host' : node.node, 'user' : node.user}
+        sp = subprocess.Popen(['ssh', '-Y', node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT)
+        mt = NodeMonitorThread(node.str(), sp)
         mt.start()
         mts.append(mt)
         time.sleep(.1)
@@ -73,10 +73,10 @@ def ClusterDeploymentRun(cc, command):
     mts = []
     index = 1
     for node in cc.deploy_nodes:
-        node_command = command % {'node' : index}
+        node_command = command % {'host' : node.node, 'user' : node.user, 'node' : index}
         print node_command
-        sp = subprocess.Popen(['ssh', '-Y', '-l' , cc.user, node, node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
-        mt = NodeMonitorThread(str(index) + " (" + node + ")", sp)
+        sp = subprocess.Popen(['ssh', '-Y' , node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
+        mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp)
         mt.start()
         mts.append(mt)
         time.sleep(.1)

@@ -1,13 +1,23 @@
 #!/usr/bin/python
 
+class ClusterNode:
+    def __init__(self, spec_string):
+        (self.user, self.node) = spec_string.split('@',1)
+
+    def str(self):
+        return self.user + "@" + self.node
+
 class ClusterConfig:
     def __init__(self):
-        self.nodes = ["meru00", "meru01", "meru02", "meru03", "meru04"]
-        self.user = "meru"
+        self.nodes = [ ClusterNode("meru@meru00"),
+                       ClusterNode("meru@meru01"),
+                       ClusterNode("meru@meru02"),
+                       ClusterNode("meru@meru03"),
+                       ClusterNode("meru@meru04")]
         self.deploy_nodes = []
 
     def generate_deployment(self, count, repeat = True):
-        if (self.user == None or self.nodes == None or len(self.nodes) == 0):
+        if (self.nodes == None or len(self.nodes) == 0):
             return None
         self.deploy_nodes = []
         node_idx = 0
@@ -32,10 +42,8 @@ class ClusterConfig:
         for line in fp:
             [opt_name, opt_value] = line.split('=', 1)
             opt_name = opt_name.strip()
-            if (opt_name == "user"):
-                self.user = opt_value.strip()
-            elif (opt_name == "node"):
-                self.nodes.append(opt_value.strip())
+            if (opt_name == "node"):
+                self.nodes.append( ClusterNode(opt_value.strip()) )
         fp.close()
         return
 

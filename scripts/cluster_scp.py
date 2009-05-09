@@ -28,12 +28,12 @@ def ClusterSCP(cc, params):
 
     index = 1
     for node in deployment_nodes:
-        subs_dict = { 'host' : node, 'node' : index }
+        subs_dict = { 'host' : node.node, 'user' : node.user, 'node' : index }
         scp_command = ['scp']
         for param in params:
             subs_param = param % subs_dict
             if (subs_param.startswith("remote:")):
-                subs_param = cc.user + "@" + node + ":" + subs_param.split(':',1)[1]
+                subs_param = node.str() + ":" + subs_param.split(':',1)[1]
             scp_command.append(subs_param)
         subprocess.call(scp_command)
         index = index + 1

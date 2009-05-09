@@ -36,7 +36,7 @@ port = 6666
 server_index = 0;
 for i in range(0, layout_x):
     for j in range(0, layout_y):
-        fp.write(cc.deploy_nodes[server_index]+":"+str(port)+'\n')
+        fp.write(cc.deploy_nodes[server_index].node+":"+str(port)+'\n')
         port += 1
         server_index += 1
 fp.close()
