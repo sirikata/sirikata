@@ -14,6 +14,7 @@ class ClusterConfig:
         default_path = os.path.expanduser("~/.cluster")
         self.nodes = []
         self.deploy_nodes = []
+        self.code_dir = "cbr"
         if (os.path.exists(default_path)):
             self.parse(default_path)
         else: # just setup some default nodes that make sense for us
@@ -51,6 +52,8 @@ class ClusterConfig:
             opt_name = opt_name.strip()
             if (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
+            elif (opt_name == "code_dir"):
+                self.code_dir = opt_value.strip()
         fp.close()
         return
 
@@ -58,6 +61,7 @@ class ClusterConfig:
 if __name__ == "__main__":
     testcc = ClusterConfig()
     print "Nodes: ", testcc.nodes
+    print "Code Directory: ", testcc.code_dir
     print "2 Deployment: ", testcc.generate_deployment(2)
     print "6 Deployment: ", testcc.generate_deployment(6)
     print "6 Deployment, No Repeat: ", testcc.generate_deployment(6, False)
