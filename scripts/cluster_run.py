@@ -15,6 +15,8 @@
 import sys
 import subprocess
 import threading
+import os
+import time
 from cluster_config import ClusterConfig
 
 
@@ -45,6 +47,10 @@ class NodeMonitorThread(threading.Thread):
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
 def ClusterRun(cc, command):
+    new_environ = os.environ
+    new_environ['DISPLAY'] = ':0.0'
+    new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
+
     mts = []
     for node in cc.nodes:
         node_command = command % {'host' : node}
@@ -52,6 +58,7 @@ def ClusterRun(cc, command):
         mt = NodeMonitorThread(node, sp)
         mt.start()
         mts.append(mt)
+        time.sleep(.1)
 
     for mt in mts:
         mt.join()
@@ -59,15 +66,20 @@ def ClusterRun(cc, command):
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
 def ClusterDeploymentRun(cc, command):
+    new_environ = os.environ
+    new_environ['DISPLAY'] = ':0.0'
+    new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
+
     mts = []
     index = 1
     for node in cc.deploy_nodes:
         node_command = command % {'node' : index}
         print node_command
-        sp = subprocess.Popen(['ssh', '-Y', '-l' , cc.user, node, node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT)
+        sp = subprocess.Popen(['ssh', '-Y', '-l' , cc.user, node, node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(str(index) + " (" + node + ")", sp)
         mt.start()
         mts.append(mt)
+        time.sleep(.1)
         index = index + 1
 
     for mt in mts:
