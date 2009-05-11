@@ -224,7 +224,6 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
 }
 
 void Trace::save(const String& filename) {
-    if (mShuttingDown) return;
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
 
     data.write(of);
