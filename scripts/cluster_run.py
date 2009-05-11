@@ -56,7 +56,7 @@ def ClusterRun(cc, command):
     mts = []
     for node in cc.nodes:
         node_command = command % {'host' : node.node, 'user' : node.user}
-        sp = subprocess.Popen(['ssh', '-Y', node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT)
+        sp = subprocess.Popen(['ssh', '-Y', node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(node.str(), sp)
         mt.start()
         mts.append(mt)
