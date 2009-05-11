@@ -2,6 +2,7 @@
 
 from cluster_config import ClusterConfig
 from cluster_run import ClusterRun
+from cluster_scp import ClusterSCP
 
 class ClusterBuild:
     def __init__(self, config):
@@ -25,6 +26,12 @@ class ClusterBuild:
         cd_cmd = self.cd_to_code()
         pull_cmd = "git pull origin;"
         ClusterRun(self.config, cd_cmd + pull_cmd)
+
+    def apply_patch(self, patch_file):
+        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
+        cd_cmd = self.cd_to_code()
+        patch_cmd = "patch -p1 < " + patch_file + ";"
+        ClusterRun(self.config, cd_cmd + patch_cmd)
 
     def dependencies(self):
         cd_cmd = self.cd_to_code()
