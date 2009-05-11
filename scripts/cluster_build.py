@@ -33,6 +33,11 @@ class ClusterBuild:
         patch_cmd = "patch -p1 < " + patch_file + ";"
         ClusterRun(self.config, cd_cmd + patch_cmd)
 
+    def reset_to_head(self):
+        cd_cmd = self.cd_to_code()
+        reset_cmd = "git reset --hard HEAD;"
+        ClusterRun(self.config, cd_cmd + reset_cmd);
+
     def dependencies(self):
         cd_cmd = self.cd_to_code()
         build_cmd = "./install-deps.sh"
