@@ -100,7 +100,7 @@ uint32 LBCoordinateSegmentation::numServers() const {
   int count = mTopLevelRegion.countServers();
  
   return count;
-} 
+}
 
 void LBCoordinateSegmentation::tick(const Time& t) {
   static bool lbed=false;
@@ -110,7 +110,8 @@ void LBCoordinateSegmentation::tick(const Time& t) {
     //printf("At id %d time is %d\n", mServerID, t.raw());
 
     if (!lbed && t.raw() >= 10000000u) {
-      lbed=true;printf("Splitting\n");
+      lbed=true;
+      printf("Splitting\n");
       
       SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mServerID);
  
@@ -148,7 +149,11 @@ void LBCoordinateSegmentation::tick(const Time& t) {
 
       notifyListeners(segInfoVector);
 
-      printf("notified listeners\n");            
+      printf("notified listeners\n");
+      
+      if (GetOption(ANALYSIS_LOCVIS)->as<bool>()) {
+	return;
+      }
 
       for (int i=1 ; i <= total_servers; i++) {
 	if (i != mServerID) {
@@ -173,8 +178,6 @@ void LBCoordinateSegmentation::tick(const Time& t) {
 	  regions[1].maxX = newBox2.max().x;
 	  regions[1].maxY = newBox2.max().y;
 	  regions[1].maxZ = newBox2.max().z;
-	  
-	  
 
 	  msg.serialize(msg_serialized, 0);
 	  

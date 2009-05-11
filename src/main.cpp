@@ -121,7 +121,12 @@ void *main_loop(void *) {
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
-    uint32 nservers = layout.x * layout.y * layout.z;
+
+    uint32 nservers = GetOption("max-servers")->as<uint32>();
+    if (nservers == 0) {
+      nservers = layout.x * layout.y * layout.z;
+    }
+    
     Duration duration = GetOption("duration")->as<Duration>();
 
     srand( GetOption("rand-seed")->as<uint32>() );
@@ -153,8 +158,10 @@ void *main_loop(void *) {
         exit(-1);
     }
 
+
     CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq);
                                  new UniformCoordinateSegmentation(region, layout);
+
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);

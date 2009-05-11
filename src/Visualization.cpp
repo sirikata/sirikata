@@ -49,8 +49,10 @@ void LocationVisualization::mainLoop() {
         ++mCurEvent;
 
     }
-    if (mCurEvent!=mObservedEvents->end())
+    if (mCurEvent!=mObservedEvents->end()) {
         mLoc->tick(mCurTime);
+	mSeg->tick(mCurTime);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT);		/* clear the display */
     uint32 i;
@@ -84,7 +86,7 @@ void LocationVisualization::mainLoop() {
     }
     glEnd();
     glPointSize(2);
-    glBegin(GL_POINTS);
+    glBegin(GL_POINTS); 
     for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
         Vector3f pos=mLoc->currentPosition(*it);
         if (*it==mObserver) {

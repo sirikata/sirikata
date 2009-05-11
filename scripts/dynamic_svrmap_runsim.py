@@ -16,8 +16,7 @@ serveripfile="serverip-"+str(xservers)+'-'+str(yservers)+'.txt'
 fp=open(serveripfile,'w')
 port=6666
 servercount=0;
-for i in range(0,xservers+1):
-    for j in range(0,yservers+1):
+for i in range(0,nservers):
         if (doid==0):
             fp.write("localhost:"+str(port)+'\n')
         else:
@@ -34,11 +33,10 @@ sid=0
 import time
 datestr=time.strftime("%Y-%m-%d %H:%M:%S%z")
 print datestr
-for i in range(0,xservers+1):
-    for j in range(0,yservers+1):
+for i in range(0,nservers):
         sid+=1
         shouldwait=os.P_NOWAIT
-        if i+1==xservers+1 and j+1==yservers+1:
+        if i+1==nservers:
             shouldwait=os.P_WAIT
         if (doid!=0):
             shouldwait=os.P_WAIT
@@ -46,13 +44,13 @@ for i in range(0,xservers+1):
             continue;
         #print ["./cbr","--id="+str(sid),"--layout=<"+str(xservers)+','+str(yservers)+",1>","--serverips="+serveripfile,"--wait-until="+datestr]+sys.argv[2:]
         #in the future you want to change this to ssh to the appropriate machine and run the command below as an argument to ssh
-        args=["./cbr","--id="+str(sid),"--layout=<"+str(xservers)+','+str(yservers)+",1>","--serverips="+serveripfile];
+        args=["./cbr","--id="+str(sid),"--serverips="+serveripfile];
         if (doid==0):
             args.append("--wait-until="+datestr);
         if (doid!=0):
-            args=args+sys.argv[3:]#+[sys.argv[len(sys.argv)-3]+sys.argv[len(sys.argv)-2]]
+            args=args+sys.argv[3:]
         else:
             args=args+sys.argv[2:]
 
-
+        print args
         print os.spawnl(shouldwait,"./cbr",*args);
