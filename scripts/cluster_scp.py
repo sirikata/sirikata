@@ -22,9 +22,8 @@ from cluster_config import ClusterConfig
 # Takes a cluster config and the source and destination filename formats
 def ClusterSCP(cc, params):
     deployment_nodes = cc.deploy_nodes
-    if (deployment_nodes == None):
-        print "Couldn't generate deployment array"
-        exit(-1)
+    if (deployment_nodes == None or len(deployment_nodes) == 0):
+        deployment_nodes = cc.nodes
 
     index = 1
     for node in deployment_nodes:
