@@ -105,10 +105,12 @@ public:
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
 
+    void prepareShutdown();
     void save(const String& filename);
 private:
     BatchedBuffer data;
     ServerIDMap* mServerIDMap;
+    bool mShuttingDown;
 }; // class Trace
 
 } // namespace CBR

@@ -92,7 +92,8 @@ static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
 
 
 Trace::Trace()
- : mServerIDMap(NULL)
+ : mServerIDMap(NULL),
+   mShuttingDown(false)
 {
 }
 
@@ -100,7 +101,12 @@ void Trace::setServerIDMap(ServerIDMap* sidmap) {
     mServerIDMap = sidmap;
 }
 
+void Trace::prepareShutdown() {
+    mShuttingDown = true;
+}
+
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
+    if (mShuttingDown) return;
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -110,6 +116,7 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
 }
 
 void Trace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
+    if (mShuttingDown) return;
     data.write( &LocationTag, sizeof(LocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -118,6 +125,7 @@ void Trace::loc(const Time& t, const UUID& receiver, const UUID& source, const T
 }
 
 void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
+    if (mShuttingDown) return;
     data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -126,6 +134,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 }
 
 void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+    if (mShuttingDown) return;
     data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
@@ -138,6 +147,7 @@ void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 
 }
 
 void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+    if (mShuttingDown) return;
     data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
@@ -146,6 +156,7 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id,
 }
 
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data) {
+    if (mShuttingDown) return;
     uint32 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
@@ -153,6 +164,7 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
 }
 
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size) {
+    if (mShuttingDown) return;
     data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &dest, sizeof(dest) );
@@ -164,6 +176,7 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
 }
 
 void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size) {
+    if (mShuttingDown) return;
     data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &src, sizeof(src) );
@@ -174,6 +187,7 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
 }
 
 void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+    if (mShuttingDown) return;
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
     ServerID* dest_server_id = mServerIDMap->lookup(dest);
@@ -188,6 +202,7 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
 }
 
 void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
+    if (mShuttingDown) return;
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
@@ -198,6 +213,7 @@ void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
 }
 
 void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
+    if (mShuttingDown) return;
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
@@ -208,6 +224,7 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
 }
 
 void Trace::save(const String& filename) {
+    if (mShuttingDown) return;
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
 
     data.write(of);

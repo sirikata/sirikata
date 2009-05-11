@@ -155,7 +155,7 @@ void *main_loop(void *) {
 
     CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq);
                                  new UniformCoordinateSegmentation(region, layout);
- 
+
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -317,6 +317,8 @@ void *main_loop(void *) {
         }
     }
 
+    gTrace->prepareShutdown();
+
     delete server;
     delete sq;
     delete prox;
@@ -334,14 +336,13 @@ void *main_loop(void *) {
     }
 
 
+    delete gNetwork;
+    gNetwork=NULL;
+
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
     if (!trace_file.empty()) gTrace->save(trace_file);
     delete gTrace;
     gTrace = NULL;
-
-
-    delete gNetwork;
-    gNetwork=NULL;
 
     return 0;
 }
