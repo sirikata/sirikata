@@ -3,6 +3,7 @@
 import sys
 import math
 import subprocess
+import datetime
 from cluster_config import ClusterConfig
 from cluster_run import ClusterRun
 from cluster_run import ClusterDeploymentRun
@@ -64,15 +65,17 @@ class ClusterSim:
         ClusterSCP(self.config, [serveripfile, "remote:" + self.build_dir()])
 
     def run_instances(self):
+        wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
         # Construct the command lines to do the actual run and dispatch them
         cmd = "cd " + self.build_dir() + "; "
         cmd += "./cbr "
-        cmd += "--id=%(node)d"
+        cmd += "--id=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
         cmd += "--serverips=" + self.ip_file() + " "
         cmd += "--duration=" + self.settings.duration + " "
         cmd += "--send-bandwidth=" + str(self.settings.tx_bandwidth) + " "
         cmd += "--receive-bandwidth=" + str(self.settings.rx_bandwidth) + " "
+        cmd += "--wait-until=" + "\"" + wait_until_time + "\" "
         cmd += "--wait-additional=6 "
         cmd += "--flatness=" + str(self.settings.flatness) + " "
         cmd += "--capexcessbandwidth=false "
