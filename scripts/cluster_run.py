@@ -40,7 +40,9 @@ class NodeMonitorThread(threading.Thread):
 
             sys.stdout.flush()
 
-        print self.node, ': ', buf.strip()
+        buf = buf + self.sp.stdout.read(1024*1024)
+        for line in buf.splitlines():
+            print self.node, ': ', line
         self.sp.wait()
 
 
