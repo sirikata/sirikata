@@ -54,7 +54,7 @@ class ClusterSim:
         # Generate the serverip file, copy it to all nodes
         serveripfile = self.ip_file()
         fp = open(serveripfile,'w')
-        port = 6666
+        port = self.config.port_base
         server_index = 0;
         for i in range(0, self.settings.layout_x):
             for j in range(0, self.settings.layout_y):

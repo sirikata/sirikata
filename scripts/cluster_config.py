@@ -15,6 +15,7 @@ class ClusterConfig:
         self.nodes = []
         self.deploy_nodes = []
         self.code_dir = "cbr"
+        self.port_base = 6666
         if (os.path.exists(default_path)):
             self.parse(default_path)
         else: # just setup some default nodes that make sense for us
@@ -54,6 +55,8 @@ class ClusterConfig:
                 self.nodes.append( ClusterNode(opt_value.strip()) )
             elif (opt_name == "code_dir"):
                 self.code_dir = opt_value.strip()
+            elif (opt_name == "port"):
+                self.port_base = int(opt_value)
         fp.close()
         return
 
