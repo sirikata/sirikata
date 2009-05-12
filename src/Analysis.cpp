@@ -790,4 +790,127 @@ void BandwidthAnalysis::dumpPacketQueueInfo(const ServerID& sender, const Server
     dumpQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator>(sender, receiver, packetQueueInfoBegin(sender), packetQueueInfoEnd(sender), summary_out, detail_out);
 }
 
+
+// note: swap_sender_receiver optionally swaps order for sake of graphing code, generally will be used when collecting stats for "receiver" side
+template<typename EventType, typename EventIteratorType, typename ValueFunctor>
+void windowedQueueInfo(const ServerID& sender, const ServerID& receiver, const EventIteratorType& filter_begin, const EventIteratorType& filter_end, const ValueFunctor& value_func, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out, bool swap_sender_receiver) {
+    EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
+    std::queue<EventType*> window_events;
+
+    uint64 window_queued_bytes = 0;
+    float window_weight = 0.f;
+
+    for(Time window_center = start_time; window_center < end_time; window_center += sample_rate) {
+        Time window_end = window_center + window / 2.f;
+
+        // add in any new packets that now fit in the window
+        while(true) {
+            EventType* evt = event_it.current();
+            if (evt == NULL) break;
+            if (evt->end_time() > window_end)
+                break;
+            window_queued_bytes += value_func.queued(evt);
+            window_weight += value_func.weight(evt);
+            window_events.push(evt);
+            event_it.next();
+        }
+
+        // subtract out any packets that have fallen out of the window
+        // note we use event_time + window < window_end because subtracting could underflow the time
+        while(!window_events.empty()) {
+            EventType* pevt = window_events.front();
+            if (pevt->begin_time() + window >= window_end) break;
+
+            window_queued_bytes -= value_func.queued(pevt);
+            window_weight -= value_func.weight(pevt);
+            window_events.pop();
+        }
+
+        // finally compute the current values
+        uint64 window_queued_avg = (window_events.size() == 0) ? 0 : window_queued_bytes / window_events.size();
+        float window_weight_avg = (window_events.size() == 0) ? 0 : window_weight / window_events.size();
+
+        // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
+        if (swap_sender_receiver)
+            detail_out << receiver << " " << sender << " ";
+        else
+            detail_out << sender << " " << receiver << " ";
+        detail_out << (window_center-Time(0)).milliseconds() << " " << window_queued_avg << " " << window_weight_avg << std::endl;
+    }
+
+    // FIXME we should probably output *something* for summary_out
+}
+
+
+template<typename EventType>
+struct SendQueueFunctor {
+    uint32 size(const EventType* evt) const {
+        return evt->send_size;
+    }
+    uint32 queued(const EventType* evt) const {
+        return evt->send_queued;
+    }
+    float weight(const EventType* evt) const {
+        return evt->send_weight;
+    }
+};
+
+template<typename EventType>
+struct ReceiveQueueFunctor {
+    uint32 size(const EventType* evt) const {
+        return evt->receive_size;
+    }
+    uint32 queued(const EventType* evt) const {
+        return evt->receive_queued;
+    }
+    float weight(const EventType* evt) const {
+        return evt->receive_weight;
+    }
+};
+
+
+void BandwidthAnalysis::windowedDatagramSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+    windowedQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator, SendQueueFunctor<ServerDatagramQueueInfoEvent> >(
+        sender, receiver,
+        datagramQueueInfoBegin(sender), datagramQueueInfoEnd(sender),
+        SendQueueFunctor<ServerDatagramQueueInfoEvent>(),
+        window, sample_rate, start_time, end_time,
+        summary_out, detail_out,
+        false
+    );
+}
+
+void BandwidthAnalysis::windowedDatagramReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+    windowedQueueInfo<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList::const_iterator, ReceiveQueueFunctor<ServerDatagramQueueInfoEvent> >(
+        sender, receiver,
+        datagramQueueInfoBegin(receiver), datagramQueueInfoEnd(receiver),
+        ReceiveQueueFunctor<ServerDatagramQueueInfoEvent>(),
+        window, sample_rate, start_time, end_time,
+        summary_out, detail_out,
+        true
+    );
+}
+
+void BandwidthAnalysis::windowedPacketSendQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+    windowedQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator, SendQueueFunctor<PacketQueueInfoEvent> >(
+        sender, receiver,
+        packetQueueInfoBegin(sender), packetQueueInfoEnd(sender),
+        SendQueueFunctor<PacketQueueInfoEvent>(),
+        window, sample_rate, start_time, end_time,
+        summary_out, detail_out,
+        false
+    );
+}
+
+void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, const ServerID& receiver, const Duration& window, const Duration& sample_rate, const Time& start_time, const Time& end_time, std::ostream& summary_out, std::ostream& detail_out) {
+    windowedQueueInfo<PacketQueueInfoEvent, PacketQueueInfoEventList::const_iterator, ReceiveQueueFunctor<PacketQueueInfoEvent> >(
+        sender, receiver,
+        packetQueueInfoBegin(receiver), packetQueueInfoEnd(receiver),
+        ReceiveQueueFunctor<PacketQueueInfoEvent>(),
+        window, sample_rate, start_time, end_time,
+        summary_out, detail_out,
+        true
+    );
+}
+
 } // namespace CBR

@@ -111,6 +111,11 @@ class ClusterSim:
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_datagram_send.dat'])
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_datagram_receive.dat'])
 
+        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_send_packet.dat'])
+        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_receive_packet.dat'])
+        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_send_datagram.dat'])
+        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_receive_datagram.dat'])
+
 
 
 if __name__ == "__main__":

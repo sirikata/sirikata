@@ -126,7 +126,7 @@ void *main_loop(void *) {
     if (nservers == 0) {
       nservers = layout.x * layout.y * layout.z;
     }
-    
+
     Duration duration = GetOption("duration")->as<Duration>();
 
     srand( GetOption("rand-seed")->as<uint32>() );
@@ -205,10 +205,21 @@ void *main_loop(void *) {
         queue_info_filename += windowed_analysis_type;
         queue_info_filename += ".dat";
 
+
+        String windowed_queue_info_send_filename = "windowed_queue_info_send_";
+        windowed_queue_info_send_filename += windowed_analysis_type;
+        windowed_queue_info_send_filename += ".dat";
+        String windowed_queue_info_receive_filename = "windowed_queue_info_receive_";
+        windowed_queue_info_receive_filename += windowed_analysis_type;
+        windowed_queue_info_receive_filename += ".dat";
+
         std::ofstream windowed_analysis_send_file(windowed_analysis_send_filename.c_str());
         std::ofstream windowed_analysis_receive_file(windowed_analysis_receive_filename.c_str());
 
         std::ofstream queue_info_file(queue_info_filename.c_str());
+
+        std::ofstream windowed_queue_info_send_file(windowed_queue_info_send_filename.c_str());
+        std::ofstream windowed_queue_info_receive_file(windowed_queue_info_receive_filename.c_str());
 
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
@@ -234,12 +245,31 @@ void *main_loop(void *) {
             }
         }
         // Queue information
+        //  * Raw dump
         for(ServerID sender = 1; sender <= nservers; sender++) {
             for(ServerID receiver = 1; receiver <= nservers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
                 else if (windowed_analysis_type == "packet")
                     ba.dumpPacketQueueInfo(sender, receiver, std::cout, queue_info_file);
+            }
+        }
+        //  * Send
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                if (windowed_analysis_type == "datagram")
+                    ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
+                else if (windowed_analysis_type == "packet")
+                    ba.windowedPacketSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
+            }
+        }
+        //  * Receive
+        for(ServerID sender = 1; sender <= nservers; sender++) {
+            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+                if (windowed_analysis_type == "datagram")
+                    ba.windowedDatagramReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
+                else if (windowed_analysis_type == "packet")
+                    ba.windowedPacketReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
             }
         }
         exit(0);
