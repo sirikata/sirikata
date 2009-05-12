@@ -45,10 +45,21 @@ class ClusterSim:
 
     def run(self):
         self.config.generate_deployment(self.num_servers())
+        self.clean_local_data()
+        self.clean_remote_data()
         self.generate_ip_file()
         self.run_instances()
         self.retrieve_data()
         self.run_analysis()
+
+    def clean_local_data(self):
+        subprocess.call(['rm', '-rf', 'trace*'])
+        subprocess.call(['rm', '-rf', 'sync*'])
+        subprocess.call(['rm', '-rf', 'serverip*'])
+
+    def clean_remote_data(self):
+        clean_cmd = "cd " + self.build_dir() + "; rm trace*; rm sync*; rm serverip*;"
+        ClusterRun(self.config, clean_cmd)
 
     def generate_ip_file(self):
         # Generate the serverip file, copy it to all nodes
