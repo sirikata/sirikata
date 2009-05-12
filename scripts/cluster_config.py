@@ -4,10 +4,22 @@ import os.path
 
 class ClusterNode:
     def __init__(self, spec_string):
-        (self.user, self.node) = spec_string.split('@',1)
+        (self.user, rest) = spec_string.split('@',1)
+        rest = rest.split(':', 1)
+        self.node = rest[0]
+        if (len(rest) > 1):
+            self.reuse_count = int(rest[1])
+        else:
+            self.reuse_count = 1
 
     def str(self):
         return self.user + "@" + self.node
+
+    def __str__(self):
+        return self.user + "@" + self.node + ":" + str(self.reuse_count)
+
+    def __repr__(self):
+        return "<" + self.user + "@" + self.node + ":" + str(self.reuse_count) + ">"
 
 class ClusterConfig:
     def __init__(self):
@@ -28,16 +40,23 @@ class ClusterConfig:
     def generate_deployment(self, count, repeat = True):
         if (self.nodes == None or len(self.nodes) == 0):
             return None
+
+        max_copies = max( [x.reuse_count for x in self.nodes] )
+        nodes_by_count = [ [] ]
+        for reuse in range(1,max_copies+1):
+            nodes_by_count.append( [] )
+        for node in self.nodes:
+            nodes_by_count[node.reuse_count].append(node)
+
         self.deploy_nodes = []
-        node_idx = 0
-        while( len(self.deploy_nodes) < count ):
-            if (node_idx >= len(self.nodes)):
-                if (repeat == False):
-                    return None
-                node_idx = 0
-            self.deploy_nodes.append(self.nodes[node_idx])
-            node_idx = node_idx + 1
-        return self.deploy_nodes
+        while( True ):
+            for used_count in range(1,max_copies+1):
+                for cur_count in range(used_count,max_copies+1):
+                    for node in nodes_by_count[cur_count]:
+                        self.deploy_nodes.append(node)
+                        if len(self.deploy_nodes) == count:
+                            return self.deploy_nodes
+        return None
 
     # Parse options from the given file
     def parse(self, filename):
@@ -68,3 +87,4 @@ if __name__ == "__main__":
     print "2 Deployment: ", testcc.generate_deployment(2)
     print "6 Deployment: ", testcc.generate_deployment(6)
     print "6 Deployment, No Repeat: ", testcc.generate_deployment(6, False)
+    print "9 Deployment: ", testcc.generate_deployment(9)
