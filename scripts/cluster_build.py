@@ -53,6 +53,12 @@ class ClusterBuild:
         build_cmd = "cmake .; make -j2"
         ClusterRun(self.config, cd_cmd + build_cmd)
 
+    def clean(self):
+        cd_cmd = self.cd_to_code() + self.cd_to_build()
+        clean_cmd = "make clean;"
+        ClusterRun(self.config, cd_cmd + clean_cmd)
+
+
 if __name__ == "__main__":
     cc = ClusterConfig()
     cluster_build = ClusterBuild(cc)
