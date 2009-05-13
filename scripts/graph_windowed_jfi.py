@@ -32,7 +32,7 @@ for bandwidth_line in bandwidth_fp:
     avg_weight = float(avg_weight)
 
     weight_by_queued = avg_weight
-    if (avg_queued == 0):
+    if (avg_queued == 0 and bandwidth == 0):
         weight_by_queued = 0
 
     if not sender in data:
@@ -51,7 +51,6 @@ if (len(data) == 0):
 server_jfi_graph = server_graph.ServerGraph()
 
 for (sender, sender_data) in data.items():
-    print sender, len(sender_data)
     sender_data.sort(key = lambda x:x[0]) # sort by time
     last_time = -1
     for (time, bandwidth, weight) in sender_data:
@@ -75,5 +74,4 @@ for (sender, sender_data) in data.items():
 
         last_time = time
 
-print output_filename
 server_jfi_graph.generate(output_filename, False, False)
