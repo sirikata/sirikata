@@ -53,9 +53,11 @@ class ClusterSim:
         self.run_analysis()
 
     def clean_local_data(self):
-        subprocess.call(['rm', '-rf', 'trace*'])
-        subprocess.call(['rm', '-rf', 'sync*'])
-        subprocess.call(['rm', '-rf', 'serverip*'])
+        subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f sync*'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f serverip*'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f *.ps'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f *.dat'], 0, None, None, None, None, None, False, True)
 
     def clean_remote_data(self):
         clean_cmd = "cd " + self.build_dir() + "; rm trace*; rm sync*; rm serverip*;"
