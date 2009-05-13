@@ -91,6 +91,7 @@ if [ ${opt_components_sst} == "true" ]; then
     git checkout stanford
   else
     cd sst
+    git reset --hard HEAD
     git pull origin stanford:stanford
   fi
 
