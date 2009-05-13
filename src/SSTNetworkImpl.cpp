@@ -157,13 +157,18 @@ void CBRSST::service() {
 void CBRSST::reportQueueInfo(const Time& t) const {
     for(StreamMap::const_iterator it = mSendConnections.begin(); it != mSendConnections.end(); it++) {
         uint32 tx_size = it->second.stream->getTransmitBuffer();
-        uint32 tx_used = it->second.stream->getTransmitBufferUsed();
+        int tx_used_max;
+        it->second.stream->getTransmitBufferUsed(NULL, NULL, &tx_used_max);
+        uint32 tx_used = tx_used_max;
+
         uint32 rx_size = 0;
         uint32 rx_used = 0;
         StreamMap::const_iterator rx_it = mReceiveConnections.find(it->first);
         if (rx_it != mReceiveConnections.end()) {
             rx_size = rx_it->second.stream->getReceiveBuffer();
-            rx_used = rx_it->second.stream->getReceiveBufferUsed();
+            int rx_used_max;
+            rx_it->second.stream->getReceiveBufferUsed(NULL, NULL, &rx_used_max);
+            rx_used = rx_used_max;
         }
         mTrace->packetQueueInfo(t, it->first, tx_size, tx_used, 0, rx_size, rx_used, 0);
     }
