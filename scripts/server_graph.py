@@ -17,6 +17,18 @@ class ServerGraph:
     def __init__(self):
         self.graph_data = {}
         self.graph_command = ''
+        self.x_min = None
+        self.x_max = None
+        self.y_min = None
+        self.y_max = None
+
+    def x_range(self, minx, maxx):
+        self.x_min = minx
+        self.x_max = maxx
+
+    def y_range(self, miny, maxy):
+        self.y_min = miny
+        self.y_max = maxy
 
     def add(self, s1, s2, x, y):
         if (s1 not in self.graph_data):
@@ -33,7 +45,15 @@ class ServerGraph:
     def begin_graph(self):
         self.graph_command = "newgraph\n"
         self.graph_command = self.graph_command + "xaxis size 5\n"
+        if self.x_min != None:
+            self.graph_command += "  min " + str(self.x_min) + "\n"
+        if self.x_max != None:
+            self.graph_command += "  max " + str(self.x_max) + "\n"
         self.graph_command = self.graph_command + "yaxis size 1\n"
+        if self.y_min != None:
+            self.graph_command += "  min " + str(self.y_min) + "\n"
+        if self.y_max != None:
+            self.graph_command += "  max " + str(self.y_max) + "\n"
 
     def begin_curve(self, index, name):
         self.graph_command = self.graph_command + "newcurve "

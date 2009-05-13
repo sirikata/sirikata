@@ -18,5 +18,9 @@ for line in fp:
     server_avg_weight_graph.add(server1, server2, time, avg_weight)
 fp.close()
 
+server_avg_queued_graph.y_min = 0
+
+server_avg_weight_graph.y_range(0, 1)
+
 server_avg_queued_graph.generate("queued_" + dat_filename, False, False)
 server_avg_weight_graph.generate("weight_" + dat_filename, False, False)

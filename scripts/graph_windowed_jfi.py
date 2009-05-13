@@ -50,6 +50,8 @@ if (len(data) == 0):
 # when it changes generate a new data point for the graph
 server_jfi_graph = server_graph.ServerGraph()
 
+server_jfi_graph.y_range(0, 1)
+
 for (sender, sender_data) in data.items():
     sender_data.sort(key = lambda x:x[0]) # sort by time
     last_time = -1

@@ -16,4 +16,5 @@ for line in fp:
     server_graph.add(server1, server2, time, bandwidth)
 fp.close()
 
+server_graph.y_min = 0
 server_graph.generate(dat_filename, False, True)

@@ -18,5 +18,8 @@ for line in fp:
     receive_server_graph.add(server1, server2, time, receive_queued)
 fp.close()
 
+send_server_graph.y_min = 0
+receive_server_graph.y_min = 0
+
 send_server_graph.generate("send_" + dat_filename, False, False)
 receive_server_graph.generate("receive_" + dat_filename, False, False)
