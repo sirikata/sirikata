@@ -61,10 +61,10 @@ class ServerGraph:
             for (s2,d2) in d1.items():
                 if (not with_self and s1 == s2):
                     continue
-                self.begin_curve(s2, "Server " + s2)
+                self.begin_curve(s2, "Server " + str(s2))
                 idx = 0
                 for (x,y) in d2:
-                    self.graph_command = self.graph_command + x + " " + y + "\n"
+                    self.graph_command = self.graph_command + str(x) + " " + str(y) + "\n"
                     if len(sum) <= idx:
                         sum.append((x,float(y)))
                     else:
@@ -76,7 +76,7 @@ class ServerGraph:
             if with_sum:
                 self.begin_curve(len(d1.items())+1, "Total")
                 for (x,y) in sum:
-                    self.graph_command = self.graph_command + x + " " + str(y) + "\n"
+                    self.graph_command = self.graph_command + str(x) + " " + str(y) + "\n"
 
             out_fname = self.get_output_filename(prefix, s1)
 
