@@ -51,17 +51,24 @@ private slots:
     void handleReset();
     void handleInit();
 private:
-    void trySendCurrentChunk();
+    struct NetworkChunk {
+        Address4 addr;
+        Network::Chunk data;
+        uint32 bytes_sent;
+    };
 
     struct StreamInfo {
         SST::Stream* stream;
         SSTStatsListener* stats;
+        NetworkChunk* currentSendChunk;
         Network::Chunk* peek;
     };
     typedef std::map<Address4, StreamInfo> StreamMap;
 
     StreamInfo* lookupOrConnectSend(const Address4& addy);
     StreamInfo* lookupReceive(const Address4& addy);
+
+    void trySendCurrentChunk(StreamInfo* si);
 
     Trace* mTrace;
 
@@ -71,14 +78,7 @@ private:
     SST::Host* mHost;
     SST::StreamServer* mAcceptor;
 
-    struct NetworkChunk {
-        Address4 addr;
-        Network::Chunk data;
-        uint32 bytes_sent;
-    };
-    NetworkChunk* mCurrentSendChunk;
     StreamMap mSendConnections;
-
     StreamMap mReceiveConnections;
 }; // class CBRSST
 

@@ -32,7 +32,6 @@ CBRSST::CBRSST(Trace* trace)
     int argc = 0;
     char** argv = NULL;
     mApp = new QApplication((int&)argc, (char**)argv);
-    mCurrentSendChunk = NULL;
 }
 
 CBRSST::~CBRSST() {
@@ -67,33 +66,33 @@ void CBRSST::listen(uint32 port) {
         this, SLOT(handleConnection()));
 }
 
-void CBRSST::trySendCurrentChunk() {
+void CBRSST::trySendCurrentChunk(StreamInfo* si) {
     // try to service the most recent
-    if (mCurrentSendChunk == NULL) return;
+    if (si->currentSendChunk == NULL) return;
 
-    StreamInfo* si = lookupOrConnectSend(mCurrentSendChunk->addr);
     Stream* strm = si->stream;
-    uint32 new_bytes_sent = strm->writeMessage((const char*)&mCurrentSendChunk->data[mCurrentSendChunk->bytes_sent], mCurrentSendChunk->data.size() - mCurrentSendChunk->bytes_sent);
-    mCurrentSendChunk->bytes_sent += new_bytes_sent;
+    uint32 new_bytes_sent = strm->writeMessage((const char*)&si->currentSendChunk->data[si->currentSendChunk->bytes_sent], si->currentSendChunk->data.size() - si->currentSendChunk->bytes_sent);
+    si->currentSendChunk->bytes_sent += new_bytes_sent;
 
-    if (mCurrentSendChunk->bytes_sent == mCurrentSendChunk->data.size()) {
-        delete mCurrentSendChunk;
-        mCurrentSendChunk = NULL;
+    if (si->currentSendChunk->bytes_sent == si->currentSendChunk->data.size()) {
+        delete si->currentSendChunk;
+        si->currentSendChunk = NULL;
     }
 }
 
 bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority) {
-    trySendCurrentChunk();
+    StreamInfo* si = lookupOrConnectSend(addy);
+    trySendCurrentChunk(si);
 
-    if (mCurrentSendChunk != NULL)
+    if (si->currentSendChunk != NULL)
         return false;
 
-    mCurrentSendChunk = new NetworkChunk();
-    mCurrentSendChunk->addr = addy;
-    mCurrentSendChunk->data = data;
-    mCurrentSendChunk->bytes_sent = 0;
+    si->currentSendChunk = new NetworkChunk();
+    si->currentSendChunk->addr = addy;
+    si->currentSendChunk->data = data;
+    si->currentSendChunk->bytes_sent = 0;
 
-    trySendCurrentChunk();
+    trySendCurrentChunk(si);
 
     return true;
 }
@@ -214,6 +213,7 @@ void CBRSST::handleConnection() {
         StreamInfo si;
         si.stream = strm;
         si.stats = stats_listener;
+        si.currentSendChunk = NULL;
         si.peek = NULL;
 
         assert( mReceiveConnections.find(remote_addy) == mReceiveConnections.end() );
@@ -256,6 +256,7 @@ CBRSST::StreamInfo* CBRSST::lookupOrConnectSend(const Address4& addy) {
     StreamInfo si;
     si.stream = strm;
     si.stats = stats_listener;
+    si.currentSendChunk = NULL;
     si.peek = NULL;
 
     mSendConnections[addy] = si;
