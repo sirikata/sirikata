@@ -61,9 +61,10 @@ class ClusterBuild:
     def patch_build_sst(self, patch_file):
         ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/dependencies/sst/"+patch_file])
         cd_cmd = self.cd_to_sst_build()
+        reset_cmd = "git reset --hard HEAD;"
         patch_cmd = "patch -p1 < " + patch_file + ";"
         build_cmd = "make; make install;"
-        ClusterRun(self.config, cd_cmd + patch_cmd + build_cmd)
+        ClusterRun(self.config, cd_cmd + reset_cmd + patch_cmd + build_cmd)
         # doing this implies we need to rebuild cbr
         self.clean()
         self.build()
