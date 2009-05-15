@@ -310,10 +310,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     if (userAccepted&&success) {
         if (!getRoot()->isInitialised()) {
             bool doAutoWindow=
-#if defined(__APPLE__)
-                false
-#else
+#if defined(_WIN32)
                 true
+#else
+                false
 #endif
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
@@ -371,8 +371,15 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");
 
-            Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==> setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
-            bool ogreCreatedWindow=true;
+            Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
+                                                                                      /// setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
+            bool ogreCreatedWindow=
+#if defined(__APPLE__)||defined(_WIN32)
+                true
+#else
+                doAutoWindow
+#endif
+                ;
 #ifdef __APPLE__
             if (system("/usr/bin/sw_vers|/usr/bin/grep ProductVersion:.10.4.")==0)
                 ogreCreatedWindow=false;
