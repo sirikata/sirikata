@@ -32,6 +32,7 @@
 #include "util/Standard.hh"
 #include "TCPDefinitions.hpp"
 #include "IOServiceFactory.hpp"
+#include "util/Time.hpp"
 namespace Sirikata { namespace Network {
 namespace {
 boost::once_flag io_singleton=BOOST_ONCE_INIT;
@@ -78,6 +79,20 @@ void IOServiceFactory::resetService(IOService*ios){
 }
 void IOServiceFactory::dispatchServiceMessage(IOService*ios,const std::tr1::function<void()>&f){
     ios->dispatch(f);
+}
+namespace {
+void handle_deadline_timer(const boost::system::error_code&e,boost::asio::deadline_timer*timer,const std::tr1::function<void()>&f) {
+    if (e) {
+    }else {
+        f();
+    }
+//    delete timer;
+}
+}
+void IOServiceFactory::dispatchServiceMessage(IOService*ios,const Duration&waitFor,const std::tr1::function<void()>&f){
+    boost::asio::deadline_timer* t= new boost::asio::deadline_timer(*ios,boost::posix_time::microseconds(waitFor.toMicroseconds()));
+    using std::tr1::placeholders::_1;
+    t->async_wait(std::tr1::bind(&handle_deadline_timer,_1,t,f));
 }
 
 

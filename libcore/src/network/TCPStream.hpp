@@ -116,7 +116,7 @@ private:
     std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
 public:
     ///Atomically sets the sendStatus for this socket to closed. FIXME: should use atomic compare and swap for |= instead of += right now only supports 2 non-io threads closing at once
-    static void closeSendStatus(AtomicValue<int>&vSendStatus);
+    static bool closeSendStatus(AtomicValue<int>&vSendStatus);
     ///Returns the active stream ID
     StreamID getID()const {return mID;}
     /**
@@ -158,6 +158,7 @@ public:
                           const BytesReceivedCallback&chunkReceivedCallback);
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
+    ~TCPStream();
 };
 } }
 #endif

@@ -61,3 +61,33 @@ Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
 	return AbsTime::microseconds(total_time);
 }
 #endif
+
+namespace Sirikata { namespace Task {
+
+std::ostream& operator<<(std::ostream& os, const DeltaTime& rhs) {
+    os << rhs.toMilliseconds() << "ms";
+    return os;
+}
+
+std::istream& operator>>(std::istream& is, DeltaTime& rhs) {
+    double v;
+    is >> v;
+
+    char type;
+    is >> type;
+    if (type == 's')
+        rhs = DeltaTime::seconds((float)v);
+    else if (type == 'm') {
+        is >> type;
+        assert(type == 's');
+        rhs = DeltaTime::milliseconds((float)v);
+    }
+    else if (type == 'u') {
+        is >> type;
+        assert(type == 's');
+        rhs = DeltaTime::microseconds((uint64)v);
+    }
+
+    return is;
+}
+} }

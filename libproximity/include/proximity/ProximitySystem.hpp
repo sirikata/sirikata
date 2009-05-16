@@ -29,15 +29,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "Sirikata.pbj.hpp"
 #include <util/SpaceObjectReference.hpp>
 #ifndef _PROXIMITY_PROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
 namespace Sirikata { namespace Proximity {
 class SIRIKATA_PROXIMITY_EXPORT ProximitySystem {
 public:
-
-
+    typedef std::tr1::function<void(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&)> Callback;
+    static void defaultProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
+    static void defaultNoAddressProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
     virtual ~ProximitySystem();
     /**
      * Does the proximity system care about messages with this name
@@ -47,11 +47,17 @@ public:
      * Does the proximity system care about any of the messages in this message bundle
      */
     bool proximityRelevantMessage(const Sirikata::Protocol::IMessage&);
+
+    enum OpaqueMessageReturnValue{
+        OBJECT_NOT_DESTROYED,
+        OBJECT_DELETED
+    };
     /**
      * Process a message that may be meant for the proximity system
-     * \returns true for proximity-specific message not of interest to others
+     * \returns true if the object has been removed from the current proximity system
      */
-    virtual bool processOpaqueProximityMessage(const ObjectReference*object,
+    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,//so it could fire back a response on the same stream if necessary
+                                               const ObjectReference*object,
                                                const Sirikata::Protocol::IMessage&,
                                                const void *optionalSerializedMessage=NULL,
                                                size_t optionalSerializedMessageSize=0)=0;
@@ -61,9 +67,9 @@ public:
      * containing an Object UUID to the proximity manager,
      * so the proximity system knows about a new object
      */
-    virtual void newObj(const Sirikata::Protocol::INewObj&,
-                        const void *optionalSerializedReturnObjectConnection=NULL,
-                        size_t optionalSerializedReturnObjectConnectionSize=0)=0;
+    virtual ObjectReference newObj(const Sirikata::Protocol::IRetObj&,
+                                   const void *optionalSerializedReturnObjectConnection=NULL,
+                                   size_t optionalSerializedReturnObjectConnectionSize=0)=0;
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread

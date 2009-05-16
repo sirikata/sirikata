@@ -66,8 +66,7 @@ void MultiplexedSocket::ioReactorThreadCommitCallback(StreamIDCallbackPair& newc
 }
 
 bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus) {
-    static boost::thread::id reactorThread=boost::this_thread::get_id();
-    assert(boost::this_thread::get_id()==reactorThread);//this function must happen from the IO reactor so it can copy over registrations without a lock
+    assertThreadGroup(*static_cast<const ThreadIdCheck*>(this));
     bool statusChanged=false;
     if (setConnectedStatus||!mCallbackRegistration.empty()) {
         if (status==CONNECTED) {
@@ -190,11 +189,11 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
+MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
     mSocketConnectionPhase=PRECONNECTION;
 }
 MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
-    : mIO(io),
+    :ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
     mSocketConnectionPhase=PRECONNECTION;

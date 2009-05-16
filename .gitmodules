@@ -1,3 +1,6 @@
 [submodule "externals/pbj"]
 	path = externals/pbj
 	url = git://github.com/danielrh/pbj.git
+[submodule "externals/prox"]
+	path = externals/prox
+	url = git://github.com/danielrh/prox.git

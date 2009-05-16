@@ -61,6 +61,7 @@ class SIRIKATA_EXPORT DeltaTime {
     DeltaTime(int64 us):mDeltaTime(us) {
     }
 public:
+    DeltaTime():mDeltaTime(0){}
     inline double operator/ (const DeltaTime&other)const {
         return (double)(mDeltaTime/other.mDeltaTime)+(double)(mDeltaTime%other.mDeltaTime)/(double)other.mDeltaTime;
     }
@@ -103,11 +104,11 @@ public:
     }
 	/// Convert to an integer in milliseconds.
 	int64 toMilliseconds() const {
-		return (int64)(mDeltaTime*1000);
+		return mDeltaTime/1000;
 	}
 	/// Convert to an integer in microseconds.
 	int64 toMicroseconds() const {
-		return (int64)(mDeltaTime*1000000);
+		return mDeltaTime;
 	}
 	/// Convert to an integer in microseconds.
 	int64 toMicro() const {
@@ -208,6 +209,13 @@ public:
 	static AbsTime now(); // Only way to generate an AbsTime for now...
 
 	/**
+	 * Creates the time when items are 0
+	 *
+	 * @returns the beginning of time--so that a subtraction can be used with an actual time
+	 */
+	static AbsTime epoch() { return AbsTime(0); }
+
+	/**
 	 * Creates a 'null' absolute time that is equivalent to
 	 * a long time ago in a galaxy far away.  Always less than
 	 * a real time, and equal to another null() value.
@@ -223,6 +231,8 @@ public:
 */
 };
 
+SIRIKATA_EXPORT std::ostream& operator<<(std::ostream& os, const Duration& rhs);
+SIRIKATA_EXPORT std::istream& operator>>(std::istream& is, Duration& rhs);
 inline AbsTime DeltaTime::fromNow() const {
 	return AbsTime::now() + (*this);
 }

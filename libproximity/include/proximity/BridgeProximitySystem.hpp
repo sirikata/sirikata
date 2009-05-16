@@ -31,15 +31,15 @@
  */
 #ifndef _PROXIMITY_BRIDGEPROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_BRIDGEPROXIMITYSYSTEM_HPP_
-
+#include "ObjectSpaceBridgeProximitySystem.hpp"
 namespace Sirikata { namespace Proximity {
-template <class SpacePtr, class ProxNetwork/*fixme actually make this a real class*/> 
+template <class SpacePtr> 
 class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<SpacePtr> {
 protected:
     virtual bool forwardThisName(const std::string&name) {
-        return name="ObjLoc"||ObjectSpaceBridgeProximitySystem<SpacePtr>::forwardThisName(name)||name=="NewObj"||name=="DelObj";
+        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<SpacePtr>::forwardThisName(name)||name=="RetObj"||name=="DelObj";
     }
-    virtual void addressMessage(Protocol::Message&output,
+    virtual typename ObjectSpaceBridgeProximitySystem<SpacePtr>::DidAlterMessage addressMessage(Protocol::IMessage&output,
                                 const ObjectReference*source,
                                 const ObjectReference*destination) {
         //if (source) //proximity management will have source through 
@@ -60,17 +60,17 @@ protected:
         if (msg.size()) {
             Protocol::Message message;
             message.ParsePartialFromArray(&msg[0],msg.size());
-            if (addressMessage(message,NULL,objectConnection)==ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
+            if (addressMessage(message,NULL,&objectConnection)==ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
                 this->deliverMessage(objectConnection,message,&msg[0],msg.size());//FIXME: this deliver happens in a thread---do we need a distinction
             }else {
-                this->deliverMessage(objectConnection,message);//FIXME: this deliver happens in a thread---do we need a distinction
+                this->deliverMessage(objectConnection,message,NULL,0);//FIXME: this deliver happens in a thread---do we need a distinction
             }
         }
     }
 public:
-    ProximityConnection mProximityConnection;
-    BridgeProximitySystem(SpacePtr obj, const Address&addy, Network::IOService&io) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(addy,io,this) {
-        
+    ProximityConnection *mProximityConnection;
+    BridgeProximitySystem(SpacePtr obj,ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(connection) {
+        mProximityConnection->setParent(this);
         //FIXME need the mProximitySystem
     }
     enum MessageBundle{
@@ -86,14 +86,15 @@ public:
      * containing an Object UUID to the proximity manager, 
      * so the proximity system knows about a new object
      */
-    virtual void newObj(const Sirikata::Protocol::IRetObj& newObjMsg,
+    virtual ObjectReference newObj(const Sirikata::Protocol::IRetObj& newObjMsg,
                         const void *optionalSerializedReturnObjectConnection=NULL,
                         size_t optionalSerializedReturnObjectConnectionSize=0){
         ObjectReference source(newObjMsg.object_reference());
-        mProximitySystem->constructObjectStream(source);
+        mProximityConnection->constructObjectStream(source);
         Protocol::Message toSend;
-        this->constructMessage(toSend,&source,NULL,"NewObj",newObjMsg,optionalSerializedReturnObjectConnection,optionalSerializedReturnObjectConnectionSize);
-        this->sendMessage(source,toSend);
+        this->constructMessage(toSend,&source,NULL,"RetObj",newObjMsg,optionalSerializedReturnObjectConnection,optionalSerializedReturnObjectConnectionSize);
+        this->sendMessage(source,toSend,NULL,0);
+        return source;
     }
     /**
      * The proximity management system must be informed of all position updates
@@ -102,7 +103,7 @@ public:
     virtual void objLoc(const ObjectReference&source, const Sirikata::Protocol::IObjLoc&objLocMsg, const void *optionalSerializedObjLoc=NULL,size_t optionalSerializedObjLocSize=0) {
         Protocol::Message toSend;
         this->constructMessage(toSend,&source,NULL,"ObjLoc",objLocMsg,optionalSerializedObjLoc,optionalSerializedObjLocSize);
-        this->sendMessage(toSend);
+        this->sendMessage(source,toSend,NULL,0);
     }
     /**
      * Objects may be destroyed: indicate loss of interest here
@@ -110,8 +111,8 @@ public:
     virtual void delObj(const ObjectReference&source, const Sirikata::Protocol::IDelObj&delObjMsg, const void *optionalSerializedDelObj=NULL,size_t optionalSerializedDelObjSize=0) {
         Protocol::Message toSend;
         this->constructMessage(toSend,&source,NULL,"DelObj",delObjMsg,optionalSerializedDelObj,optionalSerializedDelObjSize);
-        this->sendMessage(toSend);
-        mProximitySystem->deleteObjectStream(source);
+        this->sendMessage(source,toSend,NULL,0);
+        mProximityConnection->deleteObjectStream(source);
     }
    
 };

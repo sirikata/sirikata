@@ -35,8 +35,8 @@
 
 
 #define PLATFORM_WINDOWS 0
-#define PLATFORM_MAC     1
-#define PLATFORM_LINUX   2
+#define PLATFORM_LINUX   1
+#define PLATFORM_MAC     2
 
 
 #if defined(__WIN32__) || defined(_WIN32)
@@ -211,6 +211,13 @@ class Stream;
 class Address;
 typedef std::vector<uint8> Chunk;
 }
+#ifdef NDEBUG
+class ThreadIdCheck{};
+#else
+class ThreadIdCheck { public:
+    unsigned int mThreadId;
+};
+#endif
 namespace Protocol {
 class Message;
 class IMessage;

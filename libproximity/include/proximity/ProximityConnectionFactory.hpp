@@ -1,7 +1,7 @@
-/*  Sirikata Proximity
- *  main.cpp
+/*  Sirikata Object Host -- Proximity Connection Class
+ *  ProximityConnectionFactory.hpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,58 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <proximity/Platform.hpp>
-#include <options/Options.hpp>
-#include <util/PluginManager.hpp>
-#include <network/IOServiceFactory.hpp>
-namespace Sirikata{ namespace Protocol {
-class IMessage;
-class IRetObj;
-class IDelObj;
-class IDelProxQuery;
-class INewObj;
-class IObjLoc;
-class IProxCall;
-class INewProxQuery;
-
+namespace Sirikata { namespace Proximity {
+class ProximityConnection;
+class SIRIKATA_PROXIMITY_EXPORT ProximityConnectionFactory 
+    : public AutoSingleton<ProximityConnectionFactory>,
+      public Factory2<ProximityConnection*,Network::IOService*, const String &>
+{public:
+    static ProximityConnectionFactory&getSingleton();
+    static void destroy();
+};
 } }
-#include <proximity/ProximitySystem.hpp>
-#include <proximity/ProximitySystemFactory.hpp>
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
-
-}
-
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    OptionSet::getOptions("")->parse(argc,argv);
-    PluginManager plugins;
-    plugins.load(
-#ifdef __APPLE__
-#ifdef NDEBUG
-        "libprox.dylib"
-#else
-        "libprox_d.dylib"
-#endif
-#else
-#ifdef _WIN32
-#ifdef NDEBUG
-        "prox.dll"
-#else
-        "prox_d.dll"
-#endif
-#else
-#ifdef NDEBUG
-        "libprox.so"
-#else
-        "libprox_d.so"
-#endif
-#endif
-#endif
-        );
-    
-    Network::IOService*io=Network::IOServiceFactory::makeIOService();
-    Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
-    Network::IOServiceFactory::runService(io);
-    return 0;
-}

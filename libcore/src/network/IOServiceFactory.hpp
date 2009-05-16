@@ -47,6 +47,7 @@ class SIRIKATA_EXPORT IOServiceFactory {
     static void stopService(IOService*);
     static void resetService(IOService*);
     static void dispatchServiceMessage(IOService*,const std::tr1::function<void()>&f);
+    static void dispatchServiceMessage(IOService*,const Duration& waitFor, const std::tr1::function<void()>&f);
 };
 } }
 #endif

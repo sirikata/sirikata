@@ -39,6 +39,15 @@ class Address {
     String mName;
     String mService;
 public:
+    static Any lexical_cast(const std::string&value) {
+        std::string::size_type where=value.rfind(':');
+        if (where==std::string::npos) {
+            throw std::invalid_argument("Address does not contain a port");
+        }
+        Address retval(value.substr(0,where),
+                       value.substr(where+1));
+        return retval;
+    }
     const String &getHostName()const {
         return mName;
     }

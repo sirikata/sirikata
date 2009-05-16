@@ -29,10 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include "util/ThreadId.hpp"
 namespace Sirikata { namespace Network {
 
-class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket> {
+class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>,ThreadIdCheck {
 public:
     class RawRequest {
     public:
@@ -55,7 +55,6 @@ private:
     IOService*mIO;
     ///a vector of ASIO sockets (wrapped in with a simple send-full-packet abstraction)
     std::vector<ASIOSocketWrapper> mSockets;
-
     ///This callback is called whenever a newly encountered StreamID is picked up
     Stream::SubstreamCallback mNewSubstreamCallback;
     typedef std::tr1::unordered_map<Stream::StreamID,TCPStream::Callbacks*,Stream::StreamID::Hasher> CallbackMap;

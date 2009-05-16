@@ -41,8 +41,6 @@ class SstTest : public CxxTest::TestSuite
 {
 public:
     void runRoutine(Stream* s) {
-        //static boost::mutex test;
-        //boost::lock_guard<boost::mutex> connectingMutex(test);
         for (unsigned int i=0;i<mMessagesToSend.size();++i) {
             s->send(Chunk(mMessagesToSend[i].begin(),mMessagesToSend[i].end()),
                     mMessagesToSend[i].size()?(mMessagesToSend[i][0]=='U'?ReliableUnordered:(mMessagesToSend[i][0]=='X'?Unreliable:ReliableOrdered)):ReliableOrdered);

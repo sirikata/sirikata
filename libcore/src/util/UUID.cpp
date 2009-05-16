@@ -65,6 +65,9 @@ static char toHex(unsigned int a) {
         return (a-10)+'a';
     return 'x';
 }
+std::string UUID::rawData()const {
+    return std::string ((const char*)mData.begin(),static_size);
+}
 std::string UUID::rawHexData()const{
     std::string retval;
     retval.resize(2*static_size);

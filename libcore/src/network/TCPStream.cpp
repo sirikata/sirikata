@@ -107,28 +107,32 @@ void TCPStream::send(const void*data, size_t dataSize, StreamReliability reliabi
     }
 }
 ///This function waits on the sendStatus clearing up so no outstanding sends are being made (and no further ones WILL be made cus of the SendStatusClosing flag that is on
-void TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
+bool TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     int sendStatus=vSendStatus.read();
     bool incd=false;
     if ((sendStatus&(SendStatusClosing*3))==0) {
         ///FIXME we want to |= here
-        vSendStatus+=SendStatusClosing;
-        incd=true;
+        incd=((vSendStatus+=SendStatusClosing)==SendStatusClosing);
     }
     //Wait until it's a pure sendStatus value without any 'remainders' caused by outstanding sends
     while ((sendStatus=vSendStatus.read())!=SendStatusClosing&&
            sendStatus!=2*SendStatusClosing&&
            sendStatus!=3*SendStatusClosing) {
-
     }
+    return incd;
 }
 void TCPStream::close() {
     //set the stream closed as soon as sends are done
-    closeSendStatus(*mSendStatus);
-    //obliterate all incoming callback to this stream
-    mSocket->addCallbacks(getID(),NULL);
-    //send out that the stream is now closed on all sockets
-    MultiplexedSocket::closeStream(mSocket,getID());
+    bool justClosed=closeSendStatus(*mSendStatus);
+    if (justClosed) {
+        //obliterate all incoming callback to this stream
+        mSocket->addCallbacks(getID(),NULL);
+        //send out that the stream is now closed on all sockets
+        MultiplexedSocket::closeStream(mSocket,getID());
+    }
+}
+TCPStream::~TCPStream() {
+    close();
 }
 TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0)) {
 }

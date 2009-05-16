@@ -70,31 +70,17 @@ message Message {
 
 /////////////Built-in messages///////////////
 
-//New Streams can establish an ObjectConnection
-message NewObj {
-    ///key to indicate how an object's ObjectReference should be restored
-    optional uuid object_uuid_evidence=2;
-}
-//This will be in the argument for the return value of the NewObj function
-message RetObj {
-    //return value for NewObj message
-    optional uuid object_reference = 2;
-}
-//This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
-message DelObj {
-}
-
 //This message is from a space to an object updating its position and orientation (returns void)
 message ObjLoc {
 
     //time that the update was sent out
-    required time timestamp = 2;
+    optional time timestamp = 2;
 
     //position of source object
-    required vector3d position = 3;
+    optional vector3d position = 3;
 
     //orientation of source object
-    required quaternion orientation = 4;
+    optional quaternion orientation = 4;
 
     //velocity of the source object at snapsot
     optional vector3f velocity = 5;
@@ -112,10 +98,36 @@ message ObjLoc {
     //options for this update, right now only force is the option
     optional UpdateFlags update_flags = 6;
 }
+
+//New Streams can establish an ObjectConnection
+message NewObj {
+    ///key to indicate how an object's ObjectReference should be restored
+    optional uuid object_uuid_evidence=2;
+    ///The object host may request a position for a newly created object
+    optional ObjLoc requested_object_loc=3;
+    ///the bounding sphere for the mesh, so that proximity detection can begin right away
+    optional boundingsphere3f bounding_sphere=4;
+}
+
+
+//This will be in the argument for the return value of the NewObj function
+message RetObj {
+    //return value for NewObj message
+    optional uuid object_reference = 2;
+    //the definitive location of the object
+    optional ObjLoc location=3;
+    ///the defininitive bounding sphere for the mesh: may be smaller than the requested bounding sphere due to policy
+    optional boundingsphere3f bounding_sphere=4;
+}
+
+//This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
+message DelObj {
+}
+
 message NewProxQuery {
 
     //the client chosen id for this query
-    required uint32 query_id=2;
+    optional uint32 query_id=2;
 
     //If present and set to true, the query is fired once, the relevant items are returned and the query is forgotten
     optional bool stateless=3;
