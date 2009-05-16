@@ -63,6 +63,15 @@ public:
                                                size_t optionalSerializedMessageSize=0)=0;
 
     /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if the object has been removed from the current proximity system
+     */
+    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,//so it could fire back a response on the same stream if necessary
+                                               const ObjectReference*object,
+                                               const void *serializedMessage,
+                                               size_t serializedMessageSize)=0;
+
+    /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,
      * so the proximity system knows about a new object

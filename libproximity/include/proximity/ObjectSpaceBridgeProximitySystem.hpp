@@ -45,7 +45,7 @@ class ObjectSpaceBridgeProximitySystem : public ProximitySystem{
     ObjectPtr mObject;
 protected:
     static const char* proxCallbackName() {
-        return "ProxCallback";
+        return "ProxCall";
     }
     virtual bool forwardThisName(const std::string&name) {
         return name=="NewProxQuery"||name==proxCallbackName()||name=="DelProxQuery";
@@ -95,26 +95,13 @@ protected:
                              size_t optionalSerializedMessageSize) {
         mObject->send(opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
     }
-
-public:
-    ObjectSpaceBridgeProximitySystem (ObjectPtr obj) {
-        mObject=obj;
-    }
-    enum MessageBundle{
-        DELIVER_TO_UNKNOWN,
-        DELIVER_TO_OBJECT,
-        DELIVER_TO_PROX,
-        DELIVER_TO_BOTH
-        
-    };
-
     /**
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+    OpaqueMessageReturnValue internalProcessOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage& mesg,
+                                               Sirikata::Protocol::Message& mesg,
                                                const void *optionalSerializedMessage=NULL,
                                                size_t optionalSerializedMessageSize=0) {
         Protocol::Message msg(mesg);
@@ -179,6 +166,51 @@ public:
             
         }
         return obj_is_deleted;
+    }
+
+public:
+    ObjectSpaceBridgeProximitySystem (ObjectPtr obj) {
+        mObject=obj;
+    }
+    enum MessageBundle{
+        DELIVER_TO_UNKNOWN,
+        DELIVER_TO_OBJECT,
+        DELIVER_TO_PROX,
+        DELIVER_TO_BOTH
+        
+    };
+
+    /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if object was deleted
+     */
+    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+                                                                   const ObjectReference*object,
+                                                                   const void *serializedMessage,
+                                                                   size_t serializedMessageSize) {
+        Sirikata::Protocol::Message mesg;
+        mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+        return internalProcessOpaqueProximityMessage(newObjectReferences,
+                                             object,
+                                             mesg,
+                                             serializedMessage,
+                                             serializedMessageSize);
+    }
+    /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if object was deleted
+     */
+    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+                                               const ObjectReference*object,
+                                               const Sirikata::Protocol::IMessage& mesg,
+                                               const void *optionalSerializedMessage=NULL,
+                                               size_t optionalSerializedMessageSize=0) {
+        Protocol::Message msg(mesg);
+        return internalProcessOpaqueProximityMessage(newObjectReferences,
+                                             object,
+                                             msg,
+                                             optionalSerializedMessage,
+                                             optionalSerializedMessageSize);
     }
 
     /**

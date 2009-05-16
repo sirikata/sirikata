@@ -68,14 +68,17 @@ class ProxTest : public CxxTest::TestSuite
     Network::IOService *mProxIO;
     boost::thread*mProxThread;
     boost::thread*mThread;
+    AtomicValue<int>mSend;
     volatile bool mAbortTest;
     volatile bool mReadyToConnect;
     static const int NUM_OBJECTS=10;
     UUID mObjectId[NUM_OBJECTS];
+    AtomicValue<int>mDeliver[NUM_OBJECTS];
 public:
-    ProxTest():mIO(IOServiceFactory::makeIOService()),mAbortTest(false),mReadyToConnect(false){
+    ProxTest():mIO(IOServiceFactory::makeIOService()),mSend(0),mAbortTest(false),mReadyToConnect(false){
         for (int i=0;i<NUM_OBJECTS;++i) {
             mObjectId[i]=UUID::random();
+            mDeliver[i]=0;
         }
         Sirikata::PluginManager plugins;
         plugins.load(
@@ -144,33 +147,56 @@ public:
         locations[9]=Vector3d(-256,-256,-256);
         for (int i=0;i<NUM_OBJECTS;++i) {
             robj.set_object_reference(mObjectId[i]);
-            ObjLoc loc;
-            loc.set_timestamp(Time::now());
-            loc.set_position(locations[i]);
-            loc.set_orientation(Quaternion::identity());
-            loc.set_velocity(Vector3f(0,0,0));
-            robj.location().set_timestamp(Time::now());
-            robj.location().set_position(locations[i]);
-            robj.location().set_orientation(Quaternion::identity());
-            robj.location().set_velocity(Vector3f(0,0,0));
+            robj.mutable_location().set_timestamp(Time::now());
+            robj.mutable_location().set_position(locations[i]);
+            robj.mutable_location().set_orientation(Quaternion::identity());
+            robj.mutable_location().set_velocity(Vector3f(0,0,0));
             mLocalProxSystem->newObj(robj);
         }
         NewProxQuery npq;
         npq.set_query_id(0);
         npq.set_relative_center(Vector3f(0,0,0));
+        npq.set_max_radius(0);
+        mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
+        npq.set_query_id(1);
+        npq.set_max_radius(64);
+        mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
+        npq.set_query_id(2);
         npq.set_max_radius(128);
         mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
-        sleep(10);
+        npq.set_query_id(3);
+        npq.set_max_radius(256);
+        mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
+        npq.set_query_id(4);
+        npq.set_max_radius(512);
+        mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
+        sleep(3);
+        TS_ASSERT_EQUALS(mDeliver[0].read(),1);
+        TS_ASSERT_EQUALS(mDeliver[1].read(),3);
+        TS_ASSERT_EQUALS(mDeliver[2].read(),5);
+        TS_ASSERT_EQUALS(mDeliver[3].read(),7);
+        TS_ASSERT_EQUALS(mDeliver[4].read(),10);
     }
 
     void send(const Protocol::IMessage&opaqueMessage,const void*,size_t){
         for (int i=0;i<opaqueMessage.message_names_size();++i) {
-            SILOG(sirikata,warning,"Opaque message named: "<<opaqueMessage.message_names(i));
+            SILOG(sirikata,warning,"Send opaque message named: "<<opaqueMessage.message_names(i));            
+            ++mSend;
         }
     }
     void deliver(const Protocol::IMessage&opaqueMessage,const void*,size_t){
         for (int i=0;i<opaqueMessage.message_names_size();++i) {
-            SILOG(sirikata,warning,"Opaque message named: "<<opaqueMessage.message_names(i));
+            if (opaqueMessage.message_names(i)=="ProxCall") {
+                Protocol::ProxCall cb;
+                if (cb.ParseFromString(opaqueMessage.message_arguments(i))) {
+                    int qid=cb.query_id();
+                    if (qid<NUM_OBJECTS){
+                        ++mDeliver[qid];
+                    }
+                }
+            }else {
+                SILOG(sirikata,warning,"Opaque message named: "<<opaqueMessage.message_names(i));
+            }
         }        
     }
 };

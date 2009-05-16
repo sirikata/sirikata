@@ -136,6 +136,11 @@ public:
                                                const void *optionalSerializedMessage=NULL,
                                                size_t optionalSerializedMessageSize=0);
 
+    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+                                               const ObjectReference*object,
+                                               const void *serializedMessage,
+                                               size_t serializedMessageSize);
+
     /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,

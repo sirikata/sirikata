@@ -60,6 +60,20 @@ ProxBridge::~ProxBridge() {
 }
 
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+                                                                                    const ObjectReference*object,
+                                                                                    const void *serializedMessage,
+                                                                                    size_t serializedMessageSize) {
+    Sirikata::Protocol::Message mesg;
+    mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+    return processOpaqueProximityMessage(newObjectReferences,
+                                         object,
+                                         mesg,
+                                         serializedMessage,
+                                         serializedMessageSize);
+}
+
+
+ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,    
                                                const Sirikata::Protocol::IMessage&msg,
                                                const void *optionalSerializedMessage,
@@ -239,7 +253,7 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
         if (new_query.has_min_solid_angle()&&new_query.has_max_radius()) {
             queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle(new_query.min_solid_angle()),new_query.max_radius());
         }else if (new_query.has_max_radius()) {
-            queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle::Max,new_query.max_radius());
+            queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle(0),new_query.max_radius());
         }else if (new_query.has_min_solid_angle()) {
             queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle(new_query.min_solid_angle()));
         }

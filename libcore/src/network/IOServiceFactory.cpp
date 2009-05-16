@@ -86,7 +86,7 @@ void handle_deadline_timer(const boost::system::error_code&e,boost::asio::deadli
     }else {
         f();
     }
-//    delete timer;
+    delete timer;
 }
 }
 void IOServiceFactory::dispatchServiceMessage(IOService*ios,const Duration&waitFor,const std::tr1::function<void()>&f){

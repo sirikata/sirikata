@@ -51,15 +51,10 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
                           const Network::Chunk&chunk) {
     std::tr1::shared_ptr<Network::Stream> lok=mLock.lock();//make sure this proximity connection will not disappear;
     if (lok) {
-        Protocol::Message msg;
-        const void *chunk_data=NULL;
         if (chunk.size()) {
-            chunk_data=&chunk[0];
-            msg.ParseFromArray(chunk_data,chunk.size());
+            std::vector<ObjectReference>newObjReferences;
+            system->processOpaqueProximityMessage(newObjReferences,&object,&chunk[0],chunk.size());
         }
-        std::vector<ObjectReference>newObjReferences;
-        system->processOpaqueProximityMessage(newObjReferences,&object,msg,chunk_data,chunk.size());
-        
     }
 }
 }
