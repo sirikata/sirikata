@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Ogre Graphics Plugin
- *  SDLInputManager.hpp
+ *  InputEvents.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,28 +29,26 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-extern "C" typedef struct SDL_Surface SDL_Surface;
-extern "C" typedef Sirikata::uint32 SDL_WindowID;
-extern "C" typedef void* SDL_GLContext;
-#include <task/EventManager.hpp>
-namespace Sirikata { namespace Graphics {
-class PressedKeys;
-class PressedMouseButtons;
-class PressedJoyButtons;
-class SDLInputManager :public Task::GenEventManager{
-    SDL_WindowID mWindowID;
-    SDL_GLContext mWindowContext;
-    PressedKeys *mPressedKeys;
-    PressedMouseButtons *mPressedMouseButtons;
-    PressedJoyButtons *mPressedJoyButtons;
-public:
-    SDLInputManager(unsigned int width,
-                    unsigned int height,
-                    bool fullscreen,
-                    const Ogre::PixelFormat&fmt,
-                    bool grabCursor,
-                    void *&currentWindowData);
-    bool tick(Time currentTime, Duration frameTime);
-    ~SDLInputManager();
-};
-} }
+
+#include <util/Standard.hh>
+#include "InputEvents.hpp"
+
+namespace Sirikata {
+namespace Input {
+
+IdPair::Primary WindowEvent::Shown("WindowShown");
+IdPair::Primary WindowEvent::Hidden("WindowHidden");
+IdPair::Primary WindowEvent::Exposed("WindowExposed");
+IdPair::Primary WindowEvent::Moved("WindowMoved");
+IdPair::Primary WindowEvent::Resized("WindowResized");
+IdPair::Primary WindowEvent::Minimized("WindowMinimized");
+IdPair::Primary WindowEvent::Maximized("WindowMaximized");
+IdPair::Primary WindowEvent::Restored("WindowRestored");
+IdPair::Primary WindowEvent::MouseEnter("MouseEnter");
+IdPair::Primary WindowEvent::MouseLeave("MouseLeave");
+IdPair::Primary WindowEvent::FocusGained("WindowFocused");
+IdPair::Primary WindowEvent::FocusLost("WindowUnfocused");
+IdPair::Primary WindowEvent::Quit("Quit");
+
+}
+}

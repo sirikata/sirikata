@@ -52,10 +52,13 @@ class CDNArchivePlugin;
 }
 
 namespace Sirikata {
+namespace Input {
+class SDLInputManager;
+}
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
 class Entity;
-class SDLInputManager;
+using Input::SDLInputManager;
 class CameraEntity;
 
 

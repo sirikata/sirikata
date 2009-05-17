@@ -50,7 +50,7 @@
 #include <OgreWindowEventUtilities.h>
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
-#include "SDLInputManager.hpp"
+#include "input/SDLInputManager.hpp"
 
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceManager.hpp"

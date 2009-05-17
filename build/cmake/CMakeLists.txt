@@ -753,15 +753,19 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 SET(LIBOH_PLUGIN_OGREGRAPHICS_DIR ${LIBOH_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBOH_PLUGIN_OGREGRAPHICS_DIR})
+SET(INPUT ${GFX}/input)
 SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${SirikataOgreCoreZipCpp}
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgreSystem.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/SDLInputManager.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/Entity.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/LightEntity.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/MeshEntity.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/CameraEntity.cpp
-  ${LIBOH_PLUGIN_OGREGRAPHICS_DIR}/OgrePlugin.cpp
+  ${GFX}/OgreSystem.cpp
+  ${INPUT}/SDLInputManager.cpp
+  ${INPUT}/InputEvents.cpp
+  ${INPUT}/InputDevice.cpp
+  ${INPUT}/SDLInputDevice.cpp
+  ${GFX}/Entity.cpp
+  ${GFX}/LightEntity.cpp
+  ${GFX}/MeshEntity.cpp
+  ${GFX}/CameraEntity.cpp
+  ${GFX}/OgrePlugin.cpp
 ${GFX}/meruCompat/Event.cpp
 ${GFX}/meruCompat/EventSource.cpp
 ${GFX}/meruCompat/MeruDefs.cpp
