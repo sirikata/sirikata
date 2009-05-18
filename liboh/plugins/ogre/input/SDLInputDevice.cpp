@@ -101,12 +101,8 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     }
 
     if (changedx || changedy) {
-        if (buttonState.empty()) {
-            em->fire(EventPtr(new MouseHoverEvent(thisptr, event.x, event.y, event.cursor)));
-        } else {
-            em->fire(EventPtr(new MouseDragEvent(thisptr, event.x, event.y, event.cursor,
-                event.pressure, event.pressure_min, event.pressure_max)));
-        }
+        firePointerMotion(thisptr, em, event.x, event.y, event.cursor,
+                event.pressure, event.pressure_min, event.pressure_max);
     }
 
     // "For future use"

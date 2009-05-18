@@ -129,6 +129,9 @@ class InputDevice;
 typedef std::tr1::shared_ptr<InputDevice> InputDevicePtr;
 typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
 
+class PointerDevice;
+typedef std::tr1::shared_ptr<PointerDevice> PointerDevicePtr;
+
 class InputDevice {
 public:
     typedef uint32 Modifier;
@@ -277,6 +280,37 @@ public:
         return std::string();
     }
 
+};
+
+class PointerDevice : public InputDevice {
+    struct DragInfo {
+        bool mIsDragging;
+        int mDragStartX;
+        int mDragStartY;
+    };
+    typedef std::map<int, DragInfo> DragMap;
+    DragMap mDragInfo;
+    float mDeadband;
+public:
+    PointerDevice() : mDeadband(0.0) {
+    }
+    void setDragDeadband(float deadband) {
+        mDeadband = deadband;
+    }
+
+    void firePointerMotion(const PointerDevicePtr &thisptr,
+                    Task::GenEventManager *em,
+                    int xPixel,
+                    int yPixel,
+                    int cursorType,
+                    int pressure, int pressmin, int pressmax);
+    void firePointerClick(const PointerDevicePtr &thisptr,
+                    Task::GenEventManager *em,
+                    int xPixel,
+                    int yPixel,
+                    int cursor,
+                    int button,
+                    bool state);
 };
 
 }

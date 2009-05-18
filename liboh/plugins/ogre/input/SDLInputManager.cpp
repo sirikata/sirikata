@@ -210,6 +210,15 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 mMice[event->button.which],
                 this, 
                 event->button.button,
+                (event->button.state == SDL_PRESSED),
+                (1<<SDL_GetCurrentCursor(event->button.which))>>1);
+            mMice[event->button.which]->firePointerClick(
+                mMice[event->button.which],
+                this, 
+                event->button.x,
+                event->button.y,
+                SDL_GetCurrentCursor(event->button.which),
+                event->button.button,
                 event->button.state == SDL_PRESSED);
             break;
           case SDL_JOYBUTTONDOWN:

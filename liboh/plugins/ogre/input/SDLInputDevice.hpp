@@ -50,7 +50,7 @@ typedef std::tr1::shared_ptr<SDLJoystick> SDLJoystickPtr;
 class SDLKeyboard;
 typedef std::tr1::shared_ptr<SDLKeyboard> SDLKeyboardPtr;
 
-class SDLMouse: public InputDevice {
+class SDLMouse: public PointerDevice {
     unsigned int mWhich;
     unsigned int mNumButtons;
 public:

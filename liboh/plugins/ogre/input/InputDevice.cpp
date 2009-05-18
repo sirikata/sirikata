@@ -111,6 +111,70 @@ bool InputDevice::fireAxis(const InputDevicePtr &thisptr,
     return changed;
 }
 
+void PointerDevice::firePointerClick(
+        const PointerDevicePtr &thisptr,
+        GenEventManager *em,
+        int xPixel,
+        int yPixel,
+        int cursor,
+        int button,
+        bool state) {
+    DragMap::iterator iter = mDragInfo.find(button);
+    if (iter == mDragInfo.end()) {
+        if (!state) return;
+        DragInfo di;
+        di.mIsDragging = false;
+        di.mDragStartX = xPixel;
+        di.mDragStartY = yPixel;
+        mDragInfo.insert(DragMap::value_type(button, di));
+    } else {
+        if (state) return;
+        int endX, endY;
+        if ((*iter).second.mIsDragging) {
+            xPixel = (*iter).second.mDragStartX;
+            yPixel = (*iter).second.mDragStartY;
+        }
+        em->fire(std::tr1::shared_ptr<MouseClickEvent>(
+            new MouseClickEvent(thisptr,
+                                (*iter).second.mDragStartX,
+                                (*iter).second.mDragStartY,
+                                xPixel, yPixel,
+                                cursor, button)));
+        mDragInfo.erase(iter);
+    }
+}
+
+void PointerDevice::firePointerMotion(
+        const PointerDevicePtr &thisptr,
+        GenEventManager *em,
+        int xPixel,
+        int yPixel,
+        int cursorType,
+        int pressure, int pressmin, int pressmax) {
+    if (mDragInfo.empty()) {
+        em->fire(EventPtr(new MouseHoverEvent(thisptr, xPixel, yPixel, cursorType)));
+    } else {
+        for (DragMap::iterator iter = mDragInfo.begin();
+             iter != mDragInfo.end(); ++iter) {
+
+            DragInfo &di = (*iter).second;
+            if (!di.mIsDragging) {
+                int xdiff = (xPixel - di.mDragStartX);
+                int ydiff = (yPixel - di.mDragStartY);
+                if (xdiff*xdiff + ydiff*ydiff >= mDeadband*mDeadband) {
+                    di.mIsDragging = true;
+                }
+            }
+            if (di.mIsDragging) {
+                em->fire(EventPtr(new MouseDragEvent(thisptr, di.mDragStartX, di.mDragStartY, 
+                                                     xPixel, yPixel, cursorType, (*iter).first,
+                                                     pressure, pressmin, pressmax)));
+            }
+        }
+    }
+}
+
+
 }
 }
 

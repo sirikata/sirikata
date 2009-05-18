@@ -164,13 +164,18 @@ public:
     int mY;
     int mCursorType;
 
-    MouseEvent(IdPair::Primary priId,
-               const InputDevicePtr &dev, 
+    MouseEvent(const IdPair &id,
+               const PointerDevicePtr &dev, 
                int x, int y, int cursorType)
-        : InputEvent(dev, IdPair(priId, getSecondaryId(dev))) {
+        : InputEvent(dev, id) {
         mX = x;
         mY = y;
         mCursorType = cursorType;
+    }
+
+    PointerDevicePtr getDevice() const {
+        return std::tr1::static_pointer_cast<PointerDevice>(
+            InputEvent::getDevice());
     }
 };
 
@@ -181,13 +186,56 @@ public:
         return retval;
     }
 
-    MouseHoverEvent(const InputDevicePtr &dev, 
+    MouseHoverEvent(const PointerDevicePtr &dev, 
                int x, int y, int cursorType)
-        : MouseEvent(getEventId(), dev, x, y, cursorType) {
+        : MouseEvent(IdPair(getEventId(), getSecondaryId(dev)), dev, x, y, cursorType) {
     }
 };
 
-class MouseDragEvent: public MouseEvent {
+class MouseDownEvent: public MouseEvent {
+public:
+    int mButton;
+    int mXStart;
+    int mYStart;
+
+    static IdPair::Secondary getSecondaryId(int button,
+                                            const InputDevicePtr &device) {
+        std::ostringstream os;
+        os << &(*device) << "," << button;
+        return IdPair::Secondary(os.str());
+    }
+
+    MouseDownEvent(const IdPair::Primary &priId,
+                    const PointerDevicePtr &dev, 
+                    int xstart, int ystart, int xend, int yend, 
+                    int cursorType, int button)
+        : MouseEvent(IdPair(priId, getSecondaryId(button, dev)), 
+                     dev, xend, yend, cursorType) {
+        mButton = button;
+        mXStart = xstart;
+        mYStart = ystart;
+    }
+};
+
+class MouseClickEvent: public MouseDownEvent {
+public:
+    bool mDrag;
+
+    static const IdPair::Primary getEventId() {
+        static IdPair::Primary retval("MouseClickEvent");
+        return retval;
+    }
+
+    MouseClickEvent(const PointerDevicePtr &dev, 
+                    int xstart, int ystart, int xend, int yend, 
+                    int cursorType, int button)
+        : MouseDownEvent(getEventId(), dev, xstart, ystart, 
+                         xend, yend, cursorType, button) {
+        mDrag = !(xstart == xend && ystart == yend);
+    }
+};
+
+class MouseDragEvent: public MouseDownEvent {
 public:
     int mPressure;
     int mPressureMax;
@@ -198,10 +246,12 @@ public:
         return retval;
     }
 
-    MouseDragEvent(const InputDevicePtr &dev, 
-                    int x, int y, int cursorType,
-                    int pressure, int pressureMin, int pressureMax)
-        : MouseEvent(getEventId(), dev, x, y, cursorType) {
+    MouseDragEvent(const PointerDevicePtr &dev, 
+                   int xstart, int ystart, int xend, int yend,
+                   int cursorType, int button,
+                   int pressure, int pressureMin, int pressureMax)
+        : MouseDownEvent(getEventId(), dev, xstart, ystart, 
+                         xend, yend, cursorType, button) {
         mPressure = pressure;
         mPressureMin = pressureMin;
         mPressureMax = pressureMax;
