@@ -39,10 +39,10 @@
 #include <task/EventManager.hpp>
 
 namespace Sirikata {
+namespace Input { class SDLInputManager; }
 namespace Graphics {
 
 class WebView;
-class SDLInputManager;
 
 /**
 * Enumerates internal mouse button IDs. Used by WebViewManager::injectMouseDown, WebViewManager::injectMouseUp
@@ -73,7 +73,7 @@ public:
 	*
 	* @throws	Ogre::Exception::ERR_INTERNAL_ERROR		Throws this when LLMozLib fails initialization
 	*/
-	WebViewManager(Ogre::Viewport* defaultViewport, SDLInputManager* inputMgr, const std::string &baseDirectory = "WebViewLocal");
+	WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory = "WebViewLocal");
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).
@@ -234,11 +234,10 @@ protected:
 #if defined(_WIN32)
 	void handleKeyboardMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
-	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMouseDown(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMouseUp(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onKeyDown(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onKeyUp(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseHover(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onButtonDown(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onButtonUp(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onKeyTextInput(Sirikata::Task::EventPtr evt);
 };
 

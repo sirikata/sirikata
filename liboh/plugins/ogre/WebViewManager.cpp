@@ -32,8 +32,10 @@
 
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
-#include "SDLInputManager.hpp"
-#include "SDLEvents.hpp"
+#include "input/SDLInputManager.hpp"
+#include "input/InputEvents.hpp"
+#include "SDL_scancode.h"
+#include "SDL_keysym.h"
 #include <algorithm>
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #include <direct.h>
@@ -53,7 +55,7 @@ std::string getCurrentWorkingDirectory()
 	return "";
 }
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, SDLInputManager* inputMgr, const std::string &baseDirectory)
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), mouseXPos(0), mouseYPos(0), mouseButtonRDown(false), zOrderCounter(5), 
 	defaultViewport(defaultViewport), tooltipParent(0), lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
@@ -68,12 +70,11 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, SDLInputManager*
 	tooltipWebView->bind("resizeTooltip", boost::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-	inputMgr->subscribe(Sirikata::Graphics::SDL::MouseMotionType()(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
-	inputMgr->subscribe(Sirikata::Graphics::SDL::MouseButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onMouseDown, this, _1));
-	inputMgr->subscribe(Sirikata::Graphics::SDL::MouseButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onMouseUp, this, _1));
-	inputMgr->subscribe(Sirikata::Graphics::SDL::KeyPressed::getEventId(), std::tr1::bind(&WebViewManager::onKeyDown, this, _1));
-	inputMgr->subscribe(Sirikata::Graphics::SDL::KeyReleased::getEventId(), std::tr1::bind(&WebViewManager::onKeyUp, this, _1));
-	inputMgr->subscribe(Sirikata::Graphics::SDL::TextInputType()(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseHover, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseDrag, this, _1));
+	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButtonDown, this, _1));
+	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButtonUp, this, _1));
+	inputMgr->subscribe(Sirikata::Input::TextInputEvent::getEventId(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
 }
 
 WebViewManager::~WebViewManager()
@@ -459,35 +460,20 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 	isDraggingFocusedWebView = true;
 }
 
-Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onMouseHover(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Graphics::SDL::MouseMotion* e = dynamic_cast<Sirikata::Graphics::SDL::MouseMotion*>(evt.get());
+	Sirikata::Input::MouseHoverEvent* e = dynamic_cast<Sirikata::Input::MouseHoverEvent*>(evt.get());
 
-	this->injectMouseMove(e->mEvent.x, e->mEvent.y);
+	this->injectMouseMove(e->mX, e->mY);
 
 	return Sirikata::Task::EventResponse::nop();
 }
 
-Sirikata::Task::EventResponse WebViewManager::onMouseDown(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Graphics::SDL::MouseButtonPressed* e = dynamic_cast<Sirikata::Graphics::SDL::MouseButtonPressed*>(evt.get());
+	Sirikata::Input::MouseDragEvent* e = dynamic_cast<Sirikata::Input::MouseDragEvent*>(evt.get());
 
-	if(e->mEvent.button == 1)
-		this->injectMouseDown(LeftMouseButton);
-	else if(e->mEvent.button == 3)
-		this->injectMouseDown(RightMouseButton);
-
-	return Sirikata::Task::EventResponse::nop();
-}
-
-Sirikata::Task::EventResponse WebViewManager::onMouseUp(Sirikata::Task::EventPtr evt)
-{
-	Sirikata::Graphics::SDL::MouseButtonReleased* e = dynamic_cast<Sirikata::Graphics::SDL::MouseButtonReleased*>(evt.get());
-
-	if(e->mEvent.button == 1)
-		this->injectMouseUp(LeftMouseButton);
-	else if(e->mEvent.button == 3)
-		this->injectMouseUp(RightMouseButton);
+	this->injectMouseMove(e->mX, e->mY);
 
 	return Sirikata::Task::EventResponse::nop();
 }
@@ -496,34 +482,44 @@ Sirikata::Task::EventResponse WebViewManager::onMouseUp(Sirikata::Task::EventPtr
 unsigned int mapSDLToWindows(SDL_scancode scancode);
 #endif
 
-Sirikata::Task::EventResponse WebViewManager::onKeyDown(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onButtonDown(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Graphics::SDL::KeyPressed* e = dynamic_cast<Sirikata::Graphics::SDL::KeyPressed*>(evt.get());
+	Sirikata::Input::ButtonPressed* e = dynamic_cast<Sirikata::Input::ButtonPressed*>(evt.get());
 
+	if(e->mButton == 1)
+		this->injectMouseDown(LeftMouseButton);
+	else if(e->mButton == 3)
+		this->injectMouseDown(RightMouseButton);
 #if defined(_WIN32)
-	handleKeyboardMessage(0, WM_KEYDOWN, mapSDLToWindows(e->mEvent.keysym.scancode), 0);
+	else if(e->mButton >= 4)
+		handleKeyboardMessage(0, WM_KEYDOWN, mapSDLToWindows((SDL_scancode)e->mButton), 0);
 #endif
 
 	return Sirikata::Task::EventResponse::nop();
 }
 
-Sirikata::Task::EventResponse WebViewManager::onKeyUp(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onButtonUp(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Graphics::SDL::KeyReleased* e = dynamic_cast<Sirikata::Graphics::SDL::KeyReleased*>(evt.get());
+	Sirikata::Input::ButtonReleased* e = dynamic_cast<Sirikata::Input::ButtonReleased*>(evt.get());
 
+	if(e->mButton == 1)
+		this->injectMouseUp(LeftMouseButton);
+	else if(e->mButton == 3)
+		this->injectMouseUp(RightMouseButton);
 #if defined(_WIN32)
-	handleKeyboardMessage(0, WM_KEYUP, mapSDLToWindows(e->mEvent.keysym.scancode), 0);
+	else if(e->mButton >= 4)
+		handleKeyboardMessage(0, WM_KEYUP, mapSDLToWindows((SDL_scancode)e->mButton), 0);
 #endif
-	
+
 	return Sirikata::Task::EventResponse::nop();
 }
 
 Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Graphics::SDL::TextInput* e = dynamic_cast<Sirikata::Graphics::SDL::TextInput*>(evt.get());
+	Sirikata::Input::TextInputEvent* e = dynamic_cast<Sirikata::Input::TextInputEvent*>(evt.get());
 
 #if defined(_WIN32)
-	handleKeyboardMessage(0, WM_CHAR, (unsigned short)e->mEvent.text[0], 0);
+	handleKeyboardMessage(0, WM_CHAR, (unsigned short)e->mText[0], 0);
 #endif
 
 	return Sirikata::Task::EventResponse::nop();
