@@ -60,17 +60,20 @@ public:
         Sirikata::uint32 output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
     }
-    void testAtomicIncrement64( void ) {
-#ifndef _WIN32
+    // This test is only useful for 64-bit, but don't cause compile errors on 32-bit.
+    void testAtomicIncrementPointer( void ) {
       //FIXME: vista only for now
-        Sirikata::int64 test=65535;
+#ifndef _WIN32
+      // Apparently XP-64 segfaults if you call this! oh joy.
+      // Need to write inline assembly for Windows.
+        intptr_t test=(intptr_t)65535;
         test*=65535;
         test*=65535;
-        AtomicValue<Sirikata::int64> a;
+        AtomicValue<intptr_t> a;
         a=test;
         a++;
         a+=235;
-        Sirikata::int64 output=a.read();
+        intptr_t output=a.read();
         TS_ASSERT_EQUALS(test+1+235,output);
 #endif
     }
