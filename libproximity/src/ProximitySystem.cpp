@@ -1,4 +1,5 @@
 #include "proximity/Platform.hpp"
+#include "util/ObjectReference.hpp"
 #include "Proximity_Sirikata.pbj.hpp"
 #include "proximity/ProximitySystem.hpp"
 #include "network/Stream.hpp"
@@ -20,6 +21,23 @@ void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, co
     msg.SerializeToString(&data);
     strm->send(data.data(),data.size(),Network::ReliableOrdered);
 }
+
+
+const char *const* ProximitySystem::relevantUnfilteredMessages()const{
+    static const char* retval[]={"ObjLoc","RetObj","DelObj"};
+    return &retval[0];
+}
+size_t ProximitySystem::relevantUnfilteredMessagesSize()const{
+    return 3;
+}
+const char *const* ProximitySystem::relevantFilteredMessages()const{
+    static const char* retval[]={"NewProxQuery","DelProxQuery"};
+    return &retval[0];
+}
+size_t ProximitySystem::relevantFilteredMessagesSize()const{
+    return 2;
+}
+/*
 bool ProximitySystem::proximityRelevantMessageName(const String&msg){
     return msg=="ObjLoc"||msg=="ProxCall"||msg=="NewProxQuery"||msg=="DelProxQuery"||msg=="RetObj"||msg=="DelObj";
 }
@@ -31,7 +49,7 @@ bool ProximitySystem::proximityRelevantMessage(const Sirikata::Protocol::IMessag
     }
     return false;
 }
-
+*/
 
 
 } }

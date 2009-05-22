@@ -126,17 +126,23 @@ public:
 
     ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*, const Callback &cb=&sendProxCallback);
     virtual ~ProxBridge();
-    /**
-     * Process a message that may be meant for the proximity system
-     * \returns true if the object was deleted from the proximity system with the message
-     */
+
     virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,
                                                const Sirikata::Protocol::IMessage&,
                                                const void *optionalSerializedMessage=NULL,
                                                size_t optionalSerializedMessageSize=0);
+    /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if the object was deleted from the proximity system with the message
+     */
+    virtual void processOpaqueSpaceMessage(
+                                               const ObjectReference*object,
+                                               const Sirikata::Protocol::IMessage&,
+                                               const void *optionalSerializedMessage=NULL,
+                                               size_t optionalSerializedMessageSize=0);
 
-    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+    virtual void processOpaqueSpaceMessage(
                                                const ObjectReference*object,
                                                const void *serializedMessage,
                                                size_t serializedMessageSize);

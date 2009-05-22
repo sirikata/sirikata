@@ -36,11 +36,23 @@
 #include <space/Platform.hpp>
 
 namespace Sirikata {
-
+class Loc;
+class Oseg;
+class Cseg;
+class MessageRouter;
+namespace Proximity{
+class ProximitySystem;
+}
 class SIRIKATA_SPACE_EXPORT Space {
+    Loc * mLoc;
+    Proximity::ProximitySystem *mGeom;
+    Oseg *mObjectSegmentation;
+    Cseg *mCoordinateSegmentation;
+    MessageRouter *mRouter;
 public:
     Space();
     ~Space();
+
 }; // class Space
 
 } // namespace Sirikata

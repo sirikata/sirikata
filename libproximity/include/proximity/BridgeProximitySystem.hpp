@@ -59,19 +59,21 @@ protected:
     virtual void readProximityMessage(const ObjectReference&objectConnection,Network::Chunk&msg) {
         if (msg.size()) {
             Protocol::Message message;
-            message.ParsePartialFromArray(&msg[0],msg.size());
-            if (addressMessage(message,NULL,&objectConnection)==ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
-                this->deliverMessage(objectConnection,message,&msg[0],msg.size());//FIXME: this deliver happens in a thread---do we need a distinction
-            }else {
-                this->deliverMessage(objectConnection,message,NULL,0);//FIXME: this deliver happens in a thread---do we need a distinction
+            if (message.ParseFromArray(&msg[0],msg.size())) {
+                if (addressMessage(message,NULL,&objectConnection)==ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
+                    this->deliverMessage(objectConnection,message,&msg[0],msg.size());//FIXME: this deliver happens in a thread---do we need a distinction
+                }else {
+                    this->deliverMessage(objectConnection,message,NULL,0);//FIXME: this deliver happens in a thread---do we need a distinction
+                }
             }
         }
     }
 public:
     ProximityConnection *mProximityConnection;
     BridgeProximitySystem(SpacePtr obj,ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(connection) {
+        this->mImportantNames.insert("ObjLoc");
+        this->mImportantNames.insert("DelObj");
         mProximityConnection->setParent(this);
-        //FIXME need the mProximitySystem
     }
     enum MessageBundle{
         DELIVER_TO_UNKNOWN,
@@ -112,7 +114,41 @@ public:
         Protocol::Message toSend;
         this->constructMessage(toSend,&source,NULL,"DelObj",delObjMsg,optionalSerializedDelObj,optionalSerializedDelObjSize);
         this->sendMessage(source,toSend,NULL,0);
-        mProximityConnection->deleteObjectStream(source);
+        this->mProximityConnection->deleteObjectStream(source);
+    }
+    /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if object was deleted
+     */
+    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+                                               const void *serializedMessage,
+                                               size_t serializedMessageSize) {
+        Sirikata::Protocol::Message mesg;
+        mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+        if (this->internalProcessOpaqueProximityMessage(object,
+                                                        mesg,
+                                                        serializedMessage,
+                                                        serializedMessageSize)==ProximitySystem::OBJECT_DELETED) {
+            if (object)
+                this->mProximityConnection->deleteObjectStream(*object);
+        }
+    }
+    /**
+     * Process a message that may be meant for the proximity system
+     * \returns true if object was deleted
+     */
+    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+                                               const Sirikata::Protocol::IMessage& mesg,
+                                               const void *optionalSerializedMessage=NULL,
+                                               size_t optionalSerializedMessageSize=0) {
+        Protocol::Message msg(mesg);
+        if (this->internalProcessOpaqueProximityMessage(object,
+                                                        msg,
+                                                        optionalSerializedMessage,
+                                                        optionalSerializedMessageSize)==ProximitySystem::OBJECT_DELETED) {
+            if (object)
+                this->mProximityConnection->deleteObjectStream(*object);
+        }
     }
    
 };

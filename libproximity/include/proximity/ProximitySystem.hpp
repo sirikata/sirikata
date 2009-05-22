@@ -29,47 +29,34 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <util/SpaceObjectReference.hpp>
+#include <space/SpacePlugin.hpp>
 #ifndef _PROXIMITY_PROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
 namespace Sirikata { namespace Proximity {
-class SIRIKATA_PROXIMITY_EXPORT ProximitySystem {
+class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public Space::SpacePlugin{
 public:
     typedef std::tr1::function<void(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&)> Callback;
     static void defaultProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
     static void defaultNoAddressProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
     virtual ~ProximitySystem();
+
+    virtual const char *const* relevantUnfilteredMessages()const; 
+    virtual size_t relevantUnfilteredMessagesSize()const;
+    virtual const char *const* relevantFilteredMessages()const; 
+    virtual size_t relevantFilteredMessagesSize()const; 
     /**
      * Does the proximity system care about messages with this name
-     */
+     
     bool proximityRelevantMessageName(const String&);
-    /**
-     * Does the proximity system care about any of the messages in this message bundle
-     */
-    bool proximityRelevantMessage(const Sirikata::Protocol::IMessage&);
 
+     * Does the proximity system care about any of the messages in this message bundle
+
+    bool proximityRelevantMessage(const Sirikata::Protocol::IMessage&);
+     */
     enum OpaqueMessageReturnValue{
         OBJECT_NOT_DESTROYED,
         OBJECT_DELETED
     };
-    /**
-     * Process a message that may be meant for the proximity system
-     * \returns true if the object has been removed from the current proximity system
-     */
-    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,//so it could fire back a response on the same stream if necessary
-                                               const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage&,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0)=0;
-
-    /**
-     * Process a message that may be meant for the proximity system
-     * \returns true if the object has been removed from the current proximity system
-     */
-    virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,//so it could fire back a response on the same stream if necessary
-                                               const ObjectReference*object,
-                                               const void *serializedMessage,
-                                               size_t serializedMessageSize)=0;
 
     /**
      * Pass the ReturnedObjectConnection info,

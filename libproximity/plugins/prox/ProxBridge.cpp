@@ -59,19 +59,32 @@ ProxBridge::~ProxBridge() {
     delete mListener;
 }
 
-ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
+void ProxBridge::processOpaqueSpaceMessage(
                                                                                     const ObjectReference*object,
                                                                                     const void *serializedMessage,
                                                                                     size_t serializedMessageSize) {
     Sirikata::Protocol::Message mesg;
+    std::vector<ObjectReference> newObjectReferences;
     mesg.ParseFromArray(serializedMessage,serializedMessageSize);
-    return processOpaqueProximityMessage(newObjectReferences,
+    processOpaqueProximityMessage(newObjectReferences,
                                          object,
                                          mesg,
                                          serializedMessage,
                                          serializedMessageSize);
 }
 
+void ProxBridge::processOpaqueSpaceMessage(
+                                               const ObjectReference*object,    
+                                               const Sirikata::Protocol::IMessage&msg,
+                                               const void *optionalSerializedMessage,
+                                               size_t optionalSerializedMessageSize) {
+    ObjectStateMap::iterator where=mObjectStreams.end();
+    if (object) {
+        where=mObjectStreams.find(*object);
+    }
+    std::vector<ObjectReference> newObjectReferences;
+    processOpaqueProximityMessage(newObjectReferences,where,msg,optionalSerializedMessage,optionalSerializedMessageSize);
+}
 
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,    
@@ -367,6 +380,8 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
        this->delObj(where);
    }else SILOG(prox,warning,"Cannot delete nonexistant object "<<source); 
 }
+
+
 void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                                  const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                  const Network::Chunk&data) {

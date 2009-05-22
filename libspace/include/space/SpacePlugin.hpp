@@ -1,5 +1,5 @@
-/*  Sirikata Proximity Management -- Prox Plugin
- *  BruteForceProx.hpp
+/*  Sirikata Proximity Management -- Introduction Services
+ *  ProximitySystem.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,15 +29,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "proximity/Platform.hpp"
-#include "util/ObjectReference.hpp"
-#include "prox/BruteForceQueryHandler.hpp"
-#include "Prox_Sirikata.pbj.hpp"
-#include "proximity/ProximitySystem.hpp"
-#include "ProxBridge.hpp"
-#include "BruteForceProx.hpp"
-namespace Sirikata { namespace Proximity {
-ProximitySystem*BruteForceProx::create(Network::IOService*io,const String&options,const ProximitySystem::Callback&callback){
-    return new ProxBridge(*io,options,new Prox::BruteForceQueryHandler(),callback);
+#ifndef _SPACE_SPACEPLUGIN_HPP_
+#define _SPACE_SPACEPLUGIN_HPP_
+namespace Sirikata {
+class ObjectReference;
 }
+namespace Sirikata { namespace Protocol {
+class IMessage;
 } }
+namespace Sirikata { namespace Space {
+class SpacePlugin {
+public:
+    virtual ~SpacePlugin(){}
+    virtual const char *const* relevantUnfilteredMessages()const=0; 
+    virtual size_t relevantUnfilteredMessagesSize()const=0; 
+    virtual const char *const* relevantFilteredMessages()const=0; 
+    virtual size_t relevantFilteredMessagesSize()const=0; 
+    /**
+     * Process a message that may be meant for the space system
+     * \returns true if the object has been removed from the current space system
+     */
+    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+                                           const Sirikata::Protocol::IMessage&,
+                                           const void *optionalSerializedMessage=NULL,
+                                           size_t optionalSerializedMessageSize=0)=0;
+
+    /**
+     * Process a message that may be meant for the space system
+     * \returns true if the object has been removed from the current space system
+     */
+    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+                                           const void *serializedMessage,
+                                           size_t serializedMessageSize)=0;
+
+};
+
+} }
+#endif
