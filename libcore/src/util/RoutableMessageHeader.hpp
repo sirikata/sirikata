@@ -66,7 +66,7 @@ private:
             --size;
             size_t digit=(cur&127);
             retval+=digit*offset;
-            if (cur&128)break;
+            if ((cur&128)==0)break;
             offset*=128;
         }
         return retval;
@@ -90,13 +90,17 @@ private:
     }
 public:
     std::pair<const void *,size_t> ParseFromArray(const void *input, size_t size) {
-        const unsigned char*curInput;
+        const unsigned char*curInput=(const unsigned char*)input;
         while (size) {
             const unsigned char *dataStart=curInput;
+            size_t oldSize=size;
             size_t keyType=parseLength(curInput,size);
             size_t key=(keyType/8);
-            if (!isReserved(key))
+            if (!isReserved(key)) {
+                curInput=dataStart;
+                size=oldSize;
                 break;
+            }
             unsigned int type=keyType%8;
             switch(type) {
               case 0:

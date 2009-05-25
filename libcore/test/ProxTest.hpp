@@ -171,16 +171,20 @@ public:
         npq.set_query_id(4);
         npq.set_max_radius(512);
         mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
+        for (int i=0;i<100;++i) {
 #ifdef _WIN32
-		Sleep(3000);
+            Sleep(i<90:100:3000);
 #else
-		sleep(3);
+            sleep(i<90?0:1);
 #endif
+            if(mDeliver[4].read()>=10) break;
+        }
         TS_ASSERT_EQUALS(mDeliver[0].read(),1);
         TS_ASSERT_EQUALS(mDeliver[1].read(),3);
         TS_ASSERT_EQUALS(mDeliver[2].read(),5);
         TS_ASSERT_EQUALS(mDeliver[3].read(),7);
         TS_ASSERT_EQUALS(mDeliver[4].read(),10);
+
     }
 
     void send(const RoutableMessageHeader&opaqueMessage,const void*bodyData,size_t bodySize){

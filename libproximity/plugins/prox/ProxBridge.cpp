@@ -112,7 +112,6 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
         if (where==mObjectStreams.end()&&msg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(msg.source_object()));
         }
-        std::vector<ObjectReference> newObjectReferences;
         return processOpaqueProximityMessage(newObjectReferences,where,body);
     }
     SILOG(proximity,warning,"Unparseable Message");
