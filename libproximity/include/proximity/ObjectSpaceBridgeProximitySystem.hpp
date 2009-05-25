@@ -230,8 +230,8 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           MemoryReference message) {
+    virtual void processMessage(const ObjectReference*object,
+                                MemoryReference message) {
         RoutableMessageHeader mesg;
         MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
         internalProcessOpaqueProximityMessage(
@@ -244,9 +244,8 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual void processOpaqueSpaceMessage(
-                                               const RoutableMessageHeader& mesg,
-                                               MemoryReference message_body) {
+    virtual void processMessage(const RoutableMessageHeader& mesg,
+                                MemoryReference message_body) {
         internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                               mesg,
                                               message_body.data(),
@@ -259,8 +258,8 @@ public:
      * so the proximity system knows about a new object
      */
     virtual ObjectReference newObj(const Sirikata::Protocol::IRetObj&iro,
-                        const void *optionalSerializedReturnObjectConnection=NULL,
-                        size_t optionalSerializedReturnObjectConnectionSize=0){
+                                   const void *optionalSerializedReturnObjectConnection=NULL,
+                                   size_t optionalSerializedReturnObjectConnectionSize=0){
         return ObjectReference(iro.object_reference());
         //does nothing since the space is forwarding proximity messages with this bridge
     }

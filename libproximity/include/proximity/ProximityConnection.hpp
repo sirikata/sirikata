@@ -32,17 +32,18 @@
 
 namespace Sirikata { namespace Proximity {
 class ProximitySystem;
-class ProximityConnection {
+class ProximityConnection:public MessageService {
 public:
     virtual void streamDisconnected()=0;
     virtual ~ProximityConnection(){}
-    virtual void setParent(ProximitySystem*parent)=0;
+    virtual bool forwardMessagesTo(MessageService*parent)=0;
+    virtual bool endForwardingMessagesTo(MessageService*parent)=0;
     virtual void constructObjectStream(const ObjectReference&obc)=0;
     virtual void deleteObjectStream(const ObjectReference&obc)=0;
-    virtual void send(const ObjectReference&,
-                      const Protocol::IMessageBody&,
-                      const void*optionalSerializedMessageBody,
-                      const size_t optionalSerializedMessageBodySize)=0;
+    virtual void processMessage(const RoutableMessageHeader&,
+                                MemoryReference message_body)=0;
+    virtual void processMessage(const ObjectReference*,
+                                MemoryReference message)=0;
 };
 
 } }

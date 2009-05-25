@@ -1,5 +1,5 @@
-/*  Sirikata Proximity Management -- Introduction Services
- *  ProximitySystem.hpp
+/*  Sirikata Message Plugin Interface
+ *  MessagePlugin.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,38 +29,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SPACE_SPACEPLUGIN_HPP_
-#define _SPACE_SPACEPLUGIN_HPP_
+#ifndef _SIRIKATA_MESSAGESERVICE_HPP_
+#define _SIRIKATA_MESSAGESERVICE_HPP_
 namespace Sirikata {
 class ObjectReference;
-}
-namespace Sirikata {
 class RoutableMessageHeader;
-}
-namespace Sirikata { namespace Space {
-class SpacePlugin {
+class MessageService {
 public:
-    virtual ~SpacePlugin(){}
+    virtual ~MessageService(){}
     /**
-     * Registers that another space plugin is interested in messages accepted/produced by this plugin
-     * For instance, the NewObject plugin is probably going to get registrations of interest from just 'bout anyone
-     * And those plugins would like the RetObj messages
-     * Whereas the Loc plugin is probably going to get registrations of interest from anyone and may just care about vanilla incoming messages
+     * Registers that another space service is interested in messages accepted/produced by this service
+     * For instance, the NewObject service is probably going to get registrations of interest from just 'bout anyone
+     * And those services would like the RetObj messages
+     * Whereas the Loc service is probably going to get registrations of interest from anyone and may just care about vanilla incoming messages
      */
-    virtual void forwardMessagesTo(SpacePlugin*)=0;
-    /**
-     * Process a message that may be meant for the space system
-     */
-    virtual void processOpaqueSpaceMessage(const RoutableMessageHeader&,
-                                           MemoryReference message_body)=0;
-
+    virtual bool forwardMessagesTo(MessageService*)=0;
+    virtual bool endForwardingMessagesTo(MessageService*)=0;
     /**
      * Process a message that may be meant for the space system
      */
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           MemoryReference message)=0;
+    virtual void processMessage(const RoutableMessageHeader&,
+                                MemoryReference message_body)=0;
+    
+    /**
+     * Process a message that may be meant for the space system
+     */
+    virtual void processMessage(const ObjectReference*object,
+                                MemoryReference message)=0;
 
 };
 
-} }
+}
 #endif

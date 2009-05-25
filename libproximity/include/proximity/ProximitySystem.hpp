@@ -29,11 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <space/SpacePlugin.hpp>
+#include <util/MessageService.hpp>
 #ifndef _PROXIMITY_PROXIMITYSYSTEM_HPP_
 #define _PROXIMITY_PROXIMITYSYSTEM_HPP_
 namespace Sirikata { namespace Proximity {
-class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public Space::SpacePlugin{
+class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public MessageService{
 public:
     static void defaultProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
     static void defaultNoDestinationAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
@@ -46,7 +46,8 @@ public:
         OBJECT_DELETED
     };
     ///Do not forward any messages of interest to other plugins
-    void forwardMessagesTo(Space::SpacePlugin*){}
+    virtual bool forwardMessagesTo(MessageService*){return false;}
+    virtual bool endForwardingMessagesTo(MessageService*){return false;}
     /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,

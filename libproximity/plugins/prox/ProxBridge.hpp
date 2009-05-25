@@ -134,10 +134,10 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if the object was deleted from the proximity system with the message
      */
-    virtual void processOpaqueSpaceMessage(const RoutableMessageHeader&hdr,
+    virtual void processMessage(const RoutableMessageHeader&hdr,
                                            MemoryReference body);
 
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+    virtual void processMessage(const ObjectReference*object,
                                            MemoryReference body);
 
     /**

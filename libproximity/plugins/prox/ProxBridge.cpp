@@ -60,7 +60,7 @@ ProxBridge::~ProxBridge() {
     delete mListener;
 }
 
-void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
+void ProxBridge::processMessage(const ObjectReference*object,
                                            MemoryReference message) {
     RoutableMessage mesg;
     std::vector<ObjectReference> newObjectReferences;
@@ -79,7 +79,7 @@ void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
     }
 }
 
-void ProxBridge::processOpaqueSpaceMessage(const RoutableMessageHeader&msg,
+void ProxBridge::processMessage(const RoutableMessageHeader&msg,
                                            MemoryReference body_reference) {
     Protocol::MessageBody body;
     if (body.ParseFromArray(body_reference.data(),body_reference.size())) {

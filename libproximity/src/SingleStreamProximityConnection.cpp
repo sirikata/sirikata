@@ -46,17 +46,32 @@ void connectionCallback(ProximityConnection* con, Network::Stream::ConnectionSta
         con->streamDisconnected();
 }
 void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
-                          ProximitySystem * system,
+                          MessageService** system,
                           const ObjectReference &object,
                           const Network::Chunk&chunk) {
     std::tr1::shared_ptr<Network::Stream> lok=mLock.lock();//make sure this proximity connection will not disappear;
     if (lok) {
-        if (chunk.size()) {
-            system->processOpaqueSpaceMessage(&object,MemoryReference(&chunk[0],chunk.size()));
+        MessageService*sys=*system;
+        if (sys) {
+            sys->processMessage(&object,MemoryReference(chunk));
         }
     }
 }
 }
+bool SingleStreamProximityConnection::forwardMessagesTo(MessageService*parent) {
+    if (mParent!=NULL)
+        return false;
+    mParent=parent;
+    return true;
+}
+bool SingleStreamProximityConnection::endForwardingMessagesTo(MessageService*parent) {
+    if (mParent==parent) {
+        mParent=NULL;
+        return true;
+    }
+    return false;
+}
+
 ProximityConnection* SingleStreamProximityConnection::create(Network::IOService*io, const String&options){
     OptionValue*address=new OptionValue("address","localhost:6408",Network::Address("localhost","6408"),"sets the fully qualified address that runs the proximity manager.");
     OptionValue*host;
@@ -82,23 +97,27 @@ SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::
 void SingleStreamProximityConnection::streamDisconnected() {
     SILOG(proximity,error,"Lost connection with proximity manager");
 }
-void SingleStreamProximityConnection::send(const ObjectReference&obc,
-                               const Protocol::IMessageBody&msg,
-                               const void *optionalSerializedMessageBody,
-                               const size_t optionalSerializedMessageBodySize) {
-    ObjectStreamMap::iterator where=mObjectStreams.find(obc);
+void SingleStreamProximityConnection::processMessage(const ObjectReference*obc,
+                                                     MemoryReference message) {
+    ObjectStreamMap::iterator where=mObjectStreams.find(obc?*obc:ObjectReference::null());
     if (where==mObjectStreams.end()) {
-        SILOG(proximity,error,"Cannot locate object with OR "<<obc<<" in the proximity connection map");
+        SILOG(proximity,error,"Cannot locate object with OR "<<(obc?*obc:ObjectReference::null())<<" in the proximity connection map");
     }else {
+        where->second->send(message,Network::ReliableOrdered);
+    }
+}
+
+
+void SingleStreamProximityConnection::processMessage(const RoutableMessageHeader&hdr,
+                                                     MemoryReference message_body) {
+    ObjectStreamMap::iterator where=mObjectStreams.find(hdr.has_source_object()?hdr.source_object():ObjectReference::null());
+    if (where==mObjectStreams.end()) {
+        SILOG(proximity,error,"Cannot locate object with OR "<<hdr.source_object()<<" in the proximity connection map: "<<hdr.has_source_object());
+    } else {
         std::string data;
         RoutableMessageHeader rmh;
         rmh.SerializeToString(&data);
-        if (optionalSerializedMessageBodySize){
-            where->second->send(MemoryReference(data),MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize),Network::ReliableOrdered);
-        }else{
-            msg.AppendToString(&data);
-            where->second->send(MemoryReference(data),Network::ReliableOrdered);
-        }
+        where->second->send(MemoryReference(data),message_body,Network::ReliableOrdered);
     }
 }
 
@@ -117,7 +136,7 @@ SingleStreamProximityConnection::~SingleStreamProximityConnection() {
 void SingleStreamProximityConnection::constructObjectStream(const ObjectReference&obc) {
     mObjectStreams[obc]
         = mConnectionStream->clone(&Network::Stream::ignoreConnectionStatus,
-                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), mParent, obc,_1));
+                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1));
 }
 void SingleStreamProximityConnection::deleteObjectStream(const ObjectReference&obc) {
     ObjectStreamMap::iterator where=mObjectStreams.find(obc);

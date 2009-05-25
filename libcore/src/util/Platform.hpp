@@ -237,6 +237,7 @@ class IMessageBody;
 }
 } // namespace Sirikata
 #include "MemoryReference.hpp"
+#include "MessageService.hpp"
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
 #include "Factory.hpp"

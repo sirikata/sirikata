@@ -54,7 +54,17 @@ protected:
                              const RoutableMessage&opaqueMessage,
                              const void *optionalSerializedMessageBody,
                              size_t optionalSerializedMessageBodySize) {
-        mProximityConnection->send(source,opaqueMessage.body(),optionalSerializedMessageBody,optionalSerializedMessageBodySize);
+        if (optionalSerializedMessageBodySize) {
+            RoutableMessageHeader hdr;
+            hdr.set_source_object(source);
+            mProximityConnection->processMessage(hdr,MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
+        }else {
+            RoutableMessageHeader hdr;
+            hdr.set_source_object(source);
+            std::string data;
+            opaqueMessage.body().SerializeToString(&data);
+            mProximityConnection->processMessage(hdr,MemoryReference(data));
+        }
     }
     virtual void readProximityMessage(const ObjectReference&objectConnection,Network::Chunk&msg) {
         if (msg.size()) {
@@ -70,7 +80,8 @@ public:
     BridgeProximitySystem(SpacePtr obj,ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(connection) {
         this->mImportantNames.insert("ObjLoc");
         this->mImportantNames.insert("DelObj");
-        mProximityConnection->setParent(this);
+        bool retval=mProximityConnection->forwardMessagesTo(this);
+        assert(retval);
     }
     enum MessageBundle{
         DELIVER_TO_UNKNOWN,
@@ -117,8 +128,8 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           MemoryReference message) {
+    virtual void processMessage(const ObjectReference*object,
+                                MemoryReference message) {
         RoutableMessageHeader mesg;
         MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
         if (this->internalProcessOpaqueProximityMessage(object,
@@ -133,9 +144,8 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual void processOpaqueSpaceMessage(
-                                               const RoutableMessageHeader& mesg,
-                                               MemoryReference message_body) {
+    virtual void processMessage(const RoutableMessageHeader& mesg,
+                                MemoryReference message_body) {
         if (this->internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                                         mesg,
                                                         message_body.data(),

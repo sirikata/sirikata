@@ -722,7 +722,7 @@ IF(NOT WIN32)
  ENDIF()
 ENDIF()
 
-SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp ${LIBSPACE_SOURCE_DIR}/SpacePlugin.cpp )
+SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
 SET(LIBPROXIMITY_SOURCES 
                   ${SirikataProtocolDirectory}/Proximity_protobuf.cc
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp 

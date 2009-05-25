@@ -44,7 +44,7 @@ namespace Sirikata { namespace Proximity {
 class ProximitySystem;
 
 class SIRIKATA_PROXIMITY_EXPORT SingleStreamProximityConnection :public ProximityConnection{
-    ProximitySystem *mParent;
+    MessageService *mParent;
     std::tr1::shared_ptr<Network::Stream> mConnectionStream;
     typedef std::tr1::unordered_map<ObjectReference,Network::Stream*,ObjectReference::Hasher> ObjectStreamMap;
     ObjectStreamMap mObjectStreams;
@@ -53,14 +53,15 @@ public:
     static ProximityConnection* create(Network::IOService*, const String&);
     void streamDisconnected();
     SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&);
-    void setParent(ProximitySystem*parent){mParent=parent;}
+    bool forwardMessagesTo(MessageService*parent);
+    bool endForwardingMessagesTo(MessageService*parent);
     ~SingleStreamProximityConnection();
     void constructObjectStream(const ObjectReference&obc);
     void deleteObjectStream(const ObjectReference&obc);
-    void send(const ObjectReference&,
-              const Protocol::IMessageBody&,
-              const void*optionalSerializedMessageBody,
-              const size_t optionalSerializedMessageBodySize);
+    void processMessage(const RoutableMessageHeader&,
+                        MemoryReference message_body);
+    void processMessage(const ObjectReference*,
+                        MemoryReference message);
 };
 
 } }
