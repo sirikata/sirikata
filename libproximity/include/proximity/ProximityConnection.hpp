@@ -40,9 +40,9 @@ public:
     virtual void constructObjectStream(const ObjectReference&obc)=0;
     virtual void deleteObjectStream(const ObjectReference&obc)=0;
     virtual void send(const ObjectReference&,
-                      const Protocol::IMessage&,
-                      const void*optionalSerializedMessage,
-                      const size_t optionalSerializedMessageSize)=0;
+                      const Protocol::IMessageBody&,
+                      const void*optionalSerializedMessageBody,
+                      const size_t optionalSerializedMessageBodySize)=0;
 };
 
 } }

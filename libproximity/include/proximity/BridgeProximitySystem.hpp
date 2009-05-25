@@ -39,33 +39,30 @@ protected:
     virtual bool forwardThisName(const std::string&name) {
         return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<SpacePtr>::forwardThisName(name)||name=="RetObj"||name=="DelObj";
     }
-    virtual typename ObjectSpaceBridgeProximitySystem<SpacePtr>::DidAlterMessage addressMessage(Protocol::IMessage&output,
+    virtual typename ObjectSpaceBridgeProximitySystem<SpacePtr>::DidAlterMessage addressMessage(RoutableMessageHeader&output,
                                 const ObjectReference*source,
                                 const ObjectReference*destination) {
         //if (source) //proximity management will have source through 
         //    output.set_source_object(source->getObjectUUID());
         if (destination) {
-            output.set_destination_object(destination->getObjectUUID());
+            output.set_destination_object(*destination);
             return ObjectSpaceBridgeProximitySystem<SpacePtr>::ALTERED_MESSAGE;
         }
         return ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE;
     }
     virtual void sendMessage(const ObjectReference&source,
-                             const Protocol::IMessage&opaqueMessage,
-                             const void *optionalSerializedMessage,
-                             size_t optionalSerializedMessageSize) {
-        mProximityConnection->send(source,opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
+                             const RoutableMessage&opaqueMessage,
+                             const void *optionalSerializedMessageBody,
+                             size_t optionalSerializedMessageBodySize) {
+        mProximityConnection->send(source,opaqueMessage.body(),optionalSerializedMessageBody,optionalSerializedMessageBodySize);
     }
     virtual void readProximityMessage(const ObjectReference&objectConnection,Network::Chunk&msg) {
         if (msg.size()) {
-            Protocol::Message message;
-            if (message.ParseFromArray(&msg[0],msg.size())) {
-                if (addressMessage(message,NULL,&objectConnection)==ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
-                    this->deliverMessage(objectConnection,message,&msg[0],msg.size());//FIXME: this deliver happens in a thread---do we need a distinction
-                }else {
-                    this->deliverMessage(objectConnection,message,NULL,0);//FIXME: this deliver happens in a thread---do we need a distinction
-                }
-            }
+            RoutableMessage message;
+            MemoryReference ref=message.RoutableMessageHeader::ParseFromArray(&msg[0],msg.size());
+            addressMessage(message,NULL,&objectConnection);
+            //ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
+            this->deliverMessage(objectConnection,message,ref.first,ref.second);//FIXME: this deliver happens in a thread---do we need a distinction
         }
     }
 public:
@@ -93,7 +90,7 @@ public:
                         size_t optionalSerializedReturnObjectConnectionSize=0){
         ObjectReference source(newObjMsg.object_reference());
         mProximityConnection->constructObjectStream(source);
-        Protocol::Message toSend;
+        RoutableMessage toSend;
         this->constructMessage(toSend,&source,NULL,"RetObj",newObjMsg,optionalSerializedReturnObjectConnection,optionalSerializedReturnObjectConnectionSize);
         this->sendMessage(source,toSend,NULL,0);
         return source;
@@ -103,7 +100,7 @@ public:
      * Pass an objects position updates to this function
      */
     virtual void objLoc(const ObjectReference&source, const Sirikata::Protocol::IObjLoc&objLocMsg, const void *optionalSerializedObjLoc=NULL,size_t optionalSerializedObjLocSize=0) {
-        Protocol::Message toSend;
+        RoutableMessage toSend;
         this->constructMessage(toSend,&source,NULL,"ObjLoc",objLocMsg,optionalSerializedObjLoc,optionalSerializedObjLocSize);
         this->sendMessage(source,toSend,NULL,0);
     }
@@ -111,7 +108,7 @@ public:
      * Objects may be destroyed: indicate loss of interest here
      */
     virtual void delObj(const ObjectReference&source, const Sirikata::Protocol::IDelObj&delObjMsg, const void *optionalSerializedDelObj=NULL,size_t optionalSerializedDelObjSize=0) {
-        Protocol::Message toSend;
+        RoutableMessage toSend;
         this->constructMessage(toSend,&source,NULL,"DelObj",delObjMsg,optionalSerializedDelObj,optionalSerializedDelObjSize);
         this->sendMessage(source,toSend,NULL,0);
         this->mProximityConnection->deleteObjectStream(source);
@@ -123,12 +120,12 @@ public:
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
                                                const void *serializedMessage,
                                                size_t serializedMessageSize) {
-        Sirikata::Protocol::Message mesg;
-        mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+        RoutableMessageHeader mesg;
+        MemoryReference remainder=mesg.ParseFromArray(serializedMessage,serializedMessageSize);
         if (this->internalProcessOpaqueProximityMessage(object,
                                                         mesg,
-                                                        serializedMessage,
-                                                        serializedMessageSize)==ProximitySystem::OBJECT_DELETED) {
+                                                        remainder.first,
+                                                        remainder.second)==ProximitySystem::OBJECT_DELETED) {
             if (object)
                 this->mProximityConnection->deleteObjectStream(*object);
         }
@@ -138,14 +135,13 @@ public:
      * \returns true if object was deleted
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage& mesg,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0) {
-        Protocol::Message msg(mesg);
+                                               const RoutableMessageHeader& mesg,
+                                               const void *serializedMessageBody,
+                                               size_t serializedMessageBodySize) {
         if (this->internalProcessOpaqueProximityMessage(object,
-                                                        msg,
-                                                        optionalSerializedMessage,
-                                                        optionalSerializedMessageSize)==ProximitySystem::OBJECT_DELETED) {
+                                                        mesg,
+                                                        serializedMessageBody,
+                                                        serializedMessageBodySize)==ProximitySystem::OBJECT_DELETED) {
             if (object)
                 this->mProximityConnection->deleteObjectStream(*object);
         }

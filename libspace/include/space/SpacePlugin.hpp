@@ -34,29 +34,30 @@
 namespace Sirikata {
 class ObjectReference;
 }
-namespace Sirikata { namespace Protocol {
-class IMessage;
-} }
+namespace Sirikata {
+class RoutableMessageHeader;
+}
 namespace Sirikata { namespace Space {
 class SpacePlugin {
 public:
     virtual ~SpacePlugin(){}
-    virtual const char *const* relevantUnfilteredMessages()const=0; 
-    virtual size_t relevantUnfilteredMessagesSize()const=0; 
-    virtual const char *const* relevantFilteredMessages()const=0; 
-    virtual size_t relevantFilteredMessagesSize()const=0; 
+    /**
+     * Registers that another space plugin is interested in messages accepted/produced by this plugin
+     * For instance, the NewObject plugin is probably going to get registrations of interest from just 'bout anyone
+     * And those plugins would like the RetObj messages
+     * Whereas the Loc plugin is probably going to get registrations of interest from anyone and may just care about vanilla incoming messages
+     */
+    virtual void forwardMessagesTo(SpacePlugin*)=0;
     /**
      * Process a message that may be meant for the space system
-     * \returns true if the object has been removed from the current space system
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           const Sirikata::Protocol::IMessage&,
-                                           const void *optionalSerializedMessage=NULL,
-                                           size_t optionalSerializedMessageSize=0)=0;
+                                           const RoutableMessageHeader&,
+                                           const void *serializedMessageBody,
+                                           size_t serializedMessageBodySize)=0;
 
     /**
      * Process a message that may be meant for the space system
-     * \returns true if the object has been removed from the current space system
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
                                            const void *serializedMessage,

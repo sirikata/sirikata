@@ -612,6 +612,9 @@ SET(ProtocolBuffersSources
 
 
 SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
+
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS MessageHeader INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Protocol" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc)
+
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Prox" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Prox_protobuf.cc)
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc)
@@ -635,6 +638,7 @@ ENDIF()
 #source files
 
 SET(SIRIKATA_CORE_SOURCES
+    ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp

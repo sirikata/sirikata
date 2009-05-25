@@ -36,6 +36,7 @@
 #include "util/ObjectReference.hpp"
 #include "Test_Sirikata.pbj.hpp"
 #include "util/PluginManager.hpp"
+#include "util/RoutableMessage.hpp"
 #include "proximity/Platform.hpp"
 #include "proximity/ProximitySystem.hpp"
 #include "proximity/ProximityConnection.hpp"
@@ -182,25 +183,31 @@ public:
         TS_ASSERT_EQUALS(mDeliver[4].read(),10);
     }
 
-    void send(const Protocol::IMessage&opaqueMessage,const void*,size_t){
-        for (int i=0;i<opaqueMessage.message_names_size();++i) {
-            SILOG(sirikata,warning,"Send opaque message named: "<<opaqueMessage.message_names(i));            
-            ++mSend;
+    void send(const RoutableMessageHeader&opaqueMessage,const void*bodyData,size_t bodySize){
+        Protocol::MessageBody mesg;
+        if (mesg.ParseFromArray(bodyData,bodySize)) {
+            for (int i=0;i<mesg.message_names_size();++i) {
+                SILOG(sirikata,warning,"Send opaque message named: "<<mesg.message_names(i));
+                ++mSend;
+            }
         }
     }
-    void deliver(const Protocol::IMessage&opaqueMessage,const void*,size_t){
-        for (int i=0;i<opaqueMessage.message_names_size();++i) {
-            if (opaqueMessage.message_names(i)=="ProxCall") {
-                Protocol::ProxCall cb;
-                if (cb.ParseFromString(opaqueMessage.message_arguments(i))) {
-                    int qid=cb.query_id();
-                    if (qid<NUM_OBJECTS){
-                        ++mDeliver[qid];
+    void deliver(const RoutableMessageHeader&opaqueMessage,const void*bodyData,size_t bodySize){
+        Protocol::MessageBody mesg;
+        if (mesg.ParseFromArray(bodyData,bodySize)) {
+            for (int i=0;i<mesg.message_names_size();++i) {
+                if (mesg.message_names(i)=="ProxCall") {
+                    Protocol::ProxCall cb;
+                    if (cb.ParseFromString(mesg.message_arguments(i))) {
+                        int qid=cb.query_id();
+                        if (qid<NUM_OBJECTS){
+                            ++mDeliver[qid];
+                        }
                     }
+                }else {
+                    SILOG(sirikata,warning,"Opaque message named: "<<mesg.message_names(i));
                 }
-            }else {
-                SILOG(sirikata,warning,"Opaque message named: "<<opaqueMessage.message_names(i));
-            }
-        }        
+            }        
+        }
     }
 };

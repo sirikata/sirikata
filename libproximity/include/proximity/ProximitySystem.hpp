@@ -35,29 +35,18 @@
 namespace Sirikata { namespace Proximity {
 class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public Space::SpacePlugin{
 public:
-    typedef std::tr1::function<void(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&)> Callback;
-    static void defaultProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
-    static void defaultNoAddressProximityCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
+    static void defaultProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
+    static void defaultNoDestinationAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
+    static void defaultNoAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
+    typedef std::tr1::function<void(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&)> Callback;
     virtual ~ProximitySystem();
-
-    virtual const char *const* relevantUnfilteredMessages()const; 
-    virtual size_t relevantUnfilteredMessagesSize()const;
-    virtual const char *const* relevantFilteredMessages()const; 
-    virtual size_t relevantFilteredMessagesSize()const; 
-    /**
-     * Does the proximity system care about messages with this name
-     
-    bool proximityRelevantMessageName(const String&);
-
-     * Does the proximity system care about any of the messages in this message bundle
-
-    bool proximityRelevantMessage(const Sirikata::Protocol::IMessage&);
-     */
+    
     enum OpaqueMessageReturnValue{
         OBJECT_NOT_DESTROYED,
         OBJECT_DELETED
     };
-
+    ///Do not forward any messages of interest to other plugins
+    void forwardMessagesTo(Space::SpacePlugin*){}
     /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,

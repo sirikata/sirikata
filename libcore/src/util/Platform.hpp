@@ -215,6 +215,7 @@ typedef double float64;
 typedef uchar byte;
 typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
+typedef std::pair<const void*,size_t> MemoryReference;
 namespace Network {
 class IOService;
 class Stream;
@@ -228,9 +229,11 @@ class ThreadIdCheck { public:
     unsigned int mThreadId;
 };
 #endif
+class RoutableMessageHeader;
+class RoutableMessage;
 namespace Protocol {
-class Message;
-class IMessage;
+class MessageBody;
+class IMessageBody;
 }
 } // namespace Sirikata
 #include "TotallyOrdered.hpp"

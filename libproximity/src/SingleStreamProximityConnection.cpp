@@ -32,10 +32,10 @@
 
 #include <proximity/Platform.hpp>
 #include "options/Options.hpp"
-#include "util/ObjectReference.hpp"
+#include "Proximity_Sirikata.pbj.hpp"
+#include "util/RoutableMessage.hpp"
 #include "proximity/ProximityConnection.hpp"
 #include "proximity/SingleStreamProximityConnection.hpp"
-#include "Proximity_Sirikata.pbj.hpp"
 #include "proximity/ProximitySystem.hpp"
 #include "network/TCPStream.hpp"
 
@@ -83,18 +83,20 @@ void SingleStreamProximityConnection::streamDisconnected() {
     SILOG(proximity,error,"Lost connection with proximity manager");
 }
 void SingleStreamProximityConnection::send(const ObjectReference&obc,
-                               const Protocol::IMessage&msg,
-                               const void *optionalSerializedMessage,
-                               const size_t optionalSerializedMessageSize) {
+                               const Protocol::IMessageBody&msg,
+                               const void *optionalSerializedMessageBody,
+                               const size_t optionalSerializedMessageBodySize) {
     ObjectStreamMap::iterator where=mObjectStreams.find(obc);
     if (where==mObjectStreams.end()) {
         SILOG(proximity,error,"Cannot locate object with OR "<<obc<<" in the proximity connection map");
     }else {
-        if (optionalSerializedMessageSize){
-            where->second->send(optionalSerializedMessage,optionalSerializedMessageSize,Network::ReliableOrdered);
+        std::string data;
+        RoutableMessageHeader rmh;
+        rmh.SerializeToString(&data);
+        if (optionalSerializedMessageBodySize&&data.size()==0){
+            where->second->send(optionalSerializedMessageBody,optionalSerializedMessageBodySize,Network::ReliableOrdered);
         }else{
-            std::string data;
-            msg.SerializeToString(&data);
+            msg.AppendToString(&data);
             where->second->send(data.data(),data.size(),Network::ReliableOrdered);
         }
     }

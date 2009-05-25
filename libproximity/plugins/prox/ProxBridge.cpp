@@ -10,6 +10,7 @@
 #include "network/TCPStream.hpp"
 #include "options/Options.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "util/RoutableMessage.hpp"
 //#include "Sirikata.pbj.hpp"
 namespace Sirikata { namespace Proximity {
 
@@ -59,49 +60,67 @@ ProxBridge::~ProxBridge() {
     delete mListener;
 }
 
-void ProxBridge::processOpaqueSpaceMessage(
-                                                                                    const ObjectReference*object,
-                                                                                    const void *serializedMessage,
-                                                                                    size_t serializedMessageSize) {
-    Sirikata::Protocol::Message mesg;
+void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
+                                           const void *serializedMessage,
+                                           size_t serializedMessageSize) {
+    RoutableMessage mesg;
     std::vector<ObjectReference> newObjectReferences;
-    mesg.ParseFromArray(serializedMessage,serializedMessageSize);
-    processOpaqueProximityMessage(newObjectReferences,
-                                         object,
-                                         mesg,
-                                         serializedMessage,
-                                         serializedMessageSize);
+    if (mesg.ParseFromArray(serializedMessage,serializedMessageSize)) {
+        ObjectStateMap::iterator where=mObjectStreams.end();
+        if (object) {
+            where=mObjectStreams.find(*object);
+        }
+        if (where==mObjectStreams.end()&&mesg.has_source_object()){
+            where=mObjectStreams.find(ObjectReference(mesg.source_object()));
+        }
+
+        processOpaqueProximityMessage(newObjectReferences,
+                                      where,
+                                      mesg.body());
+    }
 }
 
-void ProxBridge::processOpaqueSpaceMessage(
-                                               const ObjectReference*object,    
-                                               const Sirikata::Protocol::IMessage&msg,
-                                               const void *optionalSerializedMessage,
-                                               size_t optionalSerializedMessageSize) {
-    ObjectStateMap::iterator where=mObjectStreams.end();
-    if (object) {
-        where=mObjectStreams.find(*object);
+void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,    
+                                           const RoutableMessageHeader&msg,
+                                           const void *serializedMessageBody,
+                                           size_t serializedMessageBodySize) {
+    Protocol::MessageBody body;
+    if (body.ParseFromArray(serializedMessageBody,serializedMessageBodySize)) {
+        ObjectStateMap::iterator where=mObjectStreams.end();
+        if (object) {
+            where=mObjectStreams.find(*object);
+        }
+        if (where==mObjectStreams.end()&&msg.has_source_object()){
+            where=mObjectStreams.find(ObjectReference(msg.source_object()));
+        }
+        std::vector<ObjectReference> newObjectReferences;
+        processOpaqueProximityMessage(newObjectReferences,where,body);
     }
-    std::vector<ObjectReference> newObjectReferences;
-    processOpaqueProximityMessage(newObjectReferences,where,msg,optionalSerializedMessage,optionalSerializedMessageSize);
 }
 
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,    
-                                               const Sirikata::Protocol::IMessage&msg,
-                                               const void *optionalSerializedMessage,
-                                               size_t optionalSerializedMessageSize) {
-    ObjectStateMap::iterator where=mObjectStreams.end();
-    if (object) {
-        where=mObjectStreams.find(*object);
+                                               const RoutableMessageHeader&msg,
+                                               const void *serializedMessageBody,
+                                               size_t serializedMessageBodySize) {
+    Protocol::MessageBody body;
+    if (body.ParseFromArray(serializedMessageBody,serializedMessageBodySize)) {
+        ObjectStateMap::iterator where=mObjectStreams.end();
+        if (object) {
+            where=mObjectStreams.find(*object);
+        }
+        if (where==mObjectStreams.end()&&msg.has_source_object()){
+            where=mObjectStreams.find(ObjectReference(msg.source_object()));
+        }
+        std::vector<ObjectReference> newObjectReferences;
+        return processOpaqueProximityMessage(newObjectReferences,where,body);
     }
-    return processOpaqueProximityMessage(newObjectReferences,where,msg,optionalSerializedMessage,optionalSerializedMessageSize);
+    SILOG(proximity,warning,"Unparseable Message");
+    return OBJECT_NOT_DESTROYED;
 }
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
-                                               ProxBridge::ObjectStateMap::iterator where,
-                                               const Sirikata::Protocol::IMessage&msg,
-                                               const void *optionalSerializedMessage,
-                                               size_t optionalSerializedMessageSize) {
+                                                                                    ProxBridge::ObjectStateMap::iterator where,
+                                                                                    const Sirikata::Protocol::IMessageBody&msg) {
     int numMessages=msg.message_names_size();
     if (numMessages!=msg.message_arguments_size()) {
         return OBJECT_NOT_DESTROYED; //FIXME should we assume the rest equal the first
@@ -196,10 +215,11 @@ UUID convertProxObjectId(const Prox::ObjectID &id) {
 
 }
 void ProxBridge::sendProxCallback(Network::Stream*stream,
-                                         const ObjectReference&destination,
-                                         const Sirikata::Protocol::IMessage&unaddressed_prox_callback_msg){
+                                         const RoutableMessageHeader&destination,
+                                         const Sirikata::Protocol::IMessageBody&unaddressed_prox_callback_msg){
     std::string str;
-    unaddressed_prox_callback_msg.SerializeToString(&str);
+    destination.SerializeToString(&str);
+    unaddressed_prox_callback_msg.AppendToString(&str);
     stream->send(str.data(),str.size(),Network::ReliableOrdered);
 }
 class QueryListener:public Prox::QueryEventListener, public Prox::QueryChangeListener {
@@ -212,9 +232,9 @@ public:
     }
     virtual ~QueryListener(){}
     virtual void queryHasEvents(Prox::Query*query){
-        ObjectReference reference(convertProxObjectId(mState->mObject->id()));
         Protocol::ProxCall callback_message;
-        Protocol::Message message_container;
+        RoutableMessage message_container;
+        message_container.set_destination_object(ObjectReference(convertProxObjectId(mState->mObject->id())));
         std::deque<Prox::QueryEvent> evts;
         query->popEvents(evts);
         std::deque<Prox::QueryEvent>::const_iterator i=evts.begin(),iend=evts.end();
@@ -223,13 +243,13 @@ public:
                 callback_message.set_proximity_event(i->type()==Prox::QueryEvent::Added?Protocol::ProxCall::ENTERED_PROXIMITY:Protocol::ProxCall::EXITED_PROXIMITY);
                 callback_message.set_proximate_object(convertProxObjectId(i->id()));
                 callback_message.set_query_id(mID);
-                message_container.add_message_arguments(std::string());
-                callback_message.SerializeToString(&message_container.message_arguments(message_container.message_arguments_size()-1));
-                message_container.add_message_names("ProxCall");
+                message_container.body().add_message_arguments(std::string());
+                callback_message.SerializeToString(&message_container.body().message_arguments(message_container.body().message_arguments_size()-1));
+                message_container.body().add_message_names("ProxCall");
             }
         }
-        if (message_container.message_names_size()) {
-            mCallback(mState->mStream?&*mState->mStream:NULL,reference,message_container);
+        if (message_container.body().message_names_size()) {
+            mCallback(mState->mStream?&*mState->mStream:NULL,message_container,message_container.body());
         }
     }
     virtual void queryPositionUpdated(Prox::Query* query, const Prox::Query::PositionVectorType& old_pos, const Prox::MotionVector3f& new_pos){}
@@ -318,7 +338,9 @@ void ProxBridge::processProxCallback(const ObjectReference&destination,
                                      size_t optionalSerializedProxCallSize){
     ObjectStateMap::iterator where=mObjectStreams.find(destination);
     if (where!=mObjectStreams.end()) {
-        Sirikata::Protocol::Message msg;
+        RoutableMessageHeader dest;
+        dest.set_destination_object(destination);
+        Sirikata::Protocol::MessageBody msg;
         msg.add_message_names("ProxCall");
         if (optionalSerializedProxCallSize) {
             msg.add_message_arguments(optionalSerializedProxCall,optionalSerializedProxCallSize);
@@ -326,7 +348,7 @@ void ProxBridge::processProxCallback(const ObjectReference&destination,
             msg.add_message_arguments(std::string());
             prox_callback.SerializeToString(&msg.message_arguments(0));
         }
-        mCallback(where->second->mStream?&*where->second->mStream:NULL,destination,msg);
+        mCallback(where->second->mStream?&*where->second->mStream:NULL,dest,msg);
     }else SILOG(prox,warning,"Cannot callback to "<<destination<<" unknown stream");    
 }
 
@@ -385,24 +407,26 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
 void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                                  const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                  const Network::Chunk&data) {
-    Protocol::Message msg;
-    if (data.size()&&msg.ParseFromArray(&*data.begin(),data.size())) {
+    RoutableMessageHeader hdr;
+    
+    if (data.size()) {
+        MemoryReference bodyData=hdr.ParseFromArray(&*data.begin(),data.size());
         size_t old_size=ref->size();
-        if (msg.has_source_object()) {
-            ObjectReference source_object(msg.source_object());
-            if (processOpaqueProximityMessage(*ref,&source_object,msg,&*data.begin(),data.size())==OBJECT_DELETED) {
+        if (hdr.has_source_object()) {
+            ObjectReference source_object(hdr.source_object());
+            if (processOpaqueProximityMessage(*ref,&source_object,hdr,bodyData.first,bodyData.second)==OBJECT_DELETED) {
                 std::vector<ObjectReference>::iterator where=std::find(ref->begin(),ref->end(),source_object);
                 if (where!=ref->end()) {
                     ref->erase(where);
                 }
             }
         }else if (old_size==1) {
-            if (processOpaqueProximityMessage(*ref,&*ref->begin(),msg,&*data.begin(),data.size())==OBJECT_DELETED) {
+            if (processOpaqueProximityMessage(*ref,&*ref->begin(),hdr,bodyData.first,bodyData.second)==OBJECT_DELETED) {
                 ref->resize(0);
             }
         }else {
             std::vector<ObjectReference> newObjects;
-            if (processOpaqueProximityMessage(newObjects,NULL,msg,&*data.begin(),data.size())!=OBJECT_DELETED&&!newObjects.empty()) {
+            if (processOpaqueProximityMessage(newObjects,NULL,hdr,bodyData.first,bodyData.second)!=OBJECT_DELETED&&!newObjects.empty()) {
                 ref->insert(ref->end(),newObjects.begin(),newObjects.end());
             }
         }

@@ -76,9 +76,7 @@ class ProxBridge : public ProximitySystem {
      */
     OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                        ObjectStateMap::iterator where,
-                                       const Sirikata::Protocol::IMessage&,
-                                       const void *optionalSerializedMessage=NULL,
-                                       size_t optionalSerializedMessageSize=0);
+                                       const Sirikata::Protocol::IMessageBody&);
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread
@@ -115,7 +113,7 @@ class ProxBridge : public ProximitySystem {
                                const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                Network::Stream::ConnectionStatus stat,
                                const std::string&reason);
-    static void sendProxCallback(Network::Stream*, const ObjectReference&,const Sirikata::Protocol::IMessage&);
+    static void sendProxCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
 
     void update(const Duration&timeSinceUpdate,const std::tr1::weak_ptr<Prox::QueryHandler>&);
     void updateThread(const Duration&optimalUpdateTime,const std::tr1::weak_ptr<Prox::QueryHandler>&);
@@ -129,18 +127,18 @@ public:
 
     virtual OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage&,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0);
+                                               const RoutableMessageHeader&,
+                                               const void *serializedMessageBody,
+                                               size_t serializedMessageSize);
     /**
      * Process a message that may be meant for the proximity system
      * \returns true if the object was deleted from the proximity system with the message
      */
     virtual void processOpaqueSpaceMessage(
                                                const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage&,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0);
+                                               const RoutableMessageHeader&hdr,
+                                               const void *serializedMessageBody,
+                                               size_t serializedMessageBodySize);
 
     virtual void processOpaqueSpaceMessage(
                                                const ObjectReference*object,

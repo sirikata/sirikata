@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proximity Connection Class
- *  ProximityConnection.hpp
+/*  Sirikata Serialization Protocol
+ *  MessageHeader.pbj
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,37 +30,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Sirikata { namespace Network {
-class Stream;
-class Address;
-class IOService;
-} }
-namespace Sirikata { namespace Protocol {
-class IMessage;
+package Sirikata.Protocol;
 
-} }
+//This is the standard message container. All items sent over the wire should be preceeded type MessageHeader. Reserved areas may be used in future headers
+message MessageHeader {
+    reserve 1 to 5;
+    reserve 1536 to 2560;
+    reserve 229376 to 294912;
 
-namespace Sirikata { namespace Proximity {
-class ProximitySystem;
+    //the source ObjectReference (space is implicit)
+    optional uuid source_object = 1;
 
-class SIRIKATA_PROXIMITY_EXPORT SingleStreamProximityConnection :public ProximityConnection{
-    ProximitySystem *mParent;
-    std::tr1::shared_ptr<Network::Stream> mConnectionStream;
-    typedef std::tr1::unordered_map<ObjectReference,Network::Stream*,ObjectReference::Hasher> ObjectStreamMap;
-    ObjectStreamMap mObjectStreams;
-    
-public:
-    static ProximityConnection* create(Network::IOService*, const String&);
-    void streamDisconnected();
-    SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&);
-    void setParent(ProximitySystem*parent){mParent=parent;}
-    ~SingleStreamProximityConnection();
-    void constructObjectStream(const ObjectReference&obc);
-    void deleteObjectStream(const ObjectReference&obc);
-    void send(const ObjectReference&,
-              const Protocol::IMessageBody&,
-              const void*optionalSerializedMessageBody,
-              const size_t optionalSerializedMessageBodySize);
-};
+    //the spaceID origin message (in case we have a space routing messages)
+    optional uuid source_space = 1536;
 
-} }
+    //the destination ObjectReference (space is implicit) if omitted, space is destination
+    optional uuid destination_object = 2;
+
+    //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
+
+    optional uuid destination_space = 1537;
+}

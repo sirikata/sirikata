@@ -56,18 +56,18 @@ protected:
         UNSPOILED_MESSAGE
       
     };
-    virtual DidAlterMessage addressMessage(Protocol::IMessage&output,
+    virtual DidAlterMessage addressMessage(RoutableMessageHeader&output,
                                 const ObjectReference*source,
                                 const ObjectReference*destination) {
         return UNSPOILED_MESSAGE;
         if (0) {//you might want to do this if you are a forwarding class or something more advanced
             if (source)
-                output.set_source_object(source->getObjectUUID());
+                output.set_source_object(*source);
             if (destination)
-                output.set_destination_object(destination->getObjectUUID());
+                output.set_destination_object(*destination);
         }
     }
-    template <typename T> void constructMessage(Protocol::Message&output,
+    template <typename T> void constructMessage(RoutableMessage&output,
                                                 const ObjectReference*source,
                                                 const ObjectReference*destination,
                                                 const char* messageName,
@@ -75,26 +75,40 @@ protected:
                                                 const void *optionalSerializedSubMessage,
                                                 size_t optionalSerializedSubMessageSize) {
         DidAlterMessage alteration=addressMessage(output,source,destination);
-        output.add_message_names(messageName);
+        output.body().add_message_names(messageName);
         if (optionalSerializedSubMessage&&optionalSerializedSubMessageSize) {
-            output.add_message_arguments(optionalSerializedSubMessage,optionalSerializedSubMessageSize);
+            output.body().add_message_arguments(optionalSerializedSubMessage,optionalSerializedSubMessageSize);
         }else {
-            int which=output.message_arguments_size();
-            output.add_message_arguments(std::string());
-            opaqueMessage.SerializeToString(&output.message_arguments(which));
+            int which=output.body().message_arguments_size();
+            output.body().add_message_arguments(std::string());
+            opaqueMessage.SerializeToString(&output.body().message_arguments(which));
         }
     }
     virtual void deliverMessage(const ObjectReference& destination,
-                                const Protocol::IMessage&opaqueMessage,
-                                const void *optionalSerializedMessage,
-                                size_t optionalSerializedMessageSize) {
-        mObject->deliver(opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
+                                const RoutableMessage&opaqueMessage,
+                                const void *optionalSerializedMessageBody,
+                                size_t optionalSerializedMessageBodySize) {
+        if (optionalSerializedMessageBody) {
+            mObject->deliver(opaqueMessage,optionalSerializedMessageBody,optionalSerializedMessageBodySize);
+        }else {
+            std::string bodyMsg;
+            if (opaqueMessage.body().SerializeToString(&bodyMsg)) {
+                mObject->deliver(opaqueMessage,bodyMsg.data(),bodyMsg.size());
+            }
+        }
     }
     virtual void sendMessage(const ObjectReference& source,
-                             const Protocol::IMessage&opaqueMessage,
-                             const void *optionalSerializedMessage,
-                             size_t optionalSerializedMessageSize) {
-        mObject->send(opaqueMessage,optionalSerializedMessage,optionalSerializedMessageSize);
+                             const RoutableMessage&opaqueMessage,
+                             const void *optionalSerializedMessageBody,
+                             size_t optionalSerializedMessageBodySize) {
+        if (optionalSerializedMessageBody) {
+            mObject->send(opaqueMessage,optionalSerializedMessageBody,optionalSerializedMessageBodySize);
+        }else {
+            std::string bodyMsg;
+            if (opaqueMessage.body().SerializeToString(&bodyMsg)) {
+                mObject->send(opaqueMessage,bodyMsg.data(),bodyMsg.size());
+            }
+        }
     }
     /**
      * Process a message that may be meant for the proximity system
@@ -102,91 +116,97 @@ protected:
      */
     OpaqueMessageReturnValue internalProcessOpaqueProximityMessage(
                                                const ObjectReference*object,
-                                               Sirikata::Protocol::Message& mesg,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0) {
-        Protocol::Message msg(mesg);
-        MessageBundle sendState=DELIVER_TO_UNKNOWN;
-        bool deliverAllMessages=true;
-        int len=msg.message_names_size();
-        OpaqueMessageReturnValue obj_is_deleted=OBJECT_NOT_DESTROYED;
-        for (int i=0;i<len;++i) {
-            if(msg.message_names(i)=="DelObj")
-                obj_is_deleted=OBJECT_DELETED;
-            if(msg.message_names(i)=="RetObj") {
-                int maxnum=i+1;
-                if (maxnum==len)
-                    maxnum=msg.message_arguments_size();
-                for (int j=i;j<maxnum;++j){
-                    Sirikata::Protocol::RetObj ro;
-                    ro.ParseFromString(msg.message_arguments(j));
-                    newObj(ro,msg.message_arguments(j).data(),msg.message_arguments(j).size());
-                }
-            }
-            if (!forwardThisName(msg.message_names(i))) {
-                if (len==1) return obj_is_deleted;
-                deliverAllMessages=false;
-            }else {
-                if (msg.message_names(i)==proxCallbackName()) {
-                    if (sendState==DELIVER_TO_UNKNOWN||sendState==DELIVER_TO_OBJECT)
-                        sendState=DELIVER_TO_OBJECT;
-                    else 
-                        sendState=DELIVER_TO_BOTH;
-                }else{
-                    if (sendState==DELIVER_TO_UNKNOWN||sendState==DELIVER_TO_PROX)
-                        sendState=DELIVER_TO_PROX;
-                    else 
-                        sendState=DELIVER_TO_BOTH;
-                }
-            }
-        }
-        if (sendState==DELIVER_TO_UNKNOWN)
-            return obj_is_deleted;//no messages considered worth forwarding to the proximity system
-        if (sendState==DELIVER_TO_BOTH) {
-            SILOG(prox,info,"Message with recipients both proximity and object bundled into the same message: not delivering.");
-            return obj_is_deleted;
-        }
-/* NOT SURE THIS IS NECESSARY -- do these messages already have addresses on them?*/
-        DidAlterMessage alteration;
-        if (sendState==DELIVER_TO_PROX) 
-            alteration=addressMessage(msg,object,NULL);
-        else
-            alteration=addressMessage(msg,NULL,object);
-        if (deliverAllMessages&&sendState==DELIVER_TO_PROX) {
-            sendMessage(*object,msg,alteration==UNSPOILED_MESSAGE?optionalSerializedMessage:NULL,alteration==UNSPOILED_MESSAGE?optionalSerializedMessageSize:0);
-        } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT) {
-            deliverMessage(*object,msg,alteration==UNSPOILED_MESSAGE?optionalSerializedMessage:NULL,alteration==UNSPOILED_MESSAGE?optionalSerializedMessageSize:0);
-        }else {
-            //some messages are not considered worth forwarding to the proximity system or there's a mishmash of destinations
-            if (msg.message_arguments_size()<len) {
-                len=msg.message_arguments_size();
-            }
-            Protocol::Message newMsg (msg);
-            newMsg.clear_message_names();
-            newMsg.clear_message_arguments();
-            bool forwardLastMessageType=false;
+                                               const RoutableMessageHeader& hdr,
+                                               const void *serializedMessageBody,
+                                               size_t serializedMessageBodySize) {
+        try {
+            RoutableMessage msg(hdr,serializedMessageBody,serializedMessageBodySize);
+            MessageBundle sendState=DELIVER_TO_UNKNOWN;
+            bool deliverAllMessages=true;
+            int len=msg.body().message_names_size();
+            OpaqueMessageReturnValue obj_is_deleted=OBJECT_NOT_DESTROYED;
             for (int i=0;i<len;++i) {
-                if (forwardThisName(msg.message_names(i))) {
-                    forwardLastMessageType=true;
-                    newMsg.add_message_names(newMsg.message_names(i));
-                    newMsg.add_message_arguments(newMsg.message_arguments(i));
+                if(msg.body().message_names(i)=="DelObj")
+                    obj_is_deleted=OBJECT_DELETED;
+                if(msg.body().message_names(i)=="RetObj") {
+                    int maxnum=i+1;
+                    if (maxnum==len)
+                        maxnum=msg.body().message_arguments_size();
+                    for (int j=i;j<maxnum;++j){
+                        Sirikata::Protocol::RetObj ro;
+                        ro.ParseFromString(msg.body().message_arguments(j));
+                        newObj(ro,msg.body().message_arguments(j).data(),msg.body().message_arguments(j).size());
+                    }
+                }
+                if (!forwardThisName(msg.body().message_names(i))) {
+                    if (len==1) return obj_is_deleted;
+                    deliverAllMessages=false;
                 }else {
-                    forwardLastMessageType=false;
+                    if (msg.body().message_names(i)==proxCallbackName()) {
+                        if (sendState==DELIVER_TO_UNKNOWN||sendState==DELIVER_TO_OBJECT)
+                            sendState=DELIVER_TO_OBJECT;
+                        else 
+                            sendState=DELIVER_TO_BOTH;
+                    }else{
+                        if (sendState==DELIVER_TO_UNKNOWN||sendState==DELIVER_TO_PROX)
+                            sendState=DELIVER_TO_PROX;
+                        else 
+                            sendState=DELIVER_TO_BOTH;
+                    }
                 }
             }
-            if (forwardLastMessageType) {
-                int fullSize=msg.message_arguments_size();
-                for (int i=len;i<fullSize;++i) {
-                    newMsg.add_message_arguments(newMsg.message_arguments(i));
-                }
+            if (sendState==DELIVER_TO_UNKNOWN)
+                return obj_is_deleted;//no messages considered worth forwarding to the proximity system
+            if (sendState==DELIVER_TO_BOTH) {
+                SILOG(prox,info,"Message with recipients both proximity and object bundled into the same message: not delivering.");
+                return obj_is_deleted;
             }
-            if (sendState==DELIVER_TO_OBJECT)
-                deliverMessage(*object,newMsg,NULL,0);
-            if (sendState==DELIVER_TO_PROX)
-                sendMessage(*object,newMsg,NULL,0);
-            
+/* NOT SURE THIS IS NECESSARY -- do these messages already have addresses on them?*/
+            DidAlterMessage alteration;
+            if (sendState==DELIVER_TO_PROX) 
+                alteration=addressMessage(msg,object,NULL);
+            else
+                alteration=addressMessage(msg,NULL,object);
+            if (deliverAllMessages&&sendState==DELIVER_TO_PROX) {
+                sendMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
+            } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT) {
+                deliverMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
+            }else {
+                //some messages are not considered worth forwarding to the proximity system or there's a mishmash of destinations
+                if (msg.body().message_arguments_size()<len) {
+                    len=msg.body().message_arguments_size();
+                }
+                RoutableMessage newMsg (msg);
+                newMsg.body().clear_message_names();
+                newMsg.body().clear_message_arguments();
+                bool forwardLastMessageType=false;
+                for (int i=0;i<len;++i) {
+                    if (forwardThisName(msg.body().message_names(i))) {
+                        forwardLastMessageType=true;
+                        newMsg.body().add_message_names(newMsg.body().message_names(i));
+                        newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
+                    }else {
+                        forwardLastMessageType=false;
+                    }
+                }
+                if (forwardLastMessageType) {
+                    int fullSize=msg.body().message_arguments_size();
+                    for (int i=len;i<fullSize;++i) {
+                        newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
+                    }
+                }
+                if (sendState==DELIVER_TO_OBJECT)
+                    deliverMessage(*object,newMsg,NULL,0);
+                if (sendState==DELIVER_TO_PROX)
+                    sendMessage(*object,newMsg,NULL,0);
+                
+            }
+            return obj_is_deleted;
+        }catch(std::invalid_argument&ia) {
+            SILOG(proximity,warning,"Could not parse message");
+            return OBJECT_NOT_DESTROYED;
         }
-        return obj_is_deleted;
+
     }
 
 public:
@@ -211,28 +231,27 @@ public:
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
                                                const void *serializedMessage,
                                                size_t serializedMessageSize) {
-        Sirikata::Protocol::Message mesg;
-        mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+        RoutableMessageHeader mesg;
+        std::pair<const void*,size_t>remainder=mesg.ParseFromArray(serializedMessage,serializedMessageSize);
         internalProcessOpaqueProximityMessage(
                                              object,
                                              mesg,
-                                             serializedMessage,
-                                             serializedMessageSize);
+                                             remainder.first,
+                                             remainder.second);
     }
     /**
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                               const Sirikata::Protocol::IMessage& mesg,
-                                               const void *optionalSerializedMessage=NULL,
-                                               size_t optionalSerializedMessageSize=0) {
-        Protocol::Message msg(mesg);
+                                               const RoutableMessageHeader& mesg,
+                                               const void *optionalSerializedMessageBody,
+                                               size_t optionalSerializedMessageBodySize) {
         internalProcessOpaqueProximityMessage(
                                              object,
-                                             msg,
-                                             optionalSerializedMessage,
-                                             optionalSerializedMessageSize);
+                                             mesg,
+                                             optionalSerializedMessageBody,
+                                             optionalSerializedMessageBodySize);
     }
 
     /**
@@ -254,7 +273,7 @@ public:
                               const Sirikata::Protocol::INewProxQuery&newProxQueryMsg, 
                               const void *optionalSerializedProximityQuery=NULL,
                               size_t optionalSerializedProximitySize=0){
-        Protocol::Message toSend;
+        RoutableMessage toSend;
         constructMessage(toSend,&source,NULL,"NewProxQuery",newProxQueryMsg,optionalSerializedProximityQuery,optionalSerializedProximitySize);
         sendMessage(source,toSend,NULL,0);
     }
@@ -266,7 +285,7 @@ public:
                                      const Sirikata::Protocol::IProxCall&callInfo,
                                      const void *optionalSerializedProxCall=NULL,
                                      size_t optionalSerializedProxCallSize=0) {
-        Protocol::Message delivery;
+        RoutableMessage delivery;
         constructMessage(delivery,NULL,&destination,"ProxCall",callInfo,optionalSerializedProxCall,optionalSerializedProxCallSize);
         deliverMessage(destination,delivery,NULL,0);
     }
@@ -283,7 +302,7 @@ public:
      * when this function returns, no more responses will be given
      */
     virtual void delProxQuery(const ObjectReference&source, const Sirikata::Protocol::IDelProxQuery&delProx,  const void *optionalSerializedDelProxQuery=NULL,size_t optionalSerializedDelProxQuerySize=0){
-        Protocol::Message toSend;
+        RoutableMessage toSend;
         constructMessage(toSend,&source,NULL,"DelProxQuery",delProx,optionalSerializedDelProxQuery,optionalSerializedDelProxQuerySize);
         sendMessage(source,toSend,NULL,0);
     }
