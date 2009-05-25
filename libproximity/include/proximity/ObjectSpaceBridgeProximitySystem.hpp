@@ -89,11 +89,11 @@ protected:
                                 const void *optionalSerializedMessageBody,
                                 size_t optionalSerializedMessageBodySize) {
         if (optionalSerializedMessageBody) {
-            mObject->deliver(opaqueMessage.header(),MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
+            mObject->processMessage(opaqueMessage.header(),MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
         }else {
             std::string bodyMsg;
             if (opaqueMessage.body().SerializeToString(&bodyMsg)) {
-                mObject->deliver(opaqueMessage.header(),MemoryReference(bodyMsg.data(),bodyMsg.size()));
+                mObject->processMessage(opaqueMessage.header(),MemoryReference(bodyMsg.data(),bodyMsg.size()));
             }
         }
     }
@@ -225,6 +225,9 @@ public:
         DELIVER_TO_BOTH
         
     };
+    ///Do not forward any messages of interest to other plugins
+    virtual bool forwardMessagesTo(MessageService*){return false;}
+    virtual bool endForwardingMessagesTo(MessageService*){return false;}
 
     /**
      * Process a message that may be meant for the proximity system

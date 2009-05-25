@@ -29,8 +29,30 @@ void ProxBridge::update(const Duration&duration,const std::tr1::weak_ptr<Prox::Q
         Network::IOServiceFactory::dispatchServiceMessage(mIO,duration,std::tr1::bind(&ProxBridge::update,this,duration,listen));
     }
 }
+bool ProxBridge::forwardMessagesTo(MessageService*ms){ 
+    for (int i=0;i<sMaxMessageServices;++i) {
+        if(mMessageServices[i]==NULL) {
+            mMessageServices[i]=ms;
+            return true;
+        }
+    }
+    return false;
+}
+bool ProxBridge::endForwardingMessagesTo(MessageService*ms){ 
+    for (int i=0;i<sMaxMessageServices;++i) {
+        if(mMessageServices[i]==ms) {
+            for (int j=i+1;j<sMaxMessageServices;++j) {
+                mMessageServices[j-1]=mMessageServices[j];
+            }
+            mMessageServices[sMaxMessageServices-1]=NULL;
+            return true;
+        }
+    }
+    return false;
+}
 
 ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mListener(new Network::TCPStreamListener(io)),mQueryHandler(handler),mCallback(cb) {
+    std::memset(mMessageServices,0,sMaxMessageServices*sizeof(MessageService*));
     OptionValue*port;    
     OptionValue*updateDuration;
     InitializeClassOptions("proxbridge",this,
@@ -218,9 +240,9 @@ void ProxBridge::sendProxCallback(Network::Stream*stream,
 class QueryListener:public Prox::QueryEventListener, public Prox::QueryChangeListener {
     ProxBridge::ObjectState* mState;
     unsigned int mID;
-    ProxBridge::Callback mCallback;
+    ProxBridge*mParent;
 public:
-    QueryListener(unsigned int id, ProxBridge::ObjectState*state, const ProxBridge::Callback &cb):mState(state), mCallback(cb) {
+    QueryListener(unsigned int id, ProxBridge::ObjectState*state, ProxBridge*parent):mState(state), mParent(parent) {
         mID=id;
     }
     virtual ~QueryListener(){}
@@ -242,7 +264,17 @@ public:
             }
         }
         if (message_container.body().message_names_size()) {
-            mCallback(mState->mStream?&*mState->mStream:NULL,message_container,message_container.body());
+            mParent->mCallback(mState->mStream?&*mState->mStream:NULL,message_container,message_container.body());
+        }
+        std::string toSerialize;
+        for (int i=0;i<ProxBridge::sMaxMessageServices;++i){ 
+            MessageService*svc;
+            if ((svc=mParent->mMessageServices[i])==NULL)
+                break;
+            if (toSerialize.length()==0) {
+                message_container.body().SerializeToString(&toSerialize);
+            }
+            svc->processMessage(message_container.header(),MemoryReference(toSerialize));
         }
     }
     virtual void queryPositionUpdated(Prox::Query* query, const Prox::Query::PositionVectorType& old_pos, const Prox::MotionVector3f& new_pos){}
@@ -284,7 +316,7 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
             queryState->mQuery=query=new Prox::Query(pos,Prox::SolidAngle(new_query.min_solid_angle()));
         }
         mQueryHandler->registerQuery(query);
-        QueryListener * ql=new QueryListener(new_query.query_id(),source->second,mCallback);
+        QueryListener * ql=new QueryListener(new_query.query_id(),source->second,this);
         query->addChangeListener(ql);
         query->setEventListener(ql);
     }

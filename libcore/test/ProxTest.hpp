@@ -48,7 +48,7 @@
 #include <time.h>
 using namespace Sirikata;
 using namespace Sirikata::Network;
-class ProxTest : public CxxTest::TestSuite
+class ProxTest : MessageService, public CxxTest::TestSuite
 {
     void ioThread(){
         using std::tr1::placeholders::_1;
@@ -109,7 +109,8 @@ public:
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}
         Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
-        mLocalProxSystem=new Proximity::BridgeProximitySystem<ProxTest*>(this,proxCon);
+        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon);
+        mLocalProxSystem->forwardMessagesTo(this);
         mThread=new boost::thread(std::tr1::bind(&ProxTest::pcThread,this));
 
     }
@@ -196,7 +197,22 @@ public:
             }
         }
     }
-    void deliver(const RoutableMessageHeader&opaqueMessage, MemoryReference body){
+    bool forwardMessagesTo(MessageService*body) {
+        return false;
+    }
+    bool stopForwardingMessagesTo(MessageService*body) {
+        return false;
+    }
+    void processMessage(const ObjectReference*reference, MemoryReference message){
+        
+        RoutableMessageHeader rmh;
+        MemoryReference body=rmh.ParseFromArray(message.data(),message.size());
+        if (reference)
+            rmh.set_destination_object(*reference);
+        this->processMessage(rmh,body);
+                
+    }
+    void processMessage(const RoutableMessageHeader&opaqueMessage, MemoryReference body){
         Protocol::MessageBody mesg;
         if (mesg.ParseFromArray(body.data(),body.size())) {
             for (int i=0;i<mesg.message_names_size();++i) {

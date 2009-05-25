@@ -130,6 +130,11 @@ public:
                                                const RoutableMessageHeader&,
                                                const void *serializedMessageBody,
                                                size_t serializedMessageSize);
+
+    ///Do not forward any messages of interest to other plugins
+    virtual bool forwardMessagesTo(MessageService*);
+    virtual bool endForwardingMessagesTo(MessageService*);
+
     /**
      * Process a message that may be meant for the proximity system
      * \returns true if the object was deleted from the proximity system with the message
@@ -180,6 +185,8 @@ public:
      */
     virtual void delObj(const ObjectReference&source, const Sirikata::Protocol::IDelObj&, const void *optionalSerializedDelObj=NULL,size_t optionalSerializedDelObjSize=0);
 protected:
+    static const int sMaxMessageServices=16;
+    MessageService* mMessageServices[sMaxMessageServices];
     Callback mCallback;
 
 };

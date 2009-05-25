@@ -33,22 +33,62 @@
 #define _PROXIMITY_BRIDGEPROXIMITYSYSTEM_HPP_
 #include "ObjectSpaceBridgeProximitySystem.hpp"
 namespace Sirikata { namespace Proximity {
-template <class SpacePtr> 
-class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<SpacePtr> {
+class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageService*> {
+    class MulticastProcessMessage:public MessageService {
+        std::vector<MessageService*>mMessageServices;
+    public:
+        virtual bool forwardMessagesTo(MessageService*ms){
+            mMessageServices.push_back(ms);
+            return true;
+        }
+        virtual bool endForwardingMessagesTo(MessageService*ms) {
+            std::vector<MessageService*>::iterator where=std::find(mMessageServices.begin(),mMessageServices.end(),ms);
+            if (where!=mMessageServices.end()) {
+                mMessageServices.erase(where);
+                return true;
+            }
+            return false;
+        }
+        /**
+         * Process a message that may be meant for the space system
+         */
+        virtual void processMessage(const RoutableMessageHeader&hdr,
+                                    MemoryReference message_body){
+            for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
+                i->processMessage(hdr,message_body);
+            }
+        }
+        
+        /**
+         * Process a message that may be meant for the space system
+         */
+        virtual void processMessage(const ObjectReference*object,
+                                    MemoryReference message){
+            for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
+                i->processMessage(object,message);
+            }
+        }        
+    }mMulticast;
 protected:
-    virtual bool forwardThisName(const std::string&name) {
-        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<SpacePtr>::forwardThisName(name)||name=="RetObj"||name=="DelObj";
+    virtual bool forwardMessagesTo(MessageService*ms){
+        return mMulticast.forwardMessagesTo(ms);
     }
-    virtual typename ObjectSpaceBridgeProximitySystem<SpacePtr>::DidAlterMessage addressMessage(RoutableMessageHeader&output,
+    virtual bool endForwardingMessagesTo(MessageService*ms) {
+        return mMulticast.endForwardingMessagesTo(ms);
+    }
+    virtual bool forwardThisName(const std::string&name) {
+        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<MessageService*>::forwardThisName(name)||name=="RetObj"||name=="DelObj";
+    }
+    virtual ObjectSpaceBridgeProximitySystem<MessageService*>::DidAlterMessage addressMessage(RoutableMessageHeader&output,
                                 const ObjectReference*source,
                                 const ObjectReference*destination) {
         //if (source) //proximity management will have source through 
         //    output.set_source_object(source->getObjectUUID());
         if (destination) {
             output.set_destination_object(*destination);
-            return ObjectSpaceBridgeProximitySystem<SpacePtr>::ALTERED_MESSAGE;
+            return ObjectSpaceBridgeProximitySystem<MessageService*>::ALTERED_MESSAGE;
         }
-        return ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE;
+        return ObjectSpaceBridgeProximitySystem<MessageService*>::UNSPOILED_MESSAGE;
     }
     virtual void sendMessage(const ObjectReference&source,
                              const RoutableMessage&opaqueMessage,
@@ -71,13 +111,13 @@ protected:
             RoutableMessage message;
             MemoryReference ref=message.RoutableMessageHeader::ParseFromArray(&msg[0],msg.size());
             addressMessage(message,NULL,&objectConnection);
-            //ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
+            //ObjectSpaceBridgeProximitySystem<MessageService*>::UNSPOILED_MESSAGE) {
             this->deliverMessage(objectConnection,message,ref.data(),ref.size());//FIXME: this deliver happens in a thread---do we need a distinction
         }
     }
 public:
     ProximityConnection *mProximityConnection;
-    BridgeProximitySystem(SpacePtr obj,ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<SpacePtr> (obj),mProximityConnection(connection) {
+    BridgeProximitySystem(ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast),mProximityConnection(connection) {
         this->mImportantNames.insert("ObjLoc");
         this->mImportantNames.insert("DelObj");
         bool retval=mProximityConnection->forwardMessagesTo(this);

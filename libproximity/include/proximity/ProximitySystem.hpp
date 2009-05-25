@@ -45,9 +45,7 @@ public:
         OBJECT_NOT_DESTROYED,
         OBJECT_DELETED
     };
-    ///Do not forward any messages of interest to other plugins
-    virtual bool forwardMessagesTo(MessageService*){return false;}
-    virtual bool endForwardingMessagesTo(MessageService*){return false;}
+
     /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,
