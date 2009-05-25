@@ -62,7 +62,7 @@ protected:
             MemoryReference ref=message.RoutableMessageHeader::ParseFromArray(&msg[0],msg.size());
             addressMessage(message,NULL,&objectConnection);
             //ObjectSpaceBridgeProximitySystem<SpacePtr>::UNSPOILED_MESSAGE) {
-            this->deliverMessage(objectConnection,message,ref.first,ref.second);//FIXME: this deliver happens in a thread---do we need a distinction
+            this->deliverMessage(objectConnection,message,ref.data(),ref.size());//FIXME: this deliver happens in a thread---do we need a distinction
         }
     }
 public:
@@ -120,11 +120,11 @@ public:
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
                                            MemoryReference message) {
         RoutableMessageHeader mesg;
-        MemoryReference remainder=mesg.ParseFromArray(message.first,message.second);
+        MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
         if (this->internalProcessOpaqueProximityMessage(object,
                                                         mesg,
-                                                        remainder.first,
-                                                        remainder.second)==ProximitySystem::OBJECT_DELETED) {
+                                                        remainder.data(),
+                                                        remainder.size())==ProximitySystem::OBJECT_DELETED) {
             if (object)
                 this->mProximityConnection->deleteObjectStream(*object);
         }
@@ -138,8 +138,8 @@ public:
                                                MemoryReference message_body) {
         if (this->internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                                         mesg,
-                                                        message_body.first,
-                                                        message_body.second)==ProximitySystem::OBJECT_DELETED) {
+                                                        message_body.data(),
+                                                        message_body.size())==ProximitySystem::OBJECT_DELETED) {
             if (mesg.has_source_object())
                 this->mProximityConnection->deleteObjectStream(mesg.source_object());
         }

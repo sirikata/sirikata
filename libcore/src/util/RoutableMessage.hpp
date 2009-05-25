@@ -22,18 +22,18 @@ public:
     Sirikata::RoutableMessageHeader& header(){return *this;}
     const Sirikata::RoutableMessageHeader& header()const {return *this;}
     bool ParseFromArray(const void*input,size_t size) {
-        std::pair<const void*,size_t> body=this->RoutableMessageHeader::ParseFromArray(input,size);
-        if (body.second>(size_t)sMaxInt)
+        MemoryReference body=this->RoutableMessageHeader::ParseFromArray(input,size);
+        if (body.size()>(size_t)sMaxInt)
             return false;
-        int isize=(int)body.second;
-        return this->Sirikata::Protocol::MessageBody::ParseFromArray(body.first,isize);
+        int isize=(int)body.size();
+        return this->Sirikata::Protocol::MessageBody::ParseFromArray(body.data(),isize);
     }
     bool ParsePartialFromArray(const void*input,size_t size) {
-        std::pair<const void*,size_t> body=this->RoutableMessageHeader::ParseFromArray(input,size);
-        if (body.second>(size_t)sMaxInt)
+        MemoryReference body=this->RoutableMessageHeader::ParseFromArray(input,size);
+        if (body.size()>(size_t)sMaxInt)
             return false;
-        int isize=(int)body.second;
-        return this->Sirikata::Protocol::MessageBody::ParsePartialFromArray(body.first,isize);
+        int isize=(int)body.size();
+        return this->Sirikata::Protocol::MessageBody::ParsePartialFromArray(body.data(),isize);
     }
     bool ParseFromString(const std::string&data) {
         return ParseFromArray(data.data(),data.length());

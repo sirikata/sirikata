@@ -215,7 +215,7 @@ typedef double float64;
 typedef uchar byte;
 typedef std::string String;
 typedef std::vector<uint8> MemoryBuffer;
-typedef std::pair<const void*,size_t> MemoryReference;
+
 namespace Network {
 class IOService;
 class Stream;
@@ -236,6 +236,7 @@ class MessageBody;
 class IMessageBody;
 }
 } // namespace Sirikata
+#include "MemoryReference.hpp"
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
 #include "Factory.hpp"

@@ -64,7 +64,7 @@ void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
                                            MemoryReference message) {
     RoutableMessage mesg;
     std::vector<ObjectReference> newObjectReferences;
-    if (mesg.ParseFromArray(message.first,message.second)) {
+    if (mesg.ParseFromArray(message.data(),message.size())) {
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (object) {
             where=mObjectStreams.find(*object);
@@ -82,7 +82,7 @@ void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
 void ProxBridge::processOpaqueSpaceMessage(const RoutableMessageHeader&msg,
                                            MemoryReference body_reference) {
     Protocol::MessageBody body;
-    if (body.ParseFromArray(body_reference.first,body_reference.second)) {
+    if (body.ParseFromArray(body_reference.data(),body_reference.size())) {
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (msg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(msg.source_object()));
@@ -407,19 +407,19 @@ void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
         size_t old_size=ref->size();
         if (hdr.has_source_object()) {
             ObjectReference source_object(hdr.source_object());
-            if (processOpaqueProximityMessage(*ref,&source_object,hdr,bodyData.first,bodyData.second)==OBJECT_DELETED) {
+            if (processOpaqueProximityMessage(*ref,&source_object,hdr,bodyData.data(),bodyData.size())==OBJECT_DELETED) {
                 std::vector<ObjectReference>::iterator where=std::find(ref->begin(),ref->end(),source_object);
                 if (where!=ref->end()) {
                     ref->erase(where);
                 }
             }
         }else if (old_size==1) {
-            if (processOpaqueProximityMessage(*ref,&*ref->begin(),hdr,bodyData.first,bodyData.second)==OBJECT_DELETED) {
+            if (processOpaqueProximityMessage(*ref,&*ref->begin(),hdr,bodyData.data(),bodyData.size())==OBJECT_DELETED) {
                 ref->resize(0);
             }
         }else {
             std::vector<ObjectReference> newObjects;
-            if (processOpaqueProximityMessage(newObjects,NULL,hdr,bodyData.first,bodyData.second)!=OBJECT_DELETED&&!newObjects.empty()) {
+            if (processOpaqueProximityMessage(newObjects,NULL,hdr,bodyData.data(),bodyData.size())!=OBJECT_DELETED&&!newObjects.empty()) {
                 ref->insert(ref->end(),newObjects.begin(),newObjects.end());
             }
         }

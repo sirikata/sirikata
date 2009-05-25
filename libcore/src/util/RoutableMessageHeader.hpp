@@ -89,7 +89,7 @@ private:
         return Sirikata::Protocol::MessageHeader::within_reserved_field_tag_range(key);
     }
 public:
-    std::pair<const void *,size_t> ParseFromArray(const void *input, size_t size) {
+    MemoryReference ParseFromArray(const void *input, size_t size) {
         const unsigned char*curInput=(const unsigned char*)input;
         while (size) {
             const unsigned char *dataStart=curInput;
@@ -156,9 +156,9 @@ public:
                 mData+=std::string((const char*)dataStart,(curInput-dataStart));//header fields go here
             }
         }
-        return std::pair<const void*,size_t>(curInput,size);
+        return MemoryReference(curInput,size);
     }
-    std::pair<const void *,size_t> ParseFromString(const std::string& size){
+    MemoryReference ParseFromString(const std::string& size){
         return ParseFromArray(size.data(),size.size());
     }
 private:

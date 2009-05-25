@@ -233,12 +233,12 @@ public:
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
                                            MemoryReference message) {
         RoutableMessageHeader mesg;
-        MemoryReference remainder=mesg.ParseFromArray(message.first,message.second);
+        MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
         internalProcessOpaqueProximityMessage(
                                              object,
                                              mesg,
-                                             remainder.first,
-                                             remainder.second);
+                                             remainder.data(),
+                                             remainder.size());
     }
     /**
      * Process a message that may be meant for the proximity system
@@ -249,8 +249,8 @@ public:
                                                MemoryReference message_body) {
         internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                               mesg,
-                                              message_body.first,
-                                              message_body.second);
+                                              message_body.data(),
+                                              message_body.size());
     }
 
     /**
