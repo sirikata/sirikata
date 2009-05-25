@@ -47,11 +47,12 @@ TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket
 
 }
 void TCPStream::send(const Chunk&data, StreamReliability reliability) {
-    if(!data.empty()) {
-        send(&data[0],data.size(),reliability);
-    }
+    send(MemoryReference(data),reliability);
 }
-void TCPStream::send(const void*data, size_t dataSize, StreamReliability reliability) {
+void TCPStream::send(MemoryReference firstChunk, StreamReliability reliability) {
+    send(firstChunk,MemoryReference::null(),reliability);
+}
+void TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, StreamReliability reliability) {
     MultiplexedSocket::RawRequest toBeSent;
     // only allow 3 of the four possibilities because unreliable ordered is tricky and usually useless
     switch(reliability) {
@@ -75,7 +76,7 @@ void TCPStream::send(const void*data, size_t dataSize, StreamReliability reliabi
     ///this function should never return something larger than the  MAX_SERIALIZED_LEGNTH
     assert(successLengthNeeded<=streamIdLength);
     streamIdLength=successLengthNeeded;
-    size_t totalSize=dataSize;
+    size_t totalSize=firstChunk.size()+secondChunk.size();
     totalSize+=streamIdLength;
     uint30 packetLength=uint30(totalSize);
     uint8 packetLengthSerialized[uint30::MAX_SERIALIZED_LENGTH];
@@ -87,10 +88,16 @@ void TCPStream::send(const void*data, size_t dataSize, StreamReliability reliabi
     uint8 *outputBuffer=&(*toBeSent.data)[0];
     std::memcpy(outputBuffer,packetLengthSerialized,packetHeaderLength);
     std::memcpy(outputBuffer+packetHeaderLength,serializedStreamId,streamIdLength);
-    if (dataSize)
+    if (firstChunk.size()) {
         std::memcpy(&outputBuffer[packetHeaderLength+streamIdLength],
-                    data,
-                    dataSize);
+                    firstChunk.data(),
+                    firstChunk.size());
+    }
+    if (secondChunk.size()) {
+        std::memcpy(&outputBuffer[packetHeaderLength+streamIdLength+firstChunk.size()],
+                    secondChunk.data(),
+                    secondChunk.size());
+    }
     bool didsend=false;
     //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);

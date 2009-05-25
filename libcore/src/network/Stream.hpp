@@ -177,7 +177,8 @@ public:
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
                           const BytesReceivedCallback&chunkReceivedCallback)=0;
     
-    virtual void send(const void * data, size_t dataSize, StreamReliability)=0;
+    virtual void send(MemoryReference, StreamReliability)=0;
+    virtual void send(MemoryReference, MemoryReference, StreamReliability)=0;
     ///Send a chunk of data to the receiver
     virtual void send(const Chunk&data,StreamReliability)=0;
     ///close this stream: if it is the last stream, close the connection as well

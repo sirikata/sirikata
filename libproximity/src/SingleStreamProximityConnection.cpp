@@ -93,11 +93,11 @@ void SingleStreamProximityConnection::send(const ObjectReference&obc,
         std::string data;
         RoutableMessageHeader rmh;
         rmh.SerializeToString(&data);
-        if (optionalSerializedMessageBodySize&&data.size()==0){
-            where->second->send(optionalSerializedMessageBody,optionalSerializedMessageBodySize,Network::ReliableOrdered);
+        if (optionalSerializedMessageBodySize){
+            where->second->send(MemoryReference(data),MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize),Network::ReliableOrdered);
         }else{
             msg.AppendToString(&data);
-            where->second->send(data.data(),data.size(),Network::ReliableOrdered);
+            where->second->send(MemoryReference(data),Network::ReliableOrdered);
         }
     }
 }

@@ -45,6 +45,13 @@ public:
         first=data;
         second=size;
     }
+    static DataReference null() {
+        return DataReference(NULL,0);
+    }
+    explicit DataReference(const std::string&s) {
+        first=s.data();
+        second=s.length();
+    }
     template <class U> explicit DataReference(const std::vector<U> &v) {
         if (v.empty()) {
             first=NULL;

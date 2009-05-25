@@ -142,7 +142,9 @@ public:
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
     ///Implementation of send interface
-    virtual void send(const void*data,  size_t dataSize, StreamReliability);
+    virtual void send(MemoryReference, StreamReliability);
+    ///Implementation of send interface
+    virtual void send(MemoryReference, MemoryReference, StreamReliability);
     ///Implementation of send interface
     virtual void send(const Chunk&data,StreamReliability);
     ///Implementation of connect interface

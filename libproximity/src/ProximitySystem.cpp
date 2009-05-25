@@ -44,7 +44,7 @@ void ProximitySystem::defaultProximityCallback(Network::Stream*strm, const Routa
     std::string data;
     hdr.SerializeToString(&data);
     msg.AppendToString(&data);
-    strm->send(data.data(),data.size(),Network::ReliableOrdered);
+    strm->send(MemoryReference(data),Network::ReliableOrdered);
 }
 void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::Protocol::IMessageBody&msg){
     assert(strm);
@@ -56,7 +56,7 @@ void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, co
     h.clear_source_space();
     h.SerializeToString(&data);
     msg.AppendToString(&data);
-    strm->send(data.data(),data.size(),Network::ReliableOrdered);
+    strm->send(MemoryReference(data),Network::ReliableOrdered);
 }
 void ProximitySystem::defaultNoDestinationAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::Protocol::IMessageBody&msg){
     assert(strm);
@@ -66,7 +66,7 @@ void ProximitySystem::defaultNoDestinationAddressProximityCallback(Network::Stre
     h.clear_destination_space();
     h.SerializeToString(&data);
     msg.AppendToString(&data);
-    strm->send(data.data(),data.size(),Network::ReliableOrdered);
+    strm->send(MemoryReference(data),Network::ReliableOrdered);
 }
 
 

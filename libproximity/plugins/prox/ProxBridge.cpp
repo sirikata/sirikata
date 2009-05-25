@@ -213,7 +213,7 @@ void ProxBridge::sendProxCallback(Network::Stream*stream,
     std::string str;
     destination.SerializeToString(&str);
     unaddressed_prox_callback_msg.AppendToString(&str);
-    stream->send(str.data(),str.size(),Network::ReliableOrdered);
+    stream->send(MemoryReference(str),Network::ReliableOrdered);
 }
 class QueryListener:public Prox::QueryEventListener, public Prox::QueryChangeListener {
     ProxBridge::ObjectState* mState;
