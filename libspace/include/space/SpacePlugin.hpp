@@ -51,17 +51,14 @@ public:
     /**
      * Process a message that may be meant for the space system
      */
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           const RoutableMessageHeader&,
-                                           const void *serializedMessageBody,
-                                           size_t serializedMessageBodySize)=0;
+    virtual void processOpaqueSpaceMessage(const RoutableMessageHeader&,
+                                           MemoryReference message_body)=0;
 
     /**
      * Process a message that may be meant for the space system
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                           const void *serializedMessage,
-                                           size_t serializedMessageSize)=0;
+                                           MemoryReference message)=0;
 
 };
 

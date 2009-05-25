@@ -134,16 +134,11 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if the object was deleted from the proximity system with the message
      */
-    virtual void processOpaqueSpaceMessage(
-                                               const ObjectReference*object,
-                                               const RoutableMessageHeader&hdr,
-                                               const void *serializedMessageBody,
-                                               size_t serializedMessageBodySize);
+    virtual void processOpaqueSpaceMessage(const RoutableMessageHeader&hdr,
+                                           MemoryReference body);
 
-    virtual void processOpaqueSpaceMessage(
-                                               const ObjectReference*object,
-                                               const void *serializedMessage,
-                                               size_t serializedMessageSize);
+    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+                                           MemoryReference body);
 
     /**
      * Pass the ReturnedObjectConnection info,

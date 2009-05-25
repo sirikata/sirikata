@@ -187,18 +187,18 @@ public:
 
     }
 
-    void send(const RoutableMessageHeader&opaqueMessage,const void*bodyData,size_t bodySize){
+    void send(const RoutableMessageHeader&opaqueMessage,MemoryReference body){
         Protocol::MessageBody mesg;
-        if (mesg.ParseFromArray(bodyData,bodySize)) {
+        if (mesg.ParseFromArray(body.first,body.second)) {
             for (int i=0;i<mesg.message_names_size();++i) {
                 SILOG(sirikata,warning,"Send opaque message named: "<<mesg.message_names(i));
                 ++mSend;
             }
         }
     }
-    void deliver(const RoutableMessageHeader&opaqueMessage,const void*bodyData,size_t bodySize){
+    void deliver(const RoutableMessageHeader&opaqueMessage, MemoryReference body){
         Protocol::MessageBody mesg;
-        if (mesg.ParseFromArray(bodyData,bodySize)) {
+        if (mesg.ParseFromArray(body.first,body.second)) {
             for (int i=0;i<mesg.message_names_size();++i) {
                 if (mesg.message_names(i)=="ProxCall") {
                     Protocol::ProxCall cb;

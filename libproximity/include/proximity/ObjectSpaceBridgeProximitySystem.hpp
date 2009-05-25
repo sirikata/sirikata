@@ -89,11 +89,11 @@ protected:
                                 const void *optionalSerializedMessageBody,
                                 size_t optionalSerializedMessageBodySize) {
         if (optionalSerializedMessageBody) {
-            mObject->deliver(opaqueMessage,optionalSerializedMessageBody,optionalSerializedMessageBodySize);
+            mObject->deliver(opaqueMessage.header(),MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
         }else {
             std::string bodyMsg;
             if (opaqueMessage.body().SerializeToString(&bodyMsg)) {
-                mObject->deliver(opaqueMessage,bodyMsg.data(),bodyMsg.size());
+                mObject->deliver(opaqueMessage.header(),MemoryReference(bodyMsg.data(),bodyMsg.size()));
             }
         }
     }
@@ -102,11 +102,13 @@ protected:
                              const void *optionalSerializedMessageBody,
                              size_t optionalSerializedMessageBodySize) {
         if (optionalSerializedMessageBody) {
-            mObject->send(opaqueMessage,optionalSerializedMessageBody,optionalSerializedMessageBodySize);
+            mObject->send(opaqueMessage.header(),
+                          MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
         }else {
             std::string bodyMsg;
             if (opaqueMessage.body().SerializeToString(&bodyMsg)) {
-                mObject->send(opaqueMessage,bodyMsg.data(),bodyMsg.size());
+                mObject->send(opaqueMessage.header(),
+                              MemoryReference(bodyMsg.data(),bodyMsg.size()));
             }
         }
     }
@@ -229,10 +231,9 @@ public:
      * \returns true if object was deleted
      */
     virtual void processOpaqueSpaceMessage(const ObjectReference*object,
-                                               const void *serializedMessage,
-                                               size_t serializedMessageSize) {
+                                           MemoryReference message) {
         RoutableMessageHeader mesg;
-        std::pair<const void*,size_t>remainder=mesg.ParseFromArray(serializedMessage,serializedMessageSize);
+        MemoryReference remainder=mesg.ParseFromArray(message.first,message.second);
         internalProcessOpaqueProximityMessage(
                                              object,
                                              mesg,
@@ -243,15 +244,13 @@ public:
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
      */
-    virtual void processOpaqueSpaceMessage(const ObjectReference*object,
+    virtual void processOpaqueSpaceMessage(
                                                const RoutableMessageHeader& mesg,
-                                               const void *optionalSerializedMessageBody,
-                                               size_t optionalSerializedMessageBodySize) {
-        internalProcessOpaqueProximityMessage(
-                                             object,
-                                             mesg,
-                                             optionalSerializedMessageBody,
-                                             optionalSerializedMessageBodySize);
+                                               MemoryReference message_body) {
+        internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
+                                              mesg,
+                                              message_body.first,
+                                              message_body.second);
     }
 
     /**

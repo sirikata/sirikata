@@ -61,11 +61,10 @@ ProxBridge::~ProxBridge() {
 }
 
 void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
-                                           const void *serializedMessage,
-                                           size_t serializedMessageSize) {
+                                           MemoryReference message) {
     RoutableMessage mesg;
     std::vector<ObjectReference> newObjectReferences;
-    if (mesg.ParseFromArray(serializedMessage,serializedMessageSize)) {
+    if (mesg.ParseFromArray(message.first,message.second)) {
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (object) {
             where=mObjectStreams.find(*object);
@@ -80,17 +79,12 @@ void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,
     }
 }
 
-void ProxBridge::processOpaqueSpaceMessage(const ObjectReference*object,    
-                                           const RoutableMessageHeader&msg,
-                                           const void *serializedMessageBody,
-                                           size_t serializedMessageBodySize) {
+void ProxBridge::processOpaqueSpaceMessage(const RoutableMessageHeader&msg,
+                                           MemoryReference body_reference) {
     Protocol::MessageBody body;
-    if (body.ParseFromArray(serializedMessageBody,serializedMessageBodySize)) {
+    if (body.ParseFromArray(body_reference.first,body_reference.second)) {
         ObjectStateMap::iterator where=mObjectStreams.end();
-        if (object) {
-            where=mObjectStreams.find(*object);
-        }
-        if (where==mObjectStreams.end()&&msg.has_source_object()){
+        if (msg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(msg.source_object()));
         }
         std::vector<ObjectReference> newObjectReferences;

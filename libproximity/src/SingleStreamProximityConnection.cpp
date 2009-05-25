@@ -52,7 +52,7 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
     std::tr1::shared_ptr<Network::Stream> lok=mLock.lock();//make sure this proximity connection will not disappear;
     if (lok) {
         if (chunk.size()) {
-            system->processOpaqueSpaceMessage(&object,&chunk[0],chunk.size());
+            system->processOpaqueSpaceMessage(&object,MemoryReference(&chunk[0],chunk.size()));
         }
     }
 }
