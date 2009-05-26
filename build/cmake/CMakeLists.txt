@@ -615,7 +615,12 @@ SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS MessageHeader INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Protocol" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc)
 
-ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Prox" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Prox_protobuf.cc)
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources}
+INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Prox" IMPORTS ${ProtocolBuffersRoot}
+OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE
+${SirikataProtocolDirectory}/Prox_protobuf.cc)
+
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Space" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc)
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc)
 
@@ -722,7 +727,12 @@ IF(NOT WIN32)
  ENDIF()
 ENDIF()
 
-SET(LIBSPACE_SOURCES ${LIBSPACE_SOURCE_DIR}/Space.cpp )
+SET(LIBSPACE_SOURCES 
+  ${SirikataProtocolDirectory}/Space_protobuf.cc
+                     ${LIBSPACE_SOURCE_DIR}/Space.cpp
+                     ${LIBSPACE_SOURCE_DIR}/Loc.cpp
+                     ${LIBSPACE_SOURCE_DIR}/Registration.cpp
+                      )
 SET(LIBPROXIMITY_SOURCES 
                   ${SirikataProtocolDirectory}/Proximity_protobuf.cc
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximityConnectionFactory.cpp 
