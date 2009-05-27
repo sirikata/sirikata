@@ -222,7 +222,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     while(SDL_PollEvent(&event[0]))
     {
         EventPtr toFire;
-        SILOG(ogre,debug,"Event type "<<(int)event->type);
+        SILOG(input,insane,"Event type "<<(int)event->type);
         switch(event->type)
         {
           case SDL_KEYDOWN:

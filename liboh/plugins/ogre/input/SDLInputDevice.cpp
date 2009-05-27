@@ -65,7 +65,7 @@ using Task::GenEventManager;
 SDLMouse::SDLMouse(SDLInputManager *manager, unsigned int which) : mWhich(which) {
     unsigned int wid,hei;
     manager->getWindowSize(wid,hei);
-    int maxsize = sqrt(wid*wid+hei*hei);
+    float maxsize = sqrt((float)(wid*wid+hei*hei));
     float drag_deadband (manager->mDragDeadband->as<float>());
     setDragDeadband(2*drag_deadband/maxsize);
     setName(SDL_GetMouseName(which));

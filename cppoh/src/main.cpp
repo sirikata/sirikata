@@ -75,9 +75,13 @@ int main(int argc,const char**argv) {
         SimulationFactory::getSingleton()
           .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
     pm->initialize();
-    while (graphicsSystem->tick()) {
+	if (graphicsSystem) {
+	    while (graphicsSystem->tick()) {
 
-    }
+		}
+	} else {
+		SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
+	}
     pm->destroy();
     delete graphicsSystem;
     delete pm;

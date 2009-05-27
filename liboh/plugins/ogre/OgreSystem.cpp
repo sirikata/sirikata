@@ -513,6 +513,14 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
                 return true;
             if (ogreLoadPlugin("../../../dependencies/lib/OGRE",filename,false))
                 return true;
+            if (ogreLoadPlugin("Debug",filename,false))
+                return true;
+            if (ogreLoadPlugin("Release",filename,false))
+                return true;
+            if (ogreLoadPlugin("MinSizeRel",filename,false))
+                return true;
+            if (ogreLoadPlugin("RelWithDebInfo",filename,false))
+                return true;
             if (ogreLoadPlugin("/usr/local/lib/OGRE",filename,false))
                 return true;
             if (ogreLoadPlugin("/usr/lib/OGRE",filename,false))
@@ -525,10 +533,13 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
 bool OgreSystem::loadBuiltinPlugins () {
     bool retval=true;
 #ifdef __APPLE__
-    ogreLoadPlugin(String(),"RenderSystem_GL");
-    ogreLoadPlugin(String(),"Plugin_CgProgramManager");
-    ogreLoadPlugin(String(),"Plugin_ParticleFX");
-    ogreLoadPlugin(String(),"Plugin_OctreeSceneManager");
+    retval = ogreLoadPlugin(String(),"RenderSystem_GL");
+    retval = ogreLoadPlugin(String(),"Plugin_CgProgramManager") && retval;
+    retval = ogreLoadPlugin(String(),"Plugin_ParticleFX") && retval;
+    retval = ogreLoadPlugin(String(),"Plugin_OctreeSceneManager") && retval;
+	if (!retval) {
+		SILOG(ogre,error,"The required ogre plugins failed to load. Check that all .dylib files named RenderSystem_* and Plugin_* are copied to the current directory.");
+	}
 #else
 #ifdef _WIN32
 #ifdef NDEBUG
@@ -543,11 +554,20 @@ bool OgreSystem::loadBuiltinPlugins () {
    #define OGRE_DEBUG_MACRO ".so"
 #endif
 #endif
-    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_GL" OGRE_DEBUG_MACRO);
-    ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_Direct3D9" OGRE_DEBUG_MACRO);
-    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_CgProgramManager" OGRE_DEBUG_MACRO);
-    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_ParticleFX" OGRE_DEBUG_MACRO);
-    ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO);
+	retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_GL" OGRE_DEBUG_MACRO);
+#ifdef _WIN32
+	try {
+	    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_Direct3D9" OGRE_DEBUG_MACRO) || retval;
+	} catch (Ogre::InternalErrorException) {
+		SILOG(ogre,warn,"Received an Internal Error when loading the Direct3D9 plugin, falling back to OpenGL. Check that you have the latest version of DirectX installed from microsoft.com/directx");
+	}
+#endif
+    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_CgProgramManager" OGRE_DEBUG_MACRO) && retval;
+    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_ParticleFX" OGRE_DEBUG_MACRO) && retval;
+    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO) && retval;
+	if (!retval) {
+		SILOG(ogre,error,"The required ogre plugins failed to load. Check that all DLLs named RenderSystem_* and Plugin_* are copied to the current directory.");
+	}
 #undef OGRE_DEBUG_MACRO
 #endif
     return retval;

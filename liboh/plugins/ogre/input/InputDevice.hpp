@@ -138,6 +138,20 @@ typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
 class PointerDevice;
 typedef std::tr1::shared_ptr<PointerDevice> PointerDevicePtr;
 
+/* SDL Defines these on some platforms */
+#ifdef MOD_SHIFT
+#undef MOD_SHIFT
+#endif
+#ifdef MOD_CTRL
+#undef MOD_CTRL
+#endif
+#ifdef MOD_GUI
+#undef MOD_GUI
+#endif
+#ifdef MOD_ALT
+#undef MOD_ALT
+#endif
+
 class InputDevice {
 public:
     typedef uint32 Modifier;
@@ -154,10 +168,10 @@ protected:
     bool changeAxis(unsigned int axis, AxisValue newValue);
 public:
     enum KeyboardModifiers {
-        MOD_SHIFT = (1<<0),
-        MOD_CTRL  = (1<<1),
-        MOD_ALT   = (1<<2),
-        MOD_GUI   = (1<<3)
+        MOD_SHIFT = 1,
+        MOD_CTRL  = 2,
+        MOD_ALT   = 4,
+        MOD_GUI   = 8
     };
     enum PointerModifiers {
         //POINTER_STYLUS = 0, // default

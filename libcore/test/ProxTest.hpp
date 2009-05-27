@@ -170,7 +170,11 @@ public:
         npq.set_query_id(4);
         npq.set_max_radius(512);
         mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
-        sleep(3);
+#ifdef _WIN32
+		Sleep(3000);
+#else
+		sleep(3);
+#endif
         TS_ASSERT_EQUALS(mDeliver[0].read(),1);
         TS_ASSERT_EQUALS(mDeliver[1].read(),3);
         TS_ASSERT_EQUALS(mDeliver[2].read(),5);

@@ -49,8 +49,6 @@ namespace Sirikata {
  * Also includes explicit template instantiations for EventManager<Event>
  */
 
-#define insane debug
-
 namespace Task {
 
 template <class T>
@@ -72,8 +70,7 @@ struct EventManager<T>::ListenerUnsubRequest : public WorkItem {
 
 		typename RemoveMap::iterator iter = mParent->mRemoveById.find(mListenerId);
 		if (iter == mParent->mRemoveById.end()) {
-			SILOG(task,error,"!!! Unsubscribe for removeId " << mListenerId <<
-				  " -- usually this is from a double-unsubscribe. ");
+			SILOG(task,warning,"Double-Unsubscribe for removeId " << mListenerId);
 		} else {
 			EventSubscriptionInfo &subInfo = (*iter).second;
 			SILOG(task,debug,"**** Unsubscribe " << mListenerId);
@@ -82,7 +79,7 @@ struct EventManager<T>::ListenerUnsubRequest : public WorkItem {
 			}
 			subInfo.mList->erase(subInfo.mIter);
 			if (subInfo.secondaryMap) {
-				SILOGNOCR(task,debug," with Secondary ID " <<
+				SILOG(task,debug," with Secondary ID " <<
 						  subInfo.secondaryId << std::endl << "\t");
 				typename SecondaryListenerMap::iterator deleteIter =
 					subInfo.secondaryMap->find(subInfo.secondaryId);
@@ -92,7 +89,6 @@ struct EventManager<T>::ListenerUnsubRequest : public WorkItem {
 
 			mParent->mRemoveById.erase(iter);
 			SubscriptionIdClass::free(mListenerId);
-			SILOG(task,debug,"");
 		}
 	}
 };
@@ -178,8 +174,7 @@ struct EventManager<T>::FireEvent : public WorkItem {
 		typename PrimaryListenerMap::iterator priIter =
 			mParent->mListeners.find(mEvent->getId().mPriId);
 		if (priIter == mParent->mListeners.end()) {
-			// FIXME: Should this ever happen?
-			SILOG(task,warning," >>>\tWARNING: No listeners for type " <<
+			SILOG(task,insane," >>>\tNo listeners for type " <<
                   "event type " << mEvent->getId().mPriId);
 			return;
 		}
@@ -196,7 +191,7 @@ struct EventManager<T>::FireEvent : public WorkItem {
         EventHistory eventHistory=EVENT_UNHANDLED;
 		// Call once per event order.
 		for (int i = 0; i < NUM_EVENTORDER && cancel == false; i++) {
-			SILOG(task,debug," >>>\tFiring " << mEvent << ": " << mEvent->getId() <<
+			SILOG(task,insane," >>>\tFiring " << mEvent << ": " << mEvent->getId() <<
                   " [order " << i << "]");
 			ListenerList *currentList = &(primaryLists->get(i));
 			if (!currentList->empty())
@@ -220,7 +215,7 @@ struct EventManager<T>::FireEvent : public WorkItem {
 			}
 
 			if (cancel) {
-				SILOG(task,debug," >>>\tCancelling " << mEvent->getId());
+				SILOG(task,insane," >>>\tCancelling " << mEvent->getId());
 			}
 		}
 		if (secIter != secondaryMap->end()) {
@@ -229,7 +224,7 @@ struct EventManager<T>::FireEvent : public WorkItem {
 
         if (cancel) eventHistory=EVENT_CANCELED;
         (*mEvent)(eventHistory);
-		SILOG(task,debug," >>>\tFinished " << mEvent->getId());
+		SILOG(task,insane," >>>\tFinished " << mEvent->getId());
 	}
 };
 
@@ -421,7 +416,7 @@ bool EventManager<T>::cleanUp(
 template <class T>
 void EventManager<T>::fire(EventPtr ev) {
 	mWorkQueue->enqueue(new FireEvent(this, ev));
-	SILOG(task,debug,"**** Firing event " << (void*)(&(*ev)) <<
+	SILOG(task,insane,"**** Firing event " << (void*)(&(*ev)) <<
 		" with " << ev->getId());
 };
 
@@ -442,18 +437,20 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 	 * The reason for this is 'iter' or 'next' may end up getting
 	 * deleted in the process.
 	 */
-	SILOG(task,debug," >>>\tHas " << lili->size() <<
+	SILOG(task,insane," >>>\tHas " << lili->size() <<
 		" Listeners registered.");
 	while (iter!=lili->end()) {
 		typename ListenerList::iterator next = iter;
 		++next;
 		// Now call the event listener.
-		SILOG(task,debug," >>>\tCalling " << (*iter).second <<
-			"...");
+		SILOG(task,insane," >>>\tCalling " << (*iter).second <<"...");
 		EventResponse resp = (*iter).first(ev);
-		SILOGNOCR(task,debug," >>>\t\tReturned ");
 		if (((int)resp.mResp) & EventResponse::DELETE_LISTENER) {
-			SILOGNOCR(task,debug,"DELETE_LISTENER ");
+			if (((int)resp.mResp) & EventResponse::CANCEL_EVENT) {
+				SILOG(task,insane," >>>\t\tReturned DELETE_LISTENER and CANCEL_EVENT");
+			} else {
+				SILOG(task,insane," >>>\t\tReturned DELETE_LISTENER");
+			}
 			if ((*iter).second != SubscriptionIdClass::null()) {
 				clearRemoveId((*iter).second);
 				// We do not want to send a NULL message to it.
@@ -462,10 +459,11 @@ bool EventManager<T>::callAllListeners(EventPtr ev,
 			lili->erase(iter);
 		}
 		if (((int)resp.mResp) & EventResponse::CANCEL_EVENT) {
-			SILOGNOCR(task,debug,"CANCEL_EVENT");
+			if (!(((int)resp.mResp) & EventResponse::DELETE_LISTENER)) {
+				SILOG(task,insane," >>>\t\tReturned CANCEL_EVENT");
+			}
 			cancel = true;
 		}
-		SILOG(task,debug,"");
 		iter = next;
 	}
 	return cancel;

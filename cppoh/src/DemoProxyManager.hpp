@@ -45,7 +45,9 @@ class DemoProxyManager :public ProxyManager{
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy){}
     ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location) {
-        SpaceObjectReference myId(SpaceID(UUID::null()),ObjectReference(UUID::random()));
+        // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
+        SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
+
         std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
         mObjects.insert(ObjectMap::value_type(myId, myObj));
         notify(&ProxyCreationListener::createProxy, myObj);
