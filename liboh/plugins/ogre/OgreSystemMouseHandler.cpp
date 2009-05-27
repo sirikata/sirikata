@@ -60,8 +60,11 @@ class OgreSystem::MouseHandler {
     Vector3d mMoveVector;
 
     static void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians) {
+        SILOG(input,info,"FOV Y Radians: "<<cam->getOgreCamera()->getFOVy().valueRadians()<<"; aspect = "<<cam->getOgreCamera()->getAspectRatio());
         xRadians = cam->getOgreCamera()->getFOVy().valueRadians() * cam->getOgreCamera()->getAspectRatio() * deltaXPct;
         yRadians = cam->getOgreCamera()->getFOVy().valueRadians() * deltaYPct;
+        SILOG(input,info,"X = "<<deltaXPct<<"; Y = "<<deltaYPct);
+        SILOG(input,info,"Xradian = "<<xRadians<<"; Yradian = "<<yRadians);
     }
     static Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel) {
         float xRadian, yRadian;
@@ -207,7 +210,7 @@ class OgreSystem::MouseHandler {
         }
         
         if (mSelectedObjects.empty()) {
-            SILOG(input,insane,"moveSelection: Found no selected objects");
+            SILOG(input,debug,"moveSelection: Found no selected objects");
             return EventResponse::nop();
         }
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -229,7 +232,7 @@ class OgreSystem::MouseHandler {
                     mMoveVector = deltaPosition;
                 }
             }
-            SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
+            SILOG(input,debug,"moveSelection: Moving selected objects at distance " << mMoveVector);
         }
 
         Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mXStart, mouseev->mYStart));
@@ -247,14 +250,14 @@ class OgreSystem::MouseHandler {
             end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
         }
         Vector3d toMove (end - start);
-        SILOG(input,insane,"Start "<<start<<"; End "<<end<<"; toMove "<<toMove);
+        SILOG(input,debug,"Start "<<start<<"; End "<<end<<"; toMove "<<toMove);
         for (std::map<Entity*,Location>::const_iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
             Location toSet ((*iter).first->getProxy().extrapolateLocation(now));
-            SILOG(input,insane,"moveSelection: OLD " << toSet.getPosition());
+            SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
             toSet.setPosition((*iter).second.getPosition() + toMove);
-            SILOG(input,insane,"moveSelection: NEW " << toSet.getPosition());
-            (*iter).first->getProxy().resetPositionVelocity(now, toSet);
+            SILOG(input,debug,"moveSelection: NEW " << toSet.getPosition());
+            (*iter).first->getProxy().setPositionVelocity(now, toSet);
         }
         return EventResponse::cancel();
     }
@@ -395,10 +398,12 @@ class OgreSystem::MouseHandler {
             }
             totalPosition /= mSelectedObjects.size();
             toMove *= (totalPosition - cameraLoc.getPosition()).length() * .75;
+            SILOG(input,debug,"Total Position: "<<totalPosition);
         } else {
             toMove *= WORLD_SCALE;
         }
         toMove *= value.getCentered(); // up == zoom in
+        SILOG(input,debug,"ZOOMIN: "<<toMove);
         cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
         camera->getProxy().resetPositionVelocity(now, cameraLoc);
     }
