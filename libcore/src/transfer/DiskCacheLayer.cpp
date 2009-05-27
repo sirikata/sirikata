@@ -67,9 +67,11 @@
 #define O_RDONLY _O_RDONLY
 #define O_WRONLY _O_WRONLY
 #define O_CREAT _O_CREAT
+#define O_BINARY _O_BINARY
 #define _finddata64_t __finddata64_t
-
 #endif
+
+#define DEFAULT_OPEN_OPTIONS O_BINARY
 
 namespace Sirikata {
 
@@ -119,8 +121,22 @@ struct DIR {
 };
 
 DIR *opendir(const char *name) {
+	std::string myName (name);
+	for (std::string::size_type i = 0; i < myName.length(); ++i) {
+		if (myName[i]=='/') {
+			myName[i]='\\';
+		}
+	}
+	/*
+	if (myName[myName.length()-1]=='/' || myName[myName.length()-1]=='\\') {
+		myName = myName.substr(0, myName.length()-1);
+	}
+	*/
+	myName += "*";
 	DIR *mydir = new DIR;
-	mydir->handle = _findfirst64(name, &mydir->winentry);
+	char test[1024];
+	getcwd(test,1024);
+	mydir->handle = _findfirst64(myName.c_str(), &mydir->winentry);
 	mydir->finished = false;
 	if (mydir->handle == -1) {
 		delete mydir;
@@ -188,7 +204,7 @@ void DiskCacheLayer::workerThread() {
 			if (newFile) {
 				unlink(rangesPath.c_str()); // in case of a leftover old file.
 			}
-			int fd = open(filePath.c_str(), O_CREAT|O_WRONLY, 0666);
+			int fd = open(filePath.c_str(), O_CREAT|O_WRONLY|DEFAULT_OPEN_OPTIONS, 0666);
 			if (fd < 0) {
 				SILOG(transfer,error, "Failed to open " << fileId <<
 					"for writing; reason: " << errno);
@@ -255,7 +271,7 @@ void DiskCacheLayer::workerThread() {
 			if (!useWholeFile) {
 				filePath += PARTIAL_SUFFIX;
 			}
-			int fd = open(filePath.c_str(), O_RDONLY);
+			int fd = open(filePath.c_str(), O_RDONLY|DEFAULT_OPEN_OPTIONS);
 			if (fd < 0) {
 				SILOG(transfer,error, "Failed to open " << fileId <<
 					"for writing; reason: " << errno);
