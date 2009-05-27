@@ -33,57 +33,36 @@ extern "C" typedef struct SDL_Surface SDL_Surface;
 extern "C" typedef Sirikata::uint32 SDL_WindowID;
 extern "C" typedef void* SDL_GLContext;
 #include <task/EventManager.hpp>
+#include "InputManager.hpp"
 namespace Sirikata { namespace Input {
 
+class InputDevice;
 class SDLKeyboard;
 class SDLMouse;
 class SDLJoystick;
-
-template <class T>
-class AutoInsertVector {
-    std::vector<T> mVec;
-    const T&operator[] (unsigned int i) const;
-public:
-    T &operator[] (unsigned int i) {
-        if (mVec.size() <= i) {
-            resize(i+1);
-        }
-        return mVec[i];
-    }
-    void resize(unsigned int n) {
-        while (mVec.size() < n) {
-            mVec.push_back(T(mVec.size()));
-        }
-    }
-};
-
-template <class T>
-class AutoSharedInsertVector {
-    const std::tr1::shared_ptr<T> &operator[] (unsigned int i) const;
-public:
-    std::vector<std::tr1::shared_ptr<T> > mVec;
-    const std::tr1::shared_ptr<T> &operator[] (unsigned int i) {
-        if (mVec.size() <= i) {
-            resize(i+1);
-        }
-        return mVec[i];
-    }
-    void resize(unsigned int n) {
-        while (mVec.size() < n) {
-            mVec.push_back(std::tr1::shared_ptr<T>(new T(mVec.size())));
-        }
-    }
-};
+typedef std::tr1::shared_ptr<InputDevice> InputDevicePtr;
+typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
+typedef std::tr1::shared_ptr<SDLMouse> SDLMousePtr;
+typedef std::tr1::shared_ptr<SDLJoystick> SDLJoystickPtr;
+typedef std::tr1::shared_ptr<SDLKeyboard> SDLKeyboardPtr;
 
 
-class SDLInputManager :public Task::GenEventManager{
+class SDLInputManager : public InputManager {
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;
-    AutoSharedInsertVector<SDLKeyboard> mKeys;
-    AutoSharedInsertVector<SDLMouse> mMice;
-    AutoSharedInsertVector<SDLJoystick> mJoy;
+    std::vector<SDLKeyboardPtr> mKeys;
+    std::vector<SDLMousePtr> mMice;
+    std::vector<SDLJoystickPtr> mJoy;
     unsigned int mWidth, mHeight;
+    static int modifiersFromSDL(int sdlMod);
 public:
+    OptionValue*mDragDeadband;
+    OptionValue*mWorldScale;
+    OptionValue*mAxisToRadians;
+    OptionValue*mWheelToAxis;
+    OptionValue*mRelativeMouseToAxis;
+    OptionValue*mJoyBallToAxis;
+
     void getWindowSize(unsigned int &width, unsigned int &height) {
         width = this->mWidth;
         height = this->mHeight;
@@ -95,6 +74,12 @@ public:
                     bool grabCursor,
                     void *&currentWindowData);
     bool tick(Time currentTime, Duration frameTime);
-    ~SDLInputManager();
+
+    virtual bool isModifierDown(int modifier) const;
+    virtual bool isCapsLockDown() const;
+    virtual bool isNumLockDown() const;
+    virtual bool isScrollLockDown() const;
+
+    virtual ~SDLInputManager();
 };
 } }

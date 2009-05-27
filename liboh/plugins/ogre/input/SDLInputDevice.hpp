@@ -54,10 +54,10 @@ class SDLMouse: public PointerDevice {
     unsigned int mWhich;
     unsigned int mNumButtons;
 public:
-    SDLMouse(unsigned int which);
+    SDLMouse(SDLInputManager *inputManager, unsigned int which);
     virtual ~SDLMouse();
 
-    enum Axes {CURSORX, CURSORY, RELX, RELY, WHEELX, WHEELY,
+    enum Axes {WHEELX=NUM_POINTER_AXES, WHEELY,
           PRESSURE, CURSORZ, ROTATION, TILT, NUM_AXES};
     virtual int getNumButtons() const;
     virtual std::string getButtonName(unsigned int button) const;
@@ -66,6 +66,8 @@ public:
         // Don't include axes labeled "for future use".
         return PRESSURE + 1;
     }
+    virtual void setRelativeMode(bool enabled);
+
     virtual std::string getAxisName(unsigned int axis) const {
         switch (axis) {
           case CURSORX:
@@ -93,10 +95,10 @@ public:
     }
 
     void fireMotion(const SDLMousePtr &thisptr,
-                    SDLInputManager *em, 
+                    SDLInputManager *em,
                     const ::SDL_MouseMotionEvent &ev);
     void fireWheel(const SDLMousePtr &thisptr,
-                   Task::GenEventManager *em, 
+                   SDLInputManager *em,
                    int xrel, 
                    int yrel);
 };
@@ -126,13 +128,13 @@ public:
     virtual int getNumButtons() const;
 
     void fireHat(const SDLJoystickPtr &thisptr,
-                 Task::GenEventManager *em, 
-                 unsigned int hatNumber, 
+                 Task::GenEventManager *em,
+                 unsigned int hatNumber,
                  int hatValue);
     void fireBall(const SDLJoystickPtr &thisptr,
-                  Task::GenEventManager *em, 
-                  unsigned int ballNumber, 
-                  int xrel, 
+                  SDLInputManager *em,
+                  unsigned int ballNumber,
+                  int xrel,
                   int yrel);
 };
 

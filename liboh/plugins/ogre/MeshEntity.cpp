@@ -93,6 +93,7 @@ void MeshEntity::loadMesh(const String& meshname)
     static AtomicValue<int32> idx ((int32)0);
     Ogre::Entity* new_entity = getScene()->getSceneManager()->createEntity(
         ogreMovableName(), meshname);
+    SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
         new_entity->setMaterialName("BaseWhiteTexture");
     }

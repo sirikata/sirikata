@@ -41,6 +41,13 @@
 #include <SDL_video.h>
 #include <SDL_syswm.h>
 #include <SDL_events.h>
+#include <SDL_mouse.h>
+
+/*
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#include <CGRemoteOperation.h>
+#endif
+*/
 #ifdef nil
 #undef nil
 #endif
@@ -53,12 +60,17 @@ using Task::GenEventManager;
 
 // HACK: Constant to convert uncalibrated axes to floating point.
 // We need a way to set calibration values for each axis.
-#define TO_AXIS(val) (AxisValue::fromCentered(((float)val) /128.))
 
-SDLMouse::SDLMouse(unsigned int which) : mWhich(which) {
+
+SDLMouse::SDLMouse(SDLInputManager *manager, unsigned int which) : mWhich(which) {
+    unsigned int wid,hei;
+    manager->getWindowSize(wid,hei);
+    int maxsize = sqrt(wid*wid+hei*hei);
+    float drag_deadband (manager->mDragDeadband->as<float>());
+    setDragDeadband(2*drag_deadband/maxsize);
     setName(SDL_GetMouseName(which));
 
-    // SDL has no API to query the number of buttons...
+    // SDL has no API to query the number of buttons. The exact value doesn't matter.
     mNumButtons = 5; // left, middle, right, Back, Forward
 }
 
@@ -84,25 +96,45 @@ std::string SDLMouse::getButtonName(unsigned int button) const {
     }
 }
 
+void SDLMouse::setRelativeMode(bool enabled) {
+    int oldmouse = SDL_SelectMouse(mWhich);
+    SDL_ShowCursor(enabled? 1 : 0);
+    SDL_SetRelativeMouseMode(mWhich, enabled ? SDL_TRUE : SDL_FALSE);
+/*#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    CGAssociateMouseAndMouseCursorPosition(!enabled);
+#endif*/
+    SDL_SelectMouse(oldmouse);
+}
+
 void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
                           SDLInputManager *em,
                           const struct SDL_MouseMotionEvent &event) {
     unsigned int screenwid, screenhei;
     em->getWindowSize(screenwid, screenhei);
     AxisValue xPctFromCenter = AxisValue::from01(event.x / float(screenwid));
-    AxisValue yPctFromCenter = AxisValue::from01(event.y / float(screenhei));
+    AxisValue yPctFromCenter = AxisValue::from01(1-(event.y / float(screenhei)));
 
-    bool changedx = fireAxis(thisptr, em, CURSORX, xPctFromCenter);
-    bool changedy = fireAxis(thisptr, em, CURSORY, yPctFromCenter);
-    fireAxis(thisptr, em, RELX, TO_AXIS(event.xrel));
-    fireAxis(thisptr, em, RELY, TO_AXIS(event.yrel));
+    bool changedx = (getAxis(CURSORX) != xPctFromCenter);
+    bool changedy = (getAxis(CURSORY) != yPctFromCenter);
+    if (mRelativeMode) {
+        float to_axis(em->mRelativeMouseToAxis->as<float>());
+        fireAxis(thisptr, em, RELX, AxisValue::fromCentered(to_axis*event.xrel));
+        fireAxis(thisptr, em, RELY, AxisValue::fromCentered(to_axis*event.yrel));
+        // drag events still get fired...
+        firePointerMotion(thisptr, em, event.xrel/float(screenwid),
+                          event.yrel/float(screenhei), event.cursor,
+                          event.pressure, event.pressure_min, event.pressure_max);
+    } else {
+        fireAxis(thisptr, em, CURSORX, xPctFromCenter);
+        fireAxis(thisptr, em, CURSORY, yPctFromCenter);
+        if (changedx || changedy) {
+            firePointerMotion(thisptr, em, xPctFromCenter.getCentered(),
+                              yPctFromCenter.getCentered(), event.cursor,
+                              event.pressure, event.pressure_min, event.pressure_max);
+        }
+    }
     if (event.pressure_max) {
         fireAxis(thisptr, em, PRESSURE, AxisValue::fromCentered((float)event.pressure / (float)event.pressure_max));
-    }
-
-    if (changedx || changedy) {
-        firePointerMotion(thisptr, em, event.x, event.y, event.cursor,
-                event.pressure, event.pressure_min, event.pressure_max);
     }
 
     // "For future use"
@@ -111,9 +143,11 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     //fireAxis(em, ROTATION, event.pressure);
 }
 void SDLMouse::fireWheel(const SDLMousePtr &thisptr,
-                         GenEventManager *em, int xrel, int yrel) {
-    fireAxis(thisptr, em, WHEELX, TO_AXIS(xrel));
-    fireAxis(thisptr, em, WHEELY, TO_AXIS(yrel));
+                         SDLInputManager *em, int xrel, int yrel) {
+    float to_axis (em->mWheelToAxis->as<float>());
+    SILOG(input,debug,"WHEEL: " << xrel << "; " << yrel);
+    fireAxis(thisptr, em, WHEELX, AxisValue::fromCentered(to_axis*xrel));
+    fireAxis(thisptr, em, WHEELY, AxisValue::fromCentered(to_axis*yrel));
 }
 
 SDLJoystick::SDLJoystick(unsigned int whichDevice)
@@ -176,9 +210,10 @@ void SDLJoystick::fireHat(const SDLJoystickPtr &thisptr,
     this->fireButton(thisptr, em, mNumButtons + HAT_MAX*num + HAT_LEFT, !!(val & SDL_HAT_LEFT));
 }
 void SDLJoystick::fireBall(const SDLJoystickPtr &thisptr,
-                          GenEventManager *em, unsigned int ballNumber, int xrel, int yrel) {
-    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber, TO_AXIS(xrel));
-    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber + 1, TO_AXIS(yrel));
+                          SDLInputManager *em, unsigned int ballNumber, int xrel, int yrel) {
+    float to_axis (em->mJoyBallToAxis->as<float>());
+    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber, AxisValue::fromCentered(to_axis*xrel));
+    fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber + 1, AxisValue::fromCentered(to_axis*yrel));
 }
 
 std::string SDLJoystick::getButtonName(unsigned int button) const {

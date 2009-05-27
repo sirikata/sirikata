@@ -36,6 +36,9 @@ void CameraEntity::attach (const String&renderTargetName,
     getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
 
     mAttachedIter = mScene->mAttachedCameras.insert(mScene->mAttachedCameras.end(), this);
+    if (renderTargetName.empty()) {
+        mScene->mPrimaryCamera = this;
+    }
 }
 void CameraEntity::detach() {
     if (mViewport&&mRenderTarget) {
@@ -60,6 +63,9 @@ void CameraEntity::detach() {
         mScene->mAttachedCameras.erase(mAttachedIter);
         mAttachedIter = mScene->mAttachedCameras.end();
     }
+    if (mScene->mPrimaryCamera == this) {
+        mScene->mPrimaryCamera = NULL;
+    }
 }
 
 CameraEntity::~CameraEntity() {
@@ -80,7 +86,6 @@ std::string CameraEntity::ogreCameraName(const SpaceObjectReference&ref) {
 std::string CameraEntity::ogreMovableName()const{
     return ogreCameraName(id());
 }
-
 
 }
 }

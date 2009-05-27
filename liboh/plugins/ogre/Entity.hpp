@@ -60,13 +60,12 @@ protected:
 
     void init(Ogre::MovableObject *obj);
 
-    void setOgrePosition(const Vector3d &pos) {
-        mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
-    }
-    void setOgreOrientation(const Quaternion &orient) {
-        mSceneNode->setOrientation(toOgre(orient));
-    }
     void setStatic(bool isStatic);
+
+protected:
+    void setOgrePosition(const Vector3d &pos);
+
+    void setOgreOrientation(const Quaternion &orient);
 public:
     ProxyPositionObject &getProxy() const {
         return *mProxy;
@@ -77,6 +76,8 @@ public:
            Ogre::MovableObject *obj=NULL);
 
     virtual ~Entity();
+
+    static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
     void removeFromScene();
     void addToScene(Ogre::SceneNode *newParent=NULL);
@@ -100,8 +101,8 @@ public:
     }
     void extrapolateLocation(TemporalValue<Location>::Time current);
 
-    virtual bool setSelected(bool selected) {
-      return false;
+    virtual void setSelected(bool selected) {
+      mSceneNode->showBoundingBox(selected);
     }
     virtual std::string ogreMovableName() const{
         return id().toString();

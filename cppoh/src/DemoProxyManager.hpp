@@ -39,22 +39,28 @@ namespace Sirikata {
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     std::tr1::shared_ptr<ProxyLightObject> mLight;
-    std::tr1::shared_ptr<ProxyMeshObject> mAttachedMesh, mMesh;
+    typedef std::map<SpaceObjectReference, std::tr1::shared_ptr<ProxyMeshObject> > ObjectMap;
+    ObjectMap mObjects;
+
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy){}
+    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location) {
+        SpaceObjectReference myId(SpaceID(UUID::null()),ObjectReference(UUID::random()));
+        std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
+        mObjects.insert(ObjectMap::value_type(myId, myObj));
+        notify(&ProxyCreationListener::createProxy, myObj);
+        myObj->resetPositionVelocity(Time::now(), location);
+        myObj->setMesh(uri);
+        return myObj;
+    }
 public:
     DemoProxyManager()
       : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-        mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-        mAttachedMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-        mMesh(new ProxyMeshObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
-
+        mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
     }
     void initialize(){
         notify(&ProxyCreationListener::createProxy,mCamera);
         notify(&ProxyCreationListener::createProxy,mLight);
-        notify(&ProxyCreationListener::createProxy,mAttachedMesh);
-        notify(&ProxyCreationListener::createProxy,mMesh);
         mCamera->attach("",0,0);
         LightInfo li;
         li.setLightDiffuseColor(Color(0,0,1));
@@ -70,9 +76,16 @@ public:
 */
 //        mMesh->setMesh("file:///razor.mesh");
 //        mAttachedMesh->setMesh("file:///razor.mesh");
-        mAttachedMesh->setMesh(Transfer::URI("meru://cplatz@/arcade.mesh"));
-        //mAttachedMesh->setMesh("meru:///arcade.mesh");
-        //mAttachedMesh->setScale(Vector3f(.1,.1,.1));
+        addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
+                             Location(Vector3d(0,0,0), Quaternion::identity(),
+                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+        addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
+                             Location(Vector3d(5,0,0), Quaternion::identity(),
+                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+        addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
+                             Location(Vector3d(0,5,0), Quaternion::identity(),
+                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+
         mCamera->resetPositionVelocity(Time::now(),
                              Location(Vector3d(0,0,50.), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
@@ -82,65 +95,31 @@ public:
         mLight->setPositionVelocity(Time::now()+Duration::seconds(.5),
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
-
-        mMesh->resetPositionVelocity(Time::now()-Duration::seconds(1),
-                             Location(Vector3d(0,0,25.), Quaternion::identity(),
-                                      Vector3f(0,0,0), Vector3f(0,0,0), 0.));
-
-/*
-        mMesh->setPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(0,1,0), Vector3f(0.71,0.71,0), 0.5));
-*/
-        mAttachedMesh->setParent(mMesh, Time::now(),
-                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
-                                      Vector3f(0,0,0), Vector3f::nil(), 0.),
-                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
-                                      Vector3f(0,0,0), Vector3f::nil(), 0.));
-/*
-        mAttachedMesh->resetPositionVelocity(Time::now(),
-                             Location(Vector3d(-10,0,0), Quaternion::identity(),
-                                      Vector3f(0,0,0), Vector3f::nil(), 0.));
-*/
-        mMesh->resetPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
-        mMesh->destroy();
-//        mAttachedMesh->unsetParent(Time::now());
-/*
-        mAttachedMesh->unsetParent(Time::now(),
-                             Location(Vector3d(2.5,5.,0), Quaternion::identity(),
-                                      Vector3f(0,-3,0), Vector3f::nil(), 0.));
-*/
-    }
-    void fiveSeconds() {
-        mMesh->destroy();
-//        mAttachedMesh->setParent(mMesh, Time::now());
-    }
-    void tenSeconds() {
-        mAttachedMesh->unsetParent(Time::now());
     }
     void destroy() {
         mCamera->destroy();
-        mLight->destroy();
-        mAttachedMesh->destroy();
-        //mMesh->destroy();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
-        notify(&ProxyCreationListener::destroyProxy,mAttachedMesh);
+        mLight->destroy();
         notify(&ProxyCreationListener::destroyProxy,mLight);
-        notify(&ProxyCreationListener::destroyProxy,mMesh);
+        for (ObjectMap::const_iterator iter = mObjects.begin();
+             iter != mObjects.end(); ++iter) {
+            (*iter).second->destroy();
+            notify(&ProxyCreationListener::destroyProxy,(*iter).second);
+        }
+        mObjects.clear();
     }
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const {
         if (id == mCamera->getObjectReference()) {
             return mCamera;
         } else if (id == mLight->getObjectReference()) {
             return mLight;
-        } else if (id == mAttachedMesh->getObjectReference()) {
-            return mAttachedMesh;
-        } else if (id == mMesh->getObjectReference()) {
-            return mMesh;
         } else {
-            return ProxyObjectPtr();
+            ObjectMap::const_iterator iter = mObjects.find(id);
+            if (iter == mObjects.end()) {
+                return ProxyObjectPtr();
+            } else {
+                return (*iter).second;
+            }
         }
     }
 };

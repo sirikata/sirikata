@@ -98,6 +98,8 @@ OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
     mSceneManager=NULL;
     mRenderTarget=NULL;
     mProxyManager=NULL;
+    mMouseHandler=NULL;
+    mRayQuery=NULL;
 }
 namespace {
 class FrequencyType{public:
@@ -465,6 +467,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     sActiveOgreScenes.push_back(this);
 
+    allocMouseHandler();
+
     return true;
 }
 namespace {
@@ -571,6 +575,9 @@ OgreSystem::~OgreSystem() {
             delete current;
         }
     }
+    if (mSceneManager) {
+        Ogre::Root::getSingleton().destroySceneManager(mSceneManager);
+    }
     decrefcount();
     for (std::list<OgreSystem*>::iterator iter=sActiveOgreScenes.begin()
              ;iter!=sActiveOgreScenes.end();) {
@@ -588,6 +595,7 @@ OgreSystem::~OgreSystem() {
         OGRE_DELETE sRoot;
         sRoot=NULL;
     }
+    destroyMouseHandler();
     delete mInputManager;
 }
 
@@ -617,6 +625,34 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
 
 }
+
+Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction, double &returnresult) const {
+    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
+    Ogre::RaySceneQuery* mRayQuery;
+    mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
+    mRayQuery->setRay(traceFrom);
+    mRayQuery->setSortByDistance(true, 2); // Only one result for now.
+    const Ogre::RaySceneQueryResult& resultList = mRayQuery->execute();
+
+    Entity *toReturn = NULL;
+    returnresult = 0;
+    for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
+         iter != resultList.end(); ++iter) {
+        const Ogre::RaySceneQueryResultEntry &result = (*iter);
+        Entity *foundEntity = Entity::fromMovableObject(result.movable);
+        if (foundEntity != mPrimaryCamera) {
+            toReturn = foundEntity;
+            returnresult = result.distance;
+            break; // dumb logic for now.
+        }
+    }
+    mRayQuery->clearResults();
+    if (mRayQuery) {
+        mSceneManager->destroyQuery(mRayQuery);
+    }
+    return toReturn;
+}
+
 Duration OgreSystem::desiredTickRate()const{
     return mFrameDuration->as<Duration>();
 }

@@ -46,10 +46,11 @@ class CameraEntity : public Entity, public CameraListener {
     Ogre::Viewport *mViewport;
     std::list<CameraEntity*>::iterator mAttachedIter;
 
+public:
     Ogre::Camera *getOgreCamera() {
         return static_cast<Ogre::Camera*const>(mOgreObject);
     }
-public:
+
     ProxyCameraObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyCameraObject>(mProxy);
     }
@@ -67,6 +68,8 @@ public:
     }
     static std::string ogreCameraName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName() const;
+
+    void extrapolateLocation(TemporalValue<Location>::Time current);
 };
 
 }

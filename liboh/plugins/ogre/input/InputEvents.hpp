@@ -39,6 +39,11 @@ namespace Sirikata {
 namespace Input {
 
 using Task::IdPair;
+
+/** Base class for all input events. Call getDevice() to
+    retrieve the specific device that fired the event,
+    and to determine the name of any buttons/axes, or the
+    the meaning of each modifier/scancode. */
 class InputEvent : public Task::Event {
     InputDeviceWPtr mDevice;
 
@@ -60,13 +65,14 @@ public:
     }
 };
 
+/** Base class for keyboard/mouse/joystick button events. */
 class ButtonEvent : public InputEvent {
 public:
     typedef InputDevice::Modifier Modifier;
 
-    bool mPressed;
-    unsigned int mButton;
-    Modifier mModifier;
+    bool mPressed; ///< If the event is ButtonPressed or ButtonReleased
+    unsigned int mButton; ///< Which scancode (keyboard)
+    Modifier mModifier; ///< OR of all modifier codes (defined by SDL)
 
     static IdPair::Secondary getSecondaryId(int keycode,
                                             Modifier mod,
@@ -86,6 +92,9 @@ public:
          mModifier(mod) {
     }
 };
+/** Fired whenever a button has been pushed down. This event is only
+    fired when the button is pressed.  Note that both a ButtonReleased
+    and a ButtonPressed event will be fired if modifiers change. */
 class ButtonPressed :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
@@ -97,6 +106,8 @@ public:
     }
     virtual ~ButtonPressed(){}
 };
+
+/** Fired whenever a button is no longer held down. */
 class ButtonReleased :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
@@ -108,6 +119,12 @@ public:
     }
     virtual ~ButtonReleased(){}
 };
+
+/** In theory, this might be fired as long as a button is held down.
+    In reality, you should be using TextInputEvent for repeated characters,
+    and for other cases, it may be more appropriate to use ButtonToAxis.
+
+    This event is currently never fired unless there is a reason it is needed. */
 class ButtonDown :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
@@ -120,6 +137,11 @@ public:
     virtual ~ButtonDown(){}
 };
 
+/** Upon changing the value of a mouse/joystick axis.  NOTE: This does
+    not take into account relative (per-frame) versus absolute axes.
+
+    For example, the mouse wheel is fired only once upon scrolling a few lines.
+    On the other hand, a joystick is constantly fired whenever the value changes. */
 class AxisEvent: public InputEvent {
 public:
     unsigned int mAxis;
@@ -143,9 +165,21 @@ public:
     }
 };
 
+/** SDL event fired as soon as textual input has been entered.
+    Usually this corresponds to one ButtonPress/ButtonRelease event.
+    However, there are some cases where they differ.  This should
+    also make use of the operating system's IME support. Either way,
+    mText is always a UTF-8 formatted string, not a scancode.
+
+    As an example, X11 contains a special key called the MultiKey, which
+    contains 2-key sequences for complicated characters, like Multi+a+e
+    produces the "ae" digraph.  mText will contain the single UTF-8
+    sequence for the specific letter produced.
+
+    FIXME: How are Backspace and Delete handled? */
 class TextInputEvent: public InputEvent {
 public:
-    std::string mText;
+    std::string mText; ///< UTF-8 formatted string to be appended to an input box.
 
     static const IdPair::Primary &getEventId() {
         static IdPair::Primary retval("TextInputEvent");
@@ -158,15 +192,16 @@ public:
     }
 };
 
+/** Base class for all pointer motion events. */
 class MouseEvent: public InputEvent {
 public:
-    int mX;
-    int mY;
-    int mCursorType;
+    float mX; ///< X coordinate, from -1 (left) to 1 (right), same as AxisEvent
+    float mY; ///< Y coordinate, from -1 (bottom) to 1 (top), same as AxisEvent
+    int mCursorType; ///< Platform-dependent value as defined by SDL.
 
     MouseEvent(const IdPair &id,
                const PointerDevicePtr &dev, 
-               int x, int y, int cursorType)
+               float x, float y, int cursorType)
         : InputEvent(dev, id) {
         mX = x;
         mY = y;
@@ -179,6 +214,7 @@ public:
     }
 };
 
+/** Event called when the cursor moves, and no buttons are down. */
 class MouseHoverEvent: public MouseEvent {
 public:
     static const IdPair::Primary &getEventId() {
@@ -187,39 +223,57 @@ public:
     }
 
     MouseHoverEvent(const PointerDevicePtr &dev, 
-               int x, int y, int cursorType)
+               float x, float y, int cursorType)
         : MouseEvent(IdPair(getEventId(), getSecondaryId(dev)), dev, x, y, cursorType) {
     }
 };
 
+/** Base class for events involving a mouse click. */
 class MouseDownEvent: public MouseEvent {
 public:
-    int mButton;
-    int mXStart;
-    int mYStart;
+    int mButton; ///< The button this event is about.
+    float mXStart; ///< X coordinate when the mouse button was first pressed, -1 to 1
+    float mYStart; ///< Y coordinate when the mouse button was pressed, -1 to 1
+    int mPressure; ///< Pressure value as defined by SDL.
+    int mPressureMax;
+    int mPressureMin;
 
-    static IdPair::Secondary getSecondaryId(int button,
-                                            const InputDevicePtr &device) {
+    /** mX - mXStart: Returns a value between -1 and 1 */
+    float deltaX() const {
+        return (mX - mXStart)/2.;
+    }
+
+    /** mY - mYStart: Returns a value between -1 and 1 */
+    float deltaY() const {
+        return (mY - mYStart)/2.;
+    }
+
+    static IdPair::Secondary getSecondaryId(int button) {
         std::ostringstream os;
-        os << &(*device) << "," << button;
+        os << button;
         return IdPair::Secondary(os.str());
     }
 
     MouseDownEvent(const IdPair::Primary &priId,
                     const PointerDevicePtr &dev, 
-                    int xstart, int ystart, int xend, int yend, 
-                    int cursorType, int button)
-        : MouseEvent(IdPair(priId, getSecondaryId(button, dev)), 
+                    float xstart, float ystart, float xend, float yend,
+                    int cursorType, int button,
+                    int pressure, int pressureMin, int pressureMax)
+        : MouseEvent(IdPair(priId, getSecondaryId(button)),
                      dev, xend, yend, cursorType) {
         mButton = button;
         mXStart = xstart;
         mYStart = ystart;
+        mPressure = pressure;
+        mPressureMin = pressureMin;
+        mPressureMax = pressureMax;
     }
 };
 
+/** Event when the mouse was clicked (pressed and released
+    without moving) */
 class MouseClickEvent: public MouseDownEvent {
 public:
-    bool mDrag;
 
     static const IdPair::Primary getEventId() {
         static IdPair::Primary retval("MouseClickEvent");
@@ -227,19 +281,22 @@ public:
     }
 
     MouseClickEvent(const PointerDevicePtr &dev, 
-                    int xstart, int ystart, int xend, int yend, 
+                    float x, float y,
                     int cursorType, int button)
-        : MouseDownEvent(getEventId(), dev, xstart, ystart, 
-                         xend, yend, cursorType, button) {
-        mDrag = !(xstart == xend && ystart == yend);
+        : MouseDownEvent(getEventId(), dev, x, y, x, y,
+                         cursorType, button, 0, 0, 0) {
     }
 };
 
+/** Event when the mouse was dragged. If this event fires, then
+    you will not get a MouseClickEvent. */
 class MouseDragEvent: public MouseDownEvent {
 public:
-    int mPressure;
-    int mPressureMax;
-    int mPressureMin;
+    /** The three types of drag events. The START event will only be
+        triggered once the motion is determined to be a drag (exceeded
+        some number of pixels). The END event happens at the time the
+        mouse button is released (mPressure == 0) */
+    enum DragType { START, DRAG, END } mType;
 
     static const IdPair::Primary &getEventId() {
         static IdPair::Primary retval("MouseDragEvent");
@@ -247,19 +304,19 @@ public:
     }
 
     MouseDragEvent(const PointerDevicePtr &dev, 
-                   int xstart, int ystart, int xend, int yend,
+                   DragType type,
+                   float xstart, float ystart, float xend, float yend,
                    int cursorType, int button,
                    int pressure, int pressureMin, int pressureMax)
         : MouseDownEvent(getEventId(), dev, xstart, ystart, 
-                         xend, yend, cursorType, button) {
-        mPressure = pressure;
-        mPressureMin = pressureMin;
-        mPressureMax = pressureMax;
+                         xend, yend, cursorType, button,
+                         pressure, pressureMin, pressureMax) {
+        mType = type;
     }
 };
 
-
-
+/** Various SDL-specific events relating to the status of the
+    top-level window. */
 class WindowEvent: public Task::Event {
 public:
     static IdPair::Primary Shown;

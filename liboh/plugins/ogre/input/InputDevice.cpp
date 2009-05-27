@@ -42,7 +42,7 @@ namespace Input {
 using Task::EventPtr;
 using Task::GenEventManager;
 
-bool InputDevice::buttonChanged(unsigned int button, bool newState, Modifier &modifiers) {
+bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &modifiers) {
     bool changed;
     if (newState == true) {
         ButtonSet::iterator iter = buttonState.find(button);
@@ -76,7 +76,7 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                              GenEventManager *em, 
                              unsigned int button, bool newState, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
-    bool changed = buttonChanged(button, newState, oldmodifiers);
+    bool changed = changeButton(button, newState, oldmodifiers);
     if (changed) {
         if (newState) {
             if (oldmodifiers != modifiers) {
@@ -90,7 +90,7 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
     return changed;
 }
 
-bool InputDevice::axisChanged(unsigned int axis, AxisValue newState) {
+bool InputDevice::changeAxis(unsigned int axis, AxisValue newState) {
     newState.clip();
     while (axisState.size() <= axis) {
         axisState.push_back(AxisValue::null());
@@ -104,7 +104,8 @@ bool InputDevice::fireAxis(const InputDevicePtr &thisptr,
                            GenEventManager *em,
                            unsigned int axis, AxisValue newState) {
     newState.clip();
-    bool changed = axisChanged(axis, newState);
+    bool changed = changeAxis(axis, newState);
+    changed = changed || (newState != AxisValue::null());
     if (changed) {
         em->fire(EventPtr(new AxisEvent(thisptr, axis, newState)));
     }
@@ -114,32 +115,51 @@ bool InputDevice::fireAxis(const InputDevicePtr &thisptr,
 void PointerDevice::firePointerClick(
         const PointerDevicePtr &thisptr,
         GenEventManager *em,
-        int xPixel,
-        int yPixel,
+        float xPixel,
+        float yPixel,
         int cursor,
         int button,
         bool state) {
-    DragMap::iterator iter = mDragInfo.find(button);
+    DragMap::iterator iter = mDragInfo.begin();
+    while (iter != mDragInfo.end()) {
+        if ((*iter).mButton == button) {
+            break;
+        }
+        ++iter;
+    }
     if (iter == mDragInfo.end()) {
         if (!state) return;
         DragInfo di;
+        di.mButton = button;
         di.mIsDragging = false;
         di.mDragStartX = xPixel;
         di.mDragStartY = yPixel;
-        mDragInfo.insert(DragMap::value_type(button, di));
+        di.mOffsetX = 0;
+        di.mOffsetY = 0;
+        mDragInfo.insert(mDragInfo.begin(), di);
     } else {
         if (state) return;
-        int endX, endY;
-        if ((*iter).second.mIsDragging) {
-            xPixel = (*iter).second.mDragStartX;
-            yPixel = (*iter).second.mDragStartY;
+        if ((*iter).mIsDragging) {
+            if (mRelativeMode) {
+                xPixel = (*iter).mDragStartX;
+                yPixel = (*iter).mDragStartY;
+            }
+            em->fire(EventPtr(
+                new MouseDragEvent(
+                    thisptr, MouseDragEvent::END,
+                    (*iter).mDragStartX,
+                    (*iter).mDragStartY,
+                    xPixel+(*iter).mOffsetX,
+                    yPixel+(*iter).mOffsetY,
+                    cursor, button, 0, 0, 0)));
+        } else {
+            em->fire(EventPtr(
+                new MouseClickEvent(
+                    thisptr,
+                    (*iter).mDragStartX,
+                    (*iter).mDragStartY,
+                    cursor, button)));
         }
-        em->fire(std::tr1::shared_ptr<MouseClickEvent>(
-            new MouseClickEvent(thisptr,
-                                (*iter).second.mDragStartX,
-                                (*iter).second.mDragStartY,
-                                xPixel, yPixel,
-                                cursor, button)));
         mDragInfo.erase(iter);
     }
 }
@@ -147,29 +167,53 @@ void PointerDevice::firePointerClick(
 void PointerDevice::firePointerMotion(
         const PointerDevicePtr &thisptr,
         GenEventManager *em,
-        int xPixel,
-        int yPixel,
+        float xPixelArg,
+        float yPixelArg,
         int cursorType,
         int pressure, int pressmin, int pressmax) {
-    if (mDragInfo.empty()) {
-        em->fire(EventPtr(new MouseHoverEvent(thisptr, xPixel, yPixel, cursorType)));
+    if (mDragInfo.empty() && !mRelativeMode) {
+        em->fire(EventPtr(new MouseHoverEvent(thisptr, xPixelArg, yPixelArg, cursorType)));
     } else {
+        bool first = true;
         for (DragMap::iterator iter = mDragInfo.begin();
              iter != mDragInfo.end(); ++iter) {
-
-            DragInfo &di = (*iter).second;
-            if (!di.mIsDragging) {
-                int xdiff = (xPixel - di.mDragStartX);
-                int ydiff = (yPixel - di.mDragStartY);
-                if (xdiff*xdiff + ydiff*ydiff >= mDeadband*mDeadband) {
-                    di.mIsDragging = true;
+            DragInfo &di = (*iter);
+            float xPixel = xPixelArg, yPixel = yPixelArg;
+            if (mRelativeMode) {
+                return; // doesn't work yet.
+                di.mOffsetX += xPixelArg;
+                di.mOffsetY += yPixelArg;
+                xPixel = di.mDragX;
+                yPixel = di.mDragY;
+            }
+            if (first) {
+                if (!di.mIsDragging) {
+                    float xdiff = (xPixel - di.mDragStartX);
+                    float ydiff = (yPixel - di.mDragStartY);
+                    if (xdiff*xdiff + ydiff*ydiff >= mDeadband*mDeadband) {
+                        di.mIsDragging = true;
+                        em->fire(EventPtr(new MouseDragEvent(
+                                              thisptr, MouseDragEvent::START,
+                                              di.mDragStartX, di.mDragStartY,
+                                              xPixel+di.mOffsetX, yPixel+di.mOffsetY,
+                                              cursorType, di.mButton,
+                                              pressure, pressmin, pressmax)));
+                    }
+                } else {
+                    em->fire(EventPtr(new MouseDragEvent(
+                                          thisptr, MouseDragEvent::DRAG,
+                                          di.mDragStartX, di.mDragStartY,
+                                          xPixel+di.mOffsetX, yPixel+di.mOffsetY,
+                                          cursorType, di.mButton,
+                                          pressure, pressmin, pressmax)));
                 }
+                first = false;
+            } else {
+                di.mOffsetX += di.mDragX - xPixel;
+                di.mOffsetY += di.mDragY - yPixel;
             }
-            if (di.mIsDragging) {
-                em->fire(EventPtr(new MouseDragEvent(thisptr, di.mDragStartX, di.mDragStartY, 
-                                                     xPixel, yPixel, cursorType, (*iter).first,
-                                                     pressure, pressmin, pressmax)));
-            }
+            di.mDragX = xPixel;
+            di.mDragY = yPixel;
         }
     }
 }

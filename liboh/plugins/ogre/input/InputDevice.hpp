@@ -83,10 +83,10 @@ Choose two analog inputs and one keyboard/joystick->key bindings
 
 struct AxisValue {
     float value;
-    float get01() {
+    float get01() const {
         return (value + 1)/2.;
     }
-    float getCentered() {
+    float getCentered() const {
         return value;
     }
     static AxisValue fromCentered(float val) {
@@ -119,10 +119,16 @@ struct AxisValue {
     bool operator == (const AxisValue &other) const {
         return value == other.value;
     }
+    AxisValue operator - () const {
+        return fromCentered(-getCentered());
+    }
     bool operator != (const AxisValue &other) const {
         return value != other.value;
     }
 
+    friend std::ostream &operator <<(std::ostream &os, const AxisValue &val) {
+        return os << (int)(100*val.getCentered()) << '%';
+    }
 };
 
 class InputDevice;
@@ -143,7 +149,22 @@ protected:
 
     ButtonSet buttonState;
     AxisVector axisState;
+
+    bool changeButton(unsigned int button, bool newState, Modifier &mod);
+    bool changeAxis(unsigned int axis, AxisValue newValue);
 public:
+    enum KeyboardModifiers {
+        MOD_SHIFT = (1<<0),
+        MOD_CTRL  = (1<<1),
+        MOD_ALT   = (1<<2),
+        MOD_GUI   = (1<<3)
+    };
+    enum PointerModifiers {
+        //POINTER_STYLUS = 0, // default
+        POINTER_ERASER = (1<<0),
+        POINTER_CURSOR = (1<<1)
+    };
+
     const std::string &getName() const {
         return mName;
     }
@@ -158,9 +179,6 @@ public:
 
     virtual std::string getAxisName(unsigned int axis) const = 0;
     virtual unsigned int getNumAxes() const = 0;
-
-    bool buttonChanged(unsigned int button, bool newState, Modifier &mod);
-    bool axisChanged(unsigned int axis, AxisValue newValue);
     
     bool fireButton(const InputDevicePtr &thisptr,
                     Task::GenEventManager *em,
@@ -194,120 +212,61 @@ public:
 };
 
 
-/** Mostly for hatswitches or d-pad's on a joystick. */
-class AxisToButton : public InputDevice {
-    struct HatButton {
-        AxisValue mLow;
-        AxisValue mHigh;
-    };
-    std::vector <HatButton> mButtons;
-
-    InputDevicePtr mParentDevice;
-    int mParentAxis;
-
-public:
-    AxisToButton (const std::string &name, const InputDevicePtr &parent, int parentAxis) 
-        : mParentDevice(parent), mParentAxis(parentAxis) {
-        setName(name);
-    }
-
-    virtual std::string getButtonName(unsigned int num) const {
-        std::ostringstream os ("[" + mParentDevice->getAxisName(mParentAxis) + " ");
-        const HatButton & button = mButtons[num];
-        if (button.mLow.isNegative() && button.mHigh.isPositive()) {
-            os << "Centered";
-        } else {
-            bool lessZero = button.mHigh.isNegative();
-            AxisValue extreme = button.mHigh;
-            if (lessZero) {
-                extreme = button.mLow;
-            }
-            os << ((int)(extreme.getCentered()*100)) << "%";
-        }
-        os << "]";
-        return os.str();
-    }
-
-    virtual int getNumButtons() const {
-        return mButtons.size();
-    }
-    virtual unsigned int getNumAxes() const {
-        return 0;
-    }
-    virtual std::string getNumAxisName(unsigned int i) const {
-        return std::string();
-    }
-
-    void addButton(AxisValue low, AxisValue high) {
-        HatButton hb = {low, high};
-        mButtons.push_back(hb);
-    }
-
-};
-
-/** Make arrow keys on a keyboard emulate a mouse/axis. */
-class ButtonToAxis : public InputDevice {
-    typedef std::map <int, float> AxisMap;
-    AxisMap mAxisPoints;
-    InputDevicePtr mParentDevice;
-    int mParentButton;
-public:
-    ButtonToAxis (const std::string &name, const InputDevicePtr &parent, int parentButton) 
-        : mParentDevice(parent), mParentButton(parentButton) {
-        setName(name);
-    }
-
-    virtual std::string getAxisName(unsigned int axis) {
-        std::string os = "[" + mParentDevice->getName() + " ";
-        bool first = true;
-        for (AxisMap::const_iterator iter = mAxisPoints.begin(); iter != mAxisPoints.end(); ++iter) {
-            if (!first) {
-                os += '/';
-            }
-            first = false;
-            os += mParentDevice->getButtonName((*iter).first);
-        }
-        os += "]";
-        return os;
-    }
-    virtual unsigned int getNumAxes() const {
-        return 1;
-    }
-    virtual int getNumButtons() const {
-        return 0;
-    }
-    virtual std::string getButtonName(unsigned int button) const {
-        return std::string();
-    }
-
-};
-
 class PointerDevice : public InputDevice {
     struct DragInfo {
+        int mButton;
         bool mIsDragging;
-        int mDragStartX;
-        int mDragStartY;
+        float mDragStartX;
+        float mDragStartY;
+        float mDragX;
+        float mDragY;
+        float mOffsetX;
+        float mOffsetY;
     };
-    typedef std::map<int, DragInfo> DragMap;
+    typedef std::list<DragInfo> DragMap;
     DragMap mDragInfo;
+protected:
     float mDeadband;
+    unsigned int mRelativeMode;
+
+    virtual void setRelativeMode(bool enabled) = 0;
+
 public:
-    PointerDevice() : mDeadband(0.0) {
+    enum Axes {CURSORX, CURSORY, RELX, RELY, NUM_POINTER_AXES};
+
+    PointerDevice() : mDeadband(0.0), mRelativeMode(0) {
     }
     void setDragDeadband(float deadband) {
         mDeadband = deadband;
     }
 
+    void pushRelativeMode() {
+        if (mRelativeMode++ == 0) {
+            setRelativeMode(true);
+        }
+    }
+
+    void popRelativeMode() {
+        if (mRelativeMode > 0) {
+            if (--mRelativeMode == 0) {
+                setRelativeMode(false);
+            }
+        }
+    }
+    bool getRelativeMode() const {
+        return mRelativeMode ? true : false;
+    }
+
     void firePointerMotion(const PointerDevicePtr &thisptr,
                     Task::GenEventManager *em,
-                    int xPixel,
-                    int yPixel,
+                    float xPixel,
+                    float yPixel,
                     int cursorType,
                     int pressure, int pressmin, int pressmax);
     void firePointerClick(const PointerDevicePtr &thisptr,
                     Task::GenEventManager *em,
-                    int xPixel,
-                    int yPixel,
+                    float xPixel,
+                    float yPixel,
                     int cursor,
                     int button,
                     bool state);

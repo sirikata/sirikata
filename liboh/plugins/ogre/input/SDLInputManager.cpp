@@ -56,6 +56,13 @@
 #include "InputEvents.hpp"
 #include "SDLInputDevice.hpp"
 
+#define TO_AXIS (1./128.)
+#define DEFAULT_DRAG_DEADBAND 20.0
+
+// Number of units to zoom if nothing selected.
+#define WORLD_SCALE 20.0
+#define WHEEL_TO_RADIANS 0.2
+
 namespace Sirikata { namespace Input {
 
 IdPair::Primary unknownId("UnknownWindowEvent");
@@ -96,7 +103,7 @@ static const IdPair::Primary &getWindowEventId(SDL_WindowEventID sdlId) {
 
 
 SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, int ogrePixelFormat,bool grabCursor, void *&currentWindow)
-: Task::GenEventManager(new Task::ThreadSafeWorkQueue) {
+: InputManager(new Task::ThreadSafeWorkQueue) {
     Ogre::PixelFormat fmt = (Ogre::PixelFormat)ogrePixelFormat;
     mWindowContext=0;
     mWidth = width;
@@ -172,9 +179,31 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
           SDL_GetNumMice()<<" mice, and "<<
           SDL_NumJoysticks() << " joysticks!");
 
-    mKeys.resize(SDL_GetNumKeyboards());
-    mMice.resize(SDL_GetNumMice());
-    mJoy.resize(SDL_NumJoysticks());
+    InitializeClassOptions(
+        "input",this,
+        mDragDeadband=new OptionValue("dragdeadband","20",OptionValueType<float>(),"The number of pixels to move the mouse before dragging"),
+        mWorldScale=new OptionValue("worldscale","20",OptionValueType<float>(),"The number of units to zoom/pan."),
+        mAxisToRadians=new OptionValue("axistoradians","0.2",OptionValueType<float>(),"Radians/window width when orbiting around an object."),
+        mWheelToAxis=new OptionValue("wheelpct","0.008",OptionValueType<float>(),"Percentage points for each wheel tick (platform-dependent)."),
+        mRelativeMouseToAxis=new OptionValue("relativemousepct","0.008",OptionValueType<float>(),"Percentage points for each pixel of mouse motion."),
+        mJoyBallToAxis=new OptionValue("joyballpct","0.008",OptionValueType<float>(),"Percentage points for each joystick trackball tick."),
+        NULL);
+
+    int numKeys = SDL_GetNumKeyboards();
+    for (int i =0 ;i < numKeys; ++i) {
+        mKeys.push_back(SDLKeyboardPtr(new SDLKeyboard(i)));
+        mAllDevices.insert(mKeys.back());
+    }
+    int numMice = SDL_GetNumMice();
+    for (int i =0 ;i < numMice; ++i) {
+        mMice.push_back(SDLMousePtr(new SDLMouse(this, i)));
+        mAllDevices.insert(mMice.back());
+    }
+    int numJoys = SDL_NumJoysticks();
+    for (int i =0 ;i < numJoys; ++i) {
+        mJoy.push_back(SDLJoystickPtr(new SDLJoystick(i)));
+        mAllDevices.insert(mJoy.back());
+    }
 
     // Grab means: lock the mouse inside our window!
 /*
@@ -202,7 +231,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 this, 
                 event->key.keysym.sym, 
                 (event->key.state == SDL_PRESSED), 
-                event->key.keysym.mod);
+                modifiersFromSDL(event->key.keysym.mod));
             break;
           case SDL_MOUSEBUTTONDOWN:
           case SDL_MOUSEBUTTONUP:
@@ -215,8 +244,8 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             mMice[event->button.which]->firePointerClick(
                 mMice[event->button.which],
                 this, 
-                event->button.x,
-                event->button.y,
+                (2.0*(float)event->button.x)/mWidth - 1,
+                1 - (2.0*(float)event->button.y)/mHeight,
                 SDL_GetCurrentCursor(event->button.which),
                 event->button.button,
                 event->button.state == SDL_PRESSED);
@@ -270,6 +299,13 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 event->jball.yrel);
             break;
           case SDL_WINDOWEVENT:
+            {
+                int wid=(int)mWidth, hei=(int)mHeight;
+                SDL_GetWindowSize(mWindowID, &wid, &hei);
+                mWidth = (unsigned int)wid;
+                mHeight = (unsigned int)hei;
+            }
+
             fire(Task::EventPtr(new WindowEvent(
                     getWindowEventId((SDL_WindowEventID)event->window.event),
                     event->window.data1,
@@ -295,10 +331,55 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             SILOG(ogre,error,"I don't know what this event is!\n");
         }
     }
+    /*
+    int oldmouse = SDL_SelectMouse(-1);
+    for (unsigned int i = 0; i < mMice.size(); ++i) {
+        if (mMice[i]->getRelativeMode()) {
+            SDL_SelectMouse(i);
+            int x = mMice[i]->getAxis(PointerDevice::CURSORX).get01() * mWidth;
+            int y = mMice[i]->getAxis(PointerDevice::CURSORY).get01() * mHeight;
+            SDL_WarpMouseInWindow(mWindowID, x, y);
+        }
+    }
+    SDL_SelectMouse(oldmouse);
+    */
     getWorkQueue()->dequeueUntil(Task::AbsTime::now()+Duration::seconds(.01));
     return continueRendering;
 
 }
+
+int SDLInputManager::modifiersFromSDL(int sdlMod) {
+    int output = 0;
+    if (sdlMod & KMOD_SHIFT) {
+        output |= InputDevice::MOD_SHIFT;
+    }
+    if (sdlMod & KMOD_CTRL) {
+        output |= InputDevice::MOD_CTRL;
+    }
+    if (sdlMod & KMOD_ALT) {
+        output |= InputDevice::MOD_ALT;
+    }
+    if (sdlMod & KMOD_GUI) {
+        output |= InputDevice::MOD_GUI;
+    }
+    return output;
+}
+
+bool SDLInputManager::isModifierDown(int whichModifier) const {
+    return !!(modifiersFromSDL(SDL_GetModState()) & whichModifier);
+}
+
+bool SDLInputManager::isNumLockDown() const {
+    return !!(SDL_GetModState() & KMOD_NUM);
+}
+bool SDLInputManager::isCapsLockDown() const {
+    return !!(SDL_GetModState() & KMOD_CAPS);
+}
+bool SDLInputManager::isScrollLockDown() const {
+    return !!(SDL_GetModState() & KMOD_MODE);
+}
+
+
 SDLInputManager::~SDLInputManager(){
     SDL_GL_DeleteContext(mWindowContext);
     SDL_DestroyWindow(mWindowID);

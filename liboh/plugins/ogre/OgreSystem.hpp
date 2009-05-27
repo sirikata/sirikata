@@ -51,6 +51,10 @@ namespace Meru {
 class CDNArchivePlugin;
 }
 
+namespace Ogre {
+struct RaySceneQueryResultEntry;
+}
+
 namespace Sirikata {
 namespace Input {
 class SDLInputManager;
@@ -61,9 +65,14 @@ class Entity;
 using Input::SDLInputManager;
 class CameraEntity;
 
-
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedSimulation {
+    class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
+    friend class MouseHandler;
+    MouseHandler *mMouseHandler;
+    void allocMouseHandler();
+    void destroyMouseHandler();
+
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
@@ -98,12 +107,15 @@ class OgreSystem: public TimeSteppedSimulation {
     void destroyRenderTarget(Ogre::ResourcePtr &name);
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
+    Ogre::RaySceneQuery* mRayQuery;
+
 public:
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
     std::list<CameraEntity*> mAttachedCameras;
+    CameraEntity *mPrimaryCamera;
 
     OptionSet*getOptions(){
         return mOptions;
@@ -134,6 +146,9 @@ public:
     Entity* getEntity(const ProxyObjectPtr &proxy) const {
         return getEntity(proxy->getObjectReference());
     }
+    Entity* rayTrace(const Vector3d &position,
+                     const Vector3f &direction,
+                     double &returnResult) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
     virtual bool tick();

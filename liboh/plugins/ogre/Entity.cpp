@@ -81,6 +81,10 @@ Entity::~Entity() {
     mScene->getSceneManager()->destroySceneNode(mSceneNode);
 }
 
+Entity *Entity::fromMovableObject(Ogre::MovableObject *movable) {
+    return Ogre::any_cast<Entity*>(movable->getUserAny());
+}
+
 void Entity::init(Ogre::MovableObject *obj) {
     if (mOgreObject) {
         mSceneNode->detachObject(mOgreObject);
@@ -92,6 +96,7 @@ void Entity::init(Ogre::MovableObject *obj) {
     }
     mOgreObject = obj;
     if (obj) {
+        mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
     }
 }
@@ -128,10 +133,21 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
     setStatic(false); // May get set to true after the next frame has drawn.
 }
 
+void Entity::setOgrePosition(const Vector3d &pos) {
+    mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
+}
+void Entity::setOgreOrientation(const Quaternion &orient) {
+    mSceneNode->setOrientation(toOgre(orient));
+}
+
+
 void Entity::updateLocation(Time ti, const Location &newLocation) {
     SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.getPosition());
     if (!getProxy().isStatic(ti)) {
         setStatic(false);
+    } else {
+        setOgrePosition(newLocation.getPosition());
+        setOgreOrientation(newLocation.getOrientation());
     }
 }
 
@@ -139,6 +155,9 @@ void Entity::resetLocation(Time ti, const Location &newLocation) {
     SILOG(ogre,debug,"ResetLocation "<<this<<" to "<<newLocation.getPosition());
     if (!getProxy().isStatic(ti)) {
         setStatic(false);
+    } else {
+        setOgrePosition(newLocation.getPosition());
+        setOgreOrientation(newLocation.getOrientation());
     }
 }
 
