@@ -68,10 +68,13 @@ class OgreSystem::MouseHandler {
     }
     static Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel) {
         float xRadian, yRadian;
-        pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
-        return Vector3f(-orient.zAxis() + 
-                        orient.xAxis() * sin(xRadian) +
-                        orient.yAxis() * sin(yRadian));
+        //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
+        xRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * cam->getOgreCamera()->getAspectRatio() * xPixel;
+        yRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * yPixel;
+
+        return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) + 
+                        orient.xAxis() * xRadian +
+                        orient.yAxis() * yRadian);
     }
 
     static inline Vector3f direction(Quaternion cameraAngle) {
