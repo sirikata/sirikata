@@ -184,6 +184,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         mDragDeadband=new OptionValue("dragdeadband","20",OptionValueType<float>(),"The number of pixels to move the mouse before dragging"),
         mWorldScale=new OptionValue("worldscale","20",OptionValueType<float>(),"The number of units to zoom/pan."),
         mAxisToRadians=new OptionValue("axistoradians","0.2",OptionValueType<float>(),"Radians/window width when orbiting around an object."),
+        mDragMultiplier=new OptionValue("dragmultiplier","5",OptionValueType<float>(),"Multiplier for mouse dragging"),
         mWheelToAxis=new OptionValue("wheelpct","0.008",OptionValueType<float>(),"Percentage points for each wheel tick (platform-dependent)."),
         mRelativeMouseToAxis=new OptionValue("relativemousepct","0.008",OptionValueType<float>(),"Percentage points for each pixel of mouse motion."),
         mJoyBallToAxis=new OptionValue("joyballpct","0.008",OptionValueType<float>(),"Percentage points for each joystick trackball tick."),

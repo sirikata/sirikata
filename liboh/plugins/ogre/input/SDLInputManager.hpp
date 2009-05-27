@@ -57,6 +57,7 @@ class SDLInputManager : public InputManager {
     static int modifiersFromSDL(int sdlMod);
 public:
     OptionValue*mDragDeadband;
+    OptionValue*mDragMultiplier;
     OptionValue*mWorldScale;
     OptionValue*mAxisToRadians;
     OptionValue*mWheelToAxis;

@@ -234,6 +234,8 @@ public:
     int mButton; ///< The button this event is about.
     float mXStart; ///< X coordinate when the mouse button was first pressed, -1 to 1
     float mYStart; ///< Y coordinate when the mouse button was pressed, -1 to 1
+    float mLastX;
+    float mLastY;
     int mPressure; ///< Pressure value as defined by SDL.
     int mPressureMax;
     int mPressureMin;
@@ -248,6 +250,14 @@ public:
         return (mY - mYStart)/2.;
     }
 
+    float deltaLastY() const {
+        return (mY - mLastY)/2.;
+    }
+
+    float deltaLastX() const {
+        return (mX - mLastX)/2.;
+    }
+
     static IdPair::Secondary getSecondaryId(int button) {
         std::ostringstream os;
         os << button;
@@ -257,6 +267,7 @@ public:
     MouseDownEvent(const IdPair::Primary &priId,
                     const PointerDevicePtr &dev, 
                     float xstart, float ystart, float xend, float yend,
+                    float lastx, float lasty,
                     int cursorType, int button,
                     int pressure, int pressureMin, int pressureMax)
         : MouseEvent(IdPair(priId, getSecondaryId(button)),
@@ -264,6 +275,8 @@ public:
         mButton = button;
         mXStart = xstart;
         mYStart = ystart;
+        mLastX = lastx;
+        mLastY = lasty;
         mPressure = pressure;
         mPressureMin = pressureMin;
         mPressureMax = pressureMax;
@@ -283,7 +296,7 @@ public:
     MouseClickEvent(const PointerDevicePtr &dev, 
                     float x, float y,
                     int cursorType, int button)
-        : MouseDownEvent(getEventId(), dev, x, y, x, y,
+        : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
     }
 };
@@ -306,10 +319,11 @@ public:
     MouseDragEvent(const PointerDevicePtr &dev, 
                    DragType type,
                    float xstart, float ystart, float xend, float yend,
+                   float lastx, float lasty,
                    int cursorType, int button,
                    int pressure, int pressureMin, int pressureMax)
         : MouseDownEvent(getEventId(), dev, xstart, ystart, 
-                         xend, yend, cursorType, button,
+                         xend, yend, lastx, lasty, cursorType, button,
                          pressure, pressureMin, pressureMax) {
         mType = type;
     }

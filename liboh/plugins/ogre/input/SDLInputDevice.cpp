@@ -117,12 +117,13 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     bool changedx = (getAxis(CURSORX) != xPctFromCenter);
     bool changedy = (getAxis(CURSORY) != yPctFromCenter);
     if (mRelativeMode) {
+        // negate y axis since coordinates start at bottom-left.
         float to_axis(em->mRelativeMouseToAxis->as<float>());
         fireAxis(thisptr, em, RELX, AxisValue::fromCentered(to_axis*event.xrel));
-        fireAxis(thisptr, em, RELY, AxisValue::fromCentered(to_axis*event.yrel));
+        fireAxis(thisptr, em, RELY, AxisValue::fromCentered(-to_axis*event.yrel));
         // drag events still get fired...
-        firePointerMotion(thisptr, em, event.xrel/float(screenwid),
-                          event.yrel/float(screenhei), event.cursor,
+        firePointerMotion(thisptr, em, 2*event.xrel/float(screenwid),
+                          -2*event.yrel/float(screenhei), event.cursor,
                           event.pressure, event.pressure_min, event.pressure_max);
     } else {
         fireAxis(thisptr, em, CURSORX, xPctFromCenter);

@@ -56,21 +56,19 @@ class OgreSystem::MouseHandler {
     typedef std::multimap<InputDevice*, SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
     
-    float mRotateLastX;
-    float mRotateLastY;
     std::map<Entity*, Location> mSelectedObjects;
     Vector3d mMoveVector;
 
     static void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians) {
         SILOG(input,info,"FOV Y Radians: "<<cam->getOgreCamera()->getFOVy().valueRadians()<<"; aspect = "<<cam->getOgreCamera()->getAspectRatio());
-        xRadians = cam->getOgreCamera()->getFOVy().valueRadians() * cam->getOgreCamera()->getAspectRatio() * deltaXPct/2;
-        yRadians = cam->getOgreCamera()->getFOVy().valueRadians() * deltaYPct/2;
+        xRadians = cam->getOgreCamera()->getFOVy().valueRadians() * cam->getOgreCamera()->getAspectRatio() * deltaXPct;
+        yRadians = cam->getOgreCamera()->getFOVy().valueRadians() * deltaYPct;
         SILOG(input,info,"X = "<<deltaXPct<<"; Y = "<<deltaYPct);
         SILOG(input,info,"Xradian = "<<xRadians<<"; Yradian = "<<yRadians);
     }
     static Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel) {
         float xRadian, yRadian;
-        pixelToRadians(cam, xPixel, yPixel, xRadian, yRadian);
+        pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
         return Vector3f(-orient.zAxis() + 
                         orient.xAxis() * sin(xRadian) +
                         orient.yAxis() * sin(yRadian));
@@ -183,18 +181,13 @@ class OgreSystem::MouseHandler {
         CameraEntity *camera = mParent->mPrimaryCamera;
 
         if (mouseev->mType == MouseDragEvent::START) {
-            mRotateLastX = mouseev->mXStart;
-            mRotateLastY = mouseev->mYStart;
             mIsRotating = true;
         } else if (!mIsRotating) {
             return EventResponse::nop();
         }
         float radianX, radianY;
-        pixelToRadians(camera, mouseev->mX - mRotateLastX, mouseev->mY - mRotateLastY, radianX, radianY);
+        pixelToRadians(camera, mouseev->deltaLastX(), mouseev->deltaLastY(), radianX, radianY);
         rotateCamera(camera, radianX, radianY);
-
-        mRotateLastX = mouseev->mX;
-        mRotateLastY = mouseev->mY;
         
         return EventResponse::cancel();
     }
@@ -268,6 +261,7 @@ class OgreSystem::MouseHandler {
 
     Vector3d mStartPan;
     double mPanDistance;
+    bool mRelativePan;
     EventResponse panScene(EventPtr ev) {
         if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
             return EventResponse::nop();
@@ -283,6 +277,7 @@ class OgreSystem::MouseHandler {
         Location cameraLoc = camera->getProxy().globalLocation(now);
 
         if (mouseev->mType == MouseDragEvent::START) {
+            mRelativePan = false;
             mStartPan = camera->getProxy().extrapolateLocation(now).getPosition();
             Vector3f toMove (
                 pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mXStart, mouseev->mYStart));
@@ -297,17 +292,18 @@ class OgreSystem::MouseHandler {
                 totalPosition /= mSelectedObjects.size();
                 mPanDistance = (totalPosition - cameraLoc.getPosition()).length();
             } else {
-                /*
                 float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
                 mPanDistance = WORLD_SCALE;
-                */
-                mPanDistance = 0;
+                mouseev->getDevice()->pushRelativeMode();
+                mRelativePan = true;
             }
+        } else if (mouseev->mType == MouseDragEvent::END && mRelativePan) {
+            mouseev->getDevice()->popRelativeMode();
         }
         if (mPanDistance) {
             float radianX, radianY;
             pixelToRadians(camera, mouseev->deltaX(), mouseev->deltaY(), radianX, radianY);
-            panCamera(camera, mStartPan, Vector3d(-2*radianX*mPanDistance, -2*radianY*mPanDistance, 0));
+            panCamera(camera, mStartPan, Vector3d(-radianX*mPanDistance, -radianY*mPanDistance, 0));
         }
         return EventResponse::nop();
     }
@@ -409,29 +405,13 @@ class OgreSystem::MouseHandler {
         camera->getProxy().resetPositionVelocity(now, cameraLoc);
     }
 
-    EventResponse orbitListener(EventPtr evbase) {
-        std::tr1::shared_ptr<AxisEvent> ev(std::tr1::dynamic_pointer_cast<AxisEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        float AXIS_TO_RADIANS = mParent->mInputManager->mAxisToRadians->as<float>();
-        if (ev->mAxis == SDLMouse::RELX) {
-            orbitObject(Vector3d(ev->mValue.getCentered() * -AXIS_TO_RADIANS, 0, 0), ev->getDevice());
-        } else if (ev->mAxis == PointerDevice::RELY) {
-            orbitObject(Vector3d(0, ev->mValue.getCentered() * AXIS_TO_RADIANS, 0), ev->getDevice());
-        }
-        return EventResponse::cancel();
-    }
-
     EventResponse wheelListener(EventPtr evbase) {
         std::tr1::shared_ptr<AxisEvent> ev(std::tr1::dynamic_pointer_cast<AxisEvent>(evbase));
         if (!ev) {
             return EventResponse::nop();
         }
-        if (ev->mAxis == SDLMouse::WHEELY) {
+        if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
             zoomInOut(ev->mValue, ev->getDevice());
-        } else if (ev->mAxis == SDLMouse::RELY) {
-            zoomInOut(-ev->mValue, ev->getDevice());
         } else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
             //orbitObject(Vector3d(ev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), ev->getDevice());
         }
@@ -459,29 +439,21 @@ class OgreSystem::MouseHandler {
         }
         if (ev->mType == MouseDragEvent::START) {
             ev->getDevice()->pushRelativeMode();
-            mMiddleDragListeners.push_back(
-                registerAxisListener(ev->getDevice(), &MouseHandler::wheelListener, PointerDevice::RELX));
-            mMiddleDragListeners.push_back(
-                registerAxisListener(ev->getDevice(), &MouseHandler::wheelListener, PointerDevice::RELY));
-            if (ev->deltaY() != 0) {
-                zoomInOut(AxisValue::fromCentered(ev->deltaY()), ev->getDevice());
-            }
-            if (ev->deltaX() != 0) {
-                //rotateXZ(AxisValue::fromCentered(ev->deltaX()));
-                //rotateCamera(mParent->mPrimaryCamera, ev->deltaX() * AXIS_TO_RADIANS, 0);
-            }
         } else if (ev->mType == MouseDragEvent::END) {
             ev->getDevice()->popRelativeMode();
-            for (unsigned int i = 0; i < mMiddleDragListeners.size(); ++i) {
-                mParent->mInputManager->unsubscribe(mMiddleDragListeners[i]);
-            }
-            mMiddleDragListeners.clear();
+        }
+        if (ev->deltaLastY() != 0) {
+            float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
+            zoomInOut(AxisValue::fromCentered(dragMultiplier*ev->deltaLastY()), ev->getDevice());
+        }
+        if (ev->deltaLastX() != 0) {
+            //rotateXZ(AxisValue::fromCentered(ev->deltaLastX()));
+            //rotateCamera(mParent->mPrimaryCamera, ev->deltaLastX() * AXIS_TO_RADIANS, 0);
         }
         return EventResponse::cancel();
     }
 
     bool mIsOrbiting;
-    std::vector<SubscriptionId> mRightDragListeners;
     EventResponse orbitDragHandler(EventPtr evbase) {
         std::tr1::shared_ptr<MouseDragEvent> ev (
             std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
@@ -490,28 +462,20 @@ class OgreSystem::MouseHandler {
         }
         if (ev->mType == MouseDragEvent::END && mIsOrbiting) {
             ev->getDevice()->popRelativeMode();
-            for (unsigned int i = 0; i < mRightDragListeners.size(); ++i) {
-                mParent->mInputManager->unsubscribe(mRightDragListeners[i]);
-            }
-            mRightDragListeners.clear();
-            return EventResponse::nop();
         }
         if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
             return EventResponse::nop();
         }
         if (ev->mType == MouseDragEvent::START) {
             ev->getDevice()->pushRelativeMode();
-            mRightDragListeners.push_back(
-                registerAxisListener(ev->getDevice(), &MouseHandler::orbitListener, PointerDevice::RELX));
-            mRightDragListeners.push_back(
-                registerAxisListener(ev->getDevice(), &MouseHandler::orbitListener, PointerDevice::RELY));
-            if (ev->deltaY() != 0 || ev->deltaX() != 0) {
-                orbitObject(Vector3d(ev->deltaX(), ev->deltaY(), 0), ev->getDevice());
-            }
             mIsOrbiting=true;
         } else if (!mIsOrbiting) {
             return EventResponse::nop();
         }
+        float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
+        float toRadians = mParent->mInputManager->mAxisToRadians->as<float>();
+        orbitObject(Vector3d(ev->deltaLastX(), ev->deltaLastY(), 0) * -toRadians*dragMultiplier,
+                    ev->getDevice());
         return EventResponse::cancel();
     }
 
