@@ -33,10 +33,14 @@
 #define _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_2
 namespace Sirikata {
 class RoutableMessageBody: public Protocol::MessageBody {
-    std::string default_string;
+    std::string& getInternalDefaultMessageName() const{
+        static std::string default_string;
+        return default_string;
+    }
 public:
     RoutableMessageBody() {
     }
+    const std::string& getDefaultMessageName()const {return getInternalDefaultMessageName();}
     int message_names_size()const {
         int namesize=this->Protocol::MessageBody::message_names_size();
         int argsize=this->Protocol::MessageBody::message_arguments_size();
@@ -52,7 +56,7 @@ public:
         if (namesize) {
             return this->Protocol::MessageBody::message_names(namesize-1);
         }
-        return default_string;
+        return getInternalDefaultMessageName();
     }
     const std::string& message_names(int i) const{
         int namesize=this->Protocol::MessageBody::message_names_size();
@@ -63,7 +67,7 @@ public:
         if (namesize) {
             return this->Protocol::MessageBody::message_names(namesize-1);
         }
-        return default_string;
+        return getDefaultMessageName();
     }
 };
 }
