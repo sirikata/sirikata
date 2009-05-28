@@ -162,6 +162,16 @@
 // Required for OGRE.
 #if (__GNUC__ == 4 && __GNUC_MINOR__ >= 3) || __GNUC__ > 4
 #define BOOST_HAS_GCC_TR1
+
+// #include_next is broken: it does not search default include paths!
+#define BOOST_TR1_DISABLE_INCLUDE_NEXT
+// config_all.hpp reads this variable, then sets BOOST_HAS_INCLUDE_NEXT anyway
+#include <boost/tr1/detail/config_all.hpp>
+#ifdef BOOST_HAS_INCLUDE_NEXT
+// This behavior has existed since boost 1.34, unlikely to change.
+#undef BOOST_HAS_INCLUDE_NEXT
+#endif
+
 #endif
 #endif
 
