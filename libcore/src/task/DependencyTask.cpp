@@ -45,8 +45,8 @@ class DependentTask::CallSuccess : public WorkItem {
     virtual void operator()() {
         assert (mDependentTask->mNumThisWaitingOn==0);
         {
+            AutoPtr deleteMe(this);
             (*mDependentTask)();
-            delete this;
         }
     }
 };
@@ -61,8 +61,8 @@ class DependentTask::CallFailed : public WorkItem {
     virtual void operator()() {
         assert (mDependentTask->mNumThisWaitingOn==0);
         {
+            AutoPtr deleteMe(this);
             mDependentTask->finish(false);
-            delete this;
         }
     }
 };
@@ -91,6 +91,7 @@ void DependentTask::finish(bool success) {
         --(*deps)->mNumThisWaitingOn;
         (*deps)->go();
     }
+    delete this;
 }
 DependentTask::DependentTask(WorkQueue *queue)
 	: mWorkQueue(queue), mNumThisWaitingOn(0), mFailure(false) {

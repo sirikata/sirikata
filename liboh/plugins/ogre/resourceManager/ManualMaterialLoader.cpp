@@ -162,7 +162,7 @@ namespace EventTypes {
 const EventType MaterialLoaded = "MaterialLoaded";
 }
 
-class LoadPreparedMaterial {
+class LoadPreparedMaterial : public Sirikata::Task::WorkItem {
     Ogre::String mMaterialScriptName;
     std::vector<Ogre::String> mMaterialNames;
     Ogre::TextureUnitState *mTus;
@@ -177,10 +177,8 @@ public:
         mWhichTextureFrame=0;
 
     }
-    static bool process(LoadPreparedMaterial*thus) {
-        return thus->processOneJob();
-    }
-    bool processOneJob() {
+    void operator()() {
+        AutoPtr deleteme(this);
 /*    int err=glGetError();
     if (err!=0) {
         fprintf(stderr,"HELP BEFOREJOB %d\n",err);
@@ -211,12 +209,7 @@ public:
                                         //fixme decide a time total among all LoadPreparedMaterials
                                     }
                                     mWhichTextureFrame++;
-/*err=glGetError();
-    if (err!=0) {
-        fprintf(stderr,"HELP MIDJOB %d\n",err);
-        }*/
-
-                                    return false;
+                                    return;
                                 }
                                 mWhichTextureFrame=0;
                                 mTus=tus;
@@ -237,31 +230,15 @@ public:
             mMaterialNames.pop_back();
             mTus=NULL;
             mWhichTextureFrame=0;
-/*err=glGetError();
-    if (err!=0) {
-        fprintf(stderr,"HELP LATEJOB %d\n",err);
-        }*/
-
-            return false;
+            return;
         }
         if (mMaterialNames.empty()) {
             MaterialScriptPtr finishMe=MaterialScriptManager::getSingleton().getByName(mMaterialScriptName);
             finishMe->mTexturesInRam=true;
             EventSource::getSingleton().fire(EventPtr(new MaterialLoadedEvent(mMaterialScriptName)));
-            delete this;
-/*err=glGetError();
-    if (err!=0) {
-        fprintf(stderr,"HELP AFTERJOB %d\n",err);
-        }*/
 
-            return true;
+            return;
         }
-/*err=glGetError();
-    if (err!=0) {
-        fprintf(stderr,"HELP ATFTOREJOB %d\n",err);
-        }*/
-
-        return false;
     }
 };
 
@@ -328,7 +305,7 @@ void MaterialScript::postLoadImpl()
         provided_materials.push_back(*iter);
         //}
     }
-    SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(LoadPreparedMaterial::process,new LoadPreparedMaterial(provided_materials,getName())));
+    SequentialWorkQueue::getSingleton().enqueue(new LoadPreparedMaterial(provided_materials,getName()));
 
 }
 

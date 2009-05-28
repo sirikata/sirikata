@@ -56,6 +56,15 @@ private:
             mHead = new Node();
         }
 
+        ~FreeNodePool() {
+            Node *cur = const_cast<Node*>(mHead);
+            Node *next = NULL;
+            do {
+                next = const_cast<Node*>(cur->mNext);
+                delete cur;
+            } while ((cur=next)!=NULL);
+        }
+
         Node* allocate() {
             volatile Node* node=0;
             do {
@@ -83,7 +92,6 @@ public:
         mHead = mFreeNodePool.allocate();
         mTail = mHead;
     }
-
     class NodeIterator {
     private:
     	// Noncopyable
@@ -124,7 +132,13 @@ public:
     			return NULL;
     		}
     	}
+
     };
+
+    ~LockFreeQueue() {
+        NodeIterator junk(*this);
+        // release everything in the queue in ~NodeIterator
+    }
 
 private:
     friend class NodeIterator;
