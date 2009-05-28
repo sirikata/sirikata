@@ -167,26 +167,32 @@ void HTTPRequest::gotHeader(const std::string &header) {
 
 
 #define RETRY_TIME 1.0
+#define MAX_TRANSFERS_PER_HOST 2
 
 namespace {
 
 	struct ServerProperties {
 		bool does_not_support_Expect_100_continue;
+		std::list<HTTPRequest*> pendingtransfers;
+		int activeTransfers;
+		int maxTransfers;
 		ServerProperties() {
 			does_not_support_Expect_100_continue = false;
+			activeTransfers = 0;
+			maxTransfers = MAX_TRANSFERS_PER_HOST;
 		}
 	} defaultProps;
 	typedef std::map<std::string, ServerProperties> ServerPropertyMap;
 	ServerPropertyMap properties;
 	const ServerProperties &getProperties(const URI &uri) {
-		ServerPropertyMap::const_iterator iter = properties.find(uri.host());
+		ServerPropertyMap::const_iterator iter = properties.find(uri.host()+'/'+uri.basepath());
 		if (iter != properties.end()) {
 			return (*iter).second;
 		}
 		return defaultProps;
 	}
 	ServerProperties &editProperties(const URI &uri) {
-		return properties[uri.host()];
+		return properties[uri.host()+'/'+uri.basepath()];
 	}
 
 	static boost::once_flag flag = BOOST_ONCE_INIT;
@@ -397,9 +403,15 @@ void HTTPRequest::curlLoop () {
 					std::tr1::shared_ptr<HTTPRequest> tempPtr (request->mPreventDeletion);
 					request->mPreventDeletion.reset(); // won't be freed until tempPtr goes out of scope.
 
+					editProperties(request->mURI).activeTransfers--;
+					std::list<HTTPRequest*> *pendingtransfers = &editProperties(request->mURI).pendingtransfers;
+					if (!pendingtransfers->empty()) {
+						pendingtransfers->front()->finalGo();
+						pendingtransfers->pop_front();
+					}
+
 					access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.
 					temp(request, finishedData, success); // may delete request.
-
 					// now tempPtr is allowed to free request.
 					//access_curl_handle.lock();
 				}
@@ -460,6 +472,13 @@ void HTTPRequest::abort() {
 			curl_multi_remove_handle(curlm, mCurlRequest);
 			curl_easy_cleanup(mCurlRequest);
 			mCurlRequest = NULL;
+
+			editProperties(mURI).activeTransfers--;
+			std::list<HTTPRequest*> *pendingtransfers = &editProperties(mURI).pendingtransfers;
+			if (!pendingtransfers->empty()) {
+				pendingtransfers->front()->finalGo();
+				pendingtransfers->pop_front();
+			}
 		}
 	}
 
@@ -736,6 +755,17 @@ void HTTPRequest::setFinalProperties() {
 	mState = INPROGRESS;
 }
 
+void HTTPRequest::finalGo() {
+	ServerProperties &props = editProperties(mURI);
+	if (props.activeTransfers < props.maxTransfers) {
+		props.activeTransfers++;
+		curl_multi_add_handle(curlm, mCurlRequest);
+		globals.doWakeup();
+	} else {
+		props.pendingtransfers.push_back(this);
+	}
+}
+
 void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 	if (mState >= INPROGRESS) {
 		throw std::logic_error(go_update_error);
@@ -744,11 +774,9 @@ void HTTPRequest::go(const HTTPRequestPtr &holdReference) {
 		boost::lock_guard<boost::mutex> curl_lock (globals.http_lock);
 
 		setFinalProperties();
+		finalGo();
 
 		mPreventDeletion = HTTPRequestPtr(holdReference);
-		curl_multi_add_handle(curlm, mCurlRequest);
-
-		globals.doWakeup();
 	}
 
 	//requestQueue.push(this);

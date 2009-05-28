@@ -101,6 +101,7 @@ private:
 
 	void setFinalProperties(); ///< Will be called if the request must be retried.
 	void initCurlHandle(); ///< Only called initially--sets defaults for all properties.
+	void finalGo(); ///< Actually performs the request, if not too many connections are active.
 
 	HTTPRequest(const HTTPRequest &other);
 public:
