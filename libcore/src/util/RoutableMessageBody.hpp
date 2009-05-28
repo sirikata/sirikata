@@ -1,5 +1,5 @@
-/*  Sirikata libspace -- Registration Services
- *  Registration.hpp
+/*  Sirikata Utilities -- Message Packet Header Parser
+ *  RoutableMessageBody.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,31 +29,42 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _SIRIKATA_REGISTRATION_HPP_
-#define _SIRIKATA_REGISTRATION_HPP_
-
-#include <space/Platform.hpp>
-
+#ifndef _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_
+#define _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_2
 namespace Sirikata {
-class Registration;
-class Oseg;
-class Cseg;
-class MessageRouter;
-class SIRIKATA_SPACE_EXPORT Registration : public MessageService {
-    std::vector<MessageService*> mServices;
+class RoutableMessageBody: public Protocol::MessageBody {
+    std::string default_string;
 public:
-    Registration();
-    ~Registration();
-    bool forwardMessagesTo(MessageService*);
-    bool endForwardingMessagesTo(MessageService*);
-    void processMessage(const ObjectReference*ref,
-                        MemoryReference message);
-    void processMessage(const RoutableMessageHeader&header,
-                        MemoryReference message_body);
-    void asyncRegister(const RoutableMessageHeader&header,MemoryReference message_body);
-}; // class Space
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_REGISTRATION_HPP
+    RoutableMessageBody() {
+    }
+    int message_names_size()const {
+        int namesize=this->Protocol::MessageBody::message_names_size();
+        int argsize=this->Protocol::MessageBody::message_arguments_size();
+        if (argsize>namesize) return argsize;
+        return namesize;
+    }
+    std::string& message_names(int i) {
+        int namesize=this->Protocol::MessageBody::message_names_size();
+        int argsize=this->Protocol::MessageBody::message_arguments_size();
+        if (i<namesize) {
+            return this->Protocol::MessageBody::message_names(i);
+        }
+        if (namesize) {
+            return this->Protocol::MessageBody::message_names(namesize-1);
+        }
+        return default_string;
+    }
+    const std::string& message_names(int i) const{
+        int namesize=this->Protocol::MessageBody::message_names_size();
+        int argsize=this->Protocol::MessageBody::message_arguments_size();
+        if (i<namesize) {
+            return this->Protocol::MessageBody::message_names(i);
+        }
+        if (namesize) {
+            return this->Protocol::MessageBody::message_names(namesize-1);
+        }
+        return default_string;
+    }
+};
+}
+#endif

@@ -33,8 +33,10 @@ void Registration::processMessage(const ObjectReference*ref,MemoryReference mess
 }
 void Registration::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     //FIXME
-
-
+    asyncRegister(header,message_body);
+}
+void Registration::asyncRegister(const RoutableMessageHeader&header,MemoryReference message_body) {
+    
     for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
         (*i)->processMessage(header,message_body);
     }

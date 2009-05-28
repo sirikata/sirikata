@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Message Packet Header Parser
- *  Plugin.hpp
+ *  RoutableMessageBody.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

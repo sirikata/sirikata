@@ -231,10 +231,7 @@ class ThreadIdCheck { public:
 #endif
 class RoutableMessageHeader;
 class RoutableMessage;
-namespace Protocol {
-class MessageBody;
-class IMessageBody;
-}
+class RoutableMessageBody;
 } // namespace Sirikata
 #include "MemoryReference.hpp"
 #include "MessageService.hpp"

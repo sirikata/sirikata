@@ -103,7 +103,7 @@ void ProxBridge::processMessage(const ObjectReference*object,
 
 void ProxBridge::processMessage(const RoutableMessageHeader&msg,
                                            MemoryReference body_reference) {
-    Protocol::MessageBody body;
+    RoutableMessageBody body;
     if (body.ParseFromArray(body_reference.data(),body_reference.size())) {
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (msg.has_source_object()){
@@ -119,7 +119,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
                                                const RoutableMessageHeader&msg,
                                                const void *serializedMessageBody,
                                                size_t serializedMessageBodySize) {
-    Protocol::MessageBody body;
+    RoutableMessageBody body;
     if (body.ParseFromArray(serializedMessageBody,serializedMessageBodySize)) {
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (object) {
@@ -135,7 +135,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
 }
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                                                     ProxBridge::ObjectStateMap::iterator where,
-                                                                                    const Sirikata::Protocol::IMessageBody&msg) {
+                                                                                    const Sirikata::RoutableMessageBody&msg) {
     int numMessages=msg.message_names_size();
     if (numMessages!=msg.message_arguments_size()) {
         return OBJECT_NOT_DESTROYED; //FIXME should we assume the rest equal the first
@@ -231,7 +231,7 @@ UUID convertProxObjectId(const Prox::ObjectID &id) {
 }
 void ProxBridge::sendProxCallback(Network::Stream*stream,
                                          const RoutableMessageHeader&destination,
-                                         const Sirikata::Protocol::IMessageBody&unaddressed_prox_callback_msg){
+                                         const Sirikata::RoutableMessageBody&unaddressed_prox_callback_msg){
     std::string str;
     destination.SerializeToString(&str);
     unaddressed_prox_callback_msg.AppendToString(&str);
@@ -365,7 +365,7 @@ void ProxBridge::processProxCallback(const ObjectReference&destination,
     if (where!=mObjectStreams.end()) {
         RoutableMessageHeader dest;
         dest.set_destination_object(destination);
-        Sirikata::Protocol::MessageBody msg;
+        Sirikata::RoutableMessageBody msg;
         msg.add_message_names("ProxCall");
         if (optionalSerializedProxCallSize) {
             msg.add_message_arguments(optionalSerializedProxCall,optionalSerializedProxCallSize);

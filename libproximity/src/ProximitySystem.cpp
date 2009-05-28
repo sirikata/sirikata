@@ -33,20 +33,21 @@
 #include "proximity/Platform.hpp"
 #include "Proximity_Sirikata.pbj.hpp"
 #include "util/RoutableMessageHeader.hpp"
+#include "util/RoutableMessageBody.hpp"
 #include "proximity/ProximitySystem.hpp"
 #include "network/Stream.hpp"
 //#include "proximity/ObjectSpaceBridgeProximitySystem.hpp"
 //for testing only#include "proximity/BridgeProximitySystem.hpp"
 namespace Sirikata { namespace Proximity {
 ProximitySystem::~ProximitySystem(){}
-void ProximitySystem::defaultProximityCallback(Network::Stream*strm, const RoutableMessageHeader&hdr,const Sirikata::Protocol::IMessageBody&msg){
+void ProximitySystem::defaultProximityCallback(Network::Stream*strm, const RoutableMessageHeader&hdr,const Sirikata::RoutableMessageBody&msg){
     assert(strm);
     std::string data;
     hdr.SerializeToString(&data);
     msg.AppendToString(&data);
     strm->send(MemoryReference(data),Network::ReliableOrdered);
 }
-void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::Protocol::IMessageBody&msg){
+void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::RoutableMessageBody&msg){
     assert(strm);
     RoutableMessageHeader h(const_hdr); 
     std::string data;
@@ -58,7 +59,7 @@ void ProximitySystem::defaultNoAddressProximityCallback(Network::Stream*strm, co
     msg.AppendToString(&data);
     strm->send(MemoryReference(data),Network::ReliableOrdered);
 }
-void ProximitySystem::defaultNoDestinationAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::Protocol::IMessageBody&msg){
+void ProximitySystem::defaultNoDestinationAddressProximityCallback(Network::Stream*strm, const RoutableMessageHeader&const_hdr,const Sirikata::RoutableMessageBody&msg){
     assert(strm);
     RoutableMessageHeader h(const_hdr); 
     std::string data;

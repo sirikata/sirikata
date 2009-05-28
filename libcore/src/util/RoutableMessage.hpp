@@ -2,23 +2,24 @@
 #define _SIRIKATA_ROUTABLE_MESSAGE_HPP_
 
 #include "RoutableMessageHeader.hpp"
+#include "RoutableMessageBody.hpp"
 namespace Sirikata {
-class RoutableMessage:public RoutableMessageHeader, private Sirikata::Protocol::MessageBody {
+class RoutableMessage:public RoutableMessageHeader, private RoutableMessageBody {
     static const int sMaxInt=2147483647;
 public:
     RoutableMessage(const RoutableMessageHeader&hdr, const void*body, const size_t body_size):RoutableMessageHeader(hdr) {
         
-        if (body_size>(size_t)sMaxInt||!this->Sirikata::Protocol::MessageBody::ParseFromArray(body,body_size)) {
+        if (body_size>(size_t)sMaxInt||!this->Sirikata::RoutableMessageBody::ParseFromArray(body,body_size)) {
             throw std::invalid_argument("incomplete body message");
         }
     }
     RoutableMessage(const RoutableMessageHeader&hdr):RoutableMessageHeader(hdr) {
     }
-    RoutableMessage(const RoutableMessageHeader&hdr, const Protocol::MessageBody&body):RoutableMessageHeader(hdr),Protocol::MessageBody(body) {
+    RoutableMessage(const RoutableMessageHeader&hdr, const RoutableMessageBody&body):RoutableMessageHeader(hdr),RoutableMessageBody(body) {
     }
     RoutableMessage(){}
-    Sirikata::Protocol::MessageBody& body(){return *this;}
-    const Sirikata::Protocol::MessageBody& body()const {return *this;}
+    RoutableMessageBody& body(){return *this;}
+    const RoutableMessageBody& body()const {return *this;}
     Sirikata::RoutableMessageHeader& header(){return *this;}
     const Sirikata::RoutableMessageHeader& header()const {return *this;}
     bool ParseFromArray(const void*input,size_t size) {
@@ -26,14 +27,14 @@ public:
         if (body.size()>(size_t)sMaxInt)
             return false;
         int isize=(int)body.size();
-        return this->Sirikata::Protocol::MessageBody::ParseFromArray(body.data(),isize);
+        return this->Sirikata::RoutableMessageBody::ParseFromArray(body.data(),isize);
     }
     bool ParsePartialFromArray(const void*input,size_t size) {
         MemoryReference body=this->RoutableMessageHeader::ParseFromArray(input,size);
         if (body.size()>(size_t)sMaxInt)
             return false;
         int isize=(int)body.size();
-        return this->Sirikata::Protocol::MessageBody::ParsePartialFromArray(body.data(),isize);
+        return this->Sirikata::RoutableMessageBody::ParsePartialFromArray(body.data(),isize);
     }
     bool ParseFromString(const std::string&data) {
         return ParseFromArray(data.data(),data.length());
@@ -43,11 +44,11 @@ public:
     }
     bool SerializeToString(std::string*str) const {
         return this->RoutableMessageHeader::SerializeToString(str)&&
-            this->Sirikata::Protocol::MessageBody::AppendToString(str);
+            this->Sirikata::RoutableMessageBody::AppendToString(str);
     }
     bool AppendToString(std::string*str) const {
         return this->RoutableMessageHeader::AppendToString(str)&&
-            this->Sirikata::Protocol::MessageBody::AppendToString(str);
+            this->Sirikata::RoutableMessageBody::AppendToString(str);
     }
 };
 

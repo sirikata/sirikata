@@ -76,7 +76,7 @@ class ProxBridge : public ProximitySystem {
      */
     OpaqueMessageReturnValue processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                        ObjectStateMap::iterator where,
-                                       const Sirikata::Protocol::IMessageBody&);
+                                       const Sirikata::RoutableMessageBody&);
     /**
      * Register a new proximity query.
      * The callback may come from an ASIO response thread
@@ -113,7 +113,7 @@ class ProxBridge : public ProximitySystem {
                                const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                Network::Stream::ConnectionStatus stat,
                                const std::string&reason);
-    static void sendProxCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
+    static void sendProxCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&);
 
     void update(const Duration&timeSinceUpdate,const std::tr1::weak_ptr<Prox::QueryHandler>&);
     void updateThread(const Duration&optimalUpdateTime,const std::tr1::weak_ptr<Prox::QueryHandler>&);

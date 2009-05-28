@@ -35,10 +35,10 @@
 namespace Sirikata { namespace Proximity {
 class SIRIKATA_PROXIMITY_EXPORT ProximitySystem :public MessageService{
 public:
-    static void defaultProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
-    static void defaultNoDestinationAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
-    static void defaultNoAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&);
-    typedef std::tr1::function<void(Network::Stream*, const RoutableMessageHeader&,const Sirikata::Protocol::IMessageBody&)> Callback;
+    static void defaultProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&);
+    static void defaultNoDestinationAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&);
+    static void defaultNoAddressProximityCallback(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&);
+    typedef std::tr1::function<void(Network::Stream*, const RoutableMessageHeader&,const Sirikata::RoutableMessageBody&)> Callback;
     virtual ~ProximitySystem();
     
     enum OpaqueMessageReturnValue{
