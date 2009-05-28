@@ -34,21 +34,27 @@
 #define _SIRIKATA_LOC_HPP_
 
 #include <space/Platform.hpp>
+#include <util/ObjectReference.hpp>
 
 namespace Sirikata {
+namespace Protocol {
+class ObjLoc;
+}
 class Loc;
 class Oseg;
 class Cseg;
 class MessageRouter;
 class SIRIKATA_SPACE_EXPORT Loc : public MessageService {
     std::vector<MessageService*> mServices;
+    ObjectReference mLocServiceIdentifier;
+    ObjectReference mRegistrationServiceIdentifier;
+    void processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc);
 public:
-    Loc();
+    Loc(const ObjectReference&locServiceIdentifier,const ObjectReference& registrationServiceIdentifier);
     ~Loc();
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
-    void processMessage(const ObjectReference*ref,
-                        MemoryReference message);
+    void processMessage(const ObjectReference*ref,MemoryReference message);
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
 

@@ -23,7 +23,8 @@ bool Registration::endForwardingMessagesTo(MessageService*ms) {
     mServices.erase(where);
     return true;
 }
-void Registration::processMessage(const ObjectReference*ref,MemoryReference message) {
+void Registration::processMessage(const ObjectReference*ref,MemoryReference message){
+    
     RoutableMessageHeader hdr;
     MemoryReference message_body=hdr.ParseFromArray(message.data(),message.size());
     if (!hdr.has_source_object()&&ref) {
@@ -31,8 +32,8 @@ void Registration::processMessage(const ObjectReference*ref,MemoryReference mess
     }
     this->processMessage(hdr,message_body);
 }
+
 void Registration::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
-    //FIXME
     RoutableMessageBody body;
     if (body.ParseFromArray(message_body.data(),message_body.size())) {
         asyncRegister(header,body);
