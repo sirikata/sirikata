@@ -625,8 +625,6 @@ class OgreSystem::MouseHandler {
 
     EventResponse deleteObjects(EventPtr ev) {
         Task::AbsTime now(Task::AbsTime::now());
-        // Not implemented yet.
-        /*
         while (doUngroupObjects(now)) {
         }
         for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
@@ -636,7 +634,6 @@ class OgreSystem::MouseHandler {
                 ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr());
             }
         }
-        */
         mSelectedObjects.clear();
         return EventResponse::nop();
     }

@@ -70,6 +70,7 @@ Entity::~Entity() {
     }
     if (mMovingIter != mScene->mMovingEntities.end()) {
         mScene->mMovingEntities.erase(mMovingIter);
+        mMovingIter = mScene->mMovingEntities.end();
     }
     getProxy().ProxyObjectProvider::removeListener(this);
     getProxy().PositionProvider::removeListener(this);
