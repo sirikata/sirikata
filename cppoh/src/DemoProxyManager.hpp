@@ -124,9 +124,11 @@ class DemoProxyManager :public ProxyManager{
             int castsshadow;
             sscanf(rest.c_str(),"[%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>",&lightInfo.mDiffuseColor.x,&lightInfo.mDiffuseColor.y,&lightInfo.mDiffuseColor.z,&ambientPower,&lightInfo.mSpecularColor.x,&lightInfo.mSpecularColor.y,&lightInfo.mSpecularColor.z,&shadowPower,&lightInfo.mLightRange,&lightInfo.mConstantFalloff,&lightInfo.mLinearFalloff,&lightInfo.mQuadraticFalloff,&lightInfo.mConeInnerRadians,&lightInfo.mConeOuterRadians,&lightInfo.mPower,&lightInfo.mConeFalloff,&castsshadow,&x,&y,&z);
             lightInfo.mCastsShadow = castsshadow?true:false;
-            lightInfo.mAmbientColor = lightInfo.mDiffuseColor/(lightInfo.mPower * ambientPower);
-            lightInfo.mShadowColor = lightInfo.mSpecularColor/(lightInfo.mPower * shadowPower);
-            addLightObject(lightInfo, location);
+
+            lightInfo.mAmbientColor = lightInfo.mDiffuseColor*(ambientPower/lightInfo.mDiffuseColor.length())/lightInfo.mPower;
+            lightInfo.mShadowColor = 0;//shadowPower;
+            if (castsshadow)
+                addLightObject(lightInfo, location);
         } else {
             addMeshObject(Transfer::URI(filename), location, scale);
         }
