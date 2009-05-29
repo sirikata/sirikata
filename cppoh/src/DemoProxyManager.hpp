@@ -47,7 +47,7 @@ static const InitializeGlobalOptions globalst (
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     std::tr1::shared_ptr<ProxyLightObject> mLight;
-    typedef std::map<SpaceObjectReference, std::tr1::shared_ptr<ProxyPositionObject> > ObjectMap;
+    typedef std::map<SpaceObjectReference, ProxyObjectPtr > ObjectMap;
     ObjectMap mObjects;
 
     //noncopyable
@@ -154,6 +154,21 @@ public:
       : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
         mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
     }
+
+    virtual void createObject(const ProxyObjectPtr &newObj) {
+        notify(&ProxyCreationListener::createProxy,newObj);
+        mObjects.insert(ObjectMap::value_type(newObj->getObjectReference(), newObj));
+    }
+
+    virtual void destroyObject(const ProxyObjectPtr &newObj) {
+        ObjectMap::iterator iter = mObjects.find(newObj->getObjectReference());
+        if (iter != mObjects.end()) {
+            newObj->destroy();
+            notify(&ProxyCreationListener::destroyProxy,newObj);
+            mObjects.erase(iter);
+        }
+    }
+
     void initialize(){
         notify(&ProxyCreationListener::createProxy,mCamera);
         mCamera->attach("",0,0);

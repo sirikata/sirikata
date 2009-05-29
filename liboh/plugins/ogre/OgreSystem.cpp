@@ -620,26 +620,38 @@ OgreSystem::~OgreSystem() {
 }
 
 void OgreSystem::createProxy(ProxyObjectPtr p){
+    bool created = false;
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
             CameraEntity *cam=new CameraEntity(this,camera);
+            created = true;
         }
-
     }
     {
         std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
         if (light) {
             LightEntity *lig=new LightEntity(this,light);
+            created = true;
         }
-
     }
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
+            created = true;
         }
-
+    }
+    if (!created) {
+        std::tr1::shared_ptr<ProxyPositionObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyPositionObject>(p);
+        if (pospxy) {
+            Entity *ent=new Entity(
+                this,
+                pospxy,
+                pospxy->getObjectReference().toString(),
+                NULL);
+            created = true;
+        }
     }
 }
 void OgreSystem::destroyProxy(ProxyObjectPtr p){

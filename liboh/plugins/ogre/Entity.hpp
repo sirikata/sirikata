@@ -70,6 +70,9 @@ public:
     ProxyPositionObject &getProxy() const {
         return *mProxy;
     }
+    const ProxyPositionObjectPtr &getProxyPtr() const {
+        return mProxy;
+    }
     Entity(OgreSystem *scene,
            const ProxyPositionObjectPtr &ppo,
            const std::string &ogreId,

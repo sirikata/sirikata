@@ -40,5 +40,6 @@ ProxyLightObject::ProxyLightObject(ProxyManager *man, const SpaceObjectReference
 }
 void ProxyLightObject::update(const LightInfo&li) {
     LightProvider::notify(li);
+    mLastInfo = li;
 }
 }

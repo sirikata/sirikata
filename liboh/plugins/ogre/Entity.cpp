@@ -48,6 +48,7 @@ Entity::Entity(OgreSystem *scene,
     mMovingIter(scene->mMovingEntities.end())
 {
     mSceneNode->setInheritScale(false);
+    addToScene(NULL);
     if (obj) {
         init(obj);
     }
@@ -72,6 +73,7 @@ Entity::~Entity() {
     }
     getProxy().ProxyObjectProvider::removeListener(this);
     getProxy().PositionProvider::removeListener(this);
+    removeFromScene();
     init(NULL);
     mSceneNode->detachAllObjects();
     /* detaches all children from the scene.
@@ -88,11 +90,6 @@ Entity *Entity::fromMovableObject(Ogre::MovableObject *movable) {
 void Entity::init(Ogre::MovableObject *obj) {
     if (mOgreObject) {
         mSceneNode->detachObject(mOgreObject);
-        if (!obj) {
-            removeFromScene();
-        }
-    } else if (obj) {
-        addToScene(NULL);
     }
     mOgreObject = obj;
     if (obj) {

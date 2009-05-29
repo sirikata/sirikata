@@ -134,6 +134,8 @@ void PointerDevice::firePointerClick(
         di.mIsDragging = false;
         di.mDragStartX = xPixel;
         di.mDragStartY = yPixel;
+        di.mDragX = xPixel;
+        di.mDragY = yPixel;
         di.mOffsetX = 0;
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);

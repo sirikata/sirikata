@@ -12,9 +12,13 @@ typedef MarkovianProvider1<LightListener*,LightInfo> LightProvider;
 class SIRIKATA_OH_EXPORT ProxyLightObject
   : public LightProvider,
     public ProxyPositionObject {
+    LightInfo mLastInfo;
 public:
     ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id);
     void update(const LightInfo &li);
+    const LightInfo &getLastLightInfo() const {
+        return mLastInfo;
+    }
 };
 }
 #endif

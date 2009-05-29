@@ -88,17 +88,21 @@ public:
     }
 
 };
+typedef std::tr1::shared_ptr<AxisToButton> AxisToButtonPtr;
 
 /** Make arrow keys on a keyboard emulate a mouse/axis. */
 class ButtonToAxis : public InputDevice {
     typedef std::map <int, float> AxisMap;
     AxisMap mAxisPoints;
     InputDevicePtr mParentDevice;
-    int mParentButton;
 public:
-    ButtonToAxis (const std::string &name, const InputDevicePtr &parent, int parentButton) 
-        : mParentDevice(parent), mParentButton(parentButton) {
+    ButtonToAxis (const std::string &name, const InputDevicePtr &parent) 
+        : mParentDevice(parent) {
         setName(name);
+    }
+
+    void addButton(int button, float value) {
+        mAxisPoints.insert(AxisMap::value_type(button, value));
     }
 
     virtual std::string getAxisName(unsigned int axis) {
@@ -125,5 +129,6 @@ public:
     }
 
 };
+typedef std::tr1::shared_ptr<ButtonToAxis> ButtonToAxisPtr;
 
 #endif
