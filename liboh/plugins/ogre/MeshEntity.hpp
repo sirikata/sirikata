@@ -87,6 +87,9 @@ public:
      *  \param meshname the name (ID) of the mesh to use for this entity
      */
     void loadMesh(const String& meshname);
+    const URI &getMeshURI() const {
+        return mMeshURI;
+    }
 
     void unloadMesh();
     ///Returns the scaled bounding info

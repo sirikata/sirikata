@@ -42,11 +42,21 @@ typedef Provider<MeshListener*> MeshProvider;
 class SIRIKATA_OH_EXPORT ProxyMeshObject
   : public MeshProvider,
     public ProxyPositionObject {
+protected:
+    URI mMeshURI;
+    Vector3f mScale;
 public:
     ProxyMeshObject(ProxyManager *man, const SpaceObjectReference&id);
-    void setMesh(const URI &newMesh);
+    void setMesh (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    
+
+    inline const URI & getMesh() const {
+        return mMeshURI;
+    }
+    inline const Vector3f &getScale() const {
+        return mScale;
+    }
+ 
 };
 }
 #endif

@@ -91,8 +91,26 @@ void MeshEntity::loadMesh(const String& meshname)
      *  original.  Also, this is definitely thread safe.
      */
     static AtomicValue<int32> idx ((int32)0);
-    Ogre::Entity* new_entity = getScene()->getSceneManager()->createEntity(
-        ogreMovableName(), meshname);
+    Ogre::Entity* new_entity;
+    try {
+      try {
+        new_entity = getScene()->getSceneManager()->createEntity(
+            ogreMovableName(), meshname);
+      } catch (Ogre::InvalidParametersException &e) {
+        SILOG(ogre,error,"Got invalid parameters");
+        throw;
+      }
+    } catch (...) {
+        SILOG(ogre,error,"Failed to load mesh "<<mMeshURI<< " (id "<<id()<<")!");
+        new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
+        /*
+        init(NULL);
+        if (oldMeshObj) {
+            getScene()->getSceneManager()->destroyEntity(oldMeshObj);
+        }
+        return;
+        */
+    }
     SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
         new_entity->setMaterialName("BaseWhiteTexture");

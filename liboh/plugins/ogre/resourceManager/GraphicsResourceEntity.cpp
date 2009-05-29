@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "MeruDefs.hpp"
+#include "GraphicsResourceAsset.hpp"
 #include "GraphicsResourceEntity.hpp"
 #include "GraphicsResourceName.hpp"
 #include "GraphicsResourceManager.hpp"
@@ -44,7 +45,6 @@ namespace Meru {
 GraphicsResourceEntity::GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity)
 : GraphicsResource(id.toString(), ENTITY), mGraphicsEntity(graphicsEntity), mLoadTime(Time::now())
 {
-
 }
 
 #define ALL_MESHES_ARE_CREATED_EQUAL 0
@@ -120,6 +120,9 @@ void GraphicsResourceEntity::doLoad()
   assert(mDependencies.size() > 0);
 
   mLoadTime = CURRENT_TIME;
+  if (mMeshID.filename().empty()) {
+      SILOG(ogre, error, "Attempt to load an empty mesh filename. ID = " << mID << "; URI = "<<mGraphicsEntity->getMeshURI());
+  }
   if (mGraphicsEntity) {
     mGraphicsEntity->loadMesh(mMeshID.filename());
   }
@@ -148,6 +151,12 @@ void GraphicsResourceEntity::setMeshResource(SharedResourcePtr newMeshPtr)
 
   clearDependencies();
   addDependency(newMeshPtr);
+  std::tr1::shared_ptr<GraphicsResourceAsset> assetPtr (
+    std::tr1::dynamic_pointer_cast<GraphicsResourceAsset>(newMeshPtr));
+  if (assetPtr) {
+    // No name lookup needed.
+    mMeshID = assetPtr->getURI();
+  }
   if (mCurMesh) { // this is a hack, need to properly split different parse/load
     sCostPropEpoch++;
     mDepCost = mCurMesh->getDepCost(sCostPropEpoch);
