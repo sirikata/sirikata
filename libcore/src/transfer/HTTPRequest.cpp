@@ -406,8 +406,8 @@ void HTTPRequest::curlLoop () {
 					editProperties(request->mURI).activeTransfers--;
 					std::list<HTTPRequest*> *pendingtransfers = &editProperties(request->mURI).pendingtransfers;
 					if (!pendingtransfers->empty()) {
-						pendingtransfers->front()->finalGo();
-						pendingtransfers->pop_front();
+						pendingtransfers->back()->finalGo();
+						pendingtransfers->pop_back();
 					}
 
 					access_curl_handle.unlock(); // UNLOCK: the callback may start a new HTTP transfer.
@@ -476,8 +476,8 @@ void HTTPRequest::abort() {
 			editProperties(mURI).activeTransfers--;
 			std::list<HTTPRequest*> *pendingtransfers = &editProperties(mURI).pendingtransfers;
 			if (!pendingtransfers->empty()) {
-				pendingtransfers->front()->finalGo();
-				pendingtransfers->pop_front();
+				pendingtransfers->back()->finalGo();
+				pendingtransfers->pop_back();
 			}
 		}
 	}

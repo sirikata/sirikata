@@ -356,7 +356,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             downServ->getProtocolRegistry()->setHandler("http", httpHandler);
             new ResourceManager(new Transfer::EventTransferManager(
                 new Transfer::MemoryCacheLayer(
-                        new Transfer::LRUPolicy(500 * Transfer::megabyte),
+                        new Transfer::LRUPolicy(200 * Transfer::megabyte),
                         new Transfer::DiskCacheLayer(
                                 new Transfer::LRUPolicy(3000 * Transfer::megabyte),
                                 "Cache", // 200 Megabytes
