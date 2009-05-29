@@ -36,25 +36,119 @@
 #include <oh/ProxyLightObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 namespace Sirikata {
+
+static OptionValue *scenefile;
+
+static const InitializeGlobalOptions globalst (
+    "cppoh",
+    new OptionValue("scenefile", "scene.txt", OptionValueType<std::string>(), "A text file with locations and filenames of all meshes in a scene.", &scenefile),
+    NULL);
+
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     std::tr1::shared_ptr<ProxyLightObject> mLight;
-    typedef std::map<SpaceObjectReference, std::tr1::shared_ptr<ProxyMeshObject> > ObjectMap;
+    typedef std::map<SpaceObjectReference, std::tr1::shared_ptr<ProxyPositionObject> > ObjectMap;
     ObjectMap mObjects;
 
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy){}
-    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location) {
+
+    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location, const Vector3f &scale=Vector3f(1,1,1)) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
-
+        std::cout << "Add Mesh Object " << myId << " = " << uri<<std::endl;
         std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
         mObjects.insert(ObjectMap::value_type(myId, myObj));
         notify(&ProxyCreationListener::createProxy, myObj);
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
+        myObj->setScale(scale);
         return myObj;
     }
+
+    ProxyObjectPtr addLightObject(const LightInfo &linfo, const Location &location) {
+        // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
+        SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
+
+        std::tr1::shared_ptr<ProxyLightObject> myObj(new ProxyLightObject(this, myId));
+        mObjects.insert(ObjectMap::value_type(myId, myObj));
+        notify(&ProxyCreationListener::createProxy, myObj);
+        myObj->resetPositionVelocity(Time::now(), location);
+        myObj->update(linfo);
+        return myObj;
+    }
+
+    void loadSceneObject(FILE *fp) {
+        Vector3d pos(0,0,0);
+        Quaternion orient(Quaternion::identity());
+        Vector3f scale(1,1,1);
+
+        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
+        Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
+        // Read a line into filename.
+        std::string filename;
+        while (true) {
+            char str[1024];
+            fgets(str, 1024, fp);
+            std::string append(str);
+            if (append.length() == 0) {
+                // EOF
+                break;
+            } else if (append[append.length()-1]=='\n') {
+                filename += append.substr(0, append.length()-1);
+                break;
+            } else {
+                filename += append;
+            }
+        }
+        std::string rest;
+        std::string::size_type sppos=filename.find(' ');
+        if (sppos != std::string::npos) {
+            rest = filename.substr(sppos+1);
+            filename = filename.substr(0, sppos);
+        }
+        if (filename=="CAMERA") {
+            mCamera->resetPositionVelocity(Time::now(), location);
+        } else if (filename=="point" || filename=="directional" || filename=="spotlight") {
+            LightInfo::LightTypes lighttype;
+            if (filename=="point") {
+                lighttype = LightInfo::POINT;
+            } else if (filename=="spotlight") {
+                lighttype = LightInfo::SPOTLIGHT;
+            } else if (filename=="directional") {
+                lighttype = LightInfo::DIRECTIONAL;
+            }
+            LightInfo lightInfo;
+            float ambientPower=1, shadowPower=1;
+            float x,y,z; // Light direction. Assume 0,1,0 for now.
+            int castsshadow;
+            sscanf(rest.c_str(),"[%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>",&lightInfo.mDiffuseColor.x,&lightInfo.mDiffuseColor.y,&lightInfo.mDiffuseColor.z,&ambientPower,&lightInfo.mSpecularColor.x,&lightInfo.mSpecularColor.y,&lightInfo.mSpecularColor.z,&shadowPower,&lightInfo.mLightRange,&lightInfo.mConstantFalloff,&lightInfo.mLinearFalloff,&lightInfo.mQuadraticFalloff,&lightInfo.mConeInnerRadians,&lightInfo.mConeOuterRadians,&lightInfo.mPower,&lightInfo.mConeFalloff,&castsshadow,&x,&y,&z);
+            lightInfo.mCastsShadow = castsshadow?true:false;
+            lightInfo.mAmbientColor = lightInfo.mDiffuseColor/(lightInfo.mPower * ambientPower);
+            lightInfo.mShadowColor = lightInfo.mSpecularColor/(lightInfo.mPower * shadowPower);
+            addLightObject(lightInfo, location);
+        } else {
+            addMeshObject(Transfer::URI(filename), location, scale);
+        }
+    }
+
+    bool loadSceneFile(std::string filename) {
+        FILE *fp;
+        for (int i = 0; i < 4; ++i) {
+            fp = fopen(filename.c_str(), "rt");
+            if (fp) break;
+            filename = std::string("../")+filename;
+        }
+        if (!fp) {
+            return false;
+        }
+        while (!feof(fp)) {
+            loadSceneObject(fp);
+        }
+        fclose(fp);
+        return true;
+    }
+
 public:
     DemoProxyManager()
       : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
@@ -62,8 +156,17 @@ public:
     }
     void initialize(){
         notify(&ProxyCreationListener::createProxy,mCamera);
-        notify(&ProxyCreationListener::createProxy,mLight);
         mCamera->attach("",0,0);
+        mCamera->resetPositionVelocity(Time::now(),
+                             Location(Vector3d(0,0,50.), Quaternion::identity(),
+                                      Vector3f::nil(), Vector3f::nil(), 0.));
+
+        if (loadSceneFile(scenefile->as<std::string>())) {
+            return; // success!
+        }
+        // Otherwise, load fallback scene.
+
+        notify(&ProxyCreationListener::createProxy,mLight);
         LightInfo li;
         li.setLightDiffuseColor(Color(0,0,1));
         li.setLightAmbientColor(Color(0,0,0));
@@ -88,9 +191,6 @@ public:
                              Location(Vector3d(0,5,0), Quaternion::identity(),
                                       Vector3f(.05,0,0), Vector3f(0,0,0),0));
 
-        mCamera->resetPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,50.), Quaternion::identity(),
-                                      Vector3f::nil(), Vector3f::nil(), 0.));
         mLight->resetPositionVelocity(Time::now()-Duration::seconds(.5),
                              Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f(-1,0,0), Vector3f(0,1,0), 0.5));
