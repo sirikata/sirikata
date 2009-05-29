@@ -89,6 +89,7 @@ class DemoProxyManager :public ProxyManager{
         std::string filename;
         while (true) {
             char str[1024];
+			str[0]='\0';
             fgets(str, 1024, fp);
             std::string append(str);
             if (append.length() == 0) {

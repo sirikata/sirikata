@@ -70,7 +70,7 @@ class OgreSystem::MouseHandler {
 
     class SubObjectIterator {
         typedef Entity* value_type;
-        typedef ssize_t difference_type;
+        //typedef ssize_t difference_type;
         typedef size_t size_type;
         OgreSystem::SceneEntitiesMap::const_iterator mIter;
         Entity *mParentEntity;
@@ -297,7 +297,7 @@ class OgreSystem::MouseHandler {
         }
         
         if (mSelectedObjects.empty()) {
-            SILOG(input,debug,"moveSelection: Found no selected objects");
+            SILOG(input,insane,"moveSelection: Found no selected objects");
             return EventResponse::nop();
         }
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -321,7 +321,7 @@ class OgreSystem::MouseHandler {
                     mMoveVector = deltaPosition;
                 }
             }
-            SILOG(input,debug,"moveSelection: Moving selected objects at distance " << mMoveVector);
+            SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
         }
 
         Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mXStart, mouseev->mYStart));
@@ -469,12 +469,10 @@ class OgreSystem::MouseHandler {
         } else if (!mSelectedObjects.empty()) {
             Vector3d totalPosition (averageSelectedPosition(now));
             toMove *= (totalPosition - cameraLoc.getPosition()).length() * .75;
-            SILOG(input,debug,"Total Position: "<<totalPosition);
         } else {
             toMove *= WORLD_SCALE;
         }
         toMove *= value.getCentered(); // up == zoom in
-        SILOG(input,debug,"ZOOMIN: "<<toMove);
         cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
         camera->getProxy().resetPositionVelocity(now, cameraLoc);
     }
