@@ -730,6 +730,7 @@ ENDIF()
 SET(LIBSPACE_SOURCES 
   ${SirikataProtocolDirectory}/Space_protobuf.cc
                      ${LIBSPACE_SOURCE_DIR}/Space.cpp
+                     ${LIBSPACE_SOURCE_DIR}/ObjectConnections.cpp
                      ${LIBSPACE_SOURCE_DIR}/Loc.cpp
                      ${LIBSPACE_SOURCE_DIR}/Registration.cpp
                       )

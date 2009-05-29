@@ -35,18 +35,20 @@
 namespace Sirikata {
 class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     ///Object with active ID's
-    std::tr1::unordered_map<ObjectReference,Stream*>mActiveStreams;
+    std::tr1::unordered_map<ObjectReference,Network::Stream*,ObjectReference::Hasher>mActiveStreams;
     ///Objects in the process of receiving a permanent ID
-    std::map<UUID,Stream*>mTemporaryStreams;
+    std::map<UUID,Network::Stream*>mTemporaryStreams;
     ///to forward messages to
     MessageService * mSpace;
+    Network::StreamListener*mListener;
+    ObjectReference mRegistrationService;
   public:
-    ObjectConnections(StreamListener*listener,                      
+    ObjectConnections(Network::StreamListener*listener,                      
                       const ObjectReference&registrationServiceIdentifier);
     ///If there's an active connection to a given object reference
-    Stream* activeConnectionTo(const ObjectReference&);
+    Network::Stream* activeConnectionTo(const ObjectReference&);
     ///If there's an as-of-yet-unnamed connection to a given object reference
-    Stream* temporaryConnectionTo(const UUID&);
+    Network::Stream* temporaryConnectionTo(const UUID&);
     ///A temporary connection has been given a permanent name
     void promoteConnectionTo(const UUID&, const ObjectReference&);
     bool forwardMessagesTo(MessageService*);
