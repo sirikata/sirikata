@@ -1,7 +1,7 @@
-/*  Sirikata libspace -- Space
- *  Space.hpp
+/*  Sirikata libspace -- Object Connection Services
+ *  ObjectConnections.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,43 +29,32 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _SIRIKATA_SPACE_HPP_
-#define _SIRIKATA_SPACE_HPP_
-
+#ifndef _SIRIKATA_OBJECT_CONNECTIONS_HPP
+#define _SIRIKATA_OBJECT_CONNECTIONS_HPP
 #include <space/Platform.hpp>
-
 namespace Sirikata {
-class Loc;
-class Oseg;
-class Cseg;
-class MessageRouter;
-class ObjectConnections;
-namespace Proximity{
-class ProximitySystem;
-}
-class SIRIKATA_SPACE_EXPORT Space :public MessageService{
-    ///The location services system: arbiter of object locations    
-    MessageService * mLoc;
-    ///The registration service that allows objects to connect to the space and maps them to consistent ObjectReferences
-    MessageService *mRegistration;
-    ///The Proximity System which answers object proximity queries
-    MessageService *mGeom;
-    ///The object segmentation service: which Space Server hosts a given object
-    Oseg *mObjectSegmentation;
-    ///The coordinate segmentation service: which Space server hosts a given set of coordinates
-    Cseg *mCoordinateSegmentation;
-    ///The routing system to forward messages to other SpaceServers(given by mObjectSegmentation/mCoordinateSegmentation)
-    MessageRouter *mRouter;
-    ///Active connections to object hosts, with streams to individual objects;
-    ObjectConnections* mObjectConnections;
-public:
-    Space();
-    ~Space();
+class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
+    ///Object with active ID's
+    std::tr1::unordered_map<ObjectReference,Stream*>mActiveStreams;
+    ///Objects in the process of receiving a permanent ID
+    std::map<UUID,Stream*>mTemporaryStreams;
+    ///to forward messages to
+    MessageService * mSpace;
+  public:
+    ObjectConnections(StreamListener*listener,                      
+                      const ObjectReference&registrationServiceIdentifier);
+    ///If there's an active connection to a given object reference
+    Stream* activeConnectionTo(const ObjectReference&);
+    ///If there's an as-of-yet-unnamed connection to a given object reference
+    Stream* temporaryConnectionTo(const UUID&);
+    ///A temporary connection has been given a permanent name
+    void promoteConnectionTo(const UUID&, const ObjectReference&);
+    bool forwardMessagesTo(MessageService*);
+    bool endForwardingMessagesTo(MessageService*);
+    void processMessage(const ObjectReference*ref,MemoryReference message);
+    void processMessage(const RoutableMessageHeader&header,
+                        MemoryReference message_body);
     
-
-}; // class Space
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_SPACE_HPP
+};
+}
+#endif
