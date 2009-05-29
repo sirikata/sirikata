@@ -81,13 +81,13 @@ class OgreSystem::MouseHandler {
         return -cameraAngle.zAxis();
     }
 
-    Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel) {
+    Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel, int which=0) {
         Location location(cam->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
         double dist;
-        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, dist);
+        Entity *mouseOverEntity = mParent->rayTrace(location.getPosition(), dir, dist, which);
         if (mouseOverEntity) {
             // return true
             return mouseOverEntity;
@@ -104,16 +104,18 @@ class OgreSystem::MouseHandler {
         mSelectedObjects.clear();
     }
 
-    EventResponse selectObject(EventPtr ev) {
+    int mWhichRayObject;
+    EventResponse selectObject(EventPtr ev, int direction) {
         std::tr1::shared_ptr<MouseClickEvent> mouseev (
             std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
         if (!mouseev) {
             return EventResponse::nop();
         }
+        mWhichRayObject+=direction;
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
             // add object.
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY);
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
             if (mouseOver) {
                 std::map<Entity*,Location>::iterator selectIter = mSelectedObjects.find(mouseOver);
                 if (selectIter == mSelectedObjects.end()) {
@@ -134,7 +136,7 @@ class OgreSystem::MouseHandler {
         } else {
             // reset selection.
             clearSelection();
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY);
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
             if (mouseOver) {
                 mSelectedObjects.insert(std::map<Entity*,Location>::value_type(mouseOver, Location()));
                 mouseOver->setSelected(true);
@@ -523,7 +525,7 @@ public:
                               IdPair(MouseDragEvent::getEventId(), secId),
                               std::tr1::bind(func, this, _1)));
     }
-    MouseHandler(OgreSystem *parent) : mParent(parent), mIsRotating(false),mPanDistance(0),mIsOrbiting(false) {
+    MouseHandler(OgreSystem *parent) : mParent(parent), mWhichRayObject(0), mIsRotating(false),mPanDistance(0),mIsOrbiting(false) {
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
             std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 
@@ -536,7 +538,11 @@ public:
         mEvents.push_back(mParent->mInputManager->subscribeId(
                               IdPair(MouseClickEvent::getEventId(), 
                                      MouseDownEvent::getSecondaryId(1)),
-                              std::tr1::bind(&MouseHandler::selectObject, this, _1)));
+                              std::tr1::bind(&MouseHandler::selectObject, this, _1, 1)));
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                              IdPair(MouseClickEvent::getEventId(), 
+                                     MouseDownEvent::getSecondaryId(3)),
+                              std::tr1::bind(&MouseHandler::selectObject, this, _1, -1)));
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin(); 

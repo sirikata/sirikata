@@ -148,7 +148,8 @@ public:
     }
     Entity* rayTrace(const Vector3d &position,
                      const Vector3f &direction,
-                     double &returnResult) const;
+                     double &returnResult,
+                     int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
     virtual bool tick();

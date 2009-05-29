@@ -51,7 +51,7 @@ namespace Meru {
 
 MANUAL_SINGLETON_STORAGE(GraphicsResourceManager);
 
-OptionValue*OPTION_VIDEO_MEMORY_RESOURCE_CACHE_SIZE = new OptionValue("video-memory-cache-size","128",OptionValueType<int>(),"Number of megabytes to store from CDN in video memory");
+OptionValue*OPTION_VIDEO_MEMORY_RESOURCE_CACHE_SIZE = new OptionValue("video-memory-cache-size","1024",OptionValueType<int>(),"Number of megabytes to store from CDN in video memory");
 
 InitializeGlobalOptions graphicsresourcemanageropts("ogregraphics",
     OPTION_VIDEO_MEMORY_RESOURCE_CACHE_SIZE,

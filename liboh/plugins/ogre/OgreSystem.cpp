@@ -646,24 +646,42 @@ void OgreSystem::destroyProxy(ProxyObjectPtr p){
 
 }
 
-Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction, double &returnresult) const {
+Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction, double &returnresult, int which) const {
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
     mRayQuery->setRay(traceFrom);
-    mRayQuery->setSortByDistance(true, 2); // Only one result for now.
+    mRayQuery->setSortByDistance(true);
     const Ogre::RaySceneQueryResult& resultList = mRayQuery->execute();
 
     Entity *toReturn = NULL;
     returnresult = 0;
+    int count = 0;
     for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
         Entity *foundEntity = Entity::fromMovableObject(result.movable);
         if (foundEntity != mPrimaryCamera) {
-            toReturn = foundEntity;
-            returnresult = result.distance;
-            break; // dumb logic for now.
+            ++count;
+        }
+    }
+    if (count > 0) {
+        which %= count;
+        if (which < 0) {
+            which += count;
+        }
+        for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
+             iter != resultList.end(); ++iter) {
+            const Ogre::RaySceneQueryResultEntry &result = (*iter);
+            Entity *foundEntity = Entity::fromMovableObject(result.movable);
+            if (foundEntity != mPrimaryCamera) {
+                if (which == 0) {
+                    toReturn = foundEntity;
+                    returnresult = result.distance;
+                    break;
+                }
+                --which;
+            }
         }
     }
     mRayQuery->clearResults();
