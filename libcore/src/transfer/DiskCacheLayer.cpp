@@ -49,6 +49,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #endif
+#define O_BINARY 0 // Other OS's don't always define this flag.
 #else
 #include <io.h>
 #include <direct.h>
