@@ -48,8 +48,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
     //for now do so synchronously in a very short-sighted manner.
     int num_messages=body.message_arguments_size();
     for (int i=0;i<num_messages;++i) {
-        if (body.message_names(i)==body.getDefaultMessageName()||body.message_names(i)=="NewObj") {//Will anything contain the extra 'NewObj' information when the destination UUID
-            //clearly indicatest the Registration servcie?
+        if (body.message_names(i)=="NewObj") {
             Protocol::NewObj newObj;
             newObj.ParseFromString(body.message_arguments(i));
             if (newObj.has_requested_object_loc()&&newObj.has_bounding_sphere()) {
@@ -63,8 +62,9 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                 retObj.mutable_location().ParseFromString(obj_loc_string);
                 retObj.set_bounding_sphere(newObj.bounding_sphere());
                 retObj.set_object_reference(UUID(SHA256::computeDigest(evidence,sizeof(evidence)).rawData().begin(),UUID::static_size));
-                destination_header.set_destination_object(ObjectReference(newObj.object_uuid_evidence()));
+                destination_header.set_destination_object(header.source_object());
                 destination_header.set_source_object(mRegistrationServiceIdentifier);
+                retval.add_message_names("RetObj");
                 if (retval.message_arguments_size()==0) {
                     retval.add_message_arguments(std::string());
                 }else {
@@ -79,6 +79,10 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
             }else {
                 SILOG(registration,warning,"Insufficient information in NewObj request"<<body.message_names(i));
             }
+        }else if (body.message_names(i)=="DelObj") {
+            Protocol::DelObj delObj;
+            delObj.ParseFromString(body.message_arguments(i));
+            
         }else {
             SILOG(registration,warning,"Do not understand message of type "<<body.message_names(i));
         }

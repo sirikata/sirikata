@@ -43,13 +43,14 @@ namespace Sirikata { namespace Proximity {
 template <class ObjectPtr> 
 class ObjectSpaceBridgeProximitySystem : public ProximitySystem{
     ObjectPtr mObject;
+    ObjectReference mRegistrationObject;
 protected:
-    std::tr1::unordered_set<std::string> mImportantNames;
     static const char* proxCallbackName() {
         return "ProxCall";
     }
-    bool forwardThisName(const std::string&name) {
-        return mImportantNames.find(name)!=mImportantNames.end();
+    virtual bool forwardThisName(bool registration_or_disconnection,const std::string&name) {        
+        if (registration_or_disconnection) return false;
+        return name==proxCallbackName()||name=="NewProxQuery"||name=="DelProxQuery";
     }
     enum DidAlterMessage {
         ALTERED_MESSAGE,
@@ -97,10 +98,11 @@ protected:
             }
         }
     }
+    ///needs to be the following send message for  Objects, but not for spaces, so make it an abstract class for now and deal with sendMessage in subclass
     virtual void sendMessage(const ObjectReference& source,
                              const RoutableMessage&opaqueMessage,
                              const void *optionalSerializedMessageBody,
-                             size_t optionalSerializedMessageBodySize) {
+                             size_t optionalSerializedMessageBodySize)=0;/* {
         if (optionalSerializedMessageBody) {
             mObject->send(opaqueMessage.header(),
                           MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
@@ -111,7 +113,7 @@ protected:
                               MemoryReference(bodyMsg.data(),bodyMsg.size()));
             }
         }
-    }
+        }*/
     /**
      * Process a message that may be meant for the proximity system
      * \returns true if object was deleted
@@ -127,10 +129,18 @@ protected:
             bool deliverAllMessages=true;
             int len=msg.body().message_names_size();
             OpaqueMessageReturnValue obj_is_deleted=OBJECT_NOT_DESTROYED;
+            bool disconnection=false;
+            bool registration=false;
+            bool customize_message=false;
             for (int i=0;i<len;++i) {
-                if(msg.body().message_names(i)=="DelObj")
+                if(msg.body().message_names(i)=="DelObj") {
+                    disconnection=true;
                     obj_is_deleted=OBJECT_DELETED;
-                if(msg.body().message_names(i)=="RetObj") {
+                }
+                if((hdr.source_object()==mRegistrationObject&&msg.body().message_names_serialized_size()==0)||msg.body().message_names(i)=="RetObj") {
+                    if (msg.body().message_names_serialized_size()==0)
+                        customize_message=true;
+                    registration=true;
                     int maxnum=i+1;
                     if (maxnum==len)
                         maxnum=msg.body().message_arguments_size();
@@ -140,7 +150,7 @@ protected:
                         newObj(ro,msg.body().message_arguments(j).data(),msg.body().message_arguments(j).size());
                     }
                 }
-                if (!forwardThisName(msg.body().message_names(i))) {
+                if (!forwardThisName(registration||disconnection,msg.body().message_names(i))) {
                     if (len==1) return obj_is_deleted;
                     deliverAllMessages=false;
                 }else {
@@ -169,9 +179,9 @@ protected:
                 alteration=addressMessage(msg,object,NULL);
             else
                 alteration=addressMessage(msg,NULL,object);
-            if (deliverAllMessages&&sendState==DELIVER_TO_PROX) {
+            if (deliverAllMessages&&sendState==DELIVER_TO_PROX&&!customize_message) {
                 sendMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
-            } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT) {
+            } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT&&!customize_message) {
                 deliverMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
             }else {
                 //some messages are not considered worth forwarding to the proximity system or there's a mishmash of destinations
@@ -183,9 +193,9 @@ protected:
                 newMsg.body().clear_message_arguments();
                 bool forwardLastMessageType=false;
                 for (int i=0;i<len;++i) {
-                    if (forwardThisName(msg.body().message_names(i))) {
+                    if (forwardThisName(registration||disconnection,msg.body().message_names(i))) {
                         forwardLastMessageType=true;
-                        newMsg.body().add_message_names(newMsg.body().message_names(i));
+                        newMsg.body().add_message_names((customize_message&&registration)?std::string("RetObj"):newMsg.body().message_names(i));
                         newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
                     }else {
                         forwardLastMessageType=false;
@@ -212,11 +222,8 @@ protected:
     }
 
 public:
-    ObjectSpaceBridgeProximitySystem (ObjectPtr obj) {
+    ObjectSpaceBridgeProximitySystem (ObjectPtr obj,const ObjectReference&registrationObject):mRegistrationObject(registrationObject) {
         mObject=obj;
-        mImportantNames.insert(proxCallbackName());
-        mImportantNames.insert("NewProxQuery");
-        mImportantNames.insert("DelProxQuery");
     }
     enum MessageBundle{
         DELIVER_TO_UNKNOWN,

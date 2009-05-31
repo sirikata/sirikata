@@ -43,7 +43,6 @@ class ObjLoc;
 class Loc;
 class Oseg;
 class Cseg;
-class MessageRouter;
 class SIRIKATA_SPACE_EXPORT Loc : public MessageService {
     std::vector<MessageService*> mServices;
     ObjectReference mLocServiceIdentifier;

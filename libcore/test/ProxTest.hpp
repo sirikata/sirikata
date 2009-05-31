@@ -48,7 +48,7 @@
 #include <time.h>
 using namespace Sirikata;
 using namespace Sirikata::Network;
-class ProxTest : MessageService, public CxxTest::TestSuite
+class ProxTest : public CxxTest::TestSuite         , MessageService
 {
     void ioThread(){
         using std::tr1::placeholders::_1;
@@ -109,7 +109,7 @@ public:
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}
         Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
-        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon);
+        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,ObjectReference::null()); 
         mLocalProxSystem->forwardMessagesTo(this);
         mThread=new boost::thread(std::tr1::bind(&ProxTest::pcThread,this));
 
@@ -200,7 +200,7 @@ public:
     bool forwardMessagesTo(MessageService*body) {
         return false;
     }
-    bool stopForwardingMessagesTo(MessageService*body) {
+    bool endForwardingMessagesTo(MessageService*body) {
         return false;
     }
     void processMessage(const ObjectReference*reference, MemoryReference message){

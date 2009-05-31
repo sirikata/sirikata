@@ -79,6 +79,23 @@
 #endif
 
 
+#ifndef SIRIKATA_FUNCTION_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_FUNCTION_EXPORT
+#   else
+#     if defined(SIRIKATA_BUILD)
+#       define SIRIKATA_FUNCTION_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_FUNCTION_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+# else
+#   define SIRIKATA_FUNCTION_EXPORT
+# endif
+#endif
+
+
 
 #ifndef SIRIKATA_EXPORT_C
 # define SIRIKATA_EXPORT_C extern "C" SIRIKATA_EXPORT

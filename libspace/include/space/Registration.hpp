@@ -40,7 +40,6 @@ namespace Sirikata {
 class Registration;
 class Oseg;
 class Cseg;
-class MessageRouter;
 class SIRIKATA_SPACE_EXPORT Registration : public MessageService {
     std::vector<MessageService*> mServices;
     ObjectReference mRegistrationServiceIdentifier;

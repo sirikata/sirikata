@@ -831,13 +831,12 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/QuaternionTest.hpp
    ${LIBCORE_DIR}/test/SstTest.hpp
    ${LIBCORE_DIR}/test/ProxTest.hpp
-#  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
   ${LIBCORE_DIR}/test/TR1Test.hpp
   ${LIBCORE_DIR}/test/UploadTest.hpp
   ${LIBCORE_DIR}/test/Vector3Test.hpp
 
  )
-
+#  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	LIBRARYDIR ${CXXTESTRoot}
 	OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})

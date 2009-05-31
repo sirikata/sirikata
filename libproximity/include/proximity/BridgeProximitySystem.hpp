@@ -55,7 +55,7 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
         virtual void processMessage(const RoutableMessageHeader&hdr,
                                     MemoryReference message_body){
             for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
-                i->processMessage(hdr,message_body);
+                (*i)->processMessage(hdr,message_body);
             }
         }
         
@@ -65,19 +65,21 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
         virtual void processMessage(const ObjectReference*object,
                                     MemoryReference message){
             for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
-                i->processMessage(object,message);
+                (*i)->processMessage(object,message);
             }
         }        
     }mMulticast;
 protected:
+    virtual bool forwardThisName(bool registration_or_disconnection, const std::string&name) {
+        if (registration_or_disconnection) return true;
+        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<MessageService*>::forwardThisName(registration_or_disconnection,name);
+    }
+
     virtual bool forwardMessagesTo(MessageService*ms){
         return mMulticast.forwardMessagesTo(ms);
     }
     virtual bool endForwardingMessagesTo(MessageService*ms) {
         return mMulticast.endForwardingMessagesTo(ms);
-    }
-    virtual bool forwardThisName(const std::string&name) {
-        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<MessageService*>::forwardThisName(name)||name=="RetObj"||name=="DelObj";
     }
     virtual ObjectSpaceBridgeProximitySystem<MessageService*>::DidAlterMessage addressMessage(RoutableMessageHeader&output,
                                 const ObjectReference*source,
@@ -117,9 +119,7 @@ protected:
     }
 public:
     ProximityConnection *mProximityConnection;
-    BridgeProximitySystem(ProximityConnection*connection) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast),mProximityConnection(connection) {
-        this->mImportantNames.insert("ObjLoc");
-        this->mImportantNames.insert("DelObj");
+    BridgeProximitySystem(ProximityConnection*connection,const ObjectReference&registrationObject) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationObject),mProximityConnection(connection) {
         bool retval=mProximityConnection->forwardMessagesTo(this);
         assert(retval);
     }

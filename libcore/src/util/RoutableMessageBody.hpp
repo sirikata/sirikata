@@ -41,6 +41,11 @@ public:
     RoutableMessageBody() {
     }
     const std::string& getDefaultMessageName()const {return getInternalDefaultMessageName();}
+    int message_names_serialized_size()const {
+        return this->Protocol::MessageBody::message_names_size();
+    }
+
+
     int message_names_size()const {
         int namesize=this->Protocol::MessageBody::message_names_size();
         int argsize=this->Protocol::MessageBody::message_arguments_size();
