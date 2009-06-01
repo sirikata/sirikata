@@ -42,9 +42,15 @@ ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress,
                                      const ObjectReference&registrationServiceIdentifier,
                                      const String&introductoryMessage) {
-
+    
     mSpaceServiceIntroductionMessage=introductoryMessage;
     mSpace=NULL;
+    mPerObjectTemporarySizeMaximum=8192;
+    mPerObjectTemporaryNumMessagesMaximum=64;
+    Protocol::SpaceServices svc;
+    svc.set_pre_connection_buffer(mPerObjectTemporarySizeMaximum);
+    svc.set_max_pre_connection_messages(mPerObjectTemporaryNumMessagesMaximum);
+    svc.AppendToString(&mSpaceServiceIntroductionMessage);
     mListener=listener;
     mRegistrationService=registrationServiceIdentifier;
     using std::tr1::placeholders::_1;    using std::tr1::placeholders::_2;
@@ -52,23 +58,30 @@ ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                       std::tr1::bind(&ObjectConnections::newStreamCallback,this,_1,_2));
 }
 void ObjectConnections::newStreamCallback(Network::Stream*stream, Network::Stream::SetCallbacks&callbacks) {
-    UUID temporaryId=UUID::random();
-    mStreams[stream].setId(temporaryId);
-    mTemporaryStreams[temporaryId].mStream=stream;
-    using std::tr1::placeholders::_1;    using std::tr1::placeholders::_2;
-    callbacks(std::tr1::bind(&ObjectConnections::connectionCallback,this,stream,_1,_2),
-              std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1));
+    if (stream!=NULL){
+        UUID temporaryId=UUID::random();//generate a random ID as a placeholder ObjectReference until Registration service calls back with RetObj
+        mStreams[stream].setId(temporaryId);//set it for the streams (mStreams is set to disconnected by default)
+        mTemporaryStreams[temporaryId].mStream=stream;//record this stream to the mTemporaryStreams
+        using std::tr1::placeholders::_1;    using std::tr1::placeholders::_2;
+        callbacks(std::tr1::bind(&ObjectConnections::connectionCallback,this,stream,_1,_2),
+                  std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1));
+    }else{
+        //whole object host has disconnected
+    }
 }
 void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk) {
+    //find the temporary stream ID and connected boolean
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
     RoutableMessageHeader hdr;
-    MemoryReference chunkRef(chunk);
+    MemoryReference chunkRef(chunk);//parse header
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
+    //munge header to reflect known ID
     hdr.set_source_object(ObjectReference(where->second.uuid()));
     if (((!hdr.has_destination_object())||hdr.destination_object()==ObjectReference::null())&&message_body.size()==0) {
-        stream->send(MemoryReference(mSpaceServiceIntroductionMessage),Network::ReliableOrdered);
-    }else
-    if (hdr.has_destination_object()&&hdr.destination_object()==mRegistrationService) {
+        //if our message is size 0 and header nowhere or to null(), assume it's the object host request for service addresses
+        stream->send(MemoryReference(mSpaceServiceIntroductionMessage),Network::ReliableOrdered);//send the tuned packet with all information needed to know services
+    }else if (hdr.has_destination_object()&&hdr.destination_object()==mRegistrationService) {
+        //this is either a NewObj or DelObj request Parse the body to find out
         RoutableMessageBody rmb;
         bool success=rmb.ParseFromArray(message_body.data(),message_body.size());
         Protocol::RetObj ro;
@@ -80,27 +93,41 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
                 disconnection=disconnection||(rmb.message_names(i)=="DelObj");
                 connection=connection||(rmb.message_names(i)=="NewObj");
             }
+            if (connection) {
+                where->second.setConnecting();
+            }
+            //let a connection request through to the registration service
             if (connection||where->second.connected()) {
                 mSpace->processMessage(hdr,MemoryReference(message_body));
-            }else {
+            }else {//push other requests for registration to the queue
                 std::map<UUID,TemporaryStreamData>::iterator twhere=mTemporaryStreams.find(where->second.uuid());
-                if (twhere!=mTemporaryStreams.end()) {
-                    twhere->second.mPendingMessages.push_back(chunk);
+                if (twhere!=mTemporaryStreams.end()) {//find the queue on which the request should live
+                    if (twhere->second.mTotalMessageSize+chunk.size()<mPerObjectTemporarySizeMaximum
+                        &&twhere->second.mPendingMessages.size()<mPerObjectTemporaryNumMessagesMaximum) {//if message queue has space
+                        twhere->second.mTotalMessageSize+=chunk.size();//annotate size
+                        twhere->second.mPendingMessages.push_back(chunk);//push back to array
+                    }
                 }else{
                     SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" due to already disconnected object");
                 }
             }
-            if (disconnection) {
+            if (disconnection) {//do not let further messages through to space if the object is disconnected
                 where->second.setDisconnected();
                 //don't disconnect stream immediately, should get message back from disconnection service
             }
         }
-    } else if (where->second.connected()) {
+    } else if (where->second.connected()) {//ordinary message to connected object
         mSpace->processMessage(hdr,MemoryReference(message_body));                
-    } else {//if not connected, this item will be inserted to list of to-be-sent
+    } else {//Not sure if we should verify that a connection request is going through,
+            // or if we should just find the size of bytes saved and cap that reasonably 
+            // this check would have verified a good faith effort to start connecting if (where->second.isConnecting()) {
         std::map<UUID,TemporaryStreamData>::iterator twhere=mTemporaryStreams.find(where->second.uuid());
         if (twhere!=mTemporaryStreams.end()) {
-            twhere->second.mPendingMessages.push_back(chunk);
+            if (twhere->second.mTotalMessageSize<mPerObjectTemporarySizeMaximum
+                &&twhere->second.mPendingMessages.size()<mPerObjectTemporaryNumMessagesMaximum) {//if message queue has space
+                twhere->second.mTotalMessageSize+=chunk.size();//annotate size
+                twhere->second.mPendingMessages.push_back(chunk);//push back to array
+            }
         }else{
             SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" due to already disconnected object");
         }
@@ -109,36 +136,37 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
 void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     RoutableMessage rm;
     Protocol::DelObj delObj;
-    rm.header().set_destination_object(mRegistrationService);
-    rm.header().set_source_object(ref);
-    rm.body().add_message_names("DelObj");
-    rm.body().add_message_arguments(NULL,0);    
+    rm.header().set_destination_object(mRegistrationService);//pretend object has contacted registration service
+    rm.header().set_source_object(ref);//and has appropriately set its identifier
+    rm.body().add_message_names("DelObj");//with one purpose: to delete itself
+    rm.body().add_message_arguments(NULL,0);    //and serialize the deleted object to the strong
     delObj.SerializeToString(&rm.body().message_arguments(0));
     std::string serialized_message_body;
     rm.body().SerializeToString(&serialized_message_body);
-    mSpace->processMessage(rm.header(),MemoryReference(serialized_message_body));
+    mSpace->processMessage(rm.header(),MemoryReference(serialized_message_body));//tell the space to forward the message to the registration service
 }
 void ObjectConnections::connectionCallback(Network::Stream*stream, Network::Stream::ConnectionStatus status, const std::string&reason){
     if (status!=Network::Stream::Connected) {
-        SILOG(space,debug,"Connection lost "<<reason);
-        std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
+        SILOG(space,debug,"Connection lost "<<reason);//log connection lost
+        std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);//find active stream
         if (where!=mStreams.end()) {
             std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>::iterator uwhere=mActiveStreams.find(where->second.uuid());
             std::map<UUID,TemporaryStreamData>::iterator twhere;
             if (uwhere!=mActiveStreams.end()) {
-                if (where->second.connected())
+                if (where->second.connected()) {//As soon as discon message detected, stream is disconnected, so must have had no disconnect message, hence send forged disconnect
                     forgeDisconnectionMessage(ObjectReference(uwhere->first));              
-                mActiveStreams.erase(uwhere);
+                }
+                mActiveStreams.erase(uwhere);//erase the active stream
             }else if ((twhere=mTemporaryStreams.find(where->second.uuid()))!=mTemporaryStreams.end()) {
-                mTemporaryStreams.erase(twhere);
+                mTemporaryStreams.erase(twhere);//erase the temporary stream, destroying all pending messages
             }else {
                 SILOG(space,error,"Stream with unknown reference "<<where->second.uuid().toString());
             }
-            mStreams.erase(where);
+            mStreams.erase(where);//delete stream from record of active streams
         }else {
             SILOG(space,error,"Stream not found "<<reason);
         }
-        delete stream;
+        delete stream;//delete the stream pointer since all references to it have been waxed (aside from callbacks--which is ok due to single-threaded assumption))
     }else {
         SILOG(space,insane,"Connected "<<reason);
     }
@@ -187,20 +215,20 @@ void ObjectConnections::processMessage(const ObjectReference*ref,MemoryReference
     RoutableMessageHeader hdr;
     MemoryReference body_array=hdr.ParseFromArray(message.data(),message.size());
     bool disconnectionAttempt=false;
-    if (ref&&*ref==mRegistrationService) {
+    if (ref&&*ref==mRegistrationService) {//message from registration service
         if (!hdr.has_source_object())
             hdr.set_source_object(*ref);
-        if (processNewObject(hdr,body_array, newRef)) {
-            hdr.set_destination_object(newRef);
+        if (processNewObject(hdr,body_array, newRef)) {//it could be a new object
+            hdr.set_destination_object(newRef);//it is a new object, complete with permanent ObjectReference
             ref=&newRef;
         }else {
-            disconnectionAttempt=true;
+            disconnectionAttempt=true;//it was a forcable disconnection (potentially at user request)
         }
     }else {
         if (ref&&!hdr.has_destination_object()) {
             hdr.set_destination_object(*ref);
         }
-        if (hdr.has_source_object()&&hdr.source_object()==mRegistrationService) {
+        if (hdr.has_source_object()&&hdr.source_object()==mRegistrationService) {//repeated logic if registration was set in packet
             if (processNewObject(hdr,body_array,newRef)) {
                 hdr.set_destination_object(newRef);
                 ref=&newRef;
@@ -209,10 +237,10 @@ void ObjectConnections::processMessage(const ObjectReference*ref,MemoryReference
             }
         }
     }
-    processExistingObject(hdr,body_array,!disconnectionAttempt);
+    processExistingObject(hdr,body_array,!disconnectionAttempt);//process the message but do not forward if a disconection attemp was made
     if (disconnectionAttempt) {
         //Server ban of user or confirm of disconnect
-        shutdownConnection(hdr.destination_object());
+        shutdownConnection(hdr.destination_object());//destroy stream if destination object was forcably removed by space
     }
 
 }
@@ -221,36 +249,36 @@ void ObjectConnections::processMessage(const RoutableMessageHeader&header,
     RoutableMessageHeader newHeader;
     const RoutableMessageHeader *hdr=&header;
     bool disconnectionAttempt=false;
-    if (header.source_object()==mRegistrationService) {
+    if (header.source_object()==mRegistrationService) {//message from registration service
         ObjectReference newRef;
-        if (processNewObject(header,message_body,newRef)) {
+        if (processNewObject(header,message_body,newRef)) {//it could be a new object
             newHeader=header;
-            newHeader.set_destination_object(newRef);
-            hdr=&newHeader;
+            newHeader.set_destination_object(newRef);//it is a new object complete with a permanent ObjectReference...make a new Header
+            hdr=&newHeader;//set the hdr pointer to the new header
         }else {
-            disconnectionAttempt=true;
+            disconnectionAttempt=true;//it was a forcable disconnection (potentially at user request)
         }
     }
-    processExistingObject(*hdr,message_body,!disconnectionAttempt);
+    processExistingObject(*hdr,message_body,!disconnectionAttempt);//process the message but do not forward a disconnection attempt if stream is nonexistant
     if (disconnectionAttempt) {//Server ban of user, or confirm of disconnect
-        shutdownConnection(header.destination_object());
+        shutdownConnection(header.destination_object());//destroy stream if destination object was forcably removed by space
     }
 }
 
 void ObjectConnections::shutdownConnection(const ObjectReference&ref) {
     Network::Stream*stream=NULL;
-    std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>::iterator awhere=mActiveStreams.find(ref.getAsUUID());
+    std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>::iterator awhere=mActiveStreams.find(ref.getAsUUID());//find uuid in active streams
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.end();
     if (awhere!=mActiveStreams.end()){
-        stream=awhere->second;
+        stream=awhere->second;//if it was an active stream, erase it
         where=mStreams.find(stream);
         mActiveStreams.erase(awhere);
     }else {
-        std::map<UUID,TemporaryStreamData>::iterator twhere=mTemporaryStreams.find(where->second.uuid());       
+        std::map<UUID,TemporaryStreamData>::iterator twhere=mTemporaryStreams.find(where->second.uuid());       //ok maybe it's a temporary stream
         if (twhere!=mTemporaryStreams.end()) {
-            stream=twhere->second.mStream;
+            stream=twhere->second.mStream;//well erase it to avoid dangling references
             where=mStreams.find(stream);
-            mTemporaryStreams.erase(twhere);
+            mTemporaryStreams.erase(twhere);//but this is a critical error: the registration service should not know about this
             SILOG(space,error,"FATAL: Stream connected yet found in temporary streams" << where->second.uuid().toString());
         }
     }
@@ -290,8 +318,10 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                     }
                                 }
                                 mStreams[stream].setConnected();
+                                mStreams[stream].setDoneConnecting();
                                 std::vector<Network::Chunk> pendingMessages;
                                 where->second.mPendingMessages.swap(pendingMessages);
+                                where->second.mTotalMessageSize=0;
                                 mActiveStreams[newRef.getAsUUID()]=stream;
                                 mTemporaryStreams.erase(where);
                                 for (std::vector<Network::Chunk>::iterator i=pendingMessages.begin(),
@@ -303,6 +333,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                 return true;
                             }else {
                                 if (mActiveStreams.find(newRef.getAsUUID())!=mActiveStreams.end()) {
+                                    mStreams[mActiveStreams[newRef.getAsUUID()]].setDoneConnecting();
                                     SILOG(space,error,"Duplicate addition of "<<hdr.destination_object().toString()<<" as "<<newRef.toString());
                                     return true;
                                 }else {
@@ -318,6 +349,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                         SILOG(space,warning,"Cannot parse RetObj in making new object "<<hdr.destination_object().toString());
                     }
                 }else if (rmb.message_names(0)=="DelObj") {
+                    
                     return false;
                 }
             }else {

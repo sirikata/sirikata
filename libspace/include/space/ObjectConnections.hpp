@@ -53,7 +53,9 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     class TemporaryStreamData {
     public:
         Network::Stream*mStream;
+        size_t mTotalMessageSize;
         std::vector<Network::Chunk>mPendingMessages;
+        TemporaryStreamData(){mStream=NULL;mTotalMessageSize=0;}
     };
     /**
      *This class holds whether a given Stream* is connected and the ID (ObjectReference or temp ID) of the Stream*
@@ -61,16 +63,21 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     class StreamMapUUID {
         UUID mId;
         bool mConnected;
+        bool mConnecting;
     public:
         StreamMapUUID() {
             mConnected=false;
+            mConnecting=false;
         }
         void setId(const UUID&id) {
             mId=id;
         }
+        void setConnecting(){mConnecting=true;}
+        void setDoneConnecting(){mConnecting=false;}
+        bool isConnecting() const{return mConnecting;}
         void setConnected(){mConnected=true;}
         void setDisconnected(){mConnected=false;}
-        bool connected() {return mConnected;}
+        bool connected() const{return mConnected;}
         const UUID& uuid() {
             return mId;
         }
@@ -84,6 +91,10 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>mStreams;
     ///to forward messages to
     MessageService * mSpace;
+    ///the maximum number of bytes allowed to be pending for a temporary object id
+    size_t mPerObjectTemporarySizeMaximum;
+    ///the maximum number of messages allowed to be pending for a temporary object id
+    size_t mPerObjectTemporaryNumMessagesMaximum;
     ///The listener class which retrieves new connections from object hosts
     Network::StreamListener*mListener;
     ///ObjectRefernece for the Registration service so those messages can be directly sent there instead of waiting on mPendingMessages

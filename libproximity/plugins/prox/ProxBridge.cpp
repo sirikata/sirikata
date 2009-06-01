@@ -15,11 +15,15 @@
 namespace Sirikata { namespace Proximity {
 
 void ProxBridge::newObjectStreamCallback(Network::Stream*newStream, Network::Stream::SetCallbacks&setCallbacks) {
-    std::tr1::shared_ptr<std::vector<ObjectReference> > ref(new std::vector<ObjectReference>());
-    std::tr1::shared_ptr<Network::Stream> stream(newStream);
-    setCallbacks(
-        std::tr1::bind(&ProxBridge::disconnectionCallback,this,stream,ref,_1,_2),
-        std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1));
+    if (newStream) {
+        std::tr1::shared_ptr<std::vector<ObjectReference> > ref(new std::vector<ObjectReference>());
+        std::tr1::shared_ptr<Network::Stream> stream(newStream);
+        setCallbacks(
+            std::tr1::bind(&ProxBridge::disconnectionCallback,this,stream,ref,_1,_2),
+            std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1));
+    }else {
+        //whole object host has disconnected;
+    }
 }
 
 void ProxBridge::update(const Duration&duration,const std::tr1::weak_ptr<Prox::QueryHandler>&listen) {
