@@ -174,7 +174,7 @@ public:
         mLocalProxSystem->newProxQuery(ObjectReference(mObjectId[0]),npq,NULL,0);
         for (int i=0;i<100;++i) {
 #ifdef _WIN32
-            Sleep(i<90:100:3000);
+            Sleep(i<90?100:3000);
 #else
             sleep(i<90?0:1);
 #endif

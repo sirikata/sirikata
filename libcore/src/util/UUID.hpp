@@ -99,7 +99,7 @@ public:
 };
 
 }
-std::istream & SIRIKATA_FUNCTION_EXPORT operator>>(std::istream & is, Sirikata::UUID & uuid);
-std::ostream & SIRIKATA_FUNCTION_EXPORT operator<<(std::ostream & os, const Sirikata::UUID & uuid);
+std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
+std::ostream &  operator<<(std::ostream & os, const Sirikata::UUID & uuid);
 
 #endif //_SIRIKATA_UUID_HPP_

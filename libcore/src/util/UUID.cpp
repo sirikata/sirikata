@@ -54,7 +54,7 @@ std::string UUID::readableHexData()const{
     oss<<boost_::uuid(getArray().begin(),getArray().end());
     return oss.str();
 }
-std::ostream & SIRIKATA_FUNCTION_EXPORT operator << (std::ostream &os, const UUID& output) {
+std::ostream & operator << (std::ostream &os, const UUID& output) {
     os<<boost_::uuid(output.getArray().begin(),output.getArray().end());
     return os;
 }
