@@ -98,12 +98,12 @@ message ReadOnlyMessage {
 /////////////Built-in messages///////////////
 
 message SpaceServices {
-   optional uuid registration=1538;
-   optional uuid loc=1539;
-   optional uuid geom=1540;
-   optional uuid oseg=1541;
-   optional uuid cseg=1542;
-   optional uuid router=1543;
+   optional uuid registration=33;
+   optional uuid loc=34;
+   optional uuid geom=35;
+   optional uuid oseg=36;
+   optional uuid cseg=37;
+   optional uuid router=38;
 }
 
 //This message is from a space to an object updating its position and orientation (returns void)
