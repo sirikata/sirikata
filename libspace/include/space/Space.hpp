@@ -44,6 +44,15 @@ class ObjectConnections;
 namespace Proximity{
 class ProximitySystem;
 }
+/**
+ * The space class handles instantiating services and shifting messages around between services
+ * Role as a MessageService:
+ * Specifically if the object id is not availabe in active mObjectConnections, mObjectConnections will 
+ * forward the message back to the space so the space can try the builtin services and then eventually the
+ * mRouter (to shift it to another space node which may have the connection)
+ * 
+ * Each space has an ID and right now the space is designed to run in a single thread and be waiting on the mIO service
+ */
 class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     SpaceID mID;
     Network::IOService*mIO;
@@ -63,14 +72,19 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     ObjectConnections* mObjectConnections;
     std::tr1::unordered_map<ObjectReference,MessageService*,ObjectReference::Hasher> mServices;
 public:
+    ///Space does not forward messages outside of what it chooses by looking at the mServices and mRouter classes
     bool forwardMessagesTo(MessageService*){return false;}
+    ///Space does not forward messages outside of what it chooses by looking at the mServices and mRouter classes
     bool endForwardingMessagesTo(MessageService*){return false;}
+    ///This method calls the other processMessage method
     void processMessage(const ObjectReference*ref,MemoryReference message);
+    ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
 
     Space(const SpaceID&);
     ~Space();
+    ///hands control off to mIO and never returns
     void run();
 
 }; // class Space

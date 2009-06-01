@@ -34,14 +34,30 @@
 #include <space/Platform.hpp>
 #include <network/Stream.hpp>
 namespace Sirikata {
+
+/**
+ * This class holds all the direct object connections out to actual live objects connected to this space node
+ * The class is responsible for temporary streams which have not completed registration as well as active streams
+ * Temporary streams are saved by a random UUID generated upon connection attempt
+ * Permanent streams are generated when the Registration service returns a valid ObjectReference
+ */
 class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
-    ///Object with active ID's (ObjectReferences)
+    ///Object with active ID's (map from ObjectReference to Stream*)
     std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>mActiveStreams;
+
+    /**
+     * This class holds data relevant to streams pending object connections
+     * FIXME: should not hang onto PendingMessages until Registration request is sent
+     *        to limit the buffering space needed to the round trip time from Registration
+     */
     class TemporaryStreamData {
     public:
         Network::Stream*mStream;
         std::vector<Network::Chunk>mPendingMessages;
     };
+    /**
+     *This class holds whether a given Stream* is connected and the ID (ObjectReference or temp ID) of the Stream*
+     */
     class StreamMapUUID {
         UUID mId;
         bool mConnected;
@@ -62,21 +78,36 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
             return ObjectReference(mId);
         }
     };
-    ///Objects in the process of receiving a permanent ID
+    ///Objects in the process of receiving a permanent ID, mapping a UUID to a Stream* and messages pending send
     std::map<UUID,TemporaryStreamData>mTemporaryStreams;
+    ///Every active stream maps to either a temporary ID in mTemporaryStreams or a permanent ObjectReference in mActiveStreams
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>mStreams;
     ///to forward messages to
     MessageService * mSpace;
+    ///The listener class which retrieves new connections from object hosts
     Network::StreamListener*mListener;
+    ///ObjectRefernece for the Registration service so those messages can be directly sent there instead of waiting on mPendingMessages
     ObjectReference mRegistrationService;
+    ///The message that lets users know which services the space supports and on what ObjectReferences
     String mSpaceServiceIntroductionMessage;
     ///processes a message from the RegistrationService: returns true if the object is a new object (false if the object was deleted)
     bool processNewObject(const RoutableMessageHeader&hdr,MemoryReference body_array,ObjectReference&);
+    ///processes a message for an object that exists in the Space (i.e. not a temporary object with fake UUID), forwarding message if necessary
     void processExistingObject(const RoutableMessageHeader&hdr,MemoryReference body_array, bool forward);
+    ///callback for new streams, giving them a temporary UUID and assigning it into mTemporaryStreams and mStreams
     void newStreamCallback(Network::Stream*stream,Network::Stream::SetCallbacks&callbacks);
+    ///callback for disconnection of new streams, to let the RegistrationService know about them
     void connectionCallback(Network::Stream*stream,Network::Stream::ConnectionStatus,const std::string&);
+    /**
+     * callback for having received bytes, either queueing them to mPendingMessages,
+     *                                     delivering them to mActiveConnections
+     *                                     or giving up and forwarding them to mSpace in the hopes
+     *                                     that they may to a service or a forwader
+     */
     void bytesReceivedCallback(Network::Stream*stream,const Network::Chunk&chunk);
+    ///makes a Disconnection message for the Registration service in the event a connection should unexpectedly close
     void forgeDisconnectionMessage(const ObjectReference&ref);
+    ///actually close a Stream connection to an object.
     void shutdownConnection(const ObjectReference&ref);
   public:
     ObjectConnections(Network::StreamListener*listener,                      
@@ -88,10 +119,13 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     Network::Stream* activeConnectionTo(const ObjectReference&);
     ///If there's an as-of-yet-unnamed connection to a given object reference
     Network::Stream* temporaryConnectionTo(const UUID&);
-    ///A temporary connection has been given a permanent name
+    ///The space needs to register here so that the ObjectConnection knows how to forward messages
     bool forwardMessagesTo(MessageService*);
+    ///Upon destruction the space should deregister itself
     bool endForwardingMessagesTo(MessageService*);
+    ///Processes a message destined for an Object referenced by either temporary (from registrationService) or permanent (from anyone else) ID ObjectReference
     void processMessage(const ObjectReference*ref,MemoryReference message);
+    ///Processes a message destined for an Object referenced by either temporary (from registrationService) or permanent (from anyone else) ID in the header
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
     
