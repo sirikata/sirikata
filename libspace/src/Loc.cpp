@@ -54,13 +54,15 @@ void Loc::processMessage(const RoutableMessageHeader&header,MemoryReference mess
         int num_args=body.message_arguments_size();
         if (header.source_object()==mRegistrationServiceIdentifier) {
             for (int i=0;i<num_args;++i) {
-                Protocol::RetObj retObj;
-                if (retObj.ParseFromString(body.message_arguments(i))&&retObj.has_location()) {
-                    processMessage(ObjectReference(retObj.object_reference()),retObj.location());
-                }else {
-                    SILOG(loc,warning,"Loc:Unable to parse RetObj message body originating from "<<header.source_object());
+                if (body.message_names_serialized_size()==0||body.message_names(i)=="RetObj") {
+                    Protocol::RetObj retObj;
+                    if (retObj.ParseFromString(body.message_arguments(i))&&retObj.has_location()) {
+                        processMessage(ObjectReference(retObj.object_reference()),retObj.location());
+                    }else {
+                        SILOG(loc,warning,"Loc:Unable to parse RetObj message body originating from "<<header.source_object());
+                    }
                 }
-            }           
+            }
         }else {
             for (int i=0;i<num_args;++i) {
                 Protocol::ObjLoc objLoc;

@@ -69,6 +69,7 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     MessageService * mSpace;
     Network::StreamListener*mListener;
     ObjectReference mRegistrationService;
+    String mSpaceServiceIntroductionMessage;
     ///processes a message from the RegistrationService: returns true if the object is a new object (false if the object was deleted)
     bool processNewObject(const RoutableMessageHeader&hdr,MemoryReference body_array,ObjectReference&);
     void processExistingObject(const RoutableMessageHeader&hdr,MemoryReference body_array, bool forward);
@@ -80,7 +81,8 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
   public:
     ObjectConnections(Network::StreamListener*listener,                      
                       const Network::Address &listenAddress,
-                      const ObjectReference&registrationServiceIdentifier);
+                      const ObjectReference&registrationServiceIdentifier,
+                      const std::string&spaceServiceIntroductionMessage );
     ~ObjectConnections();
     ///If there's an active connection to a given object reference
     Network::Stream* activeConnectionTo(const ObjectReference&);

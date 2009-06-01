@@ -94,6 +94,9 @@ void ProxBridge::processMessage(const ObjectReference*object,
         if (where==mObjectStreams.end()&&mesg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(mesg.source_object()));
         }
+        if (where==mObjectStreams.end()&&mesg.has_destination_object()){
+            where=mObjectStreams.find(ObjectReference(mesg.destination_object()));
+        }
 
         processOpaqueProximityMessage(newObjectReferences,
                                       where,
@@ -108,6 +111,9 @@ void ProxBridge::processMessage(const RoutableMessageHeader&msg,
         ObjectStateMap::iterator where=mObjectStreams.end();
         if (msg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(msg.source_object()));
+        }
+        if (msg.has_destination_object()){
+            where=mObjectStreams.find(ObjectReference(msg.destination_object()));
         }
         std::vector<ObjectReference> newObjectReferences;
         processOpaqueProximityMessage(newObjectReferences,where,body);
@@ -127,6 +133,9 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
         }
         if (where==mObjectStreams.end()&&msg.has_source_object()){
             where=mObjectStreams.find(ObjectReference(msg.source_object()));
+        }
+        if (where==mObjectStreams.end()&&msg.has_destination_object()){
+            where=mObjectStreams.find(ObjectReference(msg.destination_object()));
         }
         return processOpaqueProximityMessage(newObjectReferences,where,body);
     }
@@ -443,6 +452,11 @@ void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                 std::vector<ObjectReference>::iterator where=std::find(ref->begin(),ref->end(),source_object);
                 if (where!=ref->end()) {
                     ref->erase(where);
+                }else {
+                    std::vector<ObjectReference>::iterator where=std::find(ref->begin(),ref->end(),ObjectReference(hdr.destination_object()));
+                    if (where!=ref->end()) {
+                        ref->erase(where);
+                    }
                 }
             }
         }else if (old_size==1) {

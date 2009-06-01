@@ -40,8 +40,10 @@
 namespace Sirikata {
 ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress,
-                                     const ObjectReference&registrationServiceIdentifier) {
+                                     const ObjectReference&registrationServiceIdentifier,
+                                     const String&introductoryMessage) {
 
+    mSpaceServiceIntroductionMessage=introductoryMessage;
     mSpace=NULL;
     mListener=listener;
     mRegistrationService=registrationServiceIdentifier;
@@ -63,6 +65,9 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
     MemoryReference chunkRef(chunk);
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
     hdr.set_source_object(ObjectReference(where->second.uuid()));
+    if (((!hdr.has_destination_object())||hdr.destination_object()==ObjectReference::null())&&message_body.size()==0) {
+        stream->send(MemoryReference(mSpaceServiceIntroductionMessage),Network::ReliableOrdered);
+    }else
     if (hdr.has_destination_object()&&hdr.destination_object()==mRegistrationService) {
         RoutableMessageBody rmb;
         bool success=rmb.ParseFromArray(message_body.data(),message_body.size());

@@ -34,7 +34,7 @@
 #define _SIRIKATA_SPACE_HPP_
 
 #include <space/Platform.hpp>
-
+#include <util/SpaceObjectReference.hpp>
 namespace Sirikata {
 class Loc;
 class Oseg;
@@ -45,10 +45,12 @@ namespace Proximity{
 class ProximitySystem;
 }
 class SIRIKATA_SPACE_EXPORT Space :public MessageService{
-    ///The location services system: arbiter of object locations    
-    MessageService * mLoc;
+    SpaceID mID;
+    Network::IOService*mIO;
     ///The registration service that allows objects to connect to the space and maps them to consistent ObjectReferences
     MessageService *mRegistration;
+    ///The location services system: arbiter of object locations    
+    MessageService * mLoc;
     ///The Proximity System which answers object proximity queries
     MessageService *mGeom;
     ///The object segmentation service: which Space Server hosts a given object
@@ -56,13 +58,20 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     ///The coordinate segmentation service: which Space server hosts a given set of coordinates
     Cseg *mCoordinateSegmentation;
     ///The routing system to forward messages to other SpaceServers(given by mObjectSegmentation/mCoordinateSegmentation)
-    MessageRouter *mRouter;
+    MessageService *mRouter;
     ///Active connections to object hosts, with streams to individual objects;
     ObjectConnections* mObjectConnections;
+    std::tr1::unordered_map<ObjectReference,MessageService*,ObjectReference::Hasher> mServices;
 public:
-    Space();
+    bool forwardMessagesTo(MessageService*){return false;}
+    bool endForwardingMessagesTo(MessageService*){return false;}
+    void processMessage(const ObjectReference*ref,MemoryReference message);
+    void processMessage(const RoutableMessageHeader&header,
+                        MemoryReference message_body);
+
+    Space(const SpaceID&);
     ~Space();
-    
+    void run();
 
 }; // class Space
 
