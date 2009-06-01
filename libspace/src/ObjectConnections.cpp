@@ -291,55 +291,61 @@ void ObjectConnections::shutdownConnection(const ObjectReference&ref) {
 bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryReference body_array, ObjectReference&newRef) {
     bool new_object=false;
     RoutableMessageBody rmb;
-    if (hdr.has_destination_object()) {
+    if (hdr.has_destination_object()) {//destination_object is the temporary UUID given for pending connecting objects
         if (rmb.ParseFromArray(body_array.data(),body_array.size())) {
             if (rmb.message_arguments_size()) {
-                if (rmb.message_names(0)=="RetObj") {
+                if (rmb.message_names(0)=="RetObj") {//make sure the name of the message is RetObj so it contains the ID
                     Protocol::RetObj ro;
-                    if (ro.ParseFromString(rmb.message_arguments(0))) {
+                    if (ro.ParseFromString(rmb.message_arguments(0))) {//grab the message argument
                         if (ro.has_object_reference()) {
-                            newRef=ObjectReference(ro.object_reference());
+                            newRef=ObjectReference(ro.object_reference());//get the new reference
                             std::map<UUID,TemporaryStreamData>::iterator where=mTemporaryStreams.find(hdr.destination_object().getAsUUID());
-                            if (where!=mTemporaryStreams.end()) {
+                            if (where!=mTemporaryStreams.end()) {//a currently existing temporary stream
                                 Network::Stream*stream=where->second.mStream;
-                                if (mActiveStreams.find(newRef.getAsUUID())!=mActiveStreams.end()) {
+                                if (mActiveStreams.find(newRef.getAsUUID())!=mActiveStreams.end()) {//new stream connection trying to replace existing stream
+                                    //we may eventually want to allow this kind of behavior to allow object replication
+                                    //but then we would need to upgrade our unordered_maps into unordered_multimap
                                     SILOG(space,error,"Untested: replacing extant stream "<<newRef.toString()<<" when trying to create obj with UUID "<<hdr.destination_object());
                                     std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>::iterator awhere=mActiveStreams.find(newRef.getAsUUID());
                                     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator swhere=mStreams.find(awhere->second);
-                                    if (swhere!=mStreams.end()) {
+                                    if (swhere!=mStreams.end()) {//find the stream belonging to the old ObjectReference
                                         if (swhere->first!=stream) {
-                                            delete swhere->first;
+                                            delete swhere->first;//nuke it
                                             mStreams.erase(swhere);
-                                        }else {
-                                            SILOG(space,warning,"Duplicate request to add "<<hdr.destination_object().toString()<<":"<<newRef.toString());
+                                        }else {//must be two existing requests...this could be an indication of a leak--FIXME
+                                            SILOG(space,error,"FATAL: Duplicate request to add "<<hdr.destination_object().toString()<<":"<<newRef.toString()<<" ...leaking");
                                         }
-                                    }else {
+                                    }else {//no stream in stream map... cannot replace both copies of Stream* .  Should not reach this code
                                         SILOG(space,error,"FATAL: item in UUID map not in mStreams map "<<hdr.destination_object().toString());
                                     }
                                 }
-                                mStreams[stream].setConnected();
-                                mStreams[stream].setDoneConnecting();
+                                StreamMapUUID* iter=&mStreams[stream];
+                                iter->setConnected();
+                                iter->setDoneConnecting();
+                                iter->setId(newRef.getAsUUID());//set the id of the stream map to the permanent ObjetReference
                                 std::vector<Network::Chunk> pendingMessages;
-                                where->second.mPendingMessages.swap(pendingMessages);
-                                where->second.mTotalMessageSize=0;
-                                mActiveStreams[newRef.getAsUUID()]=stream;
-                                mTemporaryStreams.erase(where);
+                                where->second.mPendingMessages.swap(pendingMessages);//get ready to send pending messages
+                                where->second.mTotalMessageSize=0;//reset bytes used
+                                mActiveStreams[newRef.getAsUUID()]=stream;//setup mStream and 
+                                mTemporaryStreams.erase(where);//erase temporary reference to stream
                                 for (std::vector<Network::Chunk>::iterator i=pendingMessages.begin(),
                                          ie=pendingMessages.end();
                                      i!=ie;
                                      ++i) {
-                                    bytesReceivedCallback(stream,*i);
+                                    bytesReceivedCallback(stream,*i);//process pending messages as if they were just received
                                 }
-                                return true;
+                                return true;//new object ready to use
                             }else {
-                                if (mActiveStreams.find(newRef.getAsUUID())!=mActiveStreams.end()) {
-                                    mStreams[mActiveStreams[newRef.getAsUUID()]].setDoneConnecting();
+                                if (mActiveStreams.find(newRef.getAsUUID())!=mActiveStreams.end()) {//for some reason the registration service gave us another active registration
+                                    //FIXME: this error case is potentially problematic
+                                    mStreams[mActiveStreams[newRef.getAsUUID()]].setDoneConnecting();//make sure to mark the stream as done connecting
                                     SILOG(space,error,"Duplicate addition of "<<hdr.destination_object().toString()<<" as "<<newRef.toString());
                                     return true;
                                 }else {
-                                    forgeDisconnectionMessage(newRef);
-                                    SILOG(space,error,"Connection disconnected during registration process "<<hdr.destination_object().toString());
-                                    return false;
+                                    forgeDisconnectionMessage(newRef);//Normal occurance: the stream has been disconnected while registration system got its act together
+                                                                      //forge a disconnection message to purge it from other systems
+                                    SILOG(space,warning,"Connection disconnected during registration process "<<hdr.destination_object().toString());
+                                    return false;//return the object is deleted instead and not some new object
                                 }
                             }
                         }else {
@@ -348,8 +354,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                     }else {
                         SILOG(space,warning,"Cannot parse RetObj in making new object "<<hdr.destination_object().toString());
                     }
-                }else if (rmb.message_names(0)=="DelObj") {
-                    
+                }else if (rmb.message_names(0)=="DelObj") {//it's a deletion stream... return that the object is deleted and not some new object
                     return false;
                 }
             }else {
@@ -361,21 +366,21 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
         newRef=hdr.destination_object();
         return true;
     }
-    SILOG(space,warning,"null destination object for new object reference");
+    SILOG(space,error,"null destination object for new object reference");//should not get here
     return true;
 }
 void ObjectConnections::processExistingObject(const RoutableMessageHeader&const_hdr,MemoryReference body_array, bool forward){
-    if (const_hdr.has_destination_object()) {
+    if (const_hdr.has_destination_object()) {//only process if valid destination
         std::tr1::unordered_map<UUID,Network::Stream*,ObjectReference::Hasher>::iterator where;
-        where=mActiveStreams.find(const_hdr.destination_object().getAsUUID());
-        if (where==mActiveStreams.end()&&forward) {
+        where=mActiveStreams.find(const_hdr.destination_object().getAsUUID());//find UUID from active streams
+        if (where==mActiveStreams.end()&&forward) {//if this is not a message from the space, then forward it to the space for future forwarding
             mSpace->processMessage(const_hdr,body_array);
         }else {
-            RoutableMessageHeader hdr(const_hdr);
+            RoutableMessageHeader hdr(const_hdr);//send it to the found stream
             std::string header_data;
             hdr.clear_destination_object();//no reason to waste bytes
-            hdr.SerializeToString(&header_data);
-            where->second->send(MemoryReference(header_data),body_array,Network::ReliableOrdered);//can this be unordered?
+            hdr.SerializeToString(&header_data);//serialize then send out
+            where->second->send(MemoryReference(header_data),body_array,Network::ReliableOrdered);//FIXME can this be unordered?
         }
     }else {
         SILOG(space,warning, "null destination object for message routing with source "<<const_hdr.source_object().toString());
