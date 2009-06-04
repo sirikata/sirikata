@@ -70,7 +70,7 @@ void LocationVisualization::mainLoop() {
     BoundingBox3f bboxwidest;
     for (i=minServerID;i<maxServerID;++i) {
         BoundingBoxList bboxList=mSeg->serverRegion(i);
-	for (int j=0; j<bboxList.size(); j++) {
+	for (uint j=0; j<bboxList.size(); j++) {
 	  BoundingBox3f bbox = bboxList[j];
 	  if (i==minServerID) {
             bboxwidest=bbox;
@@ -96,7 +96,7 @@ void LocationVisualization::mainLoop() {
     for (i=minServerID;i<maxServerID;++i) {
       BoundingBoxList bboxList=mSeg->serverRegion(i);
       
-      for (int j=0;j<bboxList.size(); j++) {
+      for (uint j=0;j<bboxList.size(); j++) {
 	BoundingBox3f bbox = bboxList[j];
         glColor3f(0,0, (k/(float)maxServerID));	/* set current color to white */
 	glVertex2f(bbox.min().x,bbox.min().y);
@@ -198,7 +198,7 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
         }
     }
 
-    printf("mSegmentationChangeEvents.size=%d\n", mSegmentationChangeEvents.size());
+    printf("mSegmentationChangeEvents.size=%du\n", (int)mSegmentationChangeEvents.size());
 
     mSegmentationChangeIterator = mSegmentationChangeEvents.begin();
 }
