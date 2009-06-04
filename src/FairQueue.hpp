@@ -77,7 +77,7 @@ public:
         mNullMessage = new Message(mEmptyQueueMessageLength);
     }
 
-    ~FairQueue(){
+    ~FairQueue() {
         typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
         for(; it != mServerQueues.end(); it++) {
             ServerQueueInfo* queue_info = &it->second;
@@ -85,8 +85,8 @@ public:
         }
     }
 
-    void addQueue(MessageQueue *mq, Key server, float weight){
-        assert(mq->empty());
+    void addQueue(MessageQueue *mq, Key server, float weight) {
+        //assert(mq->empty());
 
         ServerQueueInfo queue_info (server, mq, weight);
 

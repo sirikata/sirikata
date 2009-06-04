@@ -78,6 +78,7 @@ const uint8 Trace::ServerDatagramReceivedTag;
 const uint8 Trace::PacketQueueInfoTag;
 const uint8 Trace::PacketSentTag;
 const uint8 Trace::PacketReceivedTag;
+const uint8 Trace::SegmentationChangeTag;
 
 
 static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -221,6 +222,14 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
     assert(src_server_id);
     data.write( src_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
+}
+
+void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
+    if (mShuttingDown) return;
+    data.write( &SegmentationChangeTag, sizeof(SegmentationChangeTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &bbox, sizeof(bbox) );
+    data.write( &serverID, sizeof(serverID) );
 }
 
 void Trace::save(const String& filename) {

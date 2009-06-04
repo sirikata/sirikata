@@ -108,10 +108,12 @@ ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
     return ServerID(server_index);
 }
 
-BoundingBox3f UniformCoordinateSegmentation::serverRegion(const ServerID& server) const {
-  //assert( server > 0 && server <= mServersPerDim.x * mServersPerDim.y * mServersPerDim.z );
+BoundingBoxList UniformCoordinateSegmentation::serverRegion(const ServerID& server) const {
+    BoundingBoxList boundingBoxList;
+    //assert( server > 0 && server <= mServersPerDim.x * mServersPerDim.y * mServersPerDim.z );
     if ( server > mServersPerDim.x * mServersPerDim.y * mServersPerDim.z ) {
-      return BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
+      boundingBoxList.push_back( BoundingBox3f( Vector3f(0,0,0),Vector3f(0,0,0)) );
+      return boundingBoxList;
     }
 
     ServerID sid = server - 1;
@@ -127,7 +129,10 @@ BoundingBox3f UniformCoordinateSegmentation::serverRegion(const ServerID& server
     Vector3f region_max((1+server_dim_indices.x)*xsize+mRegion.min().x,
                         (1+server_dim_indices.y)*ysize+mRegion.min().y,
                         (1+server_dim_indices.z)*zsize+mRegion.min().z);
-    return BoundingBox3f(region_min, region_max);
+
+    boundingBoxList.push_back(BoundingBox3f(region_min, region_max));
+
+    return boundingBoxList;
 }
 
 BoundingBox3f UniformCoordinateSegmentation::region() const {

@@ -50,6 +50,15 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
     Event* evt = NULL;
 
     switch(tag) {
+      case Trace::SegmentationChangeTag:
+          {
+  	      SegmentationChangeEvent* sevt = new SegmentationChangeEvent;
+	      is.read( (char*)&sevt->time, sizeof(sevt->time) );
+	      is.read( (char*)&sevt->bbox, sizeof(sevt->bbox) );
+	      is.read( (char*)&sevt->server, sizeof(sevt->server) );
+	      evt = sevt;
+          }
+	  break;
       case Trace::ProximityTag:
           {
               ProximityEvent* pevt = new ProximityEvent;
@@ -226,7 +235,7 @@ private:
 
 
 LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 nservers) {
-    // read in all our data
+    // read in all our data  
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -484,6 +493,8 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
             if (evt == NULL)
                 break;
 
+	    
+
             ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
             if (datagram_evt != NULL)
                 insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
@@ -732,10 +743,12 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
               total_bytes += p_evt->size;
 
               weight = p_evt->weight;
-            }
 
-          sum += total_bytes*weight;
-          sum_of_squares += (total_bytes*weight) * (total_bytes*weight);
+	      
+            }	  
+
+          sum += total_bytes/weight;
+          sum_of_squares += (total_bytes/weight) * (total_bytes/weight);
         }
       }
 

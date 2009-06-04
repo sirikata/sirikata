@@ -38,6 +38,7 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
+#include "BoundingBox.hpp"
 
 namespace CBR {
 
@@ -86,6 +87,7 @@ public:
     static const uint8 PacketQueueInfoTag = 7;
     static const uint8 PacketSentTag = 8;
     static const uint8 PacketReceivedTag = 9;
+    static const uint8 SegmentationChangeTag = 10;  
 
     Trace();
 
@@ -104,6 +106,8 @@ public:
     void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
+  
+    void segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
     void prepareShutdown();
     void save(const String& filename);

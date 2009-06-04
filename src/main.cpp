@@ -56,6 +56,7 @@
 #include "PartiallyOrderedList.hpp"
 #include "UniformCoordinateSegmentation.hpp"
 #include "LBCoordinateSegmentation.hpp"
+#include "LoadMonitor.hpp"
 
 #include "ServerWeightCalculator.hpp"
 namespace {
@@ -116,6 +117,8 @@ void *main_loop(void *) {
         return 0;
     }
 
+
+
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
     uint32 nobjects = GetOption("objects")->as<uint32>();
@@ -131,8 +134,6 @@ void *main_loop(void *) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-
-
     ServerID server_id = GetOption("id")->as<ServerID>();
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
     LocationService* loc_service = new OracleLocationService(obj_factory);
@@ -145,8 +146,6 @@ void *main_loop(void *) {
     gTrace->setServerIDMap(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
-
-
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
@@ -158,11 +157,11 @@ void *main_loop(void *) {
         exit(-1);
     }
 
-
-    CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq);
+    
+    CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq, gTrace);
                                  new UniformCoordinateSegmentation(region, layout);
-
-
+    LoadMonitor* loadMonitor = new LoadMonitor(server_id, sq, cseg);
+    
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -307,7 +306,7 @@ void *main_loop(void *) {
         );
 
 
-    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, gTrace);
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -316,6 +315,7 @@ void *main_loop(void *) {
     float inv_time_dilation = 1.f / time_dilation;
 
     ///////////Wait until start of simulation/////////////////////
+
 
     {
         Duration waiting_time=Duration::seconds(GetOption("wait-additional")->as<float>());
@@ -334,16 +334,17 @@ void *main_loop(void *) {
     Time tend = tbegin + duration;
 
     if (sim) {
+      
         for(Time t = tbegin; t < tend; t += sim_step){
 	    server->tick(t);
         }
     }
     else {
-        Timer timer;
+      Timer timer;
         timer.start();
         gNetwork->start();
 
-        while( true ) {
+        while( true ) {	    
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
@@ -377,7 +378,8 @@ void *main_loop(void *) {
     gNetwork=NULL;
 
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    if (!trace_file.empty()) gTrace->save(trace_file);
+    if (!trace_file.empty()) gTrace->save(trace_file);    
+
     delete gTrace;
     gTrace = NULL;
 

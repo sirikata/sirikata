@@ -1,3 +1,5 @@
+#include "BoundingBox.hpp"
+
 namespace CBR {
 struct Event {
     static Event* read(std::istream& is, const ServerID& trace_server_id);
@@ -123,5 +125,9 @@ struct PacketSentEvent : public PacketEvent {
 struct PacketReceivedEvent : public PacketEvent {
 };
 
+struct SegmentationChangeEvent : public Event {
+  BoundingBox3f bbox;
+  ServerID server;
+};
 
 }

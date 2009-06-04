@@ -37,6 +37,7 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
 
+    
     return mServerQueues.push(destinationServer,new ServerMessagePair(destinationServer,with_header))==QueueEnum::PushSucceeded;
 }
 
@@ -63,7 +64,8 @@ void FairServerMessageQueue::service(const Time&t){
     ServerID sid;
     bool sent_success = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookup(next_msg->dest());
+        Address4* addy = mServerIDMap->lookup(next_msg->dest());		
+
         assert(addy != NULL);
         sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
@@ -80,6 +82,7 @@ void FairServerMessageQueue::service(const Time&t){
 
         mTrace->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
                                    next_msg->dest(), next_msg->data());
+
 
         delete next_msg;
     }
@@ -142,14 +145,16 @@ void FairServerMessageQueue::service(const Time&t){
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     // send weight
-    if (!mServerQueues.hasQueue(sid))
+    if (!mServerQueues.hasQueue(sid)) {        
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
+    }
     else
         mServerQueues.setQueueWeight(sid, weight);
 
     // receive weight
-    if (!mReceiveQueues.hasQueue(sid))
-        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);
+    if (!mReceiveQueues.hasQueue(sid)) {        
+        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);       
+    }
     else
         mReceiveQueues.setQueueWeight(sid, weight);
 
@@ -171,6 +176,21 @@ void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
         float rx_weight = mReceiveQueues.getQueueWeight(*it);
         mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+    }
+}
+
+void FairServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) const  {
+    queue_info.clear();
+
+    for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
+        uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
+        float tx_weight = mServerQueues.getQueueWeight(*it);
+        uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
+        float rx_weight = mReceiveQueues.getQueueWeight(*it);
+        
+
+	QueueInfo qInfo(tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+	queue_info.push_back(qInfo);
     }
 }
 

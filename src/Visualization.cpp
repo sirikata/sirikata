@@ -3,8 +3,10 @@
 #include "CoordinateSegmentation.hpp"
 #include "LocationService.hpp"
 #include "ObjectFactory.hpp"
-#include "AnalysisEvents.hpp"
+
+#include "Options.hpp"
 #include <GL/glut.h>
+
 namespace CBR {
 static LocationVisualization*gVis=NULL;
 void LocationVisualization::mainLoop() {
@@ -13,8 +15,7 @@ void LocationVisualization::mainLoop() {
         ObjectEvent*oe=*mCurEvent;
         if (oe->end_time()>mCurTime) {
             break;
-        }
-        
+        }        
 
         ProximityEvent*pe;
         if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
@@ -44,8 +45,15 @@ void LocationVisualization::mainLoop() {
             }else {
                 where->second=le->loc;
             }
+        }
 
-        }        
+	if (mSegmentationChangeIterator != mSegmentationChangeEvents.end()) {	  
+	  if ((*mSegmentationChangeIterator)->begin_time() <= mCurTime) {	  
+	    mDynamicBoxes.push_back((*mSegmentationChangeIterator)->bbox);
+	    mSegmentationChangeIterator++;	    
+	  }
+	}
+        
         ++mCurEvent;
 
     }
@@ -61,13 +69,21 @@ void LocationVisualization::mainLoop() {
     uint32 maxServerID=mSeg->numServers()+1;
     BoundingBox3f bboxwidest;
     for (i=minServerID;i<maxServerID;++i) {
-        BoundingBox3f bbox=mSeg->serverRegion(i);
-        if (i==minServerID) {
+        BoundingBoxList bboxList=mSeg->serverRegion(i);
+	for (int j=0; j<bboxList.size(); j++) {
+	  BoundingBox3f bbox = bboxList[j];
+	  if (i==minServerID) {
             bboxwidest=bbox;
-        }else {
+	  }else {
             bboxwidest.mergeIn(bbox);
-        }
+	  }
+	}
     }
+
+    for (i=0; i<mDynamicBoxes.size(); i++) {
+      bboxwidest.mergeIn(mDynamicBoxes[i]);
+    }
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     Vector3f centre=bboxwidest.min()+bboxwidest.diag()*.5f;
@@ -76,15 +92,34 @@ void LocationVisualization::mainLoop() {
     glTranslatef(-centre.x,-centre.y,0);
     
     glBegin(GL_QUADS);
+    int k=0;
     for (i=minServerID;i<maxServerID;++i) {
-        BoundingBox3f bbox=mSeg->serverRegion(i);
-        glColor3f(0,0, (i/(float)maxServerID));		/* set current color to white */
+      BoundingBoxList bboxList=mSeg->serverRegion(i);
+      
+      for (int j=0;j<bboxList.size(); j++) {
+	BoundingBox3f bbox = bboxList[j];
+        glColor3f(0,0, (k/(float)maxServerID));	/* set current color to white */
 	glVertex2f(bbox.min().x,bbox.min().y);
         glVertex2f(bbox.min().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.min().y);
+	k++;
+      }
     }
+
+    for (i=0;i<mDynamicBoxes.size();++i) {    
+	BoundingBox3f bbox = mDynamicBoxes[i];
+        glColor3f(0,0, (k/(float)maxServerID));	/* set current color to white */
+	glVertex2f(bbox.min().x,bbox.min().y);
+        glVertex2f(bbox.min().x,bbox.max().y);
+        glVertex2f(bbox.max().x,bbox.max().y);
+        glVertex2f(bbox.max().x,bbox.min().y);
+	k++;      
+    }
+
     glEnd();
+   
+
     glPointSize(2);
     glBegin(GL_POINTS); 
     for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
@@ -148,6 +183,24 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
     mLoc=loc_serv;
     mSeg=cseg;
     mSamplingRate=Duration::milliseconds(30.0f);
+
+    // read in all our data  
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            SegmentationChangeEvent* sce;
+	    if ((sce=dynamic_cast<SegmentationChangeEvent*>(evt))) {
+	      mSegmentationChangeEvents.push_back(sce);
+	    }
+        }
+    }
+
+    printf("mSegmentationChangeEvents.size=%d\n", mSegmentationChangeEvents.size());
+
+    mSegmentationChangeIterator = mSegmentationChangeEvents.begin();
 }
 
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {

@@ -40,6 +40,9 @@ public:
     virtual void setServerWeight(ServerID, float weight);
 
     virtual void reportQueueInfo(const Time& t) const;
+
+    virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const;
+
 protected:
     float getServerWeight(ServerID);
 

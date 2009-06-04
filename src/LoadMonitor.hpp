@@ -1,7 +1,7 @@
 /*  cbr
- *  UniformCoordinateSegmentation.hpp
+ *  LoadMonitor.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Tahir Azim.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,44 +30,81 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
+#ifndef _CBR_LOAD_MONITOR_HPP_
+#define _CBR_LOAD_MONITOR_HPP_
 
-#include "CoordinateSegmentation.hpp"
+
+#include "ServerMessageQueue.hpp"
+#include "Message.hpp"
+#include "BoundingBox.hpp"
 
 namespace CBR {
 
-struct LayoutChangeEntry {
-  uint64 time;
+class ServerMessageQueue;
+class CoordinateSegmentation;
 
-  Vector3ui32 layout;
+typedef struct ServerLoadInfo{
+  ServerID mServerID;
+  float mLoadReading;
+
+  float mNetworkCapacity;
+
+  ServerLoadInfo(ServerID svrID, float load, float capacity)
+    : mServerID(svrID), mLoadReading(load), mNetworkCapacity(capacity)
+  {
+
+  }
+
+  
+
+} ServerLoadInfo;
+
+
+
+class LoadMonitor {
+public:
+  LoadMonitor(ServerID, ServerMessageQueue*, CoordinateSegmentation*); 
+
+  void addLoadReading();
+
+  void sendLoadReadings();
+  
+  float getCurrentLoadReading();
+
+  float getAveragedLoadReading();
+
+  void loadStatusMessage(LoadStatusMessage* load_status_msg);
+
+  void tick(const Time& t);
+  
+private:
+
+  enum {
+    SEND_TO_NEIGHBORS,
+    SEND_TO_ALL,
+    SEND_TO_NONE,
+    SEND_TO_CENTRAL,
+    SEND_TO_DHT,
+  };
+
+  bool handlesAdjacentRegion(ServerID server_id);
+
+  bool isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2);
+
+  float mCurrentLoadReading;
+
+  float mAveragedLoadReading;
+
+  ServerMessageQueue* mServerMsgQueue;
+  CoordinateSegmentation* mCoordinateSegmentation;
+  ServerID mServerID;
+
+  Time mCurrentTime;
+
+  std::map<ServerID, float> mRemoteLoadReadings;
 };
 
+}
 
-/** Uniform grid implementation of CoordinateSegmentation. */
-class UniformCoordinateSegmentation : public CoordinateSegmentation {
-public:
-    UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim);
-    virtual ~UniformCoordinateSegmentation();
-
-    virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const;
-    virtual BoundingBox3f region() const;
-    virtual uint32 numServers() const;
-
-    virtual void tick(const Time& t);
-
-    virtual void csegChangeMessage(CSegChangeMessage*);
-
-private:
-    BoundingBox3f mRegion;
-    Vector3ui32 mServersPerDim;
-
-    std::vector<LayoutChangeEntry> mLayoutChangeEntries;
-    uint32 lastLayoutChangeIdx;
-
-}; // class CoordinateSegmentation
-
-} // namespace CBR
 
 #endif

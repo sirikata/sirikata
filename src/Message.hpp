@@ -48,6 +48,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_MIGRATE      4
 #define MESSAGE_TYPE_COUNT        5
 #define MESSAGE_TYPE_CSEG_CHANGE  6
+#define MESSAGE_TYPE_LOAD_STATUS  7
 
 struct OriginID {
     uint32 id;
@@ -209,9 +210,6 @@ private:
 }; // class MigrateMessage
 
 class CSegChangeMessage : public Message {
-//assume the server has split into equal-sized two parts, divided along the x-axis.
-//The first part remains with the server, the second part goes to a new server 
-//whose ID is given in the message.
 public:
   CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions);
 
@@ -232,6 +230,28 @@ private:
   
   uint8_t mNumberOfRegions;
   SplitRegionf* mSplitRegions;
+  
+};
+
+class LoadStatusMessage : public Message {
+
+public:
+  LoadStatusMessage(const OriginID& origin, float loadReading);
+
+  ~LoadStatusMessage();
+
+  virtual MessageType type() const;
+
+  const float loadReading() const;
+
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+private:
+  friend class Message;
+  LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+
+  
+  float mLoadReading;
   
 };
 

@@ -37,8 +37,11 @@
 #include "BoundingBox.hpp"
 #include "ServerNetwork.hpp"
 #include "Message.hpp"
+#include "LoadMonitor.hpp"
 
 namespace CBR {
+
+typedef std::vector<BoundingBox3f> BoundingBoxList;
 
 /** Handles the segmentation of the space into regions handled by servers.
  *  Answers queries of the type
@@ -54,7 +57,7 @@ public:
 
         struct SegmentationInfo {
             ServerID server;
-            BoundingBox3f region;
+            BoundingBoxList region;
         };
         virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) = 0;
     }; // class Listener
@@ -63,7 +66,7 @@ public:
     virtual ~CoordinateSegmentation() {}
 
     virtual ServerID lookup(const Vector3f& pos) const = 0;
-    virtual BoundingBox3f serverRegion(const ServerID& server) const = 0;
+    virtual BoundingBoxList serverRegion(const ServerID& server) const = 0;
     virtual BoundingBox3f region() const = 0;
     virtual uint32 numServers() const = 0;
 
@@ -73,6 +76,8 @@ public:
     virtual void csegChangeMessage(CSegChangeMessage*) = 0;
 
     virtual void tick(const Time& t) = 0;
+
+    virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {  }
 
 protected:
     void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);

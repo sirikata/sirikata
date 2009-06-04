@@ -40,6 +40,7 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 
+
 namespace CBR {
 
 class Proximity;
@@ -54,6 +55,9 @@ class ObjectMessageQueue;
 class Network;
 class Trace;
 class MigrateMessage;
+class LoadStatusMessage;
+class LoadMonitor;
+
 
 /** Handles all the basic services provided for objects by a server,
  *  including routing and message delivery, proximity services, and
@@ -62,7 +66,7 @@ class MigrateMessage;
  */
 class Server {
 public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, Trace* trace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace);
     ~Server();
 
     const ServerID& id() const;
@@ -103,6 +107,7 @@ private:
     Proximity* mProximity;
     ObjectMessageQueue* mObjectMessageQueue;
     ServerMessageQueue* mServerMessageQueue;
+    LoadMonitor* mLoadMonitor;
 
     struct SelfMessage {
         SelfMessage(const Network::Chunk& d, bool f)

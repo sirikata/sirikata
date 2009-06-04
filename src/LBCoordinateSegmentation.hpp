@@ -102,27 +102,26 @@ typedef struct SegmentedRegion {
   }
 
 
-  BoundingBox3f serverRegion(const ServerID& server) const {
+  void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
     /* printf("Comparing %d with this one= %d having box={%s,%s}\n", 
 	   server, mServer, mBoundingBox.min().toString().c_str(),
 	   mBoundingBox.max().toString().c_str());*/
 
-    if (mServer == server) return mBoundingBox;    
+    if (mServer == server) { 
+      boundingBoxList.push_back(mBoundingBox);
+      return;
+    }
 
-    BoundingBox3f box;
+    
     for (int i=0; i<mChildrenCount; i++) {
-      box = mChildren[i].serverRegion(server);
+      mChildren[i].serverRegion(server, boundingBoxList);
 
       /*printf("Box from %d is {%s, %s}\n", mChildren[i].mServer, 
 	     mChildren[i].mBoundingBox.min().toString().c_str(),
 	     mChildren[i].mBoundingBox.max().toString().c_str() );*/
-	     
-      
-      if (box.volume() > 0)
-	break;
     }
 
-    return box;
+    return;
   }
 
   ServerID  mServer;
@@ -130,23 +129,27 @@ typedef struct SegmentedRegion {
   int mChildrenCount;
   BoundingBox3f mBoundingBox;
 
+
+
 } SegmentedRegion;
 
 
 /** Uniform grid implementation of CoordinateSegmentation. */
 class LBCoordinateSegmentation : public CoordinateSegmentation {
 public:
-  LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue*);
+  LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue*, Trace*);
     virtual ~LBCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBox3f serverRegion(const ServerID& server) const;
+    virtual BoundingBoxList serverRegion(const ServerID& server) const;
     virtual BoundingBox3f region() const;
     virtual uint32 numServers() const;
 
     virtual void tick(const Time& t);
 
     virtual void csegChangeMessage(CSegChangeMessage* ccMsg);
+
+    virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
   BoundingBox3f initRegion(const ServerID& server, const Vector3ui32& perdim) const;
@@ -156,6 +159,10 @@ private:
   ServerID mServerID;
 
   ServerMessageQueue* mServerMessageQueue;
+
+  Time mCurrentTime;
+
+  Trace* mTrace;
 
 }; // class CoordinateSegmentation
 

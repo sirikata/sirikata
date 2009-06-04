@@ -41,9 +41,11 @@
 #include "Statistics.hpp"
 #include "Options.hpp"
 #include "ObjectMessageQueue.hpp"
+#include "LoadMonitor.hpp"
+
 namespace CBR {
 
-Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, Trace* trace)
+Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace)
  : mID(id),
    mObjectFactory(obj_factory),
    mLocationService(loc_service),
@@ -52,7 +54,8 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mObjectMessageQueue(omq),
    mServerMessageQueue(smq),
    mCurrentTime(0),
-   mTrace(trace)
+   mTrace(trace),
+   mLoadMonitor(lm)
 {
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
@@ -157,7 +160,7 @@ void Server::deliver(Message* msg) {
 	      Object* obj = mObjectFactory->object(obj_id, this->id());
 	      obj->migrateMessage(migrate_msg);
 
-	      mObjects[obj_id] = obj;
+	      mObjects[obj_id] = obj;	   
 
               delete migrate_msg;
           }
@@ -170,6 +173,18 @@ void Server::deliver(Message* msg) {
 	      OriginID id = GetUniqueIDOriginID(server_split_msg->id());
 
               mCSeg->csegChangeMessage(server_split_msg);
+
+	      delete server_split_msg;
+          }
+          break;
+      case MESSAGE_TYPE_LOAD_STATUS: 
+          {
+              LoadStatusMessage* load_status_msg = dynamic_cast<LoadStatusMessage*>(msg);
+              assert(load_status_msg != NULL);
+
+	      OriginID id = GetUniqueIDOriginID(load_status_msg->id());
+	      
+              mLoadMonitor->loadStatusMessage(load_status_msg);
           }
           break;
       default:
@@ -187,7 +202,6 @@ Object* Server::object(const UUID& dest) const {
 
 void Server::forward(Message* msg, const UUID& dest) {
     ServerID dest_server_id = lookup(dest);
-
     
     route(msg, dest_server_id, true);
 }
@@ -206,6 +220,7 @@ void Server::processChunk(const Network::Chunk&chunk, const ServerID& source_ser
 }
 void Server::networkTick(const Time&t) {
     mServerMessageQueue->reportQueueInfo(t);
+    mLoadMonitor->tick(t);
 
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );

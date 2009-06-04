@@ -8,6 +8,32 @@
 #include "Statistics.hpp"
 
 namespace CBR{
+
+typedef struct QueueInfo{
+  uint32 mTXSize;
+  uint32 mTXUsed;
+  float mTXWeight;
+  
+  uint32 mRXSize;
+  uint32 mRXUsed;
+  float mRXWeight;
+
+  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight, 
+	    uint32 rx_size, uint32 rx_used, float rx_weight
+	   )
+  {
+    mTXSize = tx_size;
+    mTXUsed = tx_used;
+    mTXWeight = tx_weight;
+
+    mRXSize = rx_size;
+    mRXUsed = rx_used;
+    mRXWeight = rx_weight;
+  }
+  
+
+} QueueInfo;
+
 class ServerMessageQueue {
 public:
     ServerMessageQueue(Network* net, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
@@ -31,6 +57,9 @@ public:
     ServerID getSourceServer()const{return mSourceServer;}
 
     virtual void reportQueueInfo(const Time& t) const = 0;
+
+    virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
+
 protected:
     Network* mNetwork;
     ServerID mSourceServer;
@@ -38,4 +67,5 @@ protected:
     Trace* mTrace;
 };
 }
+
 #endif

@@ -49,7 +49,7 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-  LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue* smq) : mServerID(server_id), mServerMessageQueue(smq)
+  LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue* smq, Trace* trace) : mServerID(server_id), mServerMessageQueue(smq), mTrace(trace), mCurrentTime(0)
 {
   
   mTopLevelRegion.mBoundingBox = region;
@@ -64,6 +64,8 @@ T clamp(T val, T minval, T maxval) {
     mTopLevelRegion.mChildren[i].mBoundingBox = ith_region;
     mTopLevelRegion.mChildren[i].mServer = i+1;
   }
+
+
 }
 
 LBCoordinateSegmentation::~LBCoordinateSegmentation() {
@@ -87,9 +89,16 @@ ServerID LBCoordinateSegmentation::lookup(const Vector3f& pos) const {
   return mTopLevelRegion.lookup(searchVec);
 }
 
-BoundingBox3f LBCoordinateSegmentation::serverRegion(const ServerID& server) const 
+BoundingBoxList LBCoordinateSegmentation::serverRegion(const ServerID& server) const 
 {
-  return mTopLevelRegion.serverRegion(server);
+  BoundingBoxList boundingBoxList;
+  mTopLevelRegion.serverRegion(server, boundingBoxList);
+
+  if (boundingBoxList.size() == 0) {
+    boundingBoxList.push_back(BoundingBox3f());
+  }
+
+  return boundingBoxList;
 }
 
 BoundingBox3f LBCoordinateSegmentation::region() const {
@@ -97,96 +106,13 @@ BoundingBox3f LBCoordinateSegmentation::region() const {
 }
 
 uint32 LBCoordinateSegmentation::numServers() const {
-  int count = mTopLevelRegion.countServers();
+  int count = mTopLevelRegion.countServers(); return 9;
  
   return count;
 }
 
 void LBCoordinateSegmentation::tick(const Time& t) {
-  static bool lbed=false;
-  
-  if (mServerID == 1) {
-
-    //printf("At id %d time is %d\n", mServerID, t.raw());
-
-    if (!lbed && t.raw() >= 10000000u) {
-      lbed=true;
-      printf("Splitting\n");
-      
-      SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mServerID);
- 
-      segRegion->mChildrenCount = 2;
-      segRegion->mChildren = new SegmentedRegion[2];
-      segRegion->mServer = -1;
-      
-
-      BoundingBox3f origBox = segRegion->mBoundingBox;      
-      BoundingBox3f newBox1(origBox.min(), Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.max().y, origBox.max().z));
-      BoundingBox3f newBox2(Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.min().y, origBox.min().z), origBox.max());
-
-      printf("newBox1= %s, %s\n", newBox1.min().toString().c_str(), newBox1.max().toString().c_str());
-      printf("newBox2= %s, %s\n", newBox2.min().toString().c_str(), newBox2.max().toString().c_str());
-
-      segRegion->mChildren[0].mBoundingBox = newBox1;
-      segRegion->mChildren[1].mBoundingBox = newBox2;
-
-      segRegion->mChildren[0].mServer = mServerID;
-      segRegion->mChildren[1].mServer = 10;
-      
-      OriginID origin;
-      origin.id = mServerID;
-
-      int total_servers = numServers();
-      std::vector<Listener::SegmentationInfo> segInfoVector;
-      for (int j = 1; j <= total_servers; j++) {
-        Listener::SegmentationInfo segInfo;
-        segInfo.server = j;
-        segInfo.region = serverRegion(j);
-        segInfoVector.push_back( segInfo );
-      }
-
-      printf("notifying listeners\n");
-
-      notifyListeners(segInfoVector);
-
-      printf("notified listeners\n");
-      
-      if (GetOption(ANALYSIS_LOCVIS)->as<bool>()) {
-	return;
-      }
-
-      for (int i=1 ; i <= total_servers; i++) {
-	if (i != mServerID) {
-	  printf("Sending server_split to %d\n", i);
-	  
-	  Network::Chunk msg_serialized;
-	  CSegChangeMessage msg(origin, 2);
-	  SplitRegionf* regions = msg.splitRegions();
-	  
-	  regions[0].mNewServerID = mServerID;
-	  regions[0].minX = newBox1.min().x;
-	  regions[0].minY = newBox1.min().y;
-	  regions[0].minZ = newBox1.min().z;
-	  regions[0].maxX = newBox1.max().x;
-	  regions[0].maxY = newBox1.max().y;
-	  regions[0].maxZ = newBox1.max().z;
-
-	  regions[1].mNewServerID = 10;
-	  regions[1].minX = newBox2.min().x;
-	  regions[1].minY = newBox2.min().y;
-	  regions[1].minZ = newBox2.min().z;
-	  regions[1].maxX = newBox2.max().x;
-	  regions[1].maxY = newBox2.max().y;
-	  regions[1].maxZ = newBox2.max().z;
-
-	  msg.serialize(msg_serialized, 0);
-	  
-	  mServerMessageQueue->addMessage(i,msg_serialized);	  
-	 
-	}
-      }
-    }
-  }
+   mCurrentTime = t;
 }
 
 BoundingBox3f LBCoordinateSegmentation::initRegion(const ServerID& server, const Vector3ui32& perdim) const {
@@ -220,7 +146,8 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
   int numberOfRegions = ccMsg->numberOfRegions();
   SplitRegionf* regions = ccMsg->splitRegions();
 
-  //printf("%d received server_split_msg from %d for new server %d\n", mServerID, originID,                            ccMsg->newServerID());
+  //printf("%d received server_split_msg from %d for new server %d\n", mServerID, originID,
+  // ccMsg->newServerID());
  
   SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(originID);
   
@@ -251,6 +178,97 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
   
   notifyListeners(segInfoVector);
 }
+
+void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) { 
+  static bool lbed=false; 
+
+  if ( !lbed  ) {
+    if (svrLoadInfo.size() == 0)
+      return;
+
+    lbed=true;
+
+    ServerID new_server = svrLoadInfo[0].mServerID;
+
+    SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mServerID);
+    
+    segRegion->mChildrenCount = 2;
+    segRegion->mChildren = new SegmentedRegion[2];
+    segRegion->mServer = -1;
+
+    BoundingBox3f origBox = segRegion->mBoundingBox;
+    BoundingBox3f newBox1(origBox.min(), Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.max().y, origBox.max().z));
+    BoundingBox3f newBox2(Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.min().y, origBox.min().z), origBox.max());
+    
+    printf("newBox1= %s, %s\n", newBox1.min().toString().c_str(), newBox1.max().toString().c_str());
+    printf("newBox2= %s, %s\n", newBox2.min().toString().c_str(), newBox2.max().toString().c_str());
+    
+    segRegion->mChildren[0].mBoundingBox = newBox1;
+    segRegion->mChildren[1].mBoundingBox = newBox2;
+    
+    segRegion->mChildren[0].mServer = mServerID;
+    segRegion->mChildren[1].mServer = new_server;
+
+    
+    mTrace->segmentationChanged(mCurrentTime, newBox2, new_server);
+    printf("Server %d Splitting and migrating to new_server %d\n", mServerID, new_server);
+    
+    OriginID origin;
+    origin.id = mServerID;
+    
+    int total_servers = numServers();
+    std::vector<Listener::SegmentationInfo> segInfoVector;
+    printf("total_servers before loop=%d\n", total_servers);
+    for (int j = 1; j <= total_servers; j++) {
+      Listener::SegmentationInfo segInfo;
+      segInfo.server = j;
+      segInfo.region = serverRegion(j);
+      segInfoVector.push_back( segInfo );
+    }
+
+    printf("total_servers before notifylisteners=%d\n", total_servers);
+    
+    notifyListeners(segInfoVector);
+    
+    printf("total_servers before getoption=%d\n", total_servers);
+    if (GetOption(ANALYSIS_LOCVIS)->as<bool>()) {
+      return;
+    }
+    
+    printf("total_servers=%d\n", total_servers);
+    for (int i=1 ; i <= total_servers; i++) {
+      if (i != mServerID) {
+	printf("Sending server_split to %d\n", i);
+	
+	Network::Chunk msg_serialized;
+	CSegChangeMessage msg(origin, 2);
+	SplitRegionf* regions = msg.splitRegions();
+	
+	regions[0].mNewServerID = mServerID;
+	regions[0].minX = newBox1.min().x;
+	regions[0].minY = newBox1.min().y;
+	regions[0].minZ = newBox1.min().z;
+	regions[0].maxX = newBox1.max().x;
+	regions[0].maxY = newBox1.max().y;
+	regions[0].maxZ = newBox1.max().z;
+	
+	regions[1].mNewServerID = new_server;
+	regions[1].minX = newBox2.min().x;
+	regions[1].minY = newBox2.min().y;
+	regions[1].minZ = newBox2.min().z;
+	regions[1].maxX = newBox2.max().x;
+	regions[1].maxY = newBox2.max().y;
+	regions[1].maxZ = newBox2.max().z;
+	
+	msg.serialize(msg_serialized, 0);
+	
+	mServerMessageQueue->addMessage(i,msg_serialized);	  
+	
+      }
+    }
+  }  
+}
+
 
 
 } // namespace CBR

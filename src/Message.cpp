@@ -103,6 +103,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_CSEG_CHANGE:
         msg = new CSegChangeMessage(wire, offset, _id);
         break;
+      case MESSAGE_TYPE_LOAD_STATUS:
+        msg = new LoadStatusMessage(wire, offset, _id);
+        break;
       default:
         assert(false);
         break;
@@ -301,7 +304,7 @@ LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uin
     mLocation = TimedMotionVector3f( t, MotionVector3f(pos, vel) );
 }
 
-MessageType LocationMessage::type() const {
+MessageType LocationMessage::type() const {    
     return MESSAGE_TYPE_LOCATION;
 }
 
@@ -513,5 +516,45 @@ const uint8_t CSegChangeMessage::numberOfRegions() const {
 SplitRegionf* CSegChangeMessage::splitRegions() const {
     return mSplitRegions;
 }
+
+LoadStatusMessage::LoadStatusMessage(const OriginID& origin, float load_reading)
+ : Message(origin, true),
+   mLoadReading(load_reading)
+{
+  
+}
+
+LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+ : Message(_id)
+{
+    float load_reading;
+    memcpy(&load_reading, &wire[offset], sizeof(load_reading));
+    offset += sizeof(load_reading);
+    mLoadReading = load_reading;
+}
+
+LoadStatusMessage::~LoadStatusMessage() {
+}
+
+MessageType LoadStatusMessage::type() const {
+  return MESSAGE_TYPE_LOAD_STATUS;
+}
+
+uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    
+    wire.resize( wire.size() +  sizeof(mLoadReading) );
+    
+    memcpy( &wire[offset], &mLoadReading, sizeof(mLoadReading) );
+    offset += sizeof(mLoadReading);
+
+    return offset;
+}
+
+const float LoadStatusMessage::loadReading() const {
+    return mLoadReading;
+}
+
+
 
 } // namespace CBR
