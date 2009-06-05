@@ -37,9 +37,20 @@ class ClusterBuild:
         patch_cmd = "patch -p1 < " + patch_file + ";"
         ClusterRun(self.config, cd_cmd + patch_cmd)
 
+    def apply_patch_mail(self, patch_file):
+        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
+        cd_cmd = self.cd_to_code()
+        patch_cmd = "git am " + patch_file + ";"
+        ClusterRun(self.config, cd_cmd + patch_cmd)
+
     def reset_to_head(self):
         cd_cmd = self.cd_to_code()
         reset_cmd = "git reset --hard HEAD;"
+        ClusterRun(self.config, cd_cmd + reset_cmd);
+
+    def reset_to_origin_head(self):
+        cd_cmd = self.cd_to_code()
+        reset_cmd = "git reset --hard origin/HEAD;"
         ClusterRun(self.config, cd_cmd + reset_cmd);
 
     def dependencies(self, which = None):
@@ -121,8 +132,14 @@ if __name__ == "__main__":
             patch_file = sys.argv[cur_arg_idx]
             cur_arg_idx += 1
             cluster_build.apply_patch(patch_file)
+        elif cmd == 'patchmail':
+            patch_file = sys.argv[cur_arg_idx]
+            cur_arg_idx += 1
+            cluster_build.apply_patch_mail(patch_file)
         elif cmd == 'reset':
             cluster_build.reset_to_head()
+        elif cmd == 'reset_origin':
+            cluster_build.reset_to_origin_head()
         elif cmd == 'clean':
             cluster_build.clean()
         elif cmd == 'fullbuild':
