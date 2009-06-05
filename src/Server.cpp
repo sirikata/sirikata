@@ -53,9 +53,9 @@ Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_ser
    mProximity(prox),
    mObjectMessageQueue(omq),
    mServerMessageQueue(smq),
+   mLoadMonitor(lm),
    mCurrentTime(0),
-   mTrace(trace),
-   mLoadMonitor(lm)
+   mTrace(trace)
 {
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++) {
@@ -160,7 +160,7 @@ void Server::deliver(Message* msg) {
 	      Object* obj = mObjectFactory->object(obj_id, this->id());
 	      obj->migrateMessage(migrate_msg);
 
-	      mObjects[obj_id] = obj;	   
+	      mObjects[obj_id] = obj;
 
               delete migrate_msg;
           }
@@ -168,7 +168,7 @@ void Server::deliver(Message* msg) {
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
               CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
-              assert(server_split_msg != NULL);	
+              assert(server_split_msg != NULL);
 
 	      OriginID id = GetUniqueIDOriginID(server_split_msg->id());
 
@@ -177,13 +177,13 @@ void Server::deliver(Message* msg) {
 	      delete server_split_msg;
           }
           break;
-      case MESSAGE_TYPE_LOAD_STATUS: 
+      case MESSAGE_TYPE_LOAD_STATUS:
           {
               LoadStatusMessage* load_status_msg = dynamic_cast<LoadStatusMessage*>(msg);
               assert(load_status_msg != NULL);
 
 	      OriginID id = GetUniqueIDOriginID(load_status_msg->id());
-	      
+
               mLoadMonitor->loadStatusMessage(load_status_msg);
           }
           break;
@@ -202,7 +202,7 @@ Object* Server::object(const UUID& dest) const {
 
 void Server::forward(Message* msg, const UUID& dest) {
     ServerID dest_server_id = lookup(dest);
-    
+
     route(msg, dest_server_id, true);
 }
 

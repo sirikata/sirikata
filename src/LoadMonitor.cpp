@@ -68,11 +68,11 @@ void LoadMonitor::addLoadReading() {
 
   mCurrentLoadReading = currentLoad;
 
-  mAveragedLoadReading = ALPHA * mAveragedLoadReading + 
+  mAveragedLoadReading = ALPHA * mAveragedLoadReading +
                          (1.0-ALPHA) * mCurrentLoadReading;
 
     printf("mAveragedLoadReading at %d=%f\n", mServerID, mAveragedLoadReading);
-  
+
 
   if (mAveragedLoadReading > THRESHOLD) {
     std::vector<ServerLoadInfo> migrationHints;
@@ -86,7 +86,7 @@ void LoadMonitor::addLoadReading() {
     }
 
     sort(migrationHints.begin(), migrationHints.end(), loadInfoComparator);
-    
+
 
     mCoordinateSegmentation->migrationHint(migrationHints);
   }
@@ -101,18 +101,18 @@ float LoadMonitor::getAveragedLoadReading() {
 
 void LoadMonitor::sendLoadReadings() {
   //send mCurrentLoadReading to other servers
-  int total_servers = mCoordinateSegmentation->numServers();
+  uint32 total_servers = mCoordinateSegmentation->numServers();
   OriginID origin;
   origin.id = mServerID;
 
-  for (int i=1 ; i <= total_servers; i++) {    
+  for (uint32 i=1 ; i <= total_servers; i++) {
     if (i != mServerID && handlesAdjacentRegion(i) ) {
       printf("%d handles adjacent region with %d\n", i, mServerID);
-      
+
       Network::Chunk msg_serialized;
       LoadStatusMessage msg(origin, mAveragedLoadReading);
       msg.serialize(msg_serialized, 0);
-      
+
       mServerMsgQueue->addMessage(i,msg_serialized);
     }
   }
@@ -123,7 +123,7 @@ void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
   ServerID originID = id.id;
 
   mRemoteLoadReadings[originID] = load_status_msg->loadReading();
-  
+
 }
 
 void LoadMonitor::tick(const Time& t) {
@@ -141,13 +141,13 @@ bool LoadMonitor::handlesAdjacentRegion(ServerID server_id) {
   BoundingBoxList myBoundingBoxList = mCoordinateSegmentation->serverRegion(mServerID);
 
   for (std::vector<BoundingBox3f>::iterator other_it=otherBoundingBoxList.begin();
-       other_it != otherBoundingBoxList.end(); 
+       other_it != otherBoundingBoxList.end();
        other_it++)
   {
     for (std::vector<BoundingBox3f>::iterator my_it=myBoundingBoxList.begin();
-         my_it != myBoundingBoxList.end(); 
+         my_it != myBoundingBoxList.end();
          my_it++)
-    { 
+    {
       if (isAdjacent(*other_it, *my_it)) return true;
     }
   }
@@ -156,7 +156,7 @@ bool LoadMonitor::handlesAdjacentRegion(ServerID server_id) {
 }
 
 bool LoadMonitor::isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2) {
-  
+
   if (box1.min().x == box2.max().x || box1.max().x == box2.min().x) {
     //if box1.miny or box1.maxy lies between box2.maxy and box2.miny, return true;
     //if box2.miny or box2.maxy lies between box1.maxy and box1.miny, return true;
@@ -168,7 +168,7 @@ bool LoadMonitor::isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2) {
     if (box1.min().y <= box2.max().y && box2.max().y <= box1.max().y) return true;
 
   }
-  
+
   if (box1.min().y == box2.max().y || box1.max().y == box2.min().y) {
     //if box1.minx or box1.maxx lies between box2.maxx and box2.minx, return true;
     //if box2.minx or box2.maxx lies between box1.maxx and box1.minx, return true;

@@ -49,11 +49,11 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-  LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue* smq, Trace* trace) : mServerID(server_id), mServerMessageQueue(smq), mTrace(trace), mCurrentTime(0)
+LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue* smq, Trace* trace) : mServerID(server_id), mServerMessageQueue(smq), mCurrentTime(0), mTrace(trace)
 {
-  
+
   mTopLevelRegion.mBoundingBox = region;
- 
+
   int numServers = perdim.x * perdim.y * perdim.z;
   mTopLevelRegion.mChildrenCount = numServers;
 
@@ -75,7 +75,7 @@ LBCoordinateSegmentation::~LBCoordinateSegmentation() {
 ServerID LBCoordinateSegmentation::lookup(const Vector3f& pos) const {
   Vector3f searchVec = pos;
   BoundingBox3f region = mTopLevelRegion.mBoundingBox;
-  
+
   int i=0;
   (searchVec.z < region.min().z) ? searchVec.z = region.min().z : (i=0);
   (searchVec.x < region.min().x) ? searchVec.x = region.min().x : (i=0);
@@ -84,12 +84,12 @@ ServerID LBCoordinateSegmentation::lookup(const Vector3f& pos) const {
   (searchVec.z > region.max().z) ? searchVec.z = region.max().z : (i=0);
   (searchVec.x > region.max().x) ? searchVec.x = region.max().x : (i=0);
   (searchVec.y > region.max().y) ? searchVec.y = region.max().y : (i=0);
-  
-  
+
+
   return mTopLevelRegion.lookup(searchVec);
 }
 
-BoundingBoxList LBCoordinateSegmentation::serverRegion(const ServerID& server) const 
+BoundingBoxList LBCoordinateSegmentation::serverRegion(const ServerID& server) const
 {
   BoundingBoxList boundingBoxList;
   mTopLevelRegion.serverRegion(server, boundingBoxList);
@@ -107,7 +107,7 @@ BoundingBox3f LBCoordinateSegmentation::region() const {
 
 uint32 LBCoordinateSegmentation::numServers() const {
   int count = mTopLevelRegion.countServers(); return 9;
- 
+
   return count;
 }
 
@@ -139,7 +139,7 @@ BoundingBox3f LBCoordinateSegmentation::initRegion(const ServerID& server, const
 }
 
 void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
-  
+
   OriginID id = GetUniqueIDOriginID(ccMsg->id());
   ServerID originID = id.id;
 
@@ -148,15 +148,15 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
   //printf("%d received server_split_msg from %d for new server %d\n", mServerID, originID,
   // ccMsg->newServerID());
- 
+
   SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(originID);
-  
+
   segRegion->mChildrenCount = numberOfRegions;
   segRegion->mChildren = new SegmentedRegion[numberOfRegions];
   segRegion->mServer = -1;
-  
-  
-  BoundingBox3f origBox = segRegion->mBoundingBox;      
+
+
+  BoundingBox3f origBox = segRegion->mBoundingBox;
   for (int i=0; i<numberOfRegions; i++) {
     segRegion->mChildren[i].mServer = regions[i].mNewServerID;
     segRegion->mChildren[i].mChildrenCount = 0;
@@ -164,9 +164,9 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
     Vector3f vmin(regions[i].minX, regions[i].minY, regions[i].minZ);
     Vector3f vmax(regions[i].maxX, regions[i].maxY, regions[i].maxZ);
 
-    segRegion->mChildren[i].mBoundingBox = BoundingBox3f(vmin, vmax);    
+    segRegion->mChildren[i].mBoundingBox = BoundingBox3f(vmin, vmax);
   }
-    
+
   int total_servers = numServers();
   std::vector<Listener::SegmentationInfo> segInfoVector;
   for (int j = 1; j <= total_servers; j++) {
@@ -175,12 +175,12 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
     segInfo.region = serverRegion(j);
     segInfoVector.push_back( segInfo );
   }
-  
+
   notifyListeners(segInfoVector);
 }
 
-void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) { 
-  static bool lbed=false; 
+void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
+  static bool lbed=false;
 
   if ( !lbed  ) {
     if (svrLoadInfo.size() == 0)
@@ -191,7 +191,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
     ServerID new_server = svrLoadInfo[0].mServerID;
 
     SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mServerID);
-    
+
     segRegion->mChildrenCount = 2;
     segRegion->mChildren = new SegmentedRegion[2];
     segRegion->mServer = -1;
@@ -199,27 +199,27 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
     BoundingBox3f origBox = segRegion->mBoundingBox;
     BoundingBox3f newBox1(origBox.min(), Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.max().y, origBox.max().z));
     BoundingBox3f newBox2(Vector3f( (origBox.min().x+origBox.max().x)/2, origBox.min().y, origBox.min().z), origBox.max());
-    
+
     printf("newBox1= %s, %s\n", newBox1.min().toString().c_str(), newBox1.max().toString().c_str());
     printf("newBox2= %s, %s\n", newBox2.min().toString().c_str(), newBox2.max().toString().c_str());
-    
+
     segRegion->mChildren[0].mBoundingBox = newBox1;
     segRegion->mChildren[1].mBoundingBox = newBox2;
-    
+
     segRegion->mChildren[0].mServer = mServerID;
     segRegion->mChildren[1].mServer = new_server;
 
-    
+
     mTrace->segmentationChanged(mCurrentTime, newBox2, new_server);
     printf("Server %d Splitting and migrating to new_server %d\n", mServerID, new_server);
-    
+
     OriginID origin;
     origin.id = mServerID;
-    
-    int total_servers = numServers();
+
+    uint32 total_servers = numServers();
     std::vector<Listener::SegmentationInfo> segInfoVector;
     printf("total_servers before loop=%d\n", total_servers);
-    for (int j = 1; j <= total_servers; j++) {
+    for (uint32 j = 1; j <= total_servers; j++) {
       Listener::SegmentationInfo segInfo;
       segInfo.server = j;
       segInfo.region = serverRegion(j);
@@ -227,23 +227,23 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
     }
 
     printf("total_servers before notifylisteners=%d\n", total_servers);
-    
+
     notifyListeners(segInfoVector);
-    
+
     printf("total_servers before getoption=%d\n", total_servers);
     if (GetOption(ANALYSIS_LOCVIS)->as<bool>()) {
       return;
     }
-    
+
     printf("total_servers=%d\n", total_servers);
-    for (int i=1 ; i <= total_servers; i++) {
+    for (uint32 i=1 ; i <= total_servers; i++) {
       if (i != mServerID) {
 	printf("Sending server_split to %d\n", i);
-	
+
 	Network::Chunk msg_serialized;
 	CSegChangeMessage msg(origin, 2);
 	SplitRegionf* regions = msg.splitRegions();
-	
+
 	regions[0].mNewServerID = mServerID;
 	regions[0].minX = newBox1.min().x;
 	regions[0].minY = newBox1.min().y;
@@ -251,7 +251,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
 	regions[0].maxX = newBox1.max().x;
 	regions[0].maxY = newBox1.max().y;
 	regions[0].maxZ = newBox1.max().z;
-	
+
 	regions[1].mNewServerID = new_server;
 	regions[1].minX = newBox2.min().x;
 	regions[1].minY = newBox2.min().y;
@@ -259,14 +259,14 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
 	regions[1].maxX = newBox2.max().x;
 	regions[1].maxY = newBox2.max().y;
 	regions[1].maxZ = newBox2.max().z;
-	
+
 	msg.serialize(msg_serialized, 0);
-	
-	mServerMessageQueue->addMessage(i,msg_serialized);	  
-	
+
+	mServerMessageQueue->addMessage(i,msg_serialized);
+
       }
     }
-  }  
+  }
 }
 
 
