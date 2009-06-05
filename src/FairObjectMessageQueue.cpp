@@ -9,7 +9,7 @@
 namespace CBR{
 template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
-   mClientQueues(0,false),
+   mClientQueues(),
    mLastTime(0),
    mRate(bytes_per_second),
    mRemainderBytes(0)
@@ -20,7 +20,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
     ServerID dest_server_id = lookup(dest_uuid);
-   
+
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
     if (dest_server_id==mServerMessageQueue->getSourceServer()) {

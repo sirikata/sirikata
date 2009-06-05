@@ -38,13 +38,7 @@
 
 namespace CBR {
 
-template<class MessageQueue> class Weight {
-public:
-    template <class MessageType> uint32 operator()(MessageQueue&mq,const MessageType*nil)const {
-        return mq.empty()?nil->size():mq.front()->size();
-    }
-};
-template <class Message,class Key,class TQueue, class WeightFunction=Weight<TQueue > > class FairQueue {
+template <class Message,class Key,class TQueue> class FairQueue {
 public:
     struct ServerQueueInfo {
     private:
@@ -64,16 +58,12 @@ public:
 
 
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
-    unsigned int mEmptyQueueMessageLength;
-    bool mRenormalizeWeight;
     typedef TQueue MessageQueue;
-    FairQueue(unsigned int emptyQueueMessageLength, bool renormalizeWeight)
-        :mEmptyQueueMessageLength(emptyQueueMessageLength),
-         mRenormalizeWeight(renormalizeWeight),
-         mCurrentVirtualTime(0),
+
+    FairQueue()
+        :mCurrentVirtualTime(0),
          mServerQueues()
     {
-        mNullMessage = new Message(mEmptyQueueMessageLength);
     }
 
     ~FairQueue() {
@@ -151,9 +141,9 @@ public:
 
         ServerQueueInfo* queue_info = &qi_it->second;
 
-        if (queue_info->messageQueue->empty()) {
+        // If the queue was empty then the new packet is first and its finish time needs to be computed.
+        if (queue_info->messageQueue->empty())
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
-        }
         return queue_info->messageQueue->push(msg);
     }
 
@@ -196,11 +186,9 @@ public:
 
             min_queue_info->messageQueue->pop();
 
-            uint32 serviceEmptyQueue = mEmptyQueueMessageLength;
-
             // update the next finish time if there's anything in the queue
-            if (serviceEmptyQueue || !min_queue_info->messageQueue->empty())
-                min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,mNullMessage), min_queue_info->weight);
+            if (!min_queue_info->messageQueue->empty())
+                min_queue_info->nextFinishTime = finishTime(min_queue_info->messageQueue->front()->size(), min_queue_info->weight);
         }
 
         return result;
@@ -236,53 +224,33 @@ protected:
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, ServerQueueInfo** min_queue_info_out) {
-        uint32 serviceEmptyQueue = mEmptyQueueMessageLength;
-
-        Message* result = mNullMessage;
-        while( result == mNullMessage) {
+        while(true) {
             // Find the non-empty queue with the earliest finish time
             ServerQueueInfo* min_queue_info = NULL;
             for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
                 ServerQueueInfo* queue_info = &it->second;
-                if (queue_info->messageQueue->empty()&&!serviceEmptyQueue) continue;
+                if (queue_info->messageQueue->empty()) continue;
                 if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                     min_queue_info = queue_info;
             }
 
-            // If we actually have something to deliver, deliver it
-            result = NULL;
-            if (min_queue_info) {
-                *min_queue_info_out = min_queue_info;
-                *vftime_out = min_queue_info->nextFinishTime;
-                result = mNullMessage;
-
-                if (!min_queue_info->messageQueue->empty()) {
-                    if (*bytes < min_queue_info->messageQueue->front()->size())
-                        break;
-                    result = min_queue_info->messageQueue->front();
-                } else {
-                    if (*bytes < result->size())
-                        break;
-                }
-
-                if (result == mNullMessage) {
-                    uint32 message_size = result->size();
-                    assert (message_size <= *bytes);
-                    *bytes -= message_size;
-
-                    mCurrentVirtualTime = min_queue_info->nextFinishTime;
-
-                    // update the next finish time if there's anything in the queue
-                    if (serviceEmptyQueue)
-                        min_queue_info->nextFinishTime = finishTime(WeightFunction()(*min_queue_info->messageQueue,mNullMessage), min_queue_info->weight);
-                }
+            // If there is no minimum queue, then everything must be empty
+            if (!min_queue_info) {
+                *result_out = NULL;
+                return;
             }
-        }
 
-        if (result == mNullMessage)
-            *result_out = NULL;
-        else
-            *result_out = result;
+            // Check that we have enough bytes to deliver
+            if (*bytes < min_queue_info->messageQueue->front()->size()) {
+                *result_out = NULL;
+                return;
+            }
+
+            *min_queue_info_out = min_queue_info;
+            *vftime_out = min_queue_info->nextFinishTime;
+            *result_out = min_queue_info->messageQueue->front();
+            break;
+        }
     }
 
 
@@ -298,7 +266,6 @@ protected:
     uint32 mRate;
     Time mCurrentVirtualTime;
     ServerQueueInfoMap mServerQueues;
-    Message* mNullMessage;
 }; // class FairQueue
 
 } // namespace CBR

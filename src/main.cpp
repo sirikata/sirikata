@@ -151,17 +151,17 @@ void *main_loop(void *) {
     if (server_queue_type == "fifo")
         sq = new FIFOServerMessageQueue(gNetwork,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption("capexcessbandwidth")->as<bool>(), server_id, server_id_map, gTrace);
+        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
     else {
         assert(false);
         exit(-1);
     }
 
-    
+
     CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq, gTrace);
                                  new UniformCoordinateSegmentation(region, layout);
     LoadMonitor* loadMonitor = new LoadMonitor(server_id, sq, cseg);
-    
+
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -334,7 +334,7 @@ void *main_loop(void *) {
     Time tend = tbegin + duration;
 
     if (sim) {
-      
+
         for(Time t = tbegin; t < tend; t += sim_step){
 	    server->tick(t);
         }
@@ -344,7 +344,7 @@ void *main_loop(void *) {
         timer.start();
         gNetwork->start();
 
-        while( true ) {	    
+        while( true ) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
@@ -378,7 +378,7 @@ void *main_loop(void *) {
     gNetwork=NULL;
 
     String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    if (!trace_file.empty()) gTrace->save(trace_file);    
+    if (!trace_file.empty()) gTrace->save(trace_file);
 
     delete gTrace;
     gTrace = NULL;

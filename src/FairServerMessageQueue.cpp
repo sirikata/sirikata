@@ -5,10 +5,10 @@
 #include "Message.hpp"
 
 namespace CBR{
-FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, bool renormalizeWeights, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
+FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
-   mServerQueues(0,renormalizeWeights),
-   mReceiveQueues(0,false),
+   mServerQueues(),
+   mReceiveQueues(),
    mLastTime(0),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
@@ -37,7 +37,7 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
 
-    
+
     return mServerQueues.push(destinationServer,new ServerMessagePair(destinationServer,with_header))==QueueEnum::PushSucceeded;
 }
 
@@ -64,7 +64,7 @@ void FairServerMessageQueue::service(const Time&t){
     ServerID sid;
     bool sent_success = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookup(next_msg->dest());		
+        Address4* addy = mServerIDMap->lookup(next_msg->dest());
 
         assert(addy != NULL);
         sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
@@ -145,15 +145,15 @@ void FairServerMessageQueue::service(const Time&t){
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     // send weight
-    if (!mServerQueues.hasQueue(sid)) {        
+    if (!mServerQueues.hasQueue(sid)) {
         mServerQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
     }
     else
         mServerQueues.setQueueWeight(sid, weight);
 
     // receive weight
-    if (!mReceiveQueues.hasQueue(sid)) {        
-        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);       
+    if (!mReceiveQueues.hasQueue(sid)) {
+        mReceiveQueues.addQueue(new NetworkQueueWrapper(sid, mNetwork, mServerIDMap),sid,weight);
     }
     else
         mReceiveQueues.setQueueWeight(sid, weight);
@@ -187,7 +187,7 @@ void FairServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) co
         float tx_weight = mServerQueues.getQueueWeight(*it);
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
         float rx_weight = mReceiveQueues.getQueueWeight(*it);
-        
+
 
 	QueueInfo qInfo(tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
 	queue_info.push_back(qInfo);
