@@ -70,7 +70,6 @@ public:
     FairQueue(unsigned int emptyQueueMessageLength, bool renormalizeWeight)
         :mEmptyQueueMessageLength(emptyQueueMessageLength),
          mRenormalizeWeight(renormalizeWeight),
-         mTotalWeight(0),
          mCurrentVirtualTime(0),
          mServerQueues()
     {
@@ -90,15 +89,12 @@ public:
 
         ServerQueueInfo queue_info (server, mq, weight);
 
-        mTotalWeight += weight;
         mServerQueues.insert(std::pair<Key,ServerQueueInfo>(server, queue_info));
     }
     void setQueueWeight(Key server, float weight) {
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
         bool retval=( where != mServerQueues.end() );
         if (where != mServerQueues.end()) {
-            mTotalWeight -= where->second.weight;
-            mTotalWeight += weight;
             where->second.weight = weight;
         }
     }
@@ -137,7 +133,6 @@ public:
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
         bool retval=( where != mServerQueues.end() );
         if (retval) {
-            mTotalWeight -= where->second.weight;
             delete where->second.messageQueue;
             mServerQueues.erase(where);
         }
@@ -157,9 +152,6 @@ public:
         ServerQueueInfo* queue_info = &qi_it->second;
 
         if (queue_info->messageQueue->empty()) {
-            if (!mEmptyQueueMessageLength) {
-                mTotalWeight+=queue_info->weight;
-            }
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
         }
         return queue_info->messageQueue->push(msg);
@@ -205,9 +197,6 @@ public:
             min_queue_info->messageQueue->pop();
 
             uint32 serviceEmptyQueue = mEmptyQueueMessageLength;
-            // Remove the weight if the queue is now exhausted
-            if (min_queue_info->messageQueue->empty() && !serviceEmptyQueue)
-                mTotalWeight -= min_queue_info->weight;
 
             // update the next finish time if there's anything in the queue
             if (serviceEmptyQueue || !min_queue_info->messageQueue->empty())
@@ -307,7 +296,6 @@ protected:
 
 protected:
     uint32 mRate;
-    uint32 mTotalWeight;
     Time mCurrentVirtualTime;
     ServerQueueInfoMap mServerQueues;
     Message* mNullMessage;
