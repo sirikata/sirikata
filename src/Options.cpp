@@ -66,7 +66,7 @@ void InitOptions() {
         .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
         .addOption(new OptionValue(STATS_SYNC_FILE, "sync.txt", Sirikata::OptionValueType<String>(), "The filename to save clock sync data"))
 
-        .addOption(new OptionValue("time-server", "ntp.ubuntu.com", Sirikata::OptionValueType<String>(), "The server to sync with"))
+        .addOption(new OptionValue("time-server", "ahoy.stanford.edu", Sirikata::OptionValueType<String>(), "The server to sync with"))
         .addOption(new OptionValue("wait-until","",Sirikata::OptionValueType<String>(),"The date to wait until before starting"))
         .addOption(new OptionValue("wait-additional","0",Sirikata::OptionValueType<float>(),"How many additional seconds after date has passed to wait until before starting"))
 
@@ -87,7 +87,7 @@ void InitOptions() {
 
         .addOption(new OptionValue(NETWORK_TYPE, "sst", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
-      
+
      ;
 }
 
