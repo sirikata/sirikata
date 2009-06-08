@@ -198,7 +198,9 @@ public:
 
         nextMessage(bytes, &result, &vftime, &min_queue_info);
         if (result != NULL) {
-            mCurrentVirtualTime = vftime;
+            // Note: we may have skipped a msg using the predicate, so we use max here to make sure
+            // the virtual time increases monotonically.
+            mCurrentVirtualTime = std::max(vftime, mCurrentVirtualTime);
 
             assert(min_queue_info != NULL);
 
@@ -209,7 +211,7 @@ public:
 
             // update the next finish time if there's anything in the queue
             if (!min_queue_info->messageQueue->empty())
-                min_queue_info->nextFinishTime = finishTime(min_queue_info->messageQueue->front()->size(), min_queue_info->weight);
+                min_queue_info->nextFinishTime = finishTime(min_queue_info->messageQueue->front()->size(), min_queue_info->weight, min_queue_info->nextFinishTime);
         }
 
         return result;
@@ -288,7 +290,18 @@ protected:
         return;
     }
 
-    Time finishTime(uint32 size, float weight) const{
+    /** Finish time for a packet that was inserted into a non-empty queue, i.e. based on the previous packet's
+     *  finish time. */
+    Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
+        float queue_frac = weight;
+        Duration transmitTime = Duration::seconds( size / queue_frac );
+        if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
+
+        return last_finish_time + transmitTime;
+    }
+
+    /** Finish time for a packet inserted into an empty queue, i.e. based on the most recent virtual time. */
+    Time finishTime(uint32 size, float weight) const {
         float queue_frac = weight;
         Duration transmitTime = Duration::seconds( size / queue_frac );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
