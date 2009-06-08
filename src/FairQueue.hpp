@@ -38,7 +38,21 @@
 
 namespace CBR {
 
-template <class Message,class Key,class TQueue> class FairQueue {
+/** Predicate for FairQueue which never rejects the item being considered. */
+struct AlwaysUsePredicate {
+    template<typename Key, typename Message>
+    bool operator()(const Key& key, const Message* msg) const {
+        return true;
+    }
+};
+
+/** Fair Queue with one input queue of Messages per Key, backed by a TQueue. Each
+ *  input queue can be assigned a weight and selection happens according to FairQueuing,
+ *  with the additional constraint that each potential front element will be checked
+ *  against a Predicate to give the user a chance to block certain queues from being used
+ *  (for instance, if the downstream queue couldn't handle it).
+ */
+template <class Message,class Key,class TQueue,class Predicate=AlwaysUsePredicate> class FairQueue {
 public:
     struct ServerQueueInfo {
     private:
@@ -54,15 +68,22 @@ public:
         float weight;
         Time nextFinishTime;
         Key mKey;
+
+        struct FinishTimeOrder {
+            bool operator()(const ServerQueueInfo* lhs, const ServerQueueInfo* rhs) {
+                return (lhs->nextFinishTime < rhs->nextFinishTime);
+            }
+        };
     };
 
 
     typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
     typedef TQueue MessageQueue;
 
-    FairQueue()
+    FairQueue(const Predicate pred = Predicate())
         :mCurrentVirtualTime(0),
-         mServerQueues()
+         mServerQueues(),
+         mPredicate(pred)
     {
     }
 
@@ -224,35 +245,48 @@ protected:
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, ServerQueueInfo** min_queue_info_out) {
-        while(true) {
-            // Find the non-empty queue with the earliest finish time
-            ServerQueueInfo* min_queue_info = NULL;
-            for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-                ServerQueueInfo* queue_info = &it->second;
-                if (queue_info->messageQueue->empty()) continue;
-                if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
-                    min_queue_info = queue_info;
-            }
+        // Create a list of queues, sorted by nextFinishTime.  FIXME we should probably track this instead of regenerating it every time
+        std::vector<ServerQueueInfo*> queues_by_finish_time;
+        queues_by_finish_time.reserve(mServerQueues.size());
+        for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
+            ServerQueueInfo* queue_info = &it->second;
+            if (queue_info->messageQueue->empty()) continue;
+            queues_by_finish_time.push_back(queue_info);
+        }
 
-            // If there is no minimum queue, then everything must be empty
-            if (!min_queue_info) {
-                *result_out = NULL;
-                return;
-            }
+        // If this list ends up empty then there are no enqueued messages
+        if (queues_by_finish_time.empty()) {
+            *result_out = NULL;
+            return;
+        }
 
-            // Check that we have enough bytes to deliver
+        std::sort(queues_by_finish_time.begin(), queues_by_finish_time.end(), typename ServerQueueInfo::FinishTimeOrder());
+
+        // Loop through until we find one that has data and can be handled.
+        for(uint32 i = 0; i < queues_by_finish_time.size(); i++) {
+            ServerQueueInfo* min_queue_info = queues_by_finish_time[i];
+
+            // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
+            // would violate the ordering.
             if (*bytes < min_queue_info->messageQueue->front()->size()) {
                 *result_out = NULL;
                 return;
             }
 
-            *min_queue_info_out = min_queue_info;
-            *vftime_out = min_queue_info->nextFinishTime;
-            *result_out = min_queue_info->messageQueue->front();
-            break;
+            // Now give the user a chance to veto this packet.  If they can use it, set output and return.
+            // Otherwise just continue trying the rest of the options.
+            if (mPredicate(min_queue_info->mKey, min_queue_info->messageQueue->front())) {
+                *min_queue_info_out = min_queue_info;
+                *vftime_out = min_queue_info->nextFinishTime;
+                *result_out = min_queue_info->messageQueue->front();
+                return;
+            }
         }
-    }
 
+        // If we get here then we've tried everything and nothing has satisfied our constraints. Give up.
+        *result_out = NULL;
+        return;
+    }
 
     Time finishTime(uint32 size, float weight) const{
         float queue_frac = weight;
@@ -266,6 +300,7 @@ protected:
     uint32 mRate;
     Time mCurrentVirtualTime;
     ServerQueueInfoMap mServerQueues;
+    Predicate mPredicate;
 }; // class FairQueue
 
 } // namespace CBR
