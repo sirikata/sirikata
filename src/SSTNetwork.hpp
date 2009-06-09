@@ -12,7 +12,11 @@ class SSTNetwork : public Network {
 public:
     SSTNetwork(Trace* trace);
     virtual ~SSTNetwork();
+
+    // Checks if this chunk, when passed to send, would be successfully pushed.
+    virtual bool canSend(const Address4&,const Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
+
     virtual void listen (const Address4&);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Network::Chunk* receiveOne(const Address4& from, uint32 max_size);

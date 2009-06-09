@@ -44,6 +44,13 @@ void ConnectTo(RakPeerInterface*ri,const SystemAddress &sa) {
                                       0);
     assert(evenTried);
 }
+
+bool RaknetNetwork::canSend(const Address4& addy, const Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
+    if (toSend.size()==0)
+        return false;
+    return true; // FIXME we have to just assume this will succeed here because RakNet doesn't provide a way to query
+}
+
 bool RaknetNetwork::send(const Address4&addy, const Sirikata::Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
     if (toSend.size()==0)
         return false;

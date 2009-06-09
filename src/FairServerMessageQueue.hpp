@@ -10,8 +10,16 @@ namespace CBR {
 class FairServerMessageQueue:public ServerMessageQueue {
 protected:
 
+    /** Predicate for FairQueue which checks if the network will be able to send the message. */
+    struct CanSendPredicate {
+    public:
+        CanSendPredicate(FairServerMessageQueue* _fq) : fq(_fq) {}
+        bool operator()(const ServerID& key, const ServerMessagePair* msg) const;
+    private:
+        FairServerMessageQueue* fq;
+    };
 
-    FairQueue<ServerMessagePair, ServerID, Queue<ServerMessagePair*> > mServerQueues;
+    FairQueue<ServerMessagePair, ServerID, Queue<ServerMessagePair*>, CanSendPredicate > mServerQueues;
     FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
     Time mLastTime;
@@ -48,6 +56,8 @@ protected:
 
     virtual void aggregateLocationMessages() { }
 
+    // Checks if sending the given message would be successful.
+    bool canSend(const ServerMessagePair* next_msg);
 };
 }
 #endif

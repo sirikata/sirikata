@@ -5,9 +5,15 @@
 #include "Message.hpp"
 
 namespace CBR{
+
+bool FairServerMessageQueue::CanSendPredicate::operator()(const ServerID& key, const ServerMessagePair* msg) const {
+    return fq->canSend(msg);
+}
+
+
 FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
-   mServerQueues(),
+   mServerQueues( CanSendPredicate(this) ),
    mReceiveQueues(),
    mLastTime(0),
    mRate(send_bytes_per_second),
@@ -52,6 +58,13 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 
     *chunk_out = NULL;
     return false;
+}
+
+bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
+    Address4* addy = mServerIDMap->lookup(next_msg->dest());
+
+    assert(addy != NULL);
+    return mNetwork->canSend(*addy,next_msg->data(),false,true,1);
 }
 
 void FairServerMessageQueue::service(const Time&t){

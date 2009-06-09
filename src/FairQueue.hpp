@@ -83,7 +83,8 @@ public:
     FairQueue(const Predicate pred = Predicate())
         :mCurrentVirtualTime(0),
          mServerQueues(),
-         mPredicate(pred)
+         mPredicate(pred),
+         mFrontQueue(NULL)
     {
     }
 
@@ -175,12 +176,12 @@ public:
     Message* front(uint64* bytes, Key*keyAtFront) {
         Message* result = NULL;
         Time vftime(0);
-        ServerQueueInfo* min_queue_info = NULL;
+        mFrontQueue = NULL;
 
-        nextMessage(bytes, &result, &vftime, &min_queue_info);
+        nextMessage(bytes, &result, &vftime, &mFrontQueue);
         if (result != NULL) {
             assert( *bytes >= result->size() );
-            *keyAtFront=min_queue_info->mKey;
+            *keyAtFront = mFrontQueue->mKey;
             return result;
         }
 
@@ -194,24 +195,34 @@ public:
     Message* pop(uint64* bytes) {
         Message* result = NULL;
         Time vftime(0);
-        ServerQueueInfo* min_queue_info = NULL;
 
-        nextMessage(bytes, &result, &vftime, &min_queue_info);
+        // If we haven't marked any queue as holding the front item, do so now
+        if (mFrontQueue == NULL)
+            nextMessage(bytes, &result, &vftime, &mFrontQueue);
+        else { // Otherwise, just fill in the information we need from the marked queue
+            assert(!mFrontQueue->messageQueue->empty());
+            result = mFrontQueue->messageQueue->front();
+            vftime = mFrontQueue->nextFinishTime;
+        }
+
         if (result != NULL) {
             // Note: we may have skipped a msg using the predicate, so we use max here to make sure
             // the virtual time increases monotonically.
             mCurrentVirtualTime = std::max(vftime, mCurrentVirtualTime);
 
-            assert(min_queue_info != NULL);
+            assert(mFrontQueue != NULL);
 
             assert( *bytes >= result->size() );
             *bytes -= result->size();
 
-            min_queue_info->messageQueue->pop();
+            mFrontQueue->messageQueue->pop();
 
             // update the next finish time if there's anything in the queue
-            if (!min_queue_info->messageQueue->empty())
-                min_queue_info->nextFinishTime = finishTime(min_queue_info->messageQueue->front()->size(), min_queue_info->weight, min_queue_info->nextFinishTime);
+            if (!mFrontQueue->messageQueue->empty())
+                mFrontQueue->nextFinishTime = finishTime(mFrontQueue->messageQueue->front()->size(), mFrontQueue->weight, mFrontQueue->nextFinishTime);
+
+            // Unmark the queue as being in front
+            mFrontQueue = NULL;
         }
 
         return result;
@@ -314,6 +325,7 @@ protected:
     Time mCurrentVirtualTime;
     ServerQueueInfoMap mServerQueues;
     Predicate mPredicate;
+    ServerQueueInfo* mFrontQueue; // The queue we've marked as the one containing the front item
 }; // class FairQueue
 
 } // namespace CBR

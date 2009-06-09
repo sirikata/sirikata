@@ -32,6 +32,9 @@ public:
     CBRSST(Trace* trace);
     ~CBRSST();
     void listen(uint32 port);
+
+    // Checks if this chunk, when passed to send, would be successfully pushed.
+    virtual bool canSend(const Address4&,const Network::Chunk&, bool reliable, bool ordered, int priority);
     bool send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority);
     Network::Chunk* front(const Address4& from, uint32 max_size);
     Network::Chunk* receiveOne(const Address4& from, uint32 max_size);

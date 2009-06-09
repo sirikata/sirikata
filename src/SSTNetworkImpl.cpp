@@ -80,6 +80,16 @@ void CBRSST::trySendCurrentChunk(StreamInfo* si) {
     }
 }
 
+bool CBRSST::canSend(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority) {
+    StreamInfo* si = lookupOrConnectSend(addy);
+    trySendCurrentChunk(si);
+
+    if (si->currentSendChunk != NULL)
+        return false;
+
+    return true;
+}
+
 bool CBRSST::send(const Address4& addy, const Network::Chunk& data, bool reliable, bool ordered, int priority) {
     StreamInfo* si = lookupOrConnectSend(addy);
     trySendCurrentChunk(si);

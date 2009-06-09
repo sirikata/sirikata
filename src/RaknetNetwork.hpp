@@ -46,7 +46,10 @@ class RaknetNetwork :public Network{
 public:
     RaknetNetwork();
 
+    // Checks if this chunk, when passed to send, would be successfully pushed.
+    virtual bool canSend(const Address4&, const Network::Chunk&, bool reliable, bool ordered, int priority);
     virtual bool send(const Address4&,const Sirikata::Network::Chunk&, bool reliable, bool ordered, int priority);
+
     virtual void init(void*(*)(void*));
     virtual void start();
     virtual void listen (const Address4& as_server);
