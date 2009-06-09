@@ -76,6 +76,7 @@ void FairServerMessageQueue::service(const Time&t){
     ServerMessagePair* next_msg = NULL;
     ServerID sid;
     bool sent_success = true;
+    bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
         Address4* addy = mServerIDMap->lookup(next_msg->dest());
 
@@ -83,6 +84,8 @@ void FairServerMessageQueue::service(const Time&t){
         sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
         if (!sent_success) break;
+
+        save_bytes = false;
 
         ServerMessagePair* next_msg_popped = mServerQueues.pop(&send_bytes);
         assert(next_msg_popped == next_msg);
@@ -105,8 +108,22 @@ void FairServerMessageQueue::service(const Time&t){
         mLastSendEndTime = t;
     }
     else {
-        mRemainderSendBytes = send_bytes;
-        //mLastSendEndTime = already recorded, last end send time
+        // NOTE: we used to just leave mLastSendEndTime at the last time recorded since the leftover
+        // bytes should be used starting at that time. However, now when we exit the loop we can't tell
+        // if it was due to a) not having enough bytes for a message or b) not being able to send the
+        // message on the network.  Therefore, we're conservative and make time progress.  This could
+        // screw up the statistics a little bit, but only by the size of the largest packet. Further, if
+        // we don't do this, then when we consistently exit the loop due to not being able to push onto
+        // the network (which starts happening a lot when a queue gets backed up), then we stop accounting
+        // for time correctly and things get improperly recored.
+        if (save_bytes) {
+            mRemainderSendBytes = send_bytes;
+            //mLastSendTime = already saved
+        }
+        else {
+            mRemainderSendBytes = 0;
+            mLastSendEndTime = t;
+        }
     }
 
 
