@@ -36,11 +36,13 @@
 
 #include <queue>
 #include "Time.hpp"
+#include "util/AtomicTypes.hpp"
 
 namespace Sirikata {
 
 template <class T> class LockFreeQueue;
 template <class T> class ThreadSafeQueue;
+template <class T> class AtomicValue;
 
 namespace Task {
 
@@ -53,14 +55,60 @@ protected:
 	virtual ~WorkItem() {} // Virtual to avoid accidental deletion. Children can override this if necessary.
 public:
 	virtual void operator()() = 0;
+    virtual void enqueued() {}
 };
+
+class AbortableWorkItem;
+typedef std::tr1::shared_ptr<AbortableWorkItem> AbortableWorkItemPtr;
+
+class SIRIKATA_EXPORT AbortableWorkItem :
+		public WorkItem,
+		public std::tr1::enable_shared_from_this<AbortableWorkItem>
+{
+	AbortableWorkItemPtr mPreventDeletion;
+	AtomicValue<int> mAbortLock;
+
+	bool doAcquireLock();
+protected:
+	/** Call in the operator() of the subclass, to ensure the task will not be
+		aborted while executing.
+		This will destroy the internal reference, so keep a temporary reference:
+		AbortableWorkItemPtr tempReference(shared_from_this());
+	*/
+	bool prepareExecute() {
+		mPreventDeletion = AbortableWorkItemPtr();
+		assert(shared_from_this());
+		return doAcquireLock();
+	}
+
+public:
+	AbortableWorkItem();
+	virtual ~AbortableWorkItem();
+
+    virtual void enqueued() {
+        mPreventDeletion = shared_from_this();
+    }
+	/** Called if aborting was succesful before the task has run.
+	 This function is called only if mAbortLock is acquired.
+	 destruct() will be called when finished. */
+	virtual void aborted() = 0;
+
+	/** Override to allow aborting a task while it is actively running.
+	    Note that this task is either running in an unsynchronized thread, or
+	    it may have already completed.
+	 */
+	virtual bool abort();
+};
+
+
+class WorkQueueThread;
 
 class SIRIKATA_EXPORT WorkQueue {
 public:
 	/**
 	 * Enqueues this WorkItem and wakes up any threads that may be blocking for new work.
 	 *
-	 * If NULL is passed, it acts as a WorkItem with an empty operator().
+	 * If NULL is passed, it will interrupt a
 	 *
 	 * Note that it is the responsibility of the WorkItem to delete itself when finished,
 	 * usually done by creating a AutoPtr at the beginning of operator().
@@ -80,7 +128,7 @@ public:
 	 *
 	 * \fixme: Does this belong in the definition? It may not be supported.
 	 */
-	virtual void dequeueBlocking()=0;
+	virtual bool dequeueBlocking()=0;
 
 	/**
 	 * This function simply checks if the head of the queue is non-NULL. If so,
@@ -119,6 +167,9 @@ public:
 
 	/// Virtual destructor.
 	virtual ~WorkQueue() {}
+
+	WorkQueueThread *createWorkerThreads(int count);
+	void destroyWorkerThreads(WorkQueueThread *th);
 };
 
 template <class QueueType>
@@ -127,7 +178,7 @@ class SIRIKATA_EXPORT WorkQueueImpl : public WorkQueue {
 	Queue mQueue;
 public:
 	virtual void enqueue(WorkItem *element);
-	virtual void dequeueBlocking();
+	virtual bool dequeueBlocking();
 	virtual bool dequeuePoll();
 	virtual unsigned int dequeueAll();
 	virtual ~WorkQueueImpl();
@@ -135,7 +186,10 @@ public:
 	virtual bool probablyEmpty();
 };
 
-typedef WorkQueueImpl<LockFreeQueue<WorkItem*> > LockFreeWorkQueue;
+///// blockingPop not implemented yet in LockFreeQueue.
+// Needs to use semaphores which are platform-specific.
+//typedef WorkQueueImpl<LockFreeQueue<WorkItem*> > LockFreeWorkQueue;
+typedef WorkQueueImpl<ThreadSafeQueue<WorkItem*> > LockFreeWorkQueue;
 typedef WorkQueueImpl<ThreadSafeQueue<WorkItem*> > ThreadSafeWorkQueue;
 
 template <class QueueType>
@@ -146,7 +200,7 @@ class SIRIKATA_EXPORT UnsafeWorkQueueImpl : public WorkQueue {
 public:
 	UnsafeWorkQueueImpl() : mWhichQueue(0) {};
 	virtual void enqueue(WorkItem *element);
-	virtual void dequeueBlocking();
+	virtual bool dequeueBlocking();
 	virtual bool dequeuePoll();
 	virtual unsigned int dequeueAll();
 	virtual ~UnsafeWorkQueueImpl();

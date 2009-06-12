@@ -894,6 +894,33 @@ class OgreSystem::MouseHandler {
         return EventResponse::nop();
     }
 
+    EventResponse import(EventPtr ev) {
+		std::string filename;
+		// a bit of a cludge right now, type name into console.
+        fflush(stdin);
+		while (!feof(stdin)) {
+			int c = fgetc(stdin);
+			if (c == '\r') {
+				c = fgetc(stdin);
+			}
+			if (c=='\n') {
+				break;
+			}
+			if (c=='\033' || c <= 0) {
+				std::cout << "<escape>\n";
+				return EventResponse::nop();
+			}
+			std::cout << (unsigned char)c;
+			filename += (unsigned char)c;
+		}
+		std::cout << '\n';
+		std::vector<std::string> files;
+		files.push_back(filename);
+		mParent->mInputManager->filesDropped(files);
+		return EventResponse::cancel();
+	}
+
+
     ///////////////// DEVICE FUNCTIONS ////////////////
 
     SubscriptionId registerAxisListener(const InputDevicePtr &dev,
@@ -910,9 +937,9 @@ class OgreSystem::MouseHandler {
 
     SubscriptionId registerButtonListener(const InputDevicePtr &dev,
                               EventResponse(MouseHandler::*func)(EventPtr),
-                              int button, bool released=false) {
+                              int button, bool released=false, InputDevice::Modifier mod=0) {
         Task::IdPair eventId (released?ButtonReleased::getEventId():ButtonPressed::getEventId(),
-                              ButtonEvent::getSecondaryId(button, 0, dev));
+                              ButtonEvent::getSecondaryId(button, mod, dev));
         SubscriptionId subId = mParent->mInputManager->subscribeId(eventId,
             std::tr1::bind(func, this, _1));
         mEvents.push_back(subId);
@@ -958,6 +985,7 @@ class OgreSystem::MouseHandler {
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_DOWN,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::import, 'o', false, InputDevice::MOD_CTRL);
             }
             break;
           case InputDeviceEvent::REMOVED:

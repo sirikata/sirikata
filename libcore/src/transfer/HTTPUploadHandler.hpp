@@ -75,12 +75,12 @@ class HTTPUploadHandler :
 
 	template <class Base>
 	void createRequest (HTTPRequestPtr &req, typename Base::TransferDataPtr *ptrRef, const URI &uri, const Callback&cb) {
-		req = HTTPRequestPtr(new HTTPRequest(uri, bytes));
+		req = HTTPRequestPtr(new HTTPRequest(uri, Range(true)));
 		req->setCallback(
-			std::tr1::bind(&HTTPDownloadHandler::httpCallback, cb, _1, _2, _3));
+			std::tr1::bind(&HTTPUploadHandler::finishedCallback, cb, _1, _2, _3));
 		if (ptrRef) {
 			// Must set this before calling req->go()
-			*ptrRef = Base::TransferDataPtr(
+			*ptrRef = typename Base::TransferDataPtr(
 				new HTTPTransferData<Base>(shared_from_this(), req));
 		}
 	}

@@ -36,22 +36,89 @@
 #include "Time.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "util/LockFreeQueue.hpp"
-
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Task {
 
+bool AbortableWorkItem::doAcquireLock() {
+	if ((++mAbortLock)==1) {
+		return true;
+	}
+	return false;
+}
+
+AbortableWorkItem::AbortableWorkItem() : mAbortLock(0) {
+}
+AbortableWorkItem::~AbortableWorkItem() {}
+
+bool AbortableWorkItem::abort() {
+	AbortableWorkItemPtr tempReference(shared_from_this());
+	if (doAcquireLock()) {
+		if (mPreventDeletion) {
+			aborted();
+			return true;
+		}
+	}
+	return false;
+}
+
+
+
+namespace {
+void workQueueWorkerThread(WorkQueue *queue) {
+    try {
+        while (queue->dequeueBlocking()) {
+        }
+    } catch (std::exception &exc) {
+        SILOG(task,fatal,"Caught exception '" << exc.what() << "' in WorkQueue thread!");
+        throw;
+    }
+}
+}
+
+struct WorkQueueThread {
+	std::vector<boost::thread*> mThreads;
+};
+
+WorkQueueThread *WorkQueue::createWorkerThreads(int count) {
+	WorkQueueThread *threads = new WorkQueueThread;
+	for (int i = 0; i < count; ++i) {
+		threads->mThreads.push_back(
+			new boost::thread(std::tr1::bind(&workQueueWorkerThread, this)));
+	}
+	return threads;
+}
+
+void WorkQueue::destroyWorkerThreads(WorkQueueThread *th) {
+	int len = th->mThreads.size();
+	for (int i = 0; i < len; ++i) {
+		enqueue(NULL); // Make sure each thread gets one of these.
+	}
+	for (int i = 0; i < len; ++i) {
+		th->mThreads[i]->join();
+		delete th->mThreads[i];
+	}
+	delete th;
+}
+
 template <class QueueType>
 void WorkQueueImpl<QueueType>::enqueue(WorkItem *element) {
+    if (element) {
+        element->enqueued();
+    }
 	mQueue.push(element);
 }
 
 template <class QueueType>
-void WorkQueueImpl<QueueType>::dequeueBlocking() {
+bool WorkQueueImpl<QueueType>::dequeueBlocking() {
 	WorkItem *element;
 	mQueue.blockingPop(element);
 	if (element) {
 		(*element)();
+		return true;
+	} else {
+		return false;
 	}
 }
 
@@ -108,14 +175,15 @@ bool UnsafeWorkQueueImpl<QueueType>::dequeuePoll() {
 		(*element)();
 	}
 	mQueue[mWhichQueue].pop();
-	return true;
+	return element?true:false;
 }
 
 template <class QueueType>
-void UnsafeWorkQueueImpl<QueueType>::dequeueBlocking() {
+bool UnsafeWorkQueueImpl<QueueType>::dequeueBlocking() {
 	if (!dequeuePoll()) {
 		throw std::domain_error("Blocking dequeue called on empty thread-unsafe WorkQueue.");
 	}
+	return true;
 }
 
 template <class QueueType>

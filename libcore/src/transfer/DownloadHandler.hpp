@@ -103,6 +103,7 @@ public:
 		return false;
 	}
 };
+typedef std::tr1::shared_ptr<DownloadHandler> DownloadHandlerPtr;
 
 /** A protocol handler for converting a filename to a hash, so that it can be
  * downloaded and cached. Currently, the only implementation is HTTP, but this
@@ -127,6 +128,7 @@ public:
 		cb(Fingerprint(), std::string(), false);
 	}
 };
+typedef std::tr1::shared_ptr<NameLookupHandler> NameLookupHandlerPtr;
 
 
 }

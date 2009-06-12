@@ -139,6 +139,9 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         RECT r;
         GetWindowRect(pInfo.window, &r);
         SetWindowPos(pInfo.window, 0, r.left, r.top, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+		SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE);
+		DragAcceptFiles(pInfo.window, TRUE);
 #endif
     }else {
         SDL_Init(SDL_INIT_VIDEO);
@@ -213,6 +216,16 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         SDL_SetWindowGrab(mWindowID,SDL_GRAB_ON); // SDL_GRAB_OFF to not grab input (default)
 */
 }
+
+void SDLInputManager::filesDropped(const std::vector<std::string> &files) {
+    std::vector<std::string> allFiles; // Recursively search!
+	for (size_t i = 0; i < files.size(); ++i) {
+		SILOG(input,info,"File '" << files[i] << "' has been dropped on the window");
+        allFiles.push_back(files[i]);
+    }
+    fire(Task::EventPtr(new DragAndDropEvent(files)));
+}
+
 bool SDLInputManager::tick(Time currentTime, Duration frameTime){
 #ifndef _WIN32
     SDL_GL_SwapBuffers();
@@ -299,6 +312,32 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
                 event->jball.xrel, 
                 event->jball.yrel);
             break;
+		  case SDL_SYSWMEVENT:
+			  {
+				  SDL_SysWMmsg *msg = event->syswm.msg;
+#ifdef _WIN32
+				  // Drag-and-drop is windows only for now.
+				  switch (msg->msg) {
+					case WM_DROPFILE:
+					{
+					  HDROP hDrop = (HDROP)msg->wParam;
+					  POINT point;
+					  bool inWindow = DragQueryPoint(hDrop, &point)==TRUE?true:false;
+					  UINT numFiles = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
+					  std::vector<std::string> files;
+					  for (UINT i = 0; i < numFiles; i++) {
+						  UINT length = DragQueryFile(hDrop, i, NULL, 0);
+						  files.push_back(std::string (length, '\0'));
+						  DragQueryFile(hDrop, i, &*files.back().begin(), length);
+					  }
+					  DragFinish(hDrop);
+					  filesDropped(files);
+					}
+					break;
+				  }
+#endif
+			  }
+			break;
           case SDL_WINDOWEVENT:
             {
                 int wid=(int)mWidth, hei=(int)mHeight;

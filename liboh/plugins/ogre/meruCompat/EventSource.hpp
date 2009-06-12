@@ -39,8 +39,13 @@
 
 namespace Meru {
 
-class EventSource : public AutoSingleton<EventSource>, public ::Sirikata::Task::GenEventManager {
+class EventSource {
 public:
+    typedef ::Sirikata::Task::GenEventManager::EventListener EventListener;
+    static ::Sirikata::Task::GenEventManager *sSingleton;
+    static ::Sirikata::Task::GenEventManager &getSingleton() {
+        return *sSingleton;
+    }
     EventSource();
 };
 

@@ -50,5 +50,7 @@ IdPair::Primary WindowEvent::FocusGained("WindowFocused");
 IdPair::Primary WindowEvent::FocusLost("WindowUnfocused");
 IdPair::Primary WindowEvent::Quit("Quit");
 
+IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
+
 }
 }

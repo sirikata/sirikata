@@ -281,11 +281,19 @@ void DiskCacheLayer::workerThread() {
 			}
 			if (req->toRead.goesToEndOfFile()) {
 				struct stat64 st;
-				fstat64(fd, &st);
-				req->toRead.setLength(st.st_size, true);
+				if (fstat64(fd, &st)==0 && st.st_size > 0) {
+					req->toRead.setLength(st.st_size - req->toRead.startbyte(), true);
+				}
 			}
-			// FIXME: may not work with 64-bit files?
-			lseek(fd, req->toRead.startbyte(), SEEK_SET);
+			if (req->toRead.startbyte() != 0) {
+				// FIXME: may not work with 64-bit files?
+				if (lseek(fd, req->toRead.startbyte(), SEEK_SET) != (cache_ssize_type)req->toRead.startbyte()) {
+					SILOG(transfer,error, "Failed to seek in " << fileId <<
+						"to byte "<<req->toRead.startbyte()<<"; reason: " << errno);
+					CacheLayer::getData(req->fileId, req->toRead, req->finished);
+					continue;
+				}
+			}
 			MutableDenseDataPtr datum(new DenseData(req->toRead));
 			read(fd, datum->writableData(), (size_t)req->toRead.length());
 			close(fd);

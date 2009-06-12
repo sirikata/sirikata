@@ -645,6 +645,7 @@ ENDIF()
 SET(SIRIKATA_CORE_SOURCES
     ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
 	${LIBCORE_SOURCE_DIR}/transfer/HTTPRequest.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
 	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
@@ -750,7 +751,9 @@ SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
-SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp )
+SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
+${CPPOH_SOURCE_DIR}/CDNConfig.cpp
+ )
 
 # plugins sources
 
@@ -813,6 +816,7 @@ ${GFX}/resourceManager/ResourceLoadingQueue.cpp
 ${GFX}/resourceManager/ResourceManager.cpp
 ${GFX}/resourceManager/ResourceTransfer.cpp
 ${GFX}/resourceManager/ResourceUnloadTask.cpp
+${GFX}/resourceManager/UploadTool.cpp
         )
 
 #test source files

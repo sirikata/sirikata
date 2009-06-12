@@ -39,10 +39,11 @@
 namespace Sirikata {
 namespace Transfer {
 
-static const cache_usize_type gibibyte = 0x40000000, gigabyte = 1000000000;
-static const cache_usize_type mebibyte = 0x100000, megabyte = 1000000;
-static const cache_usize_type kibibyte = 0x400, kilobyte = 1000;
-static const cache_usize_type byte     = 0x1;
+static const cache_usize_type tebibyte = 0x10000000000LL, terabyte = 1000000000000LL;
+static const cache_usize_type gibibyte = 0x40000000,      gigabyte = 1000000000;
+static const cache_usize_type mebibyte = 0x100000,        megabyte = 1000000;
+static const cache_usize_type kibibyte = 0x400,           kilobyte = 1000;
+static const cache_usize_type byte     = 1;
 
 /// Critical to the functioning of CacheLayer--makes decisions which pieces of data to keep and which to throw out.
 class CachePolicy {

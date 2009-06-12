@@ -76,6 +76,8 @@ public:
                     void *&currentWindowData);
     bool tick(Time currentTime, Duration frameTime);
 
+	void filesDropped(const std::vector<std::string> &files);
+
     virtual bool isModifierDown(int modifier) const;
     virtual bool isCapsLockDown() const;
     virtual bool isNumLockDown() const;

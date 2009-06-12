@@ -88,6 +88,7 @@ public:
 			const URI &uri,
 			const Callback &cb) = 0;
 };
+typedef std::tr1::shared_ptr<UploadHandler> UploadHandlerPtr;
 
 /** A protocol handler for converting a filename to a hash, so that it can be
  * downloaded and cached. Currently, the only implementation is HTTP, but this
@@ -118,6 +119,7 @@ public:
 			const URI &uri,
 			const Callback &cb) = 0;
 };
+typedef std::tr1::shared_ptr<NameUploadHandler> NameUploadHandlerPtr;
 
 
 }

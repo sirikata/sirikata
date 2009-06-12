@@ -43,8 +43,10 @@ namespace Meru {
  * perform the operation without resulting in a framerate jitter
  * Use WorkQueue for threadsafe operations
  */
-class SequentialWorkQueue:public AutoSingleton<SequentialWorkQueue>, public Schedulable, public Sirikata::Task::ThreadSafeWorkQueue {
+class SequentialWorkQueue: public Schedulable, public ManualSingleton<SequentialWorkQueue> {
 public:
+    Sirikata::Task::WorkQueue *mWorkQueue;
+    typedef Sirikata::Task::WorkItem WorkItem;
     class WorkItemClass : public Sirikata::Task::WorkItem {
     public:
     	typedef std::tr1::function<bool()> FunctionType;
@@ -61,29 +63,39 @@ public:
     };
 
 public:
+    Sirikata::Task::WorkQueue *getWorkQueue() const { return mWorkQueue; }
     virtual unsigned int numSchedulableJobs() {
-        return probablyEmpty()?0:1;
+        return mWorkQueue->probablyEmpty()?0:1;
     }
     /**
      * processes a single job in the work queue if one exists
      * \returns true if there are any remaining jobs on the work queue
      */
     bool processOneJob() {
-    	return dequeuePoll();
+    	return mWorkQueue->dequeuePoll();
     }
     /**
      * constructs the work queue class
      */
-    SequentialWorkQueue() {}
+    SequentialWorkQueue(Sirikata::Task::WorkQueue *workQueue) : mWorkQueue(workQueue) {}
     /// destructs the work queue class, processes remaining tasks and stops it from being a singleton
     ~SequentialWorkQueue() {
-    	dequeueAll();
+    	mWorkQueue->dequeueAll();
     }
     /**
      * Adds a job to the work queue to be run.
      */
     void queueWork(const WorkItemClass::FunctionType &work) {
-    	enqueue(new WorkItemClass(work));
+    	mWorkQueue->enqueue(new WorkItemClass(work));
+    }
+    inline void enqueue(WorkItem *item) {
+        mWorkQueue->enqueue(item);
+    }
+    inline bool dequeuePoll() {
+        return mWorkQueue->dequeuePoll();
+    }
+    inline bool dequeueUntil(Sirikata::Task::AbsTime until) {
+        return mWorkQueue->dequeueUntil(until);
     }
 };
 

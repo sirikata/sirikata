@@ -364,6 +364,20 @@ public:
     }
 };
 
+class DragAndDropEvent : public Task::Event {
+public:
+    static IdPair::Primary Id;
+    static IdPair getId() {
+        return Task::IdPair(Id, IdPair::Secondary::null());
+    }
+    int mXCoord;
+    int mYCoord;
+    std::vector<std::string> mFilenames;
+    DragAndDropEvent(const std::vector<std::string>&files, int x=0, int y=0)
+        : Task::Event(getId()), mXCoord(x), mYCoord(y), mFilenames(files) {
+    }
+};
+
 #endif
 
 }

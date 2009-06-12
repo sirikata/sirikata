@@ -35,6 +35,8 @@
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
 
+#include <task/Event.hpp>
+#include <transfer/TransferManager.hpp>
 #include <oh/ProxyCameraObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyLightObject.hpp>
@@ -51,11 +53,14 @@
 #include <OgreMaterialManager.h>
 #include <OgreConfigFile.h>
 #include "input/SDLInputManager.hpp"
+#include "input/InputDevice.hpp"
+#include "input/InputEvents.hpp"
 
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceManager.hpp"
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ManualMaterialLoader.hpp"
+#include "resourceManager/UploadTool.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 using Meru::GraphicsResourceManager;
@@ -63,16 +68,6 @@ using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
-
-#include <transfer/EventTransferManager.hpp>
-#include <transfer/NetworkCacheLayer.hpp>
-#include <transfer/LRUPolicy.hpp>
-#include <transfer/DiskCacheLayer.hpp>
-#include <transfer/MemoryCacheLayer.hpp>
-#include <transfer/CachedNameLookupManager.hpp>
-#include <transfer/CachedServiceLookup.hpp>
-#include <transfer/HTTPDownloadHandler.hpp>
-#include <transfer/ServiceManager.hpp>
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
@@ -277,6 +272,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*shadowTechnique;
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
+    OptionValue*transferManager,*workQueue,*eventManager;
     OptionValue*grabCursor;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
@@ -300,10 +296,15 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           transferManager=new OptionValue("transfermanager","0",OptionValueType<void*>(),"Memory address of the TransferManager instance for downloading assets."),
+                           workQueue=new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue"),
+                           eventManager=new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>"),
                            NULL);
     bool userAccepted=true;
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
+
+    mTransferManager = (Transfer::TransferManager*)transferManager->as<void*>();
 
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
@@ -320,53 +321,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 ;
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
-            Transfer::ServiceManager<Transfer::DownloadHandler> *downServ =
-                new Transfer::ServiceManager<Transfer::DownloadHandler>(
-                    new Transfer::CachedServiceLookup,
-                    new Transfer::ProtocolRegistry<Transfer::DownloadHandler>);
-            Transfer::ListOfServices *services;
-            std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpHandler(new Transfer::HTTPDownloadHandler);
-            Transfer::ServiceManager<Transfer::NameLookupHandler> *nameServ =
-                new Transfer::ServiceManager<Transfer::NameLookupHandler>(
-                    new Transfer::CachedServiceLookup,
-                    new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>);
-
-            services = new Transfer::ListOfServices;
-            services->push_back(Transfer::ListOfServices::value_type(
-                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global"),
-                            Transfer::ServiceParams()));
-            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru:"), Transfer::ListOfServicesPtr(services));
-            services = new Transfer::ListOfServices;
-            services->push_back(Transfer::ListOfServices::value_type(
-                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global/cplatz"),
-                            Transfer::ServiceParams()));
-            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru://cplatz@/"), Transfer::ListOfServicesPtr(services));
-            services = new Transfer::ListOfServices;
-            services->push_back(Transfer::ListOfServices::value_type(
-                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/dns/names/global/meru"),
-                            Transfer::ServiceParams()));
-            nameServ->getServiceLookup()->addToCache(Transfer::URIContext("meru://meru@/"), Transfer::ListOfServicesPtr(services));
-            nameServ->getProtocolRegistry()->setHandler("http", httpHandler);
-
-            services = new Transfer::ListOfServices;
-            services->push_back(Transfer::ListOfServices::value_type(
-                            Transfer::URIContext("http://graphics.stanford.edu/~danielrh/uploadsystem/files/global"),
-                            Transfer::ServiceParams()));
-            downServ->getServiceLookup()->addToCache(Transfer::URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
-            downServ->getProtocolRegistry()->setHandler("http", httpHandler);
-            new ResourceManager(new Transfer::EventTransferManager(
-                new Transfer::MemoryCacheLayer(
-                        new Transfer::LRUPolicy(200 * Transfer::megabyte),
-                        new Transfer::DiskCacheLayer(
-                                new Transfer::LRUPolicy(3000 * Transfer::megabyte),
-                                "Cache", // 200 Megabytes
-                                new Transfer::NetworkCacheLayer(NULL, downServ))),
-                new Transfer::CachedNameLookupManager(nameServ, downServ),
-                Meru::EventSource::getSingletonPtr(),
-                new Transfer::ServiceManager<Transfer::NameUploadHandler>(NULL,NULL),
-                new Transfer::ServiceManager<Transfer::UploadHandler>(NULL,NULL)
-            ));
-            new GraphicsResourceManager(SequentialWorkQueue::getSingletonPtr());
+            Meru::EventSource::sSingleton = ((Task::GenEventManager*)eventManager->as<void*>());
+            new SequentialWorkQueue ((Task::WorkQueue*)workQueue->as<void*>());
+            new ResourceManager(mTransferManager);
+            new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
             new MaterialScriptManager;
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
@@ -382,7 +340,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 doAutoWindow
 #endif
                 ;
-#ifdef __APPLE__
+#ifdef __APPLE__x
             if (system("/usr/bin/sw_vers|/usr/bin/grep ProductVersion:.10.4.")==0)
                 ogreCreatedWindow=false;
 #endif
@@ -463,6 +421,9 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
         } else
             throw e;
     }
+    mInputManager->subscribe(
+        Input::DragAndDropEvent::getId(),
+        std::tr1::bind(&OgreSystem::performUpload,this,_1));
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
     sActiveOgreScenes.push_back(this);
@@ -701,6 +662,40 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
         mSceneManager->destroyQuery(mRayQuery);
     }
     return toReturn;
+}
+
+typedef const std::map<Meru::ResourceFileUpload,Meru::ResourceUploadStatus> UploadStatusMap;
+static void uploadFinished(UploadStatusMap &uploadStatus)
+
+/*
+,
+    const std::map<String,int>& user_interface_choices, 
+    const std::set<String>& usernames_to_logout
+*/
+{
+    for (UploadStatusMap::const_iterator iter = uploadStatus.begin(); iter != uploadStatus.end(); ++iter) {
+        bool success = (*iter).second == Transfer::TransferManager::SUCCESS;
+        if (success) {
+            SILOG(ogre,debug,"Upload of " << (*iter).first.mID << " (hash "<<(*iter).first.mHash << ") was successful.");
+        } else {
+            SILOG(ogre,warn,"Failed to upload " << (*iter).first.mID <<  " (hash "<<(*iter).first.mHash << "). Status = "<<(int)((*iter).second));
+        }
+    }
+}
+
+Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
+    std::tr1::shared_ptr<Input::DragAndDropEvent> dndev(
+        std::tr1::dynamic_pointer_cast<Input::DragAndDropEvent>(ev));
+    Meru::ReplaceMaterialOptions opts;
+    opts.uploadHashContext = Transfer::URIContext("mhash:///");
+    opts.uploadNameContext = Transfer::URIContext("meru:///");
+    std::vector<Meru::ResourceFileUpload> allDeps = 
+        Meru::ProcessOgreMeshMaterialDependencies(dndev->mFilenames, opts);
+    Meru::UploadFilesAndConfirmReplacement(mTransferManager,
+                                     allDeps,
+                                     opts.uploadHashContext,
+                                     &uploadFinished);
+    return Task::EventResponse::nop();
 }
 
 Duration OgreSystem::desiredTickRate()const{

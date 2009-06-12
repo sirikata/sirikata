@@ -36,10 +36,6 @@
 
 namespace Meru {
 
-EventSource::EventSource()
-  : AutoSingleton<EventSource>(),
-    Sirikata::Task::GenEventManager(SequentialWorkQueue::getSingletonPtr())
-{
-}
+::Sirikata::Task::GenEventManager *EventSource::sSingleton;
 
 } // namespace Meru

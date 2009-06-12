@@ -59,6 +59,14 @@ namespace Sirikata {
 namespace Input {
 class SDLInputManager;
 }
+namespace Task {
+class EventResponse;
+class Event;
+typedef std::tr1::shared_ptr<Event> EventPtr;
+}
+namespace Transfer {
+class TransferManager;
+}
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
 class Entity;
@@ -70,6 +78,8 @@ class OgreSystem: public TimeSteppedSimulation {
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
+    class Transfer::TransferManager *mTransferManager;
+    Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
     void destroyMouseHandler();
 

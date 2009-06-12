@@ -35,8 +35,6 @@
 #include "EventSource.hpp"
 namespace Meru {
 
-AUTO_SINGLETON_STORAGE(SequentialWorkQueue);
-// EventSource depends on SequentialWorkQueue.
-AUTO_SINGLETON_STORAGE(EventSource);
+MANUAL_SINGLETON_STORAGE(SequentialWorkQueue);
 
 }
