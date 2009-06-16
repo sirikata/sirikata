@@ -76,9 +76,13 @@ public:
         return true;
     }
     const Ftype &getConstructor(const String&name)const{
+        std::cout << "dbm: getConstructor" << std::endl;
         typename ConstructorMap::const_iterator where=mConstructors.find(name);
-        if (where==mConstructors.end())
+        if (where==mConstructors.end()) {
+            std::cout << "dbm: getConstructor return 1" << std::endl;
             return mNoop;
+        }
+        std::cout << "dbm: getConstructor return 2:" << where->second << std::endl;
         return where->second;
     }
     const Ftype& getDefaultConstructor()const{

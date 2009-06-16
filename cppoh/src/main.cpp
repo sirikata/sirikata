@@ -218,10 +218,10 @@ void parseConfig(
 
 }
 
-int main(int argc,const char**argv) {
+int main ( int argc,const char**argv ) {
     using namespace Sirikata;
     PluginManager plugins;
-    plugins.load(
+    plugins.load (
 #ifdef __APPLE__
 #ifdef NDEBUG
         "libogregraphics.dylib"
@@ -244,6 +244,7 @@ int main(int argc,const char**argv) {
 #endif
 #endif
         );
+    plugins.load ("libbulletphysics_d.so");
     OptionMapPtr transferOptions (new OptionMap);
     {
         std::string contents(cdnConfigFile->as<String>());
@@ -277,14 +278,32 @@ int main(int argc,const char**argv) {
         os << "--workqueue=" << workQueue << " ";
         graphicsCommandArguments = os.str();
     }
-    String graphicsPluginName("ogregraphics");
+    String graphicsPluginName ( "ogregraphics" );
+    String physicsPluginName ( "bulletphysics" );
+    SILOG(cppoh,error,"dbm: initializing graphics");
     TimeSteppedSimulation *graphicsSystem=
         SimulationFactory::getSingleton()
-          .getConstructor(graphicsPluginName)(provider,graphicsCommandArguments);
+        .getConstructor ( graphicsPluginName ) ( provider,graphicsCommandArguments );
+    SILOG(cppoh,error,"dbm: initializing physics");
+    TimeSteppedSimulation *physicsSystem=
+        SimulationFactory::getSingleton()
+        .getConstructor ( physicsPluginName ) ( provider,graphicsCommandArguments );
+    SILOG(cppoh,error,"dbm: checking physics");
+    if (!physicsSystem) {
+        SILOG(cppoh,error,"physicsSystem NULL!");
+        int n=0;
+        n /= 0;
+    }
+    else {
+        SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
+    }
+    SILOG(cppoh,error,"dbm: about to initialize");
     pm->initialize();
-    if (graphicsSystem) {
-        while (graphicsSystem->tick()) {
-
+    if ( graphicsSystem ) {
+        while ( graphicsSystem->tick() ) {
+            SILOG ( cppoh,error,"just called ogre tick" ); ///dbm
+            physicsSystem->tick();
+            SILOG ( cppoh,error,"just called bullet tick" ); ///dbm
         }
     } else {
         SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
