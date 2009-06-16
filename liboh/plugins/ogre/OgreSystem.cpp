@@ -683,14 +683,15 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
             if ((*iter).first.mType == Meru::MESH) {
                 Task::AbsTime now(Task::AbsTime::now());
                 SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
-                Vector3d delta(mInputManager->mWorldScale->as<float>()*nummesh,0,mInputManager->mWorldScale->as<float>());
                 Location loc = mPrimaryCamera->getProxy().globalLocation(now);
-                loc.setPosition(loc.getPosition()+delta);
+                float scale = mInputManager->mWorldScale->as<float>();
+                loc.setPosition(loc.getPosition()+Vector3d(-scale*loc.getOrientation().zAxis())); // z-axis is backwards.
                 ProxyManager *proxyMgr = mPrimaryCamera->getProxy().getProxyManager();
                 std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
                 proxyMgr->createObject(newMeshObject);
                 newMeshObject->setMesh((*iter).first.mID);
                 newMeshObject->resetPositionVelocity(now, loc);
+                selectObject(getEntity(newMeshObject));
                 nummesh++;
             }
         } else {
@@ -699,22 +700,35 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
     }
 }
 
+struct UploadRequest {
+    Meru::ReplaceMaterialOptions opts;
+    std::vector<Meru::DiskFile> filenames;
+    OgreSystem *parent;
+    Transfer::TransferManager *mTransferManager;
+    void perform() {
+        std::vector<Meru::ResourceFileUpload> allDeps = 
+            Meru::ProcessOgreMeshMaterialDependencies(filenames, opts);
+        Meru::UploadFilesAndConfirmReplacement(mTransferManager,
+                                           allDeps,
+                                           opts.uploadHashContext,
+                                           std::tr1::bind(&OgreSystem::uploadFinished,parent,_1));
+        delete this;
+    }
+};
+
 Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
     std::tr1::shared_ptr<Input::DragAndDropEvent> dndev(
         std::tr1::dynamic_pointer_cast<Input::DragAndDropEvent>(ev));
-    Meru::ReplaceMaterialOptions opts;
-    opts.uploadHashContext = Transfer::URIContext("mhash:///");
-    opts.uploadNameContext = Transfer::URIContext("meru:///");
-    std::vector<Meru::DiskFile> filenames;
+    UploadRequest *uploadreq = new UploadRequest;
+    uploadreq->opts.uploadHashContext = Transfer::URIContext("mhash:///");
+    uploadreq->opts.uploadNameContext = Transfer::URIContext("meru:///");
     for (std::vector<std::string>::const_iterator iter = dndev->mFilenames.begin(); iter != dndev->mFilenames.end(); ++iter) {
-        filenames.push_back(Meru::DiskFile::makediskfile(*iter));
+        uploadreq->filenames.push_back(Meru::DiskFile::makediskfile(*iter));
     }
-    std::vector<Meru::ResourceFileUpload> allDeps = 
-        Meru::ProcessOgreMeshMaterialDependencies(filenames, opts);
-    Meru::UploadFilesAndConfirmReplacement(mTransferManager,
-                                           allDeps,
-                                           opts.uploadHashContext,
-                                           std::tr1::bind(&OgreSystem::uploadFinished,this,_1));
+    uploadreq->parent = this;
+    uploadreq->mTransferManager = mTransferManager;
+    boost::thread th(std::tr1::bind(&UploadRequest::perform, uploadreq));
+    th.detach(); // let it do processing in the background.
     return Task::EventResponse::nop();
 }
 

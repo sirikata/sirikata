@@ -542,21 +542,25 @@ void HTTPRequest::initCurlHandle() {
 
 	std::ostringstream orangestring;
 	bool nontrivialRange=false;
-	if (mRequestedRange.startbyte() != 0) {
-		nontrivialRange=true;
-		orangestring << mRequestedRange.startbyte();
-		mOffset = mRequestedRange.startbyte();
-	}
-	orangestring << '-';
-	if (!mRequestedRange.goesToEndOfFile()) {
-		if (mRequestedRange.length() <= 0) {
-			// invalid range
-			mCallback(this, DenseDataPtr(new DenseData(mRequestedRange)), true);
-			return;
-		}
-		nontrivialRange=true;
-		orangestring << (mRequestedRange.endbyte());
-	}
+    if (mRequestedRange.length() == 0 && !mRequestedRange.goesToEndOfFile()) {
+		curl_easy_setopt(mCurlRequest, CURLOPT_NOBODY, 1);
+    } else {
+        if (mRequestedRange.startbyte() != 0) {
+            nontrivialRange=true;
+            orangestring << mRequestedRange.startbyte();
+            mOffset = mRequestedRange.startbyte();
+        }
+        orangestring << '-';
+        if (!mRequestedRange.goesToEndOfFile()) {
+            if (mRequestedRange.length() <= 0) {
+                // invalid range
+                mCallback(this, DenseDataPtr(new DenseData(mRequestedRange)), true);
+                return;
+            }
+            nontrivialRange=true;
+            orangestring << (mRequestedRange.endbyte());
+        }
+    }
 
 	if (nontrivialRange) {
 		mRangeString = orangestring.str();

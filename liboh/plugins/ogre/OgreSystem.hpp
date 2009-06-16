@@ -57,6 +57,7 @@ struct RaySceneQueryResultEntry;
 }
 
 namespace Sirikata {
+class ProxyPositionObject;
 namespace Input {
 class SDLInputManager;
 }
@@ -134,6 +135,7 @@ public:
     const OptionSet*getOptions()const{
         return mOptions;
     }
+    void selectObject(Entity *obj, bool reset=true); // Defined in OgreSystemMouseHandler.cpp
     const Vector3d& getOffset()const {return mFloatingPointOffset;}
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
@@ -164,7 +166,7 @@ public:
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
-    virtual bool tick();
+    virtual bool tick();    
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

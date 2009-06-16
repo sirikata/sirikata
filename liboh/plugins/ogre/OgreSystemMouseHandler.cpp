@@ -162,7 +162,7 @@ class OgreSystem::MouseHandler {
     }
 
     ///////////////////// CLICK HANDLERS /////////////////////
-
+public:
     void clearSelection() {
         for (SelectedObjectMap::const_iterator selectIter = mSelectedObjects.begin();
              selectIter != mSelectedObjects.end(); ++selectIter) {
@@ -171,6 +171,7 @@ class OgreSystem::MouseHandler {
         }
         mSelectedObjects.clear();
     }
+private:
 
     int mWhichRayObject;
     EventResponse selectObject(EventPtr ev, int direction) {
@@ -1045,6 +1046,16 @@ public:
             mParent->mInputManager->unsubscribe(*iter);
         }
     }
+    void setParentGroupAndClear(const SpaceObjectReference &id) {
+        clearSelection();
+        mCurrentGroup = id;
+    }
+    const SpaceObjectReference &getParentGroup() const {
+        return mCurrentGroup;
+    }
+    void addToSelection(const SpaceObjectReference &id) {
+        mSelectedObjects.insert(SelectedObjectMap::value_type(id, Location()));
+    }
 };
 
 void OgreSystem::allocMouseHandler() {
@@ -1053,6 +1064,16 @@ void OgreSystem::allocMouseHandler() {
 void OgreSystem::destroyMouseHandler() {
     if (mMouseHandler) {
         delete mMouseHandler;
+    }
+}
+
+void OgreSystem::selectObject(Entity *obj, bool replace) {
+    if (replace) {
+        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParent());
+    }
+    if (mMouseHandler->getParentGroup() == obj->getProxy().getParent()) {
+        mMouseHandler->addToSelection(obj->id());
+        obj->setSelected(true);
     }
 }
 
