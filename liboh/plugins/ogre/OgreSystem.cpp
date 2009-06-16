@@ -37,6 +37,7 @@
 
 #include <task/Event.hpp>
 #include <transfer/TransferManager.hpp>
+#include <oh/ProxyManager.hpp>
 #include <oh/ProxyCameraObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyLightObject.hpp>
@@ -426,6 +427,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
         std::tr1::bind(&OgreSystem::performUpload,this,_1));
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
+    mSceneManager->setAmbientLight(Ogre::ColourValue(0,0,0,0));
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
@@ -665,7 +667,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
 }
 
 typedef const std::map<Meru::ResourceFileUpload,Meru::ResourceUploadStatus> UploadStatusMap;
-static void uploadFinished(UploadStatusMap &uploadStatus)
+void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
 
 /*
 ,
@@ -673,10 +675,24 @@ static void uploadFinished(UploadStatusMap &uploadStatus)
     const std::set<String>& usernames_to_logout
 */
 {
+    int nummesh=0;
     for (UploadStatusMap::const_iterator iter = uploadStatus.begin(); iter != uploadStatus.end(); ++iter) {
         bool success = (*iter).second == Transfer::TransferManager::SUCCESS;
         if (success) {
             SILOG(ogre,debug,"Upload of " << (*iter).first.mID << " (hash "<<(*iter).first.mHash << ") was successful.");
+            if ((*iter).first.mType == Meru::MESH) {
+                Task::AbsTime now(Task::AbsTime::now());
+                SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
+                Vector3d delta(mInputManager->mWorldScale->as<float>()*nummesh,0,mInputManager->mWorldScale->as<float>());
+                Location loc = mPrimaryCamera->getProxy().globalLocation(now);
+                loc.setPosition(loc.getPosition()+delta);
+                ProxyManager *proxyMgr = mPrimaryCamera->getProxy().getProxyManager();
+                std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
+                proxyMgr->createObject(newMeshObject);
+                newMeshObject->setMesh((*iter).first.mID);
+                newMeshObject->resetPositionVelocity(now, loc);
+                nummesh++;
+            }
         } else {
             SILOG(ogre,warn,"Failed to upload " << (*iter).first.mID <<  " (hash "<<(*iter).first.mHash << "). Status = "<<(int)((*iter).second));
         }
@@ -689,12 +705,16 @@ Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
     Meru::ReplaceMaterialOptions opts;
     opts.uploadHashContext = Transfer::URIContext("mhash:///");
     opts.uploadNameContext = Transfer::URIContext("meru:///");
+    std::vector<Meru::DiskFile> filenames;
+    for (std::vector<std::string>::const_iterator iter = dndev->mFilenames.begin(); iter != dndev->mFilenames.end(); ++iter) {
+        filenames.push_back(Meru::DiskFile::makediskfile(*iter));
+    }
     std::vector<Meru::ResourceFileUpload> allDeps = 
-        Meru::ProcessOgreMeshMaterialDependencies(dndev->mFilenames, opts);
+        Meru::ProcessOgreMeshMaterialDependencies(filenames, opts);
     Meru::UploadFilesAndConfirmReplacement(mTransferManager,
-                                     allDeps,
-                                     opts.uploadHashContext,
-                                     &uploadFinished);
+                                           allDeps,
+                                           opts.uploadHashContext,
+                                           std::tr1::bind(&OgreSystem::uploadFinished,this,_1));
     return Task::EventResponse::nop();
 }
 

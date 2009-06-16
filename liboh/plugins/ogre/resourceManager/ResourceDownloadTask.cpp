@@ -63,7 +63,7 @@ EventResponse ResourceDownloadTask::downloadCompleteHandler(const EventPtr& even
     //assert(false); // ???
   }
   finish(transferEvent->success());
-  return EventResponse::nop();
+  return EventResponse::del();
 }
 
 void ResourceDownloadTask::operator()()

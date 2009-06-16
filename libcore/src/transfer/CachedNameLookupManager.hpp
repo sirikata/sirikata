@@ -53,11 +53,6 @@ class CachedNameLookupManager : public NameLookupManager {
 	boost::shared_mutex mMut;
 
 protected:
-	virtual void addToCache(const URI &origNamedUri, const RemoteFileId &toFetch) {
-		boost::unique_lock<boost::shared_mutex> updatecache(mMut);
-		mLookupCache.insert(NameMap::value_type(origNamedUri, toFetch));
-	}
-
 	/// Unimplemented.
 	virtual void unserialize() {
 		// ...
@@ -70,6 +65,19 @@ protected:
 public:
 	CachedNameLookupManager(ServiceManager<NameLookupHandler> *nameProtocols, ServiceManager<DownloadHandler> *downloadServ=NULL)
 		: NameLookupManager(nameProtocols, downloadServ) {
+	}
+
+	virtual void removeFromCache(const URI &origNamedUri) {
+		boost::unique_lock<boost::shared_mutex> updatecache(mMut);
+        NameMap::iterator iter = mLookupCache.find(origNamedUri);
+        if (iter != mLookupCache.end()) {
+            mLookupCache.erase(iter);
+        }
+	}
+
+	virtual void addToCache(const URI &origNamedUri, const RemoteFileId &toFetch) {
+		boost::unique_lock<boost::shared_mutex> updatecache(mMut);
+		mLookupCache.insert(NameMap::value_type(origNamedUri, toFetch));
 	}
 
 	virtual void lookupHash(const URI &namedUri, const Callback &cb) {

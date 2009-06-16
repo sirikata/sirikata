@@ -146,14 +146,14 @@ public:
 		mDownloadMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService, mDownloadReg);
 		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
 
-		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem,NULL,NULL);
+		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem,NULL,NULL,NULL);
 
 		// Uses the same event system, so don't combine the cached and non-cached ones into a single test.
 		mCachedNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadMgr);
 		mMemoryCachePolicy = new Transfer::LRUPolicy(1000000);
 		mMemoryCache = new Transfer::MemoryCacheLayer(mMemoryCachePolicy, mCachedNetworkCache);
 		mCachedNameLookup = new Transfer::CachedNameLookupManager(mNameLookupMgr);
-		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem,NULL,NULL);
+		mCachedTransferManager = new Transfer::EventTransferManager(mMemoryCache, mCachedNameLookup, mEventSystem,NULL,NULL,NULL);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
 

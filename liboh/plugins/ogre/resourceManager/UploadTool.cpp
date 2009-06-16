@@ -51,6 +51,8 @@
 
 #include <boost/thread/mutex.hpp>
 
+namespace Meru {
+
 using namespace ::Sirikata::Transfer;
 using namespace ::Sirikata;
 
@@ -137,22 +139,47 @@ const char *const native_files[]={"white.png","black.png","whiteclear.png","blac
 const char *const native_files_data[]={(char*)white_png,(char*)black_png,(char*)whiteclear_png , (char*)blackclear_png , (char*)graytrans_png , blackcube_bk_png , blackcube_dn_png , blackcube_up_png , blackcube_lf_png , blackcube_rt_png , blackcube_fr_png , whitecube_bk_png , whitecube_dn_png , whitecube_up_png , whitecube_lf_png , whitecube_rt_png , whitecube_fr_png, uebershader_hlsl };
 const int native_files_size[]={sizeof(white_png),sizeof(black_png),sizeof(whiteclear_png) , sizeof(blackclear_png) , sizeof(graytrans_png) , sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(black_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png), sizeof(white_png),sizeof(uebershader_hlsl) };
 const int num_native_files=sizeof(native_files)/sizeof(native_files[0]);
-bool isNativeFile(const Ogre::String&file) {
+
+class FingerprintArray {
+    std::vector<Fingerprint> fprints;
+public:
+    FingerprintArray() {
+        for (int i = 0; i < num_native_files; i++) {
+            fprints.push_back(Fingerprint::computeDigest(native_files_data[i], native_files_size[i]));
+        }
+    }
+    const Fingerprint &operator[] (size_t which) const {
+        return fprints[which];
+    }
+};
+static const FingerprintArray native_hashes;
+
+bool isNativeFile(const Ogre::String&filename) {
     for (int i=0;i<num_native_files;++i) {
-        if (file==native_files[i]) return true;
+        if (filename==native_files[i]) return true;
     }
     return false;
 }
-const char* nativeData (const Ogre::String&file, int&len) {
+const char* nativeData (const Ogre::String&file, int&len, Fingerprint *hash=NULL) {
     for (int i=0;i<num_native_files;++i) {
         if (file==native_files[i]) {
             len=native_files_size[i];
+            if (hash) *hash = native_hashes[i];
             return native_files_data[i];
         }
     }
     return NULL;
-    
 }
+
+DenseDataPtr nativeDataPtr(const Ogre::String&file, Fingerprint *hash=NULL) {
+    int len;
+    const char *data = nativeData(file, len, hash);
+    if (!data || !len) {
+        return DenseDataPtr();
+    }
+    return DenseDataPtr (new DenseData(std::string(data, len)));
+}
+
 Ogre::DataStream* nativeStream (const Ogre::String&file) {
     for (int i=0;i<num_native_files;++i) {
         if (file==native_files[i]) 
@@ -161,7 +188,6 @@ Ogre::DataStream* nativeStream (const Ogre::String&file) {
     return NULL;
 }
 
-using namespace Meru;
 /**  
  * this is useful where, in materials, strings are often quoted to help the parser
  * \param s may be a string is surrounded by quotes: if so eliminate those
@@ -177,7 +203,8 @@ String stripquotes(String s) {
  * \param input is the full path of the file
  * \returns everything past the last slash if such a slash exists
  */
-Ogre::String stripslashes (Ogre::String input) {
+String stripslashes (DiskFile inputdp) {
+  std::string input = inputdp.diskpath();
   std::string::size_type where=input.find_last_of("\\/");
   if (where==Ogre::String::npos) {
     return input;
@@ -186,18 +213,27 @@ Ogre::String stripslashes (Ogre::String input) {
   }
 }
 
-typedef  std::map<Ogre::String,Fingerprint,SpecialStringSort> FileMap;
-typedef  std::map<Ogre::String,std::pair<Fingerprint,Ogre::String>,SpecialStringSort> MaterialMap;
-typedef  std::map<String,std::vector<String> > ProviderMap;
-typedef  std::map<Fingerprint,DependencyPair > DependencyMap;
+
+struct ResourceFileUploadData : public ResourceFileUpload, public DependencyPair {
+//    bool mProcessedDependencies;
+//    ResourceFileUploadData() : mProcessedDependencies(false) {}
+};
+
+/* upload process:
+
+-> specify mesh file. File is read into memory, and hash is computed.
+   If HashToFilename map contains this file, its DenseData is used.
+   File info is inserted into
+
+ */
 
 
 
 
-namespace Meru {
+
 class ReplaceMaterialOptionsAndReturn :public ReplaceMaterialOptions {public:
-    std::map<Fingerprint,size_t> hashToFirstLevelName; ///< Map from hash to position in files vector.
-    std::vector <ResourceFileUpload> uploadedFiles;
+    FileMap mFileMap;
+    MaterialMap mMaterialMap;
     ReplaceMaterialOptionsAndReturn(const ReplaceMaterialOptions&opts):ReplaceMaterialOptions(opts) {}
 };
 
@@ -213,63 +249,74 @@ class ReplaceMaterialOptionsAndReturn :public ReplaceMaterialOptions {public:
  * \param opts will have the files written to it if those files have computed first level names already
  */
 
-static void writeThirdLevelName(String name, const Fingerprint &fprint,ReplaceMaterialOptionsAndReturn&opts) {
-    if (fprint != Fingerprint::null()){
-        std::map<Fingerprint,size_t>::iterator where;
-        if ((where=opts.hashToFirstLevelName.find(fprint))!=opts.hashToFirstLevelName.end()) {
-            opts.uploadedFiles.push_back(ResourceFileUpload());
-            opts.uploadedFiles.back().mHash=fprint;
-            opts.uploadedFiles.back().mID=URI(opts.uploadNameContext, stripslashes(name));
-            opts.uploadedFiles.back().mData=opts.uploadedFiles[where->second].mData;
-        }else {
-			std::string hashstr (fprint.convertToHexString());
-            fprintf (stderr,"ERROR: name %s found to have hash %s that is not in database\n",name.c_str(),hashstr.c_str());
+static ResourceFileUploadData *getFileData(const DiskFile &name, ReplaceMaterialOptionsAndReturn&opts, URI *uri=NULL) {
+    String filename = stripslashes(name);
+    URI namedURI(opts.uploadNameContext,filename);
+    bool disallowed_file=opts.disallowedThirdLevelFiles.find(filename)!=opts.disallowedThirdLevelFiles.end();
+
+// Problem: in order to reference something by hash, you need to have loaded it into memory first.
+// This means that you cannot compute URIs until you have found an ordering for dependencies.
+// For material files, it is not possible to reference by hash because they can have self-referential URIs.
+
+// I'm thinking only binary files with no dependencies should be allowed to be referenced by hash.
+// In such cases, it can be possible to read the file into memory right here.
+
+// Since there is not yet any sort of preference, hashURI is commented out for now.
+
+//    URI hashURI(opts.uploadHashContext, hash.convertToHexString());
+    if (!disallowed_file) {
+        FileMap::iterator iter = opts.mFileMap.find(name);
+        bool inserted = false;
+        if (iter == opts.mFileMap.end()) {
+            iter = opts.mFileMap.insert(FileMap::value_type(name, new ResourceFileUploadData)).first;
+            inserted = true;
         }
+        ResourceFileUploadData *fileinfo = ((*iter).second);
+        if (inserted) {
+            fileinfo->mSourceFilename = name;
+            fileinfo->mReferencedByHash = false;
+            if (filename.find(".mesh")==filename.length()-strlen(".mesh")) { //&&filename.find("models")!=String::npos) {
+                fileinfo->mType = MESH;
+            } else if (filename.find(".material")!=Ogre::String::npos||
+                       filename.find(".script")!=Ogre::String::npos||
+                       filename.find(".os")!=Ogre::String::npos||
+                       filename.find(".program")!=Ogre::String::npos) {
+                fileinfo->mType = MATERIAL;
+            } else {
+                fileinfo->mType = DATA;
+            }
+            if (isNativeFile(filename)) {
+                fileinfo->mData = nativeDataPtr(filename, &fileinfo->mHash);
+                fileinfo->mID = URI(opts.uploadHashContext,fileinfo->mHash.convertToHexString());
+            } else {
+                fileinfo->mID = namedURI;
+            }
+        }
+        if (uri) {
+            if (fileinfo) {
+                *uri = fileinfo->mID;
+            } else {
+                *uri = namedURI;
+            }
+        }
+        if (!isNativeFile(filename) && access(name.diskpath().c_str(),F_OK)) {
+            std::cerr<<"File "<<name.diskpath()<<" does not exist!"<<std::endl;
+            inserted = true;
+        }
+        return fileinfo;
     }
+    if (uri) {
+        *uri = namedURI;
+    }
+    return NULL;
+};
+
+static String getFileURI(const DiskFile &name, ReplaceMaterialOptionsAndReturn&opts) {
+    URI namedURI;
+    getFileData(name, opts, &namedURI);
+    return namedURI.toString();
 }
 
-// computeDigest, convertToHexString
-
-/**
- * This function takes in some parameters and decides what sort of name the file should have based on its merits
- * \param oldName indicates the name that was on the filesystem of the file to be uploaded
- * \param opts contains information about which groups should be user or FIXME in the future that certain files have been cancel/allowed by the upload Navi
- * \param hash contains the hash of the file in case a first level name is decided
- * \param addQuotes indicates whether the function should add quotes to the return value for use in a material
- * \param forceFirstLevel indicates whether the file should be absolutely the first level no matter the options (except the future options where user is god over even that 
- * \returns fully qualified name of the object
- */
-static String firstOrThirdLevelName(String oldName, ReplaceMaterialOptionsAndReturn& opts, const Fingerprint &hash, bool forceFirstLevel) {
-/*
-
-  String username=opts.username;
-    if (oldName.find(".dds")!=String::npos&&opts.meruBaseTileable) {
-        username=opts.group_username;
-    }
-*/
-    bool core_system_file=false;
-    if (oldName.find(".material")!=String::npos||oldName.find(".program")!=String::npos||oldName.find(".hlsl")!=String::npos||oldName.find(".cg")!=String::npos||oldName.find(".glsl")!=String::npos||oldName.find(".vert")!=String::npos||oldName.find(".frag")!=String::npos) {
-        core_system_file=true;
-    } 
-    URI tentativeThirdLevelName(opts.uploadNameContext,stripslashes(oldName));
-    bool disallowed_file=opts.disallowedThirdLevelFiles.find(tentativeThirdLevelName.toString())!=opts.disallowedThirdLevelFiles.end();
-    if (disallowed_file&&!core_system_file) {
-        ///root username always gets uploaded no matter what
-        forceFirstLevel=true;
-    }
-    bool forceThirdLevel=oldName.find(".skeleton")==String::npos&&oldName.find("VPhlsl")==String::npos&&oldName.find("VPglsl")==String::npos&&oldName.find("VPcg")==String::npos&&oldName.find("VPcgGL")==String::npos&&oldName.find("FPhlsl")==String::npos&&oldName.find("FPglsl")==String::npos&&oldName.find("FPcg")==String::npos&&oldName.find("FPcgGL")==String::npos&&forceFirstLevel==false;
-
-
-    URI retval(opts.uploadHashContext, hash.convertToHexString());
-    if (opts.forceFirstLevelNames==false&&(forceThirdLevel||opts.forceThirdLevelNames)) {
-        if (!disallowed_file) {// don't want to request an upload of a different core system file if the user does not know the root password
-            writeThirdLevelName(stripslashes(oldName),hash,opts);
-        }
-        retval= tentativeThirdLevelName;
-    }
-    return retval.toString();
-    
-}
 ///Dummy name value pair list since the name/value pair is not used by the nonloading replacing data stream
 static const Ogre::NameValuePairList nvpl;
 
@@ -286,40 +333,41 @@ bool shouldForceFirstLevelName(const Ogre::String &textureName, const Ogre::Stri
     if (textureName=="white.png"||textureName=="black.png"||textureName=="blackclear.png"||textureName=="graytrans.png"||textureName=="whiteclear.png") {
         return true;
     }
-    if (textureName=="blackcube.png"||textureName=="whitecube.png"||textureName.find(".vert")!=String::npos||textureName.find(".frag")!=String::npos||textureName.find(".hlsl")!=String::npos||textureName.find(".glsl")!=String::npos||textureName.find(".cg")!=String::npos)
-        return false;
-    if (opts.namedTileable==false)
-        return true;
-    const static Ogre::String texcoordset="tex_coord_set";
-    Ogre::String::size_type where=input.find(texcoordset,second_input-input.begin());
-    if (where!=Ogre::String::npos) {
-        where+=texcoordset.length();
-        while (where<input.length()&&isspace(input[where])){
-            ++where;
-        }
-        while (where<input.length()&&!isspace(input[where])){
-            if (input[where]!='0')
-                return false;
-            where++;
-        }
-        return true;
-    }
     return false;
 }
-};
+
+DiskFile fileRelativeTo(String filename, const String &path) {
+    String ret(path);
+    do {
+        String::size_type pos = ret.rfind('/');
+        if (pos != String::npos) {
+            ret = ret.substr(0, pos);
+        } else {
+            break;
+        }
+        if (filename.length()>=3 && filename.substr(0,3)=="../") {
+            filename = filename.substr(3);
+            continue;
+        } else {
+            return DiskFile::makediskfile(ret + '/' + filename);
+        }
+    } while(true);
+    return DiskFile::makediskfile(filename);
+}
+
 /**
  * This class records all the dependencies contained within a file using the ogre script regular expression
  * facility provided by the ReplacingDataStream
  */
 class RecordingDependencyDataStream:public ReplacingDataStream {
     ///This is essentially an additional return value--the first level textures contained within this file (the others are provides and depends_on)
-    std::set<Ogre::String> *firstLevelTextures;
+    std::set<DiskFile> *firstLevelTextures;
     ///These are the options provided by the caller to the import process
     ReplaceMaterialOptionsAndReturn *opts;
 public:
+    std::vector<String> dependsOnMaterial;
 /// The obvious constructor that fills in the data as required and passes in the noop name value pair list
-    RecordingDependencyDataStream(Ogre::DataStreamPtr&input,const Ogre::String &destination, std::set<Ogre::String>&firstLevelTextures, ReplaceMaterialOptionsAndReturn &opts): ReplacingDataStream(input,destination,&nvpl){
-        this->firstLevelTextures=&firstLevelTextures;
+    RecordingDependencyDataStream(Ogre::DataStreamPtr&input,Ogre::String destination, ReplaceMaterialOptionsAndReturn &opts): ReplacingDataStream(input,destination,&nvpl){
         this->opts=&opts;
   }
     /**
@@ -334,11 +382,19 @@ public:
                                            Ogre::String::size_type where_lexeme_start,
                                            Ogre::String::size_type &return_lexeme_end,
                                            const Ogre::String &filename){
+  String extension;
+  if (input.length() > where_lexeme_start+8 && input.substr(where_lexeme_start,8)=="delegate") {
+    extension = ".program";
+  }
   find_lexeme(input,where_lexeme_start,return_lexeme_end);
   if (where_lexeme_start<return_lexeme_end) {
     Ogre::String provided=input.substr(where_lexeme_start,return_lexeme_end-where_lexeme_start);
     if (provided.find("*")==String::npos) {
-        depends_on.push_back(provided);
+        if (!extension.empty()) {
+            depends_on.push_back(provided+extension);
+        } else {
+            dependsOnMaterial.push_back(provided+extension);
+        }
     }
     return provided;
   }else {
@@ -387,13 +443,7 @@ public:
       find_lexeme(input,lexeme_start,return_lexeme_end);
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
-          if (shouldForceFirstLevelName(dep,input,pwhere,second_input,*this->opts)) {
-              firstLevelTextures->insert(dep);              
-          }else if (firstLevelTextures->find(dep)!=firstLevelTextures->end()){
-              firstLevelTextures->erase(firstLevelTextures->find(dep));
-              printf("WARNING: tilable texture %s specified in the 0th coordinate set\n",dep.c_str());
-          }
-          depends_on.push_back(dep);
+          depends_on.push_back("../textures/"+dep);
       }
 
   }  
@@ -420,6 +470,7 @@ public:
     }
   }
 };
+
 String eliminateFilename(String filename, String provided) {
     String::size_type where=filename.find_last_of("/\\");
     String::size_type where_end=filename.find_last_of(".");
@@ -448,10 +499,10 @@ String eliminateFilename(String filename, String provided) {
  * This class uses the regexp magic contained within the ReplacingDataStream class to perform
  */
 class DependencyReplacingDataStream:public ReplacingDataStream {
-  /// A map of which material names are provided by which file (the filename of that file and that files hash)
+  /// A map of which material names are provided by which file (the filename of that file)
   MaterialMap *provides_to_name;
   /// A map of which dependencies are required by which files This is for when an olde school MshW file was required which would need all dependencies period
-  DependencyMap *overarching_dependencies;
+  FileMap *overarching_dependencies;
   ///The dependencies of my file (inherits from the overarching dependencies.
   DependencyPair*my_dependencies;
   ///The options provided by the caller to this entire replace_material script
@@ -459,7 +510,7 @@ class DependencyReplacingDataStream:public ReplacingDataStream {
 public:
 
 ///This function takes as input many of the maps required to figure out which material names belong in which 3rd or first level names for scripts in order to munge those names
-    DependencyReplacingDataStream(Ogre::DataStreamPtr&input,const Ogre::String &destination,MaterialMap *provides_to_name,DependencyMap *overarching_dependencies,   DependencyPair *my_dependencies, bool thirdLevelNaming, ReplaceMaterialOptionsAndReturn&username): ReplacingDataStream(input,destination,&nvpl){
+    DependencyReplacingDataStream(Ogre::DataStreamPtr&input,const Ogre::String &destination,MaterialMap *provides_to_name,FileMap *overarching_dependencies,   DependencyPair *my_dependencies, ReplaceMaterialOptionsAndReturn&username): ReplacingDataStream(input,destination,&nvpl){
     this->provides_to_name=provides_to_name;
     this->overarching_dependencies=overarching_dependencies;
     this->my_dependencies=my_dependencies;
@@ -510,22 +561,11 @@ public:
       find_lexeme(input,lexeme_start,return_lexeme_end);
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
-          MaterialMap::iterator where=this->provides_to_name->find(dep);
-          Fingerprint hash_value = Fingerprint::null();
-          if (where==this->provides_to_name->end()|| where->second.first == Fingerprint::null()) {
-              //hash_value=processFileDependency(where,*provides_to_name,std::map<Ogre::String,Ogre::String,SpecialStringSort>(),*overarching_dependencies, username);
-          }else{
-              hash_value=where->second.first;
-          }
-
           retval+=input.substr(pwhere,lexeme_start-pwhere);
-          bool shouldForceFirst=false;
           if (texture_reference) {
-              if (shouldForceFirstLevelName(dep,input,pwhere,second_input,*username)) {
-                  shouldForceFirst=true;
-              }
+              dep = "../textures/"+dep;
           }
-          retval += (hash_value==Fingerprint::null())?dep:firstOrThirdLevelName(dep,*username,hash_value,shouldForceFirst);
+          retval += '\"'+getFileURI(fileRelativeTo(dep,filename),*username)+'\"';
           pwhere=return_lexeme_end;
 
       }
@@ -584,21 +624,19 @@ public:
       Ogre::String depended=input.substr(where_lexeme_start,return_lexeme_end-where_lexeme_start);
       MaterialMap::const_iterator where=this->provides_to_name->find(depended);
       if (where!=provides_to_name->end()) {
-        
-        if (where->second.second!=filename) {
+          DiskFile diskfilename = DiskFile::makediskfile(filename);
+          if (where->second!=diskfilename) {
           depends_on.push_back(depended);
-          DependencyPair * other_dep=&(*overarching_dependencies)[where->second.first];
-          my_dependencies->materials.insert(other_dep->materials.begin(),other_dep->materials.end());
+          DependencyPair * other_dep=getFileData(where->second,*username);
+          if (other_dep == NULL) {
+          }
           my_dependencies->files.insert(other_dep->files.begin(),other_dep->files.end());
-          my_dependencies->materials.insert(where->second.first);
-          return '\"'+firstOrThirdLevelName(where->second.second,*username,where->second.first,false)+':'+depended+'\"';
+          my_dependencies->files.insert(where->second);
+          return '\"'+getFileURI(where->second,*username)+':'+depended+'\"';
         }else {
             
            return eliminateFilename(filename,depended);
         }
-      }else if (depended.find_first_of('*')==String::npos) {
-        printf ("Cannot locate provider of %s\n",depended.c_str());
-        return depended;
       }else {
         return depended;
       }
@@ -608,16 +646,7 @@ public:
   }
 };
 
-void hashfwrite(const Fingerprint&digest, const char * data, size_t len, ReplaceMaterialOptionsAndReturn &opts) {
-    opts.hashToFirstLevelName[digest]=opts.uploadedFiles.size();
-    opts.uploadedFiles.push_back(ResourceFileUpload());
-    opts.uploadedFiles.back().mID=URI(opts.uploadHashContext, digest.convertToHexString());
-    opts.uploadedFiles.back().mHash=digest;
-    MutableDenseDataPtr dat (new DenseData(Range(0,len,LENGTH,true)));
-    if (len)
-        memcpy(dat->writableData(),data,len);
-    opts.uploadedFiles.back().mData=dat;
-}
+
 static std::string cutoff;
 
 /**
@@ -627,50 +656,56 @@ static std::string cutoff;
  * \param len returns the length of the file
  * \returns data malloced to size len filled with the file's contents
  */
-Ogre::String getHashFileData(const Ogre::String& name) {
+DenseDataPtr getHashFileData(const DiskFile& name) {
   {
-    bool isbinary=name.find(".mesh")!=Ogre::String::npos;
+      bool isbinary=name.diskpath().find(".mesh")!=Ogre::String::npos;
     if (isbinary) {
         isbinary=true;
     }
-    int length=0;
-    char * data=const_cast<char*>(nativeData(name,length));
-    if (data) {
-      size_t len=(size_t)length;
-      return String(data,len);
+    if (isNativeFile(stripslashes(name))) {
+        DenseDataPtr data (nativeDataPtr(stripslashes(name)));
+        if (data) {
+            return data;
+        }
     }
   }
   Ogre::String retval;
   std::ifstream handle;
-  handle.open(name.c_str(),std::ios::in|std::ios::binary);
-  {
+  handle.open(name.diskpath().c_str(),std::ios::in|std::ios::binary);
+  if (handle.good()) {
       Ogre::FileStreamDataStream fp(&handle,false);
       retval=fp.getAsString();
       fp.close();
+      return DenseDataPtr(new DenseData(retval));
+  } else {
+      return DenseDataPtr();
   }
-  return retval;
 }
-namespace Meru {
-Fingerprint processFileDependency(FileMap::iterator file,FileMap &filemap, const MaterialMap &materialmap,DependencyMap&overarching_dependencies, const std::set<Ogre::String>&firstLevelTextures, ReplaceMaterialOptionsAndReturn &opts) {
-  file->second=Fingerprint::null();
-  size_t len=0;
-  Ogre::String processed = getHashFileData(file->first);
-  bool ismesh=file->first.find(".mesh")!=Ogre::String::npos;
-  DependencyPair mydeps;
-  if (file->first.find(".dds")!=Ogre::String::npos||file->first.find(".gif")!=Ogre::String::npos||file->first.find(".jpeg")!=Ogre::String::npos||file->first.find(".png")!=Ogre::String::npos||file->first.find(".tif")!=Ogre::String::npos||file->first.find(".tga")!=Ogre::String::npos||file->first.find(".jpg")!=Ogre::String::npos||file->first.find(".vert")!=Ogre::String::npos||file->first.find(".frag")!=Ogre::String::npos||file->first.find(".hlsl")!=Ogre::String::npos||file->first.find(".cg")!=Ogre::String::npos||file->first.find(".glsl")!=Ogre::String::npos) {
-  }else {
-    bool isbinary=ismesh||file->first.find(".skeleton")!=Ogre::String::npos;
-    replaceAll(processed,filemap,materialmap,overarching_dependencies,firstLevelTextures,mydeps,opts,isbinary);//is binary
+void processFileDependency(ResourceFileUploadData *file,FileMap &filemap, const MaterialMap &materialmap,ReplaceMaterialOptionsAndReturn &opts) {
+  if (file->mData) {
+      return; // Already processed.
   }
-  Fingerprint fileHash=Fingerprint::computeDigest(processed);
-  file->second=fileHash;
-  hashfwrite(fileHash,processed.data(),processed.length(),opts);
-  
-  overarching_dependencies[fileHash]=mydeps;
-  return fileHash;
+  file->mHash=Fingerprint::null();
+  String filefirst = stripslashes(file->mSourceFilename);
+  if (isNativeFile(filefirst)) {
+      return; // don't care.
+  }
+  DenseDataPtr processed (getHashFileData(file->mSourceFilename));
+  if (!processed) {
+      return;
+  }
+  if (filefirst.find(".dds")!=Ogre::String::npos||filefirst.find(".gif")!=Ogre::String::npos||filefirst.find(".jpeg")!=Ogre::String::npos||filefirst.find(".png")!=Ogre::String::npos||filefirst.find(".tif")!=Ogre::String::npos||filefirst.find(".tga")!=Ogre::String::npos||filefirst.find(".jpg")!=Ogre::String::npos||filefirst.find(".vert")!=Ogre::String::npos||filefirst.find(".frag")!=Ogre::String::npos||filefirst.find(".hlsl")!=Ogre::String::npos||filefirst.find(".cg")!=Ogre::String::npos||filefirst.find(".glsl")!=Ogre::String::npos) {
+      // These file formats cannot reference any other files, so do not alter them.
+  }else {
+    bool isbinary=filefirst.find(".mesh")!=Ogre::String::npos||filefirst.find(".skeleton")!=Ogre::String::npos;
+    replaceAll(processed,filemap,materialmap,*file,opts,isbinary);//is binary
+  }
+  Fingerprint fileHash=Fingerprint::computeDigest(processed->data(), processed->length());
+  file->mHash=fileHash;
+  file->mData = processed;
 }
 
-}
+
 
 /**
  * This function replaces one dependencies referenced within a file to that dependency's CDN name and in doing so begins to build a list of dependencies this file has for future use
@@ -688,10 +723,15 @@ Fingerprint processFileDependency(FileMap::iterator file,FileMap &filemap, const
  * \param do_stripslashes is whether the \param src file being passed in may be referenced without a path (due to ogre naming conventions)
  * \param allow_binary is whether this particular file is binary so that dependencies are known to need to replace the length value before the data aspect
  */
-bool replaceOne(Ogre::String &data, Ogre::String src, Ogre::String dst,FileMap &filemap, const MaterialMap&materialmap, DependencyMap&overarching_dependencies,const std::set<Ogre::String>&firstLevelTextures,ReplaceMaterialOptionsAndReturn &opts,bool do_stripslashes, bool allow_binary) {
+bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String dst,FileMap &filemap, const MaterialMap&materialmap,ReplaceMaterialOptionsAndReturn &opts,bool do_stripslashes, bool allow_binary) {
     Ogre::String::size_type where=0;
-    bool retval=false;
-    std::string strippedsrc=do_stripslashes?stripslashes(src):src;
+    bool retval = false;
+    std::string data((const char *)dataptr->data(), (size_t)dataptr->length());
+    std::string filename = stripslashes(src);
+    if (strippedsrc.empty()) {
+        strippedsrc=do_stripslashes?filename:src.diskpath();
+    }
+
     /*if (src.find("OffsetMapping.cg")!=std::string::npos) {
       printf ("Searching for %s (%s)\n",src.c_str(),strippedsrc.c_str());
       }*/
@@ -701,18 +741,20 @@ bool replaceOne(Ogre::String &data, Ogre::String src, Ogre::String dst,FileMap &
           }*/
         
         if (false) {
-            printf("error: self referencial file %s\n",src.c_str());
+            printf("error: self referencial file %s\n",src.diskpath().c_str());
             break;
         }else {
             /*if (src.find("Ueber")!=String::npos) {
                 printf ("COOLER %s\n",dst.c_str());
                 }*/
             if (dst.length()==0) {
-                if (src.find(".dds")!=Ogre::String::npos||src.find(".gif")!=Ogre::String::npos||src.find(".jpeg")!=Ogre::String::npos||src.find(".png")!=Ogre::String::npos||src.find(".tif")!=Ogre::String::npos||src.find(".tga")!=Ogre::String::npos||src.find(".jpg")!=Ogre::String::npos||src.find(".vert")!=Ogre::String::npos||src.find(".frag")!=Ogre::String::npos||src.find(".hlsl")!=Ogre::String::npos||src.find(".cg")!=Ogre::String::npos||src.find(".glsl")!=Ogre::String::npos) {
-                    dst=firstOrThirdLevelName(src,opts,processFileDependency(filemap.find(src),filemap,materialmap,overarching_dependencies, firstLevelTextures, opts),firstLevelTextures.find(stripslashes(src))!=firstLevelTextures.end());
+                if (filename.find(".dds")!=Ogre::String::npos||filename.find(".gif")!=Ogre::String::npos||filename.find(".jpeg")!=Ogre::String::npos||filename.find(".png")!=Ogre::String::npos||filename.find(".tif")!=Ogre::String::npos||filename.find(".tga")!=Ogre::String::npos||filename.find(".jpg")!=Ogre::String::npos||filename.find(".vert")!=Ogre::String::npos||filename.find(".frag")!=Ogre::String::npos||filename.find(".hlsl")!=Ogre::String::npos||filename.find(".cg")!=Ogre::String::npos||filename.find(".glsl")!=Ogre::String::npos) {
+                    processFileDependency(filemap.find(src)->second,filemap,materialmap,opts);
+                    dst=getFileURI(src,opts);
                 }else{
                     Ogre::String summary =data.length()>200?data.substr(0,200):data;
-                    printf ("ERROR: File %s processed out of order with file beginning with %s\n",src.c_str(),summary.c_str());
+                    String path = src.diskpath();
+                    printf ("ERROR: File %s processed out of order with file beginning with %s\n",path.c_str(),summary.c_str());
                     
                 }
             }
@@ -754,31 +796,254 @@ bool replaceOne(Ogre::String &data, Ogre::String src, Ogre::String dst,FileMap &
                 where+=strippedsrc.length();
             }
         }
-    }  
+    }
+    if (retval) {
+        dataptr = DenseDataPtr(new DenseData(data));
+    }
     return retval;
 }
-namespace Meru {
-void replaceAll(Ogre::String &data, FileMap &filemap, const MaterialMap&materialmap,DependencyMap &overarching_dependencies, const std::set<Ogre::String>&firstLevelTextures, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary) {
+void replaceAll(DenseDataPtr &data, FileMap &filemap, const MaterialMap&materialmap, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary) {
     for (FileMap::iterator i=filemap.begin(),ie=filemap.end();i!=ie;++i) {
-        if (replaceOne(data,i->first,firstOrThirdLevelName(i->first,opts,i->second,firstLevelTextures.find(stripslashes(i->first))!=firstLevelTextures.end()),filemap,materialmap,overarching_dependencies,firstLevelTextures,opts,true,allow_binary)) {
-            my_dependencies.files.insert(i->second);
-            DependencyPair *dp=&overarching_dependencies[i->second];
-            my_dependencies.materials.insert(dp->materials.begin(),dp->materials.end());
-            my_dependencies.files.insert(dp->files.begin(),dp->files.end());
+        if (i->second->mType != MATERIAL) {
+            if (replaceOne(data,i->first,std::string(),getFileURI(i->first, opts),filemap,materialmap,opts, true,allow_binary)) {
+                my_dependencies.files.insert(i->first);
+                DependencyPair *dp=i->second;
+                my_dependencies.files.insert(dp->files.begin(),dp->files.end());
+            }
         }
     }
     for (MaterialMap::const_iterator i=materialmap.begin(),ie=materialmap.end();i!=ie;++i) {
-        // ??? // if (allow_binary&&i->first.find("Colu")!=String::npos) { printf ("WOOT"); }
-            
-        if (replaceOne(data,i->first,'\"'+firstOrThirdLevelName(i->second.second,opts,i->second.first,false)+":"+i->first+'\"',filemap,materialmap,overarching_dependencies,firstLevelTextures,opts,false,allow_binary)) {
-            my_dependencies.materials.insert(i->second.first);
-            DependencyPair *dp=&overarching_dependencies[i->second.first];
-            my_dependencies.materials.insert(dp->materials.begin(),dp->materials.end());
+        if (replaceOne(data,i->second,i->first,'\"'+getFileURI(i->second,opts)+":"+i->first+'\"',filemap,materialmap,opts,false,allow_binary)) {
+            my_dependencies.files.insert(i->second);
+            DependencyPair *dp=getFileData(i->second,opts);
             my_dependencies.files.insert(dp->files.begin(),dp->files.end());
         }
     }
 }
+
+static bool isMHashScheme(const URI &uri, ReplaceMaterialOptionsAndReturn &opts) {
+    return (uri.context() == opts.uploadHashContext);
 }
+
+
+//////////////// This function is really long and convoluted?!?! I wish there were comments here!
+
+std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::vector<DiskFile> &origfilenames,const ReplaceMaterialOptions&options) {
+  std::vector<DiskFile> filenames = origfilenames;
+  ReplaceMaterialOptionsAndReturn opts(options);  
+  opts.disallowedThirdLevelFiles.insert("meru:///UeberShader.hlsl");//this file should be updated manually by devs, not by artists
+
+/////////////// Not sure what this code does at all
+
+  String mesh_old_name;
+  Fingerprint mesh_new_hash;
+  String mesh_new_name;
+  std::set<Fingerprint> mesh_hashes;
+  std::set<Fingerprint> skeleton_hashes;
+
+/////// End look for THE mesh.
+
+  {
+  std::set<DiskFile> knownFilenames(filenames.begin(),filenames.end());
+  for (size_t i=0;i<filenames.size();++i) {
+    ResourceFileUploadData *deps = getFileData(filenames[i], opts);
+    if (deps->mType == MESH) {
+        String path = filenames[i].diskpath();
+        String::size_type pos = path.rfind('/');
+        if (pos != String::npos) {
+            path = path.substr(0, pos);
+            String strippedname = stripslashes(filenames[i]);
+            String::size_type dot = strippedname.rfind('.');
+            if (dot != String::npos) {
+                strippedname = strippedname.substr(0, dot) + ".os";
+                pos = path.rfind('/');
+                if (pos != String::npos) {
+                    path = path.substr(0, pos);
+                    path += "/";
+                } else {
+                    path = "../";
+                }
+                path += "materials/scripts/"+strippedname;
+                filenames.push_back(DiskFile::makediskfile(path));
+            }
+        }
+    }
+    if (deps->mType == MATERIAL) {
+      std::ifstream fhandle;
+      fhandle.open(filenames[i].diskpath().c_str(),std::ios::in|std::ios::binary);
+      if (!fhandle.good()) {
+          fprintf(stderr, "Error: Material File %s does not exist!\n", filenames[i].diskpath().c_str());
+          filenames.erase(filenames.begin()+i);
+          --i;
+          continue;
+      }
+      std::vector<Ogre::String> provides,depends_on;
+      {
+          RecordingDependencyDataStream *tmprds; // goes out of scope.
+          Ogre::DataStreamPtr input(new Ogre::FileStreamDataStream(&fhandle,false));
+          Ogre::DataStreamPtr rds (tmprds=new RecordingDependencyDataStream (input,filenames[i].diskpath(),opts));
+          //HELP FIXME ogre crashes ... need to get rid of inner bloc too.
+          tmprds->preprocessData(provides,depends_on);
+          for (std::vector<Ogre::String>::iterator iter=provides.begin(),itere=provides.end();iter!=itere;++iter) {
+              MaterialMap::iterator dupe;
+              if ((dupe=opts.mMaterialMap.find(*iter))!=opts.mMaterialMap.end()&&getFileData(dupe->second,opts)->mData) {
+                  std::string s (getFileData(dupe->second,opts)->mID.toString());
+                  fprintf (stderr, "Duplicate Material provided %s by both %s and %s\n",
+                          iter->c_str(),
+                          s.c_str(),
+                          filenames[i].diskpath().c_str());
+               }else {
+                  //printf ("%s provided by %s\n",iter->c_str(),filenames[i]);
+                  opts.mMaterialMap[*iter]=filenames[i];
+               }
+          }
+/*
+          for (size_t j=0;j<tmprds->dependsOnMaterial.size();++j) {
+              if (opts.mMaterialMap[tmprds->dependsOnMaterial[j]]!=filenames[i]) {
+              }
+          }
+*/
+      }
+      {
+        bool depends_on_nothing=true;
+        for (size_t j=0;j<depends_on.size();++j) {
+            depends_on_nothing=false;
+            //printf ("%s depends on %s\n",filenames[i].c_str(),depends_on[j].c_str());
+            DiskFile dep (fileRelativeTo(depends_on[j], filenames[i].diskpath()));
+            deps->files.insert(dep);
+            if (knownFilenames.insert(dep).second == true) {
+                std::cout << "Adding dependency "<<dep.diskpath()<<" (first referenced from "<<filenames[i].diskpath()<<")"<<std::endl;
+              filenames.push_back(dep);
+            }
+        }
+      }
+    }
+  }
+  }
+
+
+
+  for (size_t i=0;i<filenames.size();++i) {
+    ResourceFileUploadData *deps = getFileData(filenames[i], opts);
+    if (deps->mType == MATERIAL) {
+        std::ifstream fhandle;
+        DiskFile depsecond (filenames[i]);
+        {
+            Ogre::DataStreamPtr input;
+            if (isNativeFile(stripslashes(depsecond))) {
+                input = Ogre::DataStreamPtr(nativeStream(stripslashes(depsecond)));
+            } else {
+                fhandle.open(depsecond.diskpath().c_str(),std::ios::in|std::ios::binary);
+                if (fhandle.good()) {
+                    input = Ogre::DataStreamPtr(new Ogre::FileStreamDataStream(&fhandle,false));
+                } else {
+                    fprintf(stderr, "Error: File %s does not exist!\n", filenames[i].diskpath().c_str());
+                    filenames.erase(filenames.begin()+i);
+                    --i;
+                }
+            }
+            ResourceFileUploadData *mydeps = getFileData(depsecond, opts);
+            
+            Ogre::DataStreamPtr rds (new DependencyReplacingDataStream (input,depsecond.diskpath(),&opts.mMaterialMap,&opts.mFileMap,mydeps,opts));
+            DenseDataPtr data (new DenseData(rds->getAsString()));
+            
+            //printf ("Processing %s\n",dep->second.c_str());
+            //fflush(stdout);
+            //replaceAll(data,opts.mFileMap,MaterialMap(),*mydeps,opts, false);
+            Fingerprint fileHash=Fingerprint::computeDigest(data->data(), data->length());
+            
+            mydeps->mHash = fileHash;
+            mydeps->mData = data;
+        }
+    }
+  }
+  for (FileMap::iterator i=opts.mFileMap.begin(),ie=opts.mFileMap.end();i!=ie;++i) {
+      if (!i->second->mData) {
+          processFileDependency(i->second,opts.mFileMap,opts.mMaterialMap,opts);
+      }
+  }
+
+
+#if 0
+
+
+  std::map<URI,ResourceFileUpload> existingFiles;
+  std::multimap<Fingerprint,URI> reverseExistingFiles;//a map from any shasum to its file.  No, really??? Actually, it's a *MULTIMAP*, so file should be plural.
+#endif
+
+// Delete 150 additional lines of completely useless code. That feels so much better.
+
+
+  std::vector<ResourceFileUpload> retval;
+  retval.reserve(opts.mFileMap.size());
+  for (FileMap::const_iterator iter = opts.mFileMap.begin(); iter != opts.mFileMap.end(); ++iter) {
+      if (iter->second->mData) {
+          retval.push_back(*(iter->second));
+      } else {
+          // File did not exist.
+      }
+      delete iter->second;
+  }
+
+  return retval;
+}
+
+struct UploadStatus {
+    std::tr1::function<void(ResourceStatusMap const &)> mCallback;
+    ResourceStatusMap mStatusMap;
+    int mNumberRemaining;
+    boost::mutex mLock;
+    UploadStatus (const std::tr1::function<void(ResourceStatusMap const &)> &cb, int count)
+        : mCallback(cb), mNumberRemaining(count) {
+    }
+};
+
+EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &current, EventPtr ev) {
+    Transfer::UploadEventPtr uploadev (std::tr1::static_pointer_cast<UploadEvent>(ev));
+    if (!uploadev) {
+        return EventResponse::nop();
+    }
+    bool del = false;
+    {
+        boost::unique_lock<boost::mutex> (mLock);
+        ResourceUploadStatus st;
+        st = uploadev->getStatus();
+        if (stat->mStatusMap.insert(ResourceStatusMap::value_type(current, st)).second == true) {
+            if (0 == --stat->mNumberRemaining) {
+                stat->mCallback(stat->mStatusMap);
+                del = true;
+            }
+        }
+    }
+    if (del) {
+        delete stat;
+    }
+    return EventResponse::del();
+}
+
+void UploadFilesAndConfirmReplacement(TransferManager*tm, 
+                                      const std::vector<ResourceFileUpload> &filesToUpload,
+                                      const URIContext &hashContext,
+                                      const std::tr1::function<void(ResourceStatusMap const &)> &callback) {
+    UploadStatus *status = new UploadStatus(callback, filesToUpload.size());
+    for (size_t i = 0; i < filesToUpload.size(); ++i) {
+        const ResourceFileUpload &current = filesToUpload[i];
+        std::cout << "Uploading "<<stripslashes(current.mSourceFilename)<<" to URI " << current.mID<<". Hash = "<<current.mHash<<"; Size = "<<current.mData->length()<<std::endl;
+        if (current.mID.context() == hashContext) {
+            tm->uploadByHash(Transfer::RemoteFileId(current.mHash, current.mID),
+                       current.mData,
+                       std::tr1::bind(&UploadFinished, status, current, _1),true);
+        } else {
+            tm->upload(current.mID,
+                       Transfer::RemoteFileId(current.mHash, hashContext),
+                       current.mData,
+                       std::tr1::bind(&UploadFinished, status, current, _1),true);
+        }
+    }
+}
+
+}
+
 #ifdef STANDALONE
 int main (int argc, char ** argv) {
   ReplaceMaterialOptions opts;
@@ -813,321 +1078,3 @@ int main (int argc, char ** argv) {
   return 0;
 }
 #endif
-
-namespace Meru {
-
-static bool isMHashScheme(const URI &uri, ReplaceMaterialOptionsAndReturn &opts) {
-    return (uri.context() == opts.uploadHashContext);
-}
-
-// FIXME: I don't get the point of this function
-static bool find_duplicate(const URI &hashuri,ReplaceMaterialOptionsAndReturn &opts, const std::multimap<Fingerprint,URI>&existing) {
-    Fingerprint hash (Fingerprint::convertFromHex(hashuri.filename()));
-    for (std::multimap<Fingerprint,URI>::const_iterator where=existing.find(hash);
-         where!=existing.end()&&where->first==hash;
-         ++where) {
-        if (isMHashScheme(where->second,opts)) 
-            return true;
-    }
-    return false;
-}
-std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::vector<Ogre::String> &filenames,const ReplaceMaterialOptions&options) {
-  ReplaceMaterialOptionsAndReturn opts(options);  
-  opts.disallowedThirdLevelFiles.insert("meru:///UeberShader.hlsl");//this file should be updated manually by devs, not by artists
-  DependencyMap overarching_dependencies;
-  FileMap oldname_to_newname;
-  MaterialMap provides_to_argnum;
-  ProviderMap argnum_to_provides;
-  ProviderMap argnum_to_depends;
-  std::map<int,Ogre::String> dependency_order;
-  int round=0;
-  std::set<Ogre::String> firstLevelTextures;
-  for (int i=0;i<num_native_files;++i) {  
-      oldname_to_newname[native_files[i]]=Fingerprint::null();
-  }
-  for (size_t i=0;i<filenames.size();++i) {
-    oldname_to_newname[filenames[i]]=Fingerprint::null();
-    if (filenames[i].find(".material")!=Ogre::String::npos||
-        filenames[i].find(".script")!=Ogre::String::npos||
-        filenames[i].find(".os")!=Ogre::String::npos||
-        filenames[i].find(".program")!=Ogre::String::npos) {
-      std::ifstream fhandle;
-      fhandle.open(filenames[i].c_str(),std::ios::in|std::ios::binary);
-      RecordingDependencyDataStream *tmprds;
-      std::vector<Ogre::String> provides,depends_on;
-      {
-          Ogre::DataStreamPtr input(new Ogre::FileStreamDataStream(&fhandle,false));
-          Ogre::DataStreamPtr rds (tmprds=new RecordingDependencyDataStream (input,filenames[i],firstLevelTextures,opts));//HELP FIXME ogre crashes ... need to get rid of inner bloc too
-      
-
-          tmprds->preprocessData(provides,depends_on);
-          argnum_to_provides[filenames[i]]=provides;
-          for (std::vector<Ogre::String>::iterator iter=provides.begin(),itere=provides.end();iter!=itere;++iter) {
-              MaterialMap::iterator dupe;
-              if ((dupe=provides_to_argnum.find(*iter))!=provides_to_argnum.end()&&dupe->second.first!=Fingerprint::null()) {
-				  std::string s (dupe->second.first.convertToHexString());
-                  printf ("Duplicate Material provided %s by both %s and %s\n",
-                          iter->c_str(),
-                          s.c_str(),
-                          filenames[i].c_str());
-               }else {
-                  //printf ("%s provided by %s\n",iter->c_str(),filenames[i]);
-                  provides_to_argnum[*iter]=std::pair<Fingerprint,Ogre::String>(Fingerprint::null(),filenames[i]);
-               }
-          }
-      }
-      {
-        bool depends_on_nothing=true;
-        for (size_t j=0;j<depends_on.size();++j) {
-          if (provides_to_argnum[depends_on[j]].second!=filenames[i]) {
-            depends_on_nothing=false;
-            //printf ("%s depends on %s\n",filenames[i].c_str(),depends_on[j].c_str());
-            argnum_to_depends[filenames[i]].push_back(depends_on[j]);
-          }
-        }
-        if (depends_on_nothing) {
-          dependency_order[round++]=filenames[i];
-        }
-      }
-    }
-  }
-  
-  ProviderMap::iterator dep;
-  size_t prevsize;
-  do {
-    prevsize=argnum_to_depends.size();
-    for(dep=argnum_to_depends.begin();dep!=argnum_to_depends.end();) {
-      std::vector<Ogre::String>::iterator iter=dep->second.begin(),itere=dep->second.end();
-      for (;iter!=itere;++iter) {
-          if (argnum_to_depends.find(*iter)!=argnum_to_depends.end()||argnum_to_depends.find(provides_to_argnum[*iter].second)!=argnum_to_depends.end()){
-              //can't use me
-              //printf ("FOUND %s\n",iter->c_str());
-              break;
-          }
-      }
-      if (iter==itere) {
-        //can use me...no dependencies
-        dependency_order[round++]=dep->first;                
-        Ogre::String target;
-        ++dep;
-        if (dep!=argnum_to_depends.end()) {
-          target=dep->first;
-          --dep;
-          argnum_to_depends.erase(dep);
-          dep=argnum_to_depends.find(target);
-        }else {
-          --dep;
-          argnum_to_depends.erase(dep);
-          break;
-        }
-      }else {
-        ++dep;
-      }
-      
-    }    
-  }while (argnum_to_depends.size()!=prevsize);
-  if (argnum_to_depends.size()) {
-    fprintf (stderr,"circular dependency. Not processing files:\n");
-    dep=argnum_to_depends.begin();
-    for(;dep!=argnum_to_depends.end();++dep) {
-      printf ("%s ",dep->first.c_str());
-    }
-  }
-
-  for (std::map<int,Ogre::String>::iterator dep=dependency_order.begin();dep!=dependency_order.end();++dep) {
-      printf ("PLAN %s\n",dep->second.c_str());
-      }
-  for (std::map<int,Ogre::String>::iterator dep=dependency_order.begin();dep!=dependency_order.end();++dep) {
-    std::ifstream fhandle;  
-    {
-        Ogre::DataStreamPtr input(isNativeFile(dep->second)?nativeStream(dep->second):(fhandle.open(dep->second.c_str(),std::ios::in|std::ios::binary),new Ogre::FileStreamDataStream(&fhandle,false)));
-        DependencyPair mydeps;
-    
-        Ogre::DataStreamPtr rds (new DependencyReplacingDataStream (input,dep->second,&provides_to_argnum,&overarching_dependencies,&mydeps,false,opts));
-        Ogre::String data=rds->getAsString();
-
-        //printf ("Processing %s\n",dep->second.c_str());
-        //fflush(stdout);
-        replaceAll(data,oldname_to_newname,MaterialMap(),overarching_dependencies,firstLevelTextures,mydeps,opts, false);
-        Fingerprint fileHash=Fingerprint::computeDigest(data);
-    
-        overarching_dependencies[fileHash]=mydeps;
-        hashfwrite(fileHash,data.data(),data.length(),opts);
-        std::vector<Ogre::String>::iterator i=argnum_to_provides[dep->second].begin(),ie=argnum_to_provides[dep->second].end();
-        for (;i!=ie;++i) {
-            provides_to_argnum[*i].first=fileHash;
-        }
-        oldname_to_newname[dep->second]=fileHash;
-      } 
-  }
-  for (FileMap::iterator i=oldname_to_newname.begin(),ie=oldname_to_newname.end();i!=ie;++i) {
-	  if (i->second==Fingerprint::null())
-        processFileDependency(i,oldname_to_newname,provides_to_argnum,overarching_dependencies,firstLevelTextures,opts);
-  }
-  String mesh_old_name;
-  Fingerprint mesh_new_hash;
-  String mesh_new_name;
-  std::set<Fingerprint> mesh_hashes;
-  std::set<Fingerprint> skeleton_hashes;
-  for (FileMap::const_iterator iter=oldname_to_newname.begin(),iterend=oldname_to_newname.end();iter!=iterend;++iter) {
-      firstOrThirdLevelName(iter->first,opts,iter->second,firstLevelTextures.find(stripslashes(iter->first))!=firstLevelTextures.end());
-      if (iter->first.find(".mesh")!=String::npos&&iter->first.find(".mesh")+strlen(".mesh")==iter->first.length()&&iter->first.find("models")!=String::npos) {
-          mesh_hashes.insert(iter->second);
-          mesh_old_name=iter->first;
-          mesh_new_name=iter->second.convertToHexString();
-          mesh_new_hash=iter->second;
-      }
-      if (iter->first.find(".skeleton")+strlen(".skeleton")==iter->first.length()&&iter->first.find(".skeleton")!=String::npos) {
-          skeleton_hashes.insert(iter->second);
-      }
-  }
-  size_t where=0;
-  for (ptrdiff_t i=opts.uploadedFiles.size();i>0;--i) {
-
-      if (opts.disallowedThirdLevelFiles.find(opts.uploadedFiles[i-1].mID.toString())!=opts.disallowedThirdLevelFiles.end()) {
-          opts.uploadedFiles.erase(opts.uploadedFiles.begin()+i-1);
-      }
-      if (opts.uploadedFiles[i-1].mHash == mesh_new_hash) {
-          where=i-1;
-          String::size_type named_ending=opts.uploadedFiles[i-1].mID.toString().find(".mesh");
-          if (named_ending!=String::npos&&named_ending+strlen(".mesh")==opts.uploadedFiles[i-1].mID.toString().length()) {
-              break;//found the real deal
-          }
-      }
-      String::size_type whereMeshName=opts.uploadedFiles[i-1].mID.toString().find(mesh_new_name);
-      if (whereMeshName!=String::npos&&whereMeshName+mesh_new_name.length()==opts.uploadedFiles[i-1].mID.toString().length()) {
-          where=i-1;
-      }
-  }
-  
-  if (opts.uploadedFiles.size()&&where) {
-      ResourceFileUpload tmp=opts.uploadedFiles[0];
-      opts.uploadedFiles[0]=opts.uploadedFiles[where];
-      opts.uploadedFiles[where]=tmp;
-  }
-  std::map<URI,ResourceFileUpload> existingFiles;
-  std::multimap<Fingerprint,URI> reverseExistingFiles;//a map from any shasum to its file
-  for (size_t i=0;i<opts.uploadedFiles.size();++i) {
-      std::map<URI,ResourceFileUpload>::iterator where=existingFiles.find(opts.uploadedFiles[i].mID);
-      if (where==existingFiles.end()){
-          existingFiles.insert(std::pair<URI,ResourceFileUpload>(opts.uploadedFiles[i].mID,opts.uploadedFiles[i]));
-          reverseExistingFiles.insert(std::pair<Fingerprint,URI>(opts.uploadedFiles[i].mHash,opts.uploadedFiles[i].mID));
-          //retval.push_back(opts.uploadedFiles[i]);
-      }else if (where->second.mHash!=opts.uploadedFiles[i].mHash) {
-          SILOG(ogre,error,"File "<<opts.uploadedFiles[i].mID.toString() << " has Hash mismatch: "<<opts.uploadedFiles[i].mHash.convertToHexString() << " and "<<where->second.mHash.convertToHexString());
-          //retval.push_back(opts.uploadedFiles[i]);          
-      }
-  }
-  std::vector<ResourceFileUpload> retval;
-  std::set <URI> material_files;
-  std::vector<ResourceFileUpload> ordered_material_files;
-  for (std::map<int,Ogre::String>::iterator dep=dependency_order.begin();dep!=dependency_order.end();++dep) {
-      const Fingerprint &material_hash=oldname_to_newname[dep->second];
-      for (std::multimap<Fingerprint,URI>::iterator where=reverseExistingFiles.find(material_hash);
-           where!=reverseExistingFiles.end()&&where->first==material_hash;
-           ++where) {
-              std::map<URI,ResourceFileUpload>::iterator whereFileUpload=existingFiles.find(where->second);
-              if (whereFileUpload!=existingFiles.end()) {
-                  material_files.insert(where->second);
-                  ordered_material_files.push_back(whereFileUpload->second);
-              }else {
-                  SILOG(ogre,fatal, "File in reverse existing file map not in forward map");
-              }
-      }
-  }
-  std::vector<ResourceFileUpload> ordered_named_textures;
-  std::vector<ResourceFileUpload> ordered_unnamed_textures;
-  std::vector<ResourceFileUpload> ordered_skeletons;
-  std::vector<ResourceFileUpload> ordered_meshes;
-  for (std::map<URI,ResourceFileUpload>::iterator iter=existingFiles.begin();iter!=existingFiles.end();++iter) {
-      if (material_files.find(iter->first)==material_files.end()) {
-          if (mesh_hashes.find(iter->second.mHash)!=mesh_hashes.end()) {
-              if (isMHashScheme(iter->first,opts)==false||!find_duplicate(iter->first,opts,reverseExistingFiles)) {
-                  ordered_meshes.push_back(iter->second);
-                  if (iter->second.mID==opts.uploadedFiles[0].mID) {
-                      ResourceFileUpload tmp=ordered_meshes[0];
-                      opts.uploadedFiles[0]=iter->second;
-                      opts.uploadedFiles.back()=tmp;                  
-                  }
-              }
-          } else if (skeleton_hashes.find(iter->second.mHash)!=skeleton_hashes.end()) {
-              if (isMHashScheme(iter->first,opts)==false||!find_duplicate(iter->first,opts,reverseExistingFiles)) {
-                  ordered_skeletons.push_back(iter->second);              
-              }
-          }else {
-              if (isMHashScheme(iter->first,opts)){
-                  if (!find_duplicate(iter->first,opts,reverseExistingFiles)) {
-                      ordered_unnamed_textures.push_back(iter->second);
-                  }
-              }else {
-                  ordered_named_textures.push_back(iter->second);
-              }
-              //it's a texture, f00
-          }
-      }
-  }
-  retval.insert(retval.end(),ordered_named_textures.begin(),ordered_named_textures.end());
-  retval.insert(retval.end(),ordered_unnamed_textures.begin(),ordered_unnamed_textures.end());
-  retval.insert(retval.end(),ordered_material_files.begin(),ordered_material_files.end());
-  retval.insert(retval.end(),ordered_skeletons.begin(),ordered_skeletons.end());
-  std::reverse(ordered_meshes.begin(),ordered_meshes.end());
-  retval.insert(retval.end(),ordered_meshes.begin(),ordered_meshes.end());
-  std::reverse(retval.begin(),retval.end());
-  return retval;
-}
-
-struct UploadStatus {
-    std::tr1::function<void(ResourceStatusMap const &)> mCallback;
-    ResourceStatusMap mStatusMap;
-    int mNumberRemaining;
-    boost::mutex mLock;
-    UploadStatus (const std::tr1::function<void(ResourceStatusMap const &)> &cb, int count)
-        : mCallback(cb), mNumberRemaining(count) {
-    }
-};
-
-EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &current, EventPtr ev) {
-    Transfer::UploadEventPtr uploadev (std::tr1::dynamic_pointer_cast<UploadEvent>(ev));
-    if (!uploadev) {
-        return EventResponse::nop();
-    }
-    bool del;
-    {
-        boost::unique_lock<boost::mutex> (mLock);
-        ResourceUploadStatus st;
-        st = uploadev->getStatus();
-        stat->mStatusMap.insert(ResourceStatusMap::value_type(current, st));
-        if (0 == --stat->mNumberRemaining) {
-            stat->mCallback(stat->mStatusMap);
-            del = true;
-        }
-    }
-    if (del) {
-        delete stat;
-    }
-    return EventResponse::nop();
-}
-
-void UploadFilesAndConfirmReplacement(TransferManager*tm, 
-                                      const std::vector<ResourceFileUpload> &filesToUpload,
-                                      const URIContext &hashContext,
-                                      const std::tr1::function<void(ResourceStatusMap const &)> &callback) {
-    UploadStatus *status = new UploadStatus(callback, filesToUpload.size());
-
-    for (size_t i = 0; i < filesToUpload.size(); ++i) {
-        const ResourceFileUpload &current = filesToUpload[i];
-
-        if (current.mID.context() == hashContext) {
-            tm->uploadByHash(Transfer::RemoteFileId(current.mHash, current.mID),
-                       current.mData,
-                       std::tr1::bind(&UploadFinished, status, current, _1));
-        } else {
-            tm->upload(current.mID,
-                       Transfer::RemoteFileId(current.mHash, hashContext),
-                       current.mData,
-                       std::tr1::bind(&UploadFinished, status, current, _1));
-        }
-    }
-}
-
-}

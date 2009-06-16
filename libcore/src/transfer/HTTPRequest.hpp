@@ -62,6 +62,7 @@ private:
 	std::string mURIString;
 	std::string mRangeString;
 	std::vector<std::string> mHeaderStorage;
+	
 	Range mRequestedRange;
 	CallbackFunc mCallback;
 	CURL *mCurlRequest;
@@ -80,6 +81,7 @@ private:
 	std::vector<DenseDataPtr> mDataReferences; ///< prevent from being freed.
 
 	Range::base_type mOffset;
+	Range::length_type mFullFilesizeOnServer;
 	MutableDenseDataPtr mData;
 
 	/** The default callback--useful for POST queries where you do not care about the response */
@@ -160,6 +162,11 @@ public:
 
 	/// Range getter
 	inline const Range &getRange() const {return mRequestedRange;}
+
+	/** Returns the length of the file as it exists on the server,
+	 even if the request we sent was a HEAD or contained a Range. 
+	This function may return 0, indicating that the full length is unknown. */
+	inline Range::length_type getFullLength() const { return mFullFilesizeOnServer; }
 
 	/** Aborts an active transfer. Necessary for some streaming applications.
 	 * Acts as if the transfer failed--calls callback and removes the

@@ -194,6 +194,7 @@ TransferManager *initializeTransferManager (const OptionMap& options, GenEventMa
                 firstCacheLayer,
                 new Transfer::CachedNameLookupManager(nameServ, downServ),
                 eventMgr,
+				downServ,
                 upnameServ,
                 uploadServ
             );

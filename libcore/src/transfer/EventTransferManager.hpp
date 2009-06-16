@@ -55,6 +55,7 @@ class EventTransferManager : public TransferManager {
 	NameLookupManager *mNameLookup;
 	Task::GenEventManager *mEventSystem;
 
+	ServiceManager<DownloadHandler> * mDownloadServ;
 	ServiceManager<NameUploadHandler> * mNameUploadServ;
 	ServiceManager<UploadHandler> * mUploadServ;
 
@@ -63,9 +64,12 @@ class EventTransferManager : public TransferManager {
 	boost::condition_variable mCleanupCV;
 
 	typedef std::tr1::unordered_multimap<Fingerprint, Range, Fingerprint::Hasher> DownloadRangeMap;
+	typedef std::tr1::unordered_set<std::string> UploadMap;
 	DownloadRangeMap mActiveTransfers;
+	UploadMap mActiveUploads;
 
 	boost::mutex mMutex;
+	boost::mutex mUploadMutex;
 
 	void downloadFinished(const RemoteFileId &remoteid, const Range &range, const SparseData *downloadedData) {
 		bool found = true;
@@ -192,7 +196,7 @@ class EventTransferManager : public TransferManager {
 		ServiceParams params;
 		if (mNameUploadServ->getNextProtocol(services,
 				successThisRound?ServiceIterator::SUCCESS:ServiceIterator::GENERAL_ERROR,
-				hash.uri(),uploadURI,params,nameHandler)) {
+				name,uploadURI,params,nameHandler)) {
 
 			nameHandler->uploadName(NULL, params, uploadURI, hash,
 					std::tr1::bind(&EventTransferManager::doUploadName, this,
@@ -200,6 +204,7 @@ class EventTransferManager : public TransferManager {
 		} else {
 			Status stat = success ? SUCCESS : FAIL_NAMEUPLOAD;
 			Task::EventPtr ev (new UploadEvent(stat, name, UploadEventId));
+            mNameLookup->addToCache(name, hash);
 			mEventSystem->fire(ev);
 		}
 	}
@@ -232,9 +237,61 @@ class EventTransferManager : public TransferManager {
 */
 			Status stat = success ? SUCCESS : FAIL_UPLOAD;
 			Task::EventPtr ev (new UploadEvent(stat, hash.uri(), UploadDataEventId));
+			{
+				boost::unique_lock<boost::mutex> l(mMutex);
+				UploadMap::const_iterator iter = mActiveUploads.find(hash.uri().toString());
+				assert (iter != mActiveUploads.end());
+				mActiveUploads.erase(iter);
+			}
+			mFirstTransferLayer->addToCache(hash.fingerprint(), toUpload);
 			mEventSystem->fire(ev);
 		}
 	}
+	void doUploadByHash(const RemoteFileId &hash,
+			const DenseDataPtr &toUpload,
+			const EventListener &listener) {
+		mUploadServ->lookupService(
+			hash.uri().context(),
+			std::tr1::bind(&EventTransferManager::doUploadData, this,
+			               hash, toUpload, true, true, _1));
+	}
+	void uploadIfNotExists(const RemoteFileId &hash,
+			const DenseDataPtr &toUpload,
+			const EventListener &listener,
+			bool existsThisRound,
+			bool existsInAll,
+			bool firstRound,
+			ServiceIterator *services) {
+
+		existsInAll = existsInAll && existsThisRound;
+
+		std::tr1::shared_ptr<DownloadHandler> dataHandler;
+		URI dloadURI;
+		ServiceParams params;
+
+		// Always pass success to these
+		if (mDownloadServ->getNextProtocol(services,
+				ServiceIterator::SUCCESS,
+				hash.uri(),dloadURI,params,dataHandler)) {
+
+			dataHandler->exists(NULL, dloadURI, std::tr1::bind(
+				&EventTransferManager::uploadIfNotExists, this, hash, toUpload, listener, _1, existsInAll, false, services));
+		} else {
+			if (existsInAll && !firstRound) {
+				Task::EventPtr ev (new UploadEvent(SUCCESS, hash.uri(), UploadDataEventId));
+				{
+					boost::unique_lock<boost::mutex> l(mMutex);
+					UploadMap::const_iterator iter = mActiveUploads.find(hash.uri().toString());
+					assert (iter != mActiveUploads.end());
+					mActiveUploads.erase(iter);
+				}
+				mEventSystem->fire(ev);
+			} else {
+				doUploadByHash(hash, toUpload, listener);
+			}
+		}
+	}
+
 	/*
 	struct RequestInfo {
 		bool mPending; //pending overlapping requests.
@@ -251,11 +308,13 @@ public:
 	EventTransferManager(CacheLayer *download,
 				NameLookupManager *nameLookup,
 				Task::GenEventManager *eventSystem,
+				ServiceManager<DownloadHandler> * downloadReg,
 				ServiceManager<NameUploadHandler> * uploadNameReg,
 				ServiceManager<UploadHandler> * uploadDataReg)
 			: mFirstTransferLayer(download),
 			  mNameLookup(nameLookup),
 			  mEventSystem(eventSystem),
+			  mDownloadServ(downloadReg),
 			  mNameUploadServ(uploadNameReg),
 			  mUploadServ(uploadDataReg),
 			  mCleanup(false),
@@ -301,15 +360,16 @@ public:
 		return doDownloadByHash(listener, range, &name, true);
 	}
 
-        virtual void downloadName(const URI &nameURI,
-                const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
-            mNameLookup->lookupHash(nameURI, listener);
-        }
+	virtual void downloadName(const URI &nameURI,
+			const std::tr1::function<void(const URI &nameURI,const RemoteFileId *fingerprint)> &listener) {
+		mNameLookup->lookupHash(nameURI, listener);
+	}
 
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		if (!mNameUploadServ || !mUploadServ) {
 			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 		}
@@ -321,7 +381,7 @@ public:
 		*/
 		uploadByHash(hash, toUpload,
 				std::tr1::bind(&EventTransferManager::uploadDataFinishedDoName,
-						this, name, hash, listener, _1));
+						this, name, hash, listener, _1), forceIfExists);
 	}
 
 	virtual void uploadName(const URI &name,
@@ -340,16 +400,27 @@ public:
 
 	virtual void uploadByHash(const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		if (!mUploadServ) {
 			listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri(), UploadDataEventId)));
 		}
-		mEventSystem->subscribe(UploadEvent::getIdPair(hash.uri(), UploadDataEventId), listener);
-
-		mUploadServ->lookupService(
-			hash.uri().context(),
-			std::tr1::bind(&EventTransferManager::doUploadData, this,
-					hash, toUpload, true, true, _1));
+		{
+			boost::unique_lock<boost::mutex> l(mMutex);
+			mEventSystem->subscribe(UploadEvent::getIdPair(hash.uri(), UploadDataEventId), listener);
+			UploadMap::const_iterator iter = mActiveUploads.find(hash.uri().toString());
+			if (iter == mActiveUploads.end()) {
+				if (!forceIfExists) {
+					mDownloadServ->lookupService(
+						hash.uri().context(),
+						std::tr1::bind(&EventTransferManager::uploadIfNotExists, this,
+						               hash, toUpload, listener, true, true, true, _1));
+				} else {
+					doUploadByHash(hash, toUpload, listener);
+				}
+				mActiveUploads.insert(hash.uri().toString());
+			}
+		}
 	}
 
 };

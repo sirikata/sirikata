@@ -40,7 +40,6 @@
 #include <OgrePrerequisites.h>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
-
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
 #ifdef nil
@@ -49,6 +48,8 @@
 
 namespace Meru {
 class CDNArchivePlugin;
+class ResourceFileUpload;
+typedef int ResourceUploadStatus;
 }
 
 namespace Ogre {
@@ -145,6 +146,7 @@ public:
         delete os;
         return NULL;
     }
+    void uploadFinished(const std::map<Meru::ResourceFileUpload,Meru::ResourceUploadStatus>&);
     Entity* getEntity(const SpaceObjectReference &proxyId) const {
         SceneEntitiesMap::const_iterator iter = mSceneEntities.find(proxyId);
         if (iter != mSceneEntities.end()) {

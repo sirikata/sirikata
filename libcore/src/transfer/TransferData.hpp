@@ -44,6 +44,10 @@ namespace Transfer {
 class DenseData : Noncopyable, public Range {
 	std::vector<unsigned char> mData;
 
+    // All too easy to mix up string constructors (binarydata,length) with (string,startbyte)
+	DenseData(const char *str, size_t len) : Range(false) {}
+	DenseData(const unsigned char *str, size_t len) : Range(false) {}
+
 public:
 	/// The only constructor--the length can be changed later with setLength().
 	DenseData(const Range &range)

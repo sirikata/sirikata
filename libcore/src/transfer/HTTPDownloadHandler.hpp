@@ -72,7 +72,7 @@ class HTTPDownloadHandler :
 			HTTPRequest* httpreq,
 			const DenseDataPtr &recvData,
 			bool success) {
-		callback(recvData, success);
+		callback(recvData, success, httpreq->getFullLength());
 	}
 
 	struct IsSpace {
@@ -143,7 +143,7 @@ public:
 			const Range &bytes,
 			const DownloadHandler::Callback &cb) {
 		// Does not work yet.
-		cb(DenseDataPtr(), false);
+		cb(DenseDataPtr(), false, 0);
 	}
 
 	/// HTTP (as with most TCP protocols) returns packets in order.

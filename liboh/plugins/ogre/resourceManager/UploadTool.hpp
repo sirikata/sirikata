@@ -44,11 +44,37 @@ using ::Sirikata::Transfer::DenseDataPtr;
 using ::Sirikata::Transfer::TransferManager;
 using ::Sirikata::Transfer::UploadEvent;
 using ::Sirikata::Transfer::UploadEventPtr;
-typedef TransferManager::Status ResourceUploadStatus;
+//typedef TransferManager::Status ResourceUploadStatus;
+typedef int ResourceUploadStatus;
 
+enum FileType { MESH, MATERIAL, DATA, NUMTYPES };
+
+class DiskFile {
+	String str;
+public:
+	const String &diskpath() const { return str; }
+	String &diskpath() { return str; }
+	static DiskFile makediskfile(const String &mypath) {
+		DiskFile ret;
+		ret.str = mypath;
+		return ret;
+	}
+	bool operator==(const DiskFile &other) const {
+		return str == other.str;
+	}
+	bool operator!=(const DiskFile &other) const {
+		return str != other.str;
+	}
+	bool operator<(const DiskFile &other) const {
+		return str < other.str;
+	}
+};
 
 struct ResourceFileUpload {
+    FileType mType;
     URI mID;
+	bool mReferencedByHash;
+    DiskFile mSourceFilename;
     ///Hash optional
     Fingerprint mHash;
     DenseDataPtr mData;
@@ -67,7 +93,7 @@ struct ResourceFileUpload {
         return mID==i.mID;
     }
 };
-
+ 
 /** 
  * This class allows a client to pass options it wishes a material export to obey
  */
@@ -99,6 +125,14 @@ struct ReplaceMaterialOptions {
 ///A class that holds the ReplaceMaterialOptions and various temporary values to calculate returned files from
 class ReplaceMaterialOptionsAndReturn;
 
+
+
+class ResourceFileUploadData;
+//maps indexed by filename
+// filemap goes filename -> URI.
+typedef  std::map<DiskFile, ResourceFileUploadData*> FileMap;
+
+
 /**
  * This helper class wraps
  * all the dependencies a file could have in terms of 
@@ -107,12 +141,15 @@ class ReplaceMaterialOptionsAndReturn;
  */
 class DependencyPair{
 public:
-    ///The Ogre scripts on which this script file depends
-  std::set<Fingerprint> materials;
-    /// The texture/source files on which this script depends
-  std::set<Fingerprint> files;
+    ///The Ogre scripts and texture/source files on which this script file depends
+  std::set<DiskFile> files;
 
 };
+
+// Map from Material Names to the file that Provides them.
+// .first are provided by .second
+typedef std::map<String, DiskFile> MaterialMap;
+
 /**
  * A special string sorting class that takes length into account first
  */
@@ -150,7 +187,7 @@ Fingerprint processFileDependency(std::map<String,Fingerprint,SpecialStringSort>
  * \param OptionsAndOutput is the list of options that are passed in by the caller of this entire library. This tool will return all materials to be written in the OptionsAndOutput varialbe
  * \param allow_binary is whether this particular file is binary so that dependencies are known to need to replace the length value before the data aspect
  */
-void replaceAll(String &data, std::map<String,Fingerprint,SpecialStringSort> &filemap, const std::map<String,std::pair<Fingerprint,String>,SpecialStringSort>&materialmap,std::map<Fingerprint,DependencyPair> &overarching_dependencies, const std::set<String>&firstLevelTextures, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &OptionsAndOutput,bool allow_binary);
+void replaceAll(DenseDataPtr &data, FileMap &filemap, const MaterialMap&materialmap, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary);
 /**
  * This function takes in 
  * \param filenames the list of file names on the hard disk to be uploaded
@@ -158,7 +195,7 @@ void replaceAll(String &data, std::map<String,Fingerprint,SpecialStringSort> &fi
  * \returns a list of files to be uploaded, including their hashes and filenames and data contents These files will have been properly modified to include direct references to
  * hashes of other files passed in as well as 3rd level names where appropriate.  Users can pass in lists of exclusions in the ReplaceMaterialOptions
  */
-std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies (const std::vector<String>&filenames, const ReplaceMaterialOptions&opts);
+std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::vector<DiskFile> &filenames,const ReplaceMaterialOptions&options);
 
 
 /**
@@ -178,6 +215,7 @@ void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm,
                                       const std::vector<ResourceFileUpload> &filesToUpload, 
                                       const URIContext &hashContext,
                                       const std::tr1::function<void(ResourceStatusMap const &)> &callback);
+
 
 
 }

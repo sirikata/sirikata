@@ -137,6 +137,22 @@ public:
 		}
 	}
 
+	CacheLayer *getNext() const {
+		return mNext;
+	}
+
+	CacheLayer *getResponder() const {
+		return mRespondTo;
+	}
+
+	void addToCache(const Fingerprint &fileId, const DenseDataPtr &data) {
+		if (mNext) {
+			mNext->addToCache(fileId, data);
+		} else {
+			populateCache(fileId, data);
+		}
+	}
+
 	/**
 	 * Purges this hash from all subsequent caches. In general, it is not
 	 * useful to do this manually, since the CachePolicy handles freeing

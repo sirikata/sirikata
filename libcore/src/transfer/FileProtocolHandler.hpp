@@ -78,6 +78,9 @@ public:
 	virtual bool inOrderStream() const {
 		return true;
 	}
+	virtual void exists(DownloadHandler::TransferDataPtr *ptrRef,
+			const URI &uri,
+			const DownloadHandler::Callback &cb);
 
 	virtual void upload(UploadHandler::TransferDataPtr *ptrRef,
 			const ServiceParams &params,

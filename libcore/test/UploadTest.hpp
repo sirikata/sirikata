@@ -168,7 +168,7 @@ class UploadTest : public CxxTest::TestSuite {
 		mUpNameReg->setHandler("http", httpUpHandler);
 
 		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadServMgr);
-		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mUpNameServMgr, mUploadServMgr);
+		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mDownloadServMgr, mUpNameServMgr, mUploadServMgr);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);
 
@@ -240,7 +240,7 @@ public:
 		Transfer::Fingerprint fp = sd.computeFingerprint();
 		using std::tr1::placeholders::_1;
 		mTransferManager->upload(URI("meerkat:///test"), URIContext("mhash:"), sd.flatten(),
-				std::tr1::bind(&UploadTest::uploadFinished, this, _1));
+				std::tr1::bind(&UploadTest::uploadFinished, this, _1), true);
 		//mTransferManager->uploadName("meerkat:///test",Transfer::RemoteFileId(fp, URIContext("mhash:")),
 		//		std::tr1::bind(&UploadTest::uploadFinished, this, _1));
 

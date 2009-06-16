@@ -35,12 +35,10 @@
 
 namespace Sirikata {
 typedef Vector3f Color;
-class LightInfo {
-public:
+struct LightInfo {
     enum LightTypes {
         POINT,SPOTLIGHT,DIRECTIONAL,NUM_TYPES//defaults to point=0?
     };
-private:
     enum Fields {
         NONE=0,
         DIFFUSE_COLOR=1,
@@ -52,10 +50,10 @@ private:
         FALLOFF=128,
         CONE=256,
         TYPE=512,
-        CAST_SHADOW=1024
+        CAST_SHADOW=1024,
+        ALL=2047
     };
     int32 mWhichFields;
-public:
     LightInfo() :
         mWhichFields(0),
         mDiffuseColor(1,1,1),

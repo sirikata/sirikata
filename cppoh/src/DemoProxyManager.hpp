@@ -46,7 +46,6 @@ static const InitializeGlobalOptions globalst (
 
 class DemoProxyManager :public ProxyManager{
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
-    std::tr1::shared_ptr<ProxyLightObject> mLight;
     typedef std::map<SpaceObjectReference, ProxyObjectPtr > ObjectMap;
     ObjectMap mObjects;
 
@@ -122,14 +121,22 @@ class DemoProxyManager :public ProxyManager{
             LightInfo lightInfo;
             float ambientPower=1, shadowPower=1;
             float x,y,z; // Light direction. Assume 0,1,0 for now.
-            int castsshadow;
+            int castsshadow=1;
             sscanf(rest.c_str(),"[%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>",&lightInfo.mDiffuseColor.x,&lightInfo.mDiffuseColor.y,&lightInfo.mDiffuseColor.z,&ambientPower,&lightInfo.mSpecularColor.x,&lightInfo.mSpecularColor.y,&lightInfo.mSpecularColor.z,&shadowPower,&lightInfo.mLightRange,&lightInfo.mConstantFalloff,&lightInfo.mLinearFalloff,&lightInfo.mQuadraticFalloff,&lightInfo.mConeInnerRadians,&lightInfo.mConeOuterRadians,&lightInfo.mPower,&lightInfo.mConeFalloff,&castsshadow,&x,&y,&z);
             lightInfo.mCastsShadow = castsshadow?true:false;
 
-            lightInfo.mAmbientColor = lightInfo.mDiffuseColor*(ambientPower/lightInfo.mDiffuseColor.length())/lightInfo.mPower;
-            lightInfo.mShadowColor = 0;//shadowPower;
-            if (castsshadow)
-                addLightObject(lightInfo, location);
+            if (lightInfo.mDiffuseColor.length()&&lightInfo.mPower) {
+                lightInfo.mAmbientColor = lightInfo.mDiffuseColor*(ambientPower/lightInfo.mDiffuseColor.length())/lightInfo.mPower;
+            } else {
+                lightInfo.mAmbientColor = Vector3f(0,0,0);
+            }
+            if (lightInfo.mSpecularColor.length()&&lightInfo.mPower) {
+                lightInfo.mShadowColor = lightInfo.mSpecularColor*(shadowPower/lightInfo.mSpecularColor.length())/lightInfo.mPower;
+            } else {
+                lightInfo.mShadowColor = Vector3f(0,0,0);
+            }
+            lightInfo.mWhichFields = LightInfo::ALL;
+            addLightObject(lightInfo, location);
         } else {
             addMeshObject(Transfer::URI(filename), location, scale);
         }
@@ -154,8 +161,7 @@ class DemoProxyManager :public ProxyManager{
 
 public:
     DemoProxyManager()
-      : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-        mLight(new ProxyLightObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+      : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
     }
 
     virtual void createObject(const ProxyObjectPtr &newObj) {
@@ -184,21 +190,13 @@ public:
         }
         // Otherwise, load fallback scene.
 
-        notify(&ProxyCreationListener::createProxy,mLight);
         LightInfo li;
         li.setLightDiffuseColor(Color(0,0,1));
         li.setLightAmbientColor(Color(0,0,0));
         li.setLightPower(0);
-        mLight->update(li);
+        addLightObject(li, Location(Vector3d(0,1000.,0), Quaternion::identity(),
+                                      Vector3f::nil(), Vector3f::nil(), 0.));
 
-/*
-        li.setLightDiffuseColor(Color(.7,0,1));
-        li.setLightAmbientColor(Color(1,1,0));
-        li.setLightPower(100);
-        mAttachedLight->update(li);
-*/
-//        mMesh->setMesh("file:///razor.mesh");
-//        mAttachedMesh->setMesh("file:///razor.mesh");
         addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
                              Location(Vector3d(0,0,0), Quaternion::identity(),
                                       Vector3f(.05,0,0), Vector3f(0,0,0),0));
@@ -208,19 +206,10 @@ public:
         addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
                              Location(Vector3d(0,5,0), Quaternion::identity(),
                                       Vector3f(.05,0,0), Vector3f(0,0,0),0));
-
-        mLight->resetPositionVelocity(Time::now()-Duration::seconds(.5),
-                             Location(Vector3d(0,1000.,0), Quaternion::identity(),
-                                      Vector3f(-1,0,0), Vector3f(0,1,0), 0.5));
-        mLight->setPositionVelocity(Time::now()+Duration::seconds(.5),
-                             Location(Vector3d(0,1000.,0), Quaternion::identity(),
-                                      Vector3f::nil(), Vector3f::nil(), 0.));
     }
     void destroy() {
         mCamera->destroy();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
-        mLight->destroy();
-        notify(&ProxyCreationListener::destroyProxy,mLight);
         for (ObjectMap::const_iterator iter = mObjects.begin();
              iter != mObjects.end(); ++iter) {
             (*iter).second->destroy();
@@ -231,8 +220,6 @@ public:
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const {
         if (id == mCamera->getObjectReference()) {
             return mCamera;
-        } else if (id == mLight->getObjectReference()) {
-            return mLight;
         } else {
             ObjectMap::const_iterator iter = mObjects.find(id);
             if (iter == mObjects.end()) {

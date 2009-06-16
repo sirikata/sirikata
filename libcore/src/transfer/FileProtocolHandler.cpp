@@ -169,22 +169,57 @@ int open_at_byte(const char *path, int options, cache_usize_type startbyte=0, in
 	return fd;
 }
 
+class ExistsTask : public Task::AbortableWorkItem {
+protected:
+	std::string mPath;
+	DownloadHandler::Callback mCallback;
+public:
+	ExistsTask(const std::string &path, const DownloadHandler::Callback &cb) 
+		: mPath(path), mCallback(cb) {
+	}
+
+	void operator() () {
+		Task::AbortableWorkItemPtr tempReference(shared_from_this());
+		if (!prepareExecute()) {
+			return;
+		}
+		struct stat64 st;
+		cache_usize_type diskSize = 0;
+		if (stat64(mPath.c_str(), &st)!=0) {
+			aborted();
+			return;
+		}
+		if (st.st_size > 0) {
+			diskSize = st.st_size;
+		}
+		if (access(mPath.c_str(), R_OK)==0) {
+			mCallback(DenseDataPtr(), true, diskSize);
+		} else {
+			mCallback(DenseDataPtr(), false, diskSize);
+		}
+	}
+
+	virtual void aborted() {
+		mCallback(DenseDataPtr(), false, 0);
+	}
+};
+
 class ReadTask : public Task::AbortableWorkItem {
 protected:
 	std::string mPath;
 	Range mRange;
 	DownloadHandler::Callback mCallback;
 	int mFd;
+	cache_usize_type mDiskSize;
 public:
 	ReadTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb) 
-		: mPath(path), mRange(bytes), mCallback(cb), mFd(-1) {
+		: mPath(path), mRange(bytes), mCallback(cb), mFd(-1), mDiskSize(0) {
 	}
 
 	virtual void readLoop() {
 		if (mRange.goesToEndOfFile()) {
-			struct stat64 st;
-			if (fstat64(mFd, &st)==0 && st.st_size > 0) {
-				mRange.setLength(st.st_size - mRange.startbyte(), true);
+			if (mDiskSize > 0) {
+				mRange.setLength(mDiskSize - mRange.startbyte(), true);
 			} else {
 				aborted();
 				return;
@@ -195,7 +230,7 @@ public:
 			aborted();
 			return;
 		}
-		mCallback(memoryBuffer, true);
+		mCallback(memoryBuffer, true, mDiskSize);
 	}
 
 	void operator() () {
@@ -209,6 +244,11 @@ public:
 			aborted();
 			return;
 		}
+		struct stat64 st;
+		if (fstat64(mFd, &st)==0 && st.st_size > 0) {
+			mDiskSize = st.st_size;
+		}
+
 		readLoop();
 		close(mFd);
 	}
@@ -220,18 +260,23 @@ public:
 		return true;
 	}
 	virtual void aborted() {
-		mCallback(DenseDataPtr(), false);
+		mCallback(DenseDataPtr(), false, mDiskSize);
 	}
 };
 
 static const int READ_SIZE = 4096;
+
+// FIXME: If we are "streaming" from a pipe or a device, this function may never return.
+// This will cause the queue to build up.
+// We need some way to keep all of our disk accesses around by using select.
+// For now, assume the file is of finite size and not on a stalled NFS drive.
 
 class StreamTask : public ReadTask {
 public:
 	StreamTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb) 
 		: ReadTask(path, bytes, cb) {
 	}
-	virtual void readLoop() {
+	virtual void readLoop(float size) {
 		cache_usize_type pos = mRange.startbyte();
 		while (mRange.goesToEndOfFile() || pos < mRange.endbyte()) {
 			char temporary_buffer[READ_SIZE];
@@ -248,7 +293,7 @@ public:
 			}
 			MutableDenseDataPtr mddp (new DenseData(Range(pos, amount_read, LENGTH)));
 			memcpy(mddp->writableData(), temporary_buffer, amount_read);
-			mCallback(mddp, true);
+			mCallback(mddp, true, mDiskSize);
 			pos += amount_read;
 		}
 		aborted();
@@ -276,11 +321,13 @@ public:
 			return;
 		}
 		int flags;
-		std::string openPath = mTemporaryPath;
+		std::string openPath;
 		if (!mTemporaryPath.empty()) {
 			flags = O_CREAT|O_TRUNC|O_WRONLY;
+			openPath = mTemporaryPath;
 		} else {
 			flags = O_CREAT|O_WRONLY;
+			openPath = mPath;
 		}
 		if (mAppendMode && mTemporaryPath.empty()) {
 			flags |= O_APPEND;
@@ -367,6 +414,18 @@ void FileProtocolHandler::stream(DownloadHandler::TransferDataPtr *ptrRef,
 	}
 	mQueue->enqueue(&*work);
 }
+
+void FileProtocolHandler::exists(DownloadHandler::TransferDataPtr *ptrRef,
+		const URI &uri,
+		const DownloadHandler::Callback &cb) {
+	Task::AbortableWorkItemPtr work(new ExistsTask(pathFromURI(uri), cb));
+	if (ptrRef) {
+		*ptrRef = DownloadHandler::TransferDataPtr(
+			new FileData<DownloadHandler>(shared_from_this(), work));
+	}
+	mQueue->enqueue(&*work);
+}
+
 
 void FileProtocolHandler::upload(UploadHandler::TransferDataPtr *ptrRef,
 		const ServiceParams &params,

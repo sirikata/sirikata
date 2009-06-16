@@ -59,9 +59,10 @@ public:
 	/** Called upon completion. Note that stream() will call this once per packet.
 	 *
 	 * @param data      The a shared_ptr<DenseData> containing the requested data.
-	 * @param           success is set to false on failure (when data is invalid).
+	 * @param success   is set to false on failure (when data is invalid).
+	 * @param fileSize  The total size of the file, if available. Otherwise, 0.
 	 */
-	typedef std::tr1::function<void(DenseDataPtr data, bool success)> Callback;
+	typedef std::tr1::function<void(DenseDataPtr data, bool success, cache_usize_type fileSize)> Callback;
 
 	/** Downloads the given range of a file, and calls cb(data, success) upon
 	 * completion or failure.
@@ -94,6 +95,13 @@ public:
 	/* {
 		streamCB(DenseDataPtr(), false);
 	} */
+
+	/** Checks the existence of a file. The DenseData parameter of callback should be ignored
+	 * and may be NULL.  The default version calls download with an empty range.
+	 */
+	virtual void exists(TransferDataPtr *ptrRef, const URI &uri, const Callback &cb) {
+		download(ptrRef, uri, Range(false), cb);
+	}
 
 	/** Returns true if stream() will receive data in order (such as in HTTP or FTP)
 	 * FIXME: What about transfers that can lose packets (UDP video streaming)?

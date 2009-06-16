@@ -131,6 +131,7 @@ public:
 		inline Status getStatus() const {
 			return mStatus;
 		}
+		virtual ~DownloadEvent() {}
 	};
 	typedef std::tr1::shared_ptr<DownloadEvent> DownloadEventPtr;
 
@@ -158,6 +159,7 @@ public:
 		inline const URI &uri() const {
 			return mURI;
 		}
+		virtual ~UploadEvent() {}
 	};
 	typedef std::tr1::shared_ptr<UploadEvent> UploadEventPtr;
 
@@ -231,7 +233,8 @@ public:
 	virtual void upload(const URI &name,
 			const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, name, UploadEventId)));
 	}
 
@@ -241,15 +244,17 @@ public:
 	 * @param hashContext  The location to upload the data to (usually "mhash:")
 	 * @param toUpload     Data to be uploaded. Will only be uploaded if necessary.
 	 * @param listener     An EventListener to receive a UploadEventPtr with the retrieved data.
+	 * @param forceIfExists Upload the data even if the file already exists on all known CDN services.
 	 */
 	inline void upload(const URI &name,
 			const URIContext &hashContext,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		RemoteFileId rfid(
 			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
 			hashContext);
-		upload(name, rfid, toUpload, listener);
+		upload(name, rfid, toUpload, listener, forceIfExists);
 	}
 
 	/**
@@ -274,13 +279,18 @@ public:
 	 * Similar to calling:
 	 * UploadHandler::upload(NULL, service.lookup(hash.url().proto()), hash.url(), toUpload, listener)
 	 *
+	 * Note: uploadByHash checks for the existence of the file, and uploads only if it is
+	 * missing from at least one service. The forceIfExists option will override this check.
+	 *
 	 * @param hash      The hash of the file upload.
 	 * @param toUpload  SparseData to upload (can be cast from DenseData).
 	 * @param listener  A listener to receive the UploadEvent.
+	 * @param forceIfExists Upload the data even if the file already exists on all known CDN services.
 	 */
 	virtual void uploadByHash(const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		listener(UploadEventPtr(new UploadEvent(FAIL_UNIMPLEMENTED, hash.uri(), UploadDataEventId)));
 	}
 	/** Like the other uploadByHash() function, but computes the hash.
@@ -289,11 +299,12 @@ public:
 	 */
 	inline void uploadByHash(const URIContext &hashContext,
 			const DenseDataPtr &toUpload,
-			const EventListener &listener) {
+			const EventListener &listener,
+			bool forceIfExists) {
 		RemoteFileId rfid(
 			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
 			hashContext);
-		uploadByHash(rfid, toUpload, listener);
+		uploadByHash(rfid, toUpload, listener, forceIfExists);
 	}
 };
 
