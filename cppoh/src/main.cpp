@@ -53,10 +53,11 @@ InitializeGlobalOptions main_options("",
 );
 
 std::string cut(const std::string &source, std::string::size_type start, std::string::size_type end) {
-    while (std::isspace(source[start]) && start < end) {
+	using namespace std;
+    while (isspace(source[start]) && start < end) {
         ++start;
     }
-    while (end > start && std::isspace(source[end-1])) {
+    while (end > start && isspace(source[end-1])) {
         --end;
     }
     return source.substr(start,end-start);
@@ -70,9 +71,9 @@ std::ostream &display (std::ostream &os, const OptionMap &om, const GlobalMap &g
         OptionMapPtr child = (*iter).second;
         os << std::string(numspaces, ' ');
         os << (*iter).first << " = ";
-        GlobalMap::const_iterator iter = globals.find(child);
-        if (level>0 && iter != globals.end()) {
-            os << "$" << (*iter).second;
+        GlobalMap::const_iterator globaliter = globals.find(child);
+        if (level>0 && globaliter != globals.end()) {
+            os << "$" << (*globaliter).second;
         } else {
             os << child->getValue();
             if (!child->empty()) {

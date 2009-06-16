@@ -723,8 +723,24 @@ Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
     uploadreq->opts.uploadHashContext = Transfer::URIContext("mhash:///");
     uploadreq->opts.uploadNameContext = Transfer::URIContext("meru:///");
     for (std::vector<std::string>::const_iterator iter = dndev->mFilenames.begin(); iter != dndev->mFilenames.end(); ++iter) {
-        uploadreq->filenames.push_back(Meru::DiskFile::makediskfile(*iter));
-    }
+		std::string filename = *iter;
+		struct stat st;
+		if (stat((*iter).c_str(), &st)==0) {
+			if (filename.length()>2 && ((st.st_mode & S_IFDIR)==S_IFDIR)) {
+				// if directory, look in dirname/models/dirname.mesh
+				std::string::size_type lastslash = filename.rfind('/',filename.length()-2);
+				if (lastslash != std::string::npos) {
+					std::string meshname = filename.substr(lastslash+1);
+					std::string::size_type endslash = meshname.find('/');
+					if (endslash != std::string::npos) {
+						meshname = meshname.substr(0, endslash);
+					}
+					filename += "/models/"+meshname+".mesh";
+				}
+			}
+		}
+		uploadreq->filenames.push_back(Meru::DiskFile::makediskfile(filename));
+	}
     uploadreq->parent = this;
     uploadreq->mTransferManager = mTransferManager;
     boost::thread th(std::tr1::bind(&UploadRequest::perform, uploadreq));

@@ -65,13 +65,18 @@
 #define read _read
 #define write _write
 #define lseek _lseeki64
+#define lseek64 _lseeki64
 #define seek _seeki64 // by default, not 64-bit seek
 #define mkdir _mkdir
 #define unlink _unlink
+#define access _access
 #define O_RDONLY _O_RDONLY
 #define O_WRONLY _O_WRONLY
 #define O_CREAT _O_CREAT
 #define O_BINARY _O_BINARY
+#define F_OK 0
+#define W_OK 2
+#define R_OK 4
 #define _finddata64_t __finddata64_t
 #endif
 
@@ -117,8 +122,8 @@ FileProtocolHandler::~FileProtocolHandler() {
 	}
 }
 
-bool read_full(int fd, unsigned char *data, ssize_t amount) {
-	ssize_t ret;
+bool read_full(int fd, unsigned char *data, cache_ssize_type amount) {
+	cache_ssize_type ret;
  	while (amount > 0) {
 		ret = read(fd, data, amount);
 		if (ret <= 0) {
@@ -134,8 +139,8 @@ bool read_full(int fd, unsigned char *data, ssize_t amount) {
 	return true; // read all data.
 }
 
-bool write_full(int fd, const unsigned char *data, ssize_t amount) {
-	ssize_t ret;
+bool write_full(int fd, const unsigned char *data, cache_ssize_type amount) {
+	cache_ssize_type ret;
  	while (amount > 0) {
 		ret = write(fd, data, amount);
 		if (ret <= 0) {
@@ -280,7 +285,7 @@ public:
 		cache_usize_type pos = mRange.startbyte();
 		while (mRange.goesToEndOfFile() || pos < mRange.endbyte()) {
 			char temporary_buffer[READ_SIZE];
-			ssize_t amount_read = READ_SIZE;
+			cache_ssize_type amount_read = READ_SIZE;
 			if ((cache_ssize_type)(mRange.endbyte() - pos) < READ_SIZE) {
 				amount_read = (mRange.endbyte() - pos);
 			}
@@ -299,6 +304,18 @@ public:
 		aborted();
 	}
 };
+
+void makeParentDir(const std::string &openPath) {
+	std::string::size_type lastslash = openPath.rfind('/');
+	if (lastslash != std::string::npos) {
+		std::string dirname = openPath.substr(0, lastslash);
+		mkdir(dirname.c_str()
+#ifndef _WIN32
+			, 0775
+#endif
+			);
+	}
+}
 
 class WriteTask : public Task::AbortableWorkItem {
 	std::string mPath;
@@ -332,6 +349,7 @@ public:
 		if (mAppendMode && mTemporaryPath.empty()) {
 			flags |= O_APPEND;
 		}
+		makeParentDir(openPath);
 		mFd = open_at_byte(openPath.c_str(), flags, mData.startbyte());
 		if (mFd == -1) {
 			aborted();
@@ -352,6 +370,7 @@ public:
 		} while (length);
 		if (!mTemporaryPath.empty()) {
 			// Fixme: Not guaranteed to be ordered with write() calls, google for ext4 data loss.
+			makeParentDir(mPath);
 			rename(mTemporaryPath.c_str(), mPath.c_str());
 		}
 		mCallback(true);

@@ -191,9 +191,13 @@ public:
         // Otherwise, load fallback scene.
 
         LightInfo li;
-        li.setLightDiffuseColor(Color(0,0,1));
-        li.setLightAmbientColor(Color(0,0,0));
-        li.setLightPower(0);
+        li.setLightDiffuseColor(Color(0.92,0.92,0.92));
+        li.setLightAmbientColor(Color(0.0001,0.0001,0.0001));
+        li.setLightSpecularColor(Color(0,0,0));
+        li.setLightShadowColor(Color(0,0,0));
+        li.setLightPower(0.5);
+		li.setLightRange(1000);
+		li.setLightFalloff(0.1,0,0);
         addLightObject(li, Location(Vector3d(0,1000.,0), Quaternion::identity(),
                                       Vector3f::nil(), Vector3f::nil(), 0.));
 

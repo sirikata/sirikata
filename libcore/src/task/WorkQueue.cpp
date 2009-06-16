@@ -77,7 +77,8 @@ void workQueueWorkerThread(WorkQueue *queue) {
 }
 }
 
-struct WorkQueueThread {
+class WorkQueueThread {
+public:
 	std::vector<boost::thread*> mThreads;
 };
 

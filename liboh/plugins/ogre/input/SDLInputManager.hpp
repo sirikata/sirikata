@@ -54,6 +54,7 @@ class SDLInputManager : public InputManager {
     std::vector<SDLMousePtr> mMice;
     std::vector<SDLJoystickPtr> mJoy;
     unsigned int mWidth, mHeight;
+    bool mHasKeyboardFocus;
     static int modifiersFromSDL(int sdlMod);
 public:
     OptionValue*mDragDeadband;

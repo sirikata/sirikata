@@ -70,7 +70,8 @@ public:
 	}
 };
 
-struct ResourceFileUpload {
+class ResourceFileUpload {
+public:
     FileType mType;
     URI mID;
 	bool mReferencedByHash;
@@ -97,7 +98,8 @@ struct ResourceFileUpload {
 /** 
  * This class allows a client to pass options it wishes a material export to obey
  */
-struct ReplaceMaterialOptions {
+class ReplaceMaterialOptions {
+public:
     ///Should tileable textures try to use group central acct
 //    bool meruBaseTileable;
     ///Should tileable textures be named at all, or just addressed by hash

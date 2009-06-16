@@ -47,6 +47,8 @@
 #include <task/Time.hpp>
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
+#include <boost/math/special_functions/fpclassify.hpp>
+
 
 #include <map>
 
@@ -206,7 +208,7 @@ private:
             SelectedObjectMap::iterator selectIter = mSelectedObjects.find(mouseOver->id());
             if (selectIter == mSelectedObjects.end()) {
                 SILOG(input,info,"Added selection " << mouseOver->id());
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), Location()));
+                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), mouseOver->getProxy().extrapolateLocation(Task::AbsTime::now())));
                 mouseOver->setSelected(true);
                 mLastShiftSelected = mouseOver->id();
                 // Fire selected event.
@@ -228,7 +230,7 @@ private:
             mWhichRayObject+=direction;
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
             if (mouseOver) {
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), Location()));
+                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), mouseOver->getProxy().extrapolateLocation(Task::AbsTime::now())));
                 mouseOver->setSelected(true);
                 SILOG(input,info,"Replaced selection with " << mouseOver->id());
                 // Fire selected event.
@@ -340,6 +342,14 @@ private:
             end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
         }
         Vector3d toMove (end - start);
+		if (!boost::math::isfinite(toMove.x) || !boost::math::isfinite(toMove.y) || !boost::math::isfinite(toMove.z)) {
+			return EventResponse::cancel();
+		}
+		// Prevent moving outside of a small radius so you don't shoot an object into the horizon.
+		if (toMove.length() > 10*mParent->mInputManager->mWorldScale->as<float>()) {
+			// moving too much.
+			toMove *= (10*mParent->mInputManager->mWorldScale->as<float>()/toMove.length());
+		}
         SILOG(input,debug,"Start "<<start<<"; End "<<end<<"; toMove "<<toMove);
         for (SelectedObjectMap::const_iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
@@ -695,7 +705,7 @@ private:
             Location loc (ent->getProxy().extrapolateLocation(now));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
             newEnt->getProxy().resetPositionVelocity(now, loc);
-            newSelectedObjectMap.insert(SelectedObjectMap::value_type(newEnt->id(),Location()));
+            newSelectedObjectMap.insert(SelectedObjectMap::value_type(newEnt->id(),newEnt->getProxy().extrapolateLocation(now)));
             newEnt->setSelected(true);
             ent->setSelected(false);
         }
@@ -750,7 +760,7 @@ private:
             ent->setSelected(false);
         }
         mSelectedObjects.clear();
-        mSelectedObjects.insert(SelectedObjectMap::value_type(newParentId, Location()));
+        mSelectedObjects.insert(SelectedObjectMap::value_type(newParentId, newParentEntity->getProxy().extrapolateLocation(now)));
         newParentEntity->setSelected(true);
         return EventResponse::nop();
     }
@@ -772,7 +782,7 @@ private:
                 hasSubObjects = true;
                 Entity *ent = *subIter;
                 ent->getProxy().setParent(parentParent, now);
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), Location()));
+                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), ent->getProxy().extrapolateLocation(now)));
                 ent->setSelected(true);
             }
             if (hasSubObjects) {
@@ -781,7 +791,7 @@ private:
                 parentEnt = NULL; // dies.
                 numUngrouped++;
             } else {
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(parentEnt->id(), Location()));
+                newSelectedObjectMap.insert(SelectedObjectMap::value_type(parentEnt->id(), parentEnt->getProxy().extrapolateLocation(now)));
             }
         }
         mSelectedObjects.swap(newSelectedObjectMap);
@@ -810,7 +820,7 @@ private:
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), Location()));
+                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), ent->getProxy().extrapolateLocation(now)));
                 ent->setSelected(true);
             }
             if (hasSubObjects) {
@@ -836,7 +846,7 @@ private:
             mCurrentGroup = ent->getProxy().getParent();
             Entity *parentEnt = mParent->getEntity(mCurrentGroup);
             if (parentEnt) {
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mCurrentGroup,Location()));
+                mSelectedObjects.insert(SelectedObjectMap::value_type(mCurrentGroup,parentEnt->getProxy().extrapolateLocation(now)));
             }
         } else {
             mCurrentGroup = SpaceObjectReference::null();
@@ -1053,8 +1063,8 @@ public:
     const SpaceObjectReference &getParentGroup() const {
         return mCurrentGroup;
     }
-    void addToSelection(const SpaceObjectReference &id) {
-        mSelectedObjects.insert(SelectedObjectMap::value_type(id, Location()));
+    void addToSelection(const ProxyPositionObjectPtr &obj) {
+		mSelectedObjects.insert(SelectedObjectMap::value_type(obj->getObjectReference(), obj->extrapolateLocation(Task::AbsTime::now())));
     }
 };
 
@@ -1072,7 +1082,7 @@ void OgreSystem::selectObject(Entity *obj, bool replace) {
         mMouseHandler->setParentGroupAndClear(obj->getProxy().getParent());
     }
     if (mMouseHandler->getParentGroup() == obj->getProxy().getParent()) {
-        mMouseHandler->addToSelection(obj->id());
+        mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }
 }

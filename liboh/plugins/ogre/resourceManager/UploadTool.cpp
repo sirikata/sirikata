@@ -51,6 +51,12 @@
 
 #include <boost/thread/mutex.hpp>
 
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define F_OK 0
+#endif
+
 namespace Meru {
 
 using namespace ::Sirikata::Transfer;
@@ -1021,9 +1027,9 @@ EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &curre
     return EventResponse::del();
 }
 
-void UploadFilesAndConfirmReplacement(TransferManager*tm, 
+void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm, 
                                       const std::vector<ResourceFileUpload> &filesToUpload,
-                                      const URIContext &hashContext,
+                                      const ::Sirikata::Transfer::URIContext &hashContext,
                                       const std::tr1::function<void(ResourceStatusMap const &)> &callback) {
     UploadStatus *status = new UploadStatus(callback, filesToUpload.size());
     for (size_t i = 0; i < filesToUpload.size(); ++i) {
