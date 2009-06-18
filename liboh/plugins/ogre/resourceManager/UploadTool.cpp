@@ -1011,7 +1011,7 @@ EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &curre
     }
     bool del = false;
     {
-        boost::unique_lock<boost::mutex> (mLock);
+        boost::unique_lock<boost::mutex> mylock (stat->mLock);
         ResourceUploadStatus st;
         st = uploadev->getStatus();
         if (stat->mStatusMap.insert(ResourceStatusMap::value_type(current, st)).second == true) {

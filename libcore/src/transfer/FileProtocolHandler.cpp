@@ -47,6 +47,7 @@
 #include <dirent.h>
 #define fstat64 fstat
 #define stat64 stat
+#define lseek64 lseek
 #else
 #include <fcntl.h>
 #include <unistd.h>
