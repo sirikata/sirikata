@@ -215,9 +215,9 @@ protected:
 	friend class WebView; // Our very close friend <3
 
 	Awesomium::WebCore* webCore;
-	std::map<std::string,WebView*> activeWebViews;
+	typedef std::map<std::string,WebView*> WebViewMap;
+    WebViewMap activeWebViews;
 	WebView* focusedWebView, *tooltipWebView, *tooltipParent;
-	std::map<std::string,WebView*>::iterator iter;
 	Ogre::Viewport* defaultViewport;
 	int mouseXPos, mouseYPos;
 	bool mouseButtonRDown;

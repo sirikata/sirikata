@@ -35,6 +35,9 @@
 
 #include "Ogre.h"
 #include "OgrePanelOverlayElement.h"
+#ifdef nil
+#undef nil
+#endif
 #include <oh/OverlayPosition.hpp>
 
 namespace Sirikata {

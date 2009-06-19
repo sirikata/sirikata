@@ -39,7 +39,7 @@ namespace Graphics {
 
 ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, 
 	const OverlayPosition& pos, const Ogre::String& matName, Ogre::uchar zOrder, Tier tier)
-: viewport(viewport), width(width), height(height), position(pos), isVisible(true), zOrder(zOrder), tier(tier)
+: viewport(viewport), position(pos), isVisible(true), width(width), height(height), tier(tier), zOrder(zOrder)
 {
 	if(zOrder > 199)
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 

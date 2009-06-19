@@ -56,8 +56,10 @@ std::string getCurrentWorkingDirectory()
 }
 
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory)
-	: webCore(0), focusedWebView(0), mouseXPos(0), mouseYPos(0), mouseButtonRDown(false), zOrderCounter(5), 
-	defaultViewport(defaultViewport), tooltipParent(0), lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
+	: webCore(0), focusedWebView(0), tooltipParent(0),
+	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
+	  mouseButtonRDown(false), zOrderCounter(5), 
+	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
 	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
 	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
@@ -79,10 +81,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 
 WebViewManager::~WebViewManager()
 {
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end();)
 	{
 		WebView* toDelete = iter->second;
-		iter = activeWebViews.erase(iter);
 		delete toDelete;
 	}
 
@@ -109,7 +111,7 @@ void WebViewManager::Update()
 {
 	webCore->update();
 
-	std::map<std::string,WebView*>::iterator end;
+	WebViewMap::iterator end, iter;
 	end = activeWebViews.end();
 	iter = activeWebViews.begin();
 
@@ -118,7 +120,8 @@ void WebViewManager::Update()
 		if(iter->second->okayToDelete)
 		{
 			WebView* webViewToDelete = iter->second;
-			iter = activeWebViews.erase(iter);
+			// erase does not invalidate other iterators.
+			activeWebViews.erase(iter++);
 			if(focusedWebView == webViewToDelete)
 			{
 				focusedWebView = 0;
@@ -130,7 +133,7 @@ void WebViewManager::Update()
 		else
 		{
 			iter->second->update();
-			iter++;
+			++iter;
 		}
 	}
 
@@ -156,6 +159,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 	int highestZOrder = -1;
 	int zOrder = 0;
 
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		if(iter->second->overlay)
 			if(iter->second->overlay->getTier() == tier)
@@ -182,7 +186,7 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 
 WebView* WebViewManager::getWebView(const std::string &webViewName)
 {
-	iter = activeWebViews.find(webViewName);
+	WebViewMap::iterator iter = activeWebViews.find(webViewName);
 	if(iter != activeWebViews.end())
 		return iter->second;
 
@@ -191,7 +195,7 @@ WebView* WebViewManager::getWebView(const std::string &webViewName)
 
 void WebViewManager::destroyWebView(const std::string &webViewName)
 {
-	iter = activeWebViews.find(webViewName);
+	WebViewMap::iterator iter = activeWebViews.find(webViewName);
 	if(iter != activeWebViews.end())
 		iter->second->okayToDelete = true;
 }
@@ -204,6 +208,7 @@ void WebViewManager::destroyWebView(WebView* webViewToDestroy)
 
 void WebViewManager::resetAllPositions()
 {
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		if(!iter->second->isMaterialOnly())
 			iter->second->resetPosition();
@@ -242,6 +247,7 @@ bool WebViewManager::injectMouseMove(int xPos, int yPos)
 			top->injectMouseMove(top->getRelativeX(xPos), top->getRelativeY(yPos));
 			eventHandled = true;
 
+			WebViewMap::iterator iter;
 			for(iter = activeWebViews.begin(); iter != activeWebViews.end(); ++iter)
 				if(iter->second->ignoringBounds)
 					if(!(iter->second->isPointOverMe(xPos, yPos) && iter->second->overlay->panel->getZOrder() < top->overlay->panel->getZOrder()))
@@ -324,6 +330,10 @@ void WebViewManager::handleKeyboardMessage(HWND hwnd, UINT msg, WPARAM wParam, L
 }
 #endif
 
+namespace {
+struct compare { bool operator()(WebView* a, WebView* b){ return(a->getOverlay()->getZOrder() > b->getOverlay()->getZOrder()); }};
+}
+
 bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 {
 	deFocusAllWebViews();
@@ -333,13 +343,13 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 		return false;
 
 	std::vector<WebView*> sortedWebViews;
+	WebViewMap::iterator iter;
 
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		if(iter->second->overlay)
 			if(iter->second->overlay->getTier() == webViewToFocus->overlay->getTier())
 				sortedWebViews.push_back(iter->second);
 
-	struct compare { bool operator()(WebView* a, WebView* b){ return(a->overlay->getZOrder() > b->overlay->getZOrder()); }};
 	std::sort(sortedWebViews.begin(), sortedWebViews.end(), compare());
 
 	if(sortedWebViews.size())
@@ -370,6 +380,7 @@ WebView* WebViewManager::getTopWebView(int x, int y)
 {
 	WebView* top = 0;
 
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 	{
 		if(!iter->second->isPointOverMe(x, y))
@@ -386,6 +397,7 @@ WebView* WebViewManager::getTopWebView(int x, int y)
 
 void WebViewManager::deFocusAllWebViews()
 {
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		iter->second->webView->unfocus();
 
@@ -406,6 +418,7 @@ void WebViewManager::deFocusAllWebViews()
 
 void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
 {
+	WebViewMap::iterator iter;
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 	{
 		if(iter->second->overlay)
