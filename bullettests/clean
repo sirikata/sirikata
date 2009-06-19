@@ -1,0 +1,5 @@
+#!/bin/bash
+rm -r *~
+rm -r *.o
+rm -r .libs/*
+rm BasicDemo
