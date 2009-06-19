@@ -35,20 +35,20 @@
 #include "BulletSystem.hpp"
 #include <oh/SimulationFactory.hpp>
 #include <oh/ProxyObject.hpp>
-#include <oh/ProxyMeshObject.hpp>
 
+using namespace std;
 static int core_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
-    std::cout << "dbm: plugin init" << std::endl;
+    cout << "dbm: plugin init" << endl;
     if (core_plugin_refcount==0)
         SimulationFactory::getSingleton().registerConstructor("bulletphysics",
                 &BulletSystem::create,
 //                NULL,
                 true);
     core_plugin_refcount++;
-    std::cout << "dbm: plugin init return" << std::endl;
+    cout << "dbm: plugin init return" << endl;
 }
 
 SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
@@ -78,53 +78,55 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 
 namespace Sirikata {
 
-typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
-std::vector<ProxyMeshObjectPtr>mymesh;
-
-struct bulletObj : public MeshListener{
-    ProxyMeshObjectPtr meshptr;
-    URI meshname;
-    void meshChanged (const URI &newMesh) {
-        std::cout << "dbm:    meshlistener: " << newMesh;
-        meshname = newMesh;
-    }
-    void setScale (const Vector3f &newScale) {
-    }
-};
-
-std::vector<bulletObj*>objects;
+static URI streetlight("mhash:///66b189d665dd968d94a1415393f0037299fc2d9a18ca457dba5038f90083157c");
+static Task::AbsTime starttime = Task::AbsTime::now();
+static Task::AbsTime lasttime = starttime;
+static Task::DeltaTime onesec = Task::DeltaTime::seconds(1.0);
+static int bugoffset = 0;
 
 bool BulletSystem::tick() {
-    std::cout << "dbm: BulletSystem::tick" << std::endl;
-    for (int i=0; i<mymesh.size(); i++) {
-        std::cout << "dbm:     mymesh:" << mymesh[i] <<
-        "position: " << mymesh[i]->globalLocation(Task::AbsTime::now()) <<
-        std::endl;
+    Task::AbsTime now = Task::AbsTime::now();
+    cout << "dbm: BulletSystem::tick time: " << (now-starttime).toSeconds() << endl;
+    for (unsigned int i=0; i<objects.size(); i++) {
+        cout << "  dbm: BS:tick object: " << objects[i]->meshname << endl;
+        if (objects[i]->meshname == streetlight) {
+            if(now > lasttime + onesec) {
+                lasttime = now;
+                cout << "    tick -- moving!" << endl;
+                bugoffset ^= 1;
+                objects[i]->meshptr->setPosition(now,
+                        Vector3d(580+bugoffset, 3049+bugoffset, 1046+bugoffset),
+                        Quaternion());
+            }
+            cout << "     tick, that's a nice streetlight! it's at: " <<
+                    objects[i]->meshptr->getPosition()
+                    << endl;
+        }
     }
+    cout << endl;
     return 0;
 }
 
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
-    std::cout << "dbm: BulletSystem::initialize" << std::endl;
+    cout << "dbm: BulletSystem::initialize" << endl;
     proxyManager->addListener(this);
     return true;
 }
 
 BulletSystem::BulletSystem() {
-    std::cout << "dbm: I am the BulletSystem constructor!" << std::endl;
+    cout << "dbm: I am the BulletSystem constructor!" << endl;
 }
 
 BulletSystem::~BulletSystem() {
-    std::cout << "dbm: I am the BulletSystem destructor!" << std::endl;
+    cout << "dbm: I am the BulletSystem destructor!" << endl;
 }
 
 void BulletSystem::createProxy(ProxyObjectPtr p) {
-    ProxyMeshObjectPtr meshptr(std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) {
-        mymesh.push_back(meshptr);          /// debugging
-        objects.push_back(new bulletObj);     /// clean up memory!!!
+        objects.push_back(new bulletObj());     /// clean up memory!!!
         objects.back()->meshptr = meshptr;
-        meshptr->MeshProvider::addListener(objects.back());
+        meshptr->MeshProvider::addListener(objects.back()); /// dbm -- buggy phorn looking at
     }
 }
 

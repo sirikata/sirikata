@@ -38,13 +38,29 @@
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedSimulation.hpp>
 #include <oh/ProxyObject.hpp>
+#include <oh/ProxyMeshObject.hpp>
 
+using namespace std;
 namespace Sirikata {
+
+typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
+//vector<ProxyMeshObjectPtr>mymesh;
+
+struct bulletObj : public MeshListener {
+    ProxyMeshObjectPtr meshptr;
+    URI meshname;
+    void meshChanged (const URI &newMesh) {
+        cout << "dbm:    meshlistener: " << newMesh << endl;
+        meshname = newMesh;
+    }
+    void setScale (const Vector3f &newScale) {
+    }
+};
 
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-
+    vector<bulletObj*>objects;
 public:
     BulletSystem();
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
