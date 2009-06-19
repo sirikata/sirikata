@@ -149,7 +149,7 @@ void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 	webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
 	webView->setListener(this);
 
-	bind("drag", boost::bind(&WebView::onRequestDrag, this, _1, _2));
+	bind("drag", std::tr1::bind(&WebView::onRequestDrag, this, _1, _2));
 }
 
 void WebView::createMaterial()
@@ -835,6 +835,19 @@ void WebView::onChangeCursor(const HCURSOR& cursor)
 void WebView::onChangeKeyboardFocus(bool isFocused)
 {
 }
+
+void WebView::onBeginNavigation(const std::string& url, const std::wstring& frameName) {
+}
+
+void WebView::onBeginLoading(const std::string& url, const std::wstring& frameName, int statusCode, const std::wstring& mimeType) {
+}
+
+void WebView::onReceiveTitle(const std::wstring& title, const std::wstring& frameName) {
+}
+
+void WebView::onChangeTargetURL(const std::string& url) {
+}
+
 
 void WebView::onRequestDrag(WebView *caller, const Awesomium::JSArguments &args)
 {

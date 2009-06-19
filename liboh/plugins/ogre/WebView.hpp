@@ -35,8 +35,6 @@
 
 #include "Ogre.h"
 #include "WebViewManager.hpp"
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
@@ -45,7 +43,7 @@ namespace Graphics {
 
 	class WebView;
 
-	typedef boost::function2<void, WebView*, const Awesomium::JSArguments&> JSDelegate;
+	typedef std::tr1::function<void (WebView*, const Awesomium::JSArguments&)> JSDelegate;
 
 	/**
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated 
@@ -333,6 +331,15 @@ namespace Graphics {
 		* Saves a capture of this WebView to an image.
 		*/
 		void captureImage(const std::string& filename);
+
+
+		void onBeginNavigation(const std::string& url, const std::wstring& frameName);
+
+		void onBeginLoading(const std::string& url, const std::wstring& frameName, int statusCode, const std::wstring& mimeType);
+
+		void onReceiveTitle(const std::wstring& title, const std::wstring& frameName);
+
+		void onChangeTargetURL(const std::string& url);
 
 		void resize(int width, int height);
 

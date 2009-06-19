@@ -67,7 +67,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	tooltipWebView->setTransparent(true);
 	tooltipWebView->loadFile("tooltip.html");
 	//tooltipWebView->bind("resizeTooltip", JSDelegate(this, &WebViewManager::onResizeTooltip));
-	tooltipWebView->bind("resizeTooltip", boost::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
+	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
 	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseHover, this, _1));
@@ -459,6 +459,7 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 	focusWebView(0, 0, caller);
 	isDraggingFocusedWebView = true;
 }
+
 
 Sirikata::Task::EventResponse WebViewManager::onMouseHover(Sirikata::Task::EventPtr evt)
 {
