@@ -46,23 +46,26 @@ namespace Sirikata {
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 //vector<ProxyMeshObjectPtr>mymesh;
 
-struct bulletObj : public MeshListener {
+class BulletSystem;
+
+class bulletObj : public MeshListener {
+    void meshChanged (const URI &newMesh);
+    void setScale (const Vector3f &newScale);
+    BulletSystem* system;
+public:
+    bulletObj(BulletSystem* sys);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
-    void meshChanged (const URI &newMesh) {
-        cout << "dbm:    meshlistener: " << newMesh << endl;
-        meshname = newMesh;
-    }
-    void setScale (const Vector3f &newScale) {
-    }
 };
 
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     vector<bulletObj*>objects;
+    vector<ProxyMeshObjectPtr> physicalObjects;
 public:
     BulletSystem();
+    void addPhysicalObject(ProxyMeshObjectPtr);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
         BulletSystem*os= new BulletSystem;

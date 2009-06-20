@@ -43,6 +43,7 @@ class OurValue
 int main(int argc,char** argv)
 {
 	GLDebugDrawer	gDebugDrawer;
+	printf("Dan's special sauce\n");
 
 	///testing the btHashMap	
 	btHashMap<btHashKey<OurValue>,OurValue> map;

@@ -84,23 +84,37 @@ static Task::AbsTime lasttime = starttime;
 static Task::DeltaTime onesec = Task::DeltaTime::seconds(1.0);
 static int bugoffset = 0;
 
+void bulletObj::meshChanged (const URI &newMesh) {
+    cout << "dbm:    meshlistener: " << newMesh << endl;
+    meshname = newMesh;
+    if (meshname == streetlight) {
+        cout << "dbm: adding streetlight to physical objects: " << meshname << endl;
+        system->addPhysicalObject(meshptr);
+    }
+}
+void bulletObj::setScale (const Vector3f &newScale) {
+}
+
+bulletObj::bulletObj(BulletSystem* sys) {
+    cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;
+    system = sys;
+}
+
+void BulletSystem::addPhysicalObject(ProxyMeshObjectPtr obj) {
+    cout << "dbm: adding physical object: " << obj << endl;
+    physicalObjects.push_back(obj);
+}
+
 bool BulletSystem::tick() {
     Task::AbsTime now = Task::AbsTime::now();
     cout << "dbm: BulletSystem::tick time: " << (now-starttime).toSeconds() << endl;
-    for (unsigned int i=0; i<objects.size(); i++) {
-        cout << "  dbm: BS:tick object: " << objects[i]->meshname << endl;
-        if (objects[i]->meshname == streetlight) {
-            if(now > lasttime + onesec) {
-                lasttime = now;
-                cout << "    tick -- moving!" << endl;
-                bugoffset ^= 1;
-                objects[i]->meshptr->setPosition(now,
-                        Vector3d(580+bugoffset, 3049+bugoffset, 1046+bugoffset),
-                        Quaternion());
-            }
-            cout << "     tick, that's a nice streetlight! it's at: " <<
-                    objects[i]->meshptr->getPosition()
-                    << endl;
+    if (now > lasttime + onesec) {
+        lasttime = now;
+        bugoffset ^= 1;
+        for (unsigned int i=0; i<physicalObjects.size(); i++) {
+            physicalObjects[i]->setPosition(now, Vector3d(580+bugoffset, 3049+bugoffset, 1046+bugoffset), Quaternion());
+            cout << "  dbm: BS:tick moving object: " << physicalObjects[i] <<
+                    " new position: " << physicalObjects[i]->getPosition() << endl;
         }
     }
     cout << endl;
@@ -124,9 +138,10 @@ BulletSystem::~BulletSystem() {
 void BulletSystem::createProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) {
-        objects.push_back(new bulletObj());     /// clean up memory!!!
+        cout << "dbm: createProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;
+        objects.push_back(new bulletObj(this));     /// clean up memory!!!
         objects.back()->meshptr = meshptr;
-        meshptr->MeshProvider::addListener(objects.back()); /// dbm -- buggy phorn looking at
+        meshptr->MeshProvider::addListener(objects.back());
     }
 }
 
