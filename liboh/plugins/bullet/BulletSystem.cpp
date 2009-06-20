@@ -89,9 +89,10 @@ void bulletObj::meshChanged (const URI &newMesh) {
     meshname = newMesh;
     if (meshname == streetlight) {
         cout << "dbm: adding streetlight to physical objects: " << meshname << endl;
-        system->addPhysicalObject(meshptr);
+        system->addPhysicalObject(this);
     }
 }
+
 void bulletObj::setScale (const Vector3f &newScale) {
 }
 
@@ -100,7 +101,7 @@ bulletObj::bulletObj(BulletSystem* sys) {
     system = sys;
 }
 
-void BulletSystem::addPhysicalObject(ProxyMeshObjectPtr obj) {
+void BulletSystem::addPhysicalObject(bulletObj* obj) {
     cout << "dbm: adding physical object: " << obj << endl;
     physicalObjects.push_back(obj);
 }
@@ -112,9 +113,9 @@ bool BulletSystem::tick() {
         lasttime = now;
         bugoffset ^= 1;
         for (unsigned int i=0; i<physicalObjects.size(); i++) {
-            physicalObjects[i]->setPosition(now, Vector3d(580+bugoffset, 3049+bugoffset, 1046+bugoffset), Quaternion());
+            physicalObjects[i]->meshptr->setPosition(now, Vector3d(580+bugoffset, 3049+bugoffset, 1046+bugoffset), Quaternion());
             cout << "  dbm: BS:tick moving object: " << physicalObjects[i] <<
-                    " new position: " << physicalObjects[i]->getPosition() << endl;
+                    " new position: " << physicalObjects[i]->meshptr->getPosition() << endl;
         }
     }
     cout << endl;

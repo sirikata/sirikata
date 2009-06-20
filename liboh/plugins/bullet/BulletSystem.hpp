@@ -62,10 +62,10 @@ class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     vector<bulletObj*>objects;
-    vector<ProxyMeshObjectPtr> physicalObjects;
+    vector<bulletObj*>physicalObjects;
 public:
     BulletSystem();
-    void addPhysicalObject(ProxyMeshObjectPtr);
+    void addPhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
         BulletSystem*os= new BulletSystem;
