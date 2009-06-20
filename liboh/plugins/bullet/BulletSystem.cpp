@@ -108,7 +108,7 @@ bool BulletSystem::tick() {
     static Task::AbsTime lasttime = starttime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
-    static double groundlevel = 3045.0;
+    static double groundlevel = 3044.0;
     Task::AbsTime now = Task::AbsTime::now();
     Task::DeltaTime delta;
     Vector3d oldpos;
@@ -117,21 +117,21 @@ bool BulletSystem::tick() {
     cout << "dbm: BulletSystem::tick time: " << (now-starttime).toSeconds() << endl;
     if (now > lasttime + waittime) {
         delta = now-lasttime;
-        if(delta.toSeconds() > 0.05) delta = delta.seconds(0.05);
+        if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
-        for (unsigned int i=0; i<physicalObjects.size(); i++) {
-            cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
-            oldpos = physicalObjects[i]->meshptr->getPosition();
-            physicalObjects[i]->velocity += gravity*delta.toSeconds();
-            if (oldpos.y > groundlevel) {
+        if (((int)(now-starttime) % 5)<2) {
+            for (unsigned int i=0; i<physicalObjects.size(); i++) {
+                cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
+                oldpos = physicalObjects[i]->meshptr->getPosition();
+                physicalObjects[i]->velocity += gravity*delta.toSeconds();
                 newpos = oldpos + physicalObjects[i]->velocity;              /// should work, acc. to Newton
-                cout << "    dbm: BS:tick old position: " << oldpos << endl;
-                physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion());
-                cout << "    dbm: BS:tick new position: " << physicalObjects[i]->meshptr->getPosition() << endl;
-            }
-            else {
-                physicalObjects[i]->velocity = Vector3d(0, 0, 0);
-                cout << "    dbm: BS:tick groundlevel reached" << endl;
+                if (newpos.y < groundlevel) {
+                    newpos.y = groundlevel;
+                    physicalObjects[i]->velocity = Vector3d(0, 0, 0);
+                    cout << "    dbm: BS:tick groundlevel reached" << endl;
+                }
+                physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
+                cout << "    dbm: BS:tick old position: " << oldpos << " new position: " << newpos << endl;
             }
         }
     }
@@ -146,7 +146,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 }
 
 BulletSystem::BulletSystem() {
-    gravity = Vector3d(0, -1.0, 0);
+    gravity = Vector3d(0, -9.8, 0);
     cout << "dbm: I am the BulletSystem constructor!" << endl;
 }
 
