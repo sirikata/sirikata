@@ -1,8 +1,0 @@
-#!/bin/bash
-if g++ -DHAVE_CONFIG_H -I. -I. -I../../bullet-2.74    -I../../bullet-2.74/src -I../../bullet-2.74/Demos/OpenGL -g -O2  -g -O2 -g -O2  -g -O2 -MT BasicDemo-BasicDemo.o -MD -MP -MF ".deps/BasicDemo-BasicDemo.Tpo" -c -o BasicDemo-BasicDemo.o `test -f 'BasicDemo.cpp' || echo './'`BasicDemo.cpp; \
-	then mv -f ".deps/BasicDemo-BasicDemo.Tpo" ".deps/BasicDemo-BasicDemo.Po"; else rm -f ".deps/BasicDemo-BasicDemo.Tpo"; exit 1; fi
-if g++ -DHAVE_CONFIG_H -I. -I. -I../../bullet-2.74    -I../../bullet-2.74/src -I../../bullet-2.74/Demos/OpenGL -g -O2  -g -O2 -g -O2  -g -O2 -MT BasicDemo-main.o -MD -MP -MF ".deps/BasicDemo-main.Tpo" -c -o BasicDemo-main.o `test -f 'main.cpp' || echo './'`main.cpp; \
-	then mv -f ".deps/BasicDemo-main.Tpo" ".deps/BasicDemo-main.Po"; else rm -f ".deps/BasicDemo-main.Tpo"; exit 1; fi
-/bin/bash ../../bullet-2.74/libtool --tag=CXX --mode=link g++  -g -O2  -g -O2   -o BasicDemo  BasicDemo-BasicDemo.o BasicDemo-main.o -L../../bullet-2.74/Demos/OpenGL -lbulletopenglsupport -L../../bullet-2.74/src -lbulletdynamics -lbulletcollision -lbulletmath -lGL -lGLU -lglut -lnsl 
-g++ -g -O2 -g -O2 -o .libs/BasicDemo BasicDemo-BasicDemo.o BasicDemo-main.o  -L/home/dbm/src/bullet-2.74/Demos/OpenGL -lbulletopenglsupport -L/home/dbm/src/bullet-2.74/src /home/dbm/src/bullet-2.74/src/.libs/libbulletdynamics.so /home/dbm/src/bullet-2.74/src/.libs/libbulletcollision.so /home/dbm/src/bullet-2.74/src/.libs/libbulletmath.so -lGL -lGLU -lglut -lnsl 
-
