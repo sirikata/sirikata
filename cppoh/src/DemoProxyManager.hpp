@@ -52,7 +52,8 @@ class DemoProxyManager :public ProxyManager{
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy){}
 
-    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location, const Vector3f &scale=Vector3f(1,1,1)) {
+    ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
+                                 const Vector3f &scale=Vector3f(1,1,1), const int mode=0) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
         std::cout << "Add Mesh Object " << myId << " = " << uri<<std::endl;
@@ -62,6 +63,7 @@ class DemoProxyManager :public ProxyManager{
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
         myObj->setScale(scale);
+        myObj->setPhysical(mode?true:false);
         return myObj;
     }
 
@@ -81,8 +83,11 @@ class DemoProxyManager :public ProxyManager{
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
+        int mode=0;
 
-        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
+        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> {%d} \
+                ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z,&mode);
+        if (mode) std::cout << "dbm mode: " << mode << std::endl;
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;
@@ -122,7 +127,12 @@ class DemoProxyManager :public ProxyManager{
             float ambientPower=1, shadowPower=1;
             float x,y,z; // Light direction. Assume 0,1,0 for now.
             int castsshadow=1;
-            sscanf(rest.c_str(),"[%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>",&lightInfo.mDiffuseColor.x,&lightInfo.mDiffuseColor.y,&lightInfo.mDiffuseColor.z,&ambientPower,&lightInfo.mSpecularColor.x,&lightInfo.mSpecularColor.y,&lightInfo.mSpecularColor.z,&shadowPower,&lightInfo.mLightRange,&lightInfo.mConstantFalloff,&lightInfo.mLinearFalloff,&lightInfo.mQuadraticFalloff,&lightInfo.mConeInnerRadians,&lightInfo.mConeOuterRadians,&lightInfo.mPower,&lightInfo.mConeFalloff,&castsshadow,&x,&y,&z);
+            sscanf(rest.c_str(),"[%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>",
+                   &lightInfo.mDiffuseColor.x,&lightInfo.mDiffuseColor.y,&lightInfo.mDiffuseColor.z,&ambientPower,
+                   &lightInfo.mSpecularColor.x,&lightInfo.mSpecularColor.y,&lightInfo.mSpecularColor.z,&shadowPower,
+                   &lightInfo.mLightRange,&lightInfo.mConstantFalloff,&lightInfo.mLinearFalloff,&lightInfo.mQuadraticFalloff,
+                   &lightInfo.mConeInnerRadians,&lightInfo.mConeOuterRadians,&lightInfo.mPower,&lightInfo.mConeFalloff,
+                   &castsshadow,&x,&y,&z);
             lightInfo.mCastsShadow = castsshadow?true:false;
 
             if (lightInfo.mDiffuseColor.length()&&lightInfo.mPower) {
@@ -138,7 +148,7 @@ class DemoProxyManager :public ProxyManager{
             lightInfo.mWhichFields = LightInfo::ALL;
             addLightObject(lightInfo, location);
         } else {
-            addMeshObject(Transfer::URI(filename), location, scale);
+            addMeshObject(Transfer::URI(filename), location, scale, mode);
         }
     }
 

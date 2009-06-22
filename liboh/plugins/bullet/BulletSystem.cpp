@@ -93,6 +93,10 @@ void bulletObj::meshChanged (const URI &newMesh) {
 void bulletObj::setScale (const Vector3f &newScale) {
 }
 
+void bulletObj::setPhysical (const bool flag) {
+    cout << "dbm: setPhysical: " << flag << endl;
+}
+
 bulletObj::bulletObj(BulletSystem* sys) {
     cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;
     system = sys;

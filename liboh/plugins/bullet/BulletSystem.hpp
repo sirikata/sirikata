@@ -51,6 +51,7 @@ class BulletSystem;
 class bulletObj : public MeshListener {
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
+    void setPhysical (const bool flag);
     BulletSystem* system;
 public:
     Vector3d velocity;

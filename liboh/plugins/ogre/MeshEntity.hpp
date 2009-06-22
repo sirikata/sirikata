@@ -80,6 +80,8 @@ public:
     void setScale(const Vector3f &scale) {
         mSceneNode->setScale(toOgre(scale));
     }
+    void setPhysical(const bool flag) {
+    }
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
 

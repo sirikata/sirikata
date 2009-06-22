@@ -291,8 +291,6 @@ int main ( int argc,const char**argv ) {
     SILOG(cppoh,error,"dbm: checking physics");
     if (!physicsSystem) {
         SILOG(cppoh,error,"physicsSystem NULL!");
-        int n=0;
-        n /= 0;
     }
     else {
         SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
