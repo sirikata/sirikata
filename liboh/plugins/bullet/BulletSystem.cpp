@@ -84,10 +84,11 @@ static URI streetlight("meru://cplatz@/Tree_Common_trop_01.mesh");
 void bulletObj::meshChanged (const URI &newMesh) {
     cout << "dbm:    meshlistener: " << newMesh << endl;
     meshname = newMesh;
-    if (meshname == streetlight) {
+/*    if (meshname == streetlight) {
         cout << "dbm: adding streetlight to physical objects: " << meshname << endl;
         system->addPhysicalObject(this);
     }
+*/
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
@@ -95,17 +96,35 @@ void bulletObj::setScale (const Vector3f &newScale) {
 
 void bulletObj::setPhysical (const bool flag) {
     cout << "dbm: setPhysical: " << flag << endl;
+    isPhysical=flag;
+    if(isPhysical) {
+        system->addPhysicalObject(this);
+    }
+    else {
+        system->removePhysicalObject(this);
+    }
 }
 
 bulletObj::bulletObj(BulletSystem* sys) {
     cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;
     system = sys;
+    isPhysical=false;
     velocity = Vector3d(0, 0, 0);
 }
 
 void BulletSystem::addPhysicalObject(bulletObj* obj) {
     cout << "dbm: adding physical object: " << obj << endl;
     physicalObjects.push_back(obj);
+}
+
+void BulletSystem::removePhysicalObject(bulletObj* obj) {
+    cout << "dbm: removing physical object: " << obj << endl;
+    for(unsigned int i=0; i<physicalObjects.size(); i++) {
+        if (physicalObjects[i] == obj) {
+            physicalObjects.erase(physicalObjects.begin()+i);
+            break;
+        }
+    }
 }
 
 bool BulletSystem::tick() {
