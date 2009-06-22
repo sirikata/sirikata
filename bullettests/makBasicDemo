@@ -1,8 +1,8 @@
 #!/bin/bash
 
-g++ -DHAVE_CONFIG_H -I. -I../../bullet-2.74    -I../../bullet-2.74/src -I../../bullet-2.74/Demos/OpenGL -g -O2 -MT BasicDemo-BasicDemo.o -MD -MP -c -o BasicDemo-BasicDemo.o BasicDemo.cpp
+g++ -DHAVE_CONFIG_H -I. -I../dependencies/bullet-2.74    -I../dependencies/bullet-2.74/src -I../dependencies/bullet-2.74/Demos/OpenGL -g -O2 -MT BasicDemo-BasicDemo.o -MD -MP -c -o BasicDemo-BasicDemo.o BasicDemo.cpp
 
-g++ -DHAVE_CONFIG_H -I. -I. -I../../bullet-2.74    -I../../bullet-2.74/src -I../../bullet-2.74/Demos/OpenGL -g -O2 -MT BasicDemo-main.o -MD -MP -c -o BasicDemo-main.o main.cpp
+g++ -DHAVE_CONFIG_H -I. -I. -I../dependencies/bullet-2.74    -I../dependencies/bullet-2.74/src -I../dependencies/bullet-2.74/Demos/OpenGL -g -O2 -MT BasicDemo-main.o -MD -MP -c -o BasicDemo-main.o main.cpp
 
-/bin/bash ../../bullet-2.74/libtool --tag=CXX --mode=link g++ -g -O2   -o BasicDemo  BasicDemo-BasicDemo.o BasicDemo-main.o -L../../bullet-2.74/Demos/OpenGL -lbulletopenglsupport -L../../bullet-2.74/src -lbulletdynamics -lbulletcollision -lbulletmath -lGL -lGLU -lglut -lnsl 
+/bin/bash ../dependencies/bullet-2.74/libtool --tag=CXX --mode=link g++ -g -O2   -o BasicDemo  BasicDemo-BasicDemo.o BasicDemo-main.o -L../dependencies/bullet-2.74/Demos/OpenGL -lbulletopenglsupport -L../dependencies/bullet-2.74/src -lbulletdynamics -lbulletcollision -lbulletmath -lGL -lGLU -lglut -lnsl 
 
