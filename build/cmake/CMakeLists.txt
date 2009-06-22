@@ -776,6 +776,7 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${SirikataOgreCoreZipCpp}
   ${GFX}/OgreSystem.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
+  ${GFX}/DragActions.cpp
   ${INPUT}/SDLInputManager.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp

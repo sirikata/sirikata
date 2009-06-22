@@ -43,20 +43,22 @@
 #include <oh/ProxyLightObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
+#include "DragActions.hpp"
 #include <task/Event.hpp>
 #include <task/Time.hpp>
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
-#include <boost/math/special_functions/fpclassify.hpp>
 
 
-#include <map>
+#include <set>
 
 
 namespace Sirikata {
 namespace Graphics {
 using namespace Input;
 using namespace Task;
+
+// Defined in DragActions.cpp.
 
 class OgreSystem::MouseHandler {
     OgreSystem *mParent;
@@ -65,10 +67,19 @@ class OgreSystem::MouseHandler {
     DeviceSubMap mDeviceSubscriptions;
     
     SpaceObjectReference mCurrentGroup;
-    typedef std::map<SpaceObjectReference, Location> SelectedObjectMap;
-    SelectedObjectMap mSelectedObjects;
+    typedef std::set<ProxyPositionObjectPtr> SelectedObjectSet;
+    SelectedObjectSet mSelectedObjects;
     SpaceObjectReference mLastShiftSelected;
-    Vector3d mMoveVector;
+
+    // map from mouse button to drag for that mouse button.
+    /* as far as multiple cursors are concerned,
+       each cursor should have its own MouseHandler instance */
+    std::map<int, DragAction> mDragAction;
+    std::map<int, ActiveDrag*> mActiveDrag;
+/*
+    typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
+    std::map<int, ClickAction> mClickAction;
+*/
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -105,45 +116,6 @@ class OgreSystem::MouseHandler {
 
     /////////////////// HELPER FUNCTIONS ///////////////
 
-    // Assumes orthographic projection
-    static void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians) {
-        // This function is useless and hopelessly broken, since radians have no meaning in perspective. Use pixelToDirection instead!!!
-        SILOG(input,info,"FOV Y Radians: "<<cam->getOgreCamera()->getFOVy().valueRadians()<<"; aspect = "<<cam->getOgreCamera()->getAspectRatio());
-        xRadians = cam->getOgreCamera()->getFOVy().valueRadians() * cam->getOgreCamera()->getAspectRatio() * deltaXPct;
-        yRadians = cam->getOgreCamera()->getFOVy().valueRadians() * deltaYPct;
-        SILOG(input,info,"X = "<<deltaXPct<<"; Y = "<<deltaYPct);
-        SILOG(input,info,"Xradian = "<<xRadians<<"; Yradian = "<<yRadians);
-    }
-    // Uses perspective
-    static Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel) {
-        float xRadian, yRadian;
-        //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
-        xRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * cam->getOgreCamera()->getAspectRatio() * xPixel;
-        yRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * yPixel;
-
-        return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) + 
-                        orient.xAxis() * xRadian +
-                        orient.yAxis() * yRadian);
-    }
-
-    static inline Vector3f direction(Quaternion cameraAngle) {
-        return -cameraAngle.zAxis();
-    }
-
-    Vector3d averageSelectedPosition(Task::AbsTime now) const {
-        Vector3d totalPosition(0,0,0);
-        if (mSelectedObjects.empty()) {
-            return totalPosition;
-        }
-        for (SelectedObjectMap::const_iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
-            if (!ent) continue;
-            totalPosition += (ent->getProxy().globalLocation(now).getPosition());
-        }
-        return totalPosition / mSelectedObjects.size();
-    }
-
     Entity *hoverEntity (CameraEntity *cam, Task::AbsTime time, float xPixel, float yPixel, int which=0) {
         Location location(cam->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
@@ -166,9 +138,12 @@ class OgreSystem::MouseHandler {
     ///////////////////// CLICK HANDLERS /////////////////////
 public:
     void clearSelection() {
-        for (SelectedObjectMap::const_iterator selectIter = mSelectedObjects.begin();
+        for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
              selectIter != mSelectedObjects.end(); ++selectIter) {
-            mParent->getEntity((*selectIter).first)->setSelected(false);
+            Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+            if (ent) {
+                ent->setSelected(false);
+            }
             // Fire deselected event.
         }
         mSelectedObjects.clear();
@@ -190,10 +165,11 @@ private:
                 return EventResponse::nop();
             }
             if (mouseOver->id() == mLastShiftSelected) {
-                SelectedObjectMap::iterator selectIter = mSelectedObjects.find(mouseOver->id());
+                SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
                 if (selectIter != mSelectedObjects.end()) {
-                    if (mParent->getEntity((*selectIter).first)) {
-                        mParent->getEntity((*selectIter).first)->setSelected(false);
+                    Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+                    if (ent) {
+                        ent->setSelected(false);
                     }
                     mSelectedObjects.erase(selectIter);
                 }
@@ -205,17 +181,18 @@ private:
                 return EventResponse::nop();
             }
 
-            SelectedObjectMap::iterator selectIter = mSelectedObjects.find(mouseOver->id());
+            SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
             if (selectIter == mSelectedObjects.end()) {
                 SILOG(input,info,"Added selection " << mouseOver->id());
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), mouseOver->getProxy().extrapolateLocation(Task::AbsTime::now())));
+                mSelectedObjects.insert(mouseOver->getProxyPtr());
                 mouseOver->setSelected(true);
                 mLastShiftSelected = mouseOver->id();
                 // Fire selected event.
             } else {
-                SILOG(input,info,"Deselected " << (*selectIter).first);
-                if (mParent->getEntity((*selectIter).first)) {
-                    mParent->getEntity((*selectIter).first)->setSelected(false);
+                SILOG(input,info,"Deselected " << (*selectIter)->getObjectReference());
+                Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+                if (ent) {
+                    ent->setSelected(false);
                 }
                 mSelectedObjects.erase(selectIter);
                 // Fire deselected event.
@@ -230,7 +207,7 @@ private:
             mWhichRayObject+=direction;
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
             if (mouseOver) {
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mouseOver->id(), mouseOver->getProxy().extrapolateLocation(Task::AbsTime::now())));
+                mSelectedObjects.insert(mouseOver->getProxyPtr());
                 mouseOver->setSelected(true);
                 SILOG(input,info,"Replaced selection with " << mouseOver->id());
                 // Fire selected event.
@@ -242,393 +219,18 @@ private:
 
 ///////////////////// DRAG HANDLERS //////////////////////
 
-    void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
-        Task::AbsTime now = Task::AbsTime::now();
-        
-        Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
-        Quaternion dragStart (camera->getProxy().extrapolateLocation(now).getOrientation());
-        Quaternion dhorient = Quaternion(Vector3f(0,1,0),radianX);
-        Quaternion dvorient = Quaternion(dhorient * orient * Vector3f(1,0,0),-radianY);
-
-        Location location = camera->getProxy().extrapolateLocation(now);
-        location.setOrientation((dvorient * dhorient * dragStart).normal());
-        camera->getProxy().resetPositionVelocity(now, location);
-    }
-
-    void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
-        Task::AbsTime now = Task::AbsTime::now();
-        
-        Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
-
-        Location location (camera->getProxy().extrapolateLocation(now));
-        location.setPosition(orient * toPan + oldLocalPosition);
-        camera->getProxy().resetPositionVelocity(now, location);
-    }
-
-    bool mIsRotating;
-    EventResponse rotateScene(EventPtr ev) {
-        if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-            return EventResponse::nop();
-        }
-        if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-            return EventResponse::nop();
-        }
-        std::tr1::shared_ptr<MouseDragEvent> mouseev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(ev));
-        if (!mouseev) {
-            return EventResponse::nop();
-        }
-        CameraEntity *camera = mParent->mPrimaryCamera;
-
-        if (mouseev->mType == MouseDragEvent::START) {
-            mIsRotating = true;
-        } else if (!mIsRotating) {
-            return EventResponse::nop();
-        }
-        float radianX, radianY;
-        pixelToRadians(camera, mouseev->deltaLastX(), mouseev->deltaLastY(), radianX, radianY);
-        rotateCamera(camera, radianX, radianY);
-        
-        return EventResponse::cancel();
-    }
-
-    EventResponse moveSelection(EventPtr ev) {
-        std::tr1::shared_ptr<MouseDragEvent> mouseev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(ev));
-        if (!mouseev) {
-            return EventResponse::nop();
-        }
-        
-        if (mSelectedObjects.empty()) {
-            SILOG(input,insane,"moveSelection: Found no selected objects");
-            return EventResponse::nop();
-        }
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        Task::AbsTime now = Task::AbsTime::now();
-        Location cameraLoc = camera->getProxy().globalLocation(now);
-        Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
-        if (mouseev->mType == MouseDragEvent::START) {
-
-            float moveDistance;
-            bool foundObject = false;
-            for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
-                 iter != mSelectedObjects.end(); ++iter) {
-                Entity *ent = mParent->getEntity((*iter).first);
-                if (!ent) continue;
-                (*iter).second = ent->getProxy().extrapolateLocation(now);
-                Vector3d deltaPosition (ent->getProxy().globalLocation(now).getPosition() - cameraLoc.getPosition());
-                double dist = deltaPosition.dot(Vector3d(cameraAxis));
-                if (!foundObject || dist < moveDistance) {
-                    foundObject = true;
-                    moveDistance = dist;
-                    mMoveVector = deltaPosition;
-                }
-            }
-            SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
-        }
-
-        Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mXStart, mouseev->mYStart));
-        Vector3d endAxis (pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mX, mouseev->mY));
-        Vector3d start, end;
-        if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-            start = startAxis.normal() * (mMoveVector.y/startAxis.y);
-            end = endAxis.normal() * (mMoveVector.y/endAxis.y);
-        } else if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-            start = startAxis.normal() * (mMoveVector.z/startAxis.z);
-            end = endAxis.normal() * (mMoveVector.z/endAxis.z);
-        } else {
-            float moveDistance = mMoveVector.dot(Vector3d(cameraAxis));
-            start = startAxis * moveDistance; // / cameraAxis.dot(startAxis);
-            end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
-        }
-        Vector3d toMove (end - start);
-		if (!boost::math::isfinite(toMove.x) || !boost::math::isfinite(toMove.y) || !boost::math::isfinite(toMove.z)) {
-			return EventResponse::cancel();
-		}
-		// Prevent moving outside of a small radius so you don't shoot an object into the horizon.
-		if (toMove.length() > 10*mParent->mInputManager->mWorldScale->as<float>()) {
-			// moving too much.
-			toMove *= (10*mParent->mInputManager->mWorldScale->as<float>()/toMove.length());
-		}
-        SILOG(input,debug,"Start "<<start<<"; End "<<end<<"; toMove "<<toMove);
-        for (SelectedObjectMap::const_iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
-            if (!ent) continue;
-            Location toSet (ent->getProxy().extrapolateLocation(now));
-            SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
-            toSet.setPosition((*iter).second.getPosition() + toMove);
-            SILOG(input,debug,"moveSelection: NEW " << toSet.getPosition());
-            ent->getProxy().setPositionVelocity(now, toSet);
-        }
-        return EventResponse::cancel();
-    }
-
-    Vector3d mStartPan;
-    double mPanDistance;
-    bool mRelativePan;
-    EventResponse panScene(EventPtr ev) {
-        if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-            return EventResponse::nop();
-        }
-        std::tr1::shared_ptr<MouseDragEvent> mouseev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(ev));
-        if (!mouseev) {
-            return EventResponse::nop();
-        }
-        double distance;
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        Task::AbsTime now = Task::AbsTime::now();
-        Location cameraLoc = camera->getProxy().globalLocation(now);
-
-        if (mouseev->mType == MouseDragEvent::START) {
-            mRelativePan = false;
-            mStartPan = camera->getProxy().extrapolateLocation(now).getPosition();
-            Vector3f toMove (
-                pixelToDirection(camera, cameraLoc.getOrientation(), mouseev->mXStart, mouseev->mYStart));
-            if (mParent->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
-                mPanDistance = distance;
-            } else if (!mSelectedObjects.empty()) {
-                Vector3d totalPosition(averageSelectedPosition(now));
-                mPanDistance = (totalPosition - cameraLoc.getPosition()).length();
-            } else {
-                float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-                mPanDistance = WORLD_SCALE;
-                mouseev->getDevice()->pushRelativeMode();
-                mRelativePan = true;
-            }
-        } else if (mouseev->mType == MouseDragEvent::END && mRelativePan) {
-            mouseev->getDevice()->popRelativeMode();
-        }
-        if (mPanDistance) {
-            float radianX, radianY;
-            pixelToRadians(camera, mouseev->deltaX(), mouseev->deltaY(), radianX, radianY);
-            panCamera(camera, mStartPan, Vector3d(-radianX*mPanDistance, -radianY*mPanDistance, 0));
-        }
-        return EventResponse::nop();
-    }
-
-    void orbitObject(Vector3d amount, const InputDevicePtr &dev) {
-        double distance;
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        Task::AbsTime now = Task::AbsTime::now();
-        Location cameraLoc = camera->getProxy().globalLocation(now);
-/*
-        Vector3f toMove (
-            pixelToDirection(camera, cameraLoc.getOrientation(),
-                             dev->getAxis(PointerDevice::CURSORX).getCentered(),
-                             dev->getAxis(PointerDevice::CURSORY).getCentered()));
-        if (mParent->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
-            rotateCamera(camera, amount.x, amount.y);
-            panCamera(camera, amount * distance);
-        } else */
-        if (!mSelectedObjects.empty()) {
-            Vector3d totalPosition (averageSelectedPosition(now));
-            double multiplier = (totalPosition - cameraLoc.getPosition()).length();
-            rotateCamera(camera, amount.x, amount.y);
-            panCamera(camera, camera->getProxy().extrapolatePosition(now), amount * multiplier);
-        } else {
-            //rotateCamera(camera, -amount.x, -amount.y);
-        }
-    }
-
-    void orbitObject_BROKEN(AxisValue value) {
-        SILOG(input,debug,"rotate "<<value);
-        
-        if (mSelectedObjects.empty()) {
-            SILOG(input,debug,"rotateXZ: Found no selected objects");
-            return;
-        }
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        Task::AbsTime now = Task::AbsTime::now();
-
-        Location cameraLoc = camera->getProxy().globalLocation(now);
-        Vector3d totalPosition (averageSelectedPosition(now));
-        Vector3d distance (cameraLoc.getPosition() - totalPosition);
-
-        float radianX = value.getCentered() * 1.0;
-        Quaternion dhorient = Quaternion(Vector3f(0,1,0), radianX);
-        distance = dhorient * distance;
-        Quaternion dhorient2 = Quaternion(Vector3f(0,1,0), -radianX);
-        cameraLoc.setPosition(totalPosition + dhorient * distance);
-        cameraLoc.setOrientation(dhorient2 * cameraLoc.getOrientation());
-        camera->getProxy().resetPositionVelocity(now, cameraLoc);
-    }
-    void zoomInOut(AxisValue value, const InputDevicePtr &dev) {
-        if (!dev) {
-            return;
-        }
-        SILOG(input,debug,"zoom "<<value);
-
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        Task::AbsTime now = Task::AbsTime::now();
-        Location cameraLoc = camera->getProxy().globalLocation(now);
-        Vector3d toMove;
-
-        toMove = Vector3d(
-            pixelToDirection(camera, cameraLoc.getOrientation(),
-                             dev->getAxis(PointerDevice::CURSORX).getCentered(),
-                             dev->getAxis(PointerDevice::CURSORY).getCentered()));
-        double distance;
-        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-        if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL) &&
-            !mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-            toMove *= WORLD_SCALE;
-        } else if (mParent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), distance) && 
-                (distance*.75 < WORLD_SCALE || mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT))) {
-            toMove *= distance*.75;
-        } else if (!mSelectedObjects.empty()) {
-            Vector3d totalPosition (averageSelectedPosition(now));
-            toMove *= (totalPosition - cameraLoc.getPosition()).length() * .75;
-        } else {
-            toMove *= WORLD_SCALE;
-        }
-        toMove *= value.getCentered(); // up == zoom in
-        cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
-        camera->getProxy().resetPositionVelocity(now, cameraLoc);
-    }
-
     EventResponse wheelListener(EventPtr evbase) {
         std::tr1::shared_ptr<AxisEvent> ev(std::tr1::dynamic_pointer_cast<AxisEvent>(evbase));
         if (!ev) {
             return EventResponse::nop();
         }
         if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
-            zoomInOut(ev->mValue, ev->getDevice());
+            zoomInOut(ev->mValue, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
         } else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
             //orbitObject(Vector3d(ev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), ev->getDevice());
         }
         return EventResponse::cancel();
     }
-
-    EventResponse middleDragHandler(EventPtr evbase) {
-        std::tr1::shared_ptr<MouseDragEvent> ev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (ev->mType == MouseDragEvent::START) {
-            ev->getDevice()->pushRelativeMode();
-        } else if (ev->mType == MouseDragEvent::END) {
-            ev->getDevice()->popRelativeMode();
-        }
-        if (ev->deltaLastY() != 0) {
-            float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
-            zoomInOut(AxisValue::fromCentered(dragMultiplier*ev->deltaLastY()), ev->getDevice());
-        }
-        if (ev->deltaLastX() != 0) {
-            //rotateXZ(AxisValue::fromCentered(ev->deltaLastX()));
-            //rotateCamera(mParent->mPrimaryCamera, ev->deltaLastX() * AXIS_TO_RADIANS, 0);
-        }
-        return EventResponse::cancel();
-    }
-
-    EventResponse scaleSelection(EventPtr evbase) {
-        std::tr1::shared_ptr<MouseDragEvent> ev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)||
-            mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-            return EventResponse::nop();
-        }
-        if (ev->mType == MouseDragEvent::START) {
-            ev->getDevice()->pushRelativeMode();
-        } else if (ev->mType == MouseDragEvent::END) {
-            ev->getDevice()->popRelativeMode();
-        }
-        if (ev->deltaLastY() != 0) {
-            float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
-            float scaleamt = exp(dragMultiplier*ev->deltaLastY());
-            for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
-                 iter != mSelectedObjects.end(); ++iter) {
-                Entity *ent = mParent->getEntity((*iter).first);
-                if (!ent) {
-                    continue;
-                }
-                std::tr1::shared_ptr<ProxyMeshObject> meshptr (
-                    std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent->getProxyPtr()));
-                if (meshptr) {
-                    meshptr->setScale(meshptr->getScale() * scaleamt);
-                }
-            }
-        }
-        if (ev->deltaLastX() != 0) {
-            //rotateXZ(AxisValue::fromCentered(ev->deltaLastX()));
-            //rotateCamera(mParent->mPrimaryCamera, ev->deltaLastX() * AXIS_TO_RADIANS, 0);
-        }
-        return EventResponse::cancel();
-    }
-
-    EventResponse rotateSelection(EventPtr evbase) {
-        std::tr1::shared_ptr<MouseDragEvent> ev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)&&
-            !mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-            return EventResponse::nop();
-        }
-        if (ev->mType == MouseDragEvent::START) {
-            ev->getDevice()->pushRelativeMode();
-        } else if (ev->mType == MouseDragEvent::END) {
-            ev->getDevice()->popRelativeMode();
-        }
-        if (ev->deltaLastX() != 0 || ev->deltaLastY() != 0) {
-            Task::AbsTime now(Task::AbsTime::now());
-            float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
-            float radianX, radianY;
-            pixelToRadians(mParent->mPrimaryCamera,ev->deltaLastX(),ev->deltaLastY(),radianX,radianY);
-            if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
-                radianY = 0;
-            }
-            if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-                radianX = 0;
-            }
-            for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
-                 iter != mSelectedObjects.end(); ++iter) {
-                Entity *ent = mParent->getEntity((*iter).first);
-                if (!ent) {
-                    continue;
-                }
-                Location loc (ent->getProxy().extrapolateLocation(now));
-                loc.setOrientation(Quaternion(Vector3f(0,1,0),radianX)*
-                                   Quaternion(Vector3f(1,0,0),radianY)*
-                                   loc.getOrientation());
-                ent->getProxy().resetPositionVelocity(now, loc);
-            }
-        }
-        return EventResponse::cancel();
-    }
-
-    bool mIsOrbiting;
-    EventResponse orbitDragHandler(EventPtr evbase) {
-        std::tr1::shared_ptr<MouseDragEvent> ev (
-            std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (ev->mType == MouseDragEvent::END && mIsOrbiting) {
-            ev->getDevice()->popRelativeMode();
-        }
-        if (!mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-            return EventResponse::nop();
-        }
-        if (ev->mType == MouseDragEvent::START) {
-            ev->getDevice()->pushRelativeMode();
-            mIsOrbiting=true;
-        } else if (!mIsOrbiting) {
-            return EventResponse::nop();
-        }
-        float dragMultiplier = mParent->mInputManager->mDragMultiplier->as<float>();
-        float toRadians = mParent->mInputManager->mAxisToRadians->as<float>();
-        orbitObject(Vector3d(ev->deltaLastX(), ev->deltaLastY(), 0) * -toRadians*dragMultiplier,
-                    ev->getDevice());
-        return EventResponse::cancel();
-    }
-
 
     ///////////////// KEYBOARD HANDLERS /////////////////
 
@@ -636,9 +238,9 @@ private:
         Task::AbsTime now(Task::AbsTime::now());
         while (doUngroupObjects(now)) {
         }
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
+            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (ent) {
                 ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr());
             }
@@ -676,6 +278,7 @@ private:
         if (newObj) {
             if (parentPtr) {
                 newObj->setParent(parentPtr, now, loc, localLoc);
+                newObj->resetPositionVelocity(now, localLoc);
             } else {
                 newObj->resetPositionVelocity(now, loc);
             }
@@ -694,10 +297,10 @@ private:
     EventResponse cloneObjects(EventPtr ev) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
-        SelectedObjectMap newSelectedObjectMap;
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        SelectedObjectSet newSelectedObjects;
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
+            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) {
                 continue;
             }
@@ -705,11 +308,11 @@ private:
             Location loc (ent->getProxy().extrapolateLocation(now));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
             newEnt->getProxy().resetPositionVelocity(now, loc);
-            newSelectedObjectMap.insert(SelectedObjectMap::value_type(newEnt->id(),newEnt->getProxy().extrapolateLocation(now)));
+            newSelectedObjects.insert(newEnt->getProxyPtr());
             newEnt->setSelected(true);
             ent->setSelected(false);
         }
-        mSelectedObjects.swap(newSelectedObjectMap);
+        mSelectedObjects.swap(newSelectedObjects);
         return EventResponse::nop();
     }
     EventResponse groupObjects(EventPtr ev) {
@@ -718,25 +321,22 @@ private:
         }
         SpaceObjectReference parentId = mCurrentGroup;
         Task::AbsTime now(Task::AbsTime::now());
-        ProxyManager *proxyMgr = NULL;
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
+            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) continue;
-            if (proxyMgr==NULL) {
-                proxyMgr = ent->getProxy().getProxyManager();
-            }
             if (ent->getProxy().getProxyManager() != proxyMgr) {
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
                 return EventResponse::nop();
             }
             if (!(ent->getProxy().getParent() == parentId)) {
-                SILOG(input,error,"Multiple select "<< (*iter).first << 
+                SILOG(input,error,"Multiple select "<< (*iter)->getObjectReference() << 
                       " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
                 return EventResponse::nop();
             }
         }
-        Vector3d totalPosition (averageSelectedPosition(now));
+        Vector3d totalPosition (averageSelectedPosition(now, mSelectedObjects.begin(), mSelectedObjects.end()));
         Location totalLocation (totalPosition,Quaternion::identity(),Vector3f(0,0,0),Vector3f(0,0,0),0);
         Entity *parentEntity = mParent->getEntity(parentId);
         if (parentEntity) {
@@ -752,25 +352,25 @@ private:
         if (parentEntity) {
             newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter).first);
+            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) continue;
             ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
             ent->setSelected(false);
         }
         mSelectedObjects.clear();
-        mSelectedObjects.insert(SelectedObjectMap::value_type(newParentId, newParentEntity->getProxy().extrapolateLocation(now)));
+        mSelectedObjects.insert(newParentEntity->getProxyPtr());
         newParentEntity->setSelected(true);
         return EventResponse::nop();
     }
 
     bool doUngroupObjects(Task::AbsTime now) {
         int numUngrouped = 0;
-        SelectedObjectMap newSelectedObjectMap;
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        SelectedObjectSet newSelectedObjects;
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *parentEnt = mParent->getEntity((*iter).first);
+            Entity *parentEnt = mParent->getEntity((*iter)->getObjectReference());
             if (!parentEnt) {
                 continue;
             }
@@ -782,7 +382,7 @@ private:
                 hasSubObjects = true;
                 Entity *ent = *subIter;
                 ent->getProxy().setParent(parentParent, now);
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), ent->getProxy().extrapolateLocation(now)));
+                newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }
             if (hasSubObjects) {
@@ -791,10 +391,10 @@ private:
                 parentEnt = NULL; // dies.
                 numUngrouped++;
             } else {
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(parentEnt->id(), parentEnt->getProxy().extrapolateLocation(now)));
+                newSelectedObjects.insert(parentEnt->getProxyPtr());
             }
         }
-        mSelectedObjects.swap(newSelectedObjectMap);
+        mSelectedObjects.swap(newSelectedObjects);
         return (numUngrouped>0);
     }
 
@@ -810,21 +410,21 @@ private:
             return EventResponse::nop();
         }
         Entity *parentEnt = NULL;
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            parentEnt = mParent->getEntity((*iter).first);
+            parentEnt = mParent->getEntity((*iter)->getObjectReference());
         }
         if (parentEnt) {
-            SelectedObjectMap newSelectedObjectMap;
+            SelectedObjectSet newSelectedObjects;
             bool hasSubObjects = false;
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
                 hasSubObjects = true;
                 Entity *ent = *subIter;
-                newSelectedObjectMap.insert(SelectedObjectMap::value_type(ent->id(), ent->getProxy().extrapolateLocation(now)));
+                newSelectedObjects.insert(ent->getProxyPtr());
                 ent->setSelected(true);
             }
             if (hasSubObjects) {
-                mSelectedObjects.swap(newSelectedObjectMap);
+                mSelectedObjects.swap(newSelectedObjects);
                 mCurrentGroup = parentEnt->id();
             }
         }
@@ -833,9 +433,9 @@ private:
 
     EventResponse leaveObject(EventPtr ev) {
         Task::AbsTime now(Task::AbsTime::now());
-        for (SelectedObjectMap::iterator iter = mSelectedObjects.begin();
+        for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
              iter != mSelectedObjects.end(); ++iter) {
-            Entity *selent = mParent->getEntity((*iter).first);
+            Entity *selent = mParent->getEntity((*iter)->getObjectReference());
             if (selent) {
                 selent->setSelected(false);
             }
@@ -846,10 +446,54 @@ private:
             mCurrentGroup = ent->getProxy().getParent();
             Entity *parentEnt = mParent->getEntity(mCurrentGroup);
             if (parentEnt) {
-                mSelectedObjects.insert(SelectedObjectMap::value_type(mCurrentGroup,parentEnt->getProxy().extrapolateLocation(now)));
+                mSelectedObjects.insert(parentEnt->getProxyPtr());
             }
         } else {
             mCurrentGroup = SpaceObjectReference::null();
+        }
+        return EventResponse::nop();
+    }
+
+    EventResponse createLight(EventPtr ev) {
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+        Task::AbsTime now(Task::AbsTime::now());
+        CameraEntity *camera = mParent->mPrimaryCamera;
+        SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
+        ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
+        Location loc (camera->getProxy().globalLocation(now));
+        loc.setPosition(loc.getPosition() + Vector3d(direction(loc.getOrientation()))*WORLD_SCALE);
+        loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
+
+        std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
+        proxyMgr->createObject(newLightObject);
+        {
+            LightInfo li;
+            li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
+            li.setLightAmbientColor(Color(.24,.25,.18));
+            li.setLightSpecularColor(Color(0,0,0));
+            li.setLightShadowColor(Color(0,0,0));
+            li.setLightPower(1.0);
+            li.setLightRange(75);
+            li.setLightFalloff(1,0,0.03);
+            li.setLightSpotlightCone(30,40,1);
+            li.setCastsShadow(true);
+            /* set li according to some sample light in the scene file! */
+            newLightObject->update(li);
+        }
+
+        Entity *parentent = mParent->getEntity(mCurrentGroup);
+        if (parentent) {
+            Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
+            newLightObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
+            newLightObject->resetPositionVelocity(now, localLoc);
+        } else {
+            newLightObject->resetPositionVelocity(now, loc);
+        }
+        mSelectedObjects.clear();
+        mSelectedObjects.insert(newLightObject);
+        Entity *ent = mParent->getEntity(newId);
+        if (ent) {
+            ent->setSelected(true);
         }
         return EventResponse::nop();
     }
@@ -958,6 +602,32 @@ private:
         return subId;
     }
 
+    EventResponse setDragMode(EventPtr evbase) {
+        std::tr1::shared_ptr<ButtonEvent> ev (
+            std::tr1::dynamic_pointer_cast<ButtonEvent>(evbase));
+        if (!ev) {
+            return EventResponse::nop();
+        }
+        switch (ev->mButton) {
+          case 'q':
+            mDragAction[1] = 0;
+            break;
+          case 'w':
+            mDragAction[1] = DragActionRegistry::get("moveObject");
+            break;
+          case 'e':
+            mDragAction[1] = DragActionRegistry::get("rotateObject");
+            break;
+          case 'r':
+            mDragAction[1] = DragActionRegistry::get("scaleObject");
+            break;
+          case 't':
+            mDragAction[1] = DragActionRegistry::get("rotateCamera");
+            break;
+        }
+        return EventResponse::nop();
+    }
+
     EventResponse deviceListener(EventPtr evbase) {
         std::tr1::shared_ptr<InputDeviceEvent> ev (std::tr1::dynamic_pointer_cast<InputDeviceEvent>(evbase));
         if (!ev) {
@@ -971,32 +641,41 @@ private:
             }
             if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
                 registerButtonListener(ev->mDevice, &MouseHandler::groupObjects, 'g');
-                registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, 'u');
+                registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, 'g',false,InputDevice::MOD_ALT);
                 registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDLK_DELETE);
                 registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDLK_KP_PERIOD); // Del
-                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, 'c');
+                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, 'v',false,InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, 'd');
                 registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDLK_KP_ENTER);
                 registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDLK_RETURN);
                 registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDLK_KP_0);
                 registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDLK_ESCAPE);
+                registerButtonListener(ev->mDevice, &MouseHandler::createLight, 'b');
 
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w');
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a');
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's');
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd');
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w',false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a',false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's',false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd',false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_UP);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_DOWN);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w',true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a',true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's',true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd',true);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w',true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a',true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's',true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd',true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_UP,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_DOWN,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::import, 'o', false, InputDevice::MOD_CTRL);
+
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'q');
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'w');
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'e');
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'r');
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 't');
+
             }
             break;
           case InputDeviceEvent::REMOVED:
@@ -1012,6 +691,37 @@ private:
         return EventResponse::nop();
     }
 
+    EventResponse doDrag(EventPtr evbase) {
+        MouseDragEventPtr ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
+        if (!ev) {
+            return EventResponse::nop();
+        }
+        ActiveDrag * &drag = mActiveDrag[ev->mButton];
+        if (ev->mType == MouseDragEvent::START) {
+            if (drag) {
+                delete drag;
+            }
+            DragStartInfo info = {
+                /*.sys = */ mParent,
+                /*.camera = */ mParent->mPrimaryCamera, // for now...
+                /*.objects = */ mSelectedObjects,
+                /*.ev = */ ev
+            };
+            if (mDragAction[ev->mButton]) {
+                drag = mDragAction[ev->mButton](info);
+            }
+        }
+        if (drag) {
+            drag->mouseMoved(ev);
+
+            if (ev->mType == MouseDragEvent::END) {
+                delete drag;
+                drag = 0;
+            }
+        }
+        return EventResponse::nop();
+    }
+
 // .....................
 
 // SCROLL WHEEL: up/down = move object closer/farther. left/right = rotate object about Y axis.
@@ -1020,26 +730,18 @@ private:
 // Accuracy: relative versus absolute mode; exponential decay versus pixels.
 
 public:
-    void registerDragHandler(EventResponse (MouseHandler::*func) (EventPtr),
-                             int button) {
-        IdPair::Secondary secId = MouseDownEvent::getSecondaryId(button);
-        
-        mEvents.push_back(mParent->mInputManager->subscribeId(
-                              IdPair(MouseDragEvent::getEventId(), secId),
-                              std::tr1::bind(func, this, _1)));
-    }
-    MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0), mIsRotating(false),mPanDistance(0),mIsOrbiting(false) {
+    MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
             std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 
-        registerDragHandler(&MouseHandler::orbitDragHandler, 1);//shift
-        registerDragHandler(&MouseHandler::panScene, 1);//ctrl
-        registerDragHandler(&MouseHandler::rotateScene, 1);//none
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                              MouseDragEvent::getEventId(),
+                              std::tr1::bind(&MouseHandler::doDrag, this, _1)));
+        mDragAction[1] = 0;
+        mDragAction[2] = DragActionRegistry::get("zoomCamera");
+        mDragAction[3] = DragActionRegistry::get("panCamera");
+        mDragAction[4] = DragActionRegistry::get("rotateCamera");
 
-        registerDragHandler(&MouseHandler::rotateSelection, 4);
-        registerDragHandler(&MouseHandler::scaleSelection, 4);
-        registerDragHandler(&MouseHandler::moveSelection, 3);
-        registerDragHandler(&MouseHandler::middleDragHandler, 2);
         mEvents.push_back(mParent->mInputManager->subscribeId(
                               IdPair(MouseClickEvent::getEventId(), 
                                      MouseDownEvent::getSecondaryId(1)),
@@ -1064,7 +766,7 @@ public:
         return mCurrentGroup;
     }
     void addToSelection(const ProxyPositionObjectPtr &obj) {
-		mSelectedObjects.insert(SelectedObjectMap::value_type(obj->getObjectReference(), obj->extrapolateLocation(Task::AbsTime::now())));
+		mSelectedObjects.insert(obj);
     }
 };
 

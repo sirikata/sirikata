@@ -129,6 +129,9 @@ public:
     std::list<CameraEntity*> mAttachedCameras;
     CameraEntity *mPrimaryCamera;
 
+    SDLInputManager *getInputManager() {
+        return mInputManager;
+    }
     OptionSet*getOptions(){
         return mOptions;
     }

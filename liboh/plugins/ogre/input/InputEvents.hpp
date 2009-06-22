@@ -378,7 +378,7 @@ public:
     }
 };
 
-#endif
+}
+}
 
-}
-}
+#endif
