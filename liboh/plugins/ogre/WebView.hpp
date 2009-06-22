@@ -302,12 +302,8 @@ namespace Graphics {
 		* Injects mouse wheel events into this WebView.
 		*
 		* @param	relScroll	The relative Scroll-Value of the mouse.
-		*
-		* @note
-		*	To inject this using OIS: on a OIS::MouseListener::MouseMoved event, simply 
-		*	inject "arg.state.Z.rel" of the "MouseEvent".
 		*/
-		void injectMouseWheel(int relScroll);
+		void injectMouseWheel(int scrollX, int scrollY);
 
 		/**
 		* Injects mouse down events into this WebView. You must supply the current coordinates of the mouse in this
@@ -326,6 +322,10 @@ namespace Graphics {
 		* @param	yPos	The absolute Y-Value of the mouse, relative to this WebView's origin.
 		*/
 		void injectMouseUp(int xPos, int yPos);
+
+		void injectKeyEvent(bool press, int modifiers, int scancode);
+
+		void injectTextEvent(std::string utf8);
 
 		/**
 		* Saves a capture of this WebView to an image.

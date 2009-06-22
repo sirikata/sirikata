@@ -63,6 +63,8 @@ public:
     InputManager(Task::WorkQueue*queue) : Task::GenEventManager(queue) {}
     virtual ~InputManager() {}
 
+	virtual void getWindowSize(unsigned int &width, unsigned int &height) = 0; // temporary
+
     virtual bool isModifierDown(int modifier) const = 0;
     virtual bool isCapsLockDown() const = 0;
     virtual bool isNumLockDown() const = 0;

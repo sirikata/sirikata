@@ -140,29 +140,15 @@ public:
 
 class SDLKeyboard : public InputDevice {
     unsigned int mWhich;
-    static const char *SDLKeyName(unsigned int button);
 public:
     SDLKeyboard(unsigned int which);
     virtual ~SDLKeyboard();
 
     enum Directions {UP, RIGHT, DOWN, LEFT, MAX_DIRECTION};
-    virtual std::string getButtonName(unsigned int button) const {
-        if (button >= 32 && button < 127) {
-            char temp[2] = {button, '\0'};
-            return temp;
-        } else {
-            const char *keyname = SDLKeyName(button);
-            if (keyname) {
-                return keyname;
-            } else {
-                std::ostringstream ostr;
-                ostr << '#' << button;
-                return ostr.str();
-            }
-        }
-    }
+	virtual std::string getButtonName(unsigned int button) const;
     // Full keyboard--pointless to list all the possible buttons.
     virtual int getNumButtons() const { return -1; }
+    virtual bool isKeyboard() { return true; }
     virtual unsigned int getNumAxes() const { return 0; }
     virtual std::string getAxisName(unsigned int) const {
         return std::string();

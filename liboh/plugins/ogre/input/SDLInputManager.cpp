@@ -203,16 +203,19 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     int numKeys = SDL_GetNumKeyboards();
     for (int i =0 ;i < numKeys; ++i) {
         mKeys.push_back(SDLKeyboardPtr(new SDLKeyboard(i)));
+		mKeys.back()->setInputManager(this);
         mAllDevices.insert(mKeys.back());
     }
     int numMice = SDL_GetNumMice();
     for (int i =0 ;i < numMice; ++i) {
         mMice.push_back(SDLMousePtr(new SDLMouse(this, i)));
+		mMice.back()->setInputManager(this);
         mAllDevices.insert(mMice.back());
     }
     int numJoys = SDL_NumJoysticks();
     for (int i =0 ;i < numJoys; ++i) {
         mJoy.push_back(SDLJoystickPtr(new SDLJoystick(i)));
+		mJoy.back()->setInputManager(this);
         mAllDevices.insert(mJoy.back());
     }
 
@@ -242,11 +245,12 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     while(SDL_PollEvent(&event[0]))
     {
         EventPtr toFire;
-        SILOG(input,insane,"Event type "<<(int)event->type);
+        if (event->type!=15)SILOG(input,info,"Event type "<<(int)event->type);
         switch(event->type)
         {
           case SDL_KEYDOWN:
           case SDL_KEYUP:
+			  SILOG(input,info,"Keyboard "<<(int)event->key.keysym.scancode<<"; modifiers" << modifiersFromSDL(event->key.keysym.mod));
             mKeys[event->key.which]->fireButton(
                 mKeys[event->key.which],
                 this, 
@@ -285,6 +289,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             break;
           case SDL_TEXTINPUT:
           if (mHasKeyboardFocus) {
+			  SILOG(input,info,"Text "<<event->text.text);
             fire(Task::EventPtr(new TextInputEvent(
                                     mKeys[event->text.which], 
                                     event->text.text)));

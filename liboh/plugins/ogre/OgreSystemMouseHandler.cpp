@@ -513,30 +513,30 @@ private:
         const Quaternion &orient = loc.getOrientation();
 
         switch (buttonev->mButton) {
-          case 's':
+          case SDL_SCANCODE_S:
             amount*=-1;
-          case 'w':
+          case SDL_SCANCODE_W:
             amount *= WORLD_SCALE;
             loc.setVelocity(direction(orient)*amount);
             loc.setAngularSpeed(0);
             break;
-          case 'a':
+          case SDL_SCANCODE_A:
             amount*=-1;
-          case 'd':
+          case SDL_SCANCODE_D:
             amount *= WORLD_SCALE;
             loc.setVelocity(orient.xAxis()*amount);
             loc.setAngularSpeed(0);
             break;
-          case SDLK_DOWN:
+          case SDL_SCANCODE_DOWN:
             amount*=-1;
-          case SDLK_UP:
+          case SDL_SCANCODE_UP:
             loc.setAxisOfRotation(Vector3f(1,0,0));
             loc.setAngularSpeed(buttonev->mPressed?amount:0);
             loc.setVelocity(Vector3f(0,0,0));
             break;
-          case SDLK_RIGHT:
+          case SDL_SCANCODE_RIGHT:
             amount*=-1;
-          case SDLK_LEFT:
+          case SDL_SCANCODE_LEFT:
             amount*=2;
             loc.setAxisOfRotation(Vector3f(0,1,0));
             loc.setAngularSpeed(buttonev->mPressed?amount:0);
@@ -666,19 +666,19 @@ private:
             return EventResponse::nop();
         }
         switch (ev->mButton) {
-          case 'q':
+          case SDL_SCANCODE_Q:
             mDragAction[1] = 0;
             break;
-          case 'w':
+          case SDL_SCANCODE_W:
             mDragAction[1] = DragActionRegistry::get("moveObject");
             break;
-          case 'e':
+          case SDL_SCANCODE_E:
             mDragAction[1] = DragActionRegistry::get("rotateObject");
             break;
-          case 'r':
+          case SDL_SCANCODE_R:
             mDragAction[1] = DragActionRegistry::get("scaleObject");
             break;
-          case 't':
+          case SDL_SCANCODE_T:
             mDragAction[1] = DragActionRegistry::get("rotateCamera");
             break;
         }
@@ -697,43 +697,42 @@ private:
                 registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELY);
             }
             if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
-                registerButtonListener(ev->mDevice, &MouseHandler::groupObjects, 'g');
-                registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, 'g',false,InputDevice::MOD_ALT);
-                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDLK_DELETE);
-                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDLK_KP_PERIOD); // Del
-                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, 'v',false,InputDevice::MOD_CTRL);
-                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, 'd');
-                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDLK_KP_ENTER);
-                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDLK_RETURN);
-                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDLK_KP_0);
-                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDLK_ESCAPE);
-                registerButtonListener(ev->mDevice, &MouseHandler::createLight, 'b');
+                registerButtonListener(ev->mDevice, &MouseHandler::groupObjects, SDL_SCANCODE_G);
+                registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, SDL_SCANCODE_G,false,InputDevice::MOD_ALT);
+                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDL_SCANCODE_DELETE);
+                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDL_SCANCODE_KP_PERIOD); // Del
+                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, SDL_SCANCODE_V,false,InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, SDL_SCANCODE_D);
+                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDL_SCANCODE_KP_ENTER);
+                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDL_SCANCODE_RETURN);
+                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDL_SCANCODE_KP_0);
+                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDL_SCANCODE_ESCAPE);
+                registerButtonListener(ev->mDevice, &MouseHandler::createLight, SDL_SCANCODE_B);
 
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w',false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a',false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's',false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd',false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_UP);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_DOWN);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'w',true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'a',true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 's',true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, 'd',true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_UP,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_DOWN,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::import, 'o', false, InputDevice::MOD_CTRL);
-                registerButtonListener(ev->mDevice, &MouseHandler::saveScene, 's', false, InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_D,false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_D,true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::import, SDL_SCANCODE_O, false, InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::saveScene, SDL_SCANCODE_S, false, InputDevice::MOD_CTRL);
 
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'q');
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'w');
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'e');
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'r');
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 't');
-
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Q);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_W);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_E);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_R);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_T);
             }
             break;
           case InputDeviceEvent::REMOVED:

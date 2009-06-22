@@ -131,6 +131,8 @@ struct AxisValue {
     }
 };
 
+class InputManager;
+
 class InputDevice;
 typedef std::tr1::shared_ptr<InputDevice> InputDevicePtr;
 typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
@@ -157,6 +159,7 @@ public:
     typedef uint32 Modifier;
 protected:
     std::string mName;
+	InputManager *mManager;
 
     typedef std::tr1::unordered_map<unsigned int, Modifier> ButtonSet;
     typedef std::vector<AxisValue> AxisVector;
@@ -185,7 +188,14 @@ public:
     void setName(const std::string &newName) {
         mName = newName;
     }
+	InputManager *getInputManager() {
+		return mManager;
+	}
+	void setInputManager(InputManager *man) {
+		mManager = man;
+	}
 
+	InputDevice() : mManager(0) {}
     virtual ~InputDevice() {}
 
     virtual std::string getButtonName(unsigned int button) const = 0;
@@ -193,7 +203,9 @@ public:
 
     virtual std::string getAxisName(unsigned int axis) const = 0;
     virtual unsigned int getNumAxes() const = 0;
-    
+
+    virtual bool isKeyboard() { return false; }
+
     bool fireButton(const InputDevicePtr &thisptr,
                     Task::GenEventManager *em,
                     unsigned int button, bool newState, Modifier mod = 0);

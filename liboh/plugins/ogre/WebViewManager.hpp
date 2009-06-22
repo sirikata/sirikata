@@ -182,7 +182,7 @@ public:
 	*
 	* @return	Returns True if the mouse wheel was scrolled while a WebView was focused, False otherwise.
 	*/
-	bool injectMouseWheel(int relScroll);
+	bool injectMouseWheel(int relScrollX, int relScrollY);
 
 	/**
 	* Injects mouse down events into WebViewManager. Used to know when the user has pressed a mouse button
@@ -203,6 +203,10 @@ public:
 	* @return	Returns True if the mouse went up while a WebView was focused, False otherwise.
 	*/
 	bool injectMouseUp(int buttonID);
+
+	bool injectKeyEvent(bool press, int modifiers, int scancode);
+
+	bool injectTextEvent(std::string utf8);
 
 	/**
 	* De-Focuses any currently-focused WebViews.
@@ -231,13 +235,8 @@ protected:
 	void onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
-#if defined(_WIN32)
-	void handleKeyboardMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#endif
-	Sirikata::Task::EventResponse onMouseHover(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onButtonDown(Sirikata::Task::EventPtr evt);
-	Sirikata::Task::EventResponse onButtonUp(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onButton(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onKeyTextInput(Sirikata::Task::EventPtr evt);
 };
 

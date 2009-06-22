@@ -35,7 +35,6 @@
 #include "input/SDLInputManager.hpp"
 #include "input/InputEvents.hpp"
 #include "SDL_scancode.h"
-#include "SDL_keysym.h"
 #include <algorithm>
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #include <direct.h>
@@ -72,10 +71,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseHover, this, _1));
-	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseDrag, this, _1));
-	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButtonDown, this, _1));
-	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButtonUp, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
+	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
+	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
 	inputMgr->subscribe(Sirikata::Input::TextInputEvent::getEventId(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
 }
 
@@ -270,11 +269,11 @@ bool WebViewManager::injectMouseMove(int xPos, int yPos)
 	return eventHandled;
 }
 
-bool WebViewManager::injectMouseWheel(int relScroll)
+bool WebViewManager::injectMouseWheel(int relScrollX, int relScrollY)
 {
 	if(focusedWebView)
 	{
-		focusedWebView->injectMouseWheel(relScroll);
+		focusedWebView->injectMouseWheel(relScrollX, relScrollY);
 		return true;
 	}
 
@@ -322,13 +321,21 @@ bool WebViewManager::injectMouseUp(int buttonID)
 	return false;
 }
 
-#if defined(_WIN32)
-void WebViewManager::handleKeyboardMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	if(focusedWebView)
-		focusedWebView->webView->injectKeyboardEvent(0, msg, wParam, lParam);		
+bool WebViewManager::injectKeyEvent(bool press, int modifiers, int scancode) {
+	if (focusedWebView) {
+		focusedWebView->injectKeyEvent(press, modifiers, scancode);
+		return true;
+	}
+	return false;
 }
-#endif
+
+bool WebViewManager::injectTextEvent(std::string utf8text) {
+	if (focusedWebView) {
+		focusedWebView->injectTextEvent(utf8text);
+		return true;
+	}
+	return false;
+}
 
 namespace {
 struct compare { bool operator()(WebView* a, WebView* b){ return(a->getOverlay()->getZOrder() > b->getOverlay()->getZOrder()); }};
@@ -474,122 +481,71 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 }
 
 
-Sirikata::Task::EventResponse WebViewManager::onMouseHover(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::MouseHoverEvent* e = dynamic_cast<Sirikata::Input::MouseHoverEvent*>(evt.get());
+	Sirikata::Input::MouseEvent* e = dynamic_cast<Sirikata::Input::MouseEvent*>(evt.get());
+	if (!e) {
+		return Sirikata::Task::EventResponse::nop();
+	}
 
-	this->injectMouseMove(e->mX, e->mY);
+	unsigned int wid,hei;
+	e->getDevice()->getInputManager()->getWindowSize(wid,hei);
+	this->injectMouseMove(((e->mX+1)*wid)/2, ((1-e->mY)*hei)/2);
 
 	return Sirikata::Task::EventResponse::nop();
 }
 
-Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventPtr evt)
+Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::MouseDragEvent* e = dynamic_cast<Sirikata::Input::MouseDragEvent*>(evt.get());
+	Sirikata::Input::ButtonEvent* e = dynamic_cast<Sirikata::Input::ButtonEvent*>(evt.get());
+	if (!e) {
+		return Sirikata::Task::EventResponse::nop();
+	}
 
-	this->injectMouseMove(e->mX, e->mY);
-
-	return Sirikata::Task::EventResponse::nop();
-}
-
-#if defined(_WIN32)
-unsigned int mapSDLToWindows(SDL_scancode scancode);
-#endif
-
-Sirikata::Task::EventResponse WebViewManager::onButtonDown(Sirikata::Task::EventPtr evt)
-{
-	Sirikata::Input::ButtonPressed* e = dynamic_cast<Sirikata::Input::ButtonPressed*>(evt.get());
-
-	if(e->mButton == 1)
-		this->injectMouseDown(LeftMouseButton);
-	else if(e->mButton == 3)
-		this->injectMouseDown(RightMouseButton);
-#if defined(_WIN32)
-	else if(e->mButton >= 4)
-		handleKeyboardMessage(0, WM_KEYDOWN, mapSDLToWindows((SDL_scancode)e->mButton), 0);
-#endif
-
-	return Sirikata::Task::EventResponse::nop();
-}
-
-Sirikata::Task::EventResponse WebViewManager::onButtonUp(Sirikata::Task::EventPtr evt)
-{
-	Sirikata::Input::ButtonReleased* e = dynamic_cast<Sirikata::Input::ButtonReleased*>(evt.get());
-
-	if(e->mButton == 1)
-		this->injectMouseUp(LeftMouseButton);
-	else if(e->mButton == 3)
-		this->injectMouseUp(RightMouseButton);
-#if defined(_WIN32)
-	else if(e->mButton >= 4)
-		handleKeyboardMessage(0, WM_KEYUP, mapSDLToWindows((SDL_scancode)e->mButton), 0);
-#endif
-
-	return Sirikata::Task::EventResponse::nop();
+	bool success = true;
+	if(e->getDevice()->isKeyboard()) {
+		success = this->injectKeyEvent(e->mPressed, e->mModifier, e->mButton);
+	} else {
+		int awebutton;
+		switch(e->mButton) {
+		case 1:
+			awebutton = LeftMouseButton; break;
+		case 2:
+			awebutton = MiddleMouseButton; break;
+		case 3:
+			awebutton = RightMouseButton; break;
+		default:
+			success = false;
+		}
+		if (success) {
+			if (e->mPressed) {
+				success = this->injectMouseDown(awebutton);
+			} else {
+				success = this->injectMouseUp(awebutton);
+			}
+		}
+	}
+	if (success) {
+		return Sirikata::Task::EventResponse::cancel();
+	} else {
+		return Sirikata::Task::EventResponse::nop();
+	}
 }
 
 Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::EventPtr evt)
 {
 	Sirikata::Input::TextInputEvent* e = dynamic_cast<Sirikata::Input::TextInputEvent*>(evt.get());
+	if (!e) {
+		return Sirikata::Task::EventResponse::nop();
+	}
 
-#if defined(_WIN32)
-	handleKeyboardMessage(0, WM_CHAR, (unsigned short)e->mText[0], 0);
-#endif
-
-	return Sirikata::Task::EventResponse::nop();
-}
-
-#if defined(_WIN32)
-#define MAP_CHAR(X) case SDL_SCANCODE_##X: return #X[0]
-#define MAP_VK(A, B) case SDL_SCANCODE_##A: return VK_##B
-
-unsigned int mapSDLToWindows(SDL_scancode scancode)
-{
-	switch(scancode)
-	{
-	MAP_CHAR(A); MAP_CHAR(B); MAP_CHAR(C);
-	MAP_CHAR(D); MAP_CHAR(E); MAP_CHAR(F);
-	MAP_CHAR(G); MAP_CHAR(H); MAP_CHAR(I);
-	MAP_CHAR(J); MAP_CHAR(K); MAP_CHAR(L);
-	MAP_CHAR(M); MAP_CHAR(N); MAP_CHAR(O);
-	MAP_CHAR(P); MAP_CHAR(Q); MAP_CHAR(R);
-	MAP_CHAR(S); MAP_CHAR(T); MAP_CHAR(U);
-	MAP_CHAR(V); MAP_CHAR(W); MAP_CHAR(X);
-	MAP_CHAR(Y); MAP_CHAR(Z); MAP_CHAR(0);
-	MAP_CHAR(1); MAP_CHAR(2); MAP_CHAR(3);
-	MAP_CHAR(4); MAP_CHAR(5); MAP_CHAR(6);
-	MAP_CHAR(7); MAP_CHAR(8); MAP_CHAR(9);
-	MAP_VK(RETURN, RETURN);			MAP_VK(ESCAPE, ESCAPE);
-	MAP_VK(BACKSPACE, BACK);		MAP_VK(TAB, TAB);
-	MAP_VK(SPACE, SPACE);			MAP_VK(MINUS, OEM_MINUS);
-	MAP_VK(EQUALS, OEM_PLUS);		MAP_VK(LEFTBRACKET, OEM_4);
-	MAP_VK(RIGHTBRACKET, OEM_6);	MAP_VK(BACKSLASH, OEM_5);
-	MAP_VK(SEMICOLON, OEM_1);		MAP_VK(APOSTROPHE, OEM_7);
-	MAP_VK(GRAVE, OEM_3);			MAP_VK(COMMA, OEM_COMMA);
-	MAP_VK(PERIOD, OEM_PERIOD);		MAP_VK(SLASH, OEM_2);
-	MAP_VK(CAPSLOCK, CAPITAL);		MAP_VK(F1, F1);
-	MAP_VK(F2, F2);					MAP_VK(F3, F3);
-	MAP_VK(F4, F4);					MAP_VK(F5, F5);
-	MAP_VK(F6, F6);					MAP_VK(F7, F7);
-	MAP_VK(F8, F8);					MAP_VK(F9, F9);
-	MAP_VK(F10, F10);				MAP_VK(F11, F11);
-	MAP_VK(F12, F12);				MAP_VK(PRINTSCREEN, PRINT);
-	MAP_VK(SCROLLLOCK, SCROLL);		MAP_VK(PAUSE, PAUSE);
-	MAP_VK(INSERT, INSERT);			MAP_VK(HOME, HOME);
-	MAP_VK(PAGEUP, PRIOR);			MAP_VK(DELETE, DELETE);
-	MAP_VK(END, END);				MAP_VK(PAGEDOWN, NEXT);
-	MAP_VK(RIGHT, RIGHT);			MAP_VK(LEFT, LEFT);
-	MAP_VK(DOWN, DOWN);				MAP_VK(UP, UP);
-	MAP_VK(KP_0, INSERT);			MAP_VK(KP_1, END);
-	MAP_VK(KP_2, DOWN);				MAP_VK(KP_3, NEXT);
-	MAP_VK(KP_4, LEFT);				MAP_VK(KP_6, RIGHT);
-	MAP_VK(KP_7, HOME);				MAP_VK(KP_8, UP);
-	MAP_VK(KP_9, PRIOR);
-	default: return 0;
+	if (injectTextEvent(e->mText)) {
+		return Sirikata::Task::EventResponse::cancel();
+	} else {
+		return Sirikata::Task::EventResponse::nop();
 	}
 }
 
-#endif
 
 }
 }

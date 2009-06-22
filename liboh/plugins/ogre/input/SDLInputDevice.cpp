@@ -272,8 +272,15 @@ SDLKeyboard::~SDLKeyboard() {
 }
 
 
-const char *SDLKeyboard::SDLKeyName(unsigned int button) {
-    return SDL_GetKeyName((SDLKey)button);
+std::string SDLKeyboard::getButtonName(unsigned int button) const {
+    const char *keyname = SDL_GetScancodeName((SDL_scancode)button);
+    if (keyname) {
+        return keyname;
+    } else {
+        std::ostringstream ostr;
+        ostr << '#' << button;
+        return ostr.str();
+    }
 }
 
 }
