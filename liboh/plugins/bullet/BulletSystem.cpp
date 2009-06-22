@@ -78,17 +78,9 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 
 namespace Sirikata {
 
-//static URI streetlight("mhash:///66b189d665dd968d94a1415393f0037299fc2d9a18ca457dba5038f90083157c");
-static URI streetlight("meru://cplatz@/Tree_Common_trop_01.mesh");
-
 void bulletObj::meshChanged (const URI &newMesh) {
     cout << "dbm:    meshlistener: " << newMesh << endl;
     meshname = newMesh;
-/*    if (meshname == streetlight) {
-        cout << "dbm: adding streetlight to physical objects: " << meshname << endl;
-        system->addPhysicalObject(this);
-    }
-*/
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
