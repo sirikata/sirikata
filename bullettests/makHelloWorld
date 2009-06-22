@@ -1,0 +1,5 @@
+#!/bin/bash
+g++ -c -DHAVE_CONFIG_H -I../dependencies/bullet-2.74 -I../dependencies/bullet-2.74/src HelloWorld.cpp
+
+/bin/bash ../dependencies/bullet-2.74/libtool --tag=CXX --mode=link g++ -o HelloWorld  HelloWorld.o -L../dependencies/bullet-2.74/src -lbulletdynamics -lbulletcollision -lbulletmath 
+
