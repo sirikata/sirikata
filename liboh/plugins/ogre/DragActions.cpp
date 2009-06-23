@@ -233,8 +233,8 @@ public:
     void mouseMoved(MouseDragEventPtr ev) {
             Task::AbsTime now(Task::AbsTime::now());
             // one screen width = one full rotation
-            float radianX = M_PI*ev->deltaX();
-            float radianY = M_PI*ev->deltaY();
+            float radianX = 3.14159*ev->deltaX();
+            float radianY = 3.14159*ev->deltaY();
             if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
                 radianY = 0;
             }
