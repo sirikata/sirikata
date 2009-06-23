@@ -89,7 +89,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
 void bulletObj::setPhysical (const bool flag) {
     cout << "dbm: setPhysical: " << flag << endl;
     isPhysical=flag;
-    if(isPhysical) {
+    if (isPhysical) {
         system->addPhysicalObject(this);
     }
     else {
@@ -111,7 +111,7 @@ void BulletSystem::addPhysicalObject(bulletObj* obj) {
 
 void BulletSystem::removePhysicalObject(bulletObj* obj) {
     cout << "dbm: removing physical object: " << obj << endl;
-    for(unsigned int i=0; i<physicalObjects.size(); i++) {
+    for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
             physicalObjects.erase(physicalObjects.begin()+i);
             break;
