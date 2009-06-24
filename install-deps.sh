@@ -32,6 +32,11 @@ if [ ${opt_components_all} == "true" ]; then
   opt_components_raknet="true"
   opt_components_sst="true"
   opt_components_sirikata="true"
+
+  # when we're installing everything and not updating, perform basic system installation tasks
+  if [ ${opt_update} == "false" ]; then
+    sudo apt-get install libtool automake1.9 autoconf patch unzip g++ cmake qt4-dev-tools qt4-qmake qt4-qtconfig freeglut-dev
+  fi
 fi
 
 
@@ -117,7 +122,7 @@ if [ ${opt_components_sirikata} == "true" ]; then
     fi
     git clone git://github.com/sirikata/sirikata.git sirikata
     cd sirikata
-    make depends
+    make fulldepends
   else
     cd sirikata
     git pull origin
