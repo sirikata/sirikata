@@ -35,6 +35,7 @@
 #include "BulletSystem.hpp"
 #include <oh/SimulationFactory.hpp>
 #include <oh/ProxyObject.hpp>
+#include "btBulletDynamicsCommon.h"
 
 using namespace std;
 static int core_plugin_refcount = 0;
@@ -156,8 +157,92 @@ bool BulletSystem::tick() {
 }
 
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
-    cout << "dbm: BulletSystem::initialize" << endl;
+    /// HelloWorld from Bullet/Demos
+    {
+        btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+        btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+        btVector3 worldAabbMin(-10000,-10000,-10000);
+        btVector3 worldAabbMax(10000,10000,10000);
+        int maxProxies = 1024;
+        btAxisSweep3* overlappingPairCache = new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
+        btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+        btDiscreteDynamicsWorld* dynamicsWorld = 
+            new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
+        dynamicsWorld->setGravity(btVector3(0,-10,0));
+        btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+        btAlignedObjectArray<btCollisionShape*> collisionShapes;
+        collisionShapes.push_back(groundShape);
+        btTransform groundTransform;
+        groundTransform.setIdentity();
+        groundTransform.setOrigin(btVector3(0,-56,0));
+
+        btVector3 localInertia(0,0,0);
+        groundShape->calculateLocalInertia(0.0f,localInertia);
+        btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+        btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
+        btRigidBody* body = new btRigidBody(rbInfo);
+        dynamicsWorld->addRigidBody(body);
+
+        //btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
+        btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+        collisionShapes.push_back(colShape);
+        btTransform startTransform;
+        startTransform.setIdentity();
+
+        localInertia = btVector3(0,0,0);
+        colShape->calculateLocalInertia(1.0f,localInertia);
+        startTransform.setOrigin(btVector3(2,10,0));
+        myMotionState = new btDefaultMotionState(startTransform);
+        rbInfo=btRigidBody::btRigidBodyConstructionInfo(1.0f,myMotionState,colShape,localInertia);
+        body = new btRigidBody(rbInfo);
+        dynamicsWorld->addRigidBody(body);
+/// Do some simulation
+        
+        for (int i=0;i<100;i++)
+        {
+            dynamicsWorld->stepSimulation(1.f/60.f,10);
+            for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--)
+            {
+                btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
+                btRigidBody* body = btRigidBody::upcast(obj);
+                if (body && body->getMotionState())
+                {
+                    btTransform trans;
+                    body->getMotionState()->getWorldTransform(trans);
+                    printf("world pos = %f,%f,%f\n",
+                           float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
+                }
+            }
+        }
+
+/// cleanup
+        
+        for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--)
+        {
+            btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
+            btRigidBody* body = btRigidBody::upcast(obj);
+            if (body && body->getMotionState())
+            {
+                delete body->getMotionState();
+            }
+            dynamicsWorld->removeCollisionObject( obj );
+            delete obj;
+        }
+        for (int j=0;j<collisionShapes.size();j++)
+        {
+            btCollisionShape* shape = collisionShapes[j];
+            collisionShapes[j] = 0;
+            delete shape;
+        }
+        delete dynamicsWorld;
+        delete solver;
+        delete overlappingPairCache;
+        delete dispatcher;
+        delete collisionConfiguration;
+    }
+
     proxyManager->addListener(this);
+    cout << "dbm: BulletSystem::initialized, including test bullet object" << endl;
     return true;
 }
 
