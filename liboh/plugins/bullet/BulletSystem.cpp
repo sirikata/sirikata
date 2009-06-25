@@ -103,7 +103,6 @@ Vector3d bulletObj::getBulletPosition() {
     if (this->bulletBodyPtr && this->bulletBodyPtr->getMotionState()) {
         btTransform trans;
         this->bulletBodyPtr->getMotionState()->getWorldTransform(trans);
-//        printf("dbm: world item %d pos = %f,%f,%f\n", j,               float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
         return Vector3d(trans.getOrigin().getX(),trans.getOrigin().getY(),trans.getOrigin().getZ());
     }
     else {
@@ -174,43 +173,11 @@ bool BulletSystem::tick() {
             dynamicsWorld->stepSimulation(delta,0);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
-                ///* /// old non-bullet code
-                if (i % 2) {
-                    oldpos = physicalObjects[i]->meshptr->getPosition();
-                    physicalObjects[i]->velocity += gravity*delta.toSeconds();
-                    newpos = oldpos + physicalObjects[i]->velocity*delta.toSeconds();              /// should work, acc. to Newton
-                    if (newpos.y < groundlevel) {
-                        newpos.y = groundlevel;
-                        physicalObjects[i]->velocity = Vector3d(0, 0, 0);
-                        cout << "    dbm: BS:tick groundlevel reached" << endl;
-                    }
-                    cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds()
-                            << ", new position, " << newpos.y 
-                            << ", old position, " << oldpos.y 
-                            << ", velocity, " << physicalObjects[i]->velocity.y << endl;
-                }
-                else {
-                    newpos = physicalObjects[i]->getBulletPosition();
-                    cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds()
-                            << ", new position, " << newpos.y << endl;
-                }
+                newpos = physicalObjects[i]->getBulletPosition();
+                cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", new position, " << newpos << endl;
                 physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
             }
         }
-        /// test bullet
-        /*
-        dynamicsWorld->stepSimulation(1.f/60.f,10);
-        for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--) {
-            btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
-            btRigidBody* body = btRigidBody::upcast(obj);
-            if (body && body->getMotionState()) {
-                btTransform trans;
-                body->getMotionState()->getWorldTransform(trans);
-                printf("dbm: world item %d pos = %f,%f,%f\n", j,
-                       float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
-            }
-        }
-        */
     }
     cout << endl;
     return 0;
@@ -229,41 +196,25 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     int maxProxies = 1024;
     btVector3 localInertia(0,0,0);
 
+    /// set up bullet stuff
     collisionConfiguration = new btDefaultCollisionConfiguration();
     dispatcher = new btCollisionDispatcher(collisionConfiguration);
     overlappingPairCache= new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
     dynamicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
+    
+    /// create ground
     groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
     collisionShapes.push_back(groundShape);
     groundTransform.setIdentity();
     groundTransform.setOrigin(btVector3(0,groundlevel-1,0));
-
     groundShape->calculateLocalInertia(0.0f,localInertia);
     myMotionState = new btDefaultMotionState(groundTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
     body = new btRigidBody(rbInfo);
     body->setRestitution(0.75);                 /// bouncy for fun & profit
     dynamicsWorld->addRigidBody(body);
-
-/// Do some simulation
-
-    /*
-        for (int i=0;i<100;i++) {
-            dynamicsWorld->stepSimulation(1.f/60.f,10);
-            for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--) {
-                btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
-                btRigidBody* body = btRigidBody::upcast(obj);
-                if (body && body->getMotionState()) {
-                    btTransform trans;
-                    body->getMotionState()->getWorldTransform(trans);
-                    printf("world pos = %f,%f,%f\n",
-                           float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
-                }
-            }
-        }
-    */
 
     proxyManager->addListener(this);
     cout << "dbm: BulletSystem::initialized, including test bullet object" << endl;
