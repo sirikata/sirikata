@@ -25,12 +25,12 @@ void SSTStatsListener::packetReceived(qint32 size) {
     mTrace->packetReceived( Time(0) + Duration::milliseconds((uint32)msecs), mRemote, size);
 }
 
+static int argc = 1;
+static char* argv[] = { "blah", NULL };
 
 CBRSST::CBRSST(Trace* trace)
  : mTrace(trace)
 {
-    int argc = 0;
-    char** argv = NULL;
     mApp = new QApplication((int&)argc, (char**)argv);
 }
 
