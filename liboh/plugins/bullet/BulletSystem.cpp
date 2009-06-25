@@ -125,7 +125,7 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj, double posX, double
     btVector3 localInertia(0,0,0);
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
-    
+
     cout << "dbm: adding physical object: " << obj << endl;
     colShape = new btSphereShape(btScalar(1.0));
     collisionShapes.push_back(colShape);
@@ -169,9 +169,12 @@ bool BulletSystem::tick() {
         delta = now-lasttime;
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
-        if (((int)(now-starttime) % 15)<5) {
+        //if (((int)(now-starttime) % 15)<5) {
+        if ((now-starttime) > 40.0) {
+            dynamicsWorld->stepSimulation(1.f/60.f,10);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
+                /* /// old non-bullet code
                 oldpos = physicalObjects[i]->meshptr->getPosition();
                 physicalObjects[i]->velocity += gravity*delta.toSeconds();
                 newpos = oldpos + physicalObjects[i]->velocity;              /// should work, acc. to Newton
@@ -180,11 +183,14 @@ bool BulletSystem::tick() {
                     physicalObjects[i]->velocity = Vector3d(0, 0, 0);
                     cout << "    dbm: BS:tick groundlevel reached" << endl;
                 }
+                */
+                newpos = physicalObjects[i]->getBulletPosition();
                 physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
                 cout << "    dbm: BS:tick old position: " << oldpos << " new position: " << newpos << endl;
             }
         }
         /// test bullet
+        /*
         dynamicsWorld->stepSimulation(1.f/60.f,10);
         for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--) {
             btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
@@ -196,6 +202,7 @@ bool BulletSystem::tick() {
                        float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
             }
         }
+        */
     }
     cout << endl;
     return 0;
