@@ -39,6 +39,7 @@
 #include <oh/TimeSteppedSimulation.hpp>
 #include <oh/ProxyObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
+#include "btBulletDynamicsCommon.h"
 
 using namespace std;
 namespace Sirikata {
@@ -67,6 +68,16 @@ class BulletSystem: public TimeSteppedSimulation {
     vector<bulletObj*>objects;
     vector<bulletObj*>physicalObjects;
     Vector3d gravity;
+    double groundlevel;
+
+    ///local bullet stuff:
+    btDefaultCollisionConfiguration* collisionConfiguration;
+    btCollisionDispatcher* dispatcher;
+    btAxisSweep3* overlappingPairCache;
+    btSequentialImpulseConstraintSolver* solver;
+    btDiscreteDynamicsWorld* dynamicsWorld;
+    btAlignedObjectArray<btCollisionShape*> collisionShapes;
+
 public:
     BulletSystem();
     void addPhysicalObject(bulletObj*);

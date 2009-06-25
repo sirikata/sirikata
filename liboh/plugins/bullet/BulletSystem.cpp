@@ -125,7 +125,6 @@ bool BulletSystem::tick() {
     static Task::AbsTime lasttime = starttime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
-    static double groundlevel = 3044.0;
     Task::AbsTime now = Task::AbsTime::now();
     Task::DeltaTime delta;
     Vector3d oldpos;
@@ -151,6 +150,18 @@ bool BulletSystem::tick() {
                 cout << "    dbm: BS:tick old position: " << oldpos << " new position: " << newpos << endl;
             }
         }
+        /// test bullet
+        dynamicsWorld->stepSimulation(1.f/60.f,10);
+        for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--) {
+            btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
+            btRigidBody* body = btRigidBody::upcast(obj);
+            if (body && body->getMotionState()) {
+                btTransform trans;
+                body->getMotionState()->getWorldTransform(trans);
+                printf("dbm: world pos = %f,%f,%f\n",
+                       float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
+            }
+        }
     }
     cout << endl;
     return 0;
@@ -158,54 +169,52 @@ bool BulletSystem::tick() {
 
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     /// HelloWorld from Bullet/Demos
-    {
-        btDefaultCollisionConfiguration* collisionConfiguration;
-        btCollisionDispatcher* dispatcher;
-        btAxisSweep3* overlappingPairCache; 
-        btSequentialImpulseConstraintSolver* solver;
-        btDiscreteDynamicsWorld* dynamicsWorld;
-        btCollisionShape* groundShape;
-        btTransform groundTransform;
-        btRigidBody* body;
-        btDefaultMotionState* myMotionState;
-        btAlignedObjectArray<btCollisionShape*> collisionShapes;
-        btCollisionShape* colShape;
-        btTransform startTransform;
-        btVector3 worldAabbMin(-10000,-10000,-10000);
-        btVector3 worldAabbMax(10000,10000,10000);
-        int maxProxies = 1024;
-        btVector3 localInertia(0,0,0);
-        
-        collisionConfiguration = new btDefaultCollisionConfiguration();
-        dispatcher = new btCollisionDispatcher(collisionConfiguration);        
-        overlappingPairCache= new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
-        solver = new btSequentialImpulseConstraintSolver;
-        dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
-        dynamicsWorld->setGravity(btVector3(0,-10,0));
-        groundShape= new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
-        collisionShapes.push_back(groundShape);
-        groundTransform.setIdentity();
-        groundTransform.setOrigin(btVector3(0,-56,0));
+    gravity = Vector3d(0, -9.8, 0);
+    groundlevel = 3044.0;
+    btCollisionShape* groundShape;
+    btTransform groundTransform;
+    btRigidBody* body;
+    btDefaultMotionState* myMotionState;
+    btCollisionShape* colShape;
+    btTransform startTransform;
+    btVector3 worldAabbMin(-10000,-10000,-10000);
+    btVector3 worldAabbMax(10000,10000,10000);
+    int maxProxies = 1024;
+    btVector3 localInertia(0,0,0);
 
-        groundShape->calculateLocalInertia(0.0f,localInertia);
-        myMotionState = new btDefaultMotionState(groundTransform);
-        btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
-        body = new btRigidBody(rbInfo);
-        dynamicsWorld->addRigidBody(body);
+    collisionConfiguration = new btDefaultCollisionConfiguration();
+    dispatcher = new btCollisionDispatcher(collisionConfiguration);
+    overlappingPairCache= new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
+    solver = new btSequentialImpulseConstraintSolver;
+    dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
+    dynamicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
+    groundShape= new btBoxShape(btVector3(btScalar(50.),btScalar(1.0),btScalar(50.)));
+    collisionShapes.push_back(groundShape);
+    groundTransform.setIdentity();
+    groundTransform.setOrigin(btVector3(0,groundlevel-1,0));
 
-        colShape = new btSphereShape(btScalar(1.));
-        collisionShapes.push_back(colShape);
-        startTransform.setIdentity();
+    groundShape->calculateLocalInertia(0.0f,localInertia);
+    myMotionState = new btDefaultMotionState(groundTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
+    body = new btRigidBody(rbInfo);
+    body->setRestitution(0.75);                 /// bouncy for fun & profit
+    dynamicsWorld->addRigidBody(body);
 
-        localInertia = btVector3(0,0,0);
-        colShape->calculateLocalInertia(1.0f,localInertia);
-        startTransform.setOrigin(btVector3(2,10,0));
-        myMotionState = new btDefaultMotionState(startTransform);
-        btRigidBody::btRigidBodyConstructionInfo rbInfo2(1.0f,myMotionState,colShape,localInertia);
-        body = new btRigidBody(rbInfo2);
-        dynamicsWorld->addRigidBody(body);
+    colShape = new btSphereShape(btScalar(1.0));
+    collisionShapes.push_back(colShape);
+    startTransform.setIdentity();
+
+    localInertia = btVector3(0,0,0);
+    colShape->calculateLocalInertia(1.0f,localInertia);
+    startTransform.setOrigin(btVector3(2,groundlevel+10,0));
+    myMotionState = new btDefaultMotionState(startTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo2(1.0f,myMotionState,colShape,localInertia);
+    body = new btRigidBody(rbInfo2);
+    body->setRestitution(0.75);
+    dynamicsWorld->addRigidBody(body);
 /// Do some simulation
 
+    /*
         for (int i=0;i<100;i++) {
             dynamicsWorld->stepSimulation(1.f/60.f,10);
             for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--) {
@@ -219,29 +228,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
                 }
             }
         }
-
-/// cleanup
-
-        for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
-            btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
-            btRigidBody* body = btRigidBody::upcast(obj);
-            if (body && body->getMotionState()) {
-                delete body->getMotionState();
-            }
-            dynamicsWorld->removeCollisionObject( obj );
-            delete obj;
-        }
-        for (int j=0;j<collisionShapes.size();j++) {
-            btCollisionShape* shape = collisionShapes[j];
-            collisionShapes[j] = 0;
-            delete shape;
-        }
-        delete dynamicsWorld;
-        delete solver;
-        delete overlappingPairCache;
-        delete dispatcher;
-        delete collisionConfiguration;
-    }
+    */
 
     proxyManager->addListener(this);
     cout << "dbm: BulletSystem::initialized, including test bullet object" << endl;
@@ -249,11 +236,31 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 }
 
 BulletSystem::BulletSystem() {
-    gravity = Vector3d(0, -9.8, 0);
     cout << "dbm: I am the BulletSystem constructor!" << endl;
 }
 
 BulletSystem::~BulletSystem() {
+/// cleanup
+
+    for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
+        btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
+        btRigidBody* body = btRigidBody::upcast(obj);
+        if (body && body->getMotionState()) {
+            delete body->getMotionState();
+        }
+        dynamicsWorld->removeCollisionObject( obj );
+        delete obj;
+    }
+    for (int j=0;j<collisionShapes.size();j++) {
+        btCollisionShape* shape = collisionShapes[j];
+        collisionShapes[j] = 0;
+        delete shape;
+    }
+    delete dynamicsWorld;
+    delete solver;
+    delete overlappingPairCache;
+    delete dispatcher;
+    delete collisionConfiguration;
     cout << "dbm: I am the BulletSystem destructor!" << endl;
 }
 

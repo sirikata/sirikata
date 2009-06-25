@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 	dynamicsWorld->setGravity(btVector3(0,-10,0));
 
 	///create a few basic rigid bodies
-	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
+	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.),btScalar(1.),btScalar(50.)));
 
 	//keep track of the shapes, we release memory at exit.
 	//make sure to re-use collision shapes among rigid bodies whenever possible!
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-56,0));
+	groundTransform.setOrigin(btVector3(0,3044.0,0));
 
 	{
 		btScalar mass(0.);
@@ -71,6 +71,7 @@ int main(int argc, char** argv)
 		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,groundShape,localInertia);
 		btRigidBody* body = new btRigidBody(rbInfo);
+        body->setRestitution(0.75);
 
 		//add the body to the dynamics world
 		dynamicsWorld->addRigidBody(body);
@@ -81,7 +82,7 @@ int main(int argc, char** argv)
 		//create a dynamic rigidbody
 
 		//btCollisionShape* colShape = new btBoxShape(btVector3(1,1,1));
-		btCollisionShape* colShape = new btSphereShape(btScalar(1.));
+		btCollisionShape* colShape = new btSphereShape(btScalar(1.0));
 		collisionShapes.push_back(colShape);
 
 		/// Create Dynamic Objects
@@ -97,14 +98,15 @@ int main(int argc, char** argv)
 		if (isDynamic)
 			colShape->calculateLocalInertia(mass,localInertia);
 
-			startTransform.setOrigin(btVector3(2,10,0));
+			startTransform.setOrigin(btVector3(2,3044.0+10,0));
 		
 			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
 			btRigidBody* body = new btRigidBody(rbInfo);
-
-			dynamicsWorld->addRigidBody(body);
+            body->setRestitution(0.75);
+            printf("restitution: %f\n", (double)body->getRestitution());
+            dynamicsWorld->addRigidBody(body);
 	}
 
 
@@ -113,7 +115,7 @@ int main(int argc, char** argv)
 
 
 
-	for (i=0;i<100;i++)
+	for (i=0;i<200;i++)
 	{
 		dynamicsWorld->stepSimulation(1.f/60.f,10);
 		
