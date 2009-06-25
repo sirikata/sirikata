@@ -171,22 +171,30 @@ bool BulletSystem::tick() {
         lasttime = now;
         //if (((int)(now-starttime) % 15)<5) {
         if ((now-starttime) > 40.0) {
-            dynamicsWorld->stepSimulation(1.f/60.f,10);
+            dynamicsWorld->stepSimulation(delta,0);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
-                /* /// old non-bullet code
-                oldpos = physicalObjects[i]->meshptr->getPosition();
-                physicalObjects[i]->velocity += gravity*delta.toSeconds();
-                newpos = oldpos + physicalObjects[i]->velocity;              /// should work, acc. to Newton
-                if (newpos.y < groundlevel) {
-                    newpos.y = groundlevel;
-                    physicalObjects[i]->velocity = Vector3d(0, 0, 0);
-                    cout << "    dbm: BS:tick groundlevel reached" << endl;
+                ///* /// old non-bullet code
+                if (i % 2) {
+                    oldpos = physicalObjects[i]->meshptr->getPosition();
+                    physicalObjects[i]->velocity += gravity*delta.toSeconds();
+                    newpos = oldpos + physicalObjects[i]->velocity*delta.toSeconds();              /// should work, acc. to Newton
+                    if (newpos.y < groundlevel) {
+                        newpos.y = groundlevel;
+                        physicalObjects[i]->velocity = Vector3d(0, 0, 0);
+                        cout << "    dbm: BS:tick groundlevel reached" << endl;
+                    }
+                    cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds()
+                            << ", new position, " << newpos.y 
+                            << ", old position, " << oldpos.y 
+                            << ", velocity, " << physicalObjects[i]->velocity.y << endl;
                 }
-                */
-                newpos = physicalObjects[i]->getBulletPosition();
+                else {
+                    newpos = physicalObjects[i]->getBulletPosition();
+                    cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds()
+                            << ", new position, " << newpos.y << endl;
+                }
                 physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
-                cout << "    dbm: BS:tick old position: " << oldpos << " new position: " << newpos << endl;
             }
         }
         /// test bullet
