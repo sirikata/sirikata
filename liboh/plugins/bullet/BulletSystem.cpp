@@ -90,11 +90,25 @@ void bulletObj::setScale (const Vector3f &newScale) {
 void bulletObj::setPhysical (const bool flag) {
     cout << "dbm: setPhysical: " << flag << endl;
     isPhysical=flag;
+    Vector3d pos = this->meshptr->getPosition();
     if (isPhysical) {
-        system->addPhysicalObject(this);
+        bulletBodyPtr = system->addPhysicalObject(this, pos.x, pos.y, pos.z);
     }
     else {
         system->removePhysicalObject(this);
+    }
+}
+
+Vector3d bulletObj::getBulletPosition() {
+    if (this->bulletBodyPtr && this->bulletBodyPtr->getMotionState()) {
+        btTransform trans;
+        this->bulletBodyPtr->getMotionState()->getWorldTransform(trans);
+//        printf("dbm: world item %d pos = %f,%f,%f\n", j,               float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
+        return Vector3d(trans.getOrigin().getX(),trans.getOrigin().getY(),trans.getOrigin().getZ());
+    }
+    else {
+        printf("dbm: error -- this is not a bullet object with a motionstate!\n");
+        return Vector3d(0,0,0);
     }
 }
 
@@ -105,12 +119,32 @@ bulletObj::bulletObj(BulletSystem* sys) {
     velocity = Vector3d(0, 0, 0);
 }
 
-void BulletSystem::addPhysicalObject(bulletObj* obj) {
+btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj, double posX, double posY, double posZ) {
+    btCollisionShape* colShape;
+    btTransform startTransform;
+    btVector3 localInertia(0,0,0);
+    btDefaultMotionState* myMotionState;
+    btRigidBody* body;
+    
     cout << "dbm: adding physical object: " << obj << endl;
+    colShape = new btSphereShape(btScalar(1.0));
+    collisionShapes.push_back(colShape);
+    localInertia = btVector3(0,0,0);
+    colShape->calculateLocalInertia(1.0f,localInertia);
+    startTransform.setIdentity();
+    startTransform.setOrigin(btVector3(posX,posY,posZ));
+    myMotionState = new btDefaultMotionState(startTransform);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(1.0f,myMotionState,colShape,localInertia);
+    body = new btRigidBody(rbInfo);
+    body->setRestitution(0.75);
+    dynamicsWorld->addRigidBody(body);
+
     physicalObjects.push_back(obj);
+    return body;
 }
 
 void BulletSystem::removePhysicalObject(bulletObj* obj) {
+    /// need to clean up bullet stuff
     cout << "dbm: removing physical object: " << obj << endl;
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
@@ -158,7 +192,7 @@ bool BulletSystem::tick() {
             if (body && body->getMotionState()) {
                 btTransform trans;
                 body->getMotionState()->getWorldTransform(trans);
-                printf("dbm: world pos = %f,%f,%f\n",
+                printf("dbm: world item %d pos = %f,%f,%f\n", j,
                        float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
             }
         }
@@ -175,8 +209,6 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     btTransform groundTransform;
     btRigidBody* body;
     btDefaultMotionState* myMotionState;
-    btCollisionShape* colShape;
-    btTransform startTransform;
     btVector3 worldAabbMin(-10000,-10000,-10000);
     btVector3 worldAabbMax(10000,10000,10000);
     int maxProxies = 1024;
@@ -188,7 +220,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
     dynamicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
-    groundShape= new btBoxShape(btVector3(btScalar(50.),btScalar(1.0),btScalar(50.)));
+    groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
     collisionShapes.push_back(groundShape);
     groundTransform.setIdentity();
     groundTransform.setOrigin(btVector3(0,groundlevel-1,0));
@@ -200,18 +232,6 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     body->setRestitution(0.75);                 /// bouncy for fun & profit
     dynamicsWorld->addRigidBody(body);
 
-    colShape = new btSphereShape(btScalar(1.0));
-    collisionShapes.push_back(colShape);
-    startTransform.setIdentity();
-
-    localInertia = btVector3(0,0,0);
-    colShape->calculateLocalInertia(1.0f,localInertia);
-    startTransform.setOrigin(btVector3(2,groundlevel+10,0));
-    myMotionState = new btDefaultMotionState(startTransform);
-    btRigidBody::btRigidBodyConstructionInfo rbInfo2(1.0f,myMotionState,colShape,localInertia);
-    body = new btRigidBody(rbInfo2);
-    body->setRestitution(0.75);
-    dynamicsWorld->addRigidBody(body);
 /// Do some simulation
 
     /*

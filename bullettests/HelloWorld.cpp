@@ -95,8 +95,11 @@ int main(int argc, char** argv)
 		bool isDynamic = (mass != 0.f);
 
 		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			colShape->calculateLocalInertia(mass,localInertia);
+		if (isDynamic) {
+            printf("localInertia: %f %f %f\n",localInertia.getX(), localInertia.getY(), localInertia.getZ());
+            colShape->calculateLocalInertia(mass,localInertia);
+            printf("localInertia: %f %f %f\n",localInertia.getX(), localInertia.getY(), localInertia.getZ());
+        }
 
 			startTransform.setOrigin(btVector3(2,3044.0+10,0));
 		

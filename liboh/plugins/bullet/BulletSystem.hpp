@@ -54,10 +54,12 @@ class bulletObj : public MeshListener {
     void setScale (const Vector3f &newScale);
     void setPhysical (const bool flag);
     bool isPhysical;
+    btRigidBody* bulletBodyPtr;
     BulletSystem* system;
 public:
     Vector3d velocity;
     bulletObj(BulletSystem* sys);
+    Vector3d getBulletPosition();
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 };
@@ -80,7 +82,7 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
-    void addPhysicalObject(bulletObj*);
+    btRigidBody* addPhysicalObject(bulletObj*, double x, double y, double z);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
