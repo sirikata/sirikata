@@ -1,34 +1,3 @@
-/*  cbr
- *  Server.hpp
- *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of cbr nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 #ifndef _CBR_SERVER_HPP_
 #define _CBR_SERVER_HPP_
@@ -40,32 +9,36 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 
+#include "ForwarderUtilityClasses.hpp"  //bftm
+#include "Forwarder.hpp"  //bftm
 
-namespace CBR {
+namespace CBR
+{
 
-class Proximity;
-class Object;
-class ObjectFactory;
-class ServerIDMap;
-class CoordinateSegmentation;
-class Message;
-class ObjectToObjectMessage;
-class ServerMessageQueue;
-class ObjectMessageQueue;
-class Network;
-class Trace;
-class MigrateMessage;
-class LoadStatusMessage;
-class LoadMonitor;
+  class Proximity;
+  class Object;
+  class ObjectFactory;
+  class ServerIDMap;
+  class CoordinateSegmentation;
+  class Message;
+  class ObjectToObjectMessage;
+  class ServerMessageQueue;
+  class ObjectMessageQueue;
+  class Network;
+  class Trace;
+  class MigrateMessage;
+  class LoadStatusMessage;
+  class LoadMonitor;
+  class Forwarder; //bftm
 
-
-/** Handles all the basic services provided for objects by a server,
- *  including routing and message delivery, proximity services, and
- *  object -> server mapping.  This is a singleton for each simulated
- *  server.  Other servers are referenced by their ServerID.
- */
-class Server {
-public:
+  /** Handles all the basic services provided for objects by a server,
+   *  including routing and message delivery, proximity services, and
+   *  object -> server mapping.  This is a singleton for each simulated
+   *  server.  Other servers are referenced by their ServerID.
+   */
+  class Server
+  {
+  public:
     Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace);
     ~Server();
 
@@ -75,10 +48,13 @@ public:
 
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
-private:
+  private:
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
+
+
+    /* bftm
     void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
     // Routing interface for servers.  This is used to route messages that originate from
     // a server provided service, and thus don't have a source object.  Messages may be destined
@@ -95,18 +71,29 @@ private:
     // Forward the given message to its proper server.  Use this when a message arrives and the object
     // no longer lives on this server.
     void forward(Message* msg, const UUID& dest);
+    */
 
+    
     MigrateMessage* wrapObjectStateForMigration(Object* obj);
 
-    typedef std::map<UUID, Object*> ObjectMap;
+    //bftm    typedef std::map<UUID, Object*> ObjectMap;
     ServerID mID;
     ObjectMap mObjects;
     ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
+
+    //bftm
+    Forwarder mForwarder;
+  
+  /* bftm
+
+  
     ObjectMessageQueue* mObjectMessageQueue;
     ServerMessageQueue* mServerMessageQueue;
+
+
     LoadMonitor* mLoadMonitor;
 
     struct SelfMessage {
@@ -127,6 +114,8 @@ private:
     };
     std::deque<OutgoingMessage> mOutgoingMessages;
 
+  */
+    
     Time mCurrentTime;
     Trace* mTrace;
 }; // class Server
