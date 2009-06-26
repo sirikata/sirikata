@@ -96,6 +96,7 @@ void bulletObj::setPhysical (const bool flag) {
     }
     else {
         system->removePhysicalObject(this);
+        bulletBodyPtr=NULL;
     }
 }
 
@@ -109,6 +110,20 @@ Vector3d bulletObj::getBulletPosition() {
         printf("dbm: error -- this is not a bullet object with a motionstate!\n");
         return Vector3d(0,0,0);
     }
+}
+
+void bulletObj::setBulletPosition(Vector3d pos) {
+    /* /// this fails to work -- next stepSim restores old position
+    btTransform trans;
+    this->bulletBodyPtr->getMotionState()->getWorldTransform(trans);
+    trans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+    this->bulletBodyPtr->getMotionState()->setWorldTransform(trans);
+    */
+    btTransform trans;
+    bulletBodyPtr->getMotionState()->getWorldTransform(trans);
+    trans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+    bulletBodyPtr->proceedToTransform(trans);
+    bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
 bulletObj::bulletObj(BulletSystem* sys) {
@@ -147,6 +162,7 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     cout << "dbm: removing physical object: " << obj << endl;
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
+            dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
             physicalObjects.erase(physicalObjects.begin()+i);
             break;
         }
@@ -160,7 +176,6 @@ bool BulletSystem::tick() {
     static int mode = 0;
     Task::AbsTime now = Task::AbsTime::now();
     Task::DeltaTime delta;
-    Vector3d oldpos;
     Vector3d newpos;
 
     cout << "dbm: BulletSystem::tick time: " << (now-starttime).toSeconds() << endl;
@@ -170,11 +185,22 @@ bool BulletSystem::tick() {
         lasttime = now;
         //if (((int)(now-starttime) % 15)<5) {
         if ((now-starttime) > 40.0) {
+            for (unsigned int i=0; i<physicalObjects.size(); i++) {
+                if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletPosition()) {
+                    /// if object has been moved, reset bullet position accordingly
+                    cout << "    dbm: item, " << i << " moved by user!"
+                    << " meshpos: " << physicalObjects[i]->meshptr->getPosition()
+                    << " bulletpos before reset: " << physicalObjects[i]->getBulletPosition();
+
+                    physicalObjects[i]->setBulletPosition(physicalObjects[i]->meshptr->getPosition());
+                    cout << "bulletpos after reset: " << physicalObjects[i]->getBulletPosition()
+                    << endl;
+                }
+            }
             dynamicsWorld->stepSimulation(delta,0);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                cout << "  dbm: BS:tick moving object: " << physicalObjects[i] << endl;
                 newpos = physicalObjects[i]->getBulletPosition();
-                cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", new position, " << newpos << endl;
+                cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << newpos << endl;
                 physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
             }
         }
@@ -203,7 +229,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
     dynamicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
-    
+
     /// create ground
     groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
     collisionShapes.push_back(groundShape);

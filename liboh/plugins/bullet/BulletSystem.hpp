@@ -52,14 +52,15 @@ class BulletSystem;
 class bulletObj : public MeshListener {
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    void setPhysical (const bool flag);
     bool isPhysical;
-    btRigidBody* bulletBodyPtr;
     BulletSystem* system;
+    void setPhysical (const bool flag);
 public:
+    btRigidBody* bulletBodyPtr;
     Vector3d velocity;
     bulletObj(BulletSystem* sys);
     Vector3d getBulletPosition();
+    void setBulletPosition(Vector3d pos);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 };

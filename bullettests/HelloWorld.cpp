@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,groundShape,localInertia);
 		btRigidBody* body = new btRigidBody(rbInfo);
-        body->setRestitution(0.75);
+        body->setRestitution(0.05);
 
 		//add the body to the dynamics world
 		dynamicsWorld->addRigidBody(body);
@@ -118,10 +118,10 @@ int main(int argc, char** argv)
 
 
 
-	for (i=0;i<200;i++)
+	for (i=0;i<260;i++)
 	{
 		dynamicsWorld->stepSimulation(1.f/60.f,10);
-		
+
 		//print positions of all objects
 		for (int j=dynamicsWorld->getNumCollisionObjects()-1; j>=0 ;j--)
 		{
@@ -131,7 +131,15 @@ int main(int argc, char** argv)
 			{
 				btTransform trans;
 				body->getMotionState()->getWorldTransform(trans);
-				printf("world pos = %f,%f,%f\n",float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
+				if(i==250 & j==1) {
+					printf("   resetting object 1!\n");
+					trans.setOrigin(btVector3(4, 3050, 0));
+					body->proceedToTransform(trans);
+					body->activate(true);
+				}
+				if(j>0) 
+					printf("i=%d world pos = %f,%f,%f\n", i,
+						float(trans.getOrigin().getX()),float(trans.getOrigin().getY()),float(trans.getOrigin().getZ()));
 			}
 		}
 	}
