@@ -42,8 +42,10 @@ namespace Sirikata {
  * Permanent streams are generated when the Registration service returns a valid ObjectReference
  */
 class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
+    typedef std::vector<Network::Stream*> StreamSet;
     ///Object with active ID's (map from ObjectReference to Stream*)
-    std::tr1::unordered_map<UUID,Network::Stream*,UUID::Hasher>mActiveStreams;
+    typedef std::tr1::unordered_map<UUID,StreamSet,UUID::Hasher>StreamMap;
+    StreamMap mActiveStreams;
 
     /**
      * This class holds data relevant to streams pending object connections
@@ -86,7 +88,8 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
         }
     };
     ///Objects in the process of receiving a permanent ID, mapping a UUID to a Stream* and messages pending send
-    std::map<UUID,TemporaryStreamData>mTemporaryStreams;
+    typedef std::multimap<UUID,TemporaryStreamData> TemporaryStreamMultimap;
+    TemporaryStreamMultimap mTemporaryStreams;
     ///Every active stream maps to either a temporary ID in mTemporaryStreams or a permanent ObjectReference in mActiveStreams
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>mStreams;
     ///to forward messages to

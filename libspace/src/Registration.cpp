@@ -82,7 +82,18 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
         }else if (body.message_names(i)=="DelObj") {
             Protocol::DelObj delObj;
             delObj.ParseFromString(body.message_arguments(i));
-            
+            if (delObj.has_object_reference()) {
+                if (header.source_object()==ObjectReference::null()) {
+                    RoutableMessageHeader destination_header;
+                    destination_header.set_destination_object(ObjectReference(delObj.object_reference()));
+                    destination_header.set_source_object(mRegistrationServiceIdentifier);
+                    for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
+                        std::string body_string;
+                        body.SerializeToString(&body_string);
+                        (*i)->processMessage(destination_header,MemoryReference(body_string));
+                    }                    
+                }
+            }
         }else {
             SILOG(registration,warning,"Do not understand message of type "<<body.message_names(i));
         }

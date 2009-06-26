@@ -158,8 +158,9 @@ message RetObj {
     optional boundingsphere3f bounding_sphere=4;
 }
 
-//This message indicates an object has disconnected and should be removed from space. Shutting down the connection can accomplish the same (returns void)
+//This message indicates an object has disconnected and should be removed from space. May only be sent by the object connection service: DelObj messages from specific objects will be ignored.
 message DelObj {
+   optional uuid object_reference = 2;
 }
 
 message NewProxQuery {
