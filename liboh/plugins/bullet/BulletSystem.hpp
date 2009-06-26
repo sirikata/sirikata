@@ -47,6 +47,11 @@ namespace Sirikata {
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 //vector<ProxyMeshObjectPtr>mymesh;
 
+struct posquat {
+    Vector3d p;
+    Quaternion q;
+};
+
 class BulletSystem;
 
 class bulletObj : public MeshListener {
@@ -59,8 +64,8 @@ public:
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;
     bulletObj(BulletSystem* sys);
-    Vector3d getBulletPosition();
-    void setBulletPosition(Vector3d pos);
+    posquat getBulletState();
+    void setBulletState(Vector3d pos, Quaternion q);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 };

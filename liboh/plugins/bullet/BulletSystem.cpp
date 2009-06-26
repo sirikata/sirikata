@@ -100,19 +100,24 @@ void bulletObj::setPhysical (const bool flag) {
     }
 }
 
-Vector3d bulletObj::getBulletPosition() {
+posquat bulletObj::getBulletState() {
     if (this->bulletBodyPtr && this->bulletBodyPtr->getMotionState()) {
         btTransform trans;
         this->bulletBodyPtr->getMotionState()->getWorldTransform(trans);
-        return Vector3d(trans.getOrigin().getX(),trans.getOrigin().getY(),trans.getOrigin().getZ());
+        posquat pq;
+        btVector3 p = trans.getOrigin();
+        btQuaternion q = trans.getRotation();
+        pq.p = Vector3d(p.getX(), p.getY(), p.getZ());
+        pq.q = Quaternion(q.getX(), q.getY(), q.getZ(), q.getW(), Quaternion::XYZW());
+        return pq;
     }
     else {
         printf("dbm: error -- this is not a bullet object with a motionstate!\n");
-        return Vector3d(0,0,0);
+        return posquat();
     }
 }
 
-void bulletObj::setBulletPosition(Vector3d pos) {
+void bulletObj::setBulletState(Vector3d pos, Quaternion q) {
     /* /// this fails to work -- next stepSim restores old position
     btTransform trans;
     this->bulletBodyPtr->getMotionState()->getWorldTransform(trans);
@@ -122,6 +127,7 @@ void bulletObj::setBulletPosition(Vector3d pos) {
     btTransform trans;
     bulletBodyPtr->getMotionState()->getWorldTransform(trans);
     trans.setOrigin(btVector3(pos.x, pos.y, pos.z));
+    trans.setRotation(btQuaternion(q.x, q.y, q.z, q.w));
     bulletBodyPtr->proceedToTransform(trans);
     bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
@@ -185,22 +191,23 @@ bool BulletSystem::tick() {
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
         //if (((int)(now-starttime) % 15)<5) {
-        if ((now-starttime) > 40.0) {
+        if ((now-starttime) > 20.0) {
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletPosition()) {
+                if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletState().p) {
                     /// if object has been moved, reset bullet position accordingly
                     cout << "    dbm: item, " << i << " moved by user!"
                     << " meshpos: " << physicalObjects[i]->meshptr->getPosition()
-                    << " bulletpos before reset: " << physicalObjects[i]->getBulletPosition();
-
-                    physicalObjects[i]->setBulletPosition(physicalObjects[i]->meshptr->getPosition());
-                    cout << "bulletpos after reset: " << physicalObjects[i]->getBulletPosition()
+                    << " bulletpos before reset: " << physicalObjects[i]->getBulletState().p;
+                    physicalObjects[i]->setBulletState(
+                        physicalObjects[i]->meshptr->getPosition(),
+                        physicalObjects[i]->meshptr->getOrientation());
+                    cout << "bulletpos after reset: " << physicalObjects[i]->getBulletState().p
                     << endl;
                 }
             }
             dynamicsWorld->stepSimulation(delta,0);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                newpos = physicalObjects[i]->getBulletPosition();
+                newpos = physicalObjects[i]->getBulletState().p;
                 cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << newpos << endl;
                 physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
             }
