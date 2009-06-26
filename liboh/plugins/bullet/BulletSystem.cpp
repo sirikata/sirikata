@@ -157,7 +157,7 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj, double posX, double
     myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(1.0f,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
-    body->setRestitution(0.75);
+    body->setRestitution(0.5);
     dynamicsWorld->addRigidBody(body);
 
     physicalObjects.push_back(obj);
@@ -183,7 +183,7 @@ bool BulletSystem::tick() {
     static int mode = 0;
     Task::AbsTime now = Task::AbsTime::now();
     Task::DeltaTime delta;
-    Vector3d newpos;
+    posquat pq;
 
     cout << "dbm: BulletSystem::tick time: " << (now-starttime).toSeconds() << endl;
     if (now > lasttime + waittime) {
@@ -207,9 +207,9 @@ bool BulletSystem::tick() {
             }
             dynamicsWorld->stepSimulation(delta,0);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                newpos = physicalObjects[i]->getBulletState().p;
-                cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << newpos << endl;
-                physicalObjects[i]->meshptr->setPosition(now, newpos, Quaternion(Vector3f(.0,.0,.0),1.0));
+                pq = physicalObjects[i]->getBulletState();
+                cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << pq.p << endl;
+                physicalObjects[i]->meshptr->setPosition(now, pq.p, pq.q);
             }
         }
     }
@@ -247,7 +247,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     myMotionState = new btDefaultMotionState(groundTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
     body = new btRigidBody(rbInfo);
-    body->setRestitution(0.75);                 /// bouncy for fun & profit
+    body->setRestitution(0.5);                 /// bouncy for fun & profit
     dynamicsWorld->addRigidBody(body);
 
     proxyManager->addListener(this);
