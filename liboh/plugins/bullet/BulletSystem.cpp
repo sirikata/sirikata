@@ -141,7 +141,8 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj, double posX, double
     btRigidBody* body;
 
     cout << "dbm: adding physical object: " << obj << endl;
-    colShape = new btSphereShape(btScalar(1.0));
+    //colShape = new btSphereShape(btScalar(1.0));
+    colShape = new btBoxShape(btVector3(1.0, 1.0, 1.0));
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
     colShape->calculateLocalInertia(1.0f,localInertia);
