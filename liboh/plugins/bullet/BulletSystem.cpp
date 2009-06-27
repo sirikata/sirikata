@@ -152,8 +152,8 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     float mass;
     if (sizeX == sizeY && sizeY == sizeZ) {
         cout << "dbm: shape=sphere " << endl;
-        colShape = new btSphereShape(btScalar(sizeX*100));
-        mass = (sizeX*100)*(sizeX*100)*(sizeX*100);
+        colShape = new btSphereShape(btScalar(sizeX));
+        mass = sizeX*sizeX*sizeX*6;                         /// something like that.
     }
     else {
         cout << "dbm: shape=boxen " << endl;
