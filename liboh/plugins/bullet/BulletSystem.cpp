@@ -215,7 +215,8 @@ bool BulletSystem::tick() {
                     << endl;
                 }
             }
-            dynamicsWorld->stepSimulation(delta,0);
+            //dynamicsWorld->stepSimulation(delta,0);
+            dynamicsWorld->stepSimulation(delta,10);
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 pq = physicalObjects[i]->getBulletState();
                 cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << pq.p << endl;
