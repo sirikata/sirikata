@@ -90,10 +90,12 @@ void bulletObj::setScale (const Vector3f &newScale) {
 void bulletObj::setPhysical (const bool flag) {
     cout << "dbm: setPhysical: " << flag << endl;
     isPhysical=flag;
-    Vector3d pos = meshptr->getPosition();
-    Vector3f size = meshptr->getScale();
     if (isPhysical) {
-        bulletBodyPtr = system->addPhysicalObject(this, pos.x, pos.y, pos.z, size.x, size.y, size.z);
+        posquat pq;
+        pq.p = meshptr->getPosition();
+        pq.q = meshptr->getOrientation();
+        Vector3f size = meshptr->getScale();
+        bulletBodyPtr = system->addPhysicalObject(this, pq, size.x, size.y, size.z);
     }
     else {
         system->removePhysicalObject(this);
@@ -141,7 +143,7 @@ bulletObj::bulletObj(BulletSystem* sys) {
 }
 
 btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
-        double posX, double posY, double posZ,
+        posquat pq,
         float sizeX, float sizeY, float sizeZ) {
     btCollisionShape* colShape;
     btTransform startTransform;
@@ -151,19 +153,20 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
 
     cout << "dbm: adding physical object: " << obj << endl;
     /// complete hack for demo:
-    if (posY > 3055.0) {
-        cout << "dbm: shape=sphere " << posY << endl;
+    if (sizeX == sizeY && sizeY == sizeZ) {
+        cout << "dbm: shape=sphere " << endl;
         colShape = new btSphereShape(btScalar(sizeX*100));
     }
     else {
-        cout << "dbm: shape=boxen " << posY << endl;
+        cout << "dbm: shape=boxen " << endl;
         colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
     colShape->calculateLocalInertia(1.0f,localInertia);
     startTransform.setIdentity();
-    startTransform.setOrigin(btVector3(posX,posY,posZ));
+    startTransform.setOrigin(btVector3(pq.p.x,pq.p.y,pq.p.z));
+    startTransform.setRotation(btQuaternion(pq.q.x, pq.q.y, pq.q.z, pq.q.w));
     myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(1.0f,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
