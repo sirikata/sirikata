@@ -1,7 +1,7 @@
 /*  Sirikata liboh -- Bullet Graphics Plugin
  *  BulletGraphics.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn & Daniel Braxton Miller
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -47,25 +47,41 @@ namespace Sirikata {
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 //vector<ProxyMeshObjectPtr>mymesh;
 
-struct posquat {
+struct positionOrientation {
     Vector3d p;
-    Quaternion q;
+    Quaternion o;
+    positionOrientation() {
+    };
+    positionOrientation(Vector3d p, Quaternion o) {
+        this->p = p;
+        this->o = o;
+    };
+    positionOrientation(btVector3 p, btQuaternion o) {
+        this->p = Vector3d(p.getX(), p.getY(), p.getZ());
+        this->o = Quaternion(o.getX(), o.getY(), o.getZ(), o.getW(), Quaternion::XYZW());
+    };
 };
 
 class BulletSystem;
 
 class bulletObj : public MeshListener {
+    enum mode {
+        Disabled,               /// non-physical, remove from physics
+        Static,                 /// collisions, no dynamic movement (bullet mass==0)
+        Dynamic                 /// fully physical -- collision & dynamics
+    };
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    bool isPhysical;
+    bool isPhysical;            /// anything that bullet sees is physical
+    bool isDynamic;             /// but only some are dynamic (kinematic in bullet parlance)
     BulletSystem* system;
-    void setPhysical (const bool flag);
+    void setPhysical (const int mode);
 public:
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;
     bulletObj(BulletSystem* sys);
-    posquat getBulletState();
-    void setBulletState(Vector3d pos, Quaternion q);
+    positionOrientation getBulletState();
+    void setBulletState(positionOrientation pq);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 };
@@ -88,7 +104,7 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
-    btRigidBody* addPhysicalObject(bulletObj*, posquat pq, float sizx, float sizy, float sizz);
+    btRigidBody* addPhysicalObject(bulletObj*, positionOrientation pq, float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {

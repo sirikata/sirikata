@@ -43,7 +43,7 @@ public:
     virtual ~MeshListener() {}
     virtual void meshChanged (const URI &newMesh) =0;
     virtual void setScale (const Vector3f &newScale) = 0;
-    virtual void setPhysical (const bool flag) = 0;
+    virtual void setPhysical (const int mode) = 0;
 };
 }
 #endif

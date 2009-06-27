@@ -63,7 +63,7 @@ class DemoProxyManager :public ProxyManager{
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
         myObj->setScale(scale);
-        myObj->setPhysical(mode?true:false);
+        myObj->setPhysical(mode);
         return myObj;
     }
 
