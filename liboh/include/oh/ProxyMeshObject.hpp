@@ -50,7 +50,7 @@ public:
     ProxyMeshObject(ProxyManager *man, const SpaceObjectReference&id);
     void setMesh (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    void setPhysical (const bool &flag);
+    void setPhysical (const int &mode);
 
     inline const URI & getMesh() const {
         return mMeshURI;

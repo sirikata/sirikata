@@ -56,7 +56,7 @@ class DemoProxyManager :public ProxyManager{
                                  const Vector3f &scale=Vector3f(1,1,1), const int mode=0) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
-        std::cout << "Add Mesh Object " << myId << " = " << uri<<std::endl;
+        std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
         std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
         mObjects.insert(ObjectMap::value_type(myId, myObj));
         notify(&ProxyCreationListener::createProxy, myObj);

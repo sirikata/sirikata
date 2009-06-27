@@ -88,7 +88,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
 }
 
 void bulletObj::setPhysical (const int mode) {
-    cout << "dbm: setPhysical: " << mode << endl;
+    cout << "dbm: setPhysical: " << mode << " static=" << (int)Static << " dynamic=" << (int)Dynamic << endl;
     switch (mode) {
     case Disabled:
         isPhysical = false;
@@ -107,7 +107,7 @@ void bulletObj::setPhysical (const int mode) {
         po.p = meshptr->getPosition();
         po.o = meshptr->getOrientation();
         Vector3f size = meshptr->getScale();
-        bulletBodyPtr = system->addPhysicalObject(this, po, size.x, size.y, size.z);
+        bulletBodyPtr = system->addPhysicalObject(this, isDynamic, po, size.x, size.y, size.z);
     }
     else {
         system->removePhysicalObject(this);
@@ -138,6 +138,7 @@ bulletObj::bulletObj(BulletSystem* sys) {
 }
 
 btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
+        bool dynamic,
         positionOrientation po,
         float sizeX, float sizeY, float sizeZ) {
     btCollisionShape* colShape;
@@ -148,22 +149,27 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
 
     cout << "dbm: adding physical object: " << obj << endl;
     /// complete hack for demo:
+    float mass;
     if (sizeX == sizeY && sizeY == sizeZ) {
         cout << "dbm: shape=sphere " << endl;
         colShape = new btSphereShape(btScalar(sizeX*100));
+        mass = (sizeX*100)*(sizeX*100)*(sizeX*100);
     }
     else {
         cout << "dbm: shape=boxen " << endl;
         colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
+        mass = sizeX*.5 * sizeY*.5 * sizeZ*.5;
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
-    colShape->calculateLocalInertia(1.0f,localInertia);
+    if (!dynamic) mass = 0.0;
+    cout << "dbm: mass = " << mass << endl;
+    colShape->calculateLocalInertia(mass,localInertia);
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(po.p.x,po.p.y,po.p.z));
     startTransform.setRotation(btQuaternion(po.o.x, po.o.y, po.o.z, po.o.w));
     myMotionState = new btDefaultMotionState(startTransform);
-    btRigidBody::btRigidBodyConstructionInfo rbInfo(1.0f,myMotionState,colShape,localInertia);
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
     body->setRestitution(0.5);
     dynamicsWorld->addRigidBody(body);
