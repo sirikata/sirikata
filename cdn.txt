@@ -27,6 +27,10 @@ namelookup=(
        1 = http://graphics.stanford.edu/~danielrh/dns/names/global/cplatz
        2 = file:///./Staging/names-cplatz.txt
     )
+    meru://daniel@/ = (
+       1 = http://graphics.stanford.edu/~danielrh/dns/names/global/daniel
+       2 = file:///./Staging/names-daniel.txt
+    )
     meru://meru@/ = http://graphics.stanford.edu/~danielrh/dns/names/global/meru
 )
 

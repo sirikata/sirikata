@@ -157,7 +157,7 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     }
     else {
         cout << "dbm: shape=boxen " << posY << endl;
-        colShape = new btBoxShape(btVector3(sizeX*50, sizeY*50, sizeZ*50));
+        colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
