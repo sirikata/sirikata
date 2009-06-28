@@ -38,12 +38,19 @@ namespace Sirikata {
 
 using Transfer::URI;
 
+struct physicalParameters {
+    int mode;
+    float density;
+    float friction;
+    float bounce;
+};
+
 class SIRIKATA_OH_EXPORT MeshListener {
 public:
     virtual ~MeshListener() {}
     virtual void meshChanged (const URI &newMesh) =0;
     virtual void setScale (const Vector3f &newScale) = 0;
-    virtual void setPhysical (const int &mode) = 0;
+    virtual void setPhysical (const physicalParameters &pp) = 0;
 };
 }
 #endif

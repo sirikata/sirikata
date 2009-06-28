@@ -35,6 +35,7 @@
 #include <oh/ProxyCameraObject.hpp>
 #include <oh/ProxyLightObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
+
 namespace Sirikata {
 
 static OptionValue *scenefile;
@@ -63,7 +64,9 @@ class DemoProxyManager :public ProxyManager{
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
         myObj->setScale(scale);
-        myObj->setPhysical(mode);
+        physicalParameters pp;
+        pp.mode = mode;
+        myObj->setPhysical(pp);
         return myObj;
     }
 
