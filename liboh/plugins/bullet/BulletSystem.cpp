@@ -126,7 +126,13 @@ void bulletObj::setBulletState(positionOrientation po) {
     bulletBodyPtr->getMotionState()->getWorldTransform(trans);
     trans.setOrigin(btVector3(po.p.x, po.p.y, po.p.z));
     trans.setRotation(btQuaternion(po.o.x, po.o.y, po.o.z, po.o.w));
-    bulletBodyPtr->proceedToTransform(trans);
+    /// more Bullet mojo: dynamic vs kinematic
+    if (isDynamic) {
+        bulletBodyPtr->proceedToTransform(trans);           /// how to move dynamic objects
+    }
+    else {
+        bulletBodyPtr->getMotionState()->setWorldTransform(trans);   /// how to move 'kinematic' objects (animated)
+    }
     bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
@@ -172,6 +178,11 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
     body->setRestitution(0.5);
+    if (!dynamic) {
+        /// voodoo recommendations from the bullet tutorials
+        body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState(DISABLE_DEACTIVATION);        
+    }
     dynamicsWorld->addRigidBody(body);
 
     physicalObjects.push_back(obj);
