@@ -66,11 +66,13 @@ class DemoProxyManager :public ProxyManager {
         myObj->setMesh(uri);
         myObj->setScale(scale);
         physicalParameters pp;
-        pp.mode = mode;
-        pp.density = density;
-        pp.friction = friction;
-        pp.bounce = bounce;
-        myObj->setPhysical(pp);
+        if (mode) {
+            pp.mode = mode;
+            pp.density = density;
+            pp.friction = friction;
+            pp.bounce = bounce;
+            myObj->setPhysical(pp);
+        }
         return myObj;
     }
 

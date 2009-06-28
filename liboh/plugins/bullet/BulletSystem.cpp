@@ -88,7 +88,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
 }
 
 void bulletObj::setPhysical (const physicalParameters &pp) {
-    cout << "dbm: setPhysical: " << pp.mode << " static=" << (int)Static << " dynamic=" << (int)Dynamic << endl;
+    cout << "dbm: setPhysical: " << (long)this << " " << pp.mode << " static=" << (int)Static << " dynamic=" << (int)Dynamic << endl;
     switch (pp.mode) {
     case Disabled:
         isPhysical = false;
@@ -193,7 +193,6 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
 }
 
 void BulletSystem::removePhysicalObject(bulletObj* obj) {
-    /// need to clean up bullet stuff
     cout << "dbm: removing physical object: " << obj << endl;
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
