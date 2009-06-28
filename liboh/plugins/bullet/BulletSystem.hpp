@@ -104,7 +104,9 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
-    btRigidBody* addPhysicalObject(bulletObj* obj, bool dynamic, positionOrientation pq, float sizx, float sizy, float sizz);
+    btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic, 
+                                   float density, float friction, float bounce,
+                                   float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {

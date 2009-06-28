@@ -66,6 +66,9 @@ class DemoProxyManager :public ProxyManager{
         myObj->setScale(scale);
         physicalParameters pp;
         pp.mode = mode;
+        pp.density = 1.0;
+        pp.friction = 0.9;
+        pp.bounce = 0.03;
         myObj->setPhysical(pp);
         return myObj;
     }

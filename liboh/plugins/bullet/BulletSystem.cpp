@@ -107,7 +107,7 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
         po.p = meshptr->getPosition();
         po.o = meshptr->getOrientation();
         Vector3f size = meshptr->getScale();
-        bulletBodyPtr = system->addPhysicalObject(this, isDynamic, po, size.x, size.y, size.z);
+        bulletBodyPtr = system->addPhysicalObject(this, po, isDynamic, pp.density, pp.friction, pp.bounce, size.x, size.y, size.z);
     }
     else {
         system->removePhysicalObject(this);
@@ -144,8 +144,9 @@ bulletObj::bulletObj(BulletSystem* sys) {
 }
 
 btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
-        bool dynamic,
         positionOrientation po,
+        bool dynamic,
+        float density, float friction, float bounce,
         float sizeX, float sizeY, float sizeZ) {
     btCollisionShape* colShape;
     btTransform startTransform;
@@ -159,12 +160,12 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     if (sizeX == sizeY && sizeY == sizeZ) {
         cout << "dbm: shape=sphere " << endl;
         colShape = new btSphereShape(btScalar(sizeX));
-        mass = sizeX*sizeX*sizeX*6;                         /// something like that.
+        mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
     }
     else {
         cout << "dbm: shape=boxen " << endl;
         colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
-        mass = sizeX*.5 * sizeY*.5 * sizeZ*.5;
+        mass = sizeX * sizeY * sizeZ * density;
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
@@ -177,9 +178,9 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
-    body->setFriction(.825);
+    body->setFriction(friction);
     cout << "dbm: friction = " << body->getFriction() << endl;
-    body->setRestitution(0.5);
+    body->setRestitution(bounce);
     if (!dynamic) {
         /// voodoo recommendations from the bullet tutorials
         body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
