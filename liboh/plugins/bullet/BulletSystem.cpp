@@ -177,6 +177,8 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
+    body->setFriction(.825);
+    cout << "dbm: friction = " << body->getFriction() << endl;
     body->setRestitution(0.5);
     if (!dynamic) {
         /// voodoo recommendations from the bullet tutorials
