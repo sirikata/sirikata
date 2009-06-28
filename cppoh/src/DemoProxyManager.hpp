@@ -45,16 +45,17 @@ static const InitializeGlobalOptions globalst (
     new OptionValue("scenefile", "scene.txt", OptionValueType<std::string>(), "A text file with locations and filenames of all meshes in a scene.", &scenefile),
     NULL);
 
-class DemoProxyManager :public ProxyManager{
+class DemoProxyManager :public ProxyManager {
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     typedef std::map<SpaceObjectReference, ProxyObjectPtr > ObjectMap;
     ObjectMap mObjects;
 
     //noncopyable
-    DemoProxyManager(const DemoProxyManager&cpy){}
+    DemoProxyManager(const DemoProxyManager&cpy) {}
 
     ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
-                                 const Vector3f &scale=Vector3f(1,1,1), const int mode=0) {
+                                 const Vector3f &scale=Vector3f(1,1,1),
+                                 const int mode=0, const float density=0.f, const float friction=0.f, const float bounce=0.f) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
         std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
@@ -66,9 +67,9 @@ class DemoProxyManager :public ProxyManager{
         myObj->setScale(scale);
         physicalParameters pp;
         pp.mode = mode;
-        pp.density = 1.0;
-        pp.friction = 0.9;
-        pp.bounce = 0.03;
+        pp.density = density;
+        pp.friction = friction;
+        pp.bounce = bounce;
         myObj->setPhysical(pp);
         return myObj;
     }
@@ -90,16 +91,20 @@ class DemoProxyManager :public ProxyManager{
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
         int mode=0;
+        float density;
+        float friction;
+        float bounce;
 
-        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> {%d} \
-                ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z,&mode);
+        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> {%d %f %f %f} \
+               ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z,
+               &mode, &density, &friction, &bounce);
         if (mode) std::cout << "dbm mode: " << mode << std::endl;
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;
         while (true) {
             char str[1024];
-			str[0]='\0';
+            str[0]='\0';
             fgets(str, 1024, fp);
             std::string append(str);
             if (append.length() == 0) {
@@ -154,7 +159,7 @@ class DemoProxyManager :public ProxyManager{
             lightInfo.mWhichFields = LightInfo::ALL;
             addLightObject(lightInfo, location);
         } else {
-            addMeshObject(Transfer::URI(filename), location, scale, mode);
+            addMeshObject(Transfer::URI(filename), location, scale, mode, density, friction, bounce);
         }
     }
 
@@ -177,7 +182,7 @@ class DemoProxyManager :public ProxyManager{
 
 public:
     DemoProxyManager()
-      : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+            : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
     }
 
     virtual void createObject(const ProxyObjectPtr &newObj) {
@@ -198,8 +203,8 @@ public:
         notify(&ProxyCreationListener::createProxy,mCamera);
         mCamera->attach("",0,0);
         mCamera->resetPositionVelocity(Time::now(),
-                             Location(Vector3d(0,0,50.), Quaternion::identity(),
-                                      Vector3f::nil(), Vector3f::nil(), 0.));
+                                       Location(Vector3d(0,0,50.), Quaternion::identity(),
+                                                Vector3f::nil(), Vector3f::nil(), 0.));
 
         if (loadSceneFile(scenefile->as<std::string>())) {
             return; // success!
@@ -212,26 +217,26 @@ public:
         li.setLightSpecularColor(Color(0,0,0));
         li.setLightShadowColor(Color(0,0,0));
         li.setLightPower(0.5);
-		li.setLightRange(1000);
-		li.setLightFalloff(0.1,0,0);
+        li.setLightRange(1000);
+        li.setLightFalloff(0.1,0,0);
         addLightObject(li, Location(Vector3d(0,1000.,0), Quaternion::identity(),
-                                      Vector3f::nil(), Vector3f::nil(), 0.));
+                                    Vector3f::nil(), Vector3f::nil(), 0.));
 
         addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
-                             Location(Vector3d(0,0,0), Quaternion::identity(),
-                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+                      Location(Vector3d(0,0,0), Quaternion::identity(),
+                               Vector3f(.05,0,0), Vector3f(0,0,0),0));
         addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
-                             Location(Vector3d(5,0,0), Quaternion::identity(),
-                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+                      Location(Vector3d(5,0,0), Quaternion::identity(),
+                               Vector3f(.05,0,0), Vector3f(0,0,0),0));
         addMeshObject(Transfer::URI("meru://cplatz@/arcade.mesh"),
-                             Location(Vector3d(0,5,0), Quaternion::identity(),
-                                      Vector3f(.05,0,0), Vector3f(0,0,0),0));
+                      Location(Vector3d(0,5,0), Quaternion::identity(),
+                               Vector3f(.05,0,0), Vector3f(0,0,0),0));
     }
     void destroy() {
         mCamera->destroy();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
         for (ObjectMap::const_iterator iter = mObjects.begin();
-             iter != mObjects.end(); ++iter) {
+                iter != mObjects.end(); ++iter) {
             (*iter).second->destroy();
             notify(&ProxyCreationListener::destroyProxy,(*iter).second);
         }
@@ -240,11 +245,13 @@ public:
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const {
         if (id == mCamera->getObjectReference()) {
             return mCamera;
-        } else {
+        }
+        else {
             ObjectMap::const_iterator iter = mObjects.find(id);
             if (iter == mObjects.end()) {
                 return ProxyObjectPtr();
-            } else {
+            }
+            else {
                 return (*iter).second;
             }
         }
