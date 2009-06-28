@@ -75,7 +75,7 @@ class bulletObj : public MeshListener {
     bool isPhysical;            /// anything that bullet sees is physical
     bool isDynamic;             /// but only some are dynamic (kinematic in bullet parlance)
     BulletSystem* system;
-    void setPhysical (const int mode);
+    void setPhysical (const int &mode);
 public:
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;

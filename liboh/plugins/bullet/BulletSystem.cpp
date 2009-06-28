@@ -87,7 +87,14 @@ void bulletObj::meshChanged (const URI &newMesh) {
 void bulletObj::setScale (const Vector3f &newScale) {
 }
 
-void bulletObj::setPhysical (const int mode) {
+struct physicalParameters {
+    int mode;
+    float density;
+    float friction;
+    float bounce;
+};
+
+void bulletObj::setPhysical (const int &mode) {
     cout << "dbm: setPhysical: " << mode << " static=" << (int)Static << " dynamic=" << (int)Dynamic << endl;
     switch (mode) {
     case Disabled:
