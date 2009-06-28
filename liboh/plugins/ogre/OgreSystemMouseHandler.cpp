@@ -550,6 +550,7 @@ private:
     }
 
     EventResponse import(EventPtr ev) {
+		std::cout << "input path name for import: " << std::endl;
 		std::string filename;
 		// a bit of a cludge right now, type name into console.
         fflush(stdin);
@@ -573,6 +574,63 @@ private:
 		files.push_back(filename);
 		mParent->mInputManager->filesDropped(files);
 		return EventResponse::cancel();
+	}
+
+    EventResponse saveScene(EventPtr ev) {
+		std::cout << "saving new scene as scene_new.txt: " << std::endl;
+		FILE *output = fopen("scene_new.txt", "wt");
+		if (!output) {
+			perror("Failed to open scene_new.txt: ");
+			return EventResponse::cancel();
+		}
+		OgreSystem::SceneEntitiesMap::const_iterator iter;
+		for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
+			dumpObject(output, iter->second);
+		}
+		fclose(output);
+		return EventResponse::cancel();
+	}
+
+	void dumpObject(FILE* fp, Entity* e) {
+		Task::AbsTime now = Task::AbsTime::now();
+		ProxyPositionObject *pp = e->getProxyPtr().get();
+		Location loc = pp->globalLocation(now);
+		ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
+		ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
+		ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+		if (camera || mesh || light) {
+			fprintf(fp,"(%f %f %f) [%f %f %f %f] ",
+				loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
+		}
+		if (light) {
+			const char *typestr = "directional";
+			const LightInfo &linfo = light->getLastLightInfo();
+			if (linfo.mType == LightInfo::POINT) {
+				typestr = "point";
+			}
+			if (linfo.mType == LightInfo::SPOTLIGHT) {
+				typestr = "spotlight";
+			}
+			float32 ambientPower, shadowPower;
+            LightEntity * test=NULL;
+			ambientPower = test->LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor);
+			shadowPower = test->LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor);
+
+			fprintf(fp, "<1 1 1> %s [%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>\n", typestr,linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,(int)linfo.mCastsShadow,0.0,1.0,0.0);
+		} else if (mesh) {
+			URI uri = mesh->getMesh();
+			std::string uristr = uri.toString();
+			if (uri.proto().empty()) {
+				uristr = "NULL";
+			}
+			const physicalParameters &phys = mesh->getPhysical();
+			fprintf(fp, "<%f %f %f> {%d %f %f %f} %s\n",mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, (int)phys.mode, phys.density, phys.friction, phys.bounce, uristr.c_str());
+		} else if (camera) {
+			fprintf(fp, "<1 1 1> CAMERA\n");
+		} else {
+			fprintf(fp, "<1 1 1> NULL\n");
+		}
+		//std::cout << "test output: " <<  << std::endl;
 	}
 
 
@@ -669,6 +727,7 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_LEFT,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDLK_RIGHT,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::import, 'o', false, InputDevice::MOD_CTRL);
+                registerButtonListener(ev->mDevice, &MouseHandler::saveScene, 's', false, InputDevice::MOD_CTRL);
 
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'q');
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, 'w');

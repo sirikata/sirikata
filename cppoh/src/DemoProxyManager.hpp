@@ -100,7 +100,6 @@ class DemoProxyManager :public ProxyManager {
         fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> {%d %f %f %f} \
                ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z,
                &mode, &density, &friction, &bounce);
-        if (mode) std::cout << "dbm mode: " << mode << std::endl;
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;

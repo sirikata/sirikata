@@ -75,14 +75,11 @@ void PluginManager::load(const String& filename) {
     Plugin* plugin = new Plugin(filename);
 
     if (!plugin->load()) {
-        std::cout << "dbm: plugin->load FAIL!" << std::endl;
         delete plugin;
         return;
     }
-    std::cout << "dbm: plugin->load SUCCESS!" << std::endl;
 
     plugin->initialize();
-    std::cout << "dbm: initialize done" << std::endl;
 
     PluginInfo* pi = new PluginInfo();
     pi->plugin = plugin;
@@ -90,7 +87,6 @@ void PluginManager::load(const String& filename) {
     pi->name = plugin->name();
 
     mPlugins.push_back(pi);
-    std::cout << "dbm: leaving ::load" << std::endl;
 }
 
 void PluginManager::gc() {

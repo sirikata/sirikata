@@ -52,24 +52,14 @@ Plugin::~Plugin() {
 }
 
 bool Plugin::load() {
-    std::cout << "dbm: Plugin::load" << std::endl;
-    if (!mDL.load()) {
-        std::cout << "dbm: Plugin::load FAIL" << std::endl;
+    if (!mDL.load())
         return false;
-    }
-    std::cout << "dbm: Plugin::load SUCCESS" << std::endl;
 
     mInit = (InitFunc)mDL.symbol("init");
     mDestroy = (DestroyFunc)mDL.symbol("destroy");
     mName = (NameFunc)mDL.symbol("name");
     mRefCount = (RefCountFunc)mDL.symbol("refcount");
-///    std::cout << std::hex << (unsigned long)mName << std::endl;
-    std::cout << "dbm: Plugin::load RETURN: " 
-            << std::hex << (unsigned long)mInit <<"|" 
-            << std::hex << (unsigned long)mDestroy <<"|"
-            << std::hex << (unsigned long)mName <<"|"
-            << std::hex << (unsigned long)mRefCount 
-            << std::endl;
+
     return (mInit != NULL && mDestroy != NULL && mName != NULL && mRefCount != NULL);
 }
 
@@ -83,9 +73,7 @@ bool Plugin::unload() {
 
 void Plugin::initialize() {
     assert(mInit);
-    std::cout << "dbm: Plugin::initialize about to call mInit" << std::endl;
     mInit();
-    std::cout << "dbm: Plugin::initialize done" << std::endl;
     mInitialized++;
 }
 
