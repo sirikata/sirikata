@@ -87,6 +87,14 @@ void bulletObj::meshChanged (const URI &newMesh) {
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
+    /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
+    /// also, this only work on boxen
+    cout << "dbm: setScale " << newScale << endl;
+    if (isPhysical) {
+        btCollisionShape* colShape = new btBoxShape(btVector3(newScale.x*.5, newScale.y*.5, newScale.z*.5));
+        bulletBodyPtr->setCollisionShape(colShape);
+        bulletBodyPtr->activate(true);
+    }
 }
 
 void bulletObj::setPhysical (const physicalParameters &pp) {

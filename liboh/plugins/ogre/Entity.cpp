@@ -140,7 +140,7 @@ void Entity::setOgreOrientation(const Quaternion &orient) {
 
 
 void Entity::updateLocation(Time ti, const Location &newLocation) {
-    SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.getPosition()<<"; "<<newLocation.getOrientation());
+    //SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.getPosition()<<"; "<<newLocation.getOrientation());
     if (!getProxy().isStatic(ti)) {
         setStatic(false);
     } else {
