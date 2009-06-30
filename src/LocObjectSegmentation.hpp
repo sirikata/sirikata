@@ -7,28 +7,48 @@
 
 
 #include "ObjectSegmentation.hpp"
+#include "Message.hpp"
+#include "Time.hpp"
+#include "Network.hpp"
+#include "LocationService.hpp"
+#include "CoordinateSegmentation.hpp"
+#include "Statistics.hpp"
+#include "Utility.hpp"
+#include "Forwarder.hpp"
+#include <map>
+#include <vector>
 
 
 namespace CBR
 {
 
-  class LocObjectSegmentation : ObjectSegmentation
+  class LocObjectSegmentation : public ObjectSegmentation
   {
   private:
     CoordinateSegmentation* mCSeg; //will be used in lookup call
     LocationService* mLocationService; //will be used in lookup call
-    std::vector<ServID> mServerList;   //initialized with this
-    std::map<UUID,ServID> mObjectToServerMap;  //initialized with this
-
+    std::vector<ServerID> mServerList;   //initialized with this
+    std::map<UUID,ServerID> mObjectToServerMap;  //initialized with this
+    
     
   public:
-    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServID> serverList,std::map<UUID,ServID> objectToServerMap);
-    ~LocObjectSegmentation();
+    //    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
+    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
+    virtual ~LocObjectSegmentation();
 
-    virtual ServerID lookup(const UUID& obj_id);
+    virtual ServerID lookup(const UUID& obj_id) const;
     virtual void osegChangeMessage(OSegChangeMessage*);
-    virtual void tick(const Time& t);
+    virtual void tick(const Time& t, std::map<UUID,ServerID> updated);
+    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
 
+
+
+    virtual ServerID getHostServerID();
+    //    virtual void migrateMessage(MigrateMessage*);
+    virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
+    virtual void addObject(const UUID& obj_id, const ServerID ourID);
+
+    
   };
 }
 #endif
