@@ -39,20 +39,26 @@ class RoutableMessageHeader {
     ObjectReference mSourceObject;
     SpaceID mDestinationSpace;
     SpaceID mSourceSpace;
+    uint32 mDestinationPort;
+    uint32 mSourcePort;
     bool mHasDestinationObject;
     bool mHasSourceObject;
     bool mHasDestinationSpace;
     bool mHasSourceSpace;
     std::string mData;
-    static unsigned char translateKey(int key) {
-        return key*8+2;//(2=length delimited)
+    static unsigned char translateKey(int key, int message_type) {
+        return key*8+message_type;//(2=length delimited)
     }
 public:
     RoutableMessageHeader() {
+        mDestinationPort=0;
+        mSourcePort=0;
         mHasDestinationObject=mHasSourceObject=mHasDestinationSpace=mHasSourceSpace=false;
     }
     RoutableMessageHeader(const ObjectReference &destinationObject,
                           const ObjectReference &sourceObject):mDestinationObject(destinationObject),mSourceObject(sourceObject) {
+        mDestinationPort=0;
+        mSourcePort=0;
         mHasDestinationObject=mHasSourceObject=true;
         mHasDestinationSpace=mHasSourceSpace=false;
     }
@@ -104,7 +110,15 @@ public:
             unsigned int type=keyType%8;
             switch(type) {
               case 0:
-                parseLength(curInput,size);
+                  {
+                      uint64 len=parseLength(curInput,size);
+                      if (key==Sirikata::Protocol::MessageHeader::destination_port_field_tag) {
+                          mDestinationPort=key;
+                      }
+                      if (key==Sirikata::Protocol::MessageHeader::source_port_field_tag) {
+                          mSourcePort=key;
+                      }
+                  }
                 break;
               case 1:
                 if (size>=8) {
@@ -162,7 +176,21 @@ public:
         return ParseFromArray(size.data(),size.size());
     }
 private:
-    static unsigned int getSize(const UUID&uuid) {
+    static unsigned int getSize(uint64 uuid, uint32 field_tag) {
+        unsigned int retval=2;
+        field_tag/=16;
+        uuid/=128;
+        while(field_tag) {
+            retval++;
+            field_tag/=128;
+        }
+        while(uuid) {
+            retval++;
+            uuid/=128;
+        }
+        return retval;
+    }
+    static unsigned int getSize(const UUID&uuid, uint32 field_tag) {
         UUID::Data::const_iterator i,ib=uuid.getArray().begin(),ie=uuid.getArray().end();
         unsigned int retval=UUID::Data::static_size;
         for (i=ie;i!=ib;) {
@@ -172,57 +200,68 @@ private:
             else
                 --retval;
         }
-        if (retval)
-            retval+=2;//need field header if this UUID has any data
+        retval+=2;
+        field_tag/=16;
+        while(field_tag) {
+            ++retval;
+            field_tag/=128;
+        }
         return retval;
     }    
-    static unsigned int getSize(const ObjectReference&uuid) {
-        return getSize(uuid.getAsUUID());
-    }
-    static unsigned int getSize(const SpaceID&uuid) {
-        return 1+getSize(uuid.getAsUUID());
-    }
-    std::string::iterator copyItem(std::string&s,std::string::iterator output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
+    std::string::iterator copyKey(std::string&s,std::string::iterator output, unsigned int protoNum, unsigned int size, unsigned int message_type=2) const{
         if (size>=2) {
             --size;
-            *output=translateKey(protoNum);
+            *output=translateKey(protoNum%16,message_type);
+            if (protoNum/16) {
+                *output=(unsigned char)(128+(unsigned char)*output);
+                ++output;    
+                *output=(protoNum/16)%128;
+                if (protoNum/16/128) {
+                    *output=(unsigned char)(128+(unsigned char)*output);
+                    ++output;
+                    *output=(protoNum/16/128)%128;
+                    if (protoNum/16/128/128) {
+                        *output=(unsigned char)(128+(unsigned char)*output);
+                        ++output;
+                        *output=(protoNum/16/128/128)%128;
+                        if (protoNum/16/128/128/128) {
+                            *output=(unsigned char)(128+(unsigned char)*output);                            
+                            ++output;
+                            *output=(protoNum/16/128/128/128)%128;
+                        }
+                        ++output;
+                    }else {
+                        ++output;
+                    }
+                }else {
+                    ++output;
+                }
+            }else {
+                ++output;
+            }
+        }
+        return output;
+    }
+    std::string::iterator copyInt(std::string&s,std::string::iterator start_output, unsigned int protoNum, uint64 uuid, unsigned int size) const{
+        std::string::iterator output=copyKey(s,start_output,protoNum,size,0);
+        while (uuid) {
+            *output=uuid%128+(uuid/128?128:0);
+            uuid/=128;
             ++output;
-
-            --size;
+        }
+        return output;
+    }
+    std::string::iterator copyItem(std::string&s,std::string::iterator start_output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
+        std::string::iterator output=copyKey(s,start_output,protoNum,size);
+        if (output!=start_output) {
+            size-=(output-start_output);
             *output=size;
             ++output;
-
             s.replace(output,output+size,(const char*)uuid.getArray().begin(),size);
             return output+size;
         }
         output+=size;
         return output;
-    }
-    std::string::iterator copyItem(std::string&s,std::string::iterator  output, unsigned int protoNum, const ObjectReference &uuid, unsigned int size)const{
-        return copyItem(s,output,protoNum,uuid.getAsUUID(),size);
-    }
-    std::string::iterator copySpaceItem(std::string&s,std::string::iterator  output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
-        if (size>=3) {
-            --size;
-            *output=128+translateKey(protoNum);
-            ++output;
-
-            --size;
-            *output=protoNum/16;
-            ++output;
-
-            --size;
-            *output=size;
-            ++output;
-
-            s.replace(output,output+size,(const char*)uuid.getArray().begin(),size);
-            return output+size;
-        }
-        output+=size;
-        return output;
-    }
-    std::string::iterator copyItem(std::string&s,std::string::iterator  output, unsigned int protoNum, const SpaceID &uuid, unsigned int size) const{
-        return copySpaceItem(s,output,protoNum,uuid.getAsUUID(),size);
     }
     bool AppendOrSerializeToString(std::string*s,size_t slength)const {
         size_t original_size=slength;
@@ -231,22 +270,29 @@ private:
         size_t destinationSpaceSize=0;
         size_t sourceObjectSize=0;
         size_t sourceSpaceSize=0;
-        if (mHasDestinationObject)total_size+=(destinationObjectSize=getSize(mDestinationObject));
-        if (mHasSourceObject)total_size+=(sourceObjectSize=getSize(mSourceObject));
-        if (mHasDestinationSpace)total_size+=(destinationSpaceSize=getSize(mDestinationSpace));
-        if (mHasSourceSpace)total_size+=(sourceSpaceSize=getSize(mSourceSpace));
+        unsigned int sourcePortSize=0;
+        unsigned int destinationPortSize=0;
+        if (mHasDestinationObject)total_size+=(destinationObjectSize=getSize(mDestinationObject.getAsUUID(),Sirikata::Protocol::MessageHeader::source_object_field_tag));
+        if (mHasSourceObject)total_size+=(sourceObjectSize=getSize(mSourceObject.getAsUUID(),Sirikata::Protocol::MessageHeader::destination_object_field_tag));
+        if (mDestinationPort)total_size+=(destinationPortSize=getSize(mDestinationPort,Sirikata::Protocol::MessageHeader::destination_port_field_tag));
+        if (mSourcePort)total_size+=(sourcePortSize=getSize(mSourcePort,Sirikata::Protocol::MessageHeader::source_port_field_tag));
+        if (mHasDestinationSpace)total_size+=(destinationSpaceSize=getSize(mDestinationSpace.getAsUUID(),Sirikata::Protocol::MessageHeader::source_space_field_tag));
+        if (mHasSourceSpace)total_size+=(sourceSpaceSize=getSize(mSourceSpace.getAsUUID(),Sirikata::Protocol::MessageHeader::destination_space_field_tag));
         s->resize(total_size);
         std::string::iterator output=s->begin();
         output+=original_size;
-        int source_object_field_tag_must_be_one_byte[32-1-2*Sirikata::Protocol::MessageHeader::source_object_field_tag];
-        int destination_object_field_tag_must_be_one_byte[32-1-2*Sirikata::Protocol::MessageHeader::destination_object_field_tag];
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_object_field_tag,mSourceObject,sourceObjectSize);
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_object_field_tag,mDestinationObject,destinationObjectSize);
-        int source_object_field_tag_must_be_two_bytes[128*32-1-2*Sirikata::Protocol::MessageHeader::source_space_field_tag];
-        int destination_object_field_tag_must_be_two_bytes[128*32-1-2*Sirikata::Protocol::MessageHeader::destination_space_field_tag];
+        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_object_field_tag,mSourceObject.getAsUUID(),sourceObjectSize);
+        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_object_field_tag,mDestinationObject.getAsUUID(),destinationObjectSize);
 
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace,sourceSpaceSize);
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace,destinationSpaceSize);
+
+        if (mSourcePort) {
+            output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::source_port_field_tag,mSourcePort,sourcePortSize);
+        }
+        if (mDestinationPort) {
+            output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::destination_port_field_tag,mDestinationPort,destinationPortSize);
+        }
+        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace.getAsUUID(),sourceSpaceSize);
+        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace.getAsUUID(),destinationSpaceSize);
         s->replace(output,s->end(),mData);
         return true;
     }
@@ -287,7 +333,18 @@ public:
         mSourceSpace=value;
         mHasSourceSpace=true;
     }
-
+    inline uint32 source_port() const{
+        return mSourcePort;
+    }
+    inline void set_source_port(uint32 port) {
+        mSourcePort=port;
+    }
+    inline uint32 destination_port() const{
+        return mDestinationPort;
+    }
+    inline void set_destination_port(uint32 port) {
+        mDestinationPort=port;
+    }
 };
 }
 #endif

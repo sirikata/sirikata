@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  ObjectHost.cpp
+/*  Sirikata libspace -- Registration Services
+ *  Registration.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ObjectHost.hpp>
-#include "graphics/GraphicsObject.hpp"
+#ifndef _SIRIKATA_ROUTER_HPP_
+#define _SIRIKATA_ROUTER_HPP_
+
+#include <space/Platform.hpp>
 namespace Sirikata {
-
-ObjectHost::ObjectHost() {
-}
-
-ObjectHost::~ObjectHost() {
-}
-///This method calls the other processMessage method
-void ObjectHost::processMessage(const ObjectReference*ref,MemoryReference message){
-    
-}
-///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
-void ObjectHost::processMessage(const RoutableMessageHeader&header,
-                                MemoryReference message_body) {
-
-}
+class SIRIKATA_SPACE_EXPORT Router : public MessageService {
+    std::vector<MessageService*> mServices;
+public:
+    enum {
+        PORT=4
+    };
+    Router();
+    ~Router();
+    void processMessage(const ObjectReference*ref,MemoryReference message);
+    void processMessage(const RoutableMessageHeader&header,
+                        MemoryReference message_body);
+}; // class Space
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_REGISTRATION_HPP

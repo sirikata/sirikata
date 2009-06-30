@@ -45,11 +45,12 @@ class Oseg;
 class Cseg;
 class SIRIKATA_SPACE_EXPORT Loc : public MessageService {
     std::vector<MessageService*> mServices;
-    ObjectReference mLocServiceIdentifier;
-    ObjectReference mRegistrationServiceIdentifier;
     void processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc);
 public:
-    Loc(const ObjectReference&locServiceIdentifier,const ObjectReference& registrationServiceIdentifier);
+    enum {
+        PORT=2
+    };
+    Loc();
     ~Loc();
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);

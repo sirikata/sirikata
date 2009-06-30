@@ -69,7 +69,9 @@ class ObjectReference : TotallyOrdered<ObjectReference>{
         static ObjectReference retval(UUID::null());
         return retval;
     }
-
+    static const ObjectReference &spaceServiceID() {
+        return null();
+    }
     String toString() const{
         return mID.readableHexData();
     }

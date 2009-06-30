@@ -155,6 +155,24 @@ void TCPStream::connect(const Address&addy,
                                                 mSendStatus));
     mSocket->connect(addy,3);
 }
+
+void TCPStream::prepareOutboundConnection(
+                        const SubstreamCallback &substreamCallback,
+                        const ConnectionCallback &connectionCallback,
+                        const BytesReceivedCallback&bytesReceivedCallback) {
+    mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
+    *mSendStatus=0;
+    mID=StreamID(1);
+    mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
+                                                bytesReceivedCallback,
+                                                mSendStatus));
+    mSocket->prepareConnect(3);
+}
+void TCPStream::connect(const Address&addy) {
+    assert(mSocket);
+    mSocket->connect(addy,0);
+}
+
 Stream*TCPStream::factory(){
     return new TCPStream(*mIO);
 }

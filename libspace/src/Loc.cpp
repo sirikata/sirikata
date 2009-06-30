@@ -1,8 +1,9 @@
 #include <space/Loc.hpp>
+#include <space/Registration.hpp>
 #include "Space_Sirikata.pbj.hpp"
 #include "util/RoutableMessage.hpp"
 namespace Sirikata {
-Loc::Loc(const ObjectReference&locServiceIdentifier,const ObjectReference& registrationServiceIdentifier):mLocServiceIdentifier(locServiceIdentifier),mRegistrationServiceIdentifier(registrationServiceIdentifier) {
+Loc::Loc(){
     
 }
 
@@ -40,7 +41,8 @@ void Loc::processMessage(const ObjectReference&object_reference,const Protocol::
     std::string message_body;
     body.SerializeToString(&message_body);
     RoutableMessageHeader destination_header;
-    destination_header.set_source_object(mLocServiceIdentifier);
+    destination_header.set_source_object(ObjectReference::spaceServiceID());
+    destination_header.set_source_port(PORT);
     destination_header.set_destination_object(object_reference);
     
     for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
@@ -52,7 +54,7 @@ void Loc::processMessage(const RoutableMessageHeader&header,MemoryReference mess
     RoutableMessageBody body;
     if (body.ParseFromArray(message_body.data(),message_body.size())) {
         int num_args=body.message_arguments_size();
-        if (header.source_object()==mRegistrationServiceIdentifier) {
+        if (header.has_source_object()&&header.source_object()==ObjectReference::spaceServiceID()&&header.source_port()==Registration::PORT) {
             for (int i=0;i<num_args;++i) {
                 if (body.message_names_serialized_size()==0||body.message_names(i)=="RetObj") {
                     Protocol::RetObj retObj;

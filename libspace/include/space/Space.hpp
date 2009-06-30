@@ -70,7 +70,8 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     MessageService *mRouter;
     ///Active connections to object hosts, with streams to individual objects;
     ObjectConnections* mObjectConnections;
-    std::tr1::unordered_map<ObjectReference,MessageService*,ObjectReference::Hasher> mServices;
+    ///map from message port to space service
+    std::tr1::unordered_map<unsigned int,MessageService*> mServices;
 public:
     ///Space does not forward messages outside of what it chooses by looking at the mServices and mRouter classes
     bool forwardMessagesTo(MessageService*){return false;}

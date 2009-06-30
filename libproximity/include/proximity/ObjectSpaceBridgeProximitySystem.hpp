@@ -43,7 +43,7 @@ namespace Sirikata { namespace Proximity {
 template <class ObjectPtr> 
 class ObjectSpaceBridgeProximitySystem : public ProximitySystem{
     ObjectPtr mObject;
-    ObjectReference mRegistrationObject;
+    unsigned int mRegistrationPort;
 protected:
     static const char* proxCallbackName() {
         return "ProxCall";
@@ -122,7 +122,8 @@ protected:
                                                const ObjectReference*object,
                                                const RoutableMessageHeader& hdr,
                                                const void *serializedMessageBody,
-                                               size_t serializedMessageBodySize) {
+                                               size_t serializedMessageBodySize,
+                                               bool trusted) {
         try {
             RoutableMessage msg(hdr,serializedMessageBody,serializedMessageBodySize);
             MessageBundle sendState=DELIVER_TO_UNKNOWN;
@@ -131,23 +132,22 @@ protected:
             OpaqueMessageReturnValue obj_is_deleted=OBJECT_NOT_DESTROYED;
             bool disconnection=false;
             bool registration=false;
-            bool customize_message=false;
             for (int i=0;i<len;++i) {
-                if(msg.body().message_names(i)=="DelObj") {
-                    disconnection=true;
-                    obj_is_deleted=OBJECT_DELETED;
-                }
-                if((hdr.source_object()==mRegistrationObject&&msg.body().message_names_serialized_size()==0)||msg.body().message_names(i)=="RetObj") {
-                    if (msg.body().message_names_serialized_size()==0)
-                        customize_message=true;
-                    registration=true;
-                    int maxnum=i+1;
-                    if (maxnum==len)
-                        maxnum=msg.body().message_arguments_size();
-                    for (int j=i;j<maxnum;++j){
-                        Sirikata::Protocol::RetObj ro;
-                        ro.ParseFromString(msg.body().message_arguments(j));
-                        newObj(ro,msg.body().message_arguments(j).data(),msg.body().message_arguments(j).size());
+                if (trusted||(hdr.has_source_object()&&hdr.source_object()==ObjectReference::spaceServiceID()&&hdr.source_port()==mRegistrationPort)) {
+                    if(msg.body().message_names(i)=="DelObj") {
+                        disconnection=true;
+                        obj_is_deleted=OBJECT_DELETED;
+                    }
+                    if(msg.body().message_names(i)=="RetObj") {
+                        registration=true;
+                        int maxnum=i+1;
+                        if (maxnum==len)
+                            maxnum=msg.body().message_arguments_size();
+                        for (int j=i;j<maxnum;++j){
+                            Sirikata::Protocol::RetObj ro;
+                            ro.ParseFromString(msg.body().message_arguments(j));
+                            newObj(ro,msg.body().message_arguments(j).data(),msg.body().message_arguments(j).size());
+                        }
                     }
                 }
                 if (!forwardThisName(registration||disconnection,msg.body().message_names(i))) {
@@ -179,9 +179,9 @@ protected:
                 alteration=addressMessage(msg,object,NULL);
             else
                 alteration=addressMessage(msg,NULL,object);
-            if (deliverAllMessages&&sendState==DELIVER_TO_PROX&&!customize_message) {
+            if (deliverAllMessages&&sendState==DELIVER_TO_PROX) {
                 sendMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
-            } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT&&!customize_message) {
+            } else if (deliverAllMessages&&sendState==DELIVER_TO_OBJECT) {
                 deliverMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
             }else {
                 //some messages are not considered worth forwarding to the proximity system or there's a mishmash of destinations
@@ -195,7 +195,7 @@ protected:
                 for (int i=0;i<len;++i) {
                     if (forwardThisName(registration||disconnection,msg.body().message_names(i))) {
                         forwardLastMessageType=true;
-                        newMsg.body().add_message_names((customize_message&&registration)?std::string("RetObj"):newMsg.body().message_names(i));
+                        newMsg.body().add_message_names(newMsg.body().message_names(i));
                         newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
                     }else {
                         forwardLastMessageType=false;
@@ -222,8 +222,9 @@ protected:
     }
 
 public:
-    ObjectSpaceBridgeProximitySystem (ObjectPtr obj,const ObjectReference&registrationObject):mRegistrationObject(registrationObject) {
+    ObjectSpaceBridgeProximitySystem (ObjectPtr obj,unsigned int registrationMessagePort) {
         mObject=obj;
+        mRegistrationPort=registrationMessagePort;
     }
     enum MessageBundle{
         DELIVER_TO_UNKNOWN,
@@ -248,7 +249,7 @@ public:
                                              object,
                                              mesg,
                                              remainder.data(),
-                                             remainder.size());
+                                             remainder.size(),true);
     }
     /**
      * Process a message that may be meant for the proximity system
@@ -259,7 +260,7 @@ public:
         internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                               mesg,
                                               message_body.data(),
-                                              message_body.size());
+                                              message_body.size(),true);
     }
 
     /**

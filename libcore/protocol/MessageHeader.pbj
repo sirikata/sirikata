@@ -34,18 +34,24 @@ package Sirikata.Protocol;
 
 //This is the standard message container. All items sent over the wire should be preceeded type MessageHeader. Reserved areas may be used in future headers
 message MessageHeader {
-    reserve 1 to 5;
+    reserve 1 to 6;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 
     //the source ObjectReference (space is implicit)
     optional uuid source_object = 1;
 
+    //the source port from which the message originated
+    optional uuid source_port = 3;
+
     //the spaceID origin message (in case we have a space routing messages)
     optional uuid source_space = 1536;
 
     //the destination ObjectReference (space is implicit) if omitted, space is destination
     optional uuid destination_object = 2;
+
+    //the destination port that should process the message
+    optional uuid destination_port = 4;
 
     //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
 

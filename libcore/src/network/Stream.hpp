@@ -170,6 +170,24 @@ public:
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
         const BytesReceivedCallback&chunkReceivedCallback)=0;
+
+    /**
+     * Will specify all callbacks for the first successful stream and allow this stream to be cloned
+     * The stream is immediately active and may have bytes sent on it immediately. 
+     * A connectionCallback will be called as soon as connection has succeeded or failed
+     */
+    virtual void prepareOutboundConnection(
+        const SubstreamCallback &substreamCallback,
+        const ConnectionCallback &connectionCallback,
+        const BytesReceivedCallback&chunkReceivedCallback)=0;
+    /**
+     * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
+     * A connectionCallback specified in prepareConnection will be called as soon as connection has succeeded or failed
+     * must call prepareConnection prior to connect()
+     */
+    virtual void connect(
+        const Address& addy)=0;
+
     ///Creates a stream of the same type as this stream
     virtual Stream*factory()=0;
     ///Makes this stream a clone of stream "s" if they are of the same type and immediately calls the callback 

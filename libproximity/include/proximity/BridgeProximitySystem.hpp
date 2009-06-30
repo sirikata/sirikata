@@ -118,8 +118,12 @@ protected:
         }
     }
 public:
+    enum {
+        PORT=3
+    };
+
     ProximityConnection *mProximityConnection;
-    BridgeProximitySystem(ProximityConnection*connection,const ObjectReference&registrationObject) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationObject),mProximityConnection(connection) {
+    BridgeProximitySystem(ProximityConnection*connection,const unsigned int registrationPort) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationPort),mProximityConnection(connection) {
         bool retval=mProximityConnection->forwardMessagesTo(this);
         assert(retval);
     }
@@ -175,7 +179,7 @@ public:
         if (this->internalProcessOpaqueProximityMessage(object,
                                                         mesg,
                                                         remainder.data(),
-                                                        remainder.size())==ProximitySystem::OBJECT_DELETED) {
+                                                        remainder.size(),false)==ProximitySystem::OBJECT_DELETED) {
             if (object)
                 this->mProximityConnection->deleteObjectStream(*object);
         }
@@ -189,7 +193,7 @@ public:
         if (this->internalProcessOpaqueProximityMessage(mesg.has_source_object()?&mesg.source_object():NULL,
                                                         mesg,
                                                         message_body.data(),
-                                                        message_body.size())==ProximitySystem::OBJECT_DELETED) {
+                                                        message_body.size(),false)==ProximitySystem::OBJECT_DELETED) {
             if (mesg.has_source_object())
                 this->mProximityConnection->deleteObjectStream(mesg.source_object());
         }

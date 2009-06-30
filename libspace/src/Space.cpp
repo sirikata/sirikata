@@ -47,32 +47,31 @@
 
 #include <space/Loc.hpp>
 #include <space/Registration.hpp>
+#include <space/Router.hpp>
 namespace Sirikata {
 
 Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOService()) {
-    unsigned char rsi[UUID::static_size]={1,0};
-    unsigned char lsi[UUID::static_size]={2,0};
-    unsigned char gsi[UUID::static_size]={3,0};
-    unsigned char osi[UUID::static_size]={3,0};
-    unsigned char csi[UUID::static_size]={3,0};
-    unsigned char fsi[UUID::static_size]={3,0};
+    unsigned int rsi=Registration::PORT;
+    unsigned int lsi=Loc::PORT;
+    unsigned int gsi=Proximity::BridgeProximitySystem::PORT;
+    unsigned int osi;
+    unsigned int csi;
+    unsigned int fsi=Router::PORT;
     unsigned char randomKey[SHA256::static_size]={3,2,1,4,5,6,3,8,235,124,24,15,26,165,123,95,
                                                   53,2,111,114,125,166,123,158,232,144,4,152,221,161,122,96};
     
     Protocol::SpaceServices spaceServices;
-    spaceServices.set_registration(UUID(rsi,sizeof(rsi)));
-    spaceServices.set_loc(UUID(lsi,sizeof(lsi)));
-    spaceServices.set_geom(UUID(gsi,sizeof(gsi)));
-    spaceServices.set_oseg(UUID(osi,sizeof(osi)));
-    spaceServices.set_cseg(UUID(csi,sizeof(csi)));
-    spaceServices.set_router(UUID(fsi,sizeof(fsi)));
+    spaceServices.set_registration_port(rsi);
+    spaceServices.set_loc_port(lsi);//UUID(lsi,sizeof(lsi)));
+    spaceServices.set_geom_port(gsi);//UUID(gsi,sizeof(gsi)));
+    //spaceServices.set_oseg(osi);//UUID(osi,sizeof(osi)));
+    //spaceServices.set_cseg(csi);//UUID(csi,sizeof(csi)));
+    spaceServices.set_router_port(fsi);//UUID(fsi,sizeof(fsi)));
     
-    mRegistration = new Registration(ObjectReference(spaceServices.registration()),
-                                     SHA256::convertFromBinary(randomKey));
-    mLoc=new Loc(ObjectReference(spaceServices.loc()),
-                 ObjectReference(spaceServices.registration()));
+    mRegistration = new Registration(SHA256::convertFromBinary(randomKey));
+    mLoc=new Loc;
     Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
-    mGeom=new Proximity::BridgeProximitySystem(proxCon,ObjectReference(spaceServices.registration()));
+    mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
     mGeom->forwardMessagesTo(this);
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
@@ -81,15 +80,15 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     String spaceServicesString;
     spaceServices.SerializeToString(&spaceServicesString);
     mObjectConnections=new ObjectConnections(new Network::TCPStreamListener(*mIO),
-                                            Network::Address("localhost",port),
-                                            ObjectReference(spaceServices.registration()),       
-                                            spaceServicesString);
-    mServices[ObjectReference(spaceServices.registration())]=mRegistration;
-    mServices[ObjectReference(spaceServices.loc())]=mLoc;
-    mServices[ObjectReference(spaceServices.geom())]=mGeom;
-    //mServices[ObjectReference(spaceServices.oseg())]=mObjectSegmentation;
-    //mServices[ObjectReference(spaceServices.cseg())]=mCoordinateSegmentation;
-    mServices[ObjectReference(spaceServices.router())]=mRouter;
+                                             Network::Address("localhost",port)
+                                             //spaceServicesString
+                                             );
+    mServices[spaceServices.registration_port()]=mRegistration;
+    mServices[spaceServices.loc_port()]=mLoc;
+    mServices[spaceServices.geom_port()]=mGeom;
+    //mServices[ObjectReference(spaceServices.oseg_port())]=mObjectSegmentation;
+    //mServices[ObjectReference(spaceServices.cseg_port())]=mCoordinateSegmentation;
+    //mServices[ObjectReference(spaceServices.router_port())]=mRouter;
     mRegistration->forwardMessagesTo(mLoc);
     mRegistration->forwardMessagesTo(mGeom);
     mRegistration->forwardMessagesTo(mObjectConnections);
@@ -111,9 +110,13 @@ void Space::processMessage(const ObjectReference*ref,MemoryReference message){
 }
 
 void Space::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
-    std::tr1::unordered_map<ObjectReference,MessageService*,ObjectReference::Hasher>::iterator where=mServices.find(header.destination_object());
-    if (where!=mServices.end()) {
-        where->second->processMessage(header,message_body);
+    if (header.destination_object()==ObjectReference::spaceServiceID()) {
+        std::tr1::unordered_map<unsigned int,MessageService*>::iterator where=mServices.find(header.destination_port());
+        if (where!=mServices.end()) {
+            where->second->processMessage(header,message_body);
+        }else {
+            SILOG(space,warning,"Do not know where to forward space-destined message to "<<header.destination_port());
+        }
     }else if (mRouter) {
         mRouter->processMessage(header,message_body);
     }else {

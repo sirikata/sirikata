@@ -363,20 +363,22 @@ void MultiplexedSocket::hostDisconnectedCallback(unsigned int whichSocket, const
 }
 
 
-void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) {
+void MultiplexedSocket::prepareConnect(unsigned int numSockets) {
     mSocketConnectionPhase=PRECONNECTION;
-    mSockets.resize(numSockets);
-    for (unsigned int i=0;i<numSockets;++i) {
-        mSockets[i].createSocket(getASIOService());
+    unsigned int oldSize=(unsigned int)mSockets.size();
+    if (numSockets>mSockets.size()) {
+        mSockets.resize(numSockets);
+        for (unsigned int i=oldSize;i<numSockets;++i) {
+            mSockets[i].createSocket(getASIOService());
+        }
     }
+}
+void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) {
+    prepareConnect(numSockets);
     std::tr1::shared_ptr<ASIOConnectAndHandshake> 
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));
     //will notify connectionFailureOrSuccessCallback when resolved
     ASIOConnectAndHandshake::connect(headerCheck,address);
-    
 }
-
-
-
 } }

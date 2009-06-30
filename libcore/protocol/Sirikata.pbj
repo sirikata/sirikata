@@ -36,18 +36,18 @@ package Sirikata.Protocol;
 
 //This MessageBody is the standard mechanism to transport messages over the net
 message MessageBody {
-    reserve 1 to 5;
+    reserve 1 to 6;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 
     //the name of the function(s) to call
-    repeated string message_names=6;
+    repeated string message_names=7;
 
     //message to be decoded by the function(s). Length must match the number of strings unless return_status set and function's length is 0
-    repeated bytes message_arguments=7;
+    repeated bytes message_arguments=8;
 
     //the message id for the function call request, so out of order messages may be detected and return values may be paired.  
-    optional int64 id = 8;
+    optional int64 id = 9;
 
     //the message is a response to a previous message.
     enum ReturnStatus {
@@ -60,12 +60,15 @@ message MessageBody {
 
 //This is the standard message container. All items sent over the wire may be read with the following message format. It should not be used to encode message since header fields may not end up before other fields
 message ReadOnlyMessage {
-    reserve 1 to 5;
+    reserve 1 to 6;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 
     //the source ObjectReference (space is implicit)
     optional uuid source_object = 1;
+
+    //the source port from which the message originated
+    optional uuid source_port = 3;
 
     //the spaceID origin message (in case we have a space routing messages)
     optional uuid source_space = 1536;
@@ -73,18 +76,21 @@ message ReadOnlyMessage {
     //the destination ObjectReference (space is implicit) if omitted, space is destination
     optional uuid destination_object = 2;
 
+    //the destination port that should process the message
+    optional uuid destination_port = 4;
+
     //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
 
     optional uuid destination_space = 1537;
 
     //the name of the function(s) to call
-    repeated string message_names=6;
+    repeated string message_names=7;
 
     //message to be decoded by the function(s). Length must match the number of strings unless return_status set and function's length is 0
-    repeated bytes message_arguments=7;
+    repeated bytes message_arguments=8;
 
     //the message id for the function call request, so out of order messages may be detected and return values may be paired.  
-    optional int64 id = 8;
+    optional int64 id = 9;
 
     //the message is a response to a previous message.
     enum ReturnStatus {
@@ -98,12 +104,12 @@ message ReadOnlyMessage {
 /////////////Built-in messages///////////////
 
 message SpaceServices {   
-   optional uuid registration=33;
-   optional uuid loc=34;
-   optional uuid geom=35;
-   optional uuid oseg=36;
-   optional uuid cseg=37;
-   optional uuid router=38;
+   optional uint32 registration_port=33;
+   optional uint32 loc_port=34;
+   optional uint32 geom_port=35;
+   optional uint32 oseg_port=36;
+   optional uint32 cseg_port=37;
+   optional uint32 router_port=38;
    optional uint64 pre_connection_buffer=64;
    optional uint64 max_pre_connection_messages=65;
 }

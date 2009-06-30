@@ -35,7 +35,9 @@
 namespace Sirikata {
 
 /** An interface for a class that keeps track of proxy object references. */
-class SIRIKATA_OH_EXPORT ProxyManager : public Provider<ProxyCreationListener*> {
+class SIRIKATA_OH_EXPORT ProxyManager : 
+//        public MessageService,
+        public Provider<ProxyCreationListener*> {
 public:
     ProxyManager();
     virtual ~ProxyManager();
@@ -52,6 +54,7 @@ public:
 
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
+
 
 };
 }

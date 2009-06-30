@@ -235,6 +235,13 @@ public:
  */
     void connect(const Address&address, unsigned int numSockets);
 
+/**
+ *  Prepare a socket for an outbound connection. 
+ *  After this call messages may be queued and number of redundant connections set
+ *  Additionally this socket may now be cloned
+ */
+    void prepareConnect(unsigned int numSockets);
+
     unsigned int numSockets() const {
         return mSockets.size();
     }

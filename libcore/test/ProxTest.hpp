@@ -109,7 +109,7 @@ public:
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}
         Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
-        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,ObjectReference::null()); 
+        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,1); 
         mLocalProxSystem->forwardMessagesTo(this);
         mThread=new boost::thread(std::tr1::bind(&ProxTest::pcThread,this));
 
