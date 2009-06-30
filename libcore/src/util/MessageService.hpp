@@ -51,13 +51,6 @@ public:
     virtual void processMessage(const RoutableMessageHeader&,
                                 MemoryReference message_body)=0;
     
-    /**
-     * Process a message that may be meant for this system
-     * Default implementation utilizes other processMessage overload unless an optimized implementation may be found
-     */
-    virtual void processMessage(const ObjectReference*object,
-                                MemoryReference message)=0;
-
 };
 
 }

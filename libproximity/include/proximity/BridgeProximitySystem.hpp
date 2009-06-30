@@ -59,15 +59,6 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
             }
         }
         
-        /**
-         * Process a message that may be meant for the space system
-         */
-        virtual void processMessage(const ObjectReference*object,
-                                    MemoryReference message){
-            for (std::vector<MessageService*>::iterator i=mMessageServices.begin(),ie=mMessageServices.end();i!=ie;++i) {
-                (*i)->processMessage(object,message);
-            }
-        }        
     }mMulticast;
 protected:
     virtual bool forwardThisName(bool registration_or_disconnection, const std::string&name) {
@@ -167,22 +158,6 @@ public:
         this->constructMessage(toSend,&source,NULL,"DelObj",delObjMsg,optionalSerializedDelObj,optionalSerializedDelObjSize);
         this->sendMessage(source,toSend,NULL,0);
         this->mProximityConnection->deleteObjectStream(source);
-    }
-    /**
-     * Process a message that may be meant for the proximity system
-     * \returns true if object was deleted
-     */
-    virtual void processMessage(const ObjectReference*object,
-                                MemoryReference message) {
-        RoutableMessageHeader mesg;
-        MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
-        if (this->internalProcessOpaqueProximityMessage(object,
-                                                        mesg,
-                                                        remainder.data(),
-                                                        remainder.size(),false)==ProximitySystem::OBJECT_DELETED) {
-            if (object)
-                this->mProximityConnection->deleteObjectStream(*object);
-        }
     }
     /**
      * Process a message that may be meant for the proximity system

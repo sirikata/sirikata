@@ -40,10 +40,6 @@ ObjectHost::ObjectHost() {
 
 ObjectHost::~ObjectHost() {
 }
-///This method calls the other processMessage method
-void ObjectHost::processMessage(const ObjectReference*ref,MemoryReference message){
-    
-}
 ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
 void ObjectHost::processMessage(const RoutableMessageHeader&header,
                                 MemoryReference message_body) {

@@ -53,7 +53,10 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
     if (lok) {
         MessageService*sys=*system;
         if (sys) {
-            sys->processMessage(&object,MemoryReference(chunk));
+            RoutableMessageHeader hdr;
+            MemoryReference body=hdr.ParseFromArray(chunk.data(),chunk.size());
+            hdr.set_source_object(object);
+            sys->processMessage(hdr,body);
         }
     }
 }

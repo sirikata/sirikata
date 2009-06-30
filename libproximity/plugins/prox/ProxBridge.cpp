@@ -86,27 +86,6 @@ ProxBridge::~ProxBridge() {
     delete mListener;
 }
 
-void ProxBridge::processMessage(const ObjectReference*object,
-                                           MemoryReference message) {
-    RoutableMessage mesg;
-    std::vector<ObjectReference> newObjectReferences;
-    if (mesg.ParseFromArray(message.data(),message.size())) {
-        ObjectStateMap::iterator where=mObjectStreams.end();
-        if (object) {
-            where=mObjectStreams.find(*object);
-        }
-        if (where==mObjectStreams.end()&&mesg.has_source_object()){
-            where=mObjectStreams.find(ObjectReference(mesg.source_object()));
-        }
-        if (where==mObjectStreams.end()&&mesg.has_destination_object()){
-            where=mObjectStreams.find(ObjectReference(mesg.destination_object()));
-        }
-
-        processOpaqueProximityMessage(newObjectReferences,
-                                      where,
-                                      mesg.body());
-    }
-}
 
 void ProxBridge::processMessage(const RoutableMessageHeader&msg,
                                            MemoryReference body_reference) {

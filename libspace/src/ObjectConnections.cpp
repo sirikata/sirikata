@@ -220,40 +220,6 @@ bool ObjectConnections::endForwardingMessagesTo(MessageService*ms) {
     return false;
 }
 
-void ObjectConnections::processMessage(const ObjectReference*ref,MemoryReference message){
-    ObjectReference newRef;
-    RoutableMessageHeader hdr;
-    MemoryReference body_array=hdr.ParseFromArray(message.data(),message.size());
-    bool disconnectionAttempt=false;
-    if (ref&&*ref==ObjectReference::spaceServiceID()&&hdr.destination_port()==Registration::PORT) {//message from registration service
-        if (!hdr.has_source_object())
-            hdr.set_source_object(*ref);
-        if (processNewObject(hdr,body_array, newRef)) {//it could be a new object
-            hdr.set_destination_object(newRef);//it is a new object, complete with permanent ObjectReference
-            ref=&newRef;
-        }else {
-            disconnectionAttempt=true;//it was a forcable disconnection (potentially at user request)
-        }
-    }else {
-        if (ref&&!hdr.has_destination_object()) {
-            hdr.set_destination_object(*ref);
-        }
-        if (hdr.has_source_object()&&hdr.source_object()==ObjectReference::spaceServiceID()&&hdr.source_port()==Registration::PORT) {//repeated logic if registration was set in packet
-            if (processNewObject(hdr,body_array,newRef)) {
-                hdr.set_destination_object(newRef);
-                ref=&newRef;
-            }else {
-                disconnectionAttempt=true;
-            }
-        }
-    }
-    processExistingObject(hdr,body_array,!disconnectionAttempt);//process the message but do not forward if a disconection attemp was made
-    if (disconnectionAttempt) {
-        //Server ban of user or confirm of disconnect
-        shutdownConnection(hdr.destination_object());//destroy stream if destination object was forcably removed by space
-    }
-
-}
 void ObjectConnections::processMessage(const RoutableMessageHeader&header,
                     MemoryReference message_body){
     RoutableMessageHeader newHeader;

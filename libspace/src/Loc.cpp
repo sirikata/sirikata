@@ -24,16 +24,6 @@ bool Loc::endForwardingMessagesTo(MessageService*ms) {
     return true;
 }
 
-
-void Loc::processMessage(const ObjectReference*ref,MemoryReference message){
-    
-    RoutableMessageHeader hdr;
-    MemoryReference message_body=hdr.ParseFromArray(message.data(),message.size());
-    if (!hdr.has_source_object()&&ref) {
-        hdr.set_source_object(*ref);
-    }
-    this->processMessage(hdr,message_body);
-}
 void Loc::processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc){
     RoutableMessageBody body;
     body.add_message_arguments(std::string());

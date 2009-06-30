@@ -23,15 +23,6 @@ bool Registration::endForwardingMessagesTo(MessageService*ms) {
     mServices.erase(where);
     return true;
 }
-void Registration::processMessage(const ObjectReference*ref,MemoryReference message){
-    
-    RoutableMessageHeader hdr;
-    MemoryReference message_body=hdr.ParseFromArray(message.data(),message.size());
-    if (!hdr.has_source_object()&&ref) {
-        hdr.set_source_object(*ref);
-    }
-    this->processMessage(hdr,message_body);
-}
 
 void Registration::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     RoutableMessageBody body;

@@ -142,9 +142,6 @@ public:
     virtual void processMessage(const RoutableMessageHeader&hdr,
                                            MemoryReference body);
 
-    virtual void processMessage(const ObjectReference*object,
-                                           MemoryReference body);
-
     /**
      * Pass the ReturnedObjectConnection info,
      * containing an Object UUID to the proximity manager,

@@ -239,21 +239,6 @@ public:
 
     /**
      * Process a message that may be meant for the proximity system
-     * \returns true if object was deleted
-     */
-    virtual void processMessage(const ObjectReference*object,
-                                MemoryReference message) {
-        RoutableMessageHeader mesg;
-        MemoryReference remainder=mesg.ParseFromArray(message.data(),message.size());
-        internalProcessOpaqueProximityMessage(
-                                             object,
-                                             mesg,
-                                             remainder.data(),
-                                             remainder.size(),true);
-    }
-    /**
-     * Process a message that may be meant for the proximity system
-     * \returns true if object was deleted
      */
     virtual void processMessage(const RoutableMessageHeader& mesg,
                                 MemoryReference message_body) {

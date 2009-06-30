@@ -136,8 +136,6 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
     bool forwardMessagesTo(MessageService*);
     ///Upon destruction the space should deregister itself
     bool endForwardingMessagesTo(MessageService*);
-    ///Processes a message destined for an Object referenced by either temporary (from registrationService) or permanent (from anyone else) ID ObjectReference
-    void processMessage(const ObjectReference*ref,MemoryReference message);
     ///Processes a message destined for an Object referenced by either temporary (from registrationService) or permanent (from anyone else) ID in the header
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);

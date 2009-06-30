@@ -54,7 +54,6 @@ public:
     ~Loc();
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
-    void processMessage(const ObjectReference*ref,MemoryReference message);
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
 
