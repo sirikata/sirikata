@@ -633,7 +633,6 @@ private:
 		//std::cout << "test output: " <<  << std::endl;
 	}
 
-
     ///////////////// DEVICE FUNCTIONS ////////////////
 
     SubscriptionId registerAxisListener(const InputDevicePtr &dev,

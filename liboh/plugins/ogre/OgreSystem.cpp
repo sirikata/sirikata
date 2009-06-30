@@ -427,7 +427,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
         std::tr1::bind(&OgreSystem::performUpload,this,_1));
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
-    mSceneManager->setAmbientLight(Ogre::ColourValue(0.75,0.75,0.75,0));
+    mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
