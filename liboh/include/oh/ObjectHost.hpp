@@ -47,6 +47,7 @@ public:
     bool forwardMessagesTo(MessageService*){return false;}
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool endForwardingMessagesTo(MessageService*){return false;}
+
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);

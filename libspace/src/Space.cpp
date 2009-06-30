@@ -124,6 +124,7 @@ void Space::processMessage(const RoutableMessageHeader&header,MemoryReference me
         SILOG(space,warning,"Do not know where to forward message to "<<header.destination_object().toString());
     }
 }
+
 Space::~Space() {
 }
 

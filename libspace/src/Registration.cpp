@@ -1,4 +1,4 @@
-/*  Sirikata libspace -- Object Registration Services
+/*  Sirikata libspace - Registration Services
  *  Registration.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
