@@ -41,8 +41,11 @@ class SIRIKATA_SPACE_EXPORT Router : public MessageService {
 public:
 	Router(){}
 	~Router(){}
+    enum {
+        PORT=4
+    };
     void processMessage(const RoutableMessageHeader&header,
-		MemoryReference message_body){}
+		                MemoryReference message_body){}
 }; // class Space
 
 } // namespace Sirikata

@@ -41,6 +41,7 @@
 
 namespace Sirikata { namespace Proximity {
 namespace {
+
 void connectionCallback(ProximityConnection* con, Network::Stream::ConnectionStatus status, const std::string&reason) {
     if (status!=Network::Stream::Connected)
         con->streamDisconnected();
@@ -61,6 +62,7 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
     }
 }
 }
+
 bool SingleStreamProximityConnection::forwardMessagesTo(MessageService*parent) {
     if (mParent!=NULL)
         return false;
