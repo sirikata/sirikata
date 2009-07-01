@@ -612,9 +612,8 @@ private:
 				typestr = "spotlight";
 			}
 			float32 ambientPower, shadowPower;
-            LightEntity * test=NULL;
-			ambientPower = test->LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor);
-			shadowPower = test->LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor);
+			ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+			shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
 
 			fprintf(fp, "<1 1 1> %s [%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>\n", typestr,linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,(int)linfo.mCastsShadow,0.0,1.0,0.0);
 		} else if (mesh) {

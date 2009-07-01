@@ -39,7 +39,6 @@
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
 #include <task/Time.hpp>
-#include <boost/math/special_functions/fpclassify.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -200,9 +199,6 @@ public:
             end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
         }
         Vector3d toMove (end - start);
-		if (!boost::math::isfinite(toMove.x) || !boost::math::isfinite(toMove.y) || !boost::math::isfinite(toMove.z)) {
-			return;
-		}
 		// Prevent moving outside of a small radius so you don't shoot an object into the horizon.
 		if (toMove.length() > 10*mParent->getInputManager()->mWorldScale->as<float>()) {
 			// moving too much.

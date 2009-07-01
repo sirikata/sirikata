@@ -54,9 +54,10 @@ public:
         return static_cast<Ogre::Light*>(mOgreObject);
     }
 
-    float computeClosestPower(
+    static float computeClosestPower(
+            const Color &source,
             const Color &target,
-            const Color &source);
+            float32 power);
 
     virtual void notify(const LightInfo& linfo);
     static std::string ogreLightName(const SpaceObjectReference&ref);

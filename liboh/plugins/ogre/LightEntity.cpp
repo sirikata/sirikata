@@ -55,18 +55,17 @@ LightEntity::~LightEntity() {
 }
 
 float LightEntity::computeClosestPower(
+        const Color &source,
         const Color &target,
-        const Color &source) {
+        float32 power) {
     //minimize sqrt((source.r*power - target.r)^2 + (source.g*power - target.g) + (source.b*power - target.b));
-    return source.dot(target) / source.lengthSquared();
+    return power * source.dot(target) / source.length();
 }
 
 void LightEntity::notify(const LightInfo& linfo){
     float32 ambientPower, shadowPower;
-    ambientPower = computeClosestPower(linfo.mDiffuseColor,
-                                       linfo.mAmbientColor);
-    shadowPower = computeClosestPower(linfo.mShadowColor,
-        linfo.mShadowColor);
+    ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+    shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
     Ogre::ColourValue diffuse_ambient (
         toOgreRGBA(linfo.mDiffuseColor, ambientPower));
     getOgreLight()->setDiffuseColour(diffuse_ambient);

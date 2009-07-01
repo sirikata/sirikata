@@ -93,13 +93,12 @@ class DemoProxyManager :public ProxyManager {
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
         int mode=0;
-        float density;
-        float friction;
-        float bounce;
+        float density=2;
+        float friction=3;
+        float bounce=4;
 
-        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> {%d %f %f %f} \
-               ",&pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z,
-               &mode, &density, &friction, &bounce);
+        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
+               &pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;
@@ -118,6 +117,15 @@ class DemoProxyManager :public ProxyManager {
                 filename += append;
             }
         }
+        if (sscanf(filename.c_str(),"{%d %f %f %f}", &mode, &density, &friction, &bounce)) {
+            size_t i;
+            for (i = 0; i < filename.length() && filename[i]!='}'; ++i) {
+            }
+            while (i < filename.length() && isspace(filename[i])) {
+                ++i;
+            }
+            filename = filename.substr(i);
+        }
         std::string rest;
         std::string::size_type sppos=filename.find(' ');
         if (sppos != std::string::npos) {
@@ -127,7 +135,7 @@ class DemoProxyManager :public ProxyManager {
         if (filename=="CAMERA") {
             mCamera->resetPositionVelocity(Time::now(), location);
         } else if (filename=="point" || filename=="directional" || filename=="spotlight") {
-            LightInfo::LightTypes lighttype;
+            LightInfo::LightTypes lighttype = LightInfo::SPOTLIGHT;
             if (filename=="point") {
                 lighttype = LightInfo::POINT;
             } else if (filename=="spotlight") {
@@ -136,6 +144,7 @@ class DemoProxyManager :public ProxyManager {
                 lighttype = LightInfo::DIRECTIONAL;
             }
             LightInfo lightInfo;
+            lightInfo.setLightType(lighttype);
             float ambientPower=1, shadowPower=1;
             float x,y,z; // Light direction. Assume 0,1,0 for now.
             int castsshadow=1;
@@ -157,6 +166,7 @@ class DemoProxyManager :public ProxyManager {
             } else {
                 lightInfo.mShadowColor = Vector3f(0,0,0);
             }
+            std::cout << "Ambient Color: "<<lightInfo.mAmbientColor << "; Shadow color: "<<lightInfo.mShadowColor<<std::endl;
             lightInfo.mWhichFields = LightInfo::ALL;
             addLightObject(lightInfo, location);
         } else {
