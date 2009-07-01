@@ -65,12 +65,12 @@ class DemoProxyManager :public ProxyManager {
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
         myObj->setScale(scale);
-        physicalParameters pp;
+        physicalParameters pp = {0};
+        pp.mode = mode;
+        pp.density = density;
+        pp.friction = friction;
+        pp.bounce = bounce;
         if (mode) {
-            pp.mode = mode;
-            pp.density = density;
-            pp.friction = friction;
-            pp.bounce = bounce;
             myObj->setPhysical(pp);
         }
         return myObj;
@@ -97,7 +97,7 @@ class DemoProxyManager :public ProxyManager {
         float friction=3;
         float bounce=4;
 
-        fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
+        int ret = fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
                &pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
@@ -117,13 +117,16 @@ class DemoProxyManager :public ProxyManager {
                 filename += append;
             }
         }
-        if (sscanf(filename.c_str(),"{%d %f %f %f}", &mode, &density, &friction, &bounce)) {
+        if (ret < 7) { // not all options existed in the file.
+            return;
+        }
+        if (sscanf(filename.c_str(),"{%d %f %f %f}", &mode, &density, &friction, &bounce)==4) {
             size_t i;
             for (i = 0; i < filename.length() && filename[i]!='}'; ++i) {
             }
-            while (i < filename.length() && isspace(filename[i])) {
+            do {
                 ++i;
-            }
+            } while (i < filename.length() && isspace(filename[i]));
             filename = filename.substr(i);
         }
         std::string rest;
@@ -166,10 +169,16 @@ class DemoProxyManager :public ProxyManager {
             } else {
                 lightInfo.mShadowColor = Vector3f(0,0,0);
             }
-            std::cout << "Ambient Color: "<<lightInfo.mAmbientColor << "; Shadow color: "<<lightInfo.mShadowColor<<std::endl;
             lightInfo.mWhichFields = LightInfo::ALL;
             addLightObject(lightInfo, location);
-        } else {
+        } else if (filename=="NULL") {
+            SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
+
+            std::tr1::shared_ptr<ProxyPositionObject> myObj(new ProxyPositionObject(this, myId));
+            mObjects.insert(ObjectMap::value_type(myId, myObj));
+            notify(&ProxyCreationListener::createProxy, myObj);
+            myObj->resetPositionVelocity(Time::now(), location);
+        } else if (!filename.empty()){
             addMeshObject(Transfer::URI(filename), location, scale, mode, density, friction, bounce);
         }
     }
