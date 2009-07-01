@@ -260,10 +260,15 @@ void MaterialDependencyTask::operator()()
         if (dependencyName.size()/* && dependencyName.find("_noon") == std::string::npos*/) {
           // Add dependency
           if (what[2].matched) {
-           SILOG(resource,debug,"Found texture/program dependency "<<dependencyName);
-           SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
-            if (hashResource)
-              resourcePtr->addDependency(hashResource);
+            SILOG(resource,debug,"Found texture/program dependency "<<dependencyName);
+            {
+              URI dependencyURI(dependencyName);
+              if (!dependencyURI.proto().empty()) {
+                SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                if (hashResource)
+                  resourcePtr->addDependency(hashResource);
+              }
+            }
 
             static const int anim_texture_len=strlen("anim_texture");
             static const int cubic_texture_len=strlen("cubic_texture");
@@ -288,9 +293,12 @@ void MaterialDependencyTask::operator()()
                   if (next_eol(mBuffer,lexemeEndIndex)){
                     break;//framerate is last, don't add to dependency
                   }
-                  SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
-                  SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
-                  resourcePtr->addDependency(hashResource);
+                  URI dependencyURI(dependencyName);
+                  if (!dependencyURI.proto().empty()) {
+                    SILOG(resource,debug,"Found ANIM texture dependency "<<dependencyName);
+                    SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                    resourcePtr->addDependency(hashResource);
+                  }
                 }
             }else if (what[2].second-what[2].first>cubic_texture_len
               &&*what[2].first=='c'
@@ -315,9 +323,12 @@ void MaterialDependencyTask::operator()()
                     if (next_eol(mBuffer,lexemeEndIndex)){
                       break;
                     }
-                    SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
-                    SharedResourcePtr hashResource = grm->getResourceAsset(URI(dependencyName), GraphicsResource::TEXTURE);
-                    resourcePtr->addDependency(hashResource);
+                    URI dependencyURI(dependencyName);
+                    if (!dependencyURI.proto().empty()) {
+                      SILOG(resource,debug,"Found CUBIC texture dependency "<<dependencyName);
+                      SharedResourcePtr hashResource = grm->getResourceAsset(dependencyURI, GraphicsResource::TEXTURE);
+                      resourcePtr->addDependency(hashResource);
+                    }
                   }
                 }
             }
