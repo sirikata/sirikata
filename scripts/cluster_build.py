@@ -156,3 +156,6 @@ if __name__ == "__main__":
             cluster_build.dependencies()
             cluster_build.update_dependencies()
             cluster_build.build()
+        else:
+            print "Unknown command: ", cmd
+            exit(-1)
