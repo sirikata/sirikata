@@ -106,7 +106,7 @@ void handleCommand(const std::string &input, const OptionMapPtr &globalvariables
             std::string fname = "./" + value;
             if (value.find(".txt")!=std::string::npos) {
                 FILE *fp = NULL;
-                for (int i = 0; i < 3 && fp == NULL; i++) {
+                for (int i = 0; i < 4 && fp == NULL; i++) {
                     fp = fopen(fname.c_str(),"rt");
                     fname = "./."+fname;
                 }

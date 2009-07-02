@@ -52,11 +52,11 @@ struct positionOrientation {
     Quaternion o;
     positionOrientation() {
     };
-    positionOrientation(Vector3d p, Quaternion o) {
+    positionOrientation(const Vector3d &p, const Quaternion &o) {
         this->p = p;
         this->o = o;
     };
-    positionOrientation(btVector3 p, btQuaternion o) {
+    positionOrientation(const btVector3 &p, const btQuaternion &o) {
         this->p = Vector3d(p.getX(), p.getY(), p.getZ());
         this->o = Quaternion(o.getX(), o.getY(), o.getZ(), o.getW(), Quaternion::XYZW());
     };
