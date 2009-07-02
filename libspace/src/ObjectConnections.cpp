@@ -149,7 +149,7 @@ void ObjectConnections::connectionCallback(Network::Stream*stream, Network::Stre
         std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);//find active stream
         if (where!=mStreams.end()) {
             StreamMap::iterator uwhere=mActiveStreams.find(where->second.uuid());
-            std::map<UUID,TemporaryStreamData>::iterator twhere;
+            TemporaryStreamMultimap::iterator twhere;
             StreamSet::iterator stream_set_iterator;
             if (uwhere!=mActiveStreams.end()&&(stream_set_iterator=std::find(uwhere->second.begin(),uwhere->second.end(),stream))!=uwhere->second.end()) {
                 if (uwhere->second.size()==1&&where->second.connected()) {//As soon as discon message detected, stream is disconnected, so must have had no disconnect message, hence send forged disconnect
