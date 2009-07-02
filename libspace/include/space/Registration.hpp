@@ -44,9 +44,6 @@ class SIRIKATA_SPACE_EXPORT Registration : public MessageService {
     std::vector<MessageService*> mServices;
     SHA256 mPrivateKey;
 public:
-    enum {
-        PORT=1
-    };
     Registration(const SHA256&privateKey);
     ~Registration();
     bool forwardMessagesTo(MessageService*);

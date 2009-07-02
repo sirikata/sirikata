@@ -1,5 +1,5 @@
-/*  Sirikata libspace -- Registration Services
- *  Registration.hpp
+/*  Sirikata libspace -- Known Service Ports
+ *  KnownServices.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,21 +29,17 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef _SIRIKATA_ROUTER_HPP_
-#define _SIRIKATA_ROUTER_HPP_
-
-#include <space/Platform.hpp>
+#ifndef SIRIKATA_KNOWN_SERVICES_HPP_
+#define SIRIKATA_KNOWN_SERVICES_HPP_
 namespace Sirikata {
-class SIRIKATA_SPACE_EXPORT Router : public MessageService {
-    std::vector<MessageService*> mServices;
-public:
-    Router();
-    ~Router();
-    void processMessage(const RoutableMessageHeader&header,
-                        MemoryReference message_body);
-}; // class Space
-
-} // namespace Sirikata
-
-#endif //_SIRIKATA_REGISTRATION_HPP
+namespace Services{
+enum Ports{
+    REGISTRATION=1,
+    LOC=2,
+    GEOM=3,
+    ROUTER=4,
+    OBJECT_CONNECTIONS=16383
+};
+}
+}
+#endif

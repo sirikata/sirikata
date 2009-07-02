@@ -42,9 +42,6 @@ namespace Sirikata {
  * Permanent streams are generated when the Registration service returns a valid ObjectReference
  */
 class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
-    enum {
-        PORT=16383
-    };
     typedef std::vector<Network::Stream*> StreamSet;
     ///Object with active ID's (map from ObjectReference to Stream*)
     typedef std::tr1::unordered_map<UUID,StreamSet,UUID::Hasher>StreamMap;

@@ -1,6 +1,7 @@
 #include <space/Registration.hpp>
 #include <Space_Sirikata.pbj.hpp>
 #include <util/RoutableMessage.hpp>
+#include <util/KnownServices.hpp>
 namespace Sirikata {
 
 Registration::Registration(const SHA256&privateKey):mPrivateKey(privateKey) {
@@ -56,7 +57,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                 destination_header.set_destination_object(header.source_object());
                 destination_header.set_destination_port(header.source_port());
                 destination_header.set_source_object(ObjectReference::spaceServiceID());
-                destination_header.set_source_port(PORT);
+                destination_header.set_source_port(Services::REGISTRATION);
                 retval.add_message_names("RetObj");
                 if (retval.message_arguments_size()==0) {
                     retval.add_message_arguments(std::string());
@@ -80,7 +81,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                     RoutableMessageHeader destination_header;
                     destination_header.set_destination_object(ObjectReference(delObj.object_reference()));
                     destination_header.set_source_object(ObjectReference::spaceServiceID());
-                    destination_header.set_source_port(PORT);
+                    destination_header.set_source_port(Services::REGISTRATION);
                     for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
                         std::string body_string;
                         body.SerializeToString(&body_string);

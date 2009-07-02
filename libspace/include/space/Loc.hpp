@@ -47,9 +47,6 @@ class SIRIKATA_SPACE_EXPORT Loc : public MessageService {
     std::vector<MessageService*> mServices;
     void processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc);
 public:
-    enum {
-        PORT=2
-    };
     Loc();
     ~Loc();
     bool forwardMessagesTo(MessageService*);

@@ -52,9 +52,9 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
     std::tr1::shared_ptr<Network::Stream> lok=mLock.lock();//make sure this proximity connection will not disappear;
     if (lok) {
         MessageService*sys=*system;
-        if (sys) {
+        if (sys&&!chunk.empty()) {
             RoutableMessageHeader hdr;
-            MemoryReference body=hdr.ParseFromArray(chunk.data(),chunk.size());
+            MemoryReference body=hdr.ParseFromArray(&chunk[0],chunk.size());
             hdr.set_source_object(object);
             sys->processMessage(hdr,body);
         }
