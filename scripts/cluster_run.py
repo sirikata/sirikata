@@ -45,6 +45,9 @@ class NodeMonitorThread(threading.Thread):
             print self.node, ': ', line
         self.sp.wait()
 
+    def returncode(self):
+        return self.sp.returncode
+
 
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
@@ -64,6 +67,8 @@ def ClusterRun(cc, command):
 
     for mt in mts:
         mt.join()
+
+    return [mt.returncode() for mt in mts]
 
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
@@ -87,9 +92,17 @@ def ClusterDeploymentRun(cc, command):
     for mt in mts:
         mt.join()
 
+    return [mt.returncode() for mt in mts]
 
 
-if __name__ == "__main__":
+def ClusterRunFailed(returned):
+    for rec in returned:
+        if (rec != 0):
+            return True
+    return False
+
+
+def main():
     if (len(sys.argv) != 2):
         print "Syntax: cluster_run.py \"my; commands;\""
         exit(-1)
@@ -97,4 +110,11 @@ if __name__ == "__main__":
     command = sys.argv[1]
 
     cc = ClusterConfig()
-    ClusterRun(cc, command)
+    results = ClusterRun(cc, command)
+    if (ClusterRunFailed(results)):
+        return 1
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
