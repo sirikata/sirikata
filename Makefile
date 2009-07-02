@@ -16,17 +16,38 @@ tests:
 clean:
 	cd build/cmake; $(MAKE) clean $(*)
 
-minimaldepends:
-	uname | grep arwin && ( svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies && cd dependencies && ./install ) || echo "Linux"
-	uname | grep arwin || uname | grep CYGWIN || ( svn co http://sirikata.googlecode.com/svn/trunk/source dependencies && cd dependencies && ./install --without-mono )
-	uname | grep arwin || ( uname | grep CYGWIN && ( (ls c:/Program\ Files/Microsoft\ Visual\ Studio\ 9.0/VC/bin && svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies) ||  svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ) && unzip dependencies/dotnet-protobufs*.zip -d dependencies && unzip dependencies/FreeImage-*.zip -d dependencies && unzip dependencies/curl*.zip -d dependencies && unzip dependencies/boost*.zip -d dependencies  && unzip dependencies/ogre*.zip -d dependencies && unzip dependencies/SDL*.zip -d dependencies && unzip dependencies/ois*.zip -d dependencies ) || uname | grep Linux
 
-depends:
-	uname | grep arwin && ( svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies && cd dependencies && ./install ) || echo "Linux"
-	uname | grep arwin || uname | grep CYGWIN || ( svn co http://sirikata.googlecode.com/svn/trunk/source dependencies && cd dependencies && ./install )
-	uname | grep arwin || ( uname | grep CYGWIN && ( (ls c:/Program\ Files/Microsoft\ Visual\ Studio\ 9.0/VC/bin && svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies) ||  svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ) && unzip dependencies/dotnet-protobufs*.zip -d dependencies && unzip dependencies/FreeImage-*.zip -d dependencies && unzip dependencies/curl*.zip -d dependencies && unzip dependencies/boost*.zip -d dependencies  && unzip dependencies/ogre*.zip -d dependencies && unzip dependencies/SDL*.zip -d dependencies && unzip dependencies/ois*.zip -d dependencies ) || uname | grep Linux
+#========== Dependencies ===========
 
-fulldepends:
-	uname | grep arwin && ( svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies && cd dependencies && ./install ) || echo "Linux"
-	uname | grep arwin || uname | grep CYGWIN || ( svn co http://sirikata.googlecode.com/svn/trunk/source dependencies && cd dependencies && sudo ./install --use-root --user `whoami` )
-	uname | grep arwin || ( uname | grep CYGWIN && ( (ls c:/Program\ Files/Microsoft\ Visual\ Studio\ 9.0/VC/bin && svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies) ||  svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ) && unzip dependencies/dotnet-protobufs*.zip -d dependencies && unzip dependencies/FreeImage-*.zip -d dependencies && unzip dependencies/curl*.zip -d dependencies && unzip dependencies/boost*.zip -d dependencies  && unzip dependencies/ogre*.zip -d dependencies && unzip dependencies/ois*.zip -d dependencies ) || uname | grep Linux
+dependencies:
+	case "`uname`" in \
+		*arwin*) \
+			svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies \
+			;; \
+		*CYGWIN*|*win32*) \
+			if [ x = x"$(VCVER)" ]; then \
+				echo To force a specific version of visual studio, set VCVER to 8 or 9 ; \
+				[ -e c:/Program\ Files/Microsoft\ Visual\ Studio\ 9/VC/bin ] && \ 
+					svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies || \
+					svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies \
+			else \
+				svn co http://sirikata.googlecode.com/svn/trunk/win32vc$(VCVER) dependencies ; \
+			fi \
+		*) \
+			svn co http://sirikata.googlecode.com/svn/trunk/source dependencies \
+			;; \
+	esac \
+	[ -f dependencies ]
+
+update-dependencies: dependencies
+	cd dependencies && svn update
+
+minimaldepends: update-dependencies
+	$(MAKE) -C dependencies minimaldepends $(*)
+
+depends: update-dependencies
+	$(MAKE) -C dependencies depends $(*)
+
+fulldepends: update-dependencies
+	$(MAKE) -C dependencies fulldepends $(*)
+
