@@ -199,7 +199,7 @@ Network::Stream* ObjectConnections::activeConnectionTo(const ObjectReference&ref
 }
 
 Network::Stream* ObjectConnections::temporaryConnectionTo(const UUID&ref) {
-    std::map<UUID,TemporaryStreamData>::iterator where=mTemporaryStreams.find(ref);
+    TemporaryStreamMultimap::iterator where=mTemporaryStreams.find(ref);
     if (where==mTemporaryStreams.end()) 
         return NULL;
     return where->second.mStream;
