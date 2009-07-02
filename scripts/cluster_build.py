@@ -2,7 +2,7 @@
 
 import sys
 from cluster_config import ClusterConfig
-from cluster_run import ClusterRun
+from cluster_run import ClusterRun, ClusterRunConcatCommands, ClusterRunFailed
 from cluster_scp import ClusterSCP
 
 class ClusterBuild:
@@ -10,48 +10,48 @@ class ClusterBuild:
         self.config = config
 
     def cd_to_code(self):
-        return "cd " + self.config.code_dir + "; "
+        return "cd " + self.config.code_dir
 
     def cd_to_build(self):
-        return "cd build/cmake; "
+        return "cd build/cmake"
 
     def cd_to_sst_build(self):
-        return "cd " + self.config.code_dir + "; cd dependencies/sst;"
+        return ClusterRunConcatCommands( [cd_to_code(), "cd dependencies/sst"] )
 
     def destroy(self):
-        destroy_cmd = "rm -rf " + self.config.code_dir + ";"
+        destroy_cmd = "rm -rf " + self.config.code_dir
         ClusterRun(self.config, destroy_cmd)
 
     def checkout(self):
-        checkout_cmd = "git clone git@ahoy:cbr.git " + self.config.code_dir + ";"
+        checkout_cmd = "git clone git@ahoy:cbr.git " + self.config.code_dir
         ClusterRun(self.config, checkout_cmd)
 
     def update(self):
         cd_cmd = self.cd_to_code()
-        pull_cmd = "git pull origin;"
-        ClusterRun(self.config, cd_cmd + pull_cmd)
+        pull_cmd = "git pull origin"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, pull_cmd]))
 
     def apply_patch(self, patch_file):
         ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
         cd_cmd = self.cd_to_code()
-        patch_cmd = "patch -p1 < " + patch_file + ";"
-        ClusterRun(self.config, cd_cmd + patch_cmd)
+        patch_cmd = "patch -p1 < " + patch_file
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
 
     def apply_patch_mail(self, patch_file):
         ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/"+patch_file])
         cd_cmd = self.cd_to_code()
-        patch_cmd = "git am " + patch_file + ";"
-        ClusterRun(self.config, cd_cmd + patch_cmd)
+        patch_cmd = "git am " + patch_file
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, patch_cmd]))
 
     def reset_to_head(self):
         cd_cmd = self.cd_to_code()
-        reset_cmd = "git reset --hard HEAD;"
-        ClusterRun(self.config, cd_cmd + reset_cmd);
+        reset_cmd = "git reset --hard HEAD"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
 
     def reset_to_origin_head(self):
         cd_cmd = self.cd_to_code()
-        reset_cmd = "git reset --hard origin/HEAD;"
-        ClusterRun(self.config, cd_cmd + reset_cmd);
+        reset_cmd = "git reset --hard origin/HEAD"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
 
     def dependencies(self, which = None):
         cd_cmd = self.cd_to_code()
@@ -59,7 +59,7 @@ class ClusterBuild:
         if which != None:
             for dep in which:
                 build_cmd += " " + dep
-        ClusterRun(self.config, cd_cmd + build_cmd)
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, build_cmd]))
 
     def update_dependencies(self, which = None):
         cd_cmd = self.cd_to_code()
@@ -67,28 +67,30 @@ class ClusterBuild:
         if which != None:
             for dep in which:
                 update_cmd += " " + dep
-        ClusterRun(self.config, cd_cmd + update_cmd)
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, update_cmd]))
 
     def patch_build_sst(self, patch_file):
         ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/dependencies/sst/"+patch_file])
         cd_cmd = self.cd_to_sst_build()
-        reset_cmd = "git reset --hard HEAD;"
-        patch_cmd = "patch -p1 < " + patch_file + ";"
-        build_cmd = "make; make install;"
-        ClusterRun(self.config, cd_cmd + reset_cmd + patch_cmd + build_cmd)
+        reset_cmd = "git reset --hard HEAD"
+        patch_cmd = "patch -p1 < " + patch_file
+        build_cmd = "make; make install"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd, patch_cmd, build_cmd]))
         # doing this implies we need to rebuild cbr
         self.clean()
         self.build()
 
     def build(self):
-        cd_cmd = self.cd_to_code() + self.cd_to_build()
-        build_cmd = "cmake .; make -j2"
-        ClusterRun(self.config, cd_cmd + build_cmd)
+        cd_code_cmd = self.cd_to_code()
+        cd_build_cmd = self.cd_to_build()
+        build_cmd = "cmake . && make -j2"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, build_cmd]))
 
     def clean(self):
-        cd_cmd = self.cd_to_code() + self.cd_to_build()
-        clean_cmd = "make clean;"
-        ClusterRun(self.config, cd_cmd + clean_cmd)
+        cd_code_cmd = self.cd_to_code()
+        cd_build_cmd = self.cd_to_build()
+        clean_cmd = "make clean"
+        ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, clean_cmd]))
 
     def clean_git(self):
         cd_cmd = self.cd_to_code()

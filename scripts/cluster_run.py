@@ -95,6 +95,9 @@ def ClusterDeploymentRun(cc, command):
     return [mt.returncode() for mt in mts]
 
 
+def ClusterRunConcatCommands(commands):
+    return " && ".join(commands)
+
 def ClusterRunFailed(returned):
     for rec in returned:
         if (rec != 0):
