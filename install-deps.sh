@@ -5,6 +5,7 @@ opt_components_all="true"
 opt_components_raknet="false"
 opt_components_sst="false"
 opt_components_sirikata="false"
+opt_components_prox="false"
 
 # parameters
 until [ -z "$1" ]
@@ -21,6 +22,9 @@ do
   elif [ "$1" == "sirikata" ]; then
     opt_components_all="false"
     opt_components_sirikata="true"
+  elif [ "$1" == "prox" ]; then
+    opt_components_all="false"
+    opt_components_prox="true"
   else
     echo "Unknown option: $1"
   fi
@@ -32,6 +36,7 @@ if [ ${opt_components_all} == "true" ]; then
   opt_components_raknet="true"
   opt_components_sst="true"
   opt_components_sirikata="true"
+  opt_components_prox="true"
 
   # when we're installing everything and not updating, perform basic system installation tasks
   if [ ${opt_update} == "false" ]; then
@@ -145,3 +150,38 @@ if [ ${opt_components_sirikata} == "true" ]; then
   cd ../../..
 
 fi # opt_components_sirikata
+
+
+# prox
+if [ ${opt_components_prox} == "true" ]; then
+
+  if [ ${opt_update} != "true" ]; then
+    if [ -e prox ]; then
+      rm -rf prox
+    fi
+    if [ -e installed-prox ]; then
+      rm -rf installed-prox
+    fi
+    git clone git@ahoy:prox.git
+    cd prox
+  else
+    cd prox
+    git reset --hard HEAD
+    git pull origin master:master
+  fi
+
+  cd build
+
+  # Debug
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Debug .
+  make clean
+  make -j2
+  make install
+
+  # Release
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Release .
+  make clean
+  make -j2
+  make install
+
+fi # opt_components_prox
