@@ -60,6 +60,12 @@ class ClusterBuild:
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
+    def git_clean(self):
+        cd_cmd = self.cd_to_code()
+        clean_cmd = "git clean -f"
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, clean_cmd]))
+        return ClusterRunSummaryCode(retcodes)
+
     def dependencies(self, which = None):
         cd_cmd = self.cd_to_code()
         build_cmd = "./install-deps.sh"
@@ -160,6 +166,8 @@ if __name__ == "__main__":
             retval = cluster_build.reset_to_head()
         elif cmd == 'reset_origin':
             retval = cluster_build.reset_to_origin_head()
+        elif cmd == 'git_clean':
+            retval = cluster_build.git_clean()
         elif cmd == 'clean':
             retval = cluster_build.clean()
         elif cmd == 'fullbuild':
