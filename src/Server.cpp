@@ -11,25 +11,31 @@
 #include "Options.hpp"
 #include "ObjectMessageQueue.hpp"
 #include "LoadMonitor.hpp"
+#include "ForwarderUtilityClasses.hpp" 
+#include "Forwarder.hpp" 
 
-#include "ForwarderUtilityClasses.hpp" //bftm
-#include "Forwarder.hpp" //bftm
+#include "ObjectSegmentation.hpp"
+
+
+
+#include <iostream>
+#include <iomanip>
+
+
 
 namespace CBR
 {
   
-  Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace)
+  Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
     : mID(id),
       mObjectFactory(obj_factory),
       mLocationService(loc_service),
       mCSeg(cseg),
       mProximity(prox),
-      //   mObjectMessageQueue(omq), //bftm
-      //   mServerMessageQueue(smq), //bftm
-      //   mLoadMonitor(lm),         //bftm
       mCurrentTime(0),
       mTrace(trace),
-      mForwarder(trace,cseg,loc_service,obj_factory,omq,smq,lm,id)
+      mOSeg(oseg),
+      mForwarder(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,id)
   {
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++)
@@ -46,10 +52,7 @@ namespace CBR
         mProximity->addQuery(obj_id, mObjectFactory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
       }
     }
-
-    //bftm
-    //run initialization for forwarder
-    mForwarder.initialize(&mObjects,&mCurrentTime);
+    mForwarder.initialize(&mObjects,&mCurrentTime);    //run initialization for forwarder
 
   }
 
@@ -63,8 +66,7 @@ const ServerID& Server::id() const {
 
 void Server::networkTick(const Time&t)
 {
-  //        void tick(const Time&t,int servID);
-  mForwarder.tick(t,this->id()); //call mForwarder to perform networkTick
+  mForwarder.tick(t);
 }
 
   
@@ -75,6 +77,10 @@ void Server::tick(const Time& t)
   // Update object locations
   mLocationService->tick(t);
 
+  //update oseg....oseg gets updated by forwarder.
+  //  mOSeg->tick(t);
+
+  
   // Check proximity updates
   proximityTick(t);
   networkTick(t);
@@ -109,7 +115,7 @@ void Server::proximityTick(const Time& t)
                            (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited,
                            evt.location()
                            );
-    //bftm    route(msg, evt.query());
+
     mForwarder.route(msg, evt.query());
 
     proximity_events.pop();
@@ -132,7 +138,14 @@ void Server::checkObjectMigrations()
         Vector3f obj_pos = mLocationService->currentPosition(obj_id);
 	ServerID new_server_id = lookup(obj_pos);
 
-        if (new_server_id != mID) {
+        if (new_server_id != mID)
+        {
+          //bftm
+          mOSeg->migrateObject(obj_id,new_server_id);
+          //          printf("\n\nIn Server.cpp.  Sending an object migration to oseg.\n\n");
+          
+          //
+          
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
 /*
 	    printf("migrating object %s due to position %s \n",
@@ -140,7 +153,7 @@ void Server::checkObjectMigrations()
 		   obj_pos.toString().c_str());
 */
             
-            //bftm  	    route( migrate_msg , new_server_id);
+
             mForwarder.route( migrate_msg , new_server_id);
 	    migrated_objects.push_back(obj_id);
         }
@@ -161,7 +174,8 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj)
   MigrateMessage* migrate_msg = new MigrateMessage(origin,
                                                    obj_id,
                                                    obj->proximityRadius(),
-                                                   obj->subscriberSet().size());
+                                                   obj->subscriberSet().size(),
+                                                   this->id());
   ObjectSet::iterator it;
   int i=0;
   UUID* migrate_msg_subscribers = migrate_msg->subscriberList();

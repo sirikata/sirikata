@@ -38,6 +38,7 @@
 #include "Time.hpp"
 
 
+
 namespace CBR {
 
 template<typename T>
@@ -52,41 +53,59 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f
    mServersPerDim(perdim)
 {
 
+
+
+  
   /* Read in the file which maintains how the layout of the region
      changes at different times. */
   std::ifstream infile("layoutChangeFile.txt");
 
   lastLayoutChangeIdx = 0;
 
+
+  
   int  i = 0;
   std::string str;
   while (getline(infile, str)) {
+
+    
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
     boost::char_separator<char> sep(" ");
     tokenizer tokens(str, sep);
 
+    
     tokenizer::iterator tok_iter = tokens.begin();
 
+    
     uint32 time_val = atoi((*tok_iter).c_str());
 
+    
     ++tok_iter;
 
+    
     std::string layoutAsStr = *tok_iter;
 
     Vector3ui32 vec;
+
     std::istringstream is(layoutAsStr);
     is >> vec;
 
+
     std::cout << vec.toString() << std::endl;
 
+    
     LayoutChangeEntry lce;
     lce.time = time_val;
     lce.layout = vec;
 
+
+    
     mLayoutChangeEntries.push_back(lce);
   }
 
+
   infile.close();
+
 }
 
 UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {

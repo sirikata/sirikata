@@ -8,9 +8,10 @@
 #include "LocationService.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
+#include "ForwarderUtilityClasses.hpp"  
+#include "Forwarder.hpp" 
 
-#include "ForwarderUtilityClasses.hpp"  //bftm
-#include "Forwarder.hpp"  //bftm
+#include "ObjectSegmentation.hpp"
 
 namespace CBR
 {
@@ -29,7 +30,7 @@ namespace CBR
   class MigrateMessage;
   class LoadStatusMessage;
   class LoadMonitor;
-  class Forwarder; //bftm
+  class Forwarder;
 
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
@@ -39,7 +40,7 @@ namespace CBR
   class Server
   {
   public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace);
+    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
     ~Server();
 
     const ServerID& id() const;
@@ -52,72 +53,25 @@ namespace CBR
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
-
-
-    /* bftm
-    void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
-    // Routing interface for servers.  This is used to route messages that originate from
-    // a server provided service, and thus don't have a source object.  Messages may be destined
-    // for either servers or objects.  The second form will simply automatically do the destination
-    // server lookup.
-    // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
-    void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
-    // Delivery interface.  This should be used to deliver received messages to the correct location -
-    // the server or object it is addressed to.
-    void deliver(Message* msg);
-    // Get the object pointer for the given ID, or NULL if it isn't available on this server.
-    Object* object(const UUID& dest) const;
-    // Forward the given message to its proper server.  Use this when a message arrives and the object
-    // no longer lives on this server.
-    void forward(Message* msg, const UUID& dest);
-    */
-
     
     MigrateMessage* wrapObjectStateForMigration(Object* obj);
 
-    //bftm    typedef std::map<UUID, Object*> ObjectMap;
+
+
+    
     ServerID mID;
-    ObjectMap mObjects;
     ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
-
-    //bftm
-    Forwarder mForwarder;
-  
-  /* bftm
-
-  
-    ObjectMessageQueue* mObjectMessageQueue;
-    ServerMessageQueue* mServerMessageQueue;
-
-
-    LoadMonitor* mLoadMonitor;
-
-    struct SelfMessage {
-        SelfMessage(const Network::Chunk& d, bool f)
-         : data(d), forwarded(f) {}
-
-        Network::Chunk data;
-        bool forwarded;
-    };
-    std::deque<SelfMessage> mSelfMessages;
-
-    struct OutgoingMessage {
-        OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest)
-         : data(_data), dest(_dest) {}
-
-        Network::Chunk data;
-        ServerID dest;
-    };
-    std::deque<OutgoingMessage> mOutgoingMessages;
-
-  */
-    
     Time mCurrentTime;
     Trace* mTrace;
+    ObjectSegmentation* mOSeg;
+    Forwarder mForwarder;    
+
+    ObjectMap mObjects;
+
+    
 }; // class Server
 
 } // namespace CBR

@@ -58,6 +58,10 @@
 #include "LBCoordinateSegmentation.hpp"
 #include "LoadMonitor.hpp"
 
+#include "LocObjectSegmentation.hpp"
+#include "UniformObjectSegmentation.hpp"
+
+
 #include "ServerWeightCalculator.hpp"
 namespace {
 CBR::Network* gNetwork = NULL;
@@ -67,6 +71,7 @@ void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace CBR;
 
+    
     InitOptions();
     ParseOptions(argc, argv);
     std::string time_server=GetOption("time-server")->as<String>();
@@ -105,6 +110,9 @@ int main(int argc, char** argv) {
 }
 void *main_loop(void *) {
     using namespace CBR;
+
+
+    
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
         String server_port = GetOption("server-port")->as<String>();
@@ -118,17 +126,21 @@ void *main_loop(void *) {
     }
 
 
-
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
+    
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
+
+    
     uint32 nservers = GetOption("max-servers")->as<uint32>();
     if (nservers == 0) {
       nservers = layout.x * layout.y * layout.z;
     }
+
+
 
     Duration duration = GetOption("duration")->as<Duration>();
 
@@ -139,13 +151,14 @@ void *main_loop(void *) {
     LocationService* loc_service = new OracleLocationService(obj_factory);
 
 
-
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     gTrace->setServerIDMap(server_id_map);
     Proximity* prox = new Proximity(obj_factory, loc_service);
 
+
+    
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
@@ -158,10 +171,16 @@ void *main_loop(void *) {
     }
 
 
+    
     CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, sq, gTrace);
                                  new UniformCoordinateSegmentation(region, layout);
+
+
+    
     LoadMonitor* loadMonitor = new LoadMonitor(server_id, sq, cseg);
 
+
+    
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
@@ -271,9 +290,23 @@ void *main_loop(void *) {
                     ba.windowedPacketReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
             }
         }
+
+        //bftm additional object messages log file creation.
+
+
+        String object_segmentation_filename = "object_segmentation_file";
+        object_segmentation_filename += ".dat";
+        
+        ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, nservers);
+        std::ofstream object_seg_stream (object_segmentation_filename.c_str());
+        osegAnalysis.printData(object_seg_stream);
+        object_seg_stream.flush();
+        object_seg_stream.close();
+
+        //end bftm additional object message log file creation.
+        
         exit(0);
     }
-
 
 
 
@@ -292,6 +325,7 @@ void *main_loop(void *) {
         exit(-1);
     }
 
+
     obj_factory->setObjectMessageQueue(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(
@@ -305,8 +339,30 @@ void *main_loop(void *) {
             sq
         );
 
+    
+    //Create OSeg
+    std::vector<ServerID> dummyServerList; //bftm note: this should be filled in later with a list of server names.
+    std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
-    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
+    
+    //Trying to populate objectToServerMap
+      for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
+      {
+        UUID obj_id = *it;
+        Vector3f start_pos = loc_service->currentPosition(obj_id);
+        dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
+      }
+    //End of populating objectToServerMap
+      
+    //    ObjectSegmentation* oseg = new LocObjectSegmentation(cseg, loc_service,dummyServerList,dummyObjectToServerMap);
+    ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
+      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id);
+    
+    //end create oseg
+
+    
+    //    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
+    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();

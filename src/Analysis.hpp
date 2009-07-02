@@ -144,6 +144,31 @@ private:
 }; // class BandwidthAnalysis
 
 
+
+class ObjectSegmentationAnalysis
+{
+  
+private:
+  std::vector<Time> objectBeginMigrateTimes;
+  std::vector<UUID> objectBeginMigrateID;
+  std::vector<ServerID> objectBeginMigrateMigrateFrom;
+  std::vector<ServerID> objectBeginMigrateMigrateTo;
+
+
+  std::vector<Time> objectAcknowledgeMigrateTimes;
+  std::vector<UUID> objectAcknowledgeMigrateID;
+  std::vector<ServerID> objectAcknowledgeAcknowledgeFrom;
+  std::vector<ServerID> objectAcknowledgeAcknowledgeTo;
+
+public:
+  ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers);
+
+  void printData(std::ostream &fileOut);
+  ~ObjectSegmentationAnalysis();
+
+}; //class ObjectSegmentationAnalysis
+
+
 } // namespace CBR
 
 #endif //_CBR_ANALYSIS_HPP_

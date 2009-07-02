@@ -130,4 +130,18 @@ struct SegmentationChangeEvent : public Event {
   ServerID server;
 };
 
+
+struct ObjectBeginMigrateEvent : public Event
+{
+  UUID mObjID;
+  ServerID mMigrateFrom, mMigrateTo;
+};
+
+struct ObjectAcknowledgeMigrateEvent : public Event
+{
+  UUID mObjID;
+  ServerID mAcknowledgeFrom, mAcknowledgeTo;
+};
+
+  
 }

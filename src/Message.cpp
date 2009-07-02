@@ -106,6 +106,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_LOAD_STATUS:
         msg = new LoadStatusMessage(wire, offset, _id);
         break;
+      case MESSAGE_TYPE_OSEG_CHANGE:
+        msg = new OSegChangeMessage(wire,offset,_id);
+        break;
       default:
         assert(false);
         break;
@@ -373,12 +376,12 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-
-MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount)
+MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount, ServerID from)
  : Message(origin, true),
    mObject(obj),
    mProximityRadius(proxRadius),
-   mCountSubscribers(subscriberCount)
+   mCountSubscribers(subscriberCount),
+   mFrom(from)
 {
 
   mSubscribers = new UUID[mCountSubscribers];
@@ -410,6 +413,11 @@ MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint3
       offset += UUID::static_size;
       mSubscribers[i] = UUID(raw_object, UUID::static_size);
     }
+
+    ServerID from;
+    memcpy(&from,&wire[offset],sizeof(ServerID));
+    offset += sizeof(ServerID);
+    mFrom = from;
 }
 
 MigrateMessage::~MigrateMessage() {
@@ -430,8 +438,9 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
     uint32 uuid_size = UUID::static_size;
     wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) +
-		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers);
+		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers + sizeof(ServerID));
 
+    
     memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
     offset += uuid_size;
 
@@ -446,6 +455,9 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
       offset += uuid_size;
     }
 
+    memcpy(&wire[offset],&mFrom,sizeof(ServerID));
+    offset += sizeof(ServerID);
+    
     return offset;
 }
 
@@ -460,6 +472,14 @@ const int MigrateMessage::subscriberCount() const {
 UUID* MigrateMessage::subscriberList() const {
   return mSubscribers;
 }
+
+ServerID MigrateMessage::messageFrom()
+{
+  return mFrom;
+}
+
+
+
 
 CSegChangeMessage::CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions)
  : Message(origin, true),
@@ -553,6 +573,136 @@ uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 const float LoadStatusMessage::loadReading() const {
     return mLoadReading;
+}
+
+
+
+///////OSEG
+
+
+//constructor
+OSegChangeMessage::OSegChangeMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegChangeMessage::OSegAction action)
+ : Message(origin, true),
+   mServID_from (sID_from),
+   mServID_to   (sID_to),
+   mMessageDestination (sMessageDest),
+   mMessageFrom (sMessageFrom),
+   mObjID       (obj_id),
+   mAction      (action)
+{
+
+}
+
+
+//constructor
+OSegChangeMessage::OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+ : Message(_id)
+{
+
+  ServerID     sID_from, sID_to, sMessageDest, sMessageFrom;
+  UUID                                               obj_id;
+  OSegAction                                         action;
+  
+  //copying mServID_from
+  memcpy(&sID_from, &wire[offset], sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mServID_from = sID_from;
+
+  //copying mServID_to
+  memcpy(&sID_to, &wire[offset], sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mServID_to = sID_to;
+
+  //copying mMessageDestination
+  memcpy(&sMessageDest,&wire[offset],sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mMessageDestination = sMessageDest;
+
+  //copying mMessageFrom
+  memcpy(&sMessageFrom,&wire[offset],sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mMessageFrom = sMessageFrom;
+  
+  //copying mObjID
+  memcpy(&obj_id, &wire[offset], sizeof(UUID));
+  offset += sizeof(UUID);
+  mObjID = obj_id;
+
+  //copying mAction
+  memcpy(&action, &wire[offset], sizeof(OSegAction));
+  offset += sizeof(OSegAction);
+  mAction = action;
+
+}
+
+//destructor 
+OSegChangeMessage::~OSegChangeMessage()
+{
+  //need to complete later
+}
+
+MessageType OSegChangeMessage::type() const
+{
+  return MESSAGE_TYPE_OSEG_CHANGE;
+}
+
+/*
+  Serializer.  Should work.
+*/
+uint32 OSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset)
+{
+
+  offset = serializeHeader(wire,offset);
+
+  wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegAction));
+  //          wire            sID_from           sID_to              mMessageDest       mMessageFrom      obj_id           action
+
+  memcpy(&wire[offset], &mServID_from, sizeof(ServerID)); //copying sID_from
+  offset += sizeof(ServerID);
+
+  memcpy(&wire[offset], &mServID_to, sizeof(ServerID)); //copying sID_to
+  offset += sizeof(ServerID);
+
+  memcpy(&wire[offset], &mMessageDestination, sizeof(ServerID)); //copying mMessageDestination
+  offset += sizeof(ServerID);
+
+  memcpy(&wire[offset], &mMessageFrom, sizeof(ServerID)); //copying mMessageFrom
+  offset += sizeof(ServerID);
+  
+  memcpy(&wire[offset], &mObjID, sizeof(UUID));  //copying obj_id
+  offset += sizeof(UUID);
+
+  memcpy(&wire[offset], &mAction, sizeof(OSegAction)); //copying action
+  offset += sizeof(OSegAction);
+  
+  return offset;
+}
+
+//Sequence of osegmessage accessors
+ServerID OSegChangeMessage::getServFrom()
+{
+  return mServID_from;
+}
+ServerID OSegChangeMessage::getServTo()
+{
+  return mServID_to;
+}
+UUID OSegChangeMessage::getObjID()
+{
+  return mObjID;
+}
+OSegChangeMessage::OSegAction OSegChangeMessage::getAction()
+{
+  return mAction;
+}
+ServerID  OSegChangeMessage::getMessageDestination()
+{
+  return mMessageDestination;
+}
+
+ServerID OSegChangeMessage::getMessageFrom()
+{
+  return mMessageFrom;
 }
 
 

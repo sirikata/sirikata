@@ -21,6 +21,7 @@ namespace CBR
 
   
   UniformObjectSegmentation::UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID, Trace* tracer)
+    //  UniformObjectSegmentation::UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID)
     : mCSeg (cseg),
       mObjectToServerMap (objectToServerMap),
       mCurrentTime(0)
@@ -53,9 +54,27 @@ namespace CBR
     {
       //object isn't in transit.
       //      return mInTransit[obj_id];
+
+      //      printf("\n**Debug in UniformObjectSegmentation.cpp's lookup: obj found. \n");
+
+      std::map<UUID,ServerID>::const_iterator iterObjectToServerID = mObjectToServerMap.find(tmper);
+      if (iterObjectToServerID == mObjectToServerMap.end())
+      {
+        //        printf("\n\t\t***In the master list couldn't find object either.\n");
+        return -1;
+      }
+
+      //      std::cout<<"\t\t****In the master list, could find object.  Located on server:  "<<iterObjectToServerID->second<<std::endl;
+      return iterObjectToServerID->second;
+
+
       return iter->second;
     }
 
+    
+    //printf("\n**Debug in UniformObjectSegmentation.cpp's lookup: obj in transit.\n");
+    //    std::cout<<"\n**Debug in UniformObjectSegmentation.cpp's lookup: object "<<obj_id.toString()<<" in transit.\n";
+    
     return OBJECT_IN_TRANSIT;
     //    return mObjectToServerMap[obj_id];
     //    return iter->second;
@@ -72,8 +91,8 @@ namespace CBR
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  void UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner)
-  //  Message* UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
+  //  void UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner)
+  Message* UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
   {
     const UUID& obj_id = obj->uuid();
     OriginID origin;
@@ -81,8 +100,10 @@ namespace CBR
 
     Message* oseg_change_msg = new OSegChangeMessage(origin,  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegChangeMessage::ACKNOWLEDGE);
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
-    returner =  oseg_change_msg;
-}
+    //returner =  oseg_change_msg;
+    return  oseg_change_msg;
+    
+  }
 
 
   

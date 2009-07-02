@@ -79,6 +79,8 @@ const uint8 Trace::PacketQueueInfoTag;
 const uint8 Trace::PacketSentTag;
 const uint8 Trace::PacketReceivedTag;
 const uint8 Trace::SegmentationChangeTag;
+const uint8 Trace::ObjectBeginMigrateTag;
+const uint8 Trace::ObjectAcknowledgeMigrateTag;
 
 
 static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -232,6 +234,37 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write( &serverID, sizeof(serverID) );
 }
 
+  void Trace::objectBeginMigrate(const Time& t, const UUID& obj_id, const ServerID migrate_from, const ServerID migrate_to)
+  {
+    if (mShuttingDown) return;
+
+    data.write(&ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag));
+    data.write(&t, sizeof(t));
+
+    //    printf("\n\n******In Statistics.cpp.  Have an object begin migrate message. \n\n");
+    
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(&migrate_from, sizeof(migrate_from));
+    data.write(&migrate_to,sizeof(migrate_to));
+  }
+
+  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to)
+  //  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID acknowledge_from, acknowledge_to)
+  {
+    if (mShuttingDown) return;
+
+    //    printf("\n\n******In Statistics.cpp.  Have an object ack migrate message. \n\n");
+    data.write(&ObjectAcknowledgeMigrateTag, sizeof(ObjectAcknowledgeMigrateTag));
+    data.write(&t, sizeof(t));
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(&acknowledge_from, sizeof(ServerID));
+    data.write(&acknowledge_to,sizeof(ServerID));
+
+  }
+
+
+
+  
 void Trace::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
 

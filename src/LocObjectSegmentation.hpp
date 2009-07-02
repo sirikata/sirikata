@@ -39,8 +39,8 @@ namespace CBR
     virtual ServerID lookup(const UUID& obj_id) const;
     virtual void osegChangeMessage(OSegChangeMessage*);
     virtual void tick(const Time& t, std::map<UUID,ServerID> updated);
-    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
-
+    //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
+    virtual  Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to);
 
 
     virtual ServerID getHostServerID();

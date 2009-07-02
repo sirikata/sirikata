@@ -13,9 +13,9 @@
 #include "ObjectMessageQueue.hpp"
 #include "LoadMonitor.hpp"
 
-#include "ForwarderUtilityClasses.hpp" //bftm
+#include "ForwarderUtilityClasses.hpp" 
 #include "Forwarder.hpp"
-
+#include "ObjectSegmentation.hpp"
 
 
 namespace CBR
@@ -26,9 +26,10 @@ namespace CBR
     Constructor for Forwarder
     
   */
-  Forwarder::Forwarder(Trace* trace, CoordinateSegmentation* cseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm,ServerID id)
+  Forwarder::Forwarder(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm,ServerID id)
     : mTrace(trace),
       mCSeg(cseg),
+      mOSeg(oseg),
       mLocationService(locService),
       mObjectFactory(objectFactory),
       mObjectMessageQueue(omq),
@@ -61,14 +62,53 @@ namespace CBR
     return m_serv_ID;
   }
 
+
+  /*
+    Sends a tick to OSeg.  Receives messages from oseg.  Adds them to mOutgoingQueue.
+  */
+  void Forwarder::tickOSeg(const Time&t)
+  {
+    //bftm tmp, nothing
+    //    mOSeg -> tick(t,mOutgoingMessages);
+    //objects from
+    std::map<UUID,ServerID> updatedObjectLocations;
+    std::map<UUID,ServerID>::iterator iter;
+    std::map<UUID, std::vector<Message*> >::iterator iterObjectsInTransit;
+    
+    mOSeg -> tick(t,updatedObjectLocations);
+
+    //    cross-check updates against held messages.
+    for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
+    {
+      iterObjectsInTransit = mObjectsInTransit.find(iter->first);
+      
+      if (iterObjectsInTransit != mObjectsInTransit.end())
+      {
+        //means that we can route messages being held in mObjectsInTransit
+        
+        for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
+        {
+          route((iterObjectsInTransit->second)[s],iter->second,false);
+          //          void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
+        }
+
+        //remove the messages from the objects in transit
+        mObjectsInTransit.erase(iterObjectsInTransit);
+        
+      }
+    }
+  }
+
   
-  //  void Forwarder::tick(const Time&t)
-  //  void Forwarder::tick(const Time&t,int servID)
-  void Forwarder::tick(const Time&t, const ServerID& servID)
+
+  void Forwarder::tick(const Time&t)
   {
     mServerMessageQueue->reportQueueInfo(t);
     mLoadMonitor->tick(t);
 
+    tickOSeg(t);//updates oseg
+
+    
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty())
@@ -106,7 +146,7 @@ namespace CBR
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
+  /*  void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
   {
     assert(msg != NULL);
 
@@ -118,9 +158,7 @@ namespace CBR
     {
       if (!is_forward)
       {
-        //bftm        mTrace->serverDatagramQueued(mCurrentTime, dest_server, msg->id(), offset);
         mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
-        //bftm        mTrace->serverDatagramSent(mCurrentTime, mCurrentTime, 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
         mTrace->serverDatagramSent((*mCurrentTime), (*mCurrentTime), 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
       }
 
@@ -128,21 +166,82 @@ namespace CBR
     }
     else
     {
-      //bftm      mTrace->serverDatagramQueued(mCurrentTime, dest_server, msg->id(), offset);
       mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
-
       mOutgoingMessages.push_back( OutgoingMessage(msg_serialized, dest_server) );
     }
     delete msg;
   }
 
+  
   void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
   {
     ServerID dest_server_id = lookup(dest_obj);
     route(msg, dest_server_id, is_forward);
   }
 
+  */
 
+
+  
+  // Routing interface for servers.  This is used to route messages that originate from
+  // a server provided service, and thus don't have a source object.  Messages may be destined
+  // for either servers or objects.  The second form will simply automatically do the destination
+  // server lookup.
+  // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
+  void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
+  {
+
+    uint32 offset = 0;
+    Network::Chunk msg_serialized;
+    offset = msg->serialize(msg_serialized, offset);
+    
+    if (dest_server==serv_id())
+    {
+      if (!is_forward)
+      {
+        mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
+        mTrace->serverDatagramSent((*mCurrentTime), (*mCurrentTime), 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
+      }
+      mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
+    }
+    else
+    {
+      mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
+      mOutgoingMessages.push_back( OutgoingMessage(msg_serialized, dest_server) );
+    }
+    delete msg;
+    
+  }
+
+  void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
+  {
+    //    ServerID dest_server_id = lookup(dest_obj);
+    ServerID dest_server_id = mOSeg->lookup(dest_obj);
+
+    if (dest_server_id == OBJECT_IN_TRANSIT)
+    {
+      //add message to objects in transit.
+      //      if (mObjectsInTransit[dest_obj] == null)
+      if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
+      {
+        //no messages have been queued for mObjectsInTransit
+        //add this as the beginning of a vector of message pointers.
+        std::vector<Message*> tmp;
+        tmp.push_back(msg);
+        mObjectsInTransit[dest_obj] = tmp;
+      }
+      else
+      {
+        //add message to queue of objects in transit.
+        mObjectsInTransit[dest_obj].push_back(msg);
+      }
+    }
+    else
+    {
+      route(msg, dest_server_id, is_forward);
+    }
+  }
+  
 
   
 
@@ -155,7 +254,6 @@ namespace CBR
       offset = Message::deserialize(chunk,offset,&result);
 
       if (!forwarded_self_msg)
-        //bftm        mTrace->serverDatagramReceived(mCurrentTime, mCurrentTime, source_server, result->id(), offset);
         mTrace->serverDatagramReceived((*mCurrentTime), (*mCurrentTime), source_server, result->id(), offset);
 
       deliver(result);
@@ -179,7 +277,6 @@ namespace CBR
                   forward(prox_msg, prox_msg->destObject());
               else
               {
-                //bftm                  mTrace->prox(mCurrentTime, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
                 mTrace->prox((*mCurrentTime), prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
                   dest_obj->proximityMessage(prox_msg);
               }
@@ -195,7 +292,6 @@ namespace CBR
                   forward(loc_msg, loc_msg->destObject());
               else
               {
-                //bftm                mTrace->loc(mCurrentTime, loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
                 mTrace->loc((*mCurrentTime), loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
                 dest_obj->locationMessage(loc_msg);
               }
@@ -211,7 +307,6 @@ namespace CBR
                   forward(subs_msg, subs_msg->destObject());
               else
               {
-                //bftm                mTrace->subscription(mCurrentTime, subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                 mTrace->subscription((*mCurrentTime), subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                 dest_obj->subscriptionMessage(subs_msg);
               }
@@ -227,10 +322,26 @@ namespace CBR
 	      Object* obj = mObjectFactory->object(obj_id, this->serv_id());
 	      obj->migrateMessage(migrate_msg);
 
-	      //bftm    mObjects[obj_id] = obj;
               (*mObjects)[obj_id] = obj;
  
+              ServerID idOSegAckTo = migrate_msg->messageFrom();
+              
               delete migrate_msg;
+
+              //update our oseg to show that we know that we have this object now.
+              mOSeg->addObject(obj_id,this->serv_id());
+                            
+              //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
+              Message* oseg_ack_msg;
+              //              mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo,oseg_ack_msg);
+              oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo);
+              
+              if (oseg_ack_msg != NULL)
+              {
+                route(oseg_ack_msg, (dynamic_cast <OSegChangeMessage*>(oseg_ack_msg))->getMessageDestination(),false);
+              }
+ 
+
           }
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
@@ -255,6 +366,27 @@ namespace CBR
               mLoadMonitor->loadStatusMessage(load_status_msg);
           }
           break;
+      case MESSAGE_TYPE_OSEG_CHANGE:
+        {
+          OSegChangeMessage* oseg_change_msg = dynamic_cast<OSegChangeMessage*> (msg);
+          assert(oseg_change_msg != NULL);
+
+          if (oseg_change_msg->getMessageDestination() != this->serv_id())
+          {
+            //route it on to another server
+            route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
+          }
+          else
+          {
+            //otherwise, deliver to local oseg.
+            OriginID id = GetUniqueIDOriginID(oseg_change_msg->id());  //I don't know why I'm doing this, but it matches the pattern above.
+            //bftm debug
+            mOSeg->osegChangeMessage(oseg_change_msg);
+            delete oseg_change_msg;
+          }
+        }
+        break;
+          
       default:
         assert(false);
         break;
@@ -262,11 +394,34 @@ namespace CBR
   }
   
 
-  void Forwarder::forward(Message* msg, const UUID& dest)
+  void Forwarder::forward(Message* msg, const UUID& dest_obj)
   {
-    ServerID dest_server_id = lookup(dest);
+  
+    ServerID dest_server_id = mOSeg->lookup(dest_obj);
 
-    route(msg, dest_server_id, true);
+    if (dest_server_id == OBJECT_IN_TRANSIT)
+    {
+      //add message to objects in transit.
+      //      if (mObjectsInTransit[dest_obj] == null)
+      if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
+      {
+        //no messages have been queued for mObjectsInTransit
+        //add this as the beginning of a vector of message pointers.
+        std::vector<Message*> tmp;
+        tmp.push_back(msg);
+        mObjectsInTransit[dest_obj] = tmp;
+      }
+      else
+      {
+        //add message to queue of objects in transit.
+        mObjectsInTransit[dest_obj].push_back(msg);
+      }
+    }
+    else
+    {
+      route(msg, dest_server_id, true);
+    }
+    
   }
 
   ServerID Forwarder::lookup(const Vector3f& pos)
@@ -275,10 +430,19 @@ namespace CBR
     return sid;
   }
 
+  /*
+    May return that it's in transit.
+  */
   ServerID Forwarder::lookup(const UUID& obj_id)
   {
+
+    ServerID sid = mOSeg->lookup(obj_id);
+    //need to change this lookup function to query oseg instead.
+    /*
     Vector3f pos = mLocationService->currentPosition(obj_id);
     ServerID sid = mCSeg->lookup(pos);
+    */
+
     return sid;
   }
 
@@ -286,14 +450,11 @@ namespace CBR
   //looks for object with provided uuid and either returns pointer to object or null if object doesn't exist.
   Object* Forwarder::object(const UUID& dest) const
   {
-    //bftm    ObjectMap::const_iterator it = mObjects.find(dest);
     ObjectMap::const_iterator it = mObjects->find(dest);
-    //bftm    if (it == mObjects.end())
     if (it == mObjects->end())
         return NULL;
     return it->second;
   }
-
 
 
   

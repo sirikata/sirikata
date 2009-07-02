@@ -36,6 +36,8 @@
 #include "MotionPath.hpp"
 #include "ObjectFactory.hpp"
 #include "AnalysisEvents.hpp"
+#include "Utility.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 
@@ -178,8 +180,39 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = prevt;
           }
           break;
+      case Trace::ObjectBeginMigrateTag:
+        {
+          ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
+          is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
+          
+          is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
+
+          is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
+          is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
+  
+          evt = objBegMig_evt;
+        }
+        break;
+
+
+      case Trace::ObjectAcknowledgeMigrateTag:
+        {
+          ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
+          is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
+          
+          is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
+          
+          is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
+          is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
+
+          evt = objAckMig_evt;
+        }
+        break;
+
       default:
-        assert(false);
+
+        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<tag<<"\n";
+        //assert(false);
         break;
     }
 
@@ -926,4 +959,93 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
     );
 }
 
+
+
+
+  //object move messages
+  ObjectSegmentationAnalysis::ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers)
+  {
+
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+
+        ObjectBeginMigrateEvent* obj_mig_evt = dynamic_cast<ObjectBeginMigrateEvent*>(evt);
+        if (obj_mig_evt != NULL)
+        {
+          objectBeginMigrateTimes.push_back(obj_mig_evt->time);
+
+          objectBeginMigrateID.push_back(obj_mig_evt->mObjID);
+          objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
+          objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
+
+        }
+
+        ObjectAcknowledgeMigrateEvent* obj_ack_mig_evt = dynamic_cast<ObjectAcknowledgeMigrateEvent*> (evt);
+        if (obj_ack_mig_evt != NULL)
+        {
+          objectAcknowledgeMigrateTimes.push_back(obj_ack_mig_evt->time);
+
+          objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
+          objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
+          objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
+          
+        }
+      } //end while(is)
+
+    }//end for
+  }//end constructor
+
+
+  
+  /*
+    Nothing to populate in destructor.
+  */
+
+  ObjectSegmentationAnalysis::~ObjectSegmentationAnalysis()
+  {
+  }
+
+  
+  void ObjectSegmentationAnalysis::printData(std::ostream &fileOut)
+  {
+
+    fileOut<<"\n\nSize of objectMigrateTimes:               "<<objectBeginMigrateTimes.size()<<"\n\n";
+    fileOut<<"\n\nSize of objectAcknowledgeMigrateTimes:    "<<(int)objectAcknowledgeMigrateTimes.size()<<"\n\n";
+
+    
+    fileOut << "\n\n*******************Begin Migrate Messages*************\n\n\n";
+
+    
+    for (int s=0; s < (int)objectBeginMigrateTimes.size(); ++s)
+    {
+      fileOut << objectBeginMigrateTimes[s].raw() << "\n";
+      fileOut << "          obj id:       " << objectBeginMigrateID[s].toString() << "\n";
+      fileOut << "          migrate from: " << objectBeginMigrateMigrateFrom[s] << "\n";
+      fileOut << "          migrate to:   " << objectBeginMigrateMigrateTo[s] << "\n";
+      fileOut << "\n\n";
+  
+    }
+
+    fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
+
+    for (int s=0; s < (int)objectAcknowledgeMigrateTimes.size(); ++s)
+    {
+      fileOut << objectAcknowledgeMigrateTimes[s].raw() << "\n";
+      fileOut << "          obj id:           " << objectAcknowledgeMigrateID[s].toString() << "\n";
+      fileOut << "          acknowledge from: " << objectAcknowledgeAcknowledgeFrom[s] << "\n";
+      fileOut << "          acknowledge to:   " << objectAcknowledgeAcknowledgeTo[s] << "\n";
+      fileOut << "\n\n";
+    }
+  }    
+
+  
 } // namespace CBR

@@ -10,8 +10,8 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 
-#include "ForwarderUtilityClasses.hpp"//bftm
-
+#include "ForwarderUtilityClasses.hpp"
+#include "ObjectSegmentation.hpp"
 
 
 
@@ -38,19 +38,26 @@ namespace CBR
     //Unique to forwarder
       std::deque<SelfMessage> mSelfMessages; //will be used in route.
       std::deque<OutgoingMessage> mOutgoingMessages; //will be used in route.
-      LoadMonitor* mLoadMonitor;
-      ObjectMessageQueue* mObjectMessageQueue;
-      ServerMessageQueue* mServerMessageQueue;
 
-    
+      
     //Shared with server
       Trace* mTrace;  //will be used in several places.
-      ObjectMap* mObjects; //will be used in object() lookup call and possibly in migrate
-      CoordinateSegmentation* mCSeg; //will be used in lookup call
-      LocationService* mLocationService; //will be used in lookup call
+      CoordinateSegmentation* mCSeg; 
+      ObjectSegmentation* mOSeg;
+      LocationService* mLocationService; 
       ObjectFactory* mObjectFactory;
+      ObjectMessageQueue* mObjectMessageQueue;
+      ServerMessageQueue* mServerMessageQueue;
+      LoadMonitor* mLoadMonitor;    
+      ObjectMap* mObjects; //will be used in object() lookup call and possibly in migrate
+      ServerID m_serv_ID;//Keeps copy of server id on forwarder.  necessary for sending messages to objects.
+    
       Time* mCurrentTime;
 
+      std::map<UUID,std::vector<Message*> > mObjectsInTransit;
+
+
+    
     //Private Functions
       void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
     
@@ -69,18 +76,17 @@ namespace CBR
       // Get the object pointer for the given ID, or NULL if it isn't available on this server.
       Object* object(const UUID& dest) const;
 
-      ServerID m_serv_ID;//Keeps copy of server id on us.
+    void tickOSeg(const Time&t);
 
       const ServerID& serv_id() const; //used to access server id of the processes
     
     
     public:
-      Forwarder(Trace* trace, CoordinateSegmentation* cseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm,ServerID id); //constructor
+      Forwarder(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm,ServerID id); //constructor
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
       void initialize(ObjectMap* objMap, Time* currTime);
 
-      void tick(const Time&t, const ServerID& servID);
-
+      void tick(const Time&t);
 
     
       // Routing interface for servers.  This is used to route messages that originate from

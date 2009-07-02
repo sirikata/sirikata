@@ -36,7 +36,8 @@ namespace CBR
 
     
     public:
-      UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
+    UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
+    //UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID);
       virtual ~UniformObjectSegmentation();
 
       virtual ServerID lookup(const UUID& obj_id) const;
@@ -47,7 +48,7 @@ namespace CBR
       virtual void addObject(const UUID& obj_id, const ServerID ourID);
 
 
-      virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
+      virtual Message* generateAcknowledgeMessage(Object* obj, ServerID sID_to);
       virtual ServerID getHostServerID();
     
   }; //end class

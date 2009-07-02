@@ -88,7 +88,13 @@ public:
     static const uint8 PacketSentTag = 8;
     static const uint8 PacketReceivedTag = 9;
     static const uint8 SegmentationChangeTag = 10;  
+    static const uint8 ObjectBeginMigrateTag = 11;
+    static const uint8 ObjectAcknowledgeMigrateTag = 12;
+  
+  
 
+
+  
     Trace();
 
     void setServerIDMap(ServerIDMap* sidmap);
@@ -109,8 +115,15 @@ public:
   
     void segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
+    void objectBeginMigrate(const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
+    void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
+  
     void prepareShutdown();
     void save(const String& filename);
+
+
+
+  
 private:
     BatchedBuffer data;
     ServerIDMap* mServerIDMap;

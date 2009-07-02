@@ -90,6 +90,11 @@ class ClusterBuild:
         clean_cmd = "make clean;"
         ClusterRun(self.config, cd_cmd + clean_cmd)
 
+    def clean_git(self):
+        cd_cmd = self.cd_to_code()
+        clean_cmd = "git clean -f;"
+        ClusterRun(self.config, cd_cmd + clean_cmd)
+
 
 if __name__ == "__main__":
     cc = ClusterConfig()
@@ -142,6 +147,8 @@ if __name__ == "__main__":
             cluster_build.reset_to_origin_head()
         elif cmd == 'clean':
             cluster_build.clean()
+        elif cmd == 'clean_git':
+            cluster_build.clean_git()
         elif cmd == 'fullbuild':
             cluster_build.destroy()
             cluster_build.checkout()

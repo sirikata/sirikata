@@ -49,7 +49,8 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_COUNT        5
 #define MESSAGE_TYPE_CSEG_CHANGE  6
 #define MESSAGE_TYPE_LOAD_STATUS  7
-
+#define MESSAGE_TYPE_OSEG_CHANGE  8
+  
 struct OriginID {
     uint32 id;
 };
@@ -181,7 +182,7 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount);
+    MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount, ServerID from);
 
     ~MigrateMessage();
 
@@ -196,16 +197,21 @@ public:
     UUID* subscriberList() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    ServerID messageFrom();
+  
 private:
     friend class Message;
     MigrateMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
 
+  
     UUID mObject;
 
     float mProximityRadius;
 
     uint16_t mCountSubscribers;
     UUID* mSubscribers;
+    ServerID mFrom;
 
 }; // class MigrateMessage
 
@@ -233,6 +239,44 @@ private:
   
 };
 
+
+
+  //oseg message
+
+  
+  class OSegChangeMessage : public Message
+  {
+  public:
+    enum OSegAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
+    
+    OSegChangeMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegAction action);
+    ~OSegChangeMessage();
+
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    ServerID     getServFrom();
+    ServerID     getServTo();
+    UUID         getObjID();
+    OSegAction   getAction();
+    ServerID     getMessageDestination();
+    ServerID     getMessageFrom();
+
+    
+  private:
+    friend class Message;
+    OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+
+    ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
+    UUID mObjID;
+    OSegAction mAction;
+    
+  };
+
+  //end oseg message
+  
+
+  
 class LoadStatusMessage : public Message {
 
 public:
