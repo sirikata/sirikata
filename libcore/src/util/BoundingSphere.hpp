@@ -36,6 +36,8 @@ template <typename real> class BoundingSphere {
     Vector3<real> mCenter;
     float32 mRadius;
 public:
+    static const real Pi = 3.1415926536;
+
     static BoundingSphere<real> null() {
         return BoundingSphere<real>(Vector3<real>(0,0,0),0);
     }
@@ -53,6 +55,59 @@ public:
     BoundingSphere<real> recenter(const Vector3<real>&newCenter) {
         mRadius+=(newCenter-mCenter).length();
         mCenter=newCenter;
+    }
+    BoundingSphere& mergeIn(const BoundingSphere& rhs) {
+        *this = merge(rhs);
+        return *this;
+    }
+
+    BoundingSphere merge(const BoundingSphere& rhs) const {
+        if (rhs.degenerate())
+            return *this;
+
+        if (this->degenerate())
+            return rhs;
+
+        real center_dist = (rhs.mCenter - mCenter).length();
+        if (center_dist + mRadius <= rhs.mRadius)
+            return rhs;
+        if (center_dist + rhs.mRadius <= mRadius)
+            return *this;
+
+        real new_radius = (mRadius + center_dist + rhs.mRadius) * 0.5;
+        real ratio = (new_radius - mRadius) / center_dist;
+        Vector3<real> new_center = mCenter + (rhs.mCenter - mCenter) * ratio;
+        return BoundingSphere(new_center, new_radius);
+    }
+
+    bool contains(const BoundingSphere& other) const {
+        real centers_len = (mCenter - other.mCenter).length();
+        return (mRadius >= centers_len + other.mRadius);
+    }
+
+    bool contains(const BoundingSphere& other, real epsilon) const {
+        real centers_len = (mCenter - other.mCenter).length();
+        return (mRadius + epsilon >= centers_len + other.mRadius);
+    }
+
+    bool contains(const Vector3<real>& pt) const {
+        return ( (mCenter-pt).lengthSquared() <= mRadius*mRadius );
+    }
+
+    bool degenerate() const {
+        return ( mRadius <= 0 );
+    }
+
+    real volume() const {
+        if (degenerate()) return 0.0;
+        return 4.0 / 3.0 * Pi * mRadius * mRadius * mRadius;
+    }
+
+    bool operator==(const BoundingSphere& rhs) {
+        return (mCenter == rhs.mCenter && mRadius == rhs.mRadius);
+    }
+    bool operator!=(const BoundingSphere& rhs) {
+        return (mCenter != rhs.mCenter || mRadius != rhs.mRadius);
     }
 };
 }
