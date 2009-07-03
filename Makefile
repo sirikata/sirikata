@@ -33,10 +33,11 @@ dependencies:
 			else \
 				svn co http://sirikata.googlecode.com/svn/trunk/win32vc$(VCVER) dependencies ; \
 			fi \
+			;; \
 		*) \
 			svn co http://sirikata.googlecode.com/svn/trunk/source dependencies \
 			;; \
-	esac \
+	esac ; \
 	[ -f dependencies ]
 
 update-dependencies: dependencies
