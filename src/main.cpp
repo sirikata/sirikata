@@ -61,7 +61,7 @@
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
 
-#include "ServerHash.hpp"
+//#include "ServerHash.hpp"
 
 
 #include "ServerWeightCalculator.hpp"
@@ -354,7 +354,9 @@ void *main_loop(void *) {
 
     int ser=0;
 
-    ServerHash tmpSHash;
+    //    ServerHash tmpSHash;
+
+    std::cout<<"\n\nDebug: got here.\n\n\n";
     
     //Trying to populate objectToServerMap
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
@@ -366,7 +368,7 @@ void *main_loop(void *) {
           ++ser;
           std::cout<<"\n"<<obj_id.hash()<<"\n";
           std::cout<<"\n"<<obj_id.hash()<<"\n";
-          std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
+          //          std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
         }
 
         
