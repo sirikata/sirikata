@@ -1,5 +1,5 @@
-#ifndef _CBR_TEST_SHA1_HPP
-#define _CBR_TEST_SHA1_HPP
+#ifndef _CBR_OSEG_HASHER_HPP
+#define _CBR_OSEG_HASHER_HPP
 
 //#include <sirikata/util/Standard.hh>
 #include <sirikata/util/Platform.hpp>
@@ -11,12 +11,13 @@
 namespace CBR
 {
 
-  class ServerHash
+  class OSegHasher
   {
   public:
-    ServerHash();
-    ~ServerHash();
-    size_t hash(ServerID sID);
+    OSegHasher();
+    ~OSegHasher();
+    static size_t hash(ServerID sID);
+    //    uint32 hash(ServerID sID);
   };
 }
   

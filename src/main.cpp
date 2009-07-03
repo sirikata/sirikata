@@ -363,12 +363,14 @@ void *main_loop(void *) {
       {
         UUID obj_id = *it;
 
-        if (ser <5)
+        if (ser <25)
         {
           ++ser;
-          std::cout<<"\n"<<obj_id.hash()<<"\n";
-          std::cout<<"\n"<<obj_id.hash()<<"\n";
-          std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
+          std::cout<<"\n"<<obj_id.hash() % 80<<"\n";
+          std::cout<<"\n"<<obj_id.hash() % 80<<"\n";
+          //std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
+          //          std::cout<<"\n   "<<ser<<"   "<<tmpSHash.hash(ser) %80<<"\n";
+          std::cout<<"\n   "<<ser<<"   "<<ServerHash::hash(ser) %80<<"\n";
         }
 
         
