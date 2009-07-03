@@ -38,7 +38,7 @@ dependencies:
 			svn co http://sirikata.googlecode.com/svn/trunk/source dependencies \
 			;; \
 	esac ; \
-	[ -f dependencies ]
+	[ -d dependencies ]
 
 update-dependencies: dependencies
 	cd dependencies && svn update
