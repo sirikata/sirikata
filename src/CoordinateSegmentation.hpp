@@ -34,7 +34,6 @@
 #define _CBR_COORDINATE_SEGMENTATION_HPP_
 
 #include "Utility.hpp"
-#include "BoundingBox.hpp"
 #include "ServerNetwork.hpp"
 #include "Message.hpp"
 #include "LoadMonitor.hpp"

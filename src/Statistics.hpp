@@ -38,7 +38,6 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
-#include "BoundingBox.hpp"
 
 namespace CBR {
 
@@ -87,14 +86,14 @@ public:
     static const uint8 PacketQueueInfoTag = 7;
     static const uint8 PacketSentTag = 8;
     static const uint8 PacketReceivedTag = 9;
-    static const uint8 SegmentationChangeTag = 10;  
+    static const uint8 SegmentationChangeTag = 10;
     static const uint8 ObjectBeginMigrateTag = 11;
     static const uint8 ObjectAcknowledgeMigrateTag = 12;
-  
-  
 
 
-  
+
+
+
     Trace();
 
     void setServerIDMap(ServerIDMap* sidmap);
@@ -112,18 +111,18 @@ public:
     void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
-  
+
     void segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID);
 
     void objectBeginMigrate(const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
     void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
-  
+
     void prepareShutdown();
     void save(const String& filename);
 
 
 
-  
+
 private:
     BatchedBuffer data;
     ServerIDMap* mServerIDMap;

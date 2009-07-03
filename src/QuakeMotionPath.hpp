@@ -35,7 +35,6 @@
 
 #include "Utility.hpp"
 #include "MotionPath.hpp"
-#include "BoundingBox.hpp"
 
 namespace CBR {
 
@@ -51,7 +50,7 @@ public:
 private:
     TimedMotionVector3f parseTraceLines(String firstLine, String secondLine, float scaleDownFactor);
 
-    uint32 getIDFromTraceLine(String line);     
+    uint32 getIDFromTraceLine(String line);
 
     std::vector<TimedMotionVector3f> mUpdates;
 
@@ -62,7 +61,7 @@ private:
     uint32 mID;
 
     //the total number of objects whose traces are in a file.
-    static std::map<const char*, uint32> mObjectsInFile; 
+    static std::map<const char*, uint32> mObjectsInFile;
 
     //the number of objects created so far from a file.
     static std::map<const char*, uint32> mObjectsCreatedFromFile;

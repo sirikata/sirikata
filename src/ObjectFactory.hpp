@@ -32,7 +32,6 @@
 
 #include "Utility.hpp"
 #include "Duration.hpp"
-#include "BoundingBox.hpp"
 #include "Server.hpp"
 
 namespace CBR {

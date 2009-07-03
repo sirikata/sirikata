@@ -36,6 +36,8 @@
 #include <sirikata/util/Platform.hpp>
 #include <sirikata/util/Vector3.hpp>
 #include <sirikata/util/Vector4.hpp>
+#include <sirikata/util/BoundingBox.hpp>
+#include <sirikata/util/BoundingSphere.hpp>
 #include <sirikata/util/UUID.hpp>
 #include <sirikata/options/Options.hpp>
 #include <sirikata/util/TemporalValue.hpp>
@@ -68,6 +70,9 @@ typedef Sirikata::Vector4<uint32> Vector4ui32;
 typedef Sirikata::Vector4<int32> Vector4i32;
 
 typedef Sirikata::Quaternion Quaternion;
+
+typedef Sirikata::BoundingBox<float32> BoundingBox3f;
+typedef Sirikata::BoundingSphere<float32> BoundingSphere3f;
 
 typedef Sirikata::UUID UUID;
 
@@ -185,5 +190,25 @@ public:
 
 } // namespace CBR
 
+// We need to define some additional operators to get these working with Options
+namespace Sirikata {
+
+template<typename scalar>
+inline std::ostream& operator <<(std::ostream& os, const BoundingBox<scalar> &rhs) {
+  os << '<' << rhs.min() << ',' << rhs.max() << '>';
+  return os;
+}
+
+template<typename scalar>
+inline std::istream& operator >>(std::istream& is, BoundingBox<scalar> &rhs) {
+  // FIXME this should be more robust.  It currently relies on the exact format provided by operator <<
+  char dummy;
+  Vector3<scalar> minval, maxval;
+  is >> dummy >> minval >> dummy >> maxval >> dummy;
+  rhs = BoundingBox<scalar>(minval, maxval);
+  return is;
+}
+
+} // namespace Sirikata
 
 #endif //_CBR_UTILITY_HPP_

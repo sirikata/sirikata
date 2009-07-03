@@ -32,7 +32,6 @@
 
 #include "Options.hpp"
 #include "Duration.hpp"
-#include "BoundingBox.hpp"
 
 namespace CBR {
 

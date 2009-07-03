@@ -1,4 +1,3 @@
-#include "BoundingBox.hpp"
 
 namespace CBR {
 struct Event {
@@ -143,5 +142,5 @@ struct ObjectAcknowledgeMigrateEvent : public Event
   ServerID mAcknowledgeFrom, mAcknowledgeTo;
 };
 
-  
+
 }

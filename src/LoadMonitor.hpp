@@ -36,7 +36,6 @@
 
 #include "ServerMessageQueue.hpp"
 #include "Message.hpp"
-#include "BoundingBox.hpp"
 
 namespace CBR {
 
@@ -55,7 +54,7 @@ typedef struct ServerLoadInfo{
 
   }
 
-  
+
 
 } ServerLoadInfo;
 
@@ -63,12 +62,12 @@ typedef struct ServerLoadInfo{
 
 class LoadMonitor {
 public:
-  LoadMonitor(ServerID, ServerMessageQueue*, CoordinateSegmentation*); 
+  LoadMonitor(ServerID, ServerMessageQueue*, CoordinateSegmentation*);
 
   void addLoadReading();
 
   void sendLoadReadings();
-  
+
   float getCurrentLoadReading();
 
   float getAveragedLoadReading();
@@ -76,7 +75,7 @@ public:
   void loadStatusMessage(LoadStatusMessage* load_status_msg);
 
   void tick(const Time& t);
-  
+
 private:
 
   enum {

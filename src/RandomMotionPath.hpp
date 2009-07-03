@@ -35,7 +35,6 @@
 
 #include "Utility.hpp"
 #include "MotionPath.hpp"
-#include "BoundingBox.hpp"
 
 namespace CBR {
 
