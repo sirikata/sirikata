@@ -155,6 +155,15 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(SST REQUIRED)
 
+#dependency: prox
+IF(EXISTS ${DEPENDENCIES_ROOT}/installed-prox)
+  SET(PROX_ROOT ${DEPENDENCIES_ROOT}/installed-prox)
+ELSE()
+  SET(PROX_ROOT ${DEPENDENCIES_ROOT})
+ENDIF()
+FIND_PACKAGE(Prox REQUIRED)
+
+
 #source file location
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 
@@ -167,6 +176,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Raknet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${SST_INCLUDE_DIRS}
+        ${PROX_INCLUDE_DIRS}
         )
 
 #source files
