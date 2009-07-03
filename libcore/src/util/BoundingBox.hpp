@@ -31,6 +31,9 @@
  */
 #ifndef _SIRIKATA_BOUNDING_BOX_HPP
 #define _SIRIKATA_BOUNDING_BOX_HPP
+
+#define BBOX_CONTAINS_EPSILON 0.0005
+
 namespace Sirikata {
 template <typename real> class BoundingBox {
     Vector3<real> mMin;
@@ -53,11 +56,17 @@ public:
         mMin=imin;
         mAcross=Vector3f(imax-imin);
     }
-    
+
     const Vector3<real> &min()const{
         return mMin;
     }
     const Vector3f& across() const {
+        return mAcross;
+    }
+    const Vector3f& diag() const {
+        return mAcross;
+    }
+    const Vector3f& extents() const {
         return mAcross;
     }
     Vector3<real> max() const {
@@ -82,6 +91,62 @@ public:
         return BoundingBox(min().min(other),
                            max().max(other));
     }
+
+    BoundingBox& mergeIn(const BoundingBox<real>& other) {
+        mMin = min().min(other.min());
+        Vector3<real> mmax = max().max(other.max());
+        mAcross = Vector3f(mmax - mMin);
+        return *this;
+    }
+
+    BoundingBox& mergeIn(const Vector3<real>& other) {
+        mMin = min().min(other);
+        Vector3<real> mmax = max().max(other);
+        mAcross = Vector3f(mmax - mMin);
+        return *this;
+    }
+
+    bool contains(const Vector3<real>& point, real eps = BBOX_CONTAINS_EPSILON) const {
+        Vector3<real> mmax = max();
+        for(int i = 0; i < Vector3<real>::size; i++) {
+            if (mMin[i] > point[i] || mmax[i] < point[i]) {
+                if ( fabs(mMin[i] - point[i]) > eps &&
+                    fabs(mmax[i] - point[i]) > eps )
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
+    bool degenerate() const {
+        for(int i = 0; i < Vector3<real>::size; i++)
+            if (mAcross[i] <= 0) return true;
+        return false;
+    }
+
+    real volume() const {
+        if (degenerate()) return 0.0;
+        real vol = 1;
+        for(int i = 0; i < Vector3<real>::size; i++)
+            vol *= mAcross[i];
+        return vol;
+    }
+
+    Vector3<real> clamp(const Vector3<real>& v) const {
+        return v.max(min()).min(max());
+    }
+
+    bool operator==(const BoundingBox& rhs) {
+        return (mMin == rhs.mMin && mAcross == rhs.mAcross);
+    }
+    bool operator!=(const BoundingBox& rhs) {
+        return (mMin != rhs.mMin || mAcross != rhs.mAcross);
+    }
+
 };
+
 }
 #endif
