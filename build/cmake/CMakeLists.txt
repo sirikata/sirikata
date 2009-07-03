@@ -199,6 +199,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/ObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
+  ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
@@ -206,7 +207,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
-  ${CBR_SOURCE_DIR}/ServerHash.cpp
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp

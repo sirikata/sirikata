@@ -13,11 +13,15 @@ namespace CBR
 
   class OSegHasher
   {
+  private:
+    static const uint32 MAX_HASH_NUMBER = 80;
   public:
     OSegHasher();
     ~OSegHasher();
-    static size_t hash(ServerID sID);
-    //    uint32 hash(ServerID sID);
+    static uint32 hash(ServerID sID);
+    static uint32 hash(const UUID& obj_id);
+
+    
   };
 }
   

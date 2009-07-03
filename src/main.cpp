@@ -61,7 +61,7 @@
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
 
-#include "ServerHash.hpp"
+#include "OSegHasher.hpp"
 
 
 #include "ServerWeightCalculator.hpp"
@@ -354,7 +354,6 @@ void *main_loop(void *) {
 
     int ser=0;
 
-    ServerHash tmpSHash;
 
     std::cout<<"\n\nDebug: got here.\n\n\n";
     
@@ -366,11 +365,8 @@ void *main_loop(void *) {
         if (ser <25)
         {
           ++ser;
-          std::cout<<"\n"<<obj_id.hash() % 80<<"\n";
-          std::cout<<"\n"<<obj_id.hash() % 80<<"\n";
-          //std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
-          //          std::cout<<"\n   "<<ser<<"   "<<tmpSHash.hash(ser) %80<<"\n";
-          std::cout<<"\n   "<<ser<<"   "<<ServerHash::hash(ser) %80<<"\n";
+          std::cout<<"\n"<<OSegHasher::hash(obj_id)<<"\n";
+          std::cout<<"\n   "<<ser<<"   "<<OSegHasher::hash(ser) %80<<"\n";
         }
 
         
