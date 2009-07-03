@@ -42,6 +42,9 @@ namespace CBR {
 template<typename CoordType>
 class MotionVector {
 public:
+    typedef CoordType PositionType;
+    typedef CoordType VelocityType;
+
     MotionVector()
      : mStart(0,0,0), mDirection(0,0,0)
     {
@@ -72,8 +75,51 @@ private:
 typedef MotionVector<Vector3f> MotionVector3f;
 typedef MotionVector<Vector3d> MotionVector3d;
 
-typedef TemporalValue<MotionVector3f> TimedMotionVector3f;
-typedef TemporalValue<MotionVector3d> TimedMotionVector3d;
+template<typename MotionVectorType>
+class TimedMotionVector : public TemporalValue<MotionVectorType> {
+public:
+    typedef TemporalValue<MotionVectorType> Base;
+    typedef typename MotionVectorType::PositionType PositionType;
+    typedef typename MotionVectorType::VelocityType VelocityType;
+
+    TimedMotionVector()
+     : TemporalValue<MotionVectorType>()
+    {}
+    TimedMotionVector(const Time& when, const MotionVectorType& l)
+     : TemporalValue<MotionVectorType>(when, l)
+    {}
+
+    const Time& updateTime() const {
+        return Base::time();
+    }
+
+    const PositionType& position() const {
+        return Base::value().position();
+    }
+
+    PositionType position(const Duration& dt) const {
+        return Base::value().position() + Base::value().velocity() * dt.seconds();
+    }
+
+    PositionType position(const Time& t) const {
+        return position(t - Base::time());
+    }
+
+    const VelocityType& velocity() const {
+        return Base::value().velocity();
+    }
+    TimedMotionVector& operator+=(const PositionType &offset) {
+        Base::value().position()+=offset;
+        return *this;
+    }
+    void update(const Time& t, const PositionType& pos, const VelocityType& vel) {
+        assert(t > Base::time());
+        Base::updateValue(t, MotionVectorType(pos, vel));
+    }
+};
+
+typedef TimedMotionVector<MotionVector3f> TimedMotionVector3f;
+typedef TimedMotionVector<MotionVector3d> TimedMotionVector3d;
 
 } // namespace CBR
 
