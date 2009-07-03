@@ -187,13 +187,13 @@ if __name__ == "__main__":
             retval = cluster_build.update()
         elif cmd == 'dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.dependencies(deps)
         elif cmd == 'update_dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.update_dependencies(deps)
