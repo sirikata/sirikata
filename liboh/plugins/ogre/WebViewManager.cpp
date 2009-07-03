@@ -60,6 +60,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	  mouseButtonRDown(false), zOrderCounter(5), 
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
+#ifdef HAVE_AWESOMIUM
 	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
 	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
 
@@ -76,6 +77,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
 	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
 	inputMgr->subscribe(Sirikata::Input::TextInputEvent::getEventId(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
+#endif
 }
 
 WebViewManager::~WebViewManager()
@@ -86,9 +88,10 @@ WebViewManager::~WebViewManager()
 		WebView* toDelete = iter->second;
 		delete toDelete;
 	}
-
+#ifdef HAVE_AWESOMIUM
 	if(webCore)
 		delete webCore;
+#endif
 }
 
 WebViewManager& WebViewManager::getSingleton()
@@ -108,8 +111,9 @@ WebViewManager* WebViewManager::getSingletonPtr()
 
 void WebViewManager::Update()
 {
+#ifdef HAVE_AWESOMIUM
 	webCore->update();
-
+#endif
 	WebViewMap::iterator end, iter;
 	end = activeWebViews.end();
 	iter = activeWebViews.begin();
@@ -230,7 +234,7 @@ bool WebViewManager::injectMouseMove(int xPos, int yPos)
 {
 	bool eventHandled = false;
 
-	if(focusedWebView && isDraggingFocusedWebView || focusedWebView && mouseButtonRDown)
+	if((focusedWebView && isDraggingFocusedWebView) || (focusedWebView && mouseButtonRDown))
 	{
 		if(focusedWebView->movable)
 			focusedWebView->move(xPos-mouseXPos, yPos-mouseYPos);
@@ -377,7 +381,9 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 	}
 
 	focusedWebView = webViewToFocus;
+#ifdef HAVE_AWESOMIUM
 	focusedWebView->webView->focus();
+#endif
 	isDraggingFocusedWebView = false;
 
 	return true;
@@ -405,9 +411,10 @@ WebView* WebViewManager::getTopWebView(int x, int y)
 void WebViewManager::deFocusAllWebViews()
 {
 	WebViewMap::iterator iter;
+#ifdef HAVE_AWESOMIUM
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		iter->second->webView->unfocus();
-
+#endif
 	/*
 	astralMgr->defocusAll();
 
@@ -438,6 +445,7 @@ void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
 
 void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args)
 {
+#ifdef HAVE_AWESOMIUM
 	if(args.size() != 2)
 		return;
 
@@ -455,6 +463,7 @@ void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArgume
 	{
 		tooltipShowTime = tooltipTimer.getMilliseconds() + TIP_SHOW_DELAY;
 	}
+#endif
 }
 
 void WebViewManager::handleTooltip(WebView* tooltipParent, const std::wstring& tipText)

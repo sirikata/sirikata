@@ -34,9 +34,17 @@
 #define _SIRIKATA_GRAPHICS_WEBVIEWMANAGER_HPP_
 
 #include "Ogre.h"
-#include "WebCore.h"
 #include "ViewportOverlay.hpp"
 #include <task/EventManager.hpp>
+
+#ifdef HAVE_AWESOMIUM
+#include "WebCore.h"
+#else
+namespace Awesomium {
+  struct JSArguments;
+  struct WebCore;
+}
+#endif
 
 namespace Sirikata {
 namespace Input { class SDLInputManager; }

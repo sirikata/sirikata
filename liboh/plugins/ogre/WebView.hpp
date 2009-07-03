@@ -38,6 +38,20 @@
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
+#ifndef HAVE_AWESOMIUM
+namespace Awesomium {
+
+class WebViewListener {
+};
+class WebView {
+};
+struct JSValue;
+struct JSDelegate;
+typedef int FutureJSValue;
+
+}
+#endif
+
 namespace Sirikata {
 namespace Graphics {
 

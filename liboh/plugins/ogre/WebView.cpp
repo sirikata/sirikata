@@ -122,10 +122,10 @@ WebView::~WebView()
 {
 	if(alphaCache)
 		delete[] alphaCache;
-
+#ifdef HAVE_AWESOMIUM
 	if(webView)
 		webView->destroy();
-
+#endif
 	if(overlay)
 		delete overlay;
 
@@ -150,10 +150,12 @@ void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& pro
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 {
+#ifdef HAVE_AWESOMIUM
 	webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
 	webView->setListener(this);
 
 	bind("drag", std::tr1::bind(&WebView::onRequestDrag, this, _1, _2));
+#endif
 }
 
 void WebView::createMaterial()
@@ -226,6 +228,7 @@ void WebView::loadResource(Resource* resource)
 
 void WebView::update()
 {
+#ifdef HAVE_AWESOMIUM
 	if(maxUpdatePS)
 		if(timer.getMilliseconds() - lastUpdateTime < 1000 / maxUpdatePS)
 			return;
@@ -262,6 +265,7 @@ void WebView::update()
 	pixelBuffer->unlock();
 
 	lastUpdateTime = timer.getMilliseconds();
+#endif
 }
 
 void WebView::updateFade()
@@ -306,26 +310,35 @@ bool WebView::isPointOverMe(int x, int y)
 
 void WebView::loadURL(const std::string& url)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->loadURL(url);
+#endif
 }
 
 void WebView::loadFile(const std::string& file)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->loadFile(file);
+#endif
 }
 
 void WebView::loadHTML(const std::string& html)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->loadHTML(html);
+#endif
 }
 
 void WebView::evaluateJS(const std::string& javascript)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->executeJavascript(javascript);
+#endif
 }
 
 void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args)
 {
+#ifdef HAVE_AWESOMIUM
 	std::string resultScript;
 	char paramName[15];
 	unsigned int i, count;
@@ -354,23 +367,32 @@ void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArgum
 	}
 
 	webView->executeJavascript(resultScript);
+#endif
 }
 
 Awesomium::FutureJSValue WebView::evaluateJSWithResult(const std::string& javascript)
 {
+#ifdef HAVE_AWESOMIUM
 	return webView->executeJavascriptWithResult(javascript);
+#else
+	return 0;
+#endif
 }
 
 void WebView::bind(const std::string& name, JSDelegate callback)
 {
 	delegateMap[name] = callback;
 
+#ifdef HAVE_AWESOMIUM
 	webView->setCallback(name);
+#endif
 }
 
 void WebView::setProperty(const std::string& name, const Awesomium::JSValue& value)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->setProperty(name, value);
+#endif
 }
 
 void WebView::setViewport(Ogre::Viewport* newViewport)
@@ -398,7 +420,9 @@ void WebView::setTransparent(bool isTransparent)
 		}
 	}
 
+#ifdef HAVE_AWESOMIUM
 	webView->setTransparent(isTransparent);
+#endif
 	isWebViewTransparent = isTransparent;
 }
 
@@ -617,8 +641,10 @@ void WebView::focus()
 {
 	if(overlay)
 		WebViewManager::getSingleton().focusWebView(0, 0, this);
+#ifdef HAVE_AWESOMIUM
 	else
 		webView->focus();
+#endif
 }
 
 void WebView::move(int deltaX, int deltaY)
@@ -691,25 +717,34 @@ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre:
 
 void WebView::injectMouseMove(int xPos, int yPos)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->injectMouseMove(xPos, yPos);
+#endif
 }
 
 void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->injectMouseWheelXY(relScrollX, relScrollY);
+#endif
 }
 
 void WebView::injectMouseDown(int xPos, int yPos)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
+#endif
 }
 
 void WebView::injectMouseUp(int xPos, int yPos)
 {
+#ifdef HAVE_AWESOMIUM
 	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
+#endif
 }
 
 void WebView::injectKeyEvent(bool press, int modifiers, int scancode) {
+#ifdef HAVE_AWESOMIUM
 	bool numpad = false;
 	unsigned int vk_code = mapSDLToWindows((SDL_scancode)scancode, numpad);
 	int awemods = 0;
@@ -729,17 +764,21 @@ void WebView::injectKeyEvent(bool press, int modifiers, int scancode) {
 		awemods |= Awesomium::KEYPAD_KEY;
 	}
 	webView->injectKeyEvent(press, awemods, vk_code, scancode);
+#endif
 }
 
 void WebView::injectTextEvent(std::string utf8) {
+#ifdef HAVE_AWESOMIUM
 	wchar_t *outchars = new wchar_t[utf8.size()+1];
 	size_t len = mbstowcs(outchars, utf8.c_str(), utf8.size());
 	std::wstring widestr(outchars, len);
 	webView->injectTextEvent(widestr);
+#endif
 }
 
 void WebView::captureImage(const std::string& filename)
 {
+#ifdef HAVE_AWESOMIUM
 	Ogre::Image result;
 
 	int bpp = isWebViewTransparent? 4 : 3;
@@ -752,6 +791,7 @@ void WebView::captureImage(const std::string& filename)
 	result.save(Awesomium::WebCore::Get().getBaseDirectory() + "\\" + filename);
 
 	OGRE_FREE(buffer, Ogre::MEMCATEGORY_GENERAL);
+#endif
 }
 
 void WebView::resize(int width, int height)
@@ -782,8 +822,9 @@ void WebView::resize(int width, int height)
 	}
 
 	overlay->resize(viewWidth, viewHeight);
+#ifdef HAVE_AWESOMIUM
 	webView->resize(viewWidth, viewHeight);
-
+#endif
 	if(newTexWidth == texWidth && newTexHeight == texHeight)
 		return;
 
