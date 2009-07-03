@@ -82,7 +82,6 @@ typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
 typedef Sirikata::InitializeClassOptions InitializeOptions;
 
-
 class Time;
 class Duration;
 
@@ -189,6 +188,8 @@ public:
 };
 
 } // namespace CBR
+
+#include "SolidAngle.hpp" //FIXME this should be coming from Sirikata
 
 // We need to define some additional operators to get these working with Options
 namespace Sirikata {
