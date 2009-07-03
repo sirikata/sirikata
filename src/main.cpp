@@ -61,6 +61,8 @@
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
 
+#include "ServerHash.hpp"
+
 
 #include "ServerWeightCalculator.hpp"
 namespace {
@@ -71,7 +73,7 @@ void *main_loop(void *);
 int main(int argc, char** argv) {
     using namespace CBR;
 
-    
+        
     InitOptions();
     ParseOptions(argc, argv);
     std::string time_server=GetOption("time-server")->as<String>();
@@ -349,11 +351,25 @@ void *main_loop(void *) {
     std::vector<ServerID> dummyServerList; //bftm note: this should be filled in later with a list of server names.
     std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
+
+    int ser=0;
+
+    ServerHash tmpSHash;
     
     //Trying to populate objectToServerMap
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
       {
         UUID obj_id = *it;
+
+        if (ser <5)
+        {
+          ++ser;
+          std::cout<<"\n"<<obj_id.hash()<<"\n";
+          std::cout<<"\n"<<obj_id.hash()<<"\n";
+          std::cout<<"\n"<<tmpSHash.hash(server_id)<<"\n";
+        }
+
+        
         Vector3f start_pos = loc_service->currentPosition(obj_id);
         dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
       }
