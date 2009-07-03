@@ -76,7 +76,12 @@ class SpaceID : TotallyOrdered<SpaceID>{
     unsigned int hash() const{
         return mID.hash();
     }
-
+    class Hasher {public:
+        size_t operator()(const SpaceID&objr) const {
+             return objr.hash();
+        }
+    };
+    
     /** Get the %UUID of the object referred to. This is not necessarily space-specific, it is just the value used to
      *  construct this reference. Note the contrast with getAsUUID().
      */

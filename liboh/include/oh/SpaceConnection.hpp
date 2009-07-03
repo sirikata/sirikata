@@ -1,7 +1,7 @@
 /*  Sirikata liboh -- Object Host
- *  ObjectHost.hpp
+ *  SpaceConnection.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,43 +29,65 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _SIRIKATA_SPACE_CONNECTION_HPP_
+#define _SIRIKATA_SPACE_CONNECTION_HPP_
 
-#ifndef _SIRIKATA_OBJECT_HOST_HPP_
-#define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <oh/Platform.hpp>
-#include <util/SpaceID.hpp>
+
 namespace Sirikata {
-class ProxyManager;
-class SpaceIDMap;
+class ObjectHost;
 class TopLevelSpaceConnection;
-class SpaceConnection;
 
-class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
-    ProxyManager *manager;
-    SpaceIDMap *mSpaceIDMap;
-    typedef std::tr1::unordered_map<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
-    SpaceConnectionMap mSpaceConnections;
-    friend class TopLevelSpaceConnection;
-    SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
-    void removeTopLevelSpaceConnection(const SpaceID&, const TopLevelSpaceConnection*);
-    Network::IOService*mSpaceConnectionIO;
+
+class SIRIKATA_OH_EXPORT SpaceConnection {
+    std::tr1::shared_ptr<TopLevelSpaceConnection> mTopLevelStream;
+    mutable Network::Stream *mStream;
+  public:
+    SpaceConnection(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream):
+        mTopLevelStream(topLevel),mStream(stream){}
+    Network::Stream * operator->()const{return mStream;}
+    Network::Stream * operator*()const{return mStream;}
+    class SIRIKATA_OH_EXPORT Hasher {
+        size_t operator() (const SpaceConnection&sc) const;
+    };
+};
+/*
+class HostedObjectListener {
 public:
-    
-    ObjectHost();
-    ~ObjectHost();
-    ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool forwardMessagesTo(MessageService*){return false;}
-    ///ObjectHost does not forward messages to other services, only to objects it owns
-    bool endForwardingMessagesTo(MessageService*){return false;}
+    virtual void created(HostedObject *hostedObject) {
+    }
 
-    ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
-    void processMessage(const RoutableMessageHeader&header,
-                        MemoryReference message_body);
-    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
-    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID&);
-}; // class ObjectHost
+    virtual void destroyed(HostedObject *hostedObject) = 0;
+};
 
-} // namespace Sirikata
+class HostedObject : public Provider<HostedObjectListener*>, ProxyObjectListener {
+    SSTStream *mObjectStream;
+    SpaceConnection *mSpace;
+    ProxyObjectPtr mProxy;
 
-#endif //_SIRIKATA_OBJECT_HOST_HPP
+    virtual void destroyed() {
+        this->call(&HostedObjectListener::destroyed, this);
+        delete this;
+    }
+
+protected:
+    void creationCallback(const ProxyObjectPtr &proxyPtr) {
+        mProxy = proxyPtr;
+        this->call(&HostedObjectListener::created, this);
+    }
+public:
+    // Sends initial packet on this stream, notifies ProxyManager when ready.
+    HostedObject(SpaceConnection *mSpaceConnection);
+    void create();
+    const ProxyObjectPtr &getProxyPtr() const {
+        return mProxy;
+    }
+    ProxyObject &getProxy() const {
+        return *mProxy;
+    }
+};
+*/
+}
+
+#endif

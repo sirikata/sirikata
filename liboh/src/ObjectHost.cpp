@@ -32,20 +32,59 @@
 
 #include <oh/Platform.hpp>
 #include <oh/ObjectHost.hpp>
+#include <boost/thread.hpp>
+#include <network/IOServiceFactory.hpp>
 #include "graphics/GraphicsObject.hpp"
+#include "oh/TopLevelSpaceConnection.hpp"
+#include "oh/SpaceConnection.hpp"
 
 namespace Sirikata {
 
 ObjectHost::ObjectHost() {
+    mSpaceConnectionIO=Network::IOServiceFactory::makeIOService();
 }
 
 ObjectHost::~ObjectHost() {
+    Network::IOServiceFactory::destroyIOService(mSpaceConnectionIO);
 }
 
 ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
 void ObjectHost::processMessage(const RoutableMessageHeader&header,
                                 MemoryReference message_body) {
 
+}
+namespace{
+    boost::recursive_mutex gSpaceConnectionMapLock;
+}
+std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpace(const SpaceID&id){
+    std::tr1::shared_ptr<TopLevelSpaceConnection> retval;
+    {
+        boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
+        SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
+        if ((where==mSpaceConnections.end())||((retval=where->second.lock())==NULL)) {
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(this,mSpaceConnectionIO,id));
+            retval = temp;
+            if (where==mSpaceConnections.end()) {
+                mSpaceConnections[id]=retval;
+            }else {
+                where->second=retval;
+            }
+        }
+    }
+    return retval;
+}
+void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const TopLevelSpaceConnection*example){
+    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);    
+    SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
+    if(where!=mSpaceConnections.end()) {
+        std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
+        if (!temp) {
+            mSpaceConnections.erase(where);
+        }else if(&*temp==example) {
+            mSpaceConnections.erase(where);
+        }
+        
+    }
 }
 
 } // namespace Sirikata
