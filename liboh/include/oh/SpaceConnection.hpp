@@ -49,8 +49,16 @@ class SIRIKATA_OH_EXPORT SpaceConnection {
     Network::Stream * operator->()const{return mStream;}
     Network::Stream * operator*()const{return mStream;}
     class SIRIKATA_OH_EXPORT Hasher {
-        size_t operator() (const SpaceConnection&sc) const;
+        size_t operator() (const SpaceConnection&sc) const{
+            return std::tr1::hash<void*>()(sc.mStream);
+        }
     };
+    bool operator < (const SpaceConnection&other) const {
+        return mStream<other.mStream;
+    }
+    bool operator == (const SpaceConnection&other) const {
+        return mStream==other.mStream;
+    }
 };
 /*
 class HostedObjectListener {

@@ -35,6 +35,7 @@
 
 #include <oh/Platform.hpp>
 #include <util/SpaceID.hpp>
+#include <network/Address.hpp>
 namespace Sirikata {
 class ProxyManager;
 class SpaceIDMap;
@@ -44,11 +45,15 @@ class SpaceConnection;
 class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     ProxyManager *manager;
     SpaceIDMap *mSpaceIDMap;
-    typedef std::tr1::unordered_map<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
+    typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
+    typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;
+    
     SpaceConnectionMap mSpaceConnections;
+    AddressConnectionMap mAddressConnections;
     friend class TopLevelSpaceConnection;
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
-    void removeTopLevelSpaceConnection(const SpaceID&, const TopLevelSpaceConnection*);
+    void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
+    void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
     Network::IOService*mSpaceConnectionIO;
 public:
     
@@ -64,6 +69,8 @@ public:
                         MemoryReference message_body);
     ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID&);
+    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
+    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 }; // class ObjectHost
 
 } // namespace Sirikata

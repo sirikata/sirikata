@@ -38,20 +38,25 @@
 namespace Sirikata {
 
 class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public Noncopyable{
-    const SpaceID mSpaceID;
+    SpaceID mSpaceID;
     ObjectHost*mParent;
+    Network::Address mRegisteredAddress;
     Network::Stream *mTopLevelStream;
     void removeFromMap();
+    static void connectToAddress(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*oh,const Network::Address*addy);
+
   public:
-    TopLevelSpaceConnection(ObjectHost*host, Network::IOService*, const SpaceID&id);
+    TopLevelSpaceConnection(Network::IOService*);
     ~TopLevelSpaceConnection();
     Network::Stream *topLevelStream(){
         return mTopLevelStream;
     }
     void remoteDisconnection(const std::string&reason);
     const SpaceID&id()const {return mSpaceID;}
+    const Network::Address&address()const {return mRegisteredAddress;}
     ///connects the SST stream to the given IP address unless it is null
-    void connect(ObjectHost*,const Network::Address*addy);
+    void connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*,const SpaceID&,const Network::Address&addy);
+    void connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*,const SpaceID&);
 };
 /*
 class HostedObjectListener {

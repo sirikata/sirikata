@@ -56,35 +56,78 @@ void ObjectHost::processMessage(const RoutableMessageHeader&header,
 namespace{
     boost::recursive_mutex gSpaceConnectionMapLock;
 }
+void ObjectHost::insertAddressMapping(const Network::Address&addy, const std::tr1::weak_ptr<TopLevelSpaceConnection>&val){
+    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
+    mAddressConnections[addy]=val;
+}
 std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpace(const SpaceID&id){
     std::tr1::shared_ptr<TopLevelSpaceConnection> retval;
     {
         boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
         SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
         if ((where==mSpaceConnections.end())||((retval=where->second.lock())==NULL)) {
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(this,mSpaceConnectionIO,id));
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO));
+            temp->connect(temp,this,id);//inserts into mSpaceConnections and eventuallly mAddressConnections
             retval = temp;
             if (where==mSpaceConnections.end()) {
-                mSpaceConnections[id]=retval;
+                mSpaceConnections.insert(SpaceConnectionMap::value_type(id,retval));
             }else {
+                SILOG(oh,warning,"Null spaceid->connection mapping");
                 where->second=retval;
             }
         }
     }
     return retval;
 }
-void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const TopLevelSpaceConnection*example){
-    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);    
-    SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
-    if(where!=mSpaceConnections.end()) {
-        std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
-        if (!temp) {
-            mSpaceConnections.erase(where);
-        }else if(&*temp==example) {
-            mSpaceConnections.erase(where);
+
+
+std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpaceAddress(const SpaceID&id, const Network::Address&addy){
+    std::tr1::shared_ptr<TopLevelSpaceConnection> retval;
+    {
+        boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
+        AddressConnectionMap::iterator where=mAddressConnections.find(addy);
+        if ((where==mAddressConnections.end())||(!(retval=where->second.lock()))) {
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO));
+            temp->connect(temp,this,id,addy);//inserts into mSpaceConnections and eventuallly mAddressConnections
+            retval = temp;
+            if (where==mAddressConnections.end()) {
+                mAddressConnections[addy]=temp;
+            }else {
+                SILOG(oh,warning,"Null spaceid->connection mapping");
+                where->second=retval;
+            }
+            mSpaceConnections.insert(SpaceConnectionMap::value_type(id,retval));
         }
-        
     }
+    return retval;
 }
 
+
+void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::Address& addy,const TopLevelSpaceConnection*example){
+    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);    
+    {
+        SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
+        for(;where!=mSpaceConnections.end()&&where->first==id;++where) {
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
+            if (!temp) {
+                mSpaceConnections.erase(where);
+            }else if(&*temp==example) {
+                mSpaceConnections.erase(where);
+            }
+        }
+        {
+            AddressConnectionMap::iterator where=mAddressConnections.find(addy);
+            if (where!=mAddressConnections.end()) {
+                assert(!(addy==Network::Address::null()));
+                std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
+                if (!temp) {
+                    mAddressConnections.erase(where);
+                }else if(&*temp==example) {
+                    mAddressConnections.erase(where);
+                }
+            }
+        }
+    }
+}
 } // namespace Sirikata
+

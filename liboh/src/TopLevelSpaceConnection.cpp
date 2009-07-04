@@ -38,48 +38,73 @@
 #include "oh/ObjectHost.hpp"
 namespace Sirikata {
 namespace {
-void connectionStatus(TopLevelSpaceConnection*tls,Network::Stream::ConnectionStatus status,const std::string&reason){
-    if (status!=Network::Stream::Connected) {//won't get this error until lookup returns
-        tls->remoteDisconnection(reason);
+void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,Network::Stream::ConnectionStatus status,const std::string&reason){
+    std::tr1::shared_ptr<TopLevelSpaceConnection>thus=weak_thus.lock();
+    if (thus) {
+        if (status!=Network::Stream::Connected) {//won't get this error until lookup returns
+            thus->remoteDisconnection(reason);
+        }
     }
 }
 }
 
 
-
-TopLevelSpaceConnection::TopLevelSpaceConnection(ObjectHost*oh, Network::IOService*io, const SpaceID&id):mSpaceID(id) {
+TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io):mRegisteredAddress(Network::Address::null()) {
     mParent=NULL;
     mTopLevelStream=new Network::TCPStream(*io);
+}
+void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&thus, ObjectHost * oh,  const SpaceID & id) {
+    mSpaceID=id;
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     mTopLevelStream->prepareOutboundConnection(&Network::Stream::ignoreSubstreamCallback,
-                                               boost::bind(&connectionStatus, this,_1,_2),                                               
+                                               boost::bind(&connectionStatus, thus,_1,_2),                                               
                                                &Network::Stream::ignoreBytesReceived);
-    oh->spaceIDMap()->lookup(id,boost::bind(&TopLevelSpaceConnection::connect,this,oh,_1));
+    oh->spaceIDMap()->lookup(id,boost::bind(&TopLevelSpaceConnection::connectToAddress,thus,oh,_1));
+}
+
+
+void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&thus, ObjectHost * oh,  const SpaceID & id, const Network::Address&addy) {
+    mSpaceID=id;
+    mParent=oh;
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    mTopLevelStream->connect(addy,
+                             &Network::Stream::ignoreSubstreamCallback,
+                             boost::bind(&connectionStatus, thus,_1,_2),                                               
+                             &Network::Stream::ignoreBytesReceived);
 }
 
 void TopLevelSpaceConnection::removeFromMap() {
-    mParent->removeTopLevelSpaceConnection(mSpaceID,this);
+    mParent->removeTopLevelSpaceConnection(mSpaceID,mRegisteredAddress,this);
 }
 void TopLevelSpaceConnection::remoteDisconnection(const std::string&reason) {
     if (mParent) {
         removeFromMap();//FIXME: is it possible for an object host to connect at exactly this time
         //maybe resolution is to connect nowhere?
-        mParent=NULL;
-        mTopLevelStream->connect(Network::Address("0.0.0.0","0"));
+        Network::Stream *topLevel=mTopLevelStream;
+        mTopLevelStream=NULL;
+        topLevel->connect(Network::Address("0.0.0.0","0"));
+        delete topLevel;
     }
 }
-void TopLevelSpaceConnection::connect(ObjectHost*oh,const Network::Address*addy) {
-    mParent=oh;
-    if (addy) {
-        mTopLevelStream->connect(*addy);
-    }else {
-        mTopLevelStream->connect(Network::Address("0.0.0.0","0"));
+void TopLevelSpaceConnection::connectToAddress(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*oh,const Network::Address*addy) {
+    std::tr1::shared_ptr<TopLevelSpaceConnection>thus=weak_thus.lock();
+    if (thus) {
+        thus->mParent=oh;
+        if (addy) {
+            thus->mTopLevelStream->connect(*addy);
+            oh->insertAddressMapping(*addy,thus);
+        }else {
+            thus->mTopLevelStream->connect(Network::Address("0.0.0.0","0"));
+        }
     }
 }
 TopLevelSpaceConnection::~TopLevelSpaceConnection() {
-    removeFromMap();
-    delete mTopLevelStream;
+    if (mParent) {
+        removeFromMap();
+        delete mTopLevelStream;
+    }
 }
 
 }

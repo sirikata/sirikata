@@ -1,7 +1,7 @@
-/*  Sirikata Network Utilities
- *  Address.hpp
+/*  Sirikata liboh -- Object Host
+ *  HostedObject.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,48 +29,24 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _NETWORK_ADDRESS_HPP_
-#define _NETWORK_ADDRESS_HPP_
-namespace Sirikata { namespace Network {
-/**
- * Provides a protocol-independent address layer for connecting to a target
- * Takes a name and a service (for TCP that would be computer ip address and numeric port
- */
-class Address {
-    String mName;
-    String mService;
-public:
-    static Any lexical_cast(const std::string&value) {
-        std::string::size_type where=value.rfind(':');
-        if (where==std::string::npos) {
-            throw std::invalid_argument("Address does not contain a port");
-        }
-        Address retval(value.substr(0,where),
-                       value.substr(where+1));
-        return retval;
+#include "oh/HostedObject.hpp"
+
+namespace Sirikata {
+bool HostedObject::send(const RoutableHeader&hdr, const MemoryReference&body) {
+    ObjectStreamMap::iterator where=mObjectStreams.find(hdr.getDestinationSpace());
+    if (where!=mObjectStreams.end()) {
+        String serialized_header;
+        hdr.SerializeToString(&serialized_header);
+        where->second->send(MemoryReference(serialized_header),body, Network::Reliable);
+        return true;
     }
-    const String &getHostName()const {
-        return mName;
-    }
-    const String &getService()const {
-        return mService;
-    }
-    static Address null() {
-        return Address(String(),String());
-    }
-    bool operator==(const Address&other) const{
-        return other.mName==mName&&other.mService==mService;
-    }
-    Address(const String& name, 
-            const String& service) {
-        mName=name;
-        mService=service;
-    }
-    class Hasher {public:
-        size_t operator()(const Address&addy)const {
-            return std::tr1::hash<std::string>()(addy.mName)^std::tr1::hash<std::string>()(addy.mService);
-        }
-    };
-};
-} }
-#endif
+    return false;
+}
+ObjectHost*HostedObject::getObjectHost()const {
+    return mObjectStreams.getTopLevelStream();
+}
+bool HostedObject::connect(const SpaceID&) {
+    
+}
+
+}
