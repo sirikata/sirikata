@@ -179,7 +179,9 @@ void WebView::createMaterial()
 		}
 	}
 
+
 	// Create the texture
+#if defined(HAVE_AWESOMIUM) || !defined(__APPLE__)
 	TexturePtr texture = TextureManager::getSingleton().createManual(
 		viewName + "Texture", ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
@@ -196,7 +198,7 @@ void WebView::createMaterial()
 	memset(pDest, 128, texHeight*texPitch);
 
 	pixelBuffer->unlock();
-
+#endif
 	MaterialPtr material = MaterialManager::getSingleton().create(viewName + "Material", 
 		ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	matPass = material->getTechnique(0)->getPass(0);
@@ -204,7 +206,7 @@ void WebView::createMaterial()
 	matPass->setDepthWriteEnabled(false);
 
 	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
-	
+
 	baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
 	if(texFiltering == FO_ANISOTROPIC)
 		baseTexUnit->setTextureAnisotropy(4);
@@ -833,6 +835,7 @@ void WebView::resize(int width, int height)
 
 	matPass->removeAllTextureUnitStates();
 	maskTexUnit = 0;
+#if defined(HAVE_AWESOMIUM)|| !defined (__APPLE__)
 
 	Ogre::TextureManager::getSingleton().remove(viewName + "Texture");
 
@@ -852,6 +855,7 @@ void WebView::resize(int width, int height)
 	memset(pDest, 128, texHeight*texPitch);
 
 	pixelBuffer->unlock();
+#endif
 
 	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
 	
