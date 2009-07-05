@@ -73,7 +73,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	//tooltipWebView->setIgnoresMouse();
 
 	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
-	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseDrag, this, _1));
+	inputMgr->subscribe(Sirikata::Input::MouseClickEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseClick, this, _1));
 	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
 	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
 	inputMgr->subscribe(Sirikata::Input::TextInputEvent::getEventId(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
@@ -312,8 +313,12 @@ bool WebViewManager::injectMouseUp(int buttonID)
 {
 	isDraggingFocusedWebView = false;
 
-	if(buttonID == LeftMouseButton && focusedWebView)
-		focusedWebView->injectMouseUp(focusedWebView->getRelativeX(mouseXPos), focusedWebView->getRelativeY(mouseYPos));
+	if(buttonID == LeftMouseButton && focusedWebView) {
+		int relX = focusedWebView->getRelativeX(mouseXPos);
+		int relY = focusedWebView->getRelativeY(mouseYPos);
+
+		focusedWebView->injectMouseUp(relX, relY);
+	}
 	else if(buttonID == RightMouseButton)
 	{
 		mouseButtonRDown = false;
@@ -504,6 +509,85 @@ Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventP
 	return Sirikata::Task::EventResponse::nop();
 }
 
+Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
+{
+	Sirikata::Input::MouseDownEvent* e = dynamic_cast<Sirikata::Input::MouseDownEvent*>(evt.get());
+	if (!e) {
+		return Sirikata::Task::EventResponse::nop();
+	}
+
+	onMouseMove(evt);
+
+	int awebutton;
+	bool success = true;
+	switch(e->mButton) {
+	case 1:
+		awebutton = LeftMouseButton; break;
+	case 2:
+		awebutton = MiddleMouseButton; break;
+	case 3:
+		awebutton = RightMouseButton; break;
+	default:
+		success = false;
+	}
+
+	if (success) {
+		success = this->injectMouseDown(awebutton);
+		success = success && this->injectMouseUp(awebutton);
+	}
+
+	if (success) {
+		return Sirikata::Task::EventResponse::cancel();
+	} else {
+		return Sirikata::Task::EventResponse::nop();
+	}
+}
+
+Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventPtr evt)
+{
+	Sirikata::Input::MouseDragEvent* e = dynamic_cast<Sirikata::Input::MouseDragEvent*>(evt.get());
+	if (!e) {
+		return Sirikata::Task::EventResponse::nop();
+	}
+
+	int awebutton;
+	bool success = true;
+	switch(e->mButton) {
+	case 1:
+		awebutton = LeftMouseButton; break;
+	case 2:
+		awebutton = MiddleMouseButton; break;
+	case 3:
+		awebutton = RightMouseButton; break;
+	default:
+		success = false;
+	}
+
+	if (success) {
+		if (e->mType == Sirikata::Input::MouseDragEvent::START) {
+			unsigned int wid,hei;
+			e->getDevice()->getInputManager()->getWindowSize(wid,hei);
+			this->injectMouseMove(((e->mXStart+1)*wid)/2, ((1-e->mYStart)*hei)/2);
+
+			success = this->injectMouseDown(awebutton);
+		}
+	}
+
+	onMouseMove(evt);
+
+	if (success) {
+		if (e->mType == Sirikata::Input::MouseDragEvent::END) {
+			success = this->injectMouseUp(awebutton);
+		}
+	}
+
+	if (success) {
+		return Sirikata::Task::EventResponse::cancel();
+	} else {
+		return Sirikata::Task::EventResponse::nop();
+	}
+}
+
 Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr evt)
 {
 	Sirikata::Input::ButtonEvent* e = dynamic_cast<Sirikata::Input::ButtonEvent*>(evt.get());
@@ -514,25 +598,6 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 	bool success = true;
 	if(e->getDevice()->isKeyboard()) {
 		success = this->injectKeyEvent(e->mPressed, e->mModifier, e->mButton);
-	} else {
-		int awebutton;
-		switch(e->mButton) {
-		case 1:
-			awebutton = LeftMouseButton; break;
-		case 2:
-			awebutton = MiddleMouseButton; break;
-		case 3:
-			awebutton = RightMouseButton; break;
-		default:
-			success = false;
-		}
-		if (success) {
-			if (e->mPressed) {
-				success = this->injectMouseDown(awebutton);
-			} else {
-				success = this->injectMouseUp(awebutton);
-			}
-		}
 	}
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();

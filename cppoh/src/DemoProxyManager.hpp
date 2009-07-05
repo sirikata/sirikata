@@ -51,7 +51,6 @@ class DemoProxyManager :public ProxyManager {
     typedef std::map<SpaceObjectReference, ProxyObjectPtr > ObjectMap;
     ObjectMap mObjects;
 
-	std::tr1::shared_ptr<ProxyWebViewObject> mWebView;
     //noncopyable
     DemoProxyManager(const DemoProxyManager&cpy) {}
 
@@ -88,6 +87,16 @@ class DemoProxyManager :public ProxyManager {
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->update(linfo);
         return myObj;
+    }
+    ProxyObjectPtr addWebViewObject(const std::string &url, int width=500, int height=400) {
+        SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
+		std::tr1::shared_ptr <ProxyWebViewObject> mWebView(new ProxyWebViewObject(this, SpaceObjectReference(myId)));
+        	mObjects.insert(ObjectMap::value_type(myId, mWebView));
+		notify(&ProxyCreationListener::createProxy,mWebView);
+		mWebView->resize(width, height);
+		mWebView->setPosition(OverlayPosition(RP_TOPRIGHT));
+		mWebView->loadURL(url);
+		return mWebView;
     }
 
     void loadSceneObject(FILE *fp) {
@@ -204,8 +213,7 @@ class DemoProxyManager :public ProxyManager {
 
 public:
     DemoProxyManager()
-            : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))),
-              mWebView(new ProxyWebViewObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+            : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
     }
 
     virtual void createObject(const ProxyObjectPtr &newObj) {
@@ -226,10 +234,7 @@ public:
         notify(&ProxyCreationListener::createProxy,mCamera);
         mCamera->attach("",0,0);
 
-		notify(&ProxyCreationListener::createProxy,mWebView);
-		mWebView->resize(500, 400);
-		mWebView->setPosition(OverlayPosition(RP_CENTER));
-		mWebView->loadURL("http://google.com");
+		addWebViewObject("http://sirikata.com/cgi-bin/virtualchat/irc.cgi", 400, 250);
 
         mCamera->resetPositionVelocity(Time::now(),
                                        Location(Vector3d(0,0,50.), Quaternion::identity(),
@@ -263,9 +268,7 @@ public:
     }
     void destroy() {
         mCamera->destroy();
-        mWebView->destroy();
         notify(&ProxyCreationListener::destroyProxy,mCamera);
-        notify(&ProxyCreationListener::destroyProxy,mWebView);
         for (ObjectMap::const_iterator iter = mObjects.begin();
                 iter != mObjects.end(); ++iter) {
             (*iter).second->destroy();
@@ -276,9 +279,6 @@ public:
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const {
         if (id == mCamera->getObjectReference()) {
             return mCamera;
-        }
-        else if (id == mWebView->getObjectReference()) {
-            return mWebView;
         }
         else {
             ObjectMap::const_iterator iter = mObjects.find(id);

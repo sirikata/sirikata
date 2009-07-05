@@ -244,6 +244,8 @@ protected:
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
+	Sirikata::Task::EventResponse onMouseClick(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onButton(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onKeyTextInput(Sirikata::Task::EventPtr evt);
 };
