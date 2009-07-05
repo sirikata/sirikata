@@ -51,7 +51,7 @@ namespace Sirikata {
  *  guaranteed to work in spaces other than the one they originated
  *  in.
  */
-class SpaceID : TotallyOrdered<SpaceID>{
+class SpaceID : public TotallyOrdered<SpaceID>{
   public:
     enum {static_size=UUID::static_size};
     SpaceID(){}

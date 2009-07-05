@@ -29,34 +29,44 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_SPACE_CONNECTION_HPP_
-#define _SIRIKATA_SPACE_CONNECTION_HPP_
+#ifndef _SIRIKATA_HOSTED_OBJECT_HPP_
+#define _SIRIKATA_HOSTED_OBJECT_HPP_
 
 
-#include <oh/Platform.hpp>
 
 namespace Sirikata {
 class ObjectHost;
+class ProxyObject;
 class TopLevelSpaceConnection;
-
-class HostedObject {
-    typedef std::map<SpaceID, SpaceConnection> ObjectStreamMap;
+class HostedObject : SelfWeakPtr<HostedObject> {
+    class PerSpaceData {
+    public:
+        ObjectReference mReference;
+        SpaceConnection mSpaceConnection;
+        std::tr1::shared_ptr<ProxyObject> mProxyObject;
+        PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
+    };
+    typedef std::map<SpaceID, PerSpaceData> ObjectStreamMap;
     ObjectHost *mObjectHost;
     ObjectStreamMap mObjectStreams;
     UUID mInternalObjectReference;
+    friend class ::Sirikata::SelfWeakPtr<HostedObject>;
+    HostedObject(ObjectHost*parent);    
+    void cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
+    static void processMessage(const std::tr1::weak_ptr<HostedObject>&thus,const SpaceID&sid,const Network::Chunk&);
 public:
+    static void disconnectionEvent(const std::tr1::weak_ptr<HostedObject>&thus,const SpaceID&sid,const String&reason);
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    HostedObject(const UUID &objectName, const Transform&startingLocation,const String&mesh, const SpaceID&);
+    //FIXME implement void initialize(const UUID &objectName, const Transform&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const SpaceID&, const std::tr1::weak_ptr<HostedObject>&spaceConnectionHint=std::tr1::weak_ptr<HostedObject>());
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
-    HostedObject(const UUID &objectName, const Transform&startingLocation,const String&mesh);
-    //.attempt to restore this item from database
-    HostedObject(const UUID &objectName);
+    void initialize(const UUID &objectName, const String&script, const SpaceID&id, const std::tr1::weak_ptr<HostedObject>&spaceConnectionHint=std::tr1::weak_ptr<HostedObject>() );
+    //.attempt to restore this item from database including script
+    void initialize(const UUID &objectName);
     ObjectHost *getObjectHost(){return mObjectHost;}
     const ObjectHost *getObjectHost()const {return mObjectHost;}
-    void connect(const SpaceID&space);
-    void connect(const SpaceID&space, const SpaceConnection&example);
-    bool send(const RoutableHeader& hdr, const MemoryReference &body);
-    void processMessage(const Network::Chunk&);
+    //FIXME implement SpaceConnection& connect(const SpaceID&space);
+    //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
+    bool send(RoutableMessageHeader hdr, const MemoryReference &body);
 };
 
 }

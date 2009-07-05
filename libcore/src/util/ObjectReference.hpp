@@ -51,7 +51,7 @@ namespace Sirikata {
  *  guaranteed to work in spaces other than the one they originated
  *  in.
  */
-class ObjectReference : TotallyOrdered<ObjectReference>{
+class ObjectReference : public TotallyOrdered<ObjectReference>{
   public:
     enum {static_size=UUID::static_size};
     ObjectReference(){}

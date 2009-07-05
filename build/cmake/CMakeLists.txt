@@ -815,6 +815,7 @@ SET(LIBPROXIMITY_SOURCES
                   ${LIBPROXIMITY_SOURCE_DIR}/SingleStreamProximityConnection.cpp )
 
 SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
+                  ${LIBOH_SOURCE_DIR}/HostedObject.cpp 
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyMeshObject.cpp
