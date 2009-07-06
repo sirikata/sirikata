@@ -171,7 +171,11 @@ void WebView::createMaterial()
 				compensateNPOT = true;
 		}
 		else compensateNPOT = true;
-		
+#ifdef __APPLE__
+//cus those fools always report #t when I ask if they support this or that
+//and then fall back to their buggy and terrible software driver which has never once in my life rendered a single correct frame.
+		compensateNPOT=true;
+#endif
 		if(compensateNPOT)
 		{
 			texWidth = Bitwise::firstPO2From(viewWidth);
@@ -712,7 +716,7 @@ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre:
 
 	if(compensateNPOT)
 	{
-		u2 = (Ogre::Real)viewWidth/texWidth;
+		u2 = (Ogre::Real)viewWidth/(Ogre::Real)texWidth;
 		v2 = (Ogre::Real)viewHeight/(Ogre::Real)texHeight;
 	}
 }
@@ -815,7 +819,7 @@ void WebView::resize(int width, int height)
 				compensateNPOT = true;
 		}
 		else compensateNPOT = true;
-		
+		compensateNPOT=true;
 		if(compensateNPOT)
 		{
 			newTexWidth = Bitwise::firstPO2From(viewWidth);
@@ -832,6 +836,11 @@ void WebView::resize(int width, int height)
 
 	texWidth = newTexWidth;
 	texHeight = newTexHeight;
+    if (compensateNPOT) {
+        Ogre::Real u1,v1,u2,v2;
+        getDerivedUV(u1, v1,  u2,v2);
+        overlay->panel->setUV(u1, v1, u2, v2);	
+    }
 
 	matPass->removeAllTextureUnitStates();
 	maskTexUnit = 0;

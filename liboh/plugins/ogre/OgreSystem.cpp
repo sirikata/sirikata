@@ -623,7 +623,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
         if (webviewpxy) {
-			WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 100, 100, OverlayPosition());
+			WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 128, 256, OverlayPosition());
 			view->setProxyObject(webviewpxy);
         }
         
