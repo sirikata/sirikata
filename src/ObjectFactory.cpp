@@ -56,7 +56,7 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
 
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
         inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
-
+        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * randFloat() * 20 );
         inputs->proximityRadius = randFloat() * 90 + 10; // FIXME
 
         mObjectIDs.insert(id);
@@ -97,6 +97,12 @@ MotionPath* ObjectFactory::motion(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
     assert( mInputs.find(id) != mInputs.end() );
     return mInputs[id]->motion;
+}
+
+BoundingSphere3f ObjectFactory::bounds(const UUID& id) {
+    assert( mObjectIDs.find(id) != mObjectIDs.end() );
+    assert( mInputs.find(id) != mInputs.end() );
+    return mInputs[id]->bounds;
 }
 
 float ObjectFactory::proximityRadius(const UUID& id) {

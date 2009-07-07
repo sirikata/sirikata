@@ -1,5 +1,5 @@
 /*  cbr
- *  LocationService.hpp
+ *  LocationService.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,46 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_LOCATION_SERVICE_HPP_
-#define _CBR_LOCATION_SERVICE_HPP_
-
-#include "Utility.hpp"
-#include "MotionVector.hpp"
+#include "LocationService.hpp"
 
 namespace CBR {
 
-/** Interface for objects that need to listen for location updates. */
-class LocationServiceListener {
-public:
-    virtual ~LocationServiceListener();
+LocationServiceListener::~LocationServiceListener() {
+}
 
-    virtual void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
-}; // class LocationServiceListener
+LocationService::~LocationService() {
+}
 
-/** Interface for location services.  This provides a way for other components
- *  to get the most current information about object locations.
- */
-class LocationService {
-public:
-    virtual ~LocationService();
+void LocationService::addListener(LocationServiceListener* listener) {
+    assert(mListeners.find(listener) == mListeners.end());
+    mListeners.insert(listener);
+}
 
-    virtual void tick(const Time& t) = 0;
+void LocationService::removeListener(LocationServiceListener* listener) {
+    ListenerList::iterator it = mListeners.find(listener);
+    assert(it != mListeners.end());
+    mListeners.erase(it);
+}
 
-    virtual TimedMotionVector3f location(const UUID& uuid) = 0;
-    virtual Vector3f currentPosition(const UUID& uuid) = 0;
-    virtual BoundingSphere3f bounds(const UUID& uuid) = 0;
+void LocationService::notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->locationUpdated(uuid, newval);
+}
 
-    virtual void addListener(LocationServiceListener* listener);
-    virtual void removeListener(LocationServiceListener* listener);
-protected:
-    void notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
-    void notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
-
-    typedef std::set<LocationServiceListener*> ListenerList;
-    ListenerList mListeners;
-}; // class LocationService
+void LocationService::notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->boundsUpdated(uuid, newval);
+}
 
 } // namespace CBR
-
-#endif //_CBR_LOCATION_SERVICE_HPP_

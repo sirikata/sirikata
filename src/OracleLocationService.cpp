@@ -55,6 +55,7 @@ OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
             objinfo.has_next = true;
             objinfo.next = *next;
         }
+        objinfo.bounds = objfactory->bounds(objid);
 
         mLocations[objid] = objinfo;
     }
@@ -66,6 +67,7 @@ void OracleLocationService::tick(const Time& t) {
         LocationInfo& locinfo = it->second;
         if(locinfo.has_next && locinfo.next.time() <= t) {
             locinfo.location = locinfo.next;
+            notifyLocationUpdated(it->first, locinfo.location);
             const TimedMotionVector3f* next = locinfo.path->nextUpdate(t);
             if (next == NULL)
                 locinfo.has_next = false;
@@ -73,6 +75,7 @@ void OracleLocationService::tick(const Time& t) {
                 locinfo.next = *next;
         }
     }
+    // FIXME we should update bounds as well
 
     mCurrentTime = t;
 }
@@ -88,6 +91,14 @@ TimedMotionVector3f OracleLocationService::location(const UUID& uuid) {
 Vector3f OracleLocationService::currentPosition(const UUID& uuid) {
     TimedMotionVector3f loc = location(uuid);
     return loc.extrapolate(mCurrentTime).position();
+}
+
+BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo locinfo = it->second;
+    return locinfo.bounds;
 }
 
 } // namespace CBR

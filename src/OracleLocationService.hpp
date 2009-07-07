@@ -51,12 +51,14 @@ public:
     virtual void tick(const Time& t);
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
+    virtual BoundingSphere3f bounds(const UUID& uuid);
 private:
     struct LocationInfo {
         TimedMotionVector3f location;
         bool has_next;
         TimedMotionVector3f next;
         MotionPath* path;
+        BoundingSphere3f bounds;
     };
     typedef std::map<UUID, LocationInfo> LocationMap;
 

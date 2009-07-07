@@ -48,7 +48,8 @@ class ObjectFactory {
     typedef std::set<UUID> ObjectIDSet;
     struct ObjectInputs {
         MotionPath* motion;
-        float proximityRadius;
+        BoundingSphere3f bounds;
+        float proximityRadius; // XXX FIXME
     };
     typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
     typedef std::map<UUID, Object*> ObjectMap;
@@ -67,7 +68,8 @@ public:
     const_iterator end() const;
 
     MotionPath* motion(const UUID& id);
-    float proximityRadius(const UUID& id);
+    BoundingSphere3f bounds(const UUID& id);
+    float proximityRadius(const UUID& id); // FIXME
     Object* object(const UUID& id, const ServerID& server);
     void destroyObject(const UUID& id);
 

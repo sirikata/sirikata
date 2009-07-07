@@ -192,6 +192,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
+  ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
