@@ -67,8 +67,8 @@ public:
 
 typedef SplitRegion<float> SplitRegionf;
 
-OriginID GetUniqueIDOriginID(uint32 uid);
-uint32 GetUniqueIDMessageID(uint32 uid);
+OriginID GetUniqueIDOriginID(uint64 uid);
+uint64 GetUniqueIDMessageID(uint64 uid);
 
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
@@ -78,20 +78,20 @@ public:
     virtual ~Message();
 
     virtual MessageType type() const = 0;
-    uint32 id() const;
+    uint64 id() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
 protected:
     Message(const OriginID& origin, bool x); // note the bool is here to make the signature different than the next constructor
-    Message(uint32 id);
+    Message(uint64 id);
 
     // takes care of serializing the header information properly, will overwrite
     // contents of chunk.  returns the offset after serializing the header
     uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
 private:
-    static uint32 sIDSource;
-    uint32 mID;
+    static uint64 sIDSource;
+    uint64 mID;
 }; // class Message
 
 
@@ -115,7 +115,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    ProximityMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
     UUID mDestObject;
     UUID mNeighbor;
@@ -134,7 +134,7 @@ public:
 
 protected:
     uint32 serializeSourceDest(Network::Chunk& wire, uint32 offset);
-    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
 private:
     UUID mSourceObject;
@@ -153,7 +153,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    LocationMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    LocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
     TimedMotionVector3f mLocation;
 }; // class LocationMessage
@@ -175,7 +175,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 private:
     friend class Message;
-    SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
     Action mAction;
 }; // class SubscriptionMessage
@@ -202,7 +202,7 @@ public:
   
 private:
     friend class Message;
-    MigrateMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
   
     UUID mObject;
@@ -231,7 +231,7 @@ public:
 
 private:
   friend class Message;
-  CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+  CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
   
   uint8_t mNumberOfRegions;
@@ -265,7 +265,7 @@ private:
     
   private:
     friend class Message;
-    OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+    OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
     ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
     UUID mObjID;
@@ -292,7 +292,7 @@ public:
 
 private:
   friend class Message;
-  LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint32 _id);
+  LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
   
   float mLoadReading;

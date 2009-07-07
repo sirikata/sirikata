@@ -83,13 +83,13 @@ const uint8 Trace::ObjectBeginMigrateTag;
 const uint8 Trace::ObjectAcknowledgeMigrateTag;
 
 
-static uint32 GetMessageUniqueID(const Network::Chunk& msg) {
-    uint32 offset = 0;
+static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
+    uint64 offset = 0;
     offset += sizeof(ServerMessageHeader);
     offset += 1; // size of msg type
 
-    uint32 uid;
-    memcpy(&uid, &msg[offset], sizeof(uint32));
+    uint64 uid;
+    memcpy(&uid, &msg[offset], sizeof(uint64));
     return uid;
 }
 
@@ -149,7 +149,7 @@ void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 
     data.write( &receive_weight, sizeof(receive_weight) );
 }
 
-void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size) {
+void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size) {
     if (mShuttingDown) return;
     data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
@@ -160,13 +160,13 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id,
 
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data) {
     if (mShuttingDown) return;
-    uint32 id = GetMessageUniqueID(data);
+    uint64 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
     serverDatagramSent(start_time, end_time, weight, dest, id, size);
 }
 
-void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size) {
+void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
     if (mShuttingDown) return;
     data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
@@ -178,7 +178,7 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
     data.write( &end_time, sizeof(end_time) );
 }
 
-void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size) {
+void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
     if (mShuttingDown) return;
     data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap

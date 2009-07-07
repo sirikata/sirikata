@@ -34,36 +34,36 @@
 
 namespace CBR {
 
-#define MESSAGE_ID_SERVER_SHIFT 20
-#define MESSAGE_ID_SERVER_BITS 0xFFF00000
+#define MESSAGE_ID_SERVER_SHIFT 52
+#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000
 
-static uint32 GenerateUniqueID(const OriginID& origin, uint32 id_src) {
-    uint32 server_int = (uint32)origin.id;
-    uint32 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
+static uint64 GenerateUniqueID(const OriginID& origin, uint64 id_src) {
+    uint64 server_int = (uint64)origin.id;
+    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
     assert( (server_shifted & ~MESSAGE_ID_SERVER_BITS) == 0 );
     return (server_shifted & MESSAGE_ID_SERVER_BITS) | (id_src & ~MESSAGE_ID_SERVER_BITS);
 }
 
-OriginID GetUniqueIDOriginID(uint32 uid) {
-    uint32 server_int = ( uid & MESSAGE_ID_SERVER_BITS ) >> MESSAGE_ID_SERVER_SHIFT;
+OriginID GetUniqueIDOriginID(uint64 uid) {
+    uint64 server_int = ( uid & MESSAGE_ID_SERVER_BITS ) >> MESSAGE_ID_SERVER_SHIFT;
     OriginID id;
     id.id = server_int;
     return id;
 }
 
-uint32 GetUniqueIDMessageID(uint32 uid) {
+uint64 GetUniqueIDMessageID(uint64 uid) {
     return ( uid & ~MESSAGE_ID_SERVER_BITS );
 }
 
 
-uint32 Message::sIDSource = 0;
+uint64 Message::sIDSource = 0;
 
 Message::Message(const OriginID& origin, bool x)
  : mID( GenerateUniqueID(origin, sIDSource++) )
 {
 }
 
-Message::Message(uint32 _id)
+Message::Message(uint64 _id)
  : mID(_id)
 {
 }
@@ -71,19 +71,19 @@ Message::Message(uint32 _id)
 Message::~Message() {
 }
 
-uint32 Message::id() const {
+uint64 Message::id() const {
     return mID;
 }
 
 uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message** result) {
     uint8 raw_type;
-    uint32 _id;
+    uint64 _id;
 
     memcpy( &raw_type, &wire[offset], 1 );
     offset += 1;
 
-    memcpy( &_id, &wire[offset], sizeof(uint32) );
-    offset += sizeof(uint32);
+    memcpy( &_id, &wire[offset], sizeof(uint64) );
+    offset += sizeof(uint64);
 
     Message* msg = NULL;
 
@@ -123,15 +123,15 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
 }
 
 uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
-    if (wire.size() < offset + sizeof(MessageType) + sizeof(uint32) )
-        wire.resize( offset + sizeof(MessageType) + sizeof(uint32) );
+    if (wire.size() < offset + sizeof(MessageType) + sizeof(uint64) )
+        wire.resize( offset + sizeof(MessageType) + sizeof(uint64) );
 
     MessageType t = type();
     memcpy( &wire[offset], &t, sizeof(MessageType) );
     offset += sizeof(MessageType);
 
-    memcpy( &wire[offset], &mID, sizeof(uint32) );
-    offset += sizeof(uint32);
+    memcpy( &wire[offset], &mID, sizeof(uint64) );
+    offset += sizeof(uint64);
 
     return offset;
 }
@@ -147,7 +147,7 @@ ProximityMessage::ProximityMessage(const OriginID& origin, const UUID& dst_objec
 {
 }
 
-ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
     uint8 raw_dest_object[UUID::static_size];
@@ -242,7 +242,7 @@ ObjectToObjectMessage::ObjectToObjectMessage(const OriginID& origin, const UUID&
 {
 }
 
-ObjectToObjectMessage::ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+ObjectToObjectMessage::ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
     uint8 raw_src_object[UUID::static_size];
@@ -287,7 +287,7 @@ LocationMessage::LocationMessage(const OriginID& origin, const UUID& src_object,
 {
 }
 
-LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : ObjectToObjectMessage(wire, offset, _id),
    mLocation( Time(0), MotionVector3f() )
 {
@@ -343,7 +343,7 @@ SubscriptionMessage::SubscriptionMessage(const OriginID& origin, const UUID& src
 {
 }
 
-SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : ObjectToObjectMessage(wire, offset, _id)
 {
     uint8 raw_act;
@@ -388,7 +388,7 @@ MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, float pr
 
 }
 
-MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
     uint8 raw_object[UUID::static_size];
@@ -488,7 +488,7 @@ CSegChangeMessage::CSegChangeMessage(const OriginID& origin, uint8_t number_of_r
   mSplitRegions = new SplitRegion<float>[number_of_regions];
 }
 
-CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
     uint8_t number_of_regions;
@@ -544,7 +544,7 @@ LoadStatusMessage::LoadStatusMessage(const OriginID& origin, float load_reading)
   
 }
 
-LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
     float load_reading;
@@ -595,7 +595,7 @@ OSegChangeMessage::OSegChangeMessage(const OriginID& origin,ServerID sID_from, S
 
 
 //constructor
-OSegChangeMessage::OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint32 _id)
+OSegChangeMessage::OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
 

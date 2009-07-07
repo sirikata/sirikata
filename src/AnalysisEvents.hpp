@@ -59,7 +59,7 @@ struct ServerDatagramQueueInfoEvent : public Event {
 struct ServerDatagramEvent : public Event {
     ServerID source;
     ServerID dest;
-    uint32 id;
+    uint64 id;
     uint32 size;
 };
 

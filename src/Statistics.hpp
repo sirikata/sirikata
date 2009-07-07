@@ -104,10 +104,10 @@ public:
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
 
     void serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
-    void serverDatagramQueued(const Time& t, const ServerID& dest, uint32 id, uint32 size);
+    void serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size);
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data);
-    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint32 id, uint32 size);
-    void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint32 id, uint32 size);
+    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
+    void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
     void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
