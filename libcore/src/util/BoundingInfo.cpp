@@ -40,7 +40,7 @@ BoundingInfo::BoundingInfo():mMin(0,0,0),mRadius(0),mMax(0,0,0) {
 
 
 BoundingInfo::BoundingInfo(const Vector3f& bbmin, const Vector3f& bbmax, float32 radius):mMin(bbmin),mRadius(radius),mMax(bbmax) {}
-static float32 boundingBoxRadius(const Vector3f &bbmin, const Vector3f bbmax) {
+static float32 boundingBoxRadius(const Vector3f &bbmin, const Vector3f &bbmax) {
     Vector3f tmin(fabs(bbmin.x),
                   fabs(bbmin.y),
                   fabs(bbmin.z));
@@ -50,7 +50,7 @@ static float32 boundingBoxRadius(const Vector3f &bbmin, const Vector3f bbmax) {
     Vector3d tedge(tmin.x<tmax.x?tmax.x:tmin.x,
                    tmin.y<tmax.y?tmax.y:tmin.y,
                    tmin.z<tmax.z?tmax.z:tmin.z);
-    return tedge.length();
+    return (float32)tedge.length();
 
 }
 BoundingInfo::BoundingInfo(const Vector3f& bbmin, const Vector3f& bbmax):mMin(bbmin),mMax(bbmax) {

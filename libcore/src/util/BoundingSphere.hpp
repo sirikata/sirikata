@@ -36,7 +36,6 @@ template <typename real> class BoundingSphere {
     Vector3<real> mCenter;
     float32 mRadius;
 public:
-    static const real Pi = 3.1415926536;
 
     static BoundingSphere<real> null() {
         return BoundingSphere<real>(Vector3<real>(0,0,0),0);
@@ -100,7 +99,8 @@ public:
 
     real volume() const {
         if (degenerate()) return 0.0;
-        return 4.0 / 3.0 * Pi * mRadius * mRadius * mRadius;
+        real Pi = 3.1415926536;//cannot initialize in class due to nonintegral type VC++ err
+		return 4.0 / 3.0 * Pi * mRadius * mRadius * mRadius;
     }
 
     bool operator==(const BoundingSphere& rhs) {
