@@ -89,7 +89,7 @@ void bulletObj::meshChanged (const URI &newMesh) {
 void bulletObj::setScale (const Vector3f &newScale) {
     /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
     /// also, this only work on boxen
-    cout << "dbm: setScale " << newScale << endl;
+    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << endl;)
     if (isPhysical) {
         btCollisionShape* colShape = new btBoxShape(btVector3(newScale.x*.5, newScale.y*.5, newScale.z*.5));
         bulletBodyPtr->setCollisionShape(colShape);
@@ -229,7 +229,7 @@ bool BulletSystem::tick() {
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
         //if (((int)(now-starttime) % 15)<5) {
-        if ((now-starttime) > 15.0) {
+        if ((now-starttime) > 8.0) {
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletState().p) {
                     /// if object has been moved, reset bullet position accordingly
