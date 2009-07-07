@@ -101,4 +101,13 @@ BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
     return locinfo.bounds;
 }
 
+void OracleLocationService::addLocalObject(const UUID& uuid) {
+    // This is an oracle, so we don't need to track these.
+}
+
+void OracleLocationService::removeLocalObject(const UUID& uuid) {
+    // This is an oracle, so we don't need to track these.
+}
+
+
 } // namespace CBR

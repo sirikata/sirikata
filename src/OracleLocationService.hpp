@@ -52,6 +52,9 @@ public:
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual BoundingSphere3f bounds(const UUID& uuid);
+
+    virtual void addLocalObject(const UUID& uuid);
+    virtual void removeLocalObject(const UUID& uuid);
 private:
     struct LocationInfo {
         TimedMotionVector3f location;

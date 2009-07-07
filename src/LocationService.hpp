@@ -43,6 +43,9 @@ class LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
+    virtual void localObjectAdded(const UUID& uuid) = 0;
+    virtual void localObjectRemoved(const UUID& uuid) = 0;
+
     virtual void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
     virtual void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 }; // class LocationServiceListener
@@ -56,12 +59,19 @@ public:
 
     virtual void tick(const Time& t) = 0;
 
+    /** Methods dealing with information requests. */
     virtual TimedMotionVector3f location(const UUID& uuid) = 0;
     virtual Vector3f currentPosition(const UUID& uuid) = 0;
     virtual BoundingSphere3f bounds(const UUID& uuid) = 0;
 
+    /** Methods dealing with local objects. */
+    virtual void addLocalObject(const UUID& uuid) = 0;
+    virtual void removeLocalObject(const UUID& uuid) = 0;
+
+    /** Methods dealing with listeners. */
     virtual void addListener(LocationServiceListener* listener);
     virtual void removeListener(LocationServiceListener* listener);
+
 protected:
     void notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
