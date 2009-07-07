@@ -76,6 +76,7 @@ void InitOptions() {
         .addOption(new OptionValue(ANALYSIS_LOCVIS_SEED, "5", Sirikata::OptionValueType<int>(), "Do a loc analysis on this object"))
 
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Do a latency analysis instead of a normal run"))
 
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH, "", Sirikata::OptionValueType<String>(), "Do a windowed bandwidth analysis of the specified type: datagram, packet"))
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW, "1000ms", Sirikata::OptionValueType<Duration>(), "Size of the window in windowed bandwidth analysis"))

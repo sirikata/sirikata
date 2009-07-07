@@ -145,6 +145,22 @@ private:
 
 
 
+/** Does analysis of bandwidth, e.g. checking total bandwidth in and out of a server,
+ *  checking relative bandwidths when under load, etc.
+ */
+class LatencyAnalysis {
+public:
+    LatencyAnalysis(const char* opt_name, const uint32 nservers);
+    ~LatencyAnalysis();
+
+
+private:
+    uint32_t mNumberOfServers;
+}; // class BandwidthAnalysis
+
+
+
+
 class ObjectSegmentationAnalysis
 {
   

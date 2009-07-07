@@ -191,6 +191,11 @@ void *main_loop(void *) {
         lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((uint32)30));
         exit(0);
     }
+    else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {
+        LatencyAnalysis la(STATS_TRACE_FILE,nservers);
+        
+        exit(0);
+    }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
         printf("Send rates\n");

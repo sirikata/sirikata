@@ -961,6 +961,80 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
 
 
 
+LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
+    // read in all our data
+    mNumberOfServers = nservers;
+
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+
+	    
+
+            ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
+            if (datagram_evt != NULL) {
+                //insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
+            }
+
+            PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
+            if (packet_evt != NULL) {
+                //insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
+            }
+            ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
+            if (datagram_qi_evt != NULL) {
+                //insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
+            }
+
+            PacketQueueInfoEvent* packet_qi_evt = dynamic_cast<PacketQueueInfoEvent*>(evt);
+            if (packet_qi_evt != NULL) {
+                //insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
+            }
+        }
+    }
+
+    // Sort all lists of events by time
+    /*    sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
+    sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
+
+    sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
+    sort_events<PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(mPacketQueueInfoEventLists);
+    */
+}
+
+LatencyAnalysis::~LatencyAnalysis() {
+/*
+    for(ServerDatagramEventListMap::iterator event_lists_it = mDatagramEventLists.begin(); event_lists_it != mDatagramEventLists.end(); event_lists_it++) {
+        ServerID server_id = event_lists_it->first;
+        DatagramEventList* event_list = event_lists_it->second;
+        for(DatagramEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
+            // each event is put in both the source and the dest server event lists,
+            // to avoid double deleting, only delete if this is the event's source list
+            if ((*events_it)->source == server_id)
+                delete *events_it;
+        }
+    }
+
+    for(ServerPacketEventListMap::iterator event_lists_it = mPacketEventLists.begin(); event_lists_it != mPacketEventLists.end(); event_lists_it++) {
+        ServerID server_id = event_lists_it->first;
+        PacketEventList* event_list = event_lists_it->second;
+        for(PacketEventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++) {
+            // each event is put in both the source and the dest server event lists,
+            // to avoid double deleting, only delete if this is the event's source list
+            if ((*events_it)->source == server_id)
+                delete *events_it;
+        }
+    }
+*/
+}
+
+
+
+
 
   //object move messages
   ObjectSegmentationAnalysis::ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers)
