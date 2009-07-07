@@ -50,7 +50,7 @@
 #include <OgreCommon.h>
 
 #include <boost/thread/mutex.hpp>
-
+#include <boost/filesystem.hpp>
 #ifdef _WIN32
 #include <io.h>
 #define access _access
@@ -170,7 +170,11 @@ const char* nativeData (const Ogre::String&file, int&len, Fingerprint *hash=NULL
     for (int i=0;i<num_native_files;++i) {
         if (file==native_files[i]) {
             len=native_files_size[i];
-            if (hash) *hash = native_hashes[i];
+            if (file!="UeberShader.hlsl"){
+                if (hash) *hash = native_hashes[i];
+            }else {
+                fprintf(stderr,"avoided disaster\n");
+            }
             return native_files_data[i];
         }
     }
@@ -291,7 +295,7 @@ static ResourceFileUploadData *getFileData(const DiskFile &name, ReplaceMaterial
             } else {
                 fileinfo->mType = DATA;
             }
-            if (isNativeFile(filename)) {
+            if (isNativeFile(filename) && filename != "UeberShader.hlsl") {// programs must be named by hash
                 fileinfo->mData = nativeDataPtr(filename, &fileinfo->mHash);
                 fileinfo->mID = URI(opts.uploadHashContext,fileinfo->mHash.convertToHexString());
             } else {
@@ -640,7 +644,18 @@ public:
           my_dependencies->files.insert(where->second);
           return '\"'+getFileURI(where->second,*username)+':'+depended+'\"';
         }else {
-            
+              /*
+          depends_on.push_back(depended);
+          
+          DependencyPair * other_dep=getFileData(depended,*username);
+          if (other_dep == NULL) {
+          }
+          my_dependencies->files.insert(other_dep->files.begin(),other_dep->files.end());
+          my_dependencies->files.insert(depended);
+          overarching_dependencies->insert(
+          return '\"'+getFileURI(depended,*username)+':'+depended+'\"';
+
+               */  
            return eliminateFilename(filename,depended);
         }
       }else {
@@ -832,10 +847,80 @@ static bool isMHashScheme(const URI &uri, ReplaceMaterialOptionsAndReturn &opts)
 }
 
 
+
+bool similarstr(const std::string &a, const std::string &b) {
+    if (b.length()==0) return true;
+	if (stricmp(a.c_str(),b.c_str())==0) return true;
+	return false;
+}
+
+
+bool find_all_files( const boost::filesystem::path & dir_path,         // in this directory,
+                     const std::string & file_name, // search for this name,
+                     std::vector<boost::filesystem::path> & path_found )            // placing path here if found
+{
+
+    using namespace boost::filesystem;
+    bool found=false;
+    if ( !exists( dir_path ) ) {
+        return false;
+    }
+    directory_iterator end_itr; // default construction yields past-the-end
+    for ( directory_iterator itr( dir_path );
+          itr != end_itr;
+          ++itr )
+    {
+        if ( is_directory(itr->status()) )
+        {
+            if ( itr->leaf()!=".svn"&&itr->leaf()!="CVS"&&find_all_files( itr->path(), file_name, path_found ) ) {
+                found=true;
+            }
+        }
+        else if ( similarstr(itr->leaf(),file_name)&&(extension(itr->leaf())!=".xml"||dir_path.leaf()!="models") )
+        {
+            path_found.push_back(itr->path());
+            found=true;
+        }
+    }
+    return found;
+}
+bool find_all_files_from_file( std::string mesh_path,         // in this directory,
+                               const std::string & file_name, // search for this name,
+                               std::vector<boost::filesystem::path> & path_found )            // placing path here if found
+{
+    std::string::size_type where=mesh_path.find_last_of("\\/");
+    if (where==std::string::npos) {
+        where=1;
+        mesh_path="./"+mesh_path;
+    }
+    std::string mesh_dir=mesh_path.substr(0,where)+"/..";
+    return find_all_files(mesh_dir,
+                          file_name,
+                          path_found);
+}
+
 //////////////// This function is really long and convoluted?!?! I wish there were comments here!
 
 std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::vector<DiskFile> &origfilenames,const ReplaceMaterialOptions&options) {
   std::vector<DiskFile> filenames = origfilenames;
+  if (!filenames.empty()) {
+      std::vector<boost::filesystem::path> output;
+      find_all_files_from_file(filenames[0].diskpath(),
+                               std::string(),
+                               output);
+      for (std::vector<boost::filesystem::path>::iterator i=output.begin(),ie=output.end();i!=ie;++i){
+          std::string temp=i->string();
+          printf ("Evaluating %s:",temp.c_str());
+          if (boost::filesystem::extension(*i)==".os"||
+              boost::filesystem::extension(*i)==".material"||
+              boost::filesystem::extension(*i)==".program") {
+              filenames.push_back(DiskFile::makediskfile(i->string()));
+              printf("ok\n");
+          }else {
+              printf("bad\n");
+          }
+      }
+  }
   ReplaceMaterialOptionsAndReturn opts(options);  
   opts.disallowedThirdLevelFiles.insert("meru:///UeberShader.hlsl");//this file should be updated manually by devs, not by artists
 
