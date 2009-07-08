@@ -60,7 +60,7 @@
 
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
-#include "ChordObjectSegmentation.hpp"
+//#include "ChordObjectSegmentation.hpp"
 
 #include "OSegHasher.hpp"
 
