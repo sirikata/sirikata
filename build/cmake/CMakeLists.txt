@@ -848,6 +848,7 @@ SET(INPUT ${GFX}/input)
 SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${SirikataOgreCoreZipCpp}
   ${GFX}/OgreSystem.cpp
+  ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
   ${GFX}/DragActions.cpp
   ${INPUT}/SDLInputManager.cpp

@@ -44,15 +44,8 @@
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
 #include "LightEntity.hpp"
-#include <OgreRoot.h>
-#include <OgrePlugin.h>
-#include <OgreTextureManager.h>
-#include <OgreRenderWindow.h>
-#include <OgreRenderTexture.h>
-#include <OgreHardwarePixelBuffer.h>
-#include <OgreWindowEventUtilities.h>
-#include <OgreMaterialManager.h>
-#include <OgreConfigFile.h>
+#include <Ogre.h>
+#include "CubeMap.hpp"
 #include "input/SDLInputManager.hpp"
 #include "input/InputDevice.hpp"
 #include "input/InputEvents.hpp"
@@ -88,9 +81,11 @@ Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
-OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
+OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0),mPrimaryCamera(NULL)
 {
     increfcount();
+    mInternalCubeMap=NULL;
+    mExternalCubeMap=NULL;
     mInputManager=NULL;
     mRenderTarget=NULL;
     mSceneManager=NULL;
@@ -259,6 +254,28 @@ void    setupResources(const String &filename){
     ResourceGroupManager::getSingleton().addResourceLocation(".", typeName, secName);
 
     ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although the override is optional, this is mandatory
+}
+
+std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &renderTargetName, CameraEntity*entity) {
+    std::list<CameraEntity*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
+    if (renderTargetName.empty()) {
+        mPrimaryCamera = entity;
+        mExternalCubeMap=new CubeMap(this,"ExteriorCubeMap",512,Vector3f(0,100,0));
+    }
+    return retval;
+}
+std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
+    if (mPrimaryCamera == *entity) {
+        mPrimaryCamera = NULL;//move to second in chain??
+        delete mExternalCubeMap;
+        delete mInternalCubeMap;
+        mExternalCubeMap=NULL;
+        mInternalCubeMap=NULL;
+    }
+    if (entity != mAttachedCameras.end()) {
+        mAttachedCameras.erase(entity);
+    }
+    return mAttachedCameras.end();
 }
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     mProxyManager=proxyManager;

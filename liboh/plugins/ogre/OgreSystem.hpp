@@ -74,6 +74,7 @@ namespace Graphics {
 class Entity;
 using Input::SDLInputManager;
 class CameraEntity;
+class CubeMap;
 
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedSimulation {
@@ -120,7 +121,8 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
     Ogre::RaySceneQuery* mRayQuery;
-
+    CubeMap *mExternalCubeMap;
+    CubeMap *mInternalCubeMap;
 public:
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
@@ -129,6 +131,13 @@ public:
     std::list<CameraEntity*> mAttachedCameras;
     CameraEntity *mPrimaryCamera;
 
+    ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
+    std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);
+    ///removes the camera from the list of attached cameras.
+    std::list<CameraEntity*>::iterator detachCamera(std::list<CameraEntity*>::iterator);
+    CameraEntity*getPrimaryCamera() {
+        return mPrimaryCamera;
+    }
     SDLInputManager *getInputManager() {
         return mInputManager;
     }
