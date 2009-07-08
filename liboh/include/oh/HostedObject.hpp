@@ -32,18 +32,38 @@
 #ifndef _SIRIKATA_HOSTED_OBJECT_HPP_
 #define _SIRIKATA_HOSTED_OBJECT_HPP_
 
-
+#include <util/SpaceObjectReference.hpp>
 
 namespace Sirikata {
 class ObjectHost;
 class ProxyObject;
 class TopLevelSpaceConnection;
-class HostedObject : SelfWeakPtr<HostedObject> {
+
+class HostedObject;
+typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+
+class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
+public:
+    struct ReceivedMessage {
+        SpaceObjectReference sourceObject;
+        MessagePort sourcePort;
+        MessagePort destinationPort;
+        String name;
+        MemoryReference body;
+
+        ReceivedMessage(const SpaceID &space, const ObjectReference &source,
+                        MessagePort sourcePort, MessagePort destinationPort,
+                        const String &name, const MemoryReference &body)
+            : sourceObject(space,source), sourcePort(sourcePort), destinationPort(destinationPort),
+             name(name),body(body) {
+        }
+    };
+private:
     class PerSpaceData {
     public:
-        ObjectReference mReference;
         SpaceConnection mSpaceConnection;
-        std::tr1::shared_ptr<ProxyObject> mProxyObject;
+        std::tr1::shared_ptr<ProxyObject> mProxyObject; /// 
         PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
     };
     typedef std::map<SpaceID, PerSpaceData> ObjectStreamMap;
@@ -51,23 +71,30 @@ class HostedObject : SelfWeakPtr<HostedObject> {
     ObjectStreamMap mObjectStreams;
     UUID mInternalObjectReference;
     friend class ::Sirikata::SelfWeakPtr<HostedObject>;
-    HostedObject(ObjectHost*parent);    
-    void cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
-    static void processMessage(const std::tr1::weak_ptr<HostedObject>&thus,const SpaceID&sid,const Network::Chunk&);
+    HostedObject(ObjectHost*parent);
+    PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
+    static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid,const Network::Chunk&);
 public:
-    static void disconnectionEvent(const std::tr1::weak_ptr<HostedObject>&thus,const SpaceID&sid,const String&reason);
+    static void disconnectionEvent(const HostedObjectWPtr&thus,const SpaceID&sid,const String&reason);
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    //FIXME implement void initialize(const UUID &objectName, const Transform&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const SpaceID&, const std::tr1::weak_ptr<HostedObject>&spaceConnectionHint=std::tr1::weak_ptr<HostedObject>());
+    void initializeConnect(const UUID &objectName, const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const SpaceID&, const HostedObjectWPtr&spaceConnectionHint=HostedObjectWPtr());
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
-    void initialize(const UUID &objectName, const String&script, const SpaceID&id, const std::tr1::weak_ptr<HostedObject>&spaceConnectionHint=std::tr1::weak_ptr<HostedObject>() );
+    void initializeScripted(const UUID &objectName, const String&script, const SpaceID&id, const HostedObjectWPtr&spaceConnectionHint=HostedObjectWPtr() );
     //.attempt to restore this item from database including script
-    void initialize(const UUID &objectName);
-    ObjectHost *getObjectHost(){return mObjectHost;}
-    const ObjectHost *getObjectHost()const {return mObjectHost;}
+    void initializeRestoreFromDatabase(const UUID &objectName);
+    ObjectHost *getObjectHost()const {return mObjectHost;}
+
+    std::tr1::shared_ptr<ProxyObject> getProxy(const SpaceID &space) const;
+
     //FIXME implement SpaceConnection& connect(const SpaceID&space);
     //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
     bool send(RoutableMessageHeader hdr, const MemoryReference &body);
+
+    void processMessage(const HostedObjectWPtr&thus, const ReceivedMessage &msg);
 };
+
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 
 }
 

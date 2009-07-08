@@ -43,7 +43,6 @@ class TopLevelSpaceConnection;
 class SpaceConnection;
 
 class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
-    ProxyManager *manager;
     SpaceIDMap *mSpaceIDMap;
     typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
     typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;
@@ -54,10 +53,16 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
     void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
     void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
-    Network::IOService*mSpaceConnectionIO;
+    Network::IOService *mSpaceConnectionIO;
 public:
     
-    ObjectHost();
+    /** Caller is responsible for starting a thread
+     *
+     * @param ioServ = Network::IOServiceFactory::makeIOService();
+     *
+     * Destroy it with Network::IOServiceFactory::destroyIOService(ioServ);
+     */
+    ObjectHost(SpaceIDMap *spaceIDMap, Network::IOService*ioServ);
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool forwardMessagesTo(MessageService*){return false;}

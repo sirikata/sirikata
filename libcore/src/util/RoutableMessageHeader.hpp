@@ -34,7 +34,11 @@
 #include "SpaceObjectReference.hpp"
 #include "Protocol_MessageHeader.pbj.hpp"
 namespace Sirikata {
+
+typedef uint32 MessagePort;
+
 class RoutableMessageHeader {
+
     ObjectReference mDestinationObject;
     ObjectReference mSourceObject;
     SpaceID mDestinationSpace;
@@ -333,16 +337,16 @@ public:
         mSourceSpace=value;
         mHasSourceSpace=true;
     }
-    inline uint32 source_port() const{
+    inline MessagePort source_port() const{
         return mSourcePort;
     }
-    inline void set_source_port(uint32 port) {
+    inline void set_source_port(MessagePort port) {
         mSourcePort=port;
     }
-    inline uint32 destination_port() const{
+    inline MessagePort destination_port() const{
         return mDestinationPort;
     }
-    inline void set_destination_port(uint32 port) {
+    inline void set_destination_port(MessagePort port) {
         mDestinationPort=port;
     }
 };

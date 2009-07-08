@@ -58,9 +58,9 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     mTopLevelStream->prepareOutboundConnection(&Network::Stream::ignoreSubstreamCallback,
-                                               boost::bind(&connectionStatus, thus,_1,_2),                                               
+                                               std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
                                                &Network::Stream::ignoreBytesReceived);
-    oh->spaceIDMap()->lookup(id,boost::bind(&TopLevelSpaceConnection::connectToAddress,thus,oh,_1));
+    oh->spaceIDMap()->lookup(id,std::tr1::bind(&TopLevelSpaceConnection::connectToAddress,thus,oh,_1));
 }
 
 
@@ -71,7 +71,7 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     using std::tr1::placeholders::_2;
     mTopLevelStream->connect(addy,
                              &Network::Stream::ignoreSubstreamCallback,
-                             boost::bind(&connectionStatus, thus,_1,_2),                                               
+                             std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
                              &Network::Stream::ignoreBytesReceived);
 }
 
@@ -106,5 +106,33 @@ TopLevelSpaceConnection::~TopLevelSpaceConnection() {
         delete mTopLevelStream;
     }
 }
+
+void ObjectHostProxyManager::initialize() {
+}
+void ObjectHostProxyManager::destroy() {
+}
+void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
+    notify(&ProxyCreationListener::createProxy,newObj);
+    mProxyMap.insert(ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
+}
+void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &newObj) {
+    ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
+    if (iter != mProxyMap.end()) {
+        newObj->destroy();
+        notify(&ProxyCreationListener::destroyProxy,newObj);
+        mProxyMap.erase(iter);
+    }
+}
+
+ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
+    if (id.space() == mSpaceID) {
+        ProxyMap::const_iterator iter = mProxyMap.find(id.object());
+        if (iter != mProxyMap.end()) {
+            return (*iter).second;
+        }
+    }
+    return ProxyObjectPtr();
+}
+
 
 }

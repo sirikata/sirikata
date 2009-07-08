@@ -692,6 +692,8 @@ INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Prox" IMPORTS ${ProtocolBuffersRoot}
 OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE
 ${SirikataProtocolDirectory}/Prox_protobuf.cc)
 
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "ObjectHost" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc)
+
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Space" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc)
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc)
@@ -814,7 +816,10 @@ SET(LIBPROXIMITY_SOURCES
                   ${LIBPROXIMITY_SOURCE_DIR}/ProximitySystemFactory.cpp 
                   ${LIBPROXIMITY_SOURCE_DIR}/SingleStreamProximityConnection.cpp )
 
-SET(LIBOH_SOURCES ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
+SET(LIBOH_SOURCES
+                  ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
+                  ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
+                  ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp 
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp 
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp

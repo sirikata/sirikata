@@ -40,12 +40,12 @@
 
 namespace Sirikata {
 
-ObjectHost::ObjectHost() {
-    mSpaceConnectionIO=Network::IOServiceFactory::makeIOService();
+ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Network::IOService *ioServ) {
+    mSpaceIDMap = spaceMap;
+    mSpaceConnectionIO=ioServ;
 }
 
 ObjectHost::~ObjectHost() {
-    Network::IOServiceFactory::destroyIOService(mSpaceConnectionIO);
 }
 
 ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter

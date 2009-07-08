@@ -34,11 +34,26 @@
 #define _SIRIKATA_TOP_LEVEL_SPACE_CONNECTION_HPP_
 
 #include <oh/Platform.hpp>
+#include <oh/ProxyManager.hpp>
 
 namespace Sirikata {
 
-class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public Noncopyable{
+class SIRIKATA_OH_EXPORT ObjectHostProxyManager :public ProxyManager, public Noncopyable {
+protected:
+    typedef std::tr1::unordered_map<ObjectReference, ProxyObjectPtr, ObjectReference::Hasher> ProxyMap;
+    ProxyMap mProxyMap;
     SpaceID mSpaceID;
+public:
+    void initialize();
+    void destroy();
+
+    void createObject(const ProxyObjectPtr &newObj);
+    void destroyObject(const ProxyObjectPtr &newObj);
+
+    ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
+};
+
+class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager {
     ObjectHost*mParent;
     Network::Address mRegisteredAddress;
     Network::Stream *mTopLevelStream;

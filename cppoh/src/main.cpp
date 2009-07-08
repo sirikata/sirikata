@@ -31,14 +31,21 @@
  */
 
 #include <oh/Platform.hpp>
+#include <util/RoutableMessageHeader.hpp>
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
-#include "DemoProxyManager.hpp"
 #include <oh/SimulationFactory.hpp>
 
 #include <task/EventManager.hpp>
 #include <task/WorkQueue.hpp>
 #include "CDNConfig.hpp"
+
+#include <oh/ObjectHost.hpp>
+#include <oh/TopLevelSpaceConnection.hpp>
+#include <oh/SpaceConnection.hpp>
+#include <oh/HostedObject.hpp>
+#include <oh/SpaceIDMap.hpp>
+#include <network/IOServiceFactory.hpp>
 
 namespace Sirikata {
 
@@ -235,6 +242,35 @@ int main ( int argc,const char**argv ) {
 
     initializeProtocols();
 
+    Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
+
+
+    SpaceID mainSpace(UUID::null());
+    SpaceIDMap *spaceMap = new SpaceIDMap;
+    spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
+
+    ObjectHost *oh = new ObjectHost(spaceMap, ioServ);
+    // default port is from Space.cpp
+    oh->connectToSpace(mainSpace);
+
+    HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
+    firstObject->initializeConnect(
+        UUID::random(),
+        Location(Vector3d(0,0,0), Quaternion::identity(),
+                 Vector3f::nil(), Vector3f::nil(), 0.),
+        "meru:///Bornholm_01.mesh",
+        BoundingSphere3f(Vector3f::nil(),1),
+        mainSpace);
+        
+
+    Network::IOServiceFactory::runService(ioServ);
+
+    delete oh;
+    Network::IOServiceFactory::destroyIOService(ioServ);
+
+    delete spaceMap;
+    
+#if 0
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     TransferManager *tm;
@@ -248,8 +284,6 @@ int main ( int argc,const char**argv ) {
         return 1;
     }
     OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new DemoProxyManager;
-    Provider<ProxyCreationListener*>*provider=pm;
     String graphicsCommandArguments;
     {
         std::ostringstream os;
@@ -292,5 +326,6 @@ int main ( int argc,const char**argv ) {
     delete workQueue;
     plugins.gc();
     SimulationFactory::destroy();
+#endif
     return 0;
 }
