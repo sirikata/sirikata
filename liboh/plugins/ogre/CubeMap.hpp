@@ -38,7 +38,7 @@ namespace Graphics {
 class CubeMap {//:public Ogre::FrameListener{
     OgreSystem*mParent;
     Ogre::Camera*mCamera;
-    Ogre::TexturePtr mCubeMapTexture;
+    std::vector<Ogre::TexturePtr> mCubeMapTextures;
     Ogre::TexturePtr mBackbuffer;
     
     class CubeMapFace:public Ogre::RenderTargetListener{
@@ -48,10 +48,11 @@ class CubeMap {//:public Ogre::FrameListener{
     };
     friend class CubeMapFace;
     CubeMapFace mFaces[6];
-    Vector3f mCameraDelta;
-    int mCounter;
+    std::vector<Vector3f> mCameraDelta;
+    int mFaceCounter;
+    int mMapCounter;
 public:
-    CubeMap(OgreSystem*parent, const String&cubeMapTexture, int size=512, const Vector3f &mCameraDelta=Vector3f(0,0,0));
+    CubeMap(OgreSystem*parent, const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f> &mCameraDelta);
     ~CubeMap();
     bool frameEnded(const Ogre::FrameEvent&evt);
     void preRenderTargetUpdate(int renderTargetIndex,const Ogre::RenderTargetEvent& evt);
