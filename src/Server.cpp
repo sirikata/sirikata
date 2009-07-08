@@ -77,9 +77,6 @@ void Server::tick(const Time& t)
   // Update object locations
   mLocationService->tick(t);
 
-  //update oseg....oseg gets updated by forwarder.
-  //  mOSeg->tick(t);
-
   
   // Check proximity updates
   proximityTick(t);
@@ -141,9 +138,7 @@ void Server::checkObjectMigrations()
         if (new_server_id != mID)
         {
           //bftm
-          mOSeg->migrateObject(obj_id,new_server_id);
-          //          printf("\n\nIn Server.cpp.  Sending an object migration to oseg.\n\n");
-          
+          //          mOSeg->migrateObject(obj_id,new_server_id);
           //
           
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);

@@ -67,8 +67,6 @@ namespace CBR
       //      std::cout<<"\t\t****In the master list, could find object.  Located on server:  "<<iterObjectToServerID->second<<std::endl;
       return iterObjectToServerID->second;
 
-
-      return iter->second;
     }
 
     
@@ -91,14 +89,13 @@ namespace CBR
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  //  void UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner)
   Message* UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
   {
     const UUID& obj_id = obj->uuid();
     OriginID origin;
     origin.id= (uint32)(this->getHostServerID());
 
-    Message* oseg_change_msg = new OSegChangeMessage(origin,  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegChangeMessage::ACKNOWLEDGE);
+    Message* oseg_change_msg = new OSegMigrateMessage(origin,  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegMigrateMessage::ACKNOWLEDGE);
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
     //returner =  oseg_change_msg;
     return  oseg_change_msg;
@@ -152,11 +149,11 @@ namespace CBR
     If receives a kill message, deletes object server pair from map.
     If receives an acknowledged message, means that can start forwarding the messages that we received.
   */
-  void UniformObjectSegmentation::osegChangeMessage(OSegChangeMessage* msg)
+  void UniformObjectSegmentation::osegMigrateMessage(OSegMigrateMessage* msg)
   {
     ServerID serv_from, serv_to;
     UUID obj_id;
-    OSegChangeMessage::OSegAction oaction;
+    OSegMigrateMessage::OSegMigrateAction oaction;
 
     serv_from = msg->getServFrom();
     serv_to   = msg->getServTo();
@@ -165,7 +162,7 @@ namespace CBR
     
     switch (oaction)
     {
-      case OSegChangeMessage::CREATE:      //msg says something has been added
+      case OSegMigrateMessage::CREATE:      //msg says something has been added
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
         {          
           //means that object exists.  we will move it.
@@ -178,11 +175,11 @@ namespace CBR
         }
         break;
 
-      case OSegChangeMessage::KILL:    //msg says object has been deleted
+      case OSegMigrateMessage::KILL:    //msg says object has been deleted
         mObjectToServerMap.erase(obj_id);
         break;
 
-      case OSegChangeMessage::MOVE:     //means that an object moved from one server to another.
+      case OSegMigrateMessage::MOVE:     //means that an object moved from one server to another.
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
         {
           //means that object exists.  Will move it.
@@ -195,7 +192,7 @@ namespace CBR
         }
         break;
 
-      case OSegChangeMessage::ACKNOWLEDGE:
+      case OSegMigrateMessage::ACKNOWLEDGE:
         //When receive an acknowledge, it means that we can free the messages that we were holding for the node that's being moved.
         //remove object id from in transit.
         //place it in mFinishedMove
@@ -224,7 +221,7 @@ namespace CBR
     Fill the messageQueueToPushTo deque by pushing outgoing messages from destServers and osegMessages to it
     Then clear osegMessages and destServers.
   */
-  void UniformObjectSegmentation::tick(const Time& t, std::map<UUID,ServerID> updated)
+  void UniformObjectSegmentation::tick(const Time& t, std::map<UUID,ServerID>& updated)
   {
     mCurrentTime = t;
     updated =  mFinishedMove;

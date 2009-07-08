@@ -27,27 +27,26 @@ namespace CBR
   private:
     CoordinateSegmentation* mCSeg; //will be used in lookup call
     LocationService* mLocationService; //will be used in lookup call
-    std::vector<ServerID> mServerList;   //initialized with this
     std::map<UUID,ServerID> mObjectToServerMap;  //initialized with this
     
     
   public:
     //    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
-    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
+    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
     virtual ~LocObjectSegmentation();
 
     virtual ServerID lookup(const UUID& obj_id) const;
-    virtual void osegChangeMessage(OSegChangeMessage*);
-    virtual void tick(const Time& t, std::map<UUID,ServerID> updated);
+    virtual void osegMigrateMessage(OSegMigrateMessage*);
+    virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
     virtual  Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to);
 
-
+    virtual void processLookupMessage(OSegLookupMessage* msg);
     virtual ServerID getHostServerID();
     //    virtual void migrateMessage(MigrateMessage*);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID);
-
+    virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
     
   };
 }

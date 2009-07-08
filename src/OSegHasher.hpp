@@ -14,7 +14,7 @@ namespace CBR
   class OSegHasher
   {
   private:
-    static const uint32 MAX_HASH_NUMBER = 80;
+    static const uint32 MAX_HASH_NUMBER = 5135;
   public:
     OSegHasher();
     ~OSegHasher();

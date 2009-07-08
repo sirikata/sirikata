@@ -60,6 +60,7 @@
 
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
+#include "ChordObjectSegmentation.hpp"
 
 #include "OSegHasher.hpp"
 
@@ -355,29 +356,23 @@ void *main_loop(void *) {
     int ser=0;
 
 
-    std::cout<<"\n\nDebug: got here.\n\n\n";
     
     //Trying to populate objectToServerMap
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
       {
         UUID obj_id = *it;
-
-        if (ser <25)
-        {
-          ++ser;
-          std::cout<<"\n"<<OSegHasher::hash(obj_id)<<"\n";
-          std::cout<<"\n   "<<ser<<"   "<<OSegHasher::hash(ser) %80<<"\n";
-        }
-
-        
         Vector3f start_pos = loc_service->currentPosition(obj_id);
         dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
       }
+
+
+      
     //End of populating objectToServerMap
       
-    //    ObjectSegmentation* oseg = new LocObjectSegmentation(cseg, loc_service,dummyServerList,dummyObjectToServerMap);
-    ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id);
+      //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
+      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
+      ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
+
     
     //end create oseg
 

@@ -14,7 +14,7 @@ namespace CBR
 {
 
 
-   const ServerID OBJECT_IN_TRANSIT = -999;
+  const ServerID OBJECT_IN_TRANSIT = -999;
 
   
   class ObjectSegmentation
@@ -31,18 +31,18 @@ namespace CBR
     
   public:
     virtual ServerID lookup(const UUID& obj_id) const = 0;
-    virtual void osegChangeMessage(OSegChangeMessage*) = 0;
+    virtual void osegMigrateMessage(OSegMigrateMessage*) = 0;
+    
     //    virtual void tick(const Time& t, std::deque<OutgoingMessage> &messageQueueToPushTo) = 0;
-    virtual void tick(const Time& t, std::map<UUID,ServerID> updated) = 0;
+    virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers ) = 0;
+    virtual void tick(const Time& t, std::map<UUID,ServerID>& updated) = 0;
     virtual ~ObjectSegmentation() {}
-    //    virtual void migrateMessage(MigrateMessage*) = 0;
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
     virtual void addObject(const UUID& obj_id, const ServerID ourID) = 0;
-    //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner)=0;
     virtual  Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to) = 0;
     virtual ServerID getHostServerID() = 0;
+    virtual void processLookupMessage(OSegLookupMessage* msg) = 0;
 
-    
   };
 }
 #endif

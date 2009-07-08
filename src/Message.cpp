@@ -109,8 +109,8 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_LOAD_STATUS:
         msg = new LoadStatusMessage(wire, offset, _id);
         break;
-      case MESSAGE_TYPE_OSEG_CHANGE:
-        msg = new OSegChangeMessage(wire,offset,_id);
+      case MESSAGE_TYPE_OSEG_MIGRATE:
+        msg = new OSegMigrateMessage(wire,offset,_id);
         break;
       default:
         assert(false);
@@ -580,11 +580,11 @@ const float LoadStatusMessage::loadReading() const {
 
 
 
-///////OSEG
+//*****************OSEG messages
 
-
+////migrate message
 //constructor
-OSegChangeMessage::OSegChangeMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegChangeMessage::OSegAction action)
+OSegMigrateMessage::OSegMigrateMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
  : Message(origin, true),
    mServID_from (sID_from),
    mServID_to   (sID_to),
@@ -598,13 +598,13 @@ OSegChangeMessage::OSegChangeMessage(const OriginID& origin,ServerID sID_from, S
 
 
 //constructor
-OSegChangeMessage::OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
 
   ServerID     sID_from, sID_to, sMessageDest, sMessageFrom;
   UUID                                               obj_id;
-  OSegAction                                         action;
+  OSegMigrateAction                                  action;
   
   //copying mServID_from
   memcpy(&sID_from, &wire[offset], sizeof(ServerID));
@@ -632,32 +632,32 @@ OSegChangeMessage::OSegChangeMessage(const Network::Chunk& wire, uint32& offset,
   mObjID = obj_id;
 
   //copying mAction
-  memcpy(&action, &wire[offset], sizeof(OSegAction));
-  offset += sizeof(OSegAction);
+  memcpy(&action, &wire[offset], sizeof(OSegMigrateAction));
+  offset += sizeof(OSegMigrateAction);
   mAction = action;
 
 }
 
 //destructor 
-OSegChangeMessage::~OSegChangeMessage()
+OSegMigrateMessage::~OSegMigrateMessage()
 {
   //need to complete later
 }
 
-MessageType OSegChangeMessage::type() const
+MessageType OSegMigrateMessage::type() const
 {
-  return MESSAGE_TYPE_OSEG_CHANGE;
+  return MESSAGE_TYPE_OSEG_MIGRATE;
 }
 
 /*
   Serializer.  Should work.
 */
-uint32 OSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset)
+uint32 OSegMigrateMessage::serialize(Network::Chunk& wire, uint32 offset)
 {
 
   offset = serializeHeader(wire,offset);
 
-  wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegAction));
+  wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegMigrateAction));
   //          wire            sID_from           sID_to              mMessageDest       mMessageFrom      obj_id           action
 
   memcpy(&wire[offset], &mServID_from, sizeof(ServerID)); //copying sID_from
@@ -675,38 +675,136 @@ uint32 OSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset)
   memcpy(&wire[offset], &mObjID, sizeof(UUID));  //copying obj_id
   offset += sizeof(UUID);
 
-  memcpy(&wire[offset], &mAction, sizeof(OSegAction)); //copying action
-  offset += sizeof(OSegAction);
+  memcpy(&wire[offset], &mAction, sizeof(OSegMigrateAction)); //copying action
+  offset += sizeof(OSegMigrateAction);
   
   return offset;
 }
 
 //Sequence of osegmessage accessors
-ServerID OSegChangeMessage::getServFrom()
+ServerID OSegMigrateMessage::getServFrom()
 {
   return mServID_from;
 }
-ServerID OSegChangeMessage::getServTo()
+ServerID OSegMigrateMessage::getServTo()
 {
   return mServID_to;
 }
-UUID OSegChangeMessage::getObjID()
+UUID OSegMigrateMessage::getObjID()
 {
   return mObjID;
 }
-OSegChangeMessage::OSegAction OSegChangeMessage::getAction()
+OSegMigrateMessage::OSegMigrateAction OSegMigrateMessage::getAction()
 {
   return mAction;
 }
-ServerID  OSegChangeMessage::getMessageDestination()
+ServerID  OSegMigrateMessage::getMessageDestination()
 {
   return mMessageDestination;
 }
 
-ServerID OSegChangeMessage::getMessageFrom()
+ServerID OSegMigrateMessage::getMessageFrom()
 {
   return mMessageFrom;
 }
+
+
+/////OSEG lookup
+
+//primary constructor
+OSegLookupMessage::OSegLookupMessage(const OriginID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action)
+   : Message(origin, true),
+     mSeeker(sID_seeker),
+     mKeeper(sID_keeper),
+     mObjID(obj_id),
+     mAction(action)
+{
+  //nothing to do here.
+}
+
+//secondary constructor
+OSegLookupMessage::OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  ServerID sID_seeker,sID_keeper;
+  UUID obj_id;
+  OSegLookupAction action;
+
+  //seeker
+  memcpy(&sID_seeker,&wire[offset],sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mSeeker = sID_seeker;
+
+  //keeper
+  memcpy(&sID_keeper,&wire[offset],sizeof(ServerID));
+  offset += sizeof(ServerID);
+  mKeeper = sID_keeper;
+
+  //obj id
+  memcpy(&obj_id,&wire[offset],sizeof(UUID));
+  offset += sizeof(UUID);
+  mObjID = obj_id;
+
+  //action
+  memcpy(&action,&wire[offset],sizeof(OSegLookupAction));
+  offset += sizeof(OSegLookupAction);
+  mAction = action;
+  
+}
+
+
+uint32 OSegLookupMessage::serialize(Network::Chunk& wire, uint32 offset)
+{
+  offset = serializeHeader(wire,offset);
+
+  wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegLookupAction));
+  //          wire            mSeeker            mKeeper            mObjID            mAction
+
+  memcpy(&wire[offset], &mSeeker, sizeof(ServerID)); //copying seeker
+  offset += sizeof(ServerID);
+
+  memcpy(&wire[offset], &mKeeper, sizeof(ServerID)); //copying keeper
+  offset += sizeof(ServerID);
+
+  memcpy(&wire[offset], &mObjID, sizeof(UUID)); //copying objid
+  offset += sizeof(UUID);
+  
+  memcpy(&wire[offset], &mAction, sizeof(OSegLookupAction)); //copying action
+  offset += sizeof(UUID);
+  
+  return offset;
+}
+
+//nothing to do in the destructor.
+OSegLookupMessage::~OSegLookupMessage()
+{
+
+}
+
+//some basic accessors.  
+ServerID OSegLookupMessage::getSeeker()
+{
+  return mSeeker;
+}
+ServerID OSegLookupMessage::getKeeper()
+{
+  return mKeeper;
+}
+UUID OSegLookupMessage::getObjID()
+{
+  return mObjID;
+}
+
+OSegLookupMessage::OSegLookupAction OSegLookupMessage::getAction()
+{
+  return mAction;
+}
+
+MessageType OSegLookupMessage::type() const
+{
+  return MESSAGE_TYPE_OSEG_LOOKUP;
+}
+
 
 
 

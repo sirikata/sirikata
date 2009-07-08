@@ -211,8 +211,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
       default:
 
-        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<tag<<"\n";
-        //assert(false);
+        //        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<tag<<"\n";
+        assert(false);
         break;
     }
 

@@ -42,14 +42,18 @@ namespace CBR {
 
 typedef uint8 MessageType;
 
-#define MESSAGE_TYPE_PROXIMITY    1
-#define MESSAGE_TYPE_LOCATION     2
-#define MESSAGE_TYPE_SUBSCRIPTION 3
-#define MESSAGE_TYPE_MIGRATE      4
-#define MESSAGE_TYPE_COUNT        5
-#define MESSAGE_TYPE_CSEG_CHANGE  6
-#define MESSAGE_TYPE_LOAD_STATUS  7
-#define MESSAGE_TYPE_OSEG_CHANGE  8
+#define MESSAGE_TYPE_PROXIMITY     1
+#define MESSAGE_TYPE_LOCATION      2
+#define MESSAGE_TYPE_SUBSCRIPTION  3
+#define MESSAGE_TYPE_MIGRATE       4
+#define MESSAGE_TYPE_COUNT         5
+#define MESSAGE_TYPE_CSEG_CHANGE   6
+#define MESSAGE_TYPE_LOAD_STATUS   7
+#define MESSAGE_TYPE_OSEG_MIGRATE  8
+#define MESSAGE_TYPE_OSEG_LOOKUP   9
+
+
+
   
 struct OriginID {
     uint32 id;
@@ -244,35 +248,63 @@ private:
   //oseg message
 
   
-  class OSegChangeMessage : public Message
+  class OSegMigrateMessage : public Message
   {
   public:
-    enum OSegAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
+    enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
     
-    OSegChangeMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegAction action);
-    ~OSegChangeMessage();
+    OSegMigrateMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
+    ~OSegMigrateMessage();
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    ServerID     getServFrom();
-    ServerID     getServTo();
-    UUID         getObjID();
-    OSegAction   getAction();
-    ServerID     getMessageDestination();
-    ServerID     getMessageFrom();
+    ServerID            getServFrom();
+    ServerID            getServTo();
+    UUID                getObjID();
+    OSegMigrateAction   getAction();
+    ServerID            getMessageDestination();
+    ServerID            getMessageFrom();
 
     
   private:
     friend class Message;
-    OSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
     ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
     UUID mObjID;
-    OSegAction mAction;
+    OSegMigrateAction mAction;
     
   };
 
+
+  class OSegLookupMessage : public Message
+  {
+  public:
+    enum OSegLookupAction {I_HAVE_IT, WHERE_IS_IT};
+
+    OSegLookupMessage(const OriginID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
+    ~OSegLookupMessage();
+    
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    
+    ServerID getSeeker();
+    ServerID getKeeper();
+    UUID     getObjID();
+    OSegLookupAction getAction();
+    
+  private:
+    friend class Message;
+    OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    ServerID mSeeker,mKeeper; //seeker represents the server that is looking for the object.  keeper represents the server that has the object.
+    UUID mObjID; //the id of the object that we are looking for.
+    OSegLookupAction mAction; //are we posting that we're looking for something or that we have something?
+    
+  };
+
+
+  
   //end oseg message
   
 

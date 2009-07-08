@@ -26,10 +26,9 @@ namespace CBR
       std::map<UUID,ServerID> mInTransit;//These are the objects that are in transit.
       std::map<UUID,ServerID> mFinishedMove;
 
-    //      std::map<UUID,std::vector<OSegChangeMessage*> > mHeldMessages; //This structure contains messages that are begin held because an object is in transition.
-    
-      std::vector<Message*> osegMessagesToSend;
-      std::vector<ServerID> destServersToSend;
+
+    //      std::vector<Message*> osegMessagesToSend;
+    //      std::vector<ServerID> destServersToSend;
 
       Time mCurrentTime;
 
@@ -41,8 +40,9 @@ namespace CBR
       virtual ~UniformObjectSegmentation();
 
       virtual ServerID lookup(const UUID& obj_id) const;
-      virtual void osegChangeMessage(OSegChangeMessage*);
-      virtual void tick(const Time& t, std::map<UUID,ServerID> updated);
+      virtual void osegMigrateMessage(OSegMigrateMessage*);
+    
+      virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     //      virtual void migrateMessage(MigrateMessage*);
       virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
       virtual void addObject(const UUID& obj_id, const ServerID ourID);
