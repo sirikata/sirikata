@@ -35,10 +35,12 @@ namespace Sirikata {
 namespace Graphics {
 
 
-class CubeMap {
+class CubeMap {//:public Ogre::FrameListener{
     OgreSystem*mParent;
     Ogre::Camera*mCamera;
     Ogre::TexturePtr mCubeMapTexture;
+    Ogre::TexturePtr mBackbuffer;
+    
     class CubeMapFace:public Ogre::RenderTargetListener{
     public:
         CubeMap*mParent;
@@ -47,9 +49,11 @@ class CubeMap {
     friend class CubeMapFace;
     CubeMapFace mFaces[6];
     Vector3f mCameraDelta;
+    int mCounter;
 public:
     CubeMap(OgreSystem*parent, const String&cubeMapTexture, int size=512, const Vector3f &mCameraDelta=Vector3f(0,0,0));
     ~CubeMap();
+    bool frameEnded(const Ogre::FrameEvent&evt);
     void preRenderTargetUpdate(int renderTargetIndex,const Ogre::RenderTargetEvent& evt);
 };
 }

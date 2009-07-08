@@ -842,6 +842,16 @@ void OgreSystem::preFrame(Time currentTime, Duration frameTime) {
 }
 
 void OgreSystem::postFrame(Time current, Duration frameTime) {
+    Ogre::FrameEvent evt;
+    evt.timeSinceLastEvent=frameTime.toMicroseconds()*1000000.;
+    evt.timeSinceLastFrame=frameTime.toMicroseconds()*1000000.;
+    if (mExternalCubeMap) {
+        mExternalCubeMap->frameEnded(evt);
+    }
+    if (mInternalCubeMap) {
+        mInternalCubeMap->frameEnded(evt);
+    }
+    
 }
 
 }

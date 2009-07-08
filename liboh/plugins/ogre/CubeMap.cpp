@@ -36,10 +36,15 @@
 #include "CubeMap.hpp"
 namespace Sirikata { namespace Graphics {
 CubeMap::CubeMap(OgreSystem*parent,const String&cubeMapTexture, int size, const Vector3f&cameraDelta){
+    mCounter=0;
     mParent=parent;
     char cameraIdentifier;
     if ( Ogre::TextureManager::getSingleton().getByName(cubeMapTexture).get()) {
         Ogre::TextureManager::getSingleton().remove(cubeMapTexture);
+    }
+    int num_mipmaps=0;
+    for (int tsize=size;tsize;tsize/=2) {
+        num_mipmaps++;
     }
     mCubeMapTexture = Ogre::TextureManager::getSingleton()
         .createManual(cubeMapTexture,
@@ -47,10 +52,21 @@ CubeMap::CubeMap(OgreSystem*parent,const String&cubeMapTexture, int size, const 
                       Ogre::TEX_TYPE_CUBE_MAP,
                       size,
                       size,
+                      num_mipmaps,
+                      0,
+                      Ogre::PF_A8R8G8B8,
+                      Ogre::TU_DEFAULT|Ogre::TU_AUTOMIPMAP);
+    mBackbuffer = Ogre::TextureManager::getSingleton()
+        .createManual(UUID::random().toString(),
+                      Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                      Ogre::TEX_TYPE_CUBE_MAP,
+                      size,
+                      size,
                       1,
-                      0,//FIXME mipmaps?
+                      0,
                       Ogre::PF_A8R8G8B8,
                       Ogre::TU_RENDERTARGET);
+
     mCameraDelta=cameraDelta;
     mCamera=mParent->getSceneManager()->createCamera(cubeMapTexture+"Camera");
     mCamera->setNearClipDistance(0.1f);
@@ -60,16 +76,29 @@ CubeMap::CubeMap(OgreSystem*parent,const String&cubeMapTexture, int size, const 
     for (unsigned int i=0;i<6;++i)
     {
         mFaces[i].mParent=this;
-        Ogre::RenderTarget *renderTarget = mCubeMapTexture->getBuffer(i)->getRenderTarget();
-        Ogre::Viewport *viewport = renderTarget->addViewport( mCamera );
-        viewport->setOverlaysEnabled(false);
-        viewport->setClearEveryFrame( true );
-        viewport->setBackgroundColour( Ogre::ColourValue(0,1,0,1) );
         
+        Ogre::RenderTarget *renderTarget =mBackbuffer->getBuffer(i)->getRenderTarget(); //mBackbuffer->getBuffer(i)->getRenderTarget();
         renderTarget->addListener(&mFaces[i]);
     } 
-}
 
+}
+bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
+    if (mCounter>0&&mCounter<7) {
+        mBackbuffer->getBuffer(mCounter-1)->getRenderTarget()->removeAllViewports();        
+    }
+    if (mCounter<6) {
+        Ogre::Viewport *viewport = mBackbuffer->getBuffer(mCounter)->getRenderTarget()->addViewport( mCamera );        
+        viewport->setOverlaysEnabled(false);
+        viewport->setClearEveryFrame( true );
+        viewport->setBackgroundColour( Ogre::ColourValue(1,0,0,1) );
+    }
+    if (mCounter==7) {
+        mBackbuffer->copyToTexture(mCubeMapTexture);        
+    }
+    ++mCounter;
+    mCounter%=9;
+    return true;
+}
 void CubeMap::CubeMapFace::preRenderTargetUpdate(const Ogre::RenderTargetEvent&evt) {
     mParent->preRenderTargetUpdate(this-&mParent->mFaces[0],evt);
 }
@@ -96,16 +125,15 @@ void CubeMap::preRenderTargetUpdate(int renderTargetIndex,const Ogre::RenderTarg
       case 4:
         break;
     }
-    
 }
 CubeMap::~CubeMap() {
     for (unsigned int i=0;i<6;++i)
     {
-        Ogre::RenderTarget *renderTarget = mCubeMapTexture->getBuffer(i)->getRenderTarget();
+        Ogre::RenderTarget *renderTarget = mBackbuffer->getBuffer(i)->getRenderTarget();
         renderTarget->removeListener(&mFaces[i]);
-        renderTarget->removeViewport(0);
-        
+        renderTarget->removeAllViewports();
+
+        Ogre::TextureManager::getSingleton().remove(mBackbuffer->getName());
     }
-    
 }
 } }
