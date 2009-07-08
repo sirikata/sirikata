@@ -39,6 +39,7 @@
 #include <oh/TimeSteppedSimulation.hpp>
 #include <oh/ProxyObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
+#include <task/EventManager.hpp>
 #include "btBulletDynamicsCommon.h"
 
 using namespace std;
@@ -85,7 +86,7 @@ public:
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 //    std::tr1::shared_ptr<Meru::GraphicsResourceEntity>  meshresource;
-//    Task::EventResponse downloadFinished(Task::EventPtr evbase);
+    Task::EventResponse downloadFinished(Task::EventPtr evbase);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
