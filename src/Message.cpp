@@ -35,24 +35,27 @@
 namespace CBR {
 
 #define MESSAGE_ID_SERVER_SHIFT 52
-#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000
+#define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 static uint64 GenerateUniqueID(const OriginID& origin, uint64 id_src) {
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = (uint64)origin.id;
-    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
-    assert( (server_shifted & ~MESSAGE_ID_SERVER_BITS) == 0 );
-    return (server_shifted & MESSAGE_ID_SERVER_BITS) | (id_src & ~MESSAGE_ID_SERVER_BITS);
+    uint64 server_shifted = server_int << message_id_server_bits;
+    assert( (server_shifted & ~message_id_server_bits) == 0 );
+    return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
 }
 
 OriginID GetUniqueIDOriginID(uint64 uid) {
-    uint64 server_int = ( uid & MESSAGE_ID_SERVER_BITS ) >> MESSAGE_ID_SERVER_SHIFT;
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
     OriginID id;
     id.id = server_int;
     return id;
 }
 
 uint64 GetUniqueIDMessageID(uint64 uid) {
-    return ( uid & ~MESSAGE_ID_SERVER_BITS );
+    uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
+    return ( uid & ~message_id_server_bits );
 }
 
 
