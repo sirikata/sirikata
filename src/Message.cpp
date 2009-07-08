@@ -40,7 +40,7 @@ namespace CBR {
 static uint64 GenerateUniqueID(const OriginID& origin, uint64 id_src) {
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = (uint64)origin.id;
-    uint64 server_shifted = server_int << message_id_server_bits;
+    uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
     assert( (server_shifted & ~message_id_server_bits) == 0 );
     return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
 }
