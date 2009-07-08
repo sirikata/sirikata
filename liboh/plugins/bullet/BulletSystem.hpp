@@ -40,10 +40,6 @@
 #include <oh/ProxyObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include "btBulletDynamicsCommon.h"
-#include "/home/dbm/bench/sirikata_bulletbranch/liboh/plugins/ogre/MeshEntity.hpp"
-#include "/home/dbm/bench/sirikata_bulletbranch/liboh/plugins/ogre/resourceManager/GraphicsResource.hpp"
-#include "/home/dbm/bench/sirikata_bulletbranch/liboh/plugins/ogre/resourceManager/GraphicsResourceManager.hpp"
-#include "/home/dbm/bench/sirikata_bulletbranch/liboh/plugins/ogre/resourceManager/GraphicsResourceEntity.hpp"
 
 using namespace std;
 namespace Sirikata {
@@ -89,7 +85,7 @@ public:
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 //    std::tr1::shared_ptr<Meru::GraphicsResourceEntity>  meshresource;
-    Task::EventResponse downloadFinished(Task::EventPtr evbase);
+//    Task::EventResponse downloadFinished(Task::EventPtr evbase);
 };
 
 class BulletSystem: public TimeSteppedSimulation {

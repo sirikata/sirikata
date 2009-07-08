@@ -80,6 +80,7 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 
 namespace Sirikata {
     
+/*
     Task::EventResponse bulletObj::downloadFinished(Task::EventPtr evbase) {
         Transfer::DownloadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent> (evbase);
 
@@ -89,17 +90,19 @@ namespace Sirikata {
 
         return Task::EventResponse::del();
     }
-
+*/
 void bulletObj::meshChanged (const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << " sysOpt: " << system->systemOptions << endl;)
     meshname = newMesh;
+    /*
     OptionValue* transferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
     OptionValue* workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
     OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
     InitializeClassOptions("bulletphysics",this,transferManager, workQueue, eventManager, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(system->systemOptions);
-    transferManager->download(URI("meerkat:///arcade.mesh"),
-                               std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+    */
+//    transferManager->download(URI("meerkat:///arcade.mesh"),
+//                               std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
