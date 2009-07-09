@@ -248,22 +248,11 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
             sizeof(btVector3));    // sizeof(btVector3)
         */
         
-        btVertices[0].setValue(-sizeX*.5, 0, -sizeX*.5);
-        btVertices[1].setValue( sizeX*.5, -.5, -sizeX*.5);
-        btVertices[2].setValue( sizeX*.5, -.1,  sizeX*.5);
-        btVertices[3].setValue(-sizeX*.5, -.5,  sizeX*.5);
-        indices[0] = 0;
-        indices[1] = 1;
-        indices[2] = 2;
-        indices[3] = 0;
-        indices[4] = 2;
-        indices[5] = 3;
-
         btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(
-            2,//indices.size()/3,                      // # of triangles (int)
+            indices.size()/3,                      // # of triangles (int)
             &indices[0],               // ptr to list of indices (int)
             sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
-            4,//btVertices.size(),                      // # of vertices (int)
+            btVertices.size(),                      // # of vertices (int)
             (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
             sizeof(btVector3));    // sizeof(btVector3)
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
