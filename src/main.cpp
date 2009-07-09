@@ -353,9 +353,6 @@ void *main_loop(void *) {
     std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
 
-    int ser=0;
-
-
     
     //Trying to populate objectToServerMap
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
@@ -372,7 +369,6 @@ void *main_loop(void *) {
       //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
-
     
     //end create oseg
 
