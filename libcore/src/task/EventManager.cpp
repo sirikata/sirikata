@@ -171,6 +171,8 @@ struct EventManager<T>::FireEvent : public WorkItem {
 	virtual void operator() () {
 		AutoPtr ref(this); // Allow deletion at the end.
 
+		mParent->mSubscriptionQueue->dequeueAll();
+
 		typename PrimaryListenerMap::iterator priIter =
 			mParent->mListeners.find(mEvent->getId().mPriId);
 		if (priIter == mParent->mListeners.end()) {
@@ -231,6 +233,7 @@ struct EventManager<T>::FireEvent : public WorkItem {
 template <class T>
 EventManager<T>::EventManager(WorkQueue *workQueue)
 		: mWorkQueue(workQueue) {
+	mSubscriptionQueue = new LockFreeWorkQueue;
 }
 
 template <class T>
@@ -245,6 +248,7 @@ EventManager<T>::~EventManager() {
 		delete (*iter).second;
 	}
 	mListeners.clear();
+	delete mSubscriptionQueue;
 }
 
 
@@ -291,7 +295,7 @@ void EventManager<T>::subscribe(const IdPair &eventId,
 		throw EventOrderException();
 	}
 
-	mWorkQueue->enqueue(new ListenerSubRequest(
+	mSubscriptionQueue->enqueue(new ListenerSubRequest(
 			this, SubscriptionIdClass::null(),
 			eventId, listener, whichOrder));
 
@@ -306,7 +310,7 @@ void EventManager<T>::subscribe(const IdPair::Primary & primaryId,
 		throw EventOrderException();
 	}
 
-	mWorkQueue->enqueue(new ListenerSubRequest(
+	mSubscriptionQueue->enqueue(new ListenerSubRequest(
 			this, SubscriptionIdClass::null(),
 			primaryId, listener, whichOrder));
 }
@@ -323,7 +327,7 @@ SubscriptionId EventManager<T>::subscribeId(
 
 	SubscriptionId removeId = SubscriptionIdClass::alloc();
 
-	mWorkQueue->enqueue(new ListenerSubRequest(
+	mSubscriptionQueue->enqueue(new ListenerSubRequest(
 			this, removeId,
 			eventId, listener, whichOrder));
 
@@ -341,7 +345,7 @@ SubscriptionId EventManager<T>::subscribeId(
 
 	SubscriptionId removeId = SubscriptionIdClass::alloc();
 
-	mWorkQueue->enqueue(new ListenerSubRequest(
+	mSubscriptionQueue->enqueue(new ListenerSubRequest(
 			this, removeId,
 			priId, listener, whichOrder));
 
@@ -389,7 +393,7 @@ void EventManager<T>::unsubscribe(
 			SubscriptionId removeId,
 			bool notifyListener)
 {
-	mWorkQueue->enqueue(new ListenerUnsubRequest(
+	mSubscriptionQueue->enqueue(new ListenerUnsubRequest(
 			this, removeId, notifyListener));
 }
 

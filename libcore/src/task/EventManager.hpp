@@ -197,6 +197,8 @@ private:
 
 	/* MEMBERS */
 
+	WorkQueue *mSubscriptionQueue;
+
 	WorkQueue *mWorkQueue;
 	PrimaryListenerMap mListeners;
 

@@ -189,6 +189,7 @@ public:
 ///// blockingPop not implemented yet in LockFreeQueue.
 // Needs to use semaphores which are platform-specific.
 //typedef WorkQueueImpl<LockFreeQueue<WorkItem*> > LockFreeWorkQueue;
+typedef WorkQueueImpl<LockFreeQueue<WorkItem*> > RealLockFreeWorkQueue;
 typedef WorkQueueImpl<ThreadSafeQueue<WorkItem*> > LockFreeWorkQueue;
 typedef WorkQueueImpl<ThreadSafeQueue<WorkItem*> > ThreadSafeWorkQueue;
 
