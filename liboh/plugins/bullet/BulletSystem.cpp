@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <fstream>
 #include <oh/Platform.hpp>
 #include <oh/SimulationFactory.hpp>
 #include <oh/ProxyObject.hpp>
@@ -99,8 +100,51 @@ void bulletObj::meshChanged (const URI &newMesh) {
     OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
     InitializeClassOptions("bulletphysics",this,transferManager, workQueue, eventManager, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(system->systemOptions);
-    transferManager->download(URI("meru://daniel@/cube.mesh"),
-                               std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+//    transferManager->download(URI("meru://daniel@/cube.mesh"),
+//                               std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+    string path, hash;
+    path ="Cache/";
+    hash = newMesh.filename();
+    ifstream f( (path + hash).c_str());
+    bool err = f.is_open();
+    cout << "dbm:mesh opened: " << err << ":" << (path + hash) << endl;
+    if (err) {
+        string line;
+        getline(f, line);
+        cout << "dbm:mesh line: " << line << endl;
+        f.close();
+    }
+    
+    // parse ogre mesh for vertices, indices, and bounds
+    parseOgreMesh* parser = new parseOgreMesh();
+    vector<double> vertices;
+    vector<int> indices;
+    vector<double> bounds;
+    int i,j;
+
+    parser->parseFile((path+hash).c_str(), vertices, indices, bounds);
+    printf("dbm:mesh %d vertices:\n", vertices.size());
+
+    for (i=0; i<vertices.size()/3; i+=1) {
+        printf("dbm:mesh ");
+        for (j=0; j<3; j+=1) {
+            printf(" %f ", vertices[i*3+j]);
+        }
+        printf("\n");
+    }
+
+    printf("\ndbm:mesh %d indices: ", indices.size());
+    for (i=0; i<indices.size(); i++) {
+        printf(" %d", indices[i]);
+    }
+    printf("\n");
+
+    printf("\ndbm:mesh bounds: ");
+    for (i=0; i<bounds.size(); i++) {
+        printf(" %f", bounds[i]);
+    }
+    printf("\n");
+    delete parser;
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
