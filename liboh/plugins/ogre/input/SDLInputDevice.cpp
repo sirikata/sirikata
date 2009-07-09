@@ -122,8 +122,8 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
         fireAxis(thisptr, em, RELX, AxisValue::fromCentered(to_axis*event.xrel));
         fireAxis(thisptr, em, RELY, AxisValue::fromCentered(-to_axis*event.yrel));
         // drag events still get fired...
-        firePointerMotion(thisptr, em, 2*event.xrel/float(screenwid),
-                          -2*event.yrel/float(screenhei), event.cursor,
+        firePointerMotion(thisptr, em, event.xrel/float(screenwid),
+                          -event.yrel/float(screenhei), event.cursor,
                           event.pressure, event.pressure_min, event.pressure_max);
     } else {
         fireAxis(thisptr, em, CURSORX, xPctFromCenter);
