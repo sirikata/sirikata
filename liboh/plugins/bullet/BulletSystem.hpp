@@ -295,7 +295,7 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
-    string systemOptions;
+    Transfer::TransferManager*transferManager;
     btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic,
                                    float density, float friction, float bounce,
                                    float sizx, float sizy, float sizz);
