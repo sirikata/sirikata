@@ -114,7 +114,7 @@ void bulletObj::meshChanged (const URI &newMesh) {
         cout << "dbm:mesh line: " << line << endl;
         f.close();
     }
-    
+
     // parse ogre mesh for vertices, indices, and bounds
     parseOgreMesh* parser = new parseOgreMesh();
     vector<double> vertices;
@@ -228,7 +228,8 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
 
-    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << endl;)
+    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << endl);
+    DEBUG_OUTPUT(cout << "dbm: mesh name: " << obj->meshptr->getMesh().filename() << endl);
     /// complete hack for demo:
     float mass;
     if (sizeX == sizeY && sizeY == sizeZ) {
