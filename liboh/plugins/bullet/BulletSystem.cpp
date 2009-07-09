@@ -351,7 +351,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
-    groundlevel = 4590.0;
+    groundlevel = 4500.0;
     btCollisionShape* groundShape;
     btTransform groundTransform;
     btRigidBody* body;
