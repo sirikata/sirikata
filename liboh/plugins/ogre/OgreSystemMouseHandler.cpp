@@ -681,6 +681,9 @@ private:
           case SDL_SCANCODE_T:
             mDragAction[1] = DragActionRegistry::get("rotateCamera");
             break;
+          case SDL_SCANCODE_Y:
+            mDragAction[1] = DragActionRegistry::get("panCamera");
+            break;
         }
         return EventResponse::nop();
     }
@@ -733,6 +736,7 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_E);
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_R);
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_T);
+                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Y);
             }
             break;
           case InputDeviceEvent::REMOVED:

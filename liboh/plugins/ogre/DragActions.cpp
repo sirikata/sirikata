@@ -76,7 +76,7 @@ public:
     }
     ~RelativeDrag() {
         if (mDevice) {
-            mDevice->pushRelativeMode();
+            mDevice->popRelativeMode();
         }
     }
 };
@@ -176,6 +176,7 @@ public:
         SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
     }
     void mouseMoved(MouseDragEventPtr ev) {
+		std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
         if (mSelectedObjects.empty()) {
             SILOG(input,insane,"moveSelection: Found no selected objects");
             return;
@@ -224,17 +225,31 @@ public:
     RotateObjectDrag(const DragStartInfo &info)
         : mParent (info.sys),
           mSelectedObjects (info.objects.begin(), info.objects.end()) {
-
+		mOriginalRotation.reserve(mSelectedObjects.size());
+		Task::AbsTime now = Task::AbsTime::now();
+		for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+			Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
+			mOriginalRotation.push_back(currentLoc.getOrientation());
+		}
     }
     void mouseMoved(MouseDragEventPtr ev) {
             Task::AbsTime now(Task::AbsTime::now());
             // one screen width = one full rotation
-            float radianX = 3.14159*ev->deltaX();
-            float radianY = 3.14159*ev->deltaY();
+			float SNAP_RADIANS = mParent->getInputManager()->mRotateSnap->as<float>();
+            float radianX = 3.14159 * 2 * ev->deltaX();
+            float radianY = 3.14159 * 2 * ev->deltaY();
             if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
+					radianX = 0;
+				}
+			} else if (radianY > -SNAP_RADIANS && radianY < SNAP_RADIANS) {
                 radianY = 0;
             }
             if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
+				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+					radianY = 0;
+				}
+			} else if (radianX > -SNAP_RADIANS && radianX < SNAP_RADIANS) {
                 radianX = 0;
             }
             for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
@@ -242,7 +257,7 @@ public:
                 Location loc (ent->extrapolateLocation(now));
                 loc.setOrientation(Quaternion(Vector3f(0,1,0),radianX)*
                                    Quaternion(Vector3f(1,0,0),radianY)*
-                                   loc.getOrientation());
+                                   mOriginalRotation[i]);
                 ent->resetPositionVelocity(now, loc);
             }
     }
@@ -291,7 +306,7 @@ public:
     }
     void mouseMoved(MouseDragEventPtr mouseev) {
         float radianX, radianY;
-        pixelToRadians(camera, mouseev->deltaLastX(), mouseev->deltaLastY(), radianX, radianY);
+        pixelToRadians(camera, 2*mouseev->deltaLastX(), 2*mouseev->deltaLastY(), radianX, radianY);
         rotateCamera(camera, radianX, radianY);
     }
 };
@@ -315,10 +330,15 @@ public:
             pixelToDirection(camera, cameraLoc.getOrientation(), info.ev->mXStart, info.ev->mYStart));
         mRelativePan = false;
         mStartPan = camera->getProxy().extrapolateLocation(now).getPosition();
-        if (info.sys->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
+		if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+			float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();
+            mPanDistance = WORLD_SCALE;
+		} else if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT) &&
+				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
             mPanDistance = distance;
         } else if (!info.objects.empty()) {
             Vector3d totalPosition(averageSelectedPosition(now, info.objects.begin(), info.objects.end()));
+
             mPanDistance = (totalPosition - cameraLoc.getPosition()).length();
         } else {
             float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();

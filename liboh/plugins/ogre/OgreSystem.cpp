@@ -673,7 +673,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
         Entity *foundEntity = Entity::fromMovableObject(result.movable);
-        if (foundEntity != mPrimaryCamera) {
+        if (foundEntity != mPrimaryCamera && result.distance > 0) {
             ++count;
         }
     }
@@ -686,7 +686,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
              iter != resultList.end(); ++iter) {
             const Ogre::RaySceneQueryResultEntry &result = (*iter);
             Entity *foundEntity = Entity::fromMovableObject(result.movable);
-            if (foundEntity != mPrimaryCamera) {
+            if (foundEntity != mPrimaryCamera && result.distance > 0) {
                 if (which == 0) {
                     toReturn = foundEntity;
                     returnresult = result.distance;
