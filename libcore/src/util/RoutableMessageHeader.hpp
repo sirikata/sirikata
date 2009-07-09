@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_
-#define _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_2
+#define _SIRIKATA_ROUTABLE_MESSAGE_HEADER_HPP_
 #include "SpaceObjectReference.hpp"
 #include "Protocol_MessageHeader.pbj.hpp"
 namespace Sirikata {
@@ -258,7 +258,10 @@ private:
     std::string::iterator copyItem(std::string&s,std::string::iterator start_output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
         std::string::iterator output=copyKey(s,start_output,protoNum,size);
         if (output!=start_output) {
+            assert(output != (start_output+1));
             size-=(output-start_output);
+            assert(size>0);
+            size--;
             *output=size;
             ++output;
             s.replace(output,output+size,(const char*)uuid.getArray().begin(),size);
@@ -297,7 +300,10 @@ private:
         }
         output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace.getAsUUID(),sourceSpaceSize);
         output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace.getAsUUID(),destinationSpaceSize);
-        s->replace(output,s->end(),mData);
+        if (output!=s->end()) {
+            assert(s->end()-output==(ssize_t)mData.size());
+            s->replace(output,s->end(),mData);
+        }
         return true;
     }
 public:

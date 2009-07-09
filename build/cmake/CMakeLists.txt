@@ -919,6 +919,7 @@ SET(CXXTESTSources
   ${LIBCORE_DIR}/test/NameLookupTest.hpp
   ${LIBCORE_DIR}/test/OptionTest.hpp
   ${LIBCORE_DIR}/test/QuaternionTest.hpp
+  ${LIBCORE_DIR}/test/RoutableMessageTest.hpp
    ${LIBCORE_DIR}/test/SstTest.hpp
    ${LIBCORE_DIR}/test/ProxTest.hpp
   ${LIBCORE_DIR}/test/TR1Test.hpp
