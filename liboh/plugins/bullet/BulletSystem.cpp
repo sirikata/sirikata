@@ -30,18 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-//#include <iostream>
+#include <fstream>
 #include <oh/Platform.hpp>
-#include "BulletSystem.hpp"
 #include <oh/SimulationFactory.hpp>
 #include <oh/ProxyObject.hpp>
+#include <options/Options.hpp>
+#include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
+#include "BulletSystem.hpp"
 
 using namespace std;
 static int core_plugin_refcount = 0;
 
-//#define DEBUG_OUTPUT(x) x
-#define DEBUG_OUTPUT(x)
+#define DEBUG_OUTPUT(x) x
+//#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -81,9 +83,68 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 
 namespace Sirikata {
 
+
+Task::EventResponse bulletObj::downloadFinished(Task::EventPtr evbase) {
+    Transfer::DownloadEventPtr ev = std::tr1::dynamic_pointer_cast<Transfer::DownloadEvent> (evbase);
+    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << ev->getStatus() << " success: " << Transfer::TransferManager::SUCCESS << endl);
+//    notifyOne();
+    return Task::EventResponse::del();
+}
+
 void bulletObj::meshChanged (const URI &newMesh) {
-    DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << endl;)
+    DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << " sysOpt: " << system->systemOptions << endl;)
     meshname = newMesh;
+
+    OptionValue* transferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
+    OptionValue* workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
+    OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
+    InitializeClassOptions("bulletphysics",this,transferManager, workQueue, eventManager, NULL);
+    OptionSet::getOptions("bulletphysics",this)->parse(system->systemOptions);
+//    transferManager->download(URI("meru://daniel@/cube.mesh"),
+//                               std::tr1::bind(&DownloadTest::downloadFinished, this, _1), Range(true));
+    string path, hash;
+    path ="Cache/";
+    hash = newMesh.filename();
+    ifstream f( (path + hash).c_str());
+    bool err = f.is_open();
+    cout << "dbm:mesh opened: " << err << ":" << (path + hash) << endl;
+    if (err) {
+        string line;
+        getline(f, line);
+        cout << "dbm:mesh line: " << line << endl;
+        f.close();
+    }
+    
+    // parse ogre mesh for vertices, indices, and bounds
+    parseOgreMesh* parser = new parseOgreMesh();
+    vector<double> vertices;
+    vector<int> indices;
+    vector<double> bounds;
+    int i,j;
+
+    parser->parseFile((path+hash).c_str(), vertices, indices, bounds);
+    printf("dbm:mesh %d vertices:\n", vertices.size());
+
+    for (i=0; i<vertices.size()/3; i+=1) {
+        printf("dbm:mesh ");
+        for (j=0; j<3; j+=1) {
+            printf(" %f ", vertices[i*3+j]);
+        }
+        printf("\n");
+    }
+
+    printf("\ndbm:mesh %d indices: ", indices.size());
+    for (i=0; i<indices.size(); i++) {
+        printf(" %d", indices[i]);
+    }
+    printf("\n");
+
+    printf("\ndbm:mesh bounds: ");
+    for (i=0; i<bounds.size(); i++) {
+        printf(" %f", bounds[i]);
+    }
+    printf("\n");
+    delete parser;
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
@@ -98,8 +159,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
 }
 
 void bulletObj::setPhysical (const physicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << (long)this << " " << pp.mode
-                 << " static=" << (int)Static << " dynamic=" << (int)Dynamic << endl;)
+    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << (long)this << " mode=" << pp.mode << " mesh: " << meshname << endl;)
     switch (pp.mode) {
     case Disabled:
         isPhysical = false;
@@ -154,6 +214,9 @@ bulletObj::bulletObj(BulletSystem* sys) {
     velocity = Vector3d(0, 0, 0);
 }
 
+btVector3 vertices[4];
+int indices[] = {0, 1, 2, 0, 2, 3};
+
 btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
         positionOrientation po,
         bool dynamic,
@@ -173,10 +236,44 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
         colShape = new btSphereShape(btScalar(sizeX));
         mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
     }
-    else {
+    else if (sizeY>0.11) {
         DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl;)
         colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
         mass = sizeX * sizeY * sizeZ * density;
+    }
+    else {
+        //experimental trimesh
+        vertices[0].setValue(-sizeX*.5, 0, -sizeX*.5);
+        vertices[1].setValue( sizeX*.5, -.5, -sizeX*.5);
+        vertices[2].setValue( sizeX*.5, -.1,  sizeX*.5);
+        vertices[3].setValue(-sizeX*.5, -.5,  sizeX*.5);
+
+        btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(
+            2,                      // # of triangles (int)
+            indices,               // ptr to list of indices (int)
+            sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
+            4,                      // # of vertices (int)
+            (btScalar*) &vertices[0].x(),              // (btScalar*) pointer to vertex list
+            sizeof(btVector3));    // sizeof(btVector3)
+        btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
+        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
+        DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape << endl);
+
+        /*
+        collisionShapes.push_back(colShape);
+        startTransform.setIdentity();
+        startTransform.setOrigin(btVector3(po.p.x,po.p.y,po.p.z));
+        startTransform.setRotation(btQuaternion(po.o.x, po.o.y, po.o.z, po.o.w));
+        localInertia = btVector3(0,0,0);
+        startTransform.setIdentity();
+        startTransform.setOrigin(btVector3(po.p.x,po.p.y,po.p.z));
+        startTransform.setRotation(btQuaternion(po.o.x, po.o.y, po.o.z, po.o.w));
+        cout << "debug getShapeType: " << colShape->getShapeType() << "|" << INVALID_SHAPE_PROXYTYPE << endl;
+        btAssert(colShape->getShapeType() != INVALID_SHAPE_PROXYTYPE);
+        btRigidBody::btRigidBodyConstructionInfo rbInfo(0, 0, colShape, localInertia);
+        body = new btRigidBody(rbInfo);
+        body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        */
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
@@ -198,7 +295,6 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
         body->setActivationState(DISABLE_DEACTIVATION);
     }
     dynamicsWorld->addRigidBody(body);
-
     physicalObjects.push_back(obj);
     return body;
 }
@@ -258,7 +354,9 @@ bool BulletSystem::tick() {
 }
 
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
+    systemOptions = options;
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
     groundlevel = 4590.0;

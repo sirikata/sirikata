@@ -38,11 +38,200 @@
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedSimulation.hpp>
 #include <oh/ProxyObject.hpp>
+#include <fstream>
+#include <vector>
+#include <string>
 #include <oh/ProxyMeshObject.hpp>
+#include <task/EventManager.hpp>
 #include "btBulletDynamicsCommon.h"
 
 using namespace std;
 namespace Sirikata {
+
+/*
+                 dead simple, brute-force parsing of ogre.mesh to get the precious vertex data for physics
+*/
+class parseOgreMesh {
+    vector<unsigned char> data;
+    vector<double>* vertices;
+    vector<int>* indices;
+    vector<double>* bounds;
+    int ix;
+    int lastVertexCount, lastVertexSize;
+
+    int read_ubyte() {
+        int r;
+        if (data.size()<=ix) {
+            return 0;
+        }
+        r = data[ix];
+        ix = (ix+1);
+        return r;
+    }
+
+    int read_bool() {
+        return (read_ubyte()>0);
+    }
+
+    int read_u16() {
+        return (read_ubyte()+(read_ubyte()*256));
+    }
+
+    int read_u32() {
+        int n;
+        n = 0;
+        n = (n+read_ubyte());
+        n = (n+(read_ubyte()<<8));
+        n = (n+(read_ubyte()<<16));
+        n = (n+(read_ubyte()<<24));
+        return n;
+    }
+
+    double power(double b, int e) {
+        double n=1.0;
+        if (e<0) {
+            e = -e;
+            b = 1.0/b;
+        }
+        for (int i=0; i<e; i++) {
+            n *= b;
+        }
+        return n;
+    }
+
+    double read_float() {
+        /// ok, this may look ridiculous, but I'm concerned about alternative architectures
+        /// the format is IEEE single-precision float; I don't trust casting to work everywhere
+        /// note this conversion does not deal properly with NAN, INF...
+        double man, v;
+        int exp, sign, u;
+        u = read_u32();
+        if ((!u)) {
+            return 0.0;
+        }
+        exp = (u>>23)&255;
+        sign = u>>31?-1:1;
+        man = (((double)(u&0x7fffff))/((double)0x800000))+1.0;
+        v = (sign * power(2.0, (exp-127)) ) * man;
+        return v;
+    }
+
+    string read_string() {
+        string s;
+        int b;
+        b = read_ubyte();
+        while (!(b==10)) {
+            s.push_back(b);
+            b = read_ubyte();
+        }
+        return s;
+    }
+
+    void read_chunks(int count) {
+        int __0, __1, start;
+        start = ix;
+        while ( ix<(start+count) & ix<data.size() ) {
+            read_chunk();
+        }
+    }
+
+    void read_chunk() {
+        string version;
+        int count, floatsPerVertex, i, id, ii, indexCount, indexes32Bit, jj, skeletallyAnimated, skip, useSharedVertices;
+
+        id = read_u16();
+        if ((id==0x1000)) {                                 /// HEADER
+            version = read_string();
+        }
+        else {
+            count = read_u32();
+            if ((id==0x3000)) {                             /// MESH
+                skeletallyAnimated = read_bool();
+                read_chunks(count);
+            }
+            else if ((id==0x4000)) {                        /// SUBMESH
+                read_string();
+                useSharedVertices = read_bool();
+                indexCount = read_u32();
+                indexes32Bit = read_bool();
+
+                for (i=0; i<indexCount; i+=1) {
+                    indices->push_back(indexes32Bit?read_u32():read_u16());
+                }
+
+                if ((!useSharedVertices)) {
+                    read_chunk();
+                }
+            }
+            else if ((id==0x5000)) {                        /// GEOMETRY
+                lastVertexCount = read_u32();
+                read_chunks((count-10));
+            }
+            else if ((id==0x5100)) {                        /// GEOMETRY_VERTEX_DECLARATION
+                read_chunks((count-6));
+            }
+            else if ((id==0x5110)) {                        /// GEOMETRY_VERTEX_ELEMENT
+                read_u16();
+                read_u16();
+                read_u16();
+                read_u16();
+                read_u16();
+            }
+            else if ((id==0x5200)) {                        /// GEOMETRY_VERTEX_BUFFER
+                read_u16();
+                lastVertexSize = read_u16();
+                read_chunk();
+            }
+            else if ((id==0x5210)) {                        /// GEOMETRY_VERTEX_BUFFER_DATA
+                floatsPerVertex = lastVertexSize>>2;
+                skip = (floatsPerVertex-3);
+
+                for (ii=0; ii<lastVertexCount; ii+=1) {
+                    for (jj=0; jj<3; jj+=1) {
+                        vertices->push_back(read_float());
+                    }
+                    for (jj=0; jj<skip; jj+=1) {
+                        read_u32();
+                    }
+                }
+            }
+            /*
+            else if ((id==0x8110)) {
+                string name = read_string();
+                cout << "dbm:mesh name: " << name << endl;
+            }
+            */
+            else if ((id==0x9000)) {                        /// MESH_BOUNDS
+                for (i=0; i<7; i+=1) {
+                    bounds->push_back(read_float());
+                }
+            }
+            else {
+                ix = (ix+(count-6));
+            }
+        }
+    }
+public:
+    void parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
+        char temp;
+        this->vertices = &vertices;
+        this->indices = &indices;
+        this->bounds = &bounds;
+        data.clear();
+        ix=0;
+        ifstream f;
+        f.open(filename);
+        while (!f.eof()) {
+            f.read(&temp, 1);
+            data.push_back(temp);
+        }
+        f.close();
+        data.pop_back();                                    // why? whence extra byte?
+        printf("read data %d bytes\n", data.size());
+        read_chunks(data.size());
+    }
+};//class parseOgreMesh
+
 
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 //vector<ProxyMeshObjectPtr>mymesh;
@@ -84,6 +273,8 @@ public:
     void setBulletState(positionOrientation pq);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
+//    std::tr1::shared_ptr<Meru::GraphicsResourceEntity>  meshresource;
+    Task::EventResponse downloadFinished(Task::EventPtr evbase);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
@@ -104,7 +295,8 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
-    btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic, 
+    string systemOptions;
+    btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic,
                                    float density, float friction, float bounce,
                                    float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
