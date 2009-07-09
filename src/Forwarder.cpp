@@ -76,6 +76,7 @@ namespace CBR
     {
       //route
       route(messToSendFromOSegToForwarder[s],destServers[s],false);
+      printf("\n\n\n\n******************Watch out: about to route an oseg message in Forwarder.cpp  \n\n\n\n");
     }
     
   }
@@ -240,6 +241,8 @@ namespace CBR
 
     if (dest_server_id == OBJECT_IN_TRANSIT)
     {
+      printf("\n\n\n\n*****************Watch out: object in transit in forwarder.cpp\n\n\n\n");
+
       //add message to objects in transit.
       //      if (mObjectsInTransit[dest_obj] == null)
       if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
@@ -249,9 +252,11 @@ namespace CBR
         std::vector<Message*> tmp;
         tmp.push_back(msg);
         mObjectsInTransit[dest_obj] = tmp;
+        
       }
       else
       {
+
         //add message to queue of objects in transit.
         mObjectsInTransit[dest_obj].push_back(msg);
       }
@@ -358,6 +363,8 @@ namespace CBR
               
               if (oseg_ack_msg != NULL)
               {
+                printf("\n\n\n\n\n***************Watch out: about to route a migrate message in Forwarder.cpp \n\n\n\n");
+                
                 route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
               }
  
@@ -390,10 +397,12 @@ namespace CBR
         {
           OSegMigrateMessage* oseg_change_msg = dynamic_cast<OSegMigrateMessage*> (msg);
           assert(oseg_change_msg != NULL);
-
+          printf("\n\n\n\n********warning in migrate messager in forwarder: received an oseg migrate message\n\n\n\n");
+          
           if (oseg_change_msg->getMessageDestination() != this->serv_id())
           {
             //route it on to another server
+
             route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
           }
           else
@@ -408,6 +417,8 @@ namespace CBR
         break;
       case MESSAGE_TYPE_OSEG_LOOKUP:
         {
+          printf("\n\n\n\n********warning in lookup messager in forwarder: received an oseg lookup message\n\n\n\n");
+          
           OSegLookupMessage* oseg_lookup_msg = dynamic_cast<OSegLookupMessage*> (msg);
           assert(oseg_lookup_msg != NULL);
 
@@ -428,6 +439,10 @@ namespace CBR
 
     if (dest_server_id == OBJECT_IN_TRANSIT)
     {
+
+      printf("\n\n\n\n\n*************WArning in forwarder of forwarder.cpp: received an object in transit message\n\n\n");
+
+      
       //add message to objects in transit.
       //      if (mObjectsInTransit[dest_obj] == null)
       if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())

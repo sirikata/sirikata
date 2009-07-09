@@ -37,6 +37,7 @@ namespace CBR {
 #define MESSAGE_ID_SERVER_SHIFT 52
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
+
 static uint64 GenerateUniqueID(const OriginID& origin, uint64 id_src) {
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = (uint64)origin.id;
