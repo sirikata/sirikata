@@ -160,15 +160,22 @@ bulletObj::bulletObj(BulletSystem* sys) {
 void bulletObj::setScale (const Vector3f &newScale) {
     /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
     /// also, this only work on boxen
-    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << endl;)
-    if (physical) {
-        btCollisionShape* colShape = new btBoxShape(btVector3(newScale.x*.5, newScale.y*.5, newScale.z*.5));
-        bulletBodyPtr->setCollisionShape(colShape);
-        bulletBodyPtr->activate(true);
-    }
+    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << endl);
+    if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
+        return;
+    if (sizeX==newScale.x && sizeY==newScale.y && sizeZ==newScale.z)
+        return;
+    sizeX = newScale.x;
+    sizeY = newScale.y;
+    sizeZ = newScale.z;
+    float mass;
+    btCollisionShape* colShape = buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
+    bulletBodyPtr->setCollisionShape(colShape);
+    bulletBodyPtr->activate(true);
 }
 
 btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
+    /// if meshbytes = 0, reuse vertices & indices (for rescaling)
     btCollisionShape* colShape;
     if (dynamic) {
         if (shape == ShapeSphere) {
@@ -186,14 +193,16 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        vertices.clear();
-        indices.clear();
         vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
         unsigned int i,j;
-        parseOgreMesh parser;
-        parser.parseData(meshdata, meshbytes, vertices, indices, bounds);
-        printf("dbm:mesh %d vertices:\n", vertices.size());
 
+        if (meshbytes) {
+            vertices.clear();
+            indices.clear();
+            parseOgreMesh parser;
+            parser.parseData(meshdata, meshbytes, vertices, indices, bounds);
+        }
+        printf("dbm:mesh %d vertices:\n", vertices.size());
         for (i=0; i<vertices.size()/3; i+=1) {
             printf("dbm:mesh");
             for (j=0; j<3; j+=1) {
