@@ -112,8 +112,8 @@ Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, fl
     //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
     xRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * cam->getOgreCamera()->getAspectRatio() * xPixel;
     yRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * yPixel;
-    
-    return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) + 
+
+    return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) +
                     orient.xAxis() * xRadian +
                     orient.yAxis() * yRadian);
 }
@@ -134,7 +134,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
     void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
         Task::AbsTime now = Task::AbsTime::now();
-        
+
         Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
 
         Location location (camera->getProxy().extrapolateLocation(now));
@@ -158,7 +158,7 @@ public:
         camera = info.camera;
         mParent = info.sys;
         Task::AbsTime now = Task::AbsTime::now();
-        float moveDistance;
+        float moveDistance = 0.f; // Will be reset on first foundObject
         bool foundObject = false;
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
@@ -376,7 +376,7 @@ void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera,
     if (!parent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL) &&
         !parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), distance) && 
+    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), distance) &&
                (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {
@@ -395,7 +395,7 @@ class ZoomCameraDrag : public RelativeDrag {
     CameraEntity *mCamera;
     std::set<ProxyPositionObjectPtr> mSelection;
 public:
-    ZoomCameraDrag(const DragStartInfo &info) 
+    ZoomCameraDrag(const DragStartInfo &info)
         : RelativeDrag(info.ev->getDevice()) {
         mParent = info.sys;
         mCamera = info.camera;
@@ -414,7 +414,7 @@ DragActionRegistry::RegisterClass<ZoomCameraDrag> zoomCamera("zoomCamera");
 /*
     void orbitObject_BROKEN(AxisValue value) {
         SILOG(input,debug,"rotate "<<value);
-        
+
         if (mSelectedObjects.empty()) {
             SILOG(input,debug,"rotateXZ: Found no selected objects");
             return;
@@ -444,7 +444,7 @@ class OrbitObjectDrag : public RelativeDrag {
 //    Vector3d mOrbitCenter;
 //    Vector3d mOriginalPosition;
 public:
-    OrbitObjectDrag(const DragStartInfo &info) 
+    OrbitObjectDrag(const DragStartInfo &info)
         : RelativeDrag(info.ev->getDevice()),
          mSelectedObjects(info.objects.begin(), info.objects.end()) {
         mParent = info.sys;
