@@ -174,22 +174,22 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
 
-    string path, hash;
-    path ="Cache/";
-    hash = bullobj->meshptr->getMesh().filename();
-    parseOgreMesh* parser = new parseOgreMesh();                            /// memory leak
+//    string path, hash;
+//    path ="Cache/";
+//    hash = bullobj->meshptr->getMesh().filename();
     vector<double> vertices = *(new vector<double>());                      /// big memory leak!
     vector<int>& indices = *(new vector<int>());                            /// memory leak
     vector<double> bounds;
     vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
     unsigned int i,j;
-
-    bool success=parser->parseFile((path+hash).c_str(), vertices, indices, bounds);
+    parseOgreMesh* parser = new parseOgreMesh();                            /// memory leak
+    bool success=parser->parseData(realData, ev->data().length(), vertices, indices, bounds);
     if (!success) {
         cout << "dbm: ERROR: file not found in addPhysicalObject" << endl;
         int n=0;
         cout << n/n;
     }
+    cout << "dbm:mesh parseData successful" << endl;
     printf("dbm:mesh %d vertices:\n", vertices.size());
 
     for (i=0; i<vertices.size()/3; i+=1) {

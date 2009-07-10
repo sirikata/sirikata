@@ -212,6 +212,22 @@ class parseOgreMesh {
         }
     }
 public:
+    bool parseData(const unsigned char* rawdata, int bytes, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
+        char temp;
+        this->vertices = &vertices;
+        this->indices = &indices;
+        this->bounds = &bounds;
+        data.clear();
+        ix=0;
+        for(int i=0; i<bytes; i++) {
+            data.push_back(rawdata[i]);
+        }
+//        data.pop_back();                                    // why? whence extra byte?
+        printf("read data %d bytes\n", data.size());
+        read_chunks(data.size());
+        return true;
+    }
+    
     bool parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
         char temp;
         this->vertices = &vertices;
