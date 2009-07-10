@@ -147,6 +147,7 @@ void bulletObj::setBulletState(positionOrientation po) {
     bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
+/*
 bulletObj::bulletObj(BulletSystem* sys) {
     DEBUG_OUTPUT(cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;)
     system = sys;
@@ -154,29 +155,30 @@ bulletObj::bulletObj(BulletSystem* sys) {
     velocity = Vector3d(0, 0, 0);
     bulletBodyPtr=NULL;
 }
+*/
 
 void bulletObj::setScale (const Vector3f &newScale) {
     /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
     /// also, this only work on boxen
     DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << endl;)
-            if (physical) {
+    if (physical) {
         btCollisionShape* colShape = new btBoxShape(btVector3(newScale.x*.5, newScale.y*.5, newScale.z*.5));
         bulletBodyPtr->setCollisionShape(colShape);
         bulletBodyPtr->activate(true);
-            }
+    }
 }
 
 btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     btCollisionShape* colShape;
     if (dynamic) {
         if (shape == ShapeSphere) {
-            DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl;)
-                    colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
+            DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
+            colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (shape == ShapeBox) {
-            DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl;)
-                    colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
+            DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
+            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
             mass = sizeX * sizeY * sizeZ * density;
         }
     }
@@ -184,8 +186,8 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        vector<double>& vertices = *(new vector<double>());
-        vector<int>& indices = *(new vector<int>());
+        vertices.clear();
+        indices.clear();
         vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
         unsigned int i,j;
         parseOgreMesh parser;
@@ -214,24 +216,20 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         printf("\n");
 
         btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
-                indices.size()/3,                      // # of triangles (int)
-                             &(indices[0]),               // ptr to list of indices (int)
-                               sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
-                                      btVertices.size(),                      // # of vertices (int)
-                                              (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
-                                               sizeof(btVector3));    // sizeof(btVector3)
+            indices.size()/3,                      // # of triangles (int)
+            &(indices[0]),               // ptr to list of indices (int)
+            sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
+            btVertices.size(),                      // # of vertices (int)
+            (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
+            sizeof(btVector3));    // sizeof(btVector3)
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax); /// memory leak
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
 
         mass = 0.0;
 
         /// try to clean up memory usage
-        vertices.clear();
-        delete &vertices;
-        indices.clear();
-        //delete indices;                       /// for some insane reason, this crashes Bullet
     }
     return colShape;
 }
@@ -242,9 +240,9 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     btVector3 localInertia(0,0,0);
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
-    
+
     btCollisionShape* colShape = buildBulletShape(meshdata, meshbytes, mass);
-    
+
     system->collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)

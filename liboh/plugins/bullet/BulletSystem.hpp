@@ -285,10 +285,12 @@ class bulletObj : public MeshListener {
         ShapeBox,
         ShapeSphere
     };
-    void meshChanged (const URI &newMesh);
-    void setScale (const Vector3f &newScale);
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
+    void meshChanged (const URI &newMesh);
+    void setScale (const Vector3f &newScale);
+    vector<double>& vertices;// = *(new vector<double>());
+    vector<int>& indices;// = *(new vector<int>());
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
@@ -301,13 +303,20 @@ public:
     bool dynamic;             /// but only some are dynamic (affected by forces)
     shapeID shape;
     positionOrientation initialPo;
-    btRigidBody* bulletBodyPtr;
     Vector3d velocity;
+    btRigidBody* bulletBodyPtr;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
 
     /// public methods
-    bulletObj(BulletSystem* sys);
+    bulletObj(BulletSystem* sys) :
+            vertices(*(new vector<double>())),
+            indices (*(new vector<int>())),
+            physical(false),
+            velocity(Vector3d()),
+            bulletBodyPtr(NULL) {
+        system = sys;
+    }
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
