@@ -182,8 +182,8 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
     vector<double> bounds;
     vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
     unsigned int i,j;
-    parseOgreMesh* parser = new parseOgreMesh();                            /// memory leak
-    bool success=parser->parseData(realData, ev->data().length(), vertices, indices, bounds);
+    parseOgreMesh parser;// = new parseOgreMesh();                            /// memory leak
+    bool success=parser.parseData(realData, ev->data().length(), vertices, indices, bounds);
     if (!success) {
         cout << "dbm: ERROR: file not found in addPhysicalObject" << endl;
         int n=0;
@@ -212,7 +212,7 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
         printf(" %f", bounds[i]);
     }
     printf("\n");
-    delete parser;
+//    delete parser;
 
     btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
         indices.size()/3,                      // # of triangles (int)
