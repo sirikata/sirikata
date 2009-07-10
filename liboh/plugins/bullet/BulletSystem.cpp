@@ -173,6 +173,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
     colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
+    bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
     bulletBodyPtr->activate(true);
     DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << " mass: " 
             << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
@@ -206,27 +207,26 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
             parseOgreMesh parser;
             parser.parseData(meshdata, meshbytes, vertices, indices, bounds);
         }
-        printf("dbm:mesh %d vertices:\n", vertices.size());
+        DEBUG_OUTPUT (cout << "dbm:mesh " << vertices.size() << " vertices:" << endl);
         for (i=0; i<vertices.size()/3; i+=1) {
-            printf("dbm:mesh");
+            DEBUG_OUTPUT ( cout << "dbm:mesh");
             for (j=0; j<3; j+=1) {
-                printf(" %f ", vertices[i*3+j]);
+                DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
             btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
-            printf("\n");
+            DEBUG_OUTPUT (cout << endl);
         }
-
-        printf("\ndbm:mesh %d indices: ", indices.size());
+        DEBUG_OUTPUT (cout << endl);
+        DEBUG_OUTPUT (cout << "dbm:mesh " << indices.size() << " indices:");
         for (i=0; i<indices.size(); i++) {
-            printf(" %d", indices[i]);
+            DEBUG_OUTPUT (cout << " " << indices[i]);
         }
-        printf("\n");
-
-        printf("\ndbm:mesh bounds: ");
+            DEBUG_OUTPUT (cout << endl);
+        DEBUG_OUTPUT (cout << "dbm:mesh bounds:");
         for (i=0; i<bounds.size(); i++) {
-            printf(" %f", bounds[i]);
+            DEBUG_OUTPUT (cout << " " << bounds[i]);
         }
-        printf("\n");
+        DEBUG_OUTPUT (cout << endl);
 
         btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
             indices.size()/3,                      // # of triangles (int)
@@ -284,7 +284,7 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
                   << " length = " << (int)ev->data().length() << endl);
     Transfer::DenseDataPtr flatData = ev->data().flatten();
     const unsigned char* realData = flatData->data();
-    cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl;
+    DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
     bullobj->buildBulletBody(realData, ev->data().length());
     physicalObjects.push_back(bullobj);
     return Task::EventResponse::del();
