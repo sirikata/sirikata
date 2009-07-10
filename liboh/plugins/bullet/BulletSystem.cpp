@@ -160,7 +160,6 @@ bulletObj::bulletObj(BulletSystem* sys) {
 void bulletObj::setScale (const Vector3f &newScale) {
     /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
     /// also, this only work on boxen
-    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << endl);
     if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (sizeX==newScale.x && sizeY==newScale.y && sizeZ==newScale.z)
@@ -169,9 +168,14 @@ void bulletObj::setScale (const Vector3f &newScale) {
     sizeY = newScale.y;
     sizeZ = newScale.z;
     float mass;
+    btVector3 localInertia(0,0,0);
     btCollisionShape* colShape = buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
+    colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
+    bulletBodyPtr->setMassProps(mass, localInertia);
     bulletBodyPtr->activate(true);
+    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << " mass: " 
+            << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
 btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
@@ -253,7 +257,6 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     btCollisionShape* colShape = buildBulletShape(meshdata, meshbytes, mass);
 
     system->collisionShapes.push_back(colShape);
-    localInertia = btVector3(0,0,0);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
     colShape->calculateLocalInertia(mass,localInertia);
     startTransform.setIdentity();

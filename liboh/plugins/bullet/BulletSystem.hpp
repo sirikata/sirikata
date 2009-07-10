@@ -296,9 +296,6 @@ public:
     float density;
     float friction;
     float bounce;
-    float sizeX;
-    float sizeY;
-    float sizeZ;
     bool physical;            /// anything that bullet sees is physical
     bool dynamic;             /// but only some are dynamic (affected by forces)
     shapeID shape;
@@ -307,6 +304,9 @@ public:
     btRigidBody* bulletBodyPtr;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
+    float sizeX;
+    float sizeY;
+    float sizeZ;
 
     /// public methods
     bulletObj(BulletSystem* sys) :
