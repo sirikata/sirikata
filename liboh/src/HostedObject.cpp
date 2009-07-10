@@ -85,6 +85,8 @@ using Sirikata::Protocol::IObjLoc;
 
 void HostedObject::initializeConnect(const UUID &objectName, const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const SpaceID&spaceID, const HostedObjectWPtr&spaceConnectionHint) {
 
+    mInternalObjectReference=objectName;
+
     std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
 
     HostedObjectPtr spaceConnectionHintPtr;
@@ -113,12 +115,16 @@ void HostedObject::initializeConnect(const UUID &objectName, const Location&star
     loc.set_velocity(startingLocation.getVelocity());
     loc.set_rotational_axis(startingLocation.getAxisOfRotation());
     loc.set_angular_speed(startingLocation.getAngularSpeed());
-
-    mInternalObjectReference=objectName;
-
     std::string serializedNewObj;
     newObj.SerializeToString(&serializedNewObj);
-    assert(send(messageHeader, MemoryReference(serializedNewObj))); //conn should be connected
+
+    std::string serializedBody;
+    RoutableMessageBody messageBody;
+    messageBody.add_message_names("NewObj");
+    messageBody.add_message_arguments(serializedNewObj);
+    messageBody.SerializeToString(&serializedBody);
+
+    assert(send(messageHeader, MemoryReference(serializedBody))); //conn should be connected
 }
 
 void HostedObject::initializeRestoreFromDatabase(const UUID &objectName) {
