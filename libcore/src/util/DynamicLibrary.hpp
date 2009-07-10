@@ -46,7 +46,7 @@ namespace Sirikata {
  *  loading, unloading, and symbol lookup.  This presumes nothing about the
  *  interface provided by the module.
  */
-class DynamicLibrary {
+class SIRIKATA_EXPORT DynamicLibrary {
 public:
     DynamicLibrary(const String& path);
     ~DynamicLibrary();
@@ -58,6 +58,8 @@ public:
 
     /** Get the standard platform-specific library filename prefix. */
     static String prefix();
+    /** Get the standard, build specific platform-specific library filename postfix. */
+    static String postfix();
     /** Get the standard platform-specific library filename extension. */
     static String extension();
     /** Construct a platform dependent filename for a dynamic library based
