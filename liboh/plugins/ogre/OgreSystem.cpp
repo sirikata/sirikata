@@ -272,14 +272,14 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     return retval;
 }
 std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
-    if (mPrimaryCamera == *entity) {
-        mPrimaryCamera = NULL;//move to second in chain??
-        delete mExternalCubeMap;
-        delete mInternalCubeMap;
-        mExternalCubeMap=NULL;
-        mInternalCubeMap=NULL;
-    }
     if (entity != mAttachedCameras.end()) {
+        if (mPrimaryCamera == *entity) {
+            mPrimaryCamera = NULL;//move to second in chain??
+            delete mExternalCubeMap;
+            delete mInternalCubeMap;
+            mExternalCubeMap=NULL;
+            mInternalCubeMap=NULL;
+        }
         mAttachedCameras.erase(entity);
     }
     return mAttachedCameras.end();

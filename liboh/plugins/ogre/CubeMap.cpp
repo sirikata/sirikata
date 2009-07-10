@@ -57,7 +57,7 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
                                                 num_mipmaps,
                                                 0,
                                                 Ogre::PF_A8R8G8B8,
-                                                Ogre::TU_DEFAULT|Ogre::TU_AUTOMIPMAP));
+                                                Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP));
         }
     }
     mBackbuffer = Ogre::TextureManager::getSingleton()
@@ -66,10 +66,10 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
                       Ogre::TEX_TYPE_CUBE_MAP,
                       size,
                       size,
-                      1,
+                      num_mipmaps,
                       0,
                       Ogre::PF_A8R8G8B8,
-                      Ogre::TU_RENDERTARGET);
+					  Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP);
 
     mCameraDelta=cameraDelta;
     mCamera=mParent->getSceneManager()->createCamera(mBackbuffer->getName()+"Camera");
