@@ -219,7 +219,7 @@ public:
         this->bounds = &bounds;
         data.clear();
         ix=0;
-        for(int i=0; i<bytes; i++) {
+        for (int i=0; i<bytes; i++) {
             data.push_back(rawdata[i]);
         }
 //        data.pop_back();                                    // why? whence extra byte?
@@ -227,7 +227,7 @@ public:
         read_chunks(data.size());
         return true;
     }
-    
+
     bool parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
         char temp;
         this->vertices = &vertices;
@@ -281,32 +281,35 @@ class bulletObj : public MeshListener {
     };
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    bool isPhysical;            /// anything that bullet sees is physical
-    bool isDynamic;             /// but only some are dynamic (kinematic in bullet parlance)
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
 public:
+    /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
     float friction;
     float bounce;
     float sizeX;
     float sizeY;
     float sizeZ;
+    bool physical;            /// anything that bullet sees is physical
+    bool dynamic;             /// but only some are dynamic (affected by forces)
     positionOrientation initialPo;
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;
+    ProxyMeshObjectPtr meshptr;
+    URI meshname;
+    
+    /// public methods
     bulletObj(BulletSystem* sys);
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
-    ProxyMeshObjectPtr meshptr;
-    URI meshname;
+    void buildBulletBody(const unsigned char*, int);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     vector<bulletObj*>objects;
-    vector<bulletObj*>physicalObjects;
     Vector3d gravity;
     double groundlevel;
 
@@ -315,13 +318,14 @@ class BulletSystem: public TimeSteppedSimulation {
     btCollisionDispatcher* dispatcher;
     btAxisSweep3* overlappingPairCache;
     btSequentialImpulseConstraintSolver* solver;
-    btDiscreteDynamicsWorld* dynamicsWorld;
-    btAlignedObjectArray<btCollisionShape*> collisionShapes;
 
 public:
     BulletSystem();
+    btDiscreteDynamicsWorld* dynamicsWorld;
+    vector<bulletObj*>physicalObjects;
+    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
-    btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic,
+    void addPhysicalObject(bulletObj* obj, positionOrientation po,
                                    float density, float friction, float bounce,
                                    float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
