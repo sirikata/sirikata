@@ -179,9 +179,9 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     }
     else {
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
+        vector<double> bounds;
         vector<double>& vertices = *(new vector<double>());
         vector<int>& indices = *(new vector<int>());
-        vector<double> bounds;
         vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
         unsigned int i,j;
         parseOgreMesh parser;
@@ -222,9 +222,6 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
                      " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
 
         mass = 0.0;
-        /// voodoo recommendations from the bullet tutorials
-        body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-        body->setActivationState(DISABLE_DEACTIVATION);
 
         /// try to clean up memory usage
         vertices.clear();
@@ -244,6 +241,11 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     body = new btRigidBody(rbInfo);
     body->setFriction(friction);
     body->setRestitution(bounce);
+    if (!dynamic) {
+        /// voodoo recommendations from the bullet tutorials
+        body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState(DISABLE_DEACTIVATION);
+    }
     system->dynamicsWorld->addRigidBody(body);
     bulletBodyPtr=body;
 }
