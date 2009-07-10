@@ -311,6 +311,7 @@ public:
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
+    btCollisionShape* buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
