@@ -277,8 +277,6 @@ public:
     void setBulletState(positionOrientation pq);
     ProxyMeshObjectPtr meshptr;
     URI meshname;
-//    std::tr1::shared_ptr<Meru::GraphicsResourceEntity>  meshresource;
-    Task::EventResponse downloadFinished(Task::EventPtr evbase);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
@@ -318,6 +316,7 @@ public:
     virtual Duration desiredTickRate()const {
         return Duration::seconds(0.1);
     };
+    Task::EventResponse downloadFinished(Task::EventPtr evbase, bulletObj* bullobj);
     ///returns if rendering should continue
     virtual bool tick();
     ~BulletSystem();

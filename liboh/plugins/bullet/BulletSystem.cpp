@@ -85,22 +85,9 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 namespace Sirikata {
 
 
-Task::EventResponse bulletObj::downloadFinished(Task::EventPtr evbase) {
-    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
-    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << ev->getStatus() 
-            << " success: " << Transfer::TransferManager::SUCCESS 
-            << " length = " << ev->data().length() << endl);
-    Transfer::DenseDataPtr flatData = ev->data().flatten();
-    const unsigned char *realData = flatData->data();
-    cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl;
-    return Task::EventResponse::del();
-}
-
 void bulletObj::meshChanged (const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << endl;)
     meshname = newMesh;
-
-    system->transferManager->download(newMesh, std::tr1::bind(&Sirikata::bulletObj::downloadFinished, this, _1), Transfer::Range(true));
 }
 
 void bulletObj::setScale (const Vector3f &newScale) {
@@ -170,6 +157,18 @@ bulletObj::bulletObj(BulletSystem* sys) {
     velocity = Vector3d(0, 0, 0);
 }
 
+Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bulletObj* bullobj) {
+    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
+    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << ev->getStatus() 
+            << " success: " << Transfer::TransferManager::SUCCESS 
+            << " bullet obj: " << bullobj
+            << " length = " << ev->data().length() << endl);
+    Transfer::DenseDataPtr flatData = ev->data().flatten();
+    const unsigned char *realData = flatData->data();
+    cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl;
+    return Task::EventResponse::del();
+}
+
 btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
         positionOrientation po,
         bool dynamic,
@@ -201,6 +200,10 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     else {
         /// experimental trimesh
         /// for now, get mesh data from cache (eventually will use getResource)
+        transferManager->download(obj->meshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished, 
+                                  this, _1, obj), Transfer::Range(true));
+        return NULL;
+        /*        
         string path, hash;
         path ="Cache/";
         hash = obj->meshptr->getMesh().filename();
@@ -251,6 +254,7 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax); /// memory leak
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
                      " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
+        */
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
