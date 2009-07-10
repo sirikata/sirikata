@@ -261,10 +261,10 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
 Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bulletObj* bullobj) {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
-    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << ev->getStatus()
-                  << " success: " << Transfer::TransferManager::SUCCESS
+    DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << (int)ev->getStatus()
+                  << " success: " << (int)Transfer::TransferManager::SUCCESS
                   << " bullet obj: " << bullobj
-                  << " length = " << ev->data().length() << endl);
+                  << " length = " << (int)ev->data().length() << endl);
     Transfer::DenseDataPtr flatData = ev->data().flatten();
     const unsigned char* realData = flatData->data();
     cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl;
@@ -286,7 +286,7 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     obj->sizeY = sizeY;
     obj->sizeZ = sizeZ;
     obj->initialPo = po;
-    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << " shape: " << obj->shape << endl);
+    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << " shape: " << (int)obj->shape << endl);
     if (obj->dynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0);                /// no mesh data

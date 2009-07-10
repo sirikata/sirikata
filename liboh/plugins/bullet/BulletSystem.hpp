@@ -61,7 +61,7 @@ class parseOgreMesh {
 
     int read_ubyte() {
         int r;
-        if (data.size()<=ix) {
+        if ((int)data.size()<=ix) {
             return 0;
         }
         r = data[ix];
@@ -128,9 +128,9 @@ class parseOgreMesh {
     }
 
     void read_chunks(int count) {
-        int __0, __1, start;
+        int start;
         start = ix;
-        while ( ix<(start+count) & ix<data.size() ) {
+        while ( ix<(start+count) & ix<(int)data.size() ) {
             read_chunk();
         }
     }
