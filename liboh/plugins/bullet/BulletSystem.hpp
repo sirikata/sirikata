@@ -212,7 +212,7 @@ class parseOgreMesh {
         }
     }
 public:
-    void parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
+    bool parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
         char temp;
         this->vertices = &vertices;
         this->indices = &indices;
@@ -221,6 +221,9 @@ public:
         ix=0;
         ifstream f;
         f.open(filename);
+        if (!f) {
+            return false;
+        }
         while (!f.eof()) {
             f.read(&temp, 1);
             data.push_back(temp);
@@ -229,6 +232,7 @@ public:
         data.pop_back();                                    // why? whence extra byte?
         printf("read data %d bytes\n", data.size());
         read_chunks(data.size());
+        return true;
     }
 };//class parseOgreMesh
 
