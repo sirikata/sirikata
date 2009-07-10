@@ -177,12 +177,14 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
 //    string path, hash;
 //    path ="Cache/";
 //    hash = bullobj->meshptr->getMesh().filename();
-    vector<double> vertices = *(new vector<double>());                      /// big memory leak!
-    vector<int>& indices = *(new vector<int>());                            /// memory leak
+    //vector<double> vertices = *(new vector<double>());                      /// big memory leak!
+    vector<double>& vertices = *(new vector<double>());
+    vector<int>& indices = *(new vector<int>());
+    //vector<int> indices  = *(new vector<int>());                            /// memory leak
     vector<double> bounds;
     vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
     unsigned int i,j;
-    parseOgreMesh parser;// = new parseOgreMesh();                            /// memory leak
+    parseOgreMesh parser;
     bool success=parser.parseData(realData, ev->data().length(), vertices, indices, bounds);
     if (!success) {
         cout << "dbm: ERROR: file not found in addPhysicalObject" << endl;
@@ -212,11 +214,10 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
         printf(" %f", bounds[i]);
     }
     printf("\n");
-//    delete parser;
 
     btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
         indices.size()/3,                      // # of triangles (int)
-        &indices[0],               // ptr to list of indices (int)
+        &(indices[0]),               // ptr to list of indices (int)
         sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
         btVertices.size(),                      // # of vertices (int)
         (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
@@ -237,9 +238,15 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
     body = new btRigidBody(rbInfo);                                                 /// memory leak
     body->setFriction(bullobj->friction);
     body->setRestitution(bullobj->bounce);
+    body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+    body->setActivationState(DISABLE_DEACTIVATION);
     dynamicsWorld->addRigidBody(body);
-    physicalObjects.push_back(bullobj);
     bullobj->bulletBodyPtr = body;
+    physicalObjects.push_back(bullobj);     /// put it on the list of objects for Bullet to deal with
+    vertices.clear();
+    delete &vertices;
+    indices.clear();
+//    delete indices;                       /// for some insane reason, this crashes Bullet.
     return Task::EventResponse::del();
 }
 
@@ -271,73 +278,21 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     if (dynamic) {
         if (sizeX == sizeY && sizeY == sizeZ) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl;)
-            colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak
+            colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else {
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl;)
-            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak
+            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
             mass = sizeX * sizeY * sizeZ * density;
         }
     }
     else {
-        /// experimental trimesh
-        /// for now, get mesh data from cache (eventually will use getResource)
+        /// mesh-based collision -- only works for static objects
+        /// start a download; we'll finish the object in the callback
         transferManager->download(obj->meshptr->getMesh(), std::tr1::bind(&Sirikata::BulletSystem::downloadFinished,
                                   this, _1, obj), Transfer::Range(true));
         return NULL;
-        /*
-        string path, hash;
-        path ="Cache/";
-        hash = obj->meshptr->getMesh().filename();
-        parseOgreMesh* parser = new parseOgreMesh();                            /// memory leak
-        vector<double> vertices = *(new vector<double>());                      /// big memory leak!
-        vector<int>& indices = *(new vector<int>());                            /// memory leak
-        vector<double> bounds;
-        vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
-        unsigned int i,j;
-
-        bool success=parser->parseFile((path+hash).c_str(), vertices, indices, bounds);
-        if (!success) {
-            cout << "dbm: ERROR: file not found in addPhysicalObject" << endl;
-            return NULL;
-        }
-        printf("dbm:mesh %d vertices:\n", vertices.size());
-
-        for (i=0; i<vertices.size()/3; i+=1) {
-            printf("dbm:mesh");
-            for (j=0; j<3; j+=1) {
-                printf(" %f ", vertices[i*3+j]);
-            }
-            btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
-            printf("\n");
-        }
-
-        printf("\ndbm:mesh %d indices: ", indices.size());
-        for (i=0; i<indices.size(); i++) {
-            printf(" %d", indices[i]);
-        }
-        printf("\n");
-
-        printf("\ndbm:mesh bounds: ");
-        for (i=0; i<bounds.size(); i++) {
-            printf(" %f", bounds[i]);
-        }
-        printf("\n");
-        delete parser;
-
-        btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
-            indices.size()/3,                      // # of triangles (int)
-            &indices[0],               // ptr to list of indices (int)
-            sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
-            btVertices.size(),                      // # of vertices (int)
-            (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
-            sizeof(btVector3));    // sizeof(btVector3)
-        btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
-        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax); /// memory leak
-        DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
-        */
     }
     collisionShapes.push_back(colShape);
     localInertia = btVector3(0,0,0);
@@ -347,9 +302,9 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(po.p.x,po.p.y,po.p.z));
     startTransform.setRotation(btQuaternion(po.o.x, po.o.y, po.o.z, po.o.w));
-    myMotionState = new btDefaultMotionState(startTransform);                       /// memory leak
+    myMotionState = new btDefaultMotionState(startTransform);                       /// memory leak?
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
-    body = new btRigidBody(rbInfo);                                                 /// memory leak
+    body = new btRigidBody(rbInfo);
     body->setFriction(friction);
     DEBUG_OUTPUT(cout << "dbm: friction = " << body->getFriction() << endl;)
     body->setRestitution(bounce);
@@ -364,10 +319,15 @@ btRigidBody* BulletSystem::addPhysicalObject(bulletObj* obj,
 }
 
 void BulletSystem::removePhysicalObject(bulletObj* obj) {
+    /// this is tricky, and not well tested
+    /// memory issues:
+    /// there are a number of objects created during the instantiation of a bulletObj
+    /// if they really need to be kept around, we should keep track of them & delete them
     DEBUG_OUTPUT(cout << "dbm: removing physical object: " << obj << endl;)
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
             dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
+            delete obj->bulletBodyPtr;
             physicalObjects.erase(physicalObjects.begin()+i);
             break;
         }
