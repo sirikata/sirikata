@@ -8,8 +8,8 @@
 #include "LocationService.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
-#include "ForwarderUtilityClasses.hpp"  
-#include "Forwarder.hpp" 
+#include "ForwarderUtilityClasses.hpp"
+#include "Forwarder.hpp"
 
 #include "ObjectSegmentation.hpp"
 
@@ -53,25 +53,24 @@ namespace CBR
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
-    
+
     MigrateMessage* wrapObjectStateForMigration(Object* obj);
 
 
 
-    
+
     ServerID mID;
-    ObjectFactory* mObjectFactory;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
     Time mCurrentTime;
     Trace* mTrace;
     ObjectSegmentation* mOSeg;
-    Forwarder mForwarder;    
+    Forwarder mForwarder;
 
     ObjectMap mObjects;
 
-    
+
 }; // class Server
 
 } // namespace CBR

@@ -11,8 +11,8 @@
 #include "Options.hpp"
 #include "ObjectMessageQueue.hpp"
 #include "LoadMonitor.hpp"
-#include "ForwarderUtilityClasses.hpp" 
-#include "Forwarder.hpp" 
+#include "ForwarderUtilityClasses.hpp"
+#include "Forwarder.hpp"
 
 #include "ObjectSegmentation.hpp"
 
@@ -25,10 +25,9 @@
 
 namespace CBR
 {
-  
+
   Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
     : mID(id),
-      mObjectFactory(obj_factory),
       mLocationService(loc_service),
       mCSeg(cseg),
       mProximity(prox),
@@ -38,18 +37,20 @@ namespace CBR
       mForwarder(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,id)
   {
     // setup object which are initially residing on this server
-    for(ObjectFactory::iterator it = mObjectFactory->begin(); it != mObjectFactory->end(); it++)
+    for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
     {
       UUID obj_id = *it;
       Vector3f start_pos = loc_service->currentPosition(obj_id);
 
       if (lookup(start_pos) == mID)
       {
+          // Add object as local object to LocationService
+          mLocationService->addLocalObject(obj_id);
         // Instantiate object
-        Object* obj = mObjectFactory->object(obj_id, this->id());
+        Object* obj = obj_factory->object(obj_id, this->id());
         mObjects[obj_id] = obj;
         // Register proximity query
-        mProximity->addQuery(obj_id, mObjectFactory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
+        mProximity->addQuery(obj_id, obj_factory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
       }
     }
     mForwarder.initialize(&mObjects,&mCurrentTime);    //run initialization for forwarder
@@ -58,6 +59,11 @@ namespace CBR
 
 Server::~Server()
 {
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+        UUID obj_id = it->first;
+        mLocationService->removeLocalObject(obj_id);
+    }
+    mObjects.clear();
 }
 
 const ServerID& Server::id() const {
@@ -69,7 +75,7 @@ void Server::networkTick(const Time&t)
   mForwarder.tick(t);
 }
 
-  
+
 void Server::tick(const Time& t)
 {
   mCurrentTime = t;
@@ -77,7 +83,7 @@ void Server::tick(const Time& t)
   // Update object locations
   mLocationService->tick(t);
 
-  
+
   // Check proximity updates
   proximityTick(t);
   networkTick(t);
@@ -100,7 +106,7 @@ void Server::proximityTick(const Time& t)
 
   OriginID origin;
   origin.id = (uint32)id();
-  
+
   while(!proximity_events.empty())
   {
     ProximityEventInfo& evt = proximity_events.front();
@@ -140,16 +146,19 @@ void Server::checkObjectMigrations()
           //bftm
           //          mOSeg->migrateObject(obj_id,new_server_id);
           //
-          
+
+            // Send out the migrate message
 	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
 /*
 	    printf("migrating object %s due to position %s \n",
 		   obj_id.readableHexData().c_str(),
 		   obj_pos.toString().c_str());
 */
-            
-
             mForwarder.route( migrate_msg , new_server_id);
+
+            // Stop tracking the object locally
+            mLocationService->removeLocalObject(obj_id);
+
 	    migrated_objects.push_back(obj_id);
         }
     }
