@@ -310,13 +310,13 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                 std::vector<Network::Chunk> pendingMessages;
                                 std::vector<std::pair<Network::Stream*,Network::Chunk> > taggedPendingMessages;
                                 do  {
+                                    --where;
+                                    stream = where->second.mStream;
                                     StreamMapUUID* iter=&mStreams[stream];
                                     iter->setConnected();
                                     iter->setDoneConnecting();
                                     iter->setId(newRef.getAsUUID());//set the id of the stream map to the permanent ObjetReference
                                     if (pendingMessages.empty()) {
-                                        stream=where->second.mStream;
-
                                         where->second.mPendingMessages.swap(pendingMessages);//get ready to send pending messages
                                     }else {
                                         for (std::vector<Network::Chunk>::iterator i=where->second.mPendingMessages.begin(),ie=where->second.mPendingMessages.end();i!=ie;++i) {
@@ -329,8 +329,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                         }
                                     }
                                     where->second.mTotalMessageSize=0;//reset bytes used
-                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and
-                                    --where;
+                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and 
                                 }while (where!=start);
                                 mTemporaryStreams.erase(start);
                                 while ((where=mTemporaryStreams.find(uuid))!=mTemporaryStreams.end()) {
