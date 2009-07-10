@@ -277,7 +277,13 @@ class bulletObj : public MeshListener {
     enum mode {
         Disabled,               /// non-physical, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        Dynamic                 /// fully physical -- collision & dynamics
+        DynamicBox,                 /// fully physical -- collision & dynamics
+        DynamicSphere                 /// fully physical -- collision & dynamics
+    };
+    enum shapeID {
+        ShapeMesh,
+        ShapeBox,
+        ShapeSphere
     };
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
@@ -293,12 +299,13 @@ public:
     float sizeZ;
     bool physical;            /// anything that bullet sees is physical
     bool dynamic;             /// but only some are dynamic (affected by forces)
+    shapeID shape;
     positionOrientation initialPo;
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
-    
+
     /// public methods
     bulletObj(BulletSystem* sys);
     positionOrientation getBulletState();
@@ -326,8 +333,8 @@ public:
     btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(bulletObj* obj, positionOrientation po,
-                                   float density, float friction, float bounce,
-                                   float sizx, float sizy, float sizz);
+                           float density, float friction, float bounce,
+                           float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {

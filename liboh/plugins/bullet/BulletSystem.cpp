@@ -111,10 +111,18 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
     case Static:
         physical = true;
         dynamic = false;
+        shape = ShapeMesh;
         break;
-    case Dynamic:
+    case DynamicBox:
         physical = true;
         dynamic = true;
+        shape = ShapeBox;
+        break;
+    case DynamicSphere:
+        physical = true;
+        dynamic = true;
+        shape = ShapeSphere;
+        break;
     }
     if (physical) {
         positionOrientation po;
@@ -166,19 +174,20 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
     if (dynamic) {
-        if (sizeX == sizeY && sizeY == sizeZ) {
+        if (shape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl;)
             colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
-        else {
-            DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl;)
+        else if (shape == ShapeBox) {
+        DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl;)
             colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
             mass = sizeX * sizeY * sizeZ * density;
         }
     }
     else {
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
+        /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
         vector<double>& vertices = *(new vector<double>());
         vector<int>& indices = *(new vector<int>());
@@ -277,7 +286,7 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     obj->sizeY = sizeY;
     obj->sizeZ = sizeZ;
     obj->initialPo = po;
-    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << endl);
+    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << " shape: " << obj->shape << endl);
     if (obj->dynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0);                /// no mesh data
