@@ -256,7 +256,7 @@ private:
         return output;
     }
     std::string::iterator copyItem(std::string&s,std::string::iterator start_output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
-        std::string::iterator output=copyKey(s,start_output,protoNum,size);
+        std::string::iterator output=copyKey(s,start_output,protoNum,size,2);
         if (output!=start_output) {
             size-=(output-start_output);
             assert(size>0);
