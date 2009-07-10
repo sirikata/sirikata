@@ -47,7 +47,7 @@ int main(int argc,const char**argv) {
         plugins.load( DynamicLibrary::filename("prox") );
 
     OptionSet::getOptions("")->parse(argc,argv);
-    Space space(SpaceID::null());
+    Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())));
     space.run();
     return 0;
 }

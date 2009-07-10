@@ -98,7 +98,11 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
             }
             //let a connection request through to the registration service
             if (connection||where->second.connected()) {
-                mSpace->processMessage(hdr,MemoryReference(message_body));
+                if (mSpace) {
+                    mSpace->processMessage(hdr,MemoryReference(message_body));
+                } else {
+                    SILOG(space,warning,"Dropping registration message from "<<where->second.uuid().toString()<<" because forwardMessagesTo was not called");
+                }
             }else {//push other requests for registration to the queue
                 TemporaryStreamMultimap::iterator twhere=mTemporaryStreams.find(where->second.uuid());
                 if (twhere!=mTemporaryStreams.end()) {//find the queue on which the request should live
@@ -113,7 +117,11 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
             }
         }
     } else if (where->second.connected()) {//ordinary message to connected object
-        mSpace->processMessage(hdr,MemoryReference(message_body));
+        if (mSpace) {
+            mSpace->processMessage(hdr,MemoryReference(message_body));
+        } else {
+            SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" because forwardMessagesTo was not called");
+        }
     } else {//Not sure if we should verify that a connection request is going through,
             // or if we should just find the size of bytes saved and cap that reasonably
             // this check would have verified a good faith effort to start connecting if (where->second.isConnecting()) {
@@ -142,7 +150,9 @@ void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     delObj.SerializeToString(&rm.body().message_arguments(0));
     std::string serialized_message_body;
     rm.body().SerializeToString(&serialized_message_body);
-    mSpace->processMessage(rm.header(),MemoryReference(serialized_message_body));//tell the space to forward the message to the registration service
+    if (mSpace) {
+        mSpace->processMessage(rm.header(),MemoryReference(serialized_message_body));//tell the space to forward the message to the registration service
+    }
 }
 void ObjectConnections::connectionCallback(Network::Stream*stream, Network::Stream::ConnectionStatus status, const std::string&reason){
     if (status!=Network::Stream::Connected) {
@@ -381,7 +391,11 @@ void ObjectConnections::processExistingObject(const RoutableMessageHeader&const_
         StreamMap::iterator where;
         where=mActiveStreams.find(const_hdr.destination_object().getAsUUID());//find UUID from active streams
         if (where==mActiveStreams.end()&&forward) {//if this is not a message from the space, then forward it to the space for future forwarding
-            mSpace->processMessage(const_hdr,body_array);
+            if (mSpace) {
+                mSpace->processMessage(const_hdr,body_array);
+            } else {
+                SILOG(space,warning,"Dropping message from "<<const_hdr.source_object().toString()<<" because forwardMessagesTo was not called");
+            }
         }else {
             RoutableMessageHeader hdr(const_hdr);//send it to the found stream
             std::string header_data;

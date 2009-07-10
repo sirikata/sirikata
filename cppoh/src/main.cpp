@@ -245,7 +245,7 @@ int main ( int argc,const char**argv ) {
     Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
 
 
-    SpaceID mainSpace(UUID::null());
+    SpaceID mainSpace(UUID("12345678-1111-1111-1111-DEFA01759ACE",UUID::HumanReadable()));
     SpaceIDMap *spaceMap = new SpaceIDMap;
     spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
 

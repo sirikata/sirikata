@@ -83,9 +83,9 @@ private:
     }
     UUID parseUUID(const unsigned char*&input, size_t&size) {
         size_t len=parseLength(input,size);
-        if (len>=size) {
+        if (len<=size) {
             unsigned char uuidArray[UUID::static_size]={0};
-            memcpy(uuidArray,input,len);
+            memcpy(uuidArray,input,len<UUID::static_size?len:UUID::static_size);
             input+=len;
             size-=len;
             return UUID(uuidArray,UUID::static_size);
@@ -115,12 +115,12 @@ public:
             switch(type) {
               case 0:
                   {
-                      uint64 len=parseLength(curInput,size);
+                      uint64 value=parseLength(curInput,size);
                       if (key==Sirikata::Protocol::MessageHeader::destination_port_field_tag) {
-                          mDestinationPort=key;
+                          mDestinationPort=value;
                       }
                       if (key==Sirikata::Protocol::MessageHeader::source_port_field_tag) {
-                          mSourcePort=key;
+                          mSourcePort=value;
                       }
                   }
                 break;

@@ -84,6 +84,7 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
                                              Network::Address("localhost",port)
                                              //spaceServicesString
                                              );
+    mObjectConnections->forwardMessagesTo(this);
     mServices[spaceServices.registration_port()]=mRegistration;
     mServices[spaceServices.loc_port()]=mLoc;
     mServices[spaceServices.geom_port()]=mGeom;
