@@ -90,10 +90,9 @@ public:
     }
 
     ElementType pop(){
-        ElementType m;
         std::deque<ElementType>*items=&mLists[mElements.front()];
-        
-        std::swap(m,items->front());
+
+        ElementType m = items->front();
         items->pop_front();
         if (items->empty()) {
             mLists.erase(mLists.find(mElements.front()));

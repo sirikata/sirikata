@@ -91,8 +91,7 @@ public:
     }
 
     ElementType pop(){
-        ElementType m;
-        std::swap(m,mElements.front());
+        ElementType m = mElements.front();
         mElements.pop_front();
         uint32 m_size = mSizeFunctor(m);
         mSize -= m_size;

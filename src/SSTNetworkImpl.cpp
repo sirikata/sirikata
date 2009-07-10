@@ -26,7 +26,7 @@ void SSTStatsListener::packetReceived(qint32 size) {
 }
 
 static int argc = 1;
-static char* argv[] = { "blah", NULL };
+static const char* argv[] = { "blah", NULL };
 
 CBRSST::CBRSST(Trace* trace)
  : mTrace(trace)
