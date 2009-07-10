@@ -270,6 +270,13 @@ class bulletObj : public MeshListener {
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
 public:
+    float density;
+    float friction;
+    float bounce;
+    float sizeX;
+    float sizeY;
+    float sizeZ;
+    positionOrientation initialPo;
     btRigidBody* bulletBodyPtr;
     Vector3d velocity;
     bulletObj(BulletSystem* sys);
