@@ -61,7 +61,7 @@ class parseOgreMesh {
 
     int read_ubyte() {
         int r;
-        if (data.size()<=ix) {
+        if ((int)data.size()<=ix) {
             return 0;
         }
         r = data[ix];
@@ -128,9 +128,9 @@ class parseOgreMesh {
     }
 
     void read_chunks(int count) {
-        int __0, __1, start;
+        int start;
         start = ix;
-        while ( ix<(start+count) & ix<data.size() ) {
+        while ( ix<(start+count) & ix<(int)data.size() ) {
             read_chunk();
         }
     }
@@ -212,7 +212,23 @@ class parseOgreMesh {
         }
     }
 public:
-    void parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
+    bool parseData(const unsigned char* rawdata, int bytes, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
+        char temp;
+        this->vertices = &vertices;
+        this->indices = &indices;
+        this->bounds = &bounds;
+        data.clear();
+        ix=0;
+        for (int i=0; i<bytes; i++) {
+            data.push_back(rawdata[i]);
+        }
+//        data.pop_back();                                    // why? whence extra byte?
+        printf("read data %d bytes\n", data.size());
+        read_chunks(data.size());
+        return true;
+    }
+
+    bool parseFile(const char* filename, vector<double>& vertices, vector<int>& indices, vector<double>& bounds)    {
         char temp;
         this->vertices = &vertices;
         this->indices = &indices;
@@ -221,6 +237,9 @@ public:
         ix=0;
         ifstream f;
         f.open(filename);
+        if (!f) {
+            return false;
+        }
         while (!f.eof()) {
             f.read(&temp, 1);
             data.push_back(temp);
@@ -229,6 +248,7 @@ public:
         data.pop_back();                                    // why? whence extra byte?
         printf("read data %d bytes\n", data.size());
         read_chunks(data.size());
+        return true;
     }
 };//class parseOgreMesh
 
@@ -257,31 +277,59 @@ class bulletObj : public MeshListener {
     enum mode {
         Disabled,               /// non-physical, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        Dynamic                 /// fully physical -- collision & dynamics
+        DynamicBox,                 /// fully physical -- collision & dynamics
+        DynamicSphere                 /// fully physical -- collision & dynamics
     };
-    void meshChanged (const URI &newMesh);
-    void setScale (const Vector3f &newScale);
-    bool isPhysical;            /// anything that bullet sees is physical
-    bool isDynamic;             /// but only some are dynamic (kinematic in bullet parlance)
+    enum shapeID {
+        ShapeMesh,
+        ShapeBox,
+        ShapeSphere
+    };
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
+    void meshChanged (const URI &newMesh);
+    void setScale (const Vector3f &newScale);
+    vector<double>& vertices;// = *(new vector<double>());
+    vector<int>& indices;// = *(new vector<int>());
 public:
-    btRigidBody* bulletBodyPtr;
+    /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
+    float density;
+    float friction;
+    float bounce;
+    bool physical;            /// anything that bullet sees is physical
+    bool dynamic;             /// but only some are dynamic (affected by forces)
+    shapeID shape;
+    positionOrientation initialPo;
     Vector3d velocity;
-    bulletObj(BulletSystem* sys);
-    positionOrientation getBulletState();
-    void setBulletState(positionOrientation pq);
+    btRigidBody* bulletBodyPtr;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
-//    std::tr1::shared_ptr<Meru::GraphicsResourceEntity>  meshresource;
-    Task::EventResponse downloadFinished(Task::EventPtr evbase);
+    float sizeX;
+    float sizeY;
+    float sizeZ;
+
+    /// public methods
+    bulletObj(BulletSystem* sys) :
+            vertices(*(new vector<double>())),
+            indices (*(new vector<int>())),
+            physical(false),
+            velocity(Vector3d()),
+            bulletBodyPtr(NULL),
+            sizeX(0),
+            sizeY(0),
+            sizeZ(0) {
+        system = sys;
+    }
+    positionOrientation getBulletState();
+    void setBulletState(positionOrientation pq);
+    void buildBulletBody(const unsigned char*, int);
+    btCollisionShape* buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     vector<bulletObj*>objects;
-    vector<bulletObj*>physicalObjects;
     Vector3d gravity;
     double groundlevel;
 
@@ -290,15 +338,16 @@ class BulletSystem: public TimeSteppedSimulation {
     btCollisionDispatcher* dispatcher;
     btAxisSweep3* overlappingPairCache;
     btSequentialImpulseConstraintSolver* solver;
-    btDiscreteDynamicsWorld* dynamicsWorld;
-    btAlignedObjectArray<btCollisionShape*> collisionShapes;
 
 public:
     BulletSystem();
-    string systemOptions;
-    btRigidBody* addPhysicalObject(bulletObj* obj,positionOrientation pq,  bool dynamic,
-                                   float density, float friction, float bounce,
-                                   float sizx, float sizy, float sizz);
+    btDiscreteDynamicsWorld* dynamicsWorld;
+    vector<bulletObj*>physicalObjects;
+    btAlignedObjectArray<btCollisionShape*> collisionShapes;
+    Transfer::TransferManager*transferManager;
+    void addPhysicalObject(bulletObj* obj, positionOrientation po,
+                           float density, float friction, float bounce,
+                           float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
@@ -314,6 +363,7 @@ public:
     virtual Duration desiredTickRate()const {
         return Duration::seconds(0.1);
     };
+    Task::EventResponse downloadFinished(Task::EventPtr evbase, bulletObj* bullobj);
     ///returns if rendering should continue
     virtual bool tick();
     ~BulletSystem();
