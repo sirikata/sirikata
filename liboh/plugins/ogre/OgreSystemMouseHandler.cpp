@@ -165,21 +165,16 @@ public:
 private:
 
     int mWhichRayObject;
-    EventResponse selectObject(EventPtr ev, int direction) {
-        std::tr1::shared_ptr<MouseClickEvent> mouseev (
-            std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
-        if (!mouseev) {
-            return EventResponse::nop();
-        }
+    void selectObjectAction(Vector2f p, int direction) {
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) {
-            return EventResponse::nop();
+            return;
         }
         if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
             // add object.
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, mWhichRayObject);
             if (!mouseOver) {
-                return EventResponse::nop();
+                return;
             }
             if (mouseOver->id() == mLastShiftSelected) {
                 SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
@@ -194,9 +189,9 @@ private:
                 mWhichRayObject+=direction;
                 mLastShiftSelected = SpaceObjectReference::null();
             }
-            mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, mWhichRayObject);
             if (!mouseOver) {
-                return EventResponse::nop();
+                return;
             }
 
             SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
@@ -227,7 +222,7 @@ private:
             // reset selection.
             clearSelection();
             mWhichRayObject+=direction;
-            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
+            Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, mWhichRayObject);
             if (mouseOver) {
                 mSelectedObjects.insert(mouseOver->getProxyPtr());
                 mouseOver->setSelected(true);
@@ -236,26 +231,7 @@ private:
             }
             mLastShiftSelected = SpaceObjectReference::null();
         }
-        return EventResponse::cancel();
-    }
-
-///////////////////// DRAG HANDLERS //////////////////////
-
-    EventResponse wheelListener(EventPtr evbase) {
-        std::tr1::shared_ptr<AxisEvent> ev(std::tr1::dynamic_pointer_cast<AxisEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (!mParent->mPrimaryCamera) {
-            return EventResponse::nop();
-        }
-        if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
-            zoomInOut(ev->mValue, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
-        }
-        else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
-            //orbitObject(Vector3d(ev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), ev->getDevice());
-        }
-        return EventResponse::cancel();
+        return;
     }
 
     ///////////////// KEYBOARD HANDLERS /////////////////
@@ -590,6 +566,162 @@ private:
         cam->getProxy().setLocation(now, loc);
     }
 
+    void setDragModeAction(const String& modename) {
+        if (modename == "")
+            mDragAction[1] = 0;
+
+        mDragAction[1] = DragActionRegistry::get(modename);
+    }
+
+    void importAction() {
+        std::cout << "input path name for import: " << std::endl;
+        std::string filename;
+        // a bit of a cludge right now, type name into console.
+        fflush(stdin);
+        while (!feof(stdin)) {
+            int c = fgetc(stdin);
+            if (c == '\r') {
+                c = fgetc(stdin);
+            }
+            if (c=='\n') {
+                break;
+            }
+            if (c=='\033' || c <= 0) {
+                std::cout << "<escape>\n";
+                return;
+            }
+            std::cout << (unsigned char)c;
+            filename += (unsigned char)c;
+        }
+        std::cout << '\n';
+        std::vector<std::string> files;
+        files.push_back(filename);
+        mParent->mInputManager->filesDropped(files);
+    }
+
+    void saveSceneAction() {
+        std::cout << "saving new scene as scene_new.csv: " << std::endl;
+        FILE *output = fopen("scene_new.csv", "wt");
+        if (!output) {
+            perror("Failed to open scene_new.csv");
+            return;
+        }
+        fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
+        fprintf(output, "density,friction,bounce,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
+        fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
+        fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
+        OgreSystem::SceneEntitiesMap::const_iterator iter;
+        for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
+            dumpObject(output, iter->second);
+        }
+        fclose(output);
+    }
+
+    bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
+        /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
+        /// for now, in that case we should revert to quaternion
+        double q1,q2,q3,q0;
+        q2=q.x;
+        q3=q.y;
+        q1=q.z;
+        q0=q.w;
+        roll = std::atan2((2*((q0*q1)+(q2*q3))), (1-(2*(std::pow(q1,2.0)+std::pow(q2,2.0)))));
+        pitch = std::asin((2*((q0*q2)-(q3*q1))));
+        yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
+        pitch /= DEG2RAD;
+        roll /= DEG2RAD;
+        yaw /= DEG2RAD;
+        if (std::abs(pitch) > 89.0) {
+            return false;
+        }
+        return true;
+    }
+
+    void dumpObject(FILE* fp, Entity* e) {
+        Task::AbsTime now = Task::AbsTime::now();
+        ProxyObject *pp = e->getProxyPtr().get();
+        Location loc = pp->globalLocation(now);
+        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
+        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
+        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+
+        /* Ogre's way doesn't jive
+        Ogre::Quaternion quat(loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
+        Ogre::Radian yaw = quat.getYaw();
+        Ogre::Radian pitch = quat.getPitch();
+        Ogre::Radian roll = quat.getRoll();
+        std::cout << "dbm: debug ogre yaw: " << yaw.valueDegrees() << " pitch: " << pitch.valueDegrees() << " roll: " << roll.valueDegrees() << std::endl;
+        */
+        double x,y,z;
+        std::string w("");
+        /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
+        if (!quat2Euler(loc.getOrientation(), x, z, y)) {
+            x=loc.getOrientation().x;
+            y=loc.getOrientation().y;
+            z=loc.getOrientation().z;
+            std::stringstream temp;
+            temp << loc.getOrientation().w;
+            w = temp.str();
+        }
+        if (light) {
+            const char *typestr = "directional";
+            const LightInfo &linfo = light->getLastLightInfo();
+            if (linfo.mType == LightInfo::POINT) {
+                typestr = "point";
+            }
+            if (linfo.mType == LightInfo::SPOTLIGHT) {
+                typestr = "spotlight";
+            }
+            float32 ambientPower, shadowPower;
+            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,",typestr,
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                    x,y,z,w.c_str());
+
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
+                    linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
+                    linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
+                    linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
+                    linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
+                    (int)linfo.mCastsShadow);
+        }
+        else if (mesh) {
+            URI uri = mesh->getMesh();
+            std::string uristr = uri.toString();
+            if (uri.proto().empty()) {
+                uristr = "NULL";
+            }
+            const physicalParameters &phys = mesh->getPhysical();
+            std::string subtype;
+            if (phys.mode==0) subtype="graphiconly";
+            else if (phys.mode==1) subtype="staticmesh";
+            else if (phys.mode==2) subtype="dynamicbox";
+            else if (phys.mode==3) subtype="dynamicsphere";
+            else {
+                std::cout << "unknown physical mode! " << phys.mode << std::endl;
+            }
+            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                    x,y,z,w.c_str());
+
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%s\n",
+                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
+                    phys.friction, phys.bounce, uristr.c_str());
+        }
+        else if (camera) {
+            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%s\n",
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                                    x,y,z,w.c_str());
+        }
+        else {
+            fprintf(fp, "#unknown object type in dumpObject\n");
+        }
+    }
+
+
+    ///// Top Level Input Event Handlers //////
+
     EventResponse keyHandler(EventPtr ev) {
         std::tr1::shared_ptr<ButtonEvent> buttonev (
             std::tr1::dynamic_pointer_cast<ButtonEvent>(ev));
@@ -711,22 +843,28 @@ private:
         // Drag modes
         switch (buttonev->mButton) {
           case SDL_SCANCODE_Q:
-            setDragModeAction("");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("");
             break;
           case SDL_SCANCODE_W:
-            setDragModeAction("moveObject");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("moveObject");
             break;
           case SDL_SCANCODE_E:
-            setDragModeAction("rotateObject");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("rotateObject");
             break;
           case SDL_SCANCODE_R:
-            setDragModeAction("scaleObject");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("scaleObject");
             break;
           case SDL_SCANCODE_T:
-            setDragModeAction("rotateCamera");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("rotateCamera");
             break;
           case SDL_SCANCODE_Y:
-            setDragModeAction("panCamera");
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                setDragModeAction("panCamera");
             break;
           default:
             break;
@@ -735,165 +873,78 @@ private:
         return EventResponse::nop();
     }
 
-    void importAction() {
-        std::cout << "input path name for import: " << std::endl;
-        std::string filename;
-        // a bit of a cludge right now, type name into console.
-        fflush(stdin);
-        while (!feof(stdin)) {
-            int c = fgetc(stdin);
-            if (c == '\r') {
-                c = fgetc(stdin);
-            }
-            if (c=='\n') {
-                break;
-            }
-            if (c=='\033' || c <= 0) {
-                std::cout << "<escape>\n";
-                return;
-            }
-            std::cout << (unsigned char)c;
-            filename += (unsigned char)c;
+    EventResponse axisHandler(EventPtr ev) {
+        std::tr1::shared_ptr<AxisEvent> axisev (
+            std::tr1::dynamic_pointer_cast<AxisEvent>(ev));
+        if (!axisev)
+            return EventResponse::nop();
+
+        switch(axisev->mAxis) {
+          case SDLMouse::WHEELX:
+            //orbitObject(Vector3d(axisev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), axisev->getDevice());
+            break;
+          case SDLMouse::WHEELY:
+            printf("axisHandler zoomInOut\n");
+            zoomInOut(axisev->mValue, axisev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
+            break;
         }
-        std::cout << '\n';
-        std::vector<std::string> files;
-        files.push_back(filename);
-        mParent->mInputManager->filesDropped(files);
+
+        return EventResponse::cancel();
     }
 
-    void saveSceneAction() {
-        std::cout << "saving new scene as scene_new.csv: " << std::endl;
-        FILE *output = fopen("scene_new.csv", "wt");
-        if (!output) {
-            perror("Failed to open scene_new.csv");
-            return;
+    EventResponse mouseClickHandler(EventPtr ev) {
+        std::tr1::shared_ptr<MouseClickEvent> mouseev (
+            std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
+        if (!mouseev)
+            return EventResponse::nop();
+
+        switch(mouseev->mButton) {
+          case 1:
+            selectObjectAction(Vector2f(mouseev->mX, mouseev->mY), 1);
+            break;
+          case 3:
+            selectObjectAction(Vector2f(mouseev->mX, mouseev->mY), -1);
+            break;
+          default:
+            break;
         }
-        fprintf(output, "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
-        fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
-        fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
-        fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
-        OgreSystem::SceneEntitiesMap::const_iterator iter;
-        for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
-            dumpObject(output, iter->second);
-        }
-        fclose(output);
+
+        return EventResponse::nop();
     }
 
-    bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
-        /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
-        /// for now, in that case we should revert to quaternion
-        double q1,q2,q3,q0;
-        q2=q.x;
-        q3=q.y;
-        q1=q.z;
-        q0=q.w;
-        roll = std::atan2((2*((q0*q1)+(q2*q3))), (1-(2*(std::pow(q1,2.0)+std::pow(q2,2.0)))));
-        pitch = std::asin((2*((q0*q2)-(q3*q1))));
-        yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
-        pitch /= DEG2RAD;
-        roll /= DEG2RAD;
-        yaw /= DEG2RAD;
-        if (std::abs(pitch) > 89.0) {
-            return false;
+    EventResponse mouseDragHandler(EventPtr evbase) {
+        MouseDragEventPtr ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
+        if (!ev) {
+            return EventResponse::nop();
         }
-        return true;
-    }
-
-    void dumpObject(FILE* fp, Entity* e) {
-        Task::AbsTime now = Task::AbsTime::now();
-        ProxyObject *pp = e->getProxyPtr().get();
-        Location loc = pp->globalLocation(now);
-        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
-        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
-
-        double x,y,z;
-        std::string w("");
-        /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
-        if (!quat2Euler(loc.getOrientation(), x, z, y)) {
-            x=loc.getOrientation().x;
-            y=loc.getOrientation().y;
-            z=loc.getOrientation().z;
-            std::stringstream temp;
-            temp << loc.getOrientation().w;
-            w = temp.str();
-        }
-        if (light) {
-            const char *typestr = "directional";
-            const LightInfo &linfo = light->getLastLightInfo();
-            if (linfo.mType == LightInfo::POINT) {
-                typestr = "point";
+        ActiveDrag * &drag = mActiveDrag[ev->mButton];
+        printf("mouseDragHandler handled\n");
+        if (ev->mType == MouseDragEvent::START) {
+            if (drag) {
+                delete drag;
             }
-            if (linfo.mType == LightInfo::SPOTLIGHT) {
-                typestr = "spotlight";
+            DragStartInfo info = {
+                /*.sys = */ mParent,
+                /*.camera = */ mParent->mPrimaryCamera, // for now...
+                /*.objects = */ mSelectedObjects,
+                /*.ev = */ ev
+            };
+            if (mDragAction[ev->mButton]) {
+                drag = mDragAction[ev->mButton](info);
             }
-            float32 ambientPower, shadowPower;
-            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,",typestr,
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    x,y,z,w.c_str());
+        }
+        if (drag) {
+            drag->mouseMoved(ev);
 
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
-                    linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
-                    linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
-                    linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
-                    linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
-                    (int)linfo.mCastsShadow);
-        }
-        else if (mesh) {
-            URI uri = mesh->getMesh();
-            std::string uristr = uri.toString();
-            if (uri.proto().empty()) {
-                uristr = "NULL";
+            if (ev->mType == MouseDragEvent::END) {
+                delete drag;
+                drag = 0;
             }
-            const physicalParameters &phys = mesh->getPhysical();
-            std::string subtype;
-            if (phys.mode==0) subtype="graphiconly";
-            else if (phys.mode==1) subtype="staticmesh";
-            else if (phys.mode==2) subtype="dynamicbox";
-            else if (phys.mode==3) subtype="dynamicsphere";
-            else {
-                std::cout << "unknown physical mode! " << phys.mode << std::endl;
-            }
-            fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    x,y,z,w.c_str());
-
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
-                    phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
-        else if (camera) {
-            fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                                    x,y,z,w.c_str());
-        }
-        else {
-            fprintf(fp, "#unknown object type in dumpObject\n");
-        }
+        return EventResponse::nop();
     }
 
     ///////////////// DEVICE FUNCTIONS ////////////////
-
-    SubscriptionId registerAxisListener(const InputDevicePtr &dev,
-                                        EventResponse(MouseHandler::*func)(EventPtr),
-                                        int axis) {
-        Task::IdPair eventId (AxisEvent::getEventId(),
-                              AxisEvent::getSecondaryId(dev, axis));
-        SubscriptionId subId = mParent->mInputManager->subscribeId(eventId,
-                               std::tr1::bind(func, this, _1));
-        mEvents.push_back(subId);
-        mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
-        return subId;
-    }
-
-    void setDragModeAction(const String& modename) {
-        if (modename == "")
-            mDragAction[1] = 0;
-
-        mDragAction[1] = DragActionRegistry::get(modename);
-    }
 
     EventResponse deviceListener(EventPtr evbase) {
         std::tr1::shared_ptr<InputDeviceEvent> ev (std::tr1::dynamic_pointer_cast<InputDeviceEvent>(evbase));
@@ -903,8 +954,11 @@ private:
         switch (ev->mType) {
         case InputDeviceEvent::ADDED:
             if (!!(std::tr1::dynamic_pointer_cast<SDLMouse>(ev->mDevice))) {
-                registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELX);
-                registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELY);
+                SubscriptionId subId = mParent->mInputManager->subscribeId(
+                    AxisEvent::getEventId(),
+                    std::tr1::bind(&MouseHandler::axisHandler, this, _1));
+                mEvents.push_back(subId);
+                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
             }
             if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
                 // Key Pressed
@@ -939,68 +993,23 @@ private:
         return EventResponse::nop();
     }
 
-    EventResponse doDrag(EventPtr evbase) {
-        MouseDragEventPtr ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        if (!mParent->mPrimaryCamera) {
-            return EventResponse::nop();
-        }
-        ActiveDrag * &drag = mActiveDrag[ev->mButton];
-        if (ev->mType == MouseDragEvent::START) {
-            if (drag) {
-                delete drag;
-            }
-            DragStartInfo info = {
-                /*.sys = */ mParent,
-                /*.camera = */ mParent->mPrimaryCamera, // for now...
-                /*.objects = */ mSelectedObjects,
-                /*.ev = */ ev
-            };
-            if (mDragAction[ev->mButton]) {
-                drag = mDragAction[ev->mButton](info);
-            }
-        }
-        if (drag) {
-            drag->mouseMoved(ev);
-
-            if (ev->mType == MouseDragEvent::END) {
-                delete drag;
-                drag = 0;
-            }
-        }
-        return EventResponse::nop();
-    }
-
-// .....................
-
-// SCROLL WHEEL: up/down = move object closer/farther. left/right = rotate object about Y axis.
-// holding down middle button up/down = move object closer/farther, left/right = rotate object about Y axis.
-
-// Accuracy: relative versus absolute mode; exponential decay versus pixels.
-
 public:
     MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
                               std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 
-        mEvents.push_back(mParent->mInputManager->subscribeId(
-                              MouseDragEvent::getEventId(),
-                              std::tr1::bind(&MouseHandler::doDrag, this, _1)));
         mDragAction[1] = 0;
         mDragAction[2] = DragActionRegistry::get("zoomCamera");
         mDragAction[3] = DragActionRegistry::get("panCamera");
         mDragAction[4] = DragActionRegistry::get("rotateCamera");
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                              IdPair(MouseClickEvent::getEventId(),
-                                     MouseDownEvent::getSecondaryId(1)),
-                              std::tr1::bind(&MouseHandler::selectObject, this, _1, 1)));
+                              MouseDragEvent::getEventId(),
+                              std::tr1::bind(&MouseHandler::mouseDragHandler, this, _1)));
+
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                              IdPair(MouseClickEvent::getEventId(),
-                                     MouseDownEvent::getSecondaryId(3)),
-                              std::tr1::bind(&MouseHandler::selectObject, this, _1, -1)));
+                MouseClickEvent::getEventId(),
+                std::tr1::bind(&MouseHandler::mouseClickHandler, this, _1)));
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();

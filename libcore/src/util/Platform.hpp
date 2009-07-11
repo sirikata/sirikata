@@ -260,6 +260,8 @@ class RoutableMessageBody;
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
 #include "Factory.hpp"
+#include "Vector2.hpp"
+#include "Vector3.hpp"
 #include "Vector4.hpp"
 #include "Matrix3x3.hpp"
 #include "Quaternion.hpp"
@@ -276,6 +278,8 @@ class DeltaTime;
 }
 typedef Task::AbsTime Time;
 typedef Task::DeltaTime Duration;
+typedef Vector2<float32> Vector2f;
+typedef Vector2<float64> Vector2d;
 typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;
 typedef Vector4<float32> Vector4f;
