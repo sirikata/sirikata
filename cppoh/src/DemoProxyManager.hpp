@@ -116,7 +116,11 @@ class DemoProxyManager :public ProxyManager {
         while (true) {
             char str[1024];
             str[0]='\0';
-            fgets(str, 1024, fp);
+            char* getsptr = fgets(str, 1024, fp);
+            if (getsptr == NULL) {
+                // Read error or EOF, bail
+                break;
+            }
             std::string append(str);
             if (append.length() == 0) {
                 // EOF

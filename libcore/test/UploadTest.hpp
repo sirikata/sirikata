@@ -40,12 +40,13 @@
 #include "transfer/NetworkCacheLayer.hpp"
 #include "transfer/HTTPDownloadHandler.hpp"
 #include "transfer/HTTPFormUploadHandler.hpp"
+#include "transfer/FileProtocolHandler.hpp"
 #include "transfer/URI.hpp"
 #include "transfer/LRUPolicy.hpp"
 
 using namespace Sirikata;
 
-#define SERVER "http://localhost"
+#define SERVER "file:///./uploadtest"
 // #define SERVER "http://graphics.stanford.edu/~danielrh"
 class UploadTest : public CxxTest::TestSuite {
 	typedef Transfer::TransferManager TransferManager;
@@ -108,6 +109,8 @@ class UploadTest : public CxxTest::TestSuite {
 
 		std::tr1::shared_ptr<Transfer::HTTPDownloadHandler> httpDownHandler(new Transfer::HTTPDownloadHandler);
 		std::tr1::shared_ptr<Transfer::HTTPFormUploadHandler> httpUpHandler(new Transfer::HTTPFormUploadHandler);
+		std::tr1::shared_ptr<Transfer::FileProtocolHandler> fileHandler(new Transfer::FileProtocolHandler);
+		std::tr1::shared_ptr<Transfer::FileNameHandler> fileNameHandler(new Transfer::FileNameHandler(fileHandler));
 
 		mDestroyEventManager = false;
 		mWorkQueue = new Task::ThreadSafeWorkQueue;
@@ -118,22 +121,24 @@ class UploadTest : public CxxTest::TestSuite {
 		mDownNameService = new Transfer::CachedServiceLookup;
 		services = new Transfer::ListOfServices;
 		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext(SERVER "/dns/names/global"),
+				URIContext(SERVER "/dns.txt"),
 				Transfer::ServiceParams()));
 		mDownNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
 		mDownNameReg = new Transfer::ProtocolRegistry<Transfer::NameLookupHandler>;
 		mDownNameServMgr = new Transfer::ServiceManager<Transfer::NameLookupHandler>(mDownNameService,mDownNameReg);
 		mDownNameReg->setHandler("http", httpDownHandler);
+		mDownNameReg->setHandler("file", fileNameHandler);
 
 		mDownloadService = new Transfer::CachedServiceLookup;
 		services = new Transfer::ListOfServices;
 		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext(SERVER "/uploadsystem/files/global"),
+				URIContext(SERVER "/"),
 				Transfer::ServiceParams()));
 		mDownloadService->addToCache(URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
 		mDownloadReg = new Transfer::ProtocolRegistry<Transfer::DownloadHandler>;
 		mDownloadServMgr = new Transfer::ServiceManager<Transfer::DownloadHandler>(mDownloadService,mDownloadReg);
 		mDownloadReg->setHandler("http", httpDownHandler);
+		mDownloadReg->setHandler("file", fileHandler);
 
 		//params.set("field:user", "");
 		//params.set("field:password", "authentication0");
@@ -147,12 +152,13 @@ class UploadTest : public CxxTest::TestSuite {
 		params.set("value:uploadNeed", "1");
 		services = new Transfer::ListOfServices;
 		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext(SERVER "/uploadsystem/index.php"),
+				URIContext(SERVER "/"),
 				params));
 		mUploadService->addToCache(URIContext("mhash:"), Transfer::ListOfServicesPtr(services));
 		mUploadReg = new Transfer::ProtocolRegistry<Transfer::UploadHandler>;
 		mUploadServMgr = new Transfer::ServiceManager<Transfer::UploadHandler>(mUploadService,mUploadReg);
 		mUploadReg->setHandler("http", httpUpHandler);
+		mUploadReg->setHandler("file", fileHandler);
 
 		mUpNameService = new Transfer::CachedServiceLookup;
 		params.set("field:file", "MHashFile0");
@@ -160,14 +166,16 @@ class UploadTest : public CxxTest::TestSuite {
 		params.unset("value:uploadNeed");
 		services = new Transfer::ListOfServices;
 		services->push_back(Transfer::ListOfServices::value_type(
-				URIContext(SERVER "/dns/index.php"),
+				URIContext(SERVER "/dns.txt"),
 				params));
 		mUpNameService->addToCache(URIContext("meerkat:"), Transfer::ListOfServicesPtr(services));
 		mUpNameReg = new Transfer::ProtocolRegistry<Transfer::NameUploadHandler>;
 		mUpNameServMgr = new Transfer::ServiceManager<Transfer::NameUploadHandler>(mUpNameService,mUpNameReg);
 		mUpNameReg->setHandler("http", httpUpHandler);
+		mUpNameReg->setHandler("file", fileNameHandler);
 
 		mNetworkCache = new Transfer::NetworkCacheLayer(NULL, mDownloadServMgr);
+		mNameLookup = new Transfer::NameLookupManager(mDownNameServMgr, mDownloadServMgr);
 		mTransferManager = new Transfer::EventTransferManager(mNetworkCache, mNameLookup, mEventSystem, mDownloadServMgr, mUpNameServMgr, mUploadServMgr);
 
 		mEventSystem->subscribe(Transfer::DownloadEventId, &printTransfer, Task::EARLY);

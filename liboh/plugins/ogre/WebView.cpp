@@ -74,16 +74,16 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	texFiltering = Ogre::FO_NONE;
 
 	createMaterial();
-	
+
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
 
 	if(compensateNPOT)
-		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);	
+		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
 
 	createWebView(asyncRender, maxAsyncRenderRate);
 }
 
-WebView::WebView(const std::string& name, unsigned short width, unsigned short height, 
+WebView::WebView(const std::string& name, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {
 	webView = 0;
@@ -115,7 +115,7 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	this->texFiltering = texFiltering;
 
 	createMaterial();
-	createWebView(asyncRender, maxAsyncRenderRate);	
+	createWebView(asyncRender, maxAsyncRenderRate);
 }
 
 WebView::~WebView()
@@ -203,7 +203,7 @@ void WebView::createMaterial()
 
 	pixelBuffer->unlock();
 #endif
-	MaterialPtr material = MaterialManager::getSingleton().create(viewName + "Material", 
+	MaterialPtr material = MaterialManager::getSingleton().create(viewName + "Material",
 		ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	matPass = material->getTechnique(0)->getPass(0);
 	matPass->setSceneBlending(SBT_TRANSPARENT_ALPHA);
@@ -219,7 +219,7 @@ void WebView::createMaterial()
 // This is for when the rendering device has a hiccup and loses the dynamic texture
 void WebView::loadResource(Resource* resource)
 {
-	Texture *tex = static_cast<Texture*>(resource); 
+	Texture *tex = static_cast<Texture*>(resource);
 
 	tex->setTextureType(TEX_TYPE_2D);
 	tex->setWidth(texWidth);
@@ -252,7 +252,7 @@ void WebView::update()
 		return;
 
 	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
-	
+
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
 	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
@@ -308,7 +308,7 @@ bool WebView::isPointOverMe(int x, int y)
 
 	if(localX > 0 && localX < overlay->width)
 		if(localY > 0 && localY < overlay->height)
-			return !ignoringTrans || !alphaCache ? true : 
+			return !ignoringTrans || !alphaCache ? true :
 				alphaCache[localY * alphaCachePitch + localX] > 255 * transparent;
 
 	return false;
@@ -493,13 +493,13 @@ void WebView::setMask(std::string maskFileName, std::string groupName)
 		maskTexUnit->setColourOperationEx(LBX_SOURCE1, LBS_CURRENT, LBS_CURRENT);
 		maskTexUnit->setAlphaOperation(LBX_MODULATE);
 	}
-	
+
 	Image srcImage;
 	srcImage.load(maskFileName, groupName);
 
 	Ogre::PixelBox srcPixels = srcImage.getPixelBox();
 	unsigned char* conversionBuf = 0;
-	
+
 	if(srcImage.getFormat() != Ogre::PF_BYTE_A)
 	{
 		size_t dstBpp = Ogre::PixelUtil::getNumElemBytes(Ogre::PF_BYTE_A);
@@ -551,9 +551,9 @@ void WebView::setMask(std::string maskFileName, std::string groupName)
 	}
 	else
 	{
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 
-			"Unexpected depth and format were encountered while creating a PF_BYTE_A HardwarePixelBuffer. Pixel format: " + 
-			StringConverter::toString(pixelBox.format) + ", Depth:" + StringConverter::toString(maskTexDepth), "WebView::setMask");
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
+			"Unexpected depth and format were encountered while creating a PF_BYTE_A HardwarePixelBuffer. Pixel format: " +
+                    StringConverter::toString((uint32)pixelBox.format) + ", Depth:" + StringConverter::toString(maskTexDepth), "WebView::setMask");
 	}
 
 	pixelBuffer->unlock();
@@ -580,7 +580,7 @@ void WebView::setOpacity(float opacity)
 {
 	if(opacity > 1) opacity = 1;
 	else if(opacity < 0) opacity = 0;
-	
+
 	this->opacity = opacity;
 }
 
@@ -839,7 +839,7 @@ void WebView::resize(int width, int height)
     if (compensateNPOT) {
         Ogre::Real u1,v1,u2,v2;
         getDerivedUV(u1, v1,  u2,v2);
-        overlay->panel->setUV(u1, v1, u2, v2);	
+        overlay->panel->setUV(u1, v1, u2, v2);
     }
 
 	matPass->removeAllTextureUnitStates();
@@ -867,7 +867,7 @@ void WebView::resize(int width, int height)
 #endif
 
 	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
-	
+
 	baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
 	if(texFiltering == FO_ANISOTROPIC)
 		baseTexUnit->setTextureAnisotropy(4);

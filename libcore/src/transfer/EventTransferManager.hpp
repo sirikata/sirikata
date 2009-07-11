@@ -242,9 +242,9 @@ class EventTransferManager : public TransferManager {
 				UploadMap::const_iterator iter = mActiveUploads.find(hash.uri().toString());
 				assert (iter != mActiveUploads.end());
 				mActiveUploads.erase(iter);
+				mFirstTransferLayer->addToCache(hash.fingerprint(), toUpload);
+				mEventSystem->fire(ev);
 			}
-			mFirstTransferLayer->addToCache(hash.fingerprint(), toUpload);
-			mEventSystem->fire(ev);
 		}
 	}
 	void doUploadByHash(const RemoteFileId &hash,
@@ -255,6 +255,9 @@ class EventTransferManager : public TransferManager {
 			std::tr1::bind(&EventTransferManager::doUploadData, this,
 			               hash, toUpload, true, true, _1));
 	}
+
+// #define REQUIRE_ALL_EXIST
+
 	void uploadIfNotExists(const RemoteFileId &hash,
 			const DenseDataPtr &toUpload,
 			const EventListener &listener,
@@ -263,7 +266,15 @@ class EventTransferManager : public TransferManager {
 			bool firstRound,
 			ServiceIterator *services) {
 
+#ifdef REQUIRE_ALL_EXIST
 		existsInAll = existsInAll && existsThisRound;
+#else
+		if (firstRound) {
+			existsInAll = false;
+		} else {
+			existsInAll = existsInAll || existsThisRound;
+		}
+#endif
 
 		std::tr1::shared_ptr<DownloadHandler> dataHandler;
 		URI dloadURI;
@@ -275,7 +286,7 @@ class EventTransferManager : public TransferManager {
 				hash.uri(),dloadURI,params,dataHandler)) {
 
 			dataHandler->exists(NULL, dloadURI, std::tr1::bind(
-				&EventTransferManager::uploadIfNotExists, this, hash, toUpload, listener, _1, existsInAll, false, services));
+				&EventTransferManager::uploadIfNotExists, this, hash, toUpload, listener, _2, existsInAll, false, services));
 		} else {
 			if (existsInAll && !firstRound) {
 				Task::EventPtr ev (new UploadEvent(SUCCESS, hash.uri(), UploadDataEventId));
@@ -284,8 +295,8 @@ class EventTransferManager : public TransferManager {
 					UploadMap::const_iterator iter = mActiveUploads.find(hash.uri().toString());
 					assert (iter != mActiveUploads.end());
 					mActiveUploads.erase(iter);
+					mEventSystem->fire(ev);
 				}
-				mEventSystem->fire(ev);
 			} else {
 				doUploadByHash(hash, toUpload, listener);
 			}

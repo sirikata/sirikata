@@ -24,8 +24,16 @@ IF(WIN32)  # Windows
   IF(bullet_ROOT AND EXISTS "${bullet_ROOT}")
     SET(bullet_LIBRARY_DIRS ${bullet_ROOT}/lib)
     SET(bullet_LIBRARIES
-        debug BulletCollision_d.lib BulletDynamics_d.lib BulletMultiThreaded_d.lib BulletSoftBody_d.lib LinearMath_d.lib
-        optimized BulletCollision.lib BulletDynamics.lib BulletMultiThreaded.lib BulletSoftBody.lib LinearMath.lib)
+        debug BulletCollision_d.lib
+        debug BulletDynamics_d.lib
+        debug BulletMultiThreaded_d.lib
+        debug BulletSoftBody_d.lib
+        debug LinearMath_d.lib
+        optimized BulletCollision.lib
+        optimized BulletDynamics.lib
+        optimized BulletMultiThreaded.lib
+        optimized BulletSoftBody.lib
+        optimized LinearMath.lib)
     SET(bullet_LDFLAGS)
     IF(EXISTS ${bullet_ROOT}/include/bullet)
       SET(bullet_INCLUDE_DIRS ${bullet_ROOT}/include/bullet)

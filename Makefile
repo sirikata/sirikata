@@ -1,20 +1,31 @@
 all:
-	cd build/cmake;cmake .; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) $(*)
 
 release:
-	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Release; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . -DCMAKE_BUILD_TYPE=Release && \
+	$(MAKE) $(*)
 
 debug:
-	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Debug; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . -DCMAKE_BUILD_TYPE=Debug && \
+	$(MAKE) $(*)
 
 test:
-	cd build/cmake;cmake .; $(MAKE) test $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) test $(*)
 
 tests:
-	cd build/cmake;cmake .; $(MAKE) tests $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) tests $(*)
 
 clean:
-	cd build/cmake; $(MAKE) clean $(*)
+	cd build/cmake && \
+	( [ -e Makefile ] && $(MAKE) clean $(*) ) || true
 
 
 #========== Dependencies ===========
@@ -29,7 +40,7 @@ dependencies:
 				echo To force a specific version of visual studio, set VCVER to 8 or 9 ; \
 				[ -e c:/Program\ Files/Microsoft\ Visual\ Studio\ 9/VC/bin ] && \
 					svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies || \
-					svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies \
+					svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ; \
 			else \
 				svn co http://sirikata.googlecode.com/svn/trunk/win32vc$(VCVER) dependencies ; \
 			fi \
@@ -51,4 +62,3 @@ depends: update-dependencies
 
 fulldepends: update-dependencies
 	$(MAKE) -C dependencies fulldepends $(*)
-

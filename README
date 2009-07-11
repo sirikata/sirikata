@@ -1,0 +1,12 @@
+What is Sirikata?
+-----------------
+Sirikata is a BSD licensed open source platform for games and virtual
+worlds. We aim to provide a set of libraries and protocols which can
+be used to deploy a virtual world, as well as fully featured sample
+implementations of services for hosting and deploying these worlds.
+
+Where can I find out more?
+--------------------------
+The most up to date information can always be found at
+http://www.sirikata.com.  The source code is available from GitHub at
+http://github.com/sirikata/sirikata/.
