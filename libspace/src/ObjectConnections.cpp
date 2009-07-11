@@ -43,7 +43,7 @@
 namespace Sirikata {
 ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress) {
-    
+
     //mSpaceServiceIntroductionMessage=introductoryMessage;
     mSpace=NULL;
     mPerObjectTemporarySizeMaximum=8192;
@@ -113,9 +113,9 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
             }
         }
     } else if (where->second.connected()) {//ordinary message to connected object
-        mSpace->processMessage(hdr,MemoryReference(message_body));                
+        mSpace->processMessage(hdr,MemoryReference(message_body));
     } else {//Not sure if we should verify that a connection request is going through,
-            // or if we should just find the size of bytes saved and cap that reasonably 
+            // or if we should just find the size of bytes saved and cap that reasonably
             // this check would have verified a good faith effort to start connecting if (where->second.isConnecting()) {
         TemporaryStreamMultimap::iterator twhere=mTemporaryStreams.find(where->second.uuid());
         if (twhere!=mTemporaryStreams.end()) {
@@ -133,7 +133,7 @@ void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     RoutableMessage rm;
     Protocol::DelObj delObj;
     rm.header().set_destination_object(ObjectReference::spaceServiceID());//pretend object has contacted registration service
-    rm.header().set_destination_port(Services::REGISTRATION);    
+    rm.header().set_destination_port(Services::REGISTRATION);
     rm.header().set_source_object(ObjectReference::spaceServiceID());//and has appropriately set its identifier
     rm.header().set_source_port(Services::OBJECT_CONNECTIONS);
     rm.body().add_message_names("DelObj");//with one purpose: to delete itself
@@ -154,7 +154,7 @@ void ObjectConnections::connectionCallback(Network::Stream*stream, Network::Stre
             StreamSet::iterator stream_set_iterator;
             if (uwhere!=mActiveStreams.end()&&(stream_set_iterator=std::find(uwhere->second.begin(),uwhere->second.end(),stream))!=uwhere->second.end()) {
                 if (uwhere->second.size()==1&&where->second.connected()) {//As soon as discon message detected, stream is disconnected, so must have had no disconnect message, hence send forged disconnect
-                    forgeDisconnectionMessage(ObjectReference(uwhere->first));              
+                    forgeDisconnectionMessage(ObjectReference(uwhere->first));
                     mActiveStreams.erase(uwhere);//erase the active stream
                 }else {
                     uwhere->second.erase(stream_set_iterator);
@@ -188,9 +188,9 @@ ObjectConnections::~ObjectConnections(){
 }
 Network::Stream* ObjectConnections::activeConnectionTo(const ObjectReference&ref) {
     StreamMap::iterator where=mActiveStreams.find(ref.getAsUUID());
-    if (where==mActiveStreams.end()) 
+    if (where==mActiveStreams.end())
         return NULL;
-    double percent=((double)rand())/(RAND_MAX+1);
+    double percent=((double)rand())/(RAND_MAX);
     if (where->second.empty()) {
         SILOG(space,error,"Empty connection vector in object streams");
         mActiveStreams.erase(where);
@@ -201,7 +201,7 @@ Network::Stream* ObjectConnections::activeConnectionTo(const ObjectReference&ref
 
 Network::Stream* ObjectConnections::temporaryConnectionTo(const UUID&ref) {
     TemporaryStreamMultimap::iterator where=mTemporaryStreams.find(ref);
-    if (where==mTemporaryStreams.end()) 
+    if (where==mTemporaryStreams.end())
         return NULL;
     return where->second.mStream;
 }
@@ -263,7 +263,7 @@ void ObjectConnections::shutdownConnection(const ObjectReference&ref) {
         if (twhere!=mTemporaryStreams.end()) {
             for (;twhere!=mTemporaryStreams.end()&&twhere->first==uuid;++twhere) {
                 std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where;
-                
+
                 stream=twhere->second.mStream;//well erase it to avoid dangling references
                 where=mStreams.find(stream);
                 mTemporaryStreams.erase(twhere);//but this is a critical error: the registration service should not know about this
@@ -293,7 +293,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                             UUID uuid=hdr.destination_object().getAsUUID();
                             TemporaryStreamMultimap::iterator start,where=mTemporaryStreams.find(uuid);
                             if (where!=mTemporaryStreams.end()) {//a currently existing temporary stream
-                                start=where;//messages are always added to first mTemporaryStream, so go from back to front when sending them out                                
+                                start=where;//messages are always added to first mTemporaryStream, so go from back to front when sending them out
                                 for (;where!=mTemporaryStreams.end()&&where->first==uuid;++where) {
                                 }
                                 Network::Stream*stream=NULL;
@@ -312,14 +312,14 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                         for (std::vector<Network::Chunk>::iterator i=where->second.mPendingMessages.begin(),ie=where->second.mPendingMessages.end();i!=ie;++i) {
                                             std::pair<Network::Stream*,Network::Chunk> newChunk;
                                             newChunk.first=where->second.mStream;
-                                        
-                                            
+
+
                                             taggedPendingMessages.push_back(newChunk);
                                             taggedPendingMessages.back().second.swap(*i);
                                         }
                                     }
                                     where->second.mTotalMessageSize=0;//reset bytes used
-                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and 
+                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and
                                     --where;
                                 }while (where!=start);
                                 mTemporaryStreams.erase(start);
@@ -387,7 +387,7 @@ void ObjectConnections::processExistingObject(const RoutableMessageHeader&const_
             std::string header_data;
             hdr.clear_destination_object();//no reason to waste bytes
             hdr.SerializeToString(&header_data);//serialize then send out
-            double percent=((double)rand())/(RAND_MAX+1);
+            double percent=((double)rand())/(RAND_MAX);
             if (where->second.empty()) {
                 SILOG(space,error,"Somehow got empty object connection stream.");
                 mActiveStreams.erase(where);

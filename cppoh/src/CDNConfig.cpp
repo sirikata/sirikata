@@ -157,7 +157,7 @@ CacheLayer *createNetworkCache(const OptionMap &options) {
 TransferManager *initializeTransferManager (const OptionMap& options, GenEventManager *eventMgr) {
     OptionMap &cache = options["cache"];
     CacheLayer *lastCacheLayer = NULL;
-    CacheLayer *firstCacheLayer;
+    CacheLayer *firstCacheLayer = NULL;
     for (OptionMap::const_iterator iter = cache.begin(); iter != cache.end(); ++iter) {
         CacheLayer *newCacheLayer = CreateCache(*((*iter).second));
         if (lastCacheLayer) {

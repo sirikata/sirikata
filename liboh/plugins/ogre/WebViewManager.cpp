@@ -57,7 +57,7 @@ std::string getCurrentWorkingDirectory()
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
-	  mouseButtonRDown(false), zOrderCounter(5), 
+	  mouseButtonRDown(false), zOrderCounter(5),
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
 #ifdef HAVE_AWESOMIUM
@@ -98,8 +98,8 @@ WebViewManager::~WebViewManager()
 WebViewManager& WebViewManager::getSingleton()
 {
 	if(!ms_Singleton)
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 
-			"An attempt was made to retrieve the WebViewManager Singleton before it has been instantiated! Did you forget to do 'new WebViewManager(renderWin)'?", 
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
+			"An attempt was made to retrieve the WebViewManager Singleton before it has been instantiated! Did you forget to do 'new WebViewManager(renderWin)'?",
 			"WebViewManager::Get");
 
 	return *ms_Singleton;
@@ -152,12 +152,12 @@ void WebViewManager::Update()
 	}
 }
 
-WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition, 
+WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 			bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 
-			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!", 
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
+			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebView");
 
 	int highestZOrder = -1;
@@ -173,16 +173,16 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-	return activeWebViews[webViewName] = new WebView(webViewName, width, height, webViewPosition, asyncRender, maxAsyncRenderRate, (Ogre::uchar)zOrder, tier, 
+	return activeWebViews[webViewName] = new WebView(webViewName, width, height, webViewPosition, asyncRender, maxAsyncRenderRate, (Ogre::uchar)zOrder, tier,
 		viewport? viewport : defaultViewport);
 }
 
-WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height, 
+WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 
-			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!", 
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
+			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
 	return activeWebViews[webViewName] = new WebView(webViewName, width, height, asyncRender, maxAsyncRenderRate, texFiltering);
@@ -380,7 +380,7 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 			unsigned short highestZ = sortedWebViews.at(0)->overlay->getZOrder();
 			for(unsigned int i = 0; i < popIdx; i++)
 				sortedWebViews.at(i)->overlay->setZOrder(sortedWebViews.at(i+1)->overlay->getZOrder());
-			
+
 			sortedWebViews.at(popIdx)->overlay->setZOrder(highestZ);
 		}
 	}
@@ -550,7 +550,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
 		return Sirikata::Task::EventResponse::nop();
 	}
 
-	int awebutton;
+	int awebutton = -1;
 	bool success = true;
 	switch(e->mButton) {
 	case 1:

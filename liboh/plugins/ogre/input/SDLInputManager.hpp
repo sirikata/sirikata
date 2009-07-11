@@ -61,6 +61,7 @@ public:
     OptionValue*mDragMultiplier;
     OptionValue*mWorldScale;
     OptionValue*mAxisToRadians;
+    OptionValue*mRotateSnap;
     OptionValue*mWheelToAxis;
     OptionValue*mRelativeMouseToAxis;
     OptionValue*mJoyBallToAxis;

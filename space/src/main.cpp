@@ -44,30 +44,7 @@ namespace Sirikata {
 int main(int argc,const char**argv) {
     using namespace Sirikata;
         Sirikata::PluginManager plugins;
-        plugins.load(
-#ifdef __APPLE__
-#ifdef NDEBUG
-            "libprox.dylib"
-#else
-            "libprox_d.dylib"
-#endif
-#else
-#ifdef _WIN32
-#ifdef NDEBUG
-            "prox.dll"
-#else
-            "prox_d.dll"
-#endif
-#else
-#ifdef NDEBUG
-            "libprox.so"
-#else
-            "libprox_d.so"
-#endif
-#endif
-#endif
-            );
-    
+        plugins.load( DynamicLibrary::filename("prox") );
 
     OptionSet::getOptions("")->parse(argc,argv);
     Space space(SpaceID::null());

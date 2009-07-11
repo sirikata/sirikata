@@ -1,20 +1,31 @@
 all:
-	cd build/cmake;cmake .; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) $(*)
 
 release:
-	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Release; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . -DCMAKE_BUILD_TYPE=Release && \
+	$(MAKE) $(*)
 
 debug:
-	cd build/cmake;cmake . -DCMAKE_BUILD_TYPE=Debug; $(MAKE) $(*)
+	cd build/cmake && \
+	cmake . -DCMAKE_BUILD_TYPE=Debug && \
+	$(MAKE) $(*)
 
 test:
-	cd build/cmake;cmake .; $(MAKE) test $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) test $(*)
 
 tests:
-	cd build/cmake;cmake .; $(MAKE) tests $(*)
+	cd build/cmake && \
+	cmake . && \
+	$(MAKE) tests $(*)
 
 clean:
-	cd build/cmake; $(MAKE) clean $(*)
+	cd build/cmake && \
+	( [ -e Makefile ] && $(MAKE) clean $(*) ) || true
 
 
 #========== Dependencies ===========

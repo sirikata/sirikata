@@ -198,6 +198,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
         mWheelToAxis=new OptionValue("wheelpct","0.008",OptionValueType<float>(),"Percentage points for each wheel tick (platform-dependent)."),
         mRelativeMouseToAxis=new OptionValue("relativemousepct","0.008",OptionValueType<float>(),"Percentage points for each pixel of mouse motion."),
         mJoyBallToAxis=new OptionValue("joyballpct","0.008",OptionValueType<float>(),"Percentage points for each joystick trackball tick."),
+		mRotateSnap=new OptionValue("rotatesnap","0.2",OptionValueType<float>(),"Minimum number of radians to rotate when neither Shift nor Ctrl are selected."),
         NULL);
 
     int numKeys = SDL_GetNumKeyboards();

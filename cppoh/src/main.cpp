@@ -188,7 +188,7 @@ void parseConfig(
                     }
                     state = KEYSTATE;
                 }
-                beginpos = pos+1; 
+                beginpos = pos+1;
            }
             if (ch == '(') {
                 if (!currentValue) {
@@ -218,35 +218,11 @@ void parseConfig(
 
 }
 
-#ifdef NDEBUG
-#define PLUGIN_SUFFIX
-#else
-#define PLUGIN_SUFFIX "_d"
-#endif
-
-#ifdef _WIN32
-#define PLUGIN_PREFIX
-#else
-#define PLUGIN_PREFIX "lib"
-#endif
-
-#ifdef __APPLE__
-#define PLUGIN_EXT ".dylib"
-#else
-#ifdef _WIN32
-#define PLUGIN_EXT ".dll"
-#else
-#define PLUGIN_EXT ".so"
-#endif
-#endif
-
-#define PLUGIN_FILENAME(name) PLUGIN_PREFIX name PLUGIN_SUFFIX PLUGIN_EXT
-
 int main ( int argc,const char**argv ) {
     using namespace Sirikata;
     PluginManager plugins;
-    plugins.load (PLUGIN_FILENAME("ogregraphics"));
-    plugins.load (PLUGIN_FILENAME("bulletphysics"));
+    plugins.load ( DynamicLibrary::filename("ogregraphics") );
+    plugins.load ( DynamicLibrary::filename("bulletphysics") );
     OptionSet::getOptions ( "" )->parse ( argc,argv );
 
     OptionMapPtr transferOptions (new OptionMap);

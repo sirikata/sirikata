@@ -124,6 +124,14 @@ String DynamicLibrary::prefix() {
 #endif
 }
 
+String DynamicLibrary::postfix() {
+#if SIRIKATA_DEBUG
+    return "_d";
+#else
+    return "";
+#endif
+}
+
 String DynamicLibrary::extension() {
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     return ".dll";
@@ -135,7 +143,7 @@ String DynamicLibrary::extension() {
 }
 
 String DynamicLibrary::filename(const String& name) {
-    return ( prefix() + name + extension() );
+    return ( prefix() + name + postfix() + extension() );
 }
 
 String DynamicLibrary::filename(const String& path, const String& name) {

@@ -36,11 +36,17 @@ namespace Graphics {
 
 
 class CubeMap {//:public Ogre::FrameListener{
+    Ogre::SceneManager*mCubeMapScene;
+    Ogre::Camera*mCubeMapSceneCamera[6];
     OgreSystem*mParent;
     Ogre::Camera*mCamera;
+    float mAlpha;
+    bool mFrontbufferCloser;
     std::vector<Ogre::TexturePtr> mCubeMapTextures;
-    Ogre::TexturePtr mBackbuffer;
-    
+    Ogre::TexturePtr mBackbuffer[6];
+    Ogre::MaterialPtr mMaterials[6];
+    Ogre::TexturePtr mFrontbuffer[6];
+    void swapBuffers();
     class CubeMapFace:public Ogre::RenderTargetListener{
     public:
         CubeMap*mParent;
@@ -51,11 +57,17 @@ class CubeMap {//:public Ogre::FrameListener{
     std::vector<Vector3f> mCameraDelta;
     int mFaceCounter;
     int mMapCounter;
+    String createMaterialString(const String&materialName);
+    enum BlendProgress{
+      DOING_BLENDING,
+      DONE_BLENDING
+    };
+    BlendProgress updateBlendState(const Ogre::FrameEvent&evt);
 public:
     CubeMap(OgreSystem*parent, const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f> &mCameraDelta);
     ~CubeMap();
     bool frameEnded(const Ogre::FrameEvent&evt);
-    void preRenderTargetUpdate(int renderTargetIndex,const Ogre::RenderTargetEvent& evt);
+    void preRenderTargetUpdate(Ogre::Camera*cam,int renderTargetIndex,const Ogre::RenderTargetEvent& evt);
 };
 }
 }

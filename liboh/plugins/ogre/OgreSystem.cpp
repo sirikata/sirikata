@@ -264,22 +264,22 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
         
         std::vector<Vector3f> cubeMapOffsets;
         cubeMapNames.push_back("ExteriorCubeMap");
-        cubeMapOffsets.push_back(Vector3f(0,100,0));
-        cubeMapNames.push_back("InteriorCubeMap");
         cubeMapOffsets.push_back(Vector3f(0,0,0));
+        //cubeMapNames.push_back("InteriorCubeMap");
+        //cubeMapOffsets.push_back(Vector3f(0,0,0));
         mExternalCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets);
     }
     return retval;
 }
 std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
-    if (mPrimaryCamera == *entity) {
-        mPrimaryCamera = NULL;//move to second in chain??
-        delete mExternalCubeMap;
-        delete mInternalCubeMap;
-        mExternalCubeMap=NULL;
-        mInternalCubeMap=NULL;
-    }
     if (entity != mAttachedCameras.end()) {
+        if (mPrimaryCamera == *entity) {
+            mPrimaryCamera = NULL;//move to second in chain??
+            delete mExternalCubeMap;
+            delete mInternalCubeMap;
+            mExternalCubeMap=NULL;
+            mInternalCubeMap=NULL;
+        }
         mAttachedCameras.erase(entity);
     }
     return mAttachedCameras.end();
@@ -673,7 +673,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
         Entity *foundEntity = Entity::fromMovableObject(result.movable);
-        if (foundEntity != mPrimaryCamera) {
+        if (foundEntity != mPrimaryCamera && result.distance > 0) {
             ++count;
         }
     }
@@ -686,7 +686,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
              iter != resultList.end(); ++iter) {
             const Ogre::RaySceneQueryResultEntry &result = (*iter);
             Entity *foundEntity = Entity::fromMovableObject(result.movable);
-            if (foundEntity != mPrimaryCamera) {
+            if (foundEntity != mPrimaryCamera && result.distance > 0) {
                 if (which == 0) {
                     toReturn = foundEntity;
                     returnresult = result.distance;

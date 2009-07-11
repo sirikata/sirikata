@@ -850,8 +850,8 @@ static bool isMHashScheme(const URI &uri, ReplaceMaterialOptionsAndReturn &opts)
 
 bool similarstr(const std::string &a, const std::string &b) {
     if (b.length()==0) return true;
-	if (stricmp(a.c_str(),b.c_str())==0) return true;
-	return false;
+    if (stricmp(a.c_str(),b.c_str())==0) return true;
+    return false;
 }
 
 
@@ -1099,12 +1099,15 @@ EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &curre
         boost::unique_lock<boost::mutex> mylock (stat->mLock);
         ResourceUploadStatus st;
         st = uploadev->getStatus();
-        if (stat->mStatusMap.insert(ResourceStatusMap::value_type(current, st)).second == true) {
-            if (0 == --stat->mNumberRemaining) {
-                stat->mCallback(stat->mStatusMap);
-                del = true;
-            }
+
+        if (stat->mStatusMap.insert(ResourceStatusMap::value_type(current, st)).second==false) {
+            std::cout << "Warning: Duplicate upload finished for "<<uploadev->uri()<<std::endl;
         }
+        if (--stat->mNumberRemaining == 0) {
+            stat->mCallback(stat->mStatusMap);
+            del = true;
+        }
+        std::cout <<"FINISHED UPLOAD " << current.mID << "! Number left = "<<stat->mNumberRemaining<<std::endl;
     }
     if (del) {
         delete stat;
@@ -1113,12 +1116,21 @@ EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &curre
 }
 
 void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm, 
-                                      const std::vector<ResourceFileUpload> &filesToUpload,
+                                      const std::vector<ResourceFileUpload> &origFilesToUpload,
                                       const ::Sirikata::Transfer::URIContext &hashContext,
                                       const std::tr1::function<void(ResourceStatusMap const &)> &callback) {
+    std::vector<const ResourceFileUpload*> filesToUpload;
+    {
+        std::set<String> duplicateTracking;
+        for (size_t i = 0; i < origFilesToUpload.size(); ++i) {
+            if (duplicateTracking.insert(origFilesToUpload[i].mID.toString()).second) {
+                filesToUpload.push_back(&origFilesToUpload[i]);
+            }
+        }
+    }
     UploadStatus *status = new UploadStatus(callback, filesToUpload.size());
     for (size_t i = 0; i < filesToUpload.size(); ++i) {
-        const ResourceFileUpload &current = filesToUpload[i];
+        const ResourceFileUpload &current = *(filesToUpload[i]);
         std::cout << "Uploading "<<stripslashes(current.mSourceFilename)<<" to URI " << current.mID<<". Hash = "<<current.mHash<<"; Size = "<<current.mData->length()<<std::endl;
         if (current.mID.context() == hashContext) {
             tm->uploadByHash(Transfer::RemoteFileId(current.mHash, current.mID),

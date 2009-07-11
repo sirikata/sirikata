@@ -229,7 +229,8 @@ namespace {
 			waitFd = wakeupFd = socket(0, 0, 0);
 #else
 			int pipeFds[2];
-			pipe(pipeFds);
+			int pipe_result = pipe(pipeFds);
+                        assert(pipe_result == 0);
 			waitFd = pipeFds[0];
 			wakeupFd = pipeFds[1];
 			fcntl(waitFd, F_SETFL, O_NONBLOCK);
@@ -255,7 +256,8 @@ namespace {
 #ifdef _WIN32
 			closesocket(waitFd);
 #else
-			write(wakeupFd, "", 1);
+			ssize_t nwritten = write(wakeupFd, "", 1);
+                        assert(nwritten);
 #endif
 		}
 
@@ -269,7 +271,8 @@ namespace {
 			waitFd = wakeupFd = socket(0, 0, 0);
 #else
 			char c;
-			read(waitFd, &c, 1);
+			ssize_t nread = read(waitFd, &c, 1);
+                        assert(nread);
 #endif
 		}
 

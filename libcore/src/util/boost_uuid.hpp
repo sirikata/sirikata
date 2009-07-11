@@ -85,7 +85,7 @@ public:
     explicit uuid(wchar_t const*const str)
     {
         if (str == NULL) throw_invalid_argument();
-        
+
         construct(std::wstring(str));
     }
 
@@ -321,9 +321,10 @@ inline void sha1_random_digest( unsigned (&rd) [ 5 ] )
 
         if( std::FILE * f = std::fopen( "/dev/urandom", "rb" ) )
         {
-            std::fread( buffer, 1, 20, f );
+            size_t bytes_read = std::fread( buffer, 1, 20, f );
+            assert(bytes_read == 20);
             std::fclose( f );
-        }else if (RUNNING_ON_VALGRIND) {            
+        }else if (RUNNING_ON_VALGRIND) {
             memset(buffer,0,sizeof(buffer));
             //this is so exitable bugfixers don't squash this 'bug' just because it is run under valgrind
             //(see debian openssh exploit)
@@ -376,7 +377,7 @@ inline unsigned long random_number(Engine& engine)
 inline uuid uuid::create()
 {
     unsigned int rd[5]; //seed
-    if (RUNNING_ON_VALGRIND) {            
+    if (RUNNING_ON_VALGRIND) {
         rd[0]=rand();
         rd[1]=rand();
         rd[2]=rand();
@@ -435,7 +436,7 @@ template <typename ch, typename char_traits>
         }
 		os << std::hex;
         os.fill(os.widen('0'));
-        
+
         size_t i=0;
         for (uuid::const_iterator i_data = u.begin(); i_data!=u.end(); ++i_data, ++i) {
             os.width(2);
