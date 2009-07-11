@@ -47,7 +47,7 @@ typedef std::vector<BoundingBox3f> BoundingBoxList;
  *   position -> ServerID
  *   ServerID -> region
  */
-class CoordinateSegmentation {
+class CoordinateSegmentation : public MessageRecipient {
 public:
     /** Listens for updates about the coordinate segmentation. */
     class Listener {
@@ -72,7 +72,8 @@ public:
     void addListener(Listener* listener);
     void removeListener(Listener* listener);
 
-    virtual void csegChangeMessage(CSegChangeMessage*) = 0;
+    // Callback from MessageDispatcher
+    virtual void receiveMessage(Message* msg) = 0;
 
     virtual void tick(const Time& t) = 0;
 

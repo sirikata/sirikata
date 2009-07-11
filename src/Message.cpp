@@ -140,7 +140,46 @@ uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
     return offset;
 }
 
+void MessageDispatcher::registerMessageRecipient(MessageType type, MessageRecipient* recipient) {
+    MessageRecipientMap::iterator it = mMessageRecipients.find(type);
+    if (it != mMessageRecipients.end()) {
+        // FIXME warn that we are overriding old recipient
+    }
 
+    mMessageRecipients[type] = recipient;
+}
+
+void MessageDispatcher::unregisterMessageRecipient(MessageType type, MessageRecipient* recipient) {
+    MessageRecipientMap::iterator it = mMessageRecipients.find(type);
+    if (it == mMessageRecipients.end()) {
+        // FIXME warn that we are trying to remove an recipient that hasn't been registered
+        return;
+    }
+
+    if (it->second != recipient) {
+        // FIXME warn that we tried to remove the wrong recipient
+        return;
+    }
+
+    mMessageRecipients.erase(it);
+}
+
+void MessageDispatcher::dispatchMessage(Message* msg) const {
+    if (msg == NULL) return;
+
+    MessageRecipientMap::const_iterator it = mMessageRecipients.find(msg->type());
+
+    if (it == mMessageRecipients.end()) {
+        // FIXME log warning
+        return;
+    }
+
+    MessageRecipient* recipient = it->second;
+    recipient->receiveMessage(msg);
+}
+
+
+// Specific message types
 
 ProximityMessage::ProximityMessage(const OriginID& origin, const UUID& dst_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc)
  : Message(origin, true),
@@ -311,7 +350,7 @@ LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uin
     mLocation = TimedMotionVector3f( t, MotionVector3f(pos, vel) );
 }
 
-MessageType LocationMessage::type() const {    
+MessageType LocationMessage::type() const {
     return MESSAGE_TYPE_LOCATION;
 }
 
@@ -444,7 +483,7 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) +
 		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers + sizeof(ServerID));
 
-    
+
     memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
     offset += uuid_size;
 
@@ -461,7 +500,7 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
     memcpy(&wire[offset],&mFrom,sizeof(ServerID));
     offset += sizeof(ServerID);
-    
+
     return offset;
 }
 
@@ -501,10 +540,10 @@ CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset,
     mNumberOfRegions = number_of_regions;
 
     mSplitRegions = new SplitRegionf[number_of_regions];
-    
+
     for (int i=0; i < mNumberOfRegions; i++) {
       memcpy( &mSplitRegions[i], &wire[offset], sizeof(SplitRegion<float>) );
-      offset += sizeof(SplitRegionf);      
+      offset += sizeof(SplitRegionf);
     }
 }
 
@@ -518,10 +557,10 @@ MessageType CSegChangeMessage::type() const {
 
 uint32 CSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-    
-    wire.resize( wire.size() +  sizeof(mNumberOfRegions) 
+
+    wire.resize( wire.size() +  sizeof(mNumberOfRegions)
 		 + mNumberOfRegions*sizeof(SplitRegionf) );
-    
+
     memcpy( &wire[offset], &mNumberOfRegions, sizeof(mNumberOfRegions) );
     offset += sizeof(mNumberOfRegions);
 
@@ -545,7 +584,7 @@ LoadStatusMessage::LoadStatusMessage(const OriginID& origin, float load_reading)
  : Message(origin, true),
    mLoadReading(load_reading)
 {
-  
+
 }
 
 LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
@@ -566,9 +605,9 @@ MessageType LoadStatusMessage::type() const {
 
 uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-    
+
     wire.resize( wire.size() +  sizeof(mLoadReading) );
-    
+
     memcpy( &wire[offset], &mLoadReading, sizeof(mLoadReading) );
     offset += sizeof(mLoadReading);
 
@@ -606,7 +645,7 @@ OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offse
   ServerID     sID_from, sID_to, sMessageDest, sMessageFrom;
   UUID                                               obj_id;
   OSegMigrateAction                                  action;
-  
+
   //copying mServID_from
   memcpy(&sID_from, &wire[offset], sizeof(ServerID));
   offset += sizeof(ServerID);
@@ -626,7 +665,7 @@ OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offse
   memcpy(&sMessageFrom,&wire[offset],sizeof(ServerID));
   offset += sizeof(ServerID);
   mMessageFrom = sMessageFrom;
-  
+
   //copying mObjID
   memcpy(&obj_id, &wire[offset], sizeof(UUID));
   offset += sizeof(UUID);
@@ -639,7 +678,7 @@ OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offse
 
 }
 
-//destructor 
+//destructor
 OSegMigrateMessage::~OSegMigrateMessage()
 {
   //need to complete later
@@ -672,13 +711,13 @@ uint32 OSegMigrateMessage::serialize(Network::Chunk& wire, uint32 offset)
 
   memcpy(&wire[offset], &mMessageFrom, sizeof(ServerID)); //copying mMessageFrom
   offset += sizeof(ServerID);
-  
+
   memcpy(&wire[offset], &mObjID, sizeof(UUID));  //copying obj_id
   offset += sizeof(UUID);
 
   memcpy(&wire[offset], &mAction, sizeof(OSegMigrateAction)); //copying action
   offset += sizeof(OSegMigrateAction);
-  
+
   return offset;
 }
 
@@ -750,7 +789,7 @@ OSegLookupMessage::OSegLookupMessage(const Network::Chunk& wire, uint32& offset,
   memcpy(&action,&wire[offset],sizeof(OSegLookupAction));
   offset += sizeof(OSegLookupAction);
   mAction = action;
-  
+
 }
 
 
@@ -769,10 +808,10 @@ uint32 OSegLookupMessage::serialize(Network::Chunk& wire, uint32 offset)
 
   memcpy(&wire[offset], &mObjID, sizeof(UUID)); //copying objid
   offset += sizeof(UUID);
-  
+
   memcpy(&wire[offset], &mAction, sizeof(OSegLookupAction)); //copying action
   offset += sizeof(UUID);
-  
+
   return offset;
 }
 
@@ -782,7 +821,7 @@ OSegLookupMessage::~OSegLookupMessage()
 
 }
 
-//some basic accessors.  
+//some basic accessors.
 ServerID OSegLookupMessage::getSeeker()
 {
   return mSeeker;

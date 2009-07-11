@@ -26,7 +26,7 @@
 namespace CBR
 {
 
-  Server::Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
+Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
     : mID(id),
       mLocationService(loc_service),
       mCSeg(cseg),
@@ -34,7 +34,7 @@ namespace CBR
       mCurrentTime(0),
       mTrace(trace),
       mOSeg(oseg),
-      mForwarder(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,id)
+      mForwarder(forwarder)
   {
     // setup object which are initially residing on this server
     for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
@@ -53,7 +53,7 @@ namespace CBR
         mProximity->addQuery(obj_id, obj_factory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
       }
     }
-    mForwarder.initialize(&mObjects,&mCurrentTime);    //run initialization for forwarder
+    mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime);    //run initialization for forwarder
 
   }
 
@@ -72,7 +72,7 @@ const ServerID& Server::id() const {
 
 void Server::networkTick(const Time&t)
 {
-  mForwarder.tick(t);
+  mForwarder->tick(t);
 }
 
 
@@ -119,7 +119,7 @@ void Server::proximityTick(const Time& t)
                            evt.location()
                            );
 
-    mForwarder.route(msg, evt.query());
+    mForwarder->route(msg, evt.query());
 
     proximity_events.pop();
   }
@@ -154,7 +154,7 @@ void Server::checkObjectMigrations()
 		   obj_id.readableHexData().c_str(),
 		   obj_pos.toString().c_str());
 */
-            mForwarder.route( migrate_msg , new_server_id);
+            mForwarder->route( migrate_msg , new_server_id);
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);

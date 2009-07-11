@@ -39,10 +39,10 @@
 namespace CBR {
 
 typedef struct SegmentedRegion {
-  
+
   SegmentedRegion() {
     mChildrenCount = 0;
-    
+
   }
 
   int countServers() const {
@@ -60,10 +60,10 @@ typedef struct SegmentedRegion {
     if (mChildrenCount == 0 && mServer==server_id) {
       return this;
     }
-        
+
     for (int i=0; i<mChildrenCount; i++) {
       SegmentedRegion* segRegion = mChildren[i].lookupSegmentedRegion(server_id);
-      
+
       if (segRegion != NULL) {
 	return segRegion;
       }
@@ -89,7 +89,7 @@ typedef struct SegmentedRegion {
     ServerID serverID = FAKE_SVR_ID;
     for (int i=0; i<mChildrenCount; i++) {
       serverID = mChildren[i].lookup(pos);
-      
+
       if (serverID != FAKE_SVR_ID)
 	break;
     }
@@ -103,20 +103,20 @@ typedef struct SegmentedRegion {
 
 
   void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
-    /* printf("Comparing %d with this one= %d having box={%s,%s}\n", 
+    /* printf("Comparing %d with this one= %d having box={%s,%s}\n",
 	   server, mServer, mBoundingBox.min().toString().c_str(),
 	   mBoundingBox.max().toString().c_str());*/
 
-    if (mServer == server) { 
+    if (mServer == server) {
       boundingBoxList.push_back(mBoundingBox);
       return;
     }
 
-    
+
     for (int i=0; i<mChildrenCount; i++) {
       mChildren[i].serverRegion(server, boundingBoxList);
 
-      /*printf("Box from %d is {%s, %s}\n", mChildren[i].mServer, 
+      /*printf("Box from %d is {%s, %s}\n", mChildren[i].mServer,
 	     mChildren[i].mBoundingBox.min().toString().c_str(),
 	     mChildren[i].mBoundingBox.max().toString().c_str() );*/
     }
@@ -137,7 +137,7 @@ typedef struct SegmentedRegion {
 /** Uniform grid implementation of CoordinateSegmentation. */
 class LBCoordinateSegmentation : public CoordinateSegmentation {
 public:
-  LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue*, Trace*);
+    LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, ServerMessageQueue*, Trace*);
     virtual ~LBCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -147,23 +147,22 @@ public:
 
     virtual void tick(const Time& t);
 
-    virtual void csegChangeMessage(CSegChangeMessage* ccMsg);
+    // From MessageRecipient
+    virtual void receiveMessage(Message* msg);
 
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
   BoundingBox3f initRegion(const ServerID& server, const Vector3ui32& perdim) const;
+    void csegChangeMessage(CSegChangeMessage* ccMsg);
 
-  SegmentedRegion mTopLevelRegion;
+    ServerID mServerID;
+    MessageDispatcher* mMessageDispatcher;
+    ServerMessageQueue* mServerMessageQueue;
 
-  ServerID mServerID;
-
-  ServerMessageQueue* mServerMessageQueue;
-
-  Time mCurrentTime;
-
-  Trace* mTrace;
-
+    SegmentedRegion mTopLevelRegion;
+    Time mCurrentTime;
+    Trace* mTrace;
 }; // class CoordinateSegmentation
 
 } // namespace CBR

@@ -26,20 +26,21 @@ namespace CBR
     Constructor for Forwarder
 
   */
-  Forwarder::Forwarder(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm,ServerID id)
-    : mTrace(trace),
-      mCSeg(cseg),
-      mOSeg(oseg),
-      mLocationService(locService),
-      mObjectFactory(objectFactory),
-      mObjectMessageQueue(omq),
-      mServerMessageQueue(smq),
-      mLoadMonitor(lm),
-      m_serv_ID(id)
-  {
+Forwarder::Forwarder(ServerID id)
+ : mTrace(NULL),
+   mCSeg(NULL),
+   mOSeg(NULL),
+   mLocationService(NULL),
+   mObjectFactory(NULL),
+   mObjectMessageQueue(NULL),
+   mServerMessageQueue(NULL),
+   mLoadMonitor(NULL),
+   mObjects(NULL),
+   m_serv_ID(id),
+   mCurrentTime(NULL)
+{
     //no need to initialize mSelfMessages and mOutgoingMessages.
-
-  }
+}
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
@@ -50,8 +51,16 @@ namespace CBR
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-  void Forwarder::initialize(ObjectMap* objMap, Time* currTime)
+void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime)
   {
+      mTrace = trace;
+      mCSeg = cseg;
+      mOSeg = oseg;
+      mLocationService = locService;
+      mObjectFactory = objectFactory;
+      mObjectMessageQueue = omq;
+      mServerMessageQueue =smq;
+      mLoadMonitor = lm;
     mObjects     = objMap;
     mCurrentTime = currTime;
   }
@@ -369,24 +378,12 @@ namespace CBR
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
-              CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
-              assert(server_split_msg != NULL);
-
-	      OriginID id = GetUniqueIDOriginID(server_split_msg->id());
-
-              mCSeg->csegChangeMessage(server_split_msg);
-
-	      delete server_split_msg;
+              dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_LOAD_STATUS:
           {
-              LoadStatusMessage* load_status_msg = dynamic_cast<LoadStatusMessage*>(msg);
-              assert(load_status_msg != NULL);
-
-	      OriginID id = GetUniqueIDOriginID(load_status_msg->id());
-
-              mLoadMonitor->loadStatusMessage(load_status_msg);
+              dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_OSEG_MIGRATE:
@@ -403,7 +400,7 @@ namespace CBR
           else
           {
             //otherwise, deliver to local oseg.
-            OriginID id = GetUniqueIDOriginID(oseg_change_msg->id());  //I don't know why I'm doing this, but it matches the pattern above.
+
             //bftm debug
             mOSeg->osegMigrateMessage(oseg_change_msg);
             delete oseg_change_msg;

@@ -49,8 +49,14 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, ServerMessageQueue* smq, Trace* trace) : mServerID(server_id), mServerMessageQueue(smq), mCurrentTime(0), mTrace(trace)
+LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, ServerMessageQueue* smq, Trace* trace)
+  : mServerID(server_id),
+    mMessageDispatcher(msg_source),
+    mServerMessageQueue(smq),
+    mCurrentTime(0),
+    mTrace(trace)
 {
+    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
@@ -69,6 +75,8 @@ LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, con
 }
 
 LBCoordinateSegmentation::~LBCoordinateSegmentation() {
+    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+
   //delete all the SegmentedRegion objects created with 'new'
 }
 
@@ -136,6 +144,15 @@ BoundingBox3f LBCoordinateSegmentation::initRegion(const ServerID& server, const
                         (1+server_dim_indices.y)*ysize+mRegion.min().y,
                         (1+server_dim_indices.z)*zsize+mRegion.min().z);
     return BoundingBox3f(region_min, region_max);
+}
+
+void LBCoordinateSegmentation::receiveMessage(Message* msg) {
+    CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
+    assert(server_split_msg != NULL);
+
+    csegChangeMessage(server_split_msg);
+
+    delete server_split_msg;
 }
 
 void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {

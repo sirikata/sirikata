@@ -47,7 +47,7 @@ struct LayoutChangeEntry {
 /** Uniform grid implementation of CoordinateSegmentation. */
 class UniformCoordinateSegmentation : public CoordinateSegmentation {
 public:
-    UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim);
+    UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source);
     virtual ~UniformCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -57,11 +57,13 @@ public:
 
     virtual void tick(const Time& t);
 
-    virtual void csegChangeMessage(CSegChangeMessage*);
-
+    // From MessageRecipient
+    virtual void receiveMessage(Message* msg);
 private:
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;
+
+    MessageDispatcher* mMessageDispatcher;
 
     std::vector<LayoutChangeEntry> mLayoutChangeEntries;
     uint32 lastLayoutChangeIdx;

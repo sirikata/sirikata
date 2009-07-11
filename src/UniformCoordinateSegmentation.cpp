@@ -48,14 +48,13 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim)
+UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source)
  : mRegion(region),
-   mServersPerDim(perdim)
+   mServersPerDim(perdim),
+   mMessageDispatcher(msg_source)
 {
+    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
-
-
-  
   /* Read in the file which maintains how the layout of the region
      changes at different times. */
   std::ifstream infile("layoutChangeFile.txt");
@@ -63,26 +62,26 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f
   lastLayoutChangeIdx = 0;
 
 
-  
+
   int  i = 0;
   std::string str;
   while (getline(infile, str)) {
 
-    
+
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
     boost::char_separator<char> sep(" ");
     tokenizer tokens(str, sep);
 
-    
+
     tokenizer::iterator tok_iter = tokens.begin();
 
-    
+
     uint32 time_val = atoi((*tok_iter).c_str());
 
-    
+
     ++tok_iter;
 
-    
+
     std::string layoutAsStr = *tok_iter;
 
     Vector3ui32 vec;
@@ -93,13 +92,13 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f
 
     std::cout << vec.toString() << std::endl;
 
-    
+
     LayoutChangeEntry lce;
     lce.time = time_val;
     lce.layout = vec;
 
 
-    
+
     mLayoutChangeEntries.push_back(lce);
   }
 
@@ -109,6 +108,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f
 }
 
 UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {
+    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 }
 
 ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
@@ -200,8 +200,13 @@ void UniformCoordinateSegmentation::tick(const Time& t) {
   }
 }
 
-void UniformCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
+void UniformCoordinateSegmentation::receiveMessage(Message* msg) {
+    CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
+    assert(server_split_msg != NULL);
 
+    // FIXME are we supposed to be listening for these in this cseg?
+
+    delete server_split_msg;
 }
 
 } // namespace CBR

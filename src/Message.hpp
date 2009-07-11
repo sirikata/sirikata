@@ -54,7 +54,7 @@ typedef uint8 MessageType;
 
 
 
-  
+
 struct OriginID {
     uint32 id;
 };
@@ -63,10 +63,10 @@ template <typename scalar>
 class SplitRegion {
 public:
   ServerID mNewServerID;
-  
+
   scalar minX, minY, minZ;
   scalar maxX, maxY, maxZ;
-  
+
 };
 
 typedef SplitRegion<float> SplitRegionf;
@@ -99,6 +99,32 @@ private:
 }; // class Message
 
 
+
+/** Interface for classes that need to receive messages. */
+class MessageRecipient {
+public:
+    virtual ~MessageRecipient() {}
+
+    virtual void receiveMessage(Message* msg) = 0;
+}; // class MessageRecipient
+
+/** Base class for a message dispatcher. */
+class MessageDispatcher {
+public:
+    void registerMessageRecipient(MessageType type, MessageRecipient* recipient);
+    void unregisterMessageRecipient(MessageType type, MessageRecipient* recipient);
+
+protected:
+    void dispatchMessage(Message* msg) const;
+
+private:
+    typedef std::map<MessageType, MessageRecipient*> MessageRecipientMap;
+    MessageRecipientMap mMessageRecipients;
+}; // class MessageDispatcher
+
+
+
+// Specific message types
 
 class ProximityMessage : public Message {
 public:
@@ -203,12 +229,12 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
     ServerID messageFrom();
-  
+
 private:
     friend class Message;
     MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
-  
+
     UUID mObject;
 
     float mProximityRadius;
@@ -237,22 +263,22 @@ private:
   friend class Message;
   CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
-  
+
   uint8_t mNumberOfRegions;
   SplitRegionf* mSplitRegions;
-  
+
 };
 
 
 
   //oseg message
 
-  
+
   class OSegMigrateMessage : public Message
   {
   public:
     enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
-    
+
     OSegMigrateMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
     ~OSegMigrateMessage();
 
@@ -266,7 +292,7 @@ private:
     ServerID            getMessageDestination();
     ServerID            getMessageFrom();
 
-    
+
   private:
     friend class Message;
     OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
@@ -274,7 +300,7 @@ private:
     ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
     UUID mObjID;
     OSegMigrateAction mAction;
-    
+
   };
 
 
@@ -285,30 +311,30 @@ private:
 
     OSegLookupMessage(const OriginID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
     ~OSegLookupMessage();
-    
+
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-    
+
     ServerID getSeeker();
     ServerID getKeeper();
     UUID     getObjID();
     OSegLookupAction getAction();
-    
+
   private:
     friend class Message;
     OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
     ServerID mSeeker,mKeeper; //seeker represents the server that is looking for the object.  keeper represents the server that has the object.
     UUID mObjID; //the id of the object that we are looking for.
     OSegLookupAction mAction; //are we posting that we're looking for something or that we have something?
-    
+
   };
 
 
-  
-  //end oseg message
-  
 
-  
+  //end oseg message
+
+
+
 class LoadStatusMessage : public Message {
 
 public:
@@ -326,9 +352,9 @@ private:
   friend class Message;
   LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
-  
+
   float mLoadReading;
-  
+
 };
 
 } // namespace CBR

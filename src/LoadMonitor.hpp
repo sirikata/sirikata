@@ -60,9 +60,10 @@ typedef struct ServerLoadInfo{
 
 
 
-class LoadMonitor {
+class LoadMonitor : public MessageRecipient {
 public:
-  LoadMonitor(ServerID, ServerMessageQueue*, CoordinateSegmentation*);
+    LoadMonitor(ServerID, MessageDispatcher* msg_source, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
+    ~LoadMonitor();
 
   void addLoadReading();
 
@@ -72,11 +73,13 @@ public:
 
   float getAveragedLoadReading();
 
-  void loadStatusMessage(LoadStatusMessage* load_status_msg);
+    // From MessageRecipient
+    void receiveMessage(Message* msg);
 
   void tick(const Time& t);
 
 private:
+  void loadStatusMessage(LoadStatusMessage* load_status_msg);
 
   enum {
     SEND_TO_NEIGHBORS,
@@ -90,17 +93,17 @@ private:
 
   bool isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2);
 
-  float mCurrentLoadReading;
+    ServerID mServerID;
+    MessageDispatcher* mMessageDispatcher;
+    ServerMessageQueue* mServerMsgQueue;
+    CoordinateSegmentation* mCoordinateSegmentation;
 
-  float mAveragedLoadReading;
+    Time mCurrentTime;
 
-  ServerMessageQueue* mServerMsgQueue;
-  CoordinateSegmentation* mCoordinateSegmentation;
-  ServerID mServerID;
+    float mCurrentLoadReading;
+    float mAveragedLoadReading;
 
-  Time mCurrentTime;
-
-  std::map<ServerID, float> mRemoteLoadReadings;
+    std::map<ServerID, float> mRemoteLoadReadings;
 };
 
 }

@@ -40,7 +40,7 @@ namespace CBR
   class Server
   {
   public:
-    Server(ServerID id, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
+      Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
     ~Server();
 
     const ServerID& id() const;
@@ -66,7 +66,7 @@ namespace CBR
     Time mCurrentTime;
     Trace* mTrace;
     ObjectSegmentation* mOSeg;
-    Forwarder mForwarder;
+    Forwarder* mForwarder;
 
     ObjectMap mObjects;
 

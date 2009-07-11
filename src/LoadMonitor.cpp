@@ -46,13 +46,20 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
     return sli1.mLoadReading < sli2.mLoadReading;
 }
 
-LoadMonitor::LoadMonitor(ServerID svrID, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg) : mCurrentTime(0)
+LoadMonitor::LoadMonitor(ServerID svrID, MessageDispatcher* msg_source, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
+ : mServerID(svrID),
+   mMessageDispatcher(msg_source),
+   mServerMsgQueue(serverMsgQueue),
+   mCoordinateSegmentation(cseg),
+   mCurrentTime(0),
+   mCurrentLoadReading(0),
+   mAveragedLoadReading(0)
 {
-  mServerID = svrID;
-  mServerMsgQueue = serverMsgQueue;
-  mCoordinateSegmentation = cseg;
-  mCurrentLoadReading = 0;
-  mAveragedLoadReading = 0;
+    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+}
+
+LoadMonitor::~LoadMonitor() {
+    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
 }
 
 void LoadMonitor::addLoadReading() {
@@ -118,12 +125,18 @@ void LoadMonitor::sendLoadReadings() {
   }
 }
 
+void LoadMonitor::receiveMessage(Message* msg) {
+    LoadStatusMessage* load_status_msg = dynamic_cast<LoadStatusMessage*>(msg);
+    assert(load_status_msg != NULL);
+
+    loadStatusMessage(load_status_msg);
+}
+
 void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
   OriginID id = GetUniqueIDOriginID(load_status_msg->id());
   ServerID originID = id.id;
 
   mRemoteLoadReadings[originID] = load_status_msg->loadReading();
-
 }
 
 void LoadMonitor::tick(const Time& t) {
