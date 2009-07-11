@@ -116,6 +116,12 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
                           Ogre::PF_A8R8G8B8,
                           Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP);
         mState.back().mCameraDelta=cameraDelta[i];
+        mState.back().mCamera=mParent->getSceneManager()->createCamera(UUID::random().toString()+"CubeMapCamera");
+        //mParent->getSceneManager()->getRootSceneNode()->attachObject( mCamera);
+        mState.back().mCamera->setNearClipDistance(0.1f);
+        mState.back().mCamera->setAspectRatio(1);
+        mState.back().mCamera->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
+
     }
     for (size_t j=0;j<=cubeMapTexture.size();++j) {
         for (int i=0;i<6;++i){
@@ -208,11 +214,6 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
             renderTarget->addListener(&mFaces[i]);
         }
     }
-    mCamera=mParent->getSceneManager()->createCamera(mBackbuffer[0]->getName()+"Camera");
-    //mParent->getSceneManager()->getRootSceneNode()->attachObject( mCamera);
-    mCamera->setNearClipDistance(0.1f);
-    mCamera->setAspectRatio(1);
-    mCamera->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
 }
 float clamp01(float input) {
     if (input>1) return 1;
@@ -252,21 +253,27 @@ CubeMap::BlendProgress CubeMap::updateBlendState(const Ogre::FrameEvent&evt) {
 
 
 bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
- 
+
+    if (mFaceCounter==0) {
+        mState[mMapCounter].mCamera->setPosition(toOgre(mParent->getPrimaryCamera()->getOgrePosition()+Vector3d(mState[mMapCounter].mCameraDelta),mParent->getOffset()));
+    }
     if (mFaceCounter>0&&mFaceCounter<7) {
         mBackbuffer[mFaceCounter-1]->getBuffer(0)->getRenderTarget()->removeAllViewports();        
     }
     if (mFaceCounter<6) {
-        Ogre::Viewport *viewport = mBackbuffer[mFaceCounter]->getBuffer(0)->getRenderTarget()->addViewport( mCamera );        
+        Ogre::Viewport *viewport = mBackbuffer[mFaceCounter]->getBuffer(0)->getRenderTarget()->addViewport( mState[mMapCounter].mCamera );        
         viewport->setOverlaysEnabled(false);
         viewport->setClearEveryFrame( true );
         viewport->setBackgroundColour( Ogre::ColourValue(0,1,1,1) );
-        printf ("Rendering to %s\n",mBackbuffer[mFaceCounter]->getName().c_str());
+        printf ("Rendering %d to %s\n",mMapCounter,mBackbuffer[mFaceCounter]->getName().c_str());
     }
 
-    if (mFaceCounter==7) {
-
+    BlendProgress progress=DOING_BLENDING;
+    if (mFaceCounter==7||mFaceCounter==8) {
         
+        progress=updateBlendState(evt);
+    }
+    if (mFaceCounter==7) {    
         for (int i=0;i<6;++i) {
             Ogre::Viewport *viewport = mState[mMapCounter].mCubeMapTexture->getBuffer(i)->getRenderTarget()->addViewport( mCubeMapSceneCamera[i] );
             viewport->setOverlaysEnabled(false);
@@ -274,11 +281,11 @@ bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
             viewport->setBackgroundColour( Ogre::ColourValue(1,0,0,1) );
         }
     }
-    if (mFaceCounter!=8||updateBlendState(evt)==DONE_BLENDING) {
+    if (mFaceCounter!=8||progress==DONE_BLENDING) {
       ++mFaceCounter;
     }
+
     if (mFaceCounter==9) {
-        mCamera->setPosition(toOgre(mParent->getPrimaryCamera()->getOgrePosition()+Vector3d(mState[mMapCounter].mCameraDelta),mParent->getOffset()));
         for (int i=0;i<6;++i) {
             mState[mMapCounter].mCubeMapTexture->getBuffer(i)->getRenderTarget()->removeAllViewports();
         }
@@ -292,10 +299,10 @@ bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
     return true;
 }
 void CubeMap::CubeMapFace::preRenderTargetUpdate(const Ogre::RenderTargetEvent&evt) {
-    mParent->preRenderTargetUpdate(mParent->mCamera,this-&mParent->mFaces[0],evt);
+    mParent->preRenderTargetUpdate(NULL,this-&mParent->mFaces[0],evt);
 }
 void CubeMap::preRenderTargetUpdate(Ogre::Camera*cam, int renderTargetIndex,const Ogre::RenderTargetEvent&evt) {
-    faceCameraIndex(cam,renderTargetIndex);
+    faceCameraIndex(mState[mMapCounter].mCamera,renderTargetIndex);
 }
 CubeMap::~CubeMap() {
     for (unsigned int i=0;i<6;++i)

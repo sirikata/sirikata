@@ -39,7 +39,6 @@ class CubeMap {//:public Ogre::FrameListener{
     Ogre::SceneManager*mCubeMapScene;
     Ogre::Camera*mCubeMapSceneCamera[6];
     OgreSystem*mParent;
-    Ogre::Camera*mCamera;
     float mAlpha;
     bool mFrontbufferCloser;
 
@@ -49,6 +48,7 @@ class CubeMap {//:public Ogre::FrameListener{
         Ogre::TexturePtr mCubeMapTexture;
         Vector3f mCameraDelta;
         Ogre::TexturePtr mFrontbuffer[6];
+        Ogre::Camera*mCamera;
     };
     std::vector<PerCubeMapState> mState;
     void swapBuffers();
