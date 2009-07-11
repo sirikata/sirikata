@@ -44,6 +44,7 @@ class CubeMap {//:public Ogre::FrameListener{
     bool mFrontbufferCloser;
     std::vector<Ogre::TexturePtr> mCubeMapTextures;
     Ogre::TexturePtr mBackbuffer[6];
+    Ogre::MaterialPtr mMaterials[6];
     Ogre::TexturePtr mFrontbuffer[6];
     void swapBuffers();
     class CubeMapFace:public Ogre::RenderTargetListener{

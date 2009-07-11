@@ -83,7 +83,6 @@ String CubeMap::createMaterialString(const String&textureName) {
         "}\n";
 }
 void CubeMap::swapBuffers() {
-    mFrontbufferCloser=!mFrontbufferCloser;
     for (int i=0;i<6;++i) {
         Ogre::TexturePtr tmp=mBackbuffer[i];
         mBackbuffer[i]=mFrontbuffer[i];
@@ -91,6 +90,8 @@ void CubeMap::swapBuffers() {
     }
 }
 CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f>&cameraDelta){
+    assert(cubeMapTexture.size()==1);
+    
     mFaceCounter=mMapCounter=0;
     mFrontbufferCloser=true;
     mAlpha=0;
@@ -146,13 +147,42 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
 
     
 	for (int j=0;j<2;++j) {
-	  Ogre::MaterialPtr mat=Ogre::MaterialManager::getSingleton().create((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Mat",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+	  Ogre::MaterialPtr mat=mMaterials[i]=Ogre::MaterialManager::getSingleton().create((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Mat",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	  mat->setCullingMode(Ogre::CULL_NONE);
 	  Ogre::Technique* tech=mat->getTechnique(0);
 	  Ogre::Pass*pass=tech->getPass(0);
+/*
+      pass->setDepthCheckEnabled(false);
+      pass->setReceiveShadows(false);
+      pass->setLightingEnabled(true);
+      if (j==0) {
+          //frontbuffer, turn on alpha!
+          pass->setSceneBlending(Ogre::SBF_SOURCE_ALPHA,
+                                Ogre::SBF_ONE_MINUS_SOURCE_ALPHA);
+          assert(mat->isTransparent());
+          pass->setAmbient(Ogre::ColourValue(0.,1.,0.,0));
+          pass->setDiffuse(Ogre::ColourValue(0.,0.,0.,0));
+          pass->setSpecular(Ogre::ColourValue(0.,0.,0.,0));
+      }else {
+          pass->setAmbient(Ogre::ColourValue(.1,0.,0.,1.));
+          pass->setDiffuse(Ogre::ColourValue(0.,0.,0.,0));
+          pass->setSpecular(Ogre::ColourValue(0.,0.,0.,0));
+      }
+*/
 	  Ogre::TextureUnitState*tus=pass->createTextureUnitState();
 	  tus->setTextureName((j?mBackbuffer:mFrontbuffer)[i]->getName());
 	  tus->setTextureCoordSet(0);
+      if (j){
+          Ogre::TextureUnitState*tus=pass->createTextureUnitState();
+          tus->setTextureName(mFrontbuffer[i]->getName());
+          tus->setTextureCoordSet(0);
+          tus->setColourOperationEx(Ogre::LBX_BLEND_MANUAL,
+                                    Ogre::LBS_TEXTURE,
+                                    Ogre::LBS_CURRENT,
+                                    Ogre::ColourValue::White,Ogre::ColourValue::White,
+                                    .25);
+          tus->setColourOpMultipassFallback(Ogre::SBF_SOURCE_ALPHA,Ogre::SBF_ONE_MINUS_SOURCE_ALPHA);
+      }      
 	  bool reverse=true;//defeat ogre reflection vector bug
 	  Ogre::Vector3 offset;
 	  Ogre::Vector3 up;
@@ -190,7 +220,8 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
 	  Ogre::Entity* ent=mCubeMapScene->createEntity((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Entity",
 							(j?mBackbuffer:mFrontbuffer)[i]->getName()+"Plane");
 	  ent->setMaterialName(mat->getName()); 
-	  mCubeMapScene->getRootSceneNode()->createChildSceneNode(-offset*0.5f*sizeScale)->attachObject(ent);
+      if (j)
+          mCubeMapScene->getRootSceneNode()->createChildSceneNode(-offset*0.5f*sizeScale)->attachObject(ent);
 	}
     }
     mCameraDelta=cameraDelta;
@@ -212,20 +243,32 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
 }
 
 CubeMap::BlendProgress CubeMap::updateBlendState(const Ogre::FrameEvent&evt) {
+    CubeMap::BlendProgress retval=DOING_BLENDING;
     if (mFrontbufferCloser) {
-        mAlpha+=.1;//FIXME should relate to evt
+        mAlpha+=.03125;//FIXME should relate to evt
     }else {
-        mAlpha-=.1;
+        mAlpha-=.03125;
     }
     if (mAlpha<0) {
+        mFrontbufferCloser=true;
         mAlpha=0;
-        return DONE_BLENDING;
+        retval= DONE_BLENDING;
     }
     if(mAlpha>1) {
+        mFrontbufferCloser=false;
         mAlpha=1;
-        return DONE_BLENDING;
+        retval= DONE_BLENDING;
     }
-    return DOING_BLENDING;
+    for (int i=0;i<6;++i) {
+        mMaterials[i]->getTechnique(0)->getPass(0)->getTextureUnitState(1)->
+            setColourOperationEx(Ogre::LBX_BLEND_MANUAL,
+                                 Ogre::LBS_TEXTURE,
+                                 Ogre::LBS_CURRENT,
+                                 Ogre::ColourValue::White,Ogre::ColourValue::White,
+                                 1.0-mAlpha);
+        
+    }
+    return retval;
 }
 
 
