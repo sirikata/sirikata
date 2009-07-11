@@ -334,6 +334,7 @@ int main ( int argc,const char**argv ) {
         return 1;
     }
     OptionSet::getOptions("")->parse(myargc,myargv);
+
     String graphicsCommandArguments;
     {
         std::ostringstream os;
@@ -383,7 +384,6 @@ int main ( int argc,const char**argv ) {
             sims.push_back(sim);
         }
     }
-
     while ( continue_simulation ) {
         for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
             continue_simulation = continue_simulation && (*it)->tick();

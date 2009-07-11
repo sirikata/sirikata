@@ -260,7 +260,7 @@ private:
 
     ///////////////// KEYBOARD HANDLERS /////////////////
 
-    EventResponse deleteObjects(EventPtr ev) {
+    void deleteObjectsAction() {
         Task::AbsTime now(Task::AbsTime::now());
         while (doUngroupObjects(now)) {
         }
@@ -273,7 +273,6 @@ private:
             }
         }
         mSelectedObjects.clear();
-        return EventResponse::nop();
     }
 
     Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Task::AbsTime now) {
@@ -324,7 +323,8 @@ private:
         }
         return mParent->getEntity(newId);
     }
-    EventResponse cloneObjects(EventPtr ev) {
+
+    void cloneObjectsAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
         SelectedObjectSet newSelectedObjects;
@@ -344,14 +344,14 @@ private:
             ent->setSelected(false);
         }
         mSelectedObjects.swap(newSelectedObjects);
-        return EventResponse::nop();
     }
-    EventResponse groupObjects(EventPtr ev) {
+
+    void groupObjectsAction() {
         if (mSelectedObjects.size()<2) {
-            return EventResponse::nop();
+            return;
         }
         if (!mParent->mPrimaryCamera) {
-            return EventResponse::nop();
+            return;
         }
         SpaceObjectReference parentId = mCurrentGroup;
         Task::AbsTime now(Task::AbsTime::now());
@@ -363,12 +363,12 @@ private:
             if (!ent) continue;
             if (ent->getProxy().getProxyManager() != proxyMgr) {
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
-                return EventResponse::nop();
+                return;
             }
             if (!(ent->getProxy().getParent() == parentId)) {
                 SILOG(input,error,"Multiple select "<< ent->id() <<
                       " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
-                return EventResponse::nop();
+                return;
             }
         }
         Vector3d totalPosition (averageSelectedPosition(now, mSelectedObjects.begin(), mSelectedObjects.end()));
@@ -398,7 +398,6 @@ private:
         mSelectedObjects.clear();
         mSelectedObjects.insert(newParentEntity->getProxyPtr());
         newParentEntity->setSelected(true);
-        return EventResponse::nop();
     }
 
     bool doUngroupObjects(Task::AbsTime now) {
@@ -436,16 +435,15 @@ private:
         return (numUngrouped>0);
     }
 
-    EventResponse ungroupObjects(EventPtr ev) {
+    void ungroupObjectsAction() {
         Task::AbsTime now(Task::AbsTime::now());
         doUngroupObjects(now);
-        return EventResponse::nop();
     }
 
-    EventResponse enterObject(EventPtr ev) {
+    void enterObjectAction() {
         Task::AbsTime now(Task::AbsTime::now());
         if (mSelectedObjects.size() != 1) {
-            return EventResponse::nop();
+            return;
         }
         Entity *parentEnt = NULL;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
@@ -467,10 +465,9 @@ private:
                 mCurrentGroup = parentEnt->id();
             }
         }
-        return EventResponse::nop();
     }
 
-    EventResponse leaveObject(EventPtr ev) {
+    void leaveObjectAction() {
         Task::AbsTime now(Task::AbsTime::now());
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
@@ -492,16 +489,13 @@ private:
         else {
             mCurrentGroup = SpaceObjectReference::null();
         }
-        return EventResponse::nop();
     }
 
-    EventResponse createLight(EventPtr ev) {
+    void createLightAction() {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
         CameraEntity *camera = mParent->mPrimaryCamera;
-        if (!camera) {
-            return EventResponse::nop();
-        }
+        if (!camera) return;
         SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
         Location loc (camera->getProxy().globalLocation(now));
@@ -540,88 +534,208 @@ private:
         if (ent) {
             ent->setSelected(true);
         }
-        return EventResponse::nop();
     }
 
-    EventResponse moveHandler(EventPtr ev) {
-        Vector3f yawAxis;
-        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+    void moveAction(Vector3f dir, float amount) {
         Task::AbsTime now(Task::AbsTime::now());
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *cam = mParent->mPrimaryCamera;
+        if (!cam) return;
+        Location loc = cam->getProxy().extrapolateLocation(now);
+        const Quaternion &orient = loc.getOrientation();
+
+        loc.setVelocity((orient * dir) * amount * WORLD_SCALE);
+        loc.setAngularSpeed(0);
+
+        cam->getProxy().setLocation(now, loc);
+    }
+
+    void rotateAction(Vector3f about, float amount) {
+        Task::AbsTime now(Task::AbsTime::now());
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *cam = mParent->mPrimaryCamera;
+        if (!cam) return;
+        Location loc = cam->getProxy().extrapolateLocation(now);
+        const Quaternion &orient = loc.getOrientation();
+
+        loc.setAxisOfRotation(about);
+        loc.setAngularSpeed(amount);
+        loc.setVelocity(Vector3f(0,0,0));
+
+        cam->getProxy().setLocation(now, loc);
+    }
+
+    void stableRotateAction(float dir, float amount) {
+        Task::AbsTime now(Task::AbsTime::now());
+        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
+
+        CameraEntity *cam = mParent->mPrimaryCamera;
+        if (!cam) return;
+        Location loc = cam->getProxy().extrapolateLocation(now);
+        const Quaternion &orient = loc.getOrientation();
+
+        double p, r, y;
+        quat2Euler(orient, p, r, y);
+        Vector3f raxis;
+        raxis.x = 0;
+        raxis.y = std::cos(p*DEG2RAD);
+        raxis.z = -std::sin(p*DEG2RAD);
+
+        loc.setAxisOfRotation(raxis);
+        loc.setAngularSpeed(dir*amount);
+        loc.setVelocity(Vector3f(0,0,0));
+
+        cam->getProxy().setLocation(now, loc);
+    }
+
+    EventResponse keyHandler(EventPtr ev) {
         std::tr1::shared_ptr<ButtonEvent> buttonev (
             std::tr1::dynamic_pointer_cast<ButtonEvent>(ev));
         if (!buttonev) {
             return EventResponse::nop();
         }
-        float amount = buttonev->mPressed?1:0;
 
-        CameraEntity *cam = mParent->mPrimaryCamera;
-        if (!cam) {
-            return EventResponse::nop();
-        }
-        Location loc = cam->getProxy().extrapolateLocation(now);
-        const Quaternion &orient = loc.getOrientation();
-
+        // Movement
         switch (buttonev->mButton) {
-        case SDL_SCANCODE_S:
-            amount*=-1;
-        case SDL_SCANCODE_W:
-            amount *= WORLD_SCALE;
-            loc.setVelocity(direction(orient)*amount);
-            loc.setAngularSpeed(0);
-            break;
-        case SDL_SCANCODE_A:
-            amount*=-1;
-        case SDL_SCANCODE_D:
-            amount *= WORLD_SCALE;
-            loc.setVelocity(orient.xAxis()*amount);
-            loc.setAngularSpeed(0);
-            break;
-        case SDL_SCANCODE_DOWN:
-            amount*=-1;
-        case SDL_SCANCODE_UP:
-            amount *= 0.5;
-            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
-                loc.setAxisOfRotation(Vector3f(1,0,0));
-                loc.setAngularSpeed(buttonev->mPressed?amount:0);
-                loc.setVelocity(Vector3f(0,0,0));
-            }
-            else {
-                amount *= WORLD_SCALE;
-                loc.setVelocity(direction(orient)*amount);
-                loc.setAngularSpeed(0);
+          case SDL_SCANCODE_S:
+            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
+            {
+                float amount = buttonev->mPressed?1:0;
+                moveAction(Vector3f(0, 0, 1), amount);
             }
             break;
-        case SDL_SCANCODE_PAGEDOWN:
-            amount*=-1;
-        case SDL_SCANCODE_PAGEUP:
-            amount *= 0.25;
-            amount *= WORLD_SCALE;
-            std::cout << "dbm debug PAGEUP amount: " << amount << std::endl;
-            loc.setVelocity(Vector3f(0,1,0)*amount);
-            loc.setAngularSpeed(0);
+          case SDL_SCANCODE_W:
+            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
+            {
+                float amount = buttonev->mPressed?1:0;
+                moveAction(Vector3f(0, 0, -1), amount);
+            }
             break;
-        case SDL_SCANCODE_RIGHT:
-            amount*=-1;
-        case SDL_SCANCODE_LEFT:
-            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) amount *= 0.25;
-            /// AngularSpeed needs a relative axis, so compute the global Y axis (yawAxis) in local frame
-            double p, r, y;
-            quat2Euler(loc.getOrientation(), p, r, y);
-            yawAxis.x = 0;
-            yawAxis.y = std::cos(p*DEG2RAD);
-            yawAxis.z = -std::sin(p*DEG2RAD);
-            loc.setAxisOfRotation(yawAxis);
-            loc.setAngularSpeed(buttonev->mPressed?amount:0);
-            loc.setVelocity(Vector3f(0,0,0));
+          case SDL_SCANCODE_A:
+            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
+            {
+                float amount = buttonev->mPressed?1:0;
+                moveAction(Vector3f(-1, 0, 0), amount);
+            }
+            break;
+          case SDL_SCANCODE_D:
+            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
+            {
+                float amount = buttonev->mPressed?1:0;
+                moveAction(Vector3f(1, 0, 0), amount);
+            }
+            break;
+          case SDL_SCANCODE_DOWN:
+            if (buttonev->mModifier == 0)
+            {
+                float amount = buttonev->mPressed?1:0;
+                rotateAction(Vector3f(-1, 0, 0), amount);
+            }
+            break;
+          case SDL_SCANCODE_UP:
+            if (buttonev->mModifier == 0)
+            {
+                float amount = buttonev->mPressed?1:0;
+                rotateAction(Vector3f(1, 0, 0), amount);
+            }
+            break;
+          case SDL_SCANCODE_RIGHT:
+            if (buttonev->mModifier == 0)
+            {
+                float amount = buttonev->mPressed?1:0;
+                stableRotateAction(-1.f, amount);
+            }
+            break;
+          case SDL_SCANCODE_LEFT:
+            if (buttonev->mModifier == 0)
+            {
+                float amount = buttonev->mPressed?1:0;
+                stableRotateAction(1, amount);
+            }
             break;
         default:
             break;
         }
-        cam->getProxy().setLocation(now, loc);
+
+        // Various other actions
+        switch (buttonev->mButton) {
+          case SDL_SCANCODE_B:
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                createLightAction();
+            break;
+          case SDL_SCANCODE_KP_ENTER:
+          case SDL_SCANCODE_RETURN:
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                enterObjectAction();
+            break;
+          case SDL_SCANCODE_KP_0:
+          case SDL_SCANCODE_ESCAPE:
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                leaveObjectAction();
+            break;
+          case SDL_SCANCODE_G:
+            if (buttonev->mPressed) {
+                if (buttonev->mModifier == 0)
+                    groupObjectsAction();
+                else if (buttonev->mModifier == InputDevice::MOD_ALT)
+                    ungroupObjectsAction();
+            }
+            break;
+          case SDL_SCANCODE_DELETE:
+          case SDL_SCANCODE_KP_PERIOD:
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                deleteObjectsAction();
+            break;
+          case SDL_SCANCODE_V:
+            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
+                cloneObjectsAction();
+            break;
+          case SDL_SCANCODE_D:
+            if (buttonev->mModifier == 0 && buttonev->mPressed)
+                cloneObjectsAction();
+            break;
+          case SDL_SCANCODE_O:
+            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
+                importAction();
+            break;
+          case SDL_SCANCODE_S:
+            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
+                saveSceneAction();
+            break;
+          default:
+            break;
+        }
+
+        // Drag modes
+        switch (buttonev->mButton) {
+          case SDL_SCANCODE_Q:
+            setDragModeAction("");
+            break;
+          case SDL_SCANCODE_W:
+            setDragModeAction("moveObject");
+            break;
+          case SDL_SCANCODE_E:
+            setDragModeAction("rotateObject");
+            break;
+          case SDL_SCANCODE_R:
+            setDragModeAction("scaleObject");
+            break;
+          case SDL_SCANCODE_T:
+            setDragModeAction("rotateCamera");
+            break;
+          case SDL_SCANCODE_Y:
+            setDragModeAction("panCamera");
+            break;
+          default:
+            break;
+        }
+
         return EventResponse::nop();
     }
 
-    EventResponse import(EventPtr ev) {
+    void importAction() {
         std::cout << "input path name for import: " << std::endl;
         std::string filename;
         // a bit of a cludge right now, type name into console.
@@ -636,7 +750,7 @@ private:
             }
             if (c=='\033' || c <= 0) {
                 std::cout << "<escape>\n";
-                return EventResponse::nop();
+                return;
             }
             std::cout << (unsigned char)c;
             filename += (unsigned char)c;
@@ -645,15 +759,14 @@ private:
         std::vector<std::string> files;
         files.push_back(filename);
         mParent->mInputManager->filesDropped(files);
-        return EventResponse::cancel();
     }
 
-    EventResponse saveScene(EventPtr ev) {
+    void saveSceneAction() {
         std::cout << "saving new scene as scene_new.csv: " << std::endl;
         FILE *output = fopen("scene_new.csv", "wt");
         if (!output) {
             perror("Failed to open scene_new.csv");
-            return EventResponse::cancel();
+            return;
         }
         fprintf(output, "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
         fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
@@ -664,7 +777,6 @@ private:
             dumpObject(output, iter->second);
         }
         fclose(output);
-        return EventResponse::cancel();
     }
 
     bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
@@ -776,45 +888,11 @@ private:
         return subId;
     }
 
-    SubscriptionId registerButtonListener(const InputDevicePtr &dev,
-                                          EventResponse(MouseHandler::*func)(EventPtr),
-                                          int button, bool released=false, InputDevice::Modifier mod=0) {
-        Task::IdPair eventId (released?ButtonReleased::getEventId():ButtonPressed::getEventId(),
-                              ButtonEvent::getSecondaryId(button, mod, dev));
-        SubscriptionId subId = mParent->mInputManager->subscribeId(eventId,
-                               std::tr1::bind(func, this, _1));
-        mEvents.push_back(subId);
-        mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
-        return subId;
-    }
-
-    EventResponse setDragMode(EventPtr evbase) {
-        std::tr1::shared_ptr<ButtonEvent> ev (
-            std::tr1::dynamic_pointer_cast<ButtonEvent>(evbase));
-        if (!ev) {
-            return EventResponse::nop();
-        }
-        switch (ev->mButton) {
-        case SDL_SCANCODE_Q:
+    void setDragModeAction(const String& modename) {
+        if (modename == "")
             mDragAction[1] = 0;
-            break;
-        case SDL_SCANCODE_W:
-            mDragAction[1] = DragActionRegistry::get("moveObject");
-            break;
-        case SDL_SCANCODE_E:
-            mDragAction[1] = DragActionRegistry::get("rotateObject");
-            break;
-        case SDL_SCANCODE_R:
-            mDragAction[1] = DragActionRegistry::get("scaleObject");
-            break;
-        case SDL_SCANCODE_T:
-            mDragAction[1] = DragActionRegistry::get("rotateCamera");
-            break;
-        case SDL_SCANCODE_Y:
-            mDragAction[1] = DragActionRegistry::get("panCamera");
-            break;
-        }
-        return EventResponse::nop();
+
+        mDragAction[1] = DragActionRegistry::get(modename);
     }
 
     EventResponse deviceListener(EventPtr evbase) {
@@ -829,55 +907,24 @@ private:
                 registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELY);
             }
             if (!!(std::tr1::dynamic_pointer_cast<SDLKeyboard>(ev->mDevice))) {
-                registerButtonListener(ev->mDevice, &MouseHandler::groupObjects, SDL_SCANCODE_G);
-                registerButtonListener(ev->mDevice, &MouseHandler::ungroupObjects, SDL_SCANCODE_G,false,InputDevice::MOD_ALT);
-                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDL_SCANCODE_DELETE);
-                registerButtonListener(ev->mDevice, &MouseHandler::deleteObjects, SDL_SCANCODE_KP_PERIOD); // Del
-                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, SDL_SCANCODE_V,false,InputDevice::MOD_CTRL);
-                registerButtonListener(ev->mDevice, &MouseHandler::cloneObjects, SDL_SCANCODE_D);
-                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDL_SCANCODE_KP_ENTER);
-                registerButtonListener(ev->mDevice, &MouseHandler::enterObject, SDL_SCANCODE_RETURN);
-                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDL_SCANCODE_KP_0);
-                registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDL_SCANCODE_ESCAPE);
-                registerButtonListener(ev->mDevice, &MouseHandler::createLight, SDL_SCANCODE_B);
-
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEUP);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEUP,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEDOWN);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEDOWN,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_D,false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_D,true, InputDevice::MOD_SHIFT);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT,true);
-                registerButtonListener(ev->mDevice, &MouseHandler::import, SDL_SCANCODE_O, false, InputDevice::MOD_CTRL);
-                registerButtonListener(ev->mDevice, &MouseHandler::saveScene, SDL_SCANCODE_S, false, InputDevice::MOD_CTRL);
-
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Q);
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_W);
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_E);
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_R);
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_T);
-                registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Y);
+                // Key Pressed
+                {
+                    SubscriptionId subId = mParent->mInputManager->subscribeId(
+                        ButtonPressed::getEventId(),
+                        std::tr1::bind(&MouseHandler::keyHandler, this, _1)
+                    );
+                    mEvents.push_back(subId);
+                    mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
+                }
+                // Key Released
+                {
+                    SubscriptionId subId = mParent->mInputManager->subscribeId(
+                        ButtonReleased::getEventId(),
+                        std::tr1::bind(&MouseHandler::keyHandler, this, _1)
+                    );
+                    mEvents.push_back(subId);
+                    mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
+                }
             }
             break;
         case InputDeviceEvent::REMOVED: {
@@ -957,8 +1004,8 @@ public:
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
-                iter != mEvents.end();
-                ++iter) {
+             iter != mEvents.end();
+             ++iter) {
             mParent->mInputManager->unsubscribe(*iter);
         }
     }
