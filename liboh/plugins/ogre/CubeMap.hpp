@@ -42,10 +42,15 @@ class CubeMap {//:public Ogre::FrameListener{
     Ogre::Camera*mCamera;
     float mAlpha;
     bool mFrontbufferCloser;
-    std::vector<Ogre::TexturePtr> mCubeMapTextures;
+
     Ogre::TexturePtr mBackbuffer[6];
     Ogre::MaterialPtr mMaterials[6];
-    Ogre::TexturePtr mFrontbuffer[6];
+    struct PerCubeMapState {
+        Ogre::TexturePtr mCubeMapTexture;
+        Vector3f mCameraDelta;
+        Ogre::TexturePtr mFrontbuffer[6];
+    };
+    std::vector<PerCubeMapState> mState;
     void swapBuffers();
     class CubeMapFace:public Ogre::RenderTargetListener{
     public:
@@ -54,7 +59,7 @@ class CubeMap {//:public Ogre::FrameListener{
     };
     friend class CubeMapFace;
     CubeMapFace mFaces[6];
-    std::vector<Vector3f> mCameraDelta;
+
     int mFaceCounter;
     int mMapCounter;
     String createMaterialString(const String&materialName);
