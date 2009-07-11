@@ -180,10 +180,16 @@ void *main_loop(void *) {
     }
 
 
-
-    CoordinateSegmentation* cseg=//new LBCoordinateSegmentation(server_id, region, layout, forwarder, sq, gTrace);
-        new UniformCoordinateSegmentation(region, layout, forwarder);
-
+    String cseg_type = GetOption(CSEG)->as<String>();
+    CoordinateSegmentation* cseg = NULL;
+    if (cseg_type == "uniform")
+        cseg = new UniformCoordinateSegmentation(region, layout, forwarder);
+    else if (cseg_type == "lb")
+        cseg = new LBCoordinateSegmentation(server_id, region, layout, forwarder, sq, gTrace);
+    else {
+        assert(false);
+        exit(-1);
+    }
 
 
     LoadMonitor* loadMonitor = new LoadMonitor(server_id, forwarder, sq, cseg);

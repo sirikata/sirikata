@@ -88,6 +88,7 @@ void InitOptions() {
         .addOption(new OptionValue(NETWORK_TYPE, "sst", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
 
+        .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
      ;
 }
 

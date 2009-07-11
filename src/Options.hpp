@@ -60,6 +60,8 @@
 #define SEND_BANDWIDTH       "send-bandwidth"
 #define RECEIVE_BANDWIDTH       "receive-bandwidth"
 
+#define CSEG                "cseg"
+
 namespace CBR {
 
 void InitOptions();
