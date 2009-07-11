@@ -120,7 +120,7 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
     }
     for (int j=0;j<2;++j) {
         for (int i=0;i<6;++i){
-            (j?mBackbuffer:mFrontbuffer)[i] = Ogre::TextureManager::getSingleton()
+            (j==0?mBackbuffer:mFrontbuffer)[i] = Ogre::TextureManager::getSingleton()
                 .createManual(UUID::random().toString(),
                               Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
                               Ogre::TEX_TYPE_2D,
@@ -135,58 +135,17 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
     mCubeMapScene=Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
     for (int i=0;i<6;++i) {
         mCubeMapSceneCamera[i]=mCubeMapScene->createCamera(mBackbuffer[i]->getName());
-        mCubeMapSceneCamera[i]->setPosition(0,0,0);//FIXME we want this
+        mCubeMapSceneCamera[i]->setPosition(0,0,0);
         mCubeMapScene->getRootSceneNode()->attachObject( mCubeMapSceneCamera[i]);
-        //mCubeMapSceneCamera[i]=mParent->getSceneManager()->createCamera(mBackbuffer->getName()+labele);
-        //mCubeMapSceneCamera[i]->setPosition(0,4594,0);
-
         faceCameraIndex(mCubeMapSceneCamera[i],i);
         mCubeMapSceneCamera[i]->setNearClipDistance(0.1f);
         mCubeMapSceneCamera[i]->setAspectRatio(1);
         mCubeMapSceneCamera[i]->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
 
-    
-	for (int j=0;j<2;++j) {
-	  Ogre::MaterialPtr mat=mMaterials[i]=Ogre::MaterialManager::getSingleton().create((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Mat",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-	  mat->setCullingMode(Ogre::CULL_NONE);
-	  Ogre::Technique* tech=mat->getTechnique(0);
-	  Ogre::Pass*pass=tech->getPass(0);
-/*
-      pass->setDepthCheckEnabled(false);
-      pass->setReceiveShadows(false);
-      pass->setLightingEnabled(true);
-      if (j==0) {
-          //frontbuffer, turn on alpha!
-          pass->setSceneBlending(Ogre::SBF_SOURCE_ALPHA,
-                                Ogre::SBF_ONE_MINUS_SOURCE_ALPHA);
-          assert(mat->isTransparent());
-          pass->setAmbient(Ogre::ColourValue(0.,1.,0.,0));
-          pass->setDiffuse(Ogre::ColourValue(0.,0.,0.,0));
-          pass->setSpecular(Ogre::ColourValue(0.,0.,0.,0));
-      }else {
-          pass->setAmbient(Ogre::ColourValue(.1,0.,0.,1.));
-          pass->setDiffuse(Ogre::ColourValue(0.,0.,0.,0));
-          pass->setSpecular(Ogre::ColourValue(0.,0.,0.,0));
-      }
-*/
-	  Ogre::TextureUnitState*tus=pass->createTextureUnitState();
-	  tus->setTextureName((j?mBackbuffer:mFrontbuffer)[i]->getName());
-	  tus->setTextureCoordSet(0);
-      if (j){
-          Ogre::TextureUnitState*tus=pass->createTextureUnitState();
-          tus->setTextureName(mFrontbuffer[i]->getName());
-          tus->setTextureCoordSet(0);
-          tus->setColourOperationEx(Ogre::LBX_BLEND_MANUAL,
-                                    Ogre::LBS_TEXTURE,
-                                    Ogre::LBS_CURRENT,
-                                    Ogre::ColourValue::White,Ogre::ColourValue::White,
-                                    .25);
-          tus->setColourOpMultipassFallback(Ogre::SBF_SOURCE_ALPHA,Ogre::SBF_ONE_MINUS_SOURCE_ALPHA);
-      }      
-	  bool reverse=true;//defeat ogre reflection vector bug
-	  Ogre::Vector3 offset;
-	  Ogre::Vector3 up;
-	  switch (i){
+        bool reverse=true;//defeat ogre reflection vector bug
+        Ogre::Vector3 offset;
+        Ogre::Vector3 up;
+        switch (i){
           case 0:
             offset=Ogre::Vector3(-1,0,0);
             up=Ogre::Vector3(0,1,0);
@@ -211,18 +170,37 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
             offset=Ogre::Vector3(0,0,reverse?1:-1);
             up=Ogre::Vector3(0,1,0);
             break;
-	  }
-	  float sizeScale=(j?2.0f:1.0f);
-	  Ogre::MeshPtr msh=Ogre::MeshManager::getSingleton().createPlane((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Plane",
-									  Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-									  Ogre::Plane((reverse&&(i==1||i==0||i==4||i==5))?-offset:offset,0),
-									  sizeScale,sizeScale,1,1,false,1,1.0,((reverse&&(i==3||i==2))?-1.0:1.0),up);
-	  Ogre::Entity* ent=mCubeMapScene->createEntity((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Entity",
-							(j?mBackbuffer:mFrontbuffer)[i]->getName()+"Plane");
-	  ent->setMaterialName(mat->getName()); 
-      if (j)
-          mCubeMapScene->getRootSceneNode()->createChildSceneNode(-offset*0.5f*sizeScale)->attachObject(ent);
-	}
+        }
+    
+        for (int j=0;j<2;++j) {
+            Ogre::MaterialPtr mat=mMaterials[i]=Ogre::MaterialManager::getSingleton().create((j?mBackbuffer:mFrontbuffer)[i]->getName()+"Mat",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+            mat->setCullingMode(Ogre::CULL_NONE);
+            Ogre::Technique* tech=mat->getTechnique(0);
+            Ogre::Pass*pass=tech->getPass(0);
+            Ogre::TextureUnitState*tus=pass->createTextureUnitState();
+            tus->setTextureName((j?mBackbuffer:mFrontbuffer)[i]->getName());
+            tus->setTextureCoordSet(0);
+            if (j){
+                Ogre::TextureUnitState*tus=pass->createTextureUnitState();
+                tus->setTextureName(mFrontbuffer[i]->getName());
+                tus->setTextureCoordSet(0);
+                tus->setColourOperationEx(Ogre::LBX_BLEND_MANUAL,
+                                          Ogre::LBS_TEXTURE,
+                                          Ogre::LBS_CURRENT,
+                                          Ogre::ColourValue::White,Ogre::ColourValue::White,
+                                          .25);
+                tus->setColourOpMultipassFallback(Ogre::SBF_SOURCE_ALPHA,Ogre::SBF_ONE_MINUS_SOURCE_ALPHA);
+            }      
+        }
+        float sizeScale=1.0f;
+        Ogre::MeshPtr msh=Ogre::MeshManager::getSingleton().createPlane(mBackbuffer[i]->getName()+"Plane",
+                                                                        Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                                                                        Ogre::Plane((reverse&&(i==1||i==0||i==4||i==5))?-offset:offset,0),
+                                                                        sizeScale,sizeScale,1,1,false,1,1.0,((reverse&&(i==3||i==2))?-1.0:1.0),up);
+        Ogre::Entity* ent=mCubeMapScene->createEntity(mBackbuffer[i]->getName()+"Entity",
+                                                      mBackbuffer[i]->getName()+"Plane");
+        ent->setMaterialName(mBackbuffer[i]->getName()+"Mat"); 
+        mCubeMapScene->getRootSceneNode()->createChildSceneNode(-offset*0.5f*sizeScale)->attachObject(ent);
     }
     mCameraDelta=cameraDelta;
     mCamera=mParent->getSceneManager()->createCamera(mBackbuffer[0]->getName()+"Camera");
@@ -235,11 +213,11 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
     {
         mFaces[i].mParent=this;
         
-        Ogre::RenderTarget *renderTarget =mBackbuffer[i]->getBuffer(0)->getRenderTarget(); //mBackbuffer->getBuffer(i)->getRenderTarget();
+        Ogre::RenderTarget *renderTarget =mBackbuffer[i]->getBuffer(0)->getRenderTarget();
         renderTarget->addListener(&mFaces[i]);
-        renderTarget =mFrontbuffer[i]->getBuffer(0)->getRenderTarget(); //mBackbuffer->getBuffer(i)->getRenderTarget();
+        renderTarget =mFrontbuffer[i]->getBuffer(0)->getRenderTarget();
         renderTarget->addListener(&mFaces[i]);
-    } 
+    }
 }
 
 CubeMap::BlendProgress CubeMap::updateBlendState(const Ogre::FrameEvent&evt) {
@@ -273,10 +251,7 @@ CubeMap::BlendProgress CubeMap::updateBlendState(const Ogre::FrameEvent&evt) {
 
 
 bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
-    for (int i=0;i<6;++i) {
-        //mCubeMapSceneCamera[i]->setPosition(toOgre(mParent->getPrimaryCamera()->getOgrePosition()+Vector3d(mCameraDelta[0]),mParent->getOffset()));        
-    }
-
+ 
     if (mFaceCounter>0&&mFaceCounter<7) {
         mBackbuffer[mFaceCounter-1]->getBuffer(0)->getRenderTarget()->removeAllViewports();        
     }
