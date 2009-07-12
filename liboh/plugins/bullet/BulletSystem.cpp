@@ -154,8 +154,6 @@ bulletObj::bulletObj(BulletSystem* sys) {
     physical=false;
     velocity = Vector3d(0, 0, 0);
     bulletBodyPtr=NULL;
-<<<<<<< HEAD:liboh/plugins/bullet/BulletSystem.cpp
-=======
 }
 */
 
@@ -179,35 +177,8 @@ void bulletObj::setScale (const Vector3f &newScale) {
     bulletBodyPtr->activate(true);
     DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << " mass: "
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
->>>>>>> 72ba3465ccbc6f5bdb8e40ffd5a9d23ed4f5d297:liboh/plugins/bullet/BulletSystem.cpp
-}
-*/
-
-<<<<<<< HEAD:liboh/plugins/bullet/BulletSystem.cpp
-void bulletObj::setScale (const Vector3f &newScale) {
-    /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
-    /// also, this only work on boxen
-    if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
-        return;
-    if (sizeX==newScale.x && sizeY==newScale.y && sizeZ==newScale.z)
-        return;
-    sizeX = newScale.x;
-    sizeY = newScale.y;
-    sizeZ = newScale.z;
-    float mass;
-    btVector3 localInertia(0,0,0);
-    btCollisionShape* colShape = buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
-    colShape->calculateLocalInertia(mass,localInertia);
-    bulletBodyPtr->setCollisionShape(colShape);
-    bulletBodyPtr->setMassProps(mass, localInertia);
-    bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
-    bulletBodyPtr->activate(true);
-    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << sizeX << " mass: " 
-            << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-=======
->>>>>>> 72ba3465ccbc6f5bdb8e40ffd5a9d23ed4f5d297:liboh/plugins/bullet/BulletSystem.cpp
 btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
     btCollisionShape* colShape;
@@ -218,7 +189,7 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (shape == ShapeBox) {
-            DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
+                DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
             colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
             mass = sizeX * sizeY * sizeZ * density;
         }
@@ -250,11 +221,7 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         for (i=0; i<indices.size(); i++) {
             DEBUG_OUTPUT (cout << " " << indices[i]);
         }
-<<<<<<< HEAD:liboh/plugins/bullet/BulletSystem.cpp
-            DEBUG_OUTPUT (cout << endl);
-=======
         DEBUG_OUTPUT (cout << endl);
->>>>>>> 72ba3465ccbc6f5bdb8e40ffd5a9d23ed4f5d297:liboh/plugins/bullet/BulletSystem.cpp
         DEBUG_OUTPUT (cout << "dbm:mesh bounds:");
         for (i=0; i<bounds.size(); i++) {
             DEBUG_OUTPUT (cout << " " << bounds[i]);
@@ -315,13 +282,6 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
                   << " success: " << (int)Transfer::TransferManager::SUCCESS
                   << " bullet obj: " << bullobj
                   << " length = " << (int)ev->data().length() << endl);
-<<<<<<< HEAD:liboh/plugins/bullet/BulletSystem.cpp
-    Transfer::DenseDataPtr flatData = ev->data().flatten();
-    const unsigned char* realData = flatData->data();
-    DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
-    bullobj->buildBulletBody(realData, ev->data().length());
-    physicalObjects.push_back(bullobj);
-=======
     if (!ev->getStatus()==Transfer::TransferManager::SUCCESS) {
         cout << "BulletSystem::downloadFinished failed, bullet object will not be built" << endl;
     }
@@ -332,7 +292,6 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
         bullobj->buildBulletBody(realData, ev->data().length());
         physicalObjects.push_back(bullobj);
     }
->>>>>>> 72ba3465ccbc6f5bdb8e40ffd5a9d23ed4f5d297:liboh/plugins/bullet/BulletSystem.cpp
     return Task::EventResponse::del();
 }
 
