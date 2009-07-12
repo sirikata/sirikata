@@ -289,8 +289,8 @@ class bulletObj : public MeshListener {
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    vector<double>& vertices;// = *(new vector<double>());
-    vector<int>& indices;// = *(new vector<int>());
+    vector<double>& vertices;
+    vector<int>& indices;
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
@@ -302,6 +302,7 @@ public:
     positionOrientation initialPo;
     Vector3d velocity;
     btRigidBody* bulletBodyPtr;
+    btCollisionShape* colShape;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
     float sizeX;
@@ -323,7 +324,7 @@ public:
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
-    btCollisionShape* buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
+    void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
 };
 
 class BulletSystem: public TimeSteppedSimulation {

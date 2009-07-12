@@ -169,7 +169,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
     sizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    btCollisionShape* colShape = buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
+    buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
     colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
@@ -179,9 +179,8 @@ void bulletObj::setScale (const Vector3f &newScale) {
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
+void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
-    btCollisionShape* colShape;
     if (dynamic) {
         if (shape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
@@ -244,7 +243,6 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
 
         /// try to clean up memory usage
     }
-    return colShape;
 }
 
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
@@ -254,7 +252,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     btDefaultMotionState* myMotionState;
     btRigidBody* body;
 
-    btCollisionShape* colShape = buildBulletShape(meshdata, meshbytes, mass);
+    buildBulletShape(meshdata, meshbytes, mass);
 
     system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
