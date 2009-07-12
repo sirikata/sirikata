@@ -196,10 +196,11 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
+        if (btVertices != 0) delete btVertices;
+        btVertices = new vector<btVector3>();
         unsigned int i,j;
 
         if (meshbytes) {
-            btVertices.clear();
             vertices.clear();
             indices.clear();
             parseOgreMesh parser;
@@ -211,7 +212,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             for (j=0; j<3; j+=1) {
                 DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
-            btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
+            btVertices->push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
             DEBUG_OUTPUT (cout << endl);
         }
         DEBUG_OUTPUT (cout << endl);
@@ -226,23 +227,21 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         }
         DEBUG_OUTPUT (cout << endl);
 
-        if (indexarray) delete indexarray;
-        indexarray = new btTriangleIndexVertexArray(
-            indices.size()/3,                       // # of triangles (int)
-            &(indices[0]),                          // ptr to list of indices (int)
-            sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
-            btVertices.size(),                      // # of vertices (int)
-            (btScalar*) &btVertices[0].x(),         // (btScalar*) pointer to vertex list
-            sizeof(btVector3));                     // vertex stride, in bytes
+        btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
+            indices.size()/3,                      // # of triangles (int)
+            &(indices[0]),               // ptr to list of indices (int)
+            sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
+            btVertices->size(),                      // # of vertices (int)
+            (btScalar*) &(*btVertices)[0].x(),              // (btScalar*) pointer to vertex list
+            sizeof(btVector3));    // sizeof(btVector3)
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << btVertices->size() << endl);
 
         mass = 0.0;
 
         /// try to clean up memory usage
-        vertices.clear();
     }
 }
 
@@ -250,6 +249,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
     btVector3 localInertia(0,0,0);
+    btDefaultMotionState* myMotionState;
     btRigidBody* body;
 
     buildBulletShape(meshdata, meshbytes, mass);
@@ -260,7 +260,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(initialPo.p.x, initialPo.p.y, initialPo.p.z));
     startTransform.setRotation(btQuaternion(initialPo.o.x, initialPo.o.y, initialPo.o.z, initialPo.o.w));
-    myMotionState = new btDefaultMotionState(startTransform);
+    myMotionState = new btDefaultMotionState(startTransform);                       /// memory leak?
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
     body->setFriction(friction);
@@ -327,10 +327,9 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     DEBUG_OUTPUT(cout << "dbm: removing physical object: " << obj << endl;)
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
-            physicalObjects.erase(physicalObjects.begin()+i);
             dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
-//            delete obj->bulletBodyPtr;
-            delete obj;
+            delete obj->bulletBodyPtr;
+            physicalObjects.erase(physicalObjects.begin()+i);
             break;
         }
     }

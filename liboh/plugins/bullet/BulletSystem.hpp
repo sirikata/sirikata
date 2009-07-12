@@ -289,13 +289,9 @@ class bulletObj : public MeshListener {
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-
-    /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
-    vector<btVector3>& btVertices;
     vector<double>& vertices;
     vector<int>& indices;
-    btTriangleIndexVertexArray* indexarray;
-    btDefaultMotionState* myMotionState;
+    vector<btVector3>* btVertices;
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
@@ -316,7 +312,6 @@ public:
 
     /// public methods
     bulletObj(BulletSystem* sys) :
-            btVertices(*(new vector<btVector3>())),
             vertices(*(new vector<double>())),
             indices (*(new vector<int>())),
             physical(false),
@@ -327,7 +322,7 @@ public:
             sizeY(0),
             sizeZ(0) {
         system = sys;
-        indexarray=0;
+        btVertices = 0;
     }
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
