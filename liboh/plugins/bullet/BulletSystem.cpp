@@ -158,8 +158,6 @@ bulletObj::bulletObj(BulletSystem* sys) {
 */
 
 void bulletObj::setScale (const Vector3f &newScale) {
-    /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
-    /// also, this only work on boxen
     if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (sizeX==newScale.x && sizeY==newScale.y && sizeZ==newScale.z)
@@ -169,7 +167,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
     sizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    btCollisionShape* colShape = buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
+    buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
     colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
@@ -179,18 +177,18 @@ void bulletObj::setScale (const Vector3f &newScale) {
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
+void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
-    btCollisionShape* colShape;
+    if (colShape) delete colShape;
     if (dynamic) {
         if (shape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
-            colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
+            colShape = new btSphereShape(btScalar(sizeX));
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (shape == ShapeBox) {
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
-            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
+            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
             mass = sizeX * sizeY * sizeZ * density;
         }
     }
@@ -198,7 +196,7 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
+        btVertices.clear();
         unsigned int i,j;
 
         if (meshbytes) {
@@ -228,33 +226,33 @@ btCollisionShape* bulletObj::buildBulletShape(const unsigned char* meshdata, int
         }
         DEBUG_OUTPUT (cout << endl);
 
-        btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
-            indices.size()/3,                      // # of triangles (int)
-            &(indices[0]),               // ptr to list of indices (int)
-            sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
+        if (indexarray) delete indexarray;
+        indexarray = new btTriangleIndexVertexArray(
+            indices.size()/3,                       // # of triangles (int)
+            &(indices[0]),                          // ptr to list of indices (int)
+            sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
             btVertices.size(),                      // # of vertices (int)
-            (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
-            sizeof(btVector3));    // sizeof(btVector3)
+            (btScalar*) &btVertices[0].x(),         // (btScalar*) pointer to vertex list
+            sizeof(btVector3));                     // vertex stride, in bytes
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
-        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax); /// memory leak
+        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
                      " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
 
         mass = 0.0;
 
         /// try to clean up memory usage
+        //vertices.clear();						/// inexplicably, I can't do this
     }
-    return colShape;
 }
 
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
     btVector3 localInertia(0,0,0);
-    btDefaultMotionState* myMotionState;
     btRigidBody* body;
 
-    btCollisionShape* colShape = buildBulletShape(meshdata, meshbytes, mass);
+    buildBulletShape(meshdata, meshbytes, mass);
 
     system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
@@ -262,7 +260,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(initialPo.p.x, initialPo.p.y, initialPo.p.z));
     startTransform.setRotation(btQuaternion(initialPo.o.x, initialPo.o.y, initialPo.o.z, initialPo.o.w));
-    myMotionState = new btDefaultMotionState(startTransform);                       /// memory leak?
+    myMotionState = new btDefaultMotionState(startTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
     body = new btRigidBody(rbInfo);
     body->setFriction(friction);
@@ -329,9 +327,10 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     DEBUG_OUTPUT(cout << "dbm: removing physical object: " << obj << endl;)
     for (unsigned int i=0; i<physicalObjects.size(); i++) {
         if (physicalObjects[i] == obj) {
-            dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
-            delete obj->bulletBodyPtr;
             physicalObjects.erase(physicalObjects.begin()+i);
+            dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
+//            delete obj->bulletBodyPtr;
+            delete obj;
             break;
         }
     }
@@ -351,8 +350,7 @@ bool BulletSystem::tick() {
         delta = now-lasttime;
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
-        //if (((int)(now-starttime) % 15)<5) {
-        if ((now-starttime) > 15.0) {
+        if ((now-starttime) > 10.0) {
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletState().p) {
                     /// if object has been moved, reset bullet position accordingly

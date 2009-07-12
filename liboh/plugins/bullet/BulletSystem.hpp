@@ -289,8 +289,13 @@ class bulletObj : public MeshListener {
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    vector<double>& vertices;// = *(new vector<double>());
-    vector<int>& indices;// = *(new vector<int>());
+    
+    /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
+    vector<btVector3>& btVertices;
+    vector<double>& vertices;
+    vector<int>& indices;
+    btTriangleIndexVertexArray* indexarray;
+    btDefaultMotionState* myMotionState;
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
@@ -302,6 +307,7 @@ public:
     positionOrientation initialPo;
     Vector3d velocity;
     btRigidBody* bulletBodyPtr;
+    btCollisionShape* colShape;
     ProxyMeshObjectPtr meshptr;
     URI meshname;
     float sizeX;
@@ -310,20 +316,23 @@ public:
 
     /// public methods
     bulletObj(BulletSystem* sys) :
+            btVertices(*(new vector<btVector3>())),
             vertices(*(new vector<double>())),
             indices (*(new vector<int>())),
             physical(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
+            colShape(NULL),
             sizeX(0),
             sizeY(0),
             sizeZ(0) {
         system = sys;
+        indexarray=0;
     }
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
-    btCollisionShape* buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
+    void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
 };
 
 class BulletSystem: public TimeSteppedSimulation {
