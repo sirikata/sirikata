@@ -291,7 +291,7 @@ class bulletObj : public MeshListener {
     void setScale (const Vector3f &newScale);
     vector<double>& vertices;
     vector<int>& indices;
-    vector<btVector3>* btVertices;
+    vector<btVector3>& btVertices;
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
@@ -314,6 +314,7 @@ public:
     bulletObj(BulletSystem* sys) :
             vertices(*(new vector<double>())),
             indices (*(new vector<int>())),
+            btVertices(*(new vector<btVector3>())),
             physical(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
@@ -322,7 +323,6 @@ public:
             sizeY(0),
             sizeZ(0) {
         system = sys;
-        btVertices = 0;
     }
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);

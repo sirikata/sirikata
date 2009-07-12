@@ -196,8 +196,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        if (btVertices != 0) delete btVertices;
-        btVertices = new vector<btVector3>();
+        btVertices.clear();
         unsigned int i,j;
 
         if (meshbytes) {
@@ -212,7 +211,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             for (j=0; j<3; j+=1) {
                 DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
-            btVertices->push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
+            btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
             DEBUG_OUTPUT (cout << endl);
         }
         DEBUG_OUTPUT (cout << endl);
@@ -231,13 +230,13 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             indices.size()/3,                      // # of triangles (int)
             &(indices[0]),               // ptr to list of indices (int)
             sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
-            btVertices->size(),                      // # of vertices (int)
-            (btScalar*) &(*btVertices)[0].x(),              // (btScalar*) pointer to vertex list
+            btVertices.size(),                      // # of vertices (int)
+            (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
             sizeof(btVector3));    // sizeof(btVector3)
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices->size() << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
 
         mass = 0.0;
 
