@@ -242,7 +242,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         mass = 0.0;
 
         /// try to clean up memory usage
-        //vertices.clear();
+        vertices.clear();
     }
 }
 
