@@ -49,7 +49,11 @@ class CubeMap {//:public Ogre::FrameListener{
         Vector3f mCameraDelta;
         Ogre::TexturePtr mFrontbuffer[6];
         Ogre::Camera*mCamera;
+        Ogre::Vector3 mLastActualPosition;
+        Ogre::Vector3 mLastRenderedPosition;
+        Ogre::Vector3 mFirstCameraPosition;
     };
+    bool tooSmall(Ogre::Vector3 delta);
     std::vector<PerCubeMapState> mState;
     void swapBuffers();
     class CubeMapFace:public Ogre::RenderTargetListener{
@@ -69,7 +73,7 @@ class CubeMap {//:public Ogre::FrameListener{
     };
     BlendProgress updateBlendState(const Ogre::FrameEvent&evt);
 public:
-    CubeMap(OgreSystem*parent, const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f> &mCameraDelta);
+    CubeMap(OgreSystem*parent, const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f> &mCameraDelta, const std::vector<float>& nearClipMapDistance);
     ~CubeMap();
     bool frameEnded(const Ogre::FrameEvent&evt);
     void preRenderTargetUpdate(Ogre::Camera*cam,int renderTargetIndex,const Ogre::RenderTargetEvent& evt);

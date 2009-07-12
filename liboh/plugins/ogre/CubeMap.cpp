@@ -89,7 +89,7 @@ void CubeMap::swapBuffers() {
         mState[mMapCounter].mFrontbuffer[i]=tmp;
     }
 }
-CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f>&cameraDelta){
+CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f>&cameraDelta, const std::vector<float>&cameraNearPlanes){
     mFaceCounter=mMapCounter=0;
     mFrontbufferCloser=true;
     mAlpha=0;
@@ -117,8 +117,11 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
                           Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP);
         mState.back().mCameraDelta=cameraDelta[i];
         mState.back().mCamera=mParent->getSceneManager()->createCamera(UUID::random().toString()+"CubeMapCamera");
+        mState.back().mLastRenderedPosition=Ogre::Vector3(0,0,0);
+        mState.back().mLastActualPosition=Ogre::Vector3(0,0,0);
+        mState[mMapCounter].mFirstCameraPosition=Ogre::Vector3(0,0,0);
         //mParent->getSceneManager()->getRootSceneNode()->attachObject( mCamera);
-        mState.back().mCamera->setNearClipDistance(0.1f);
+        mState.back().mCamera->setNearClipDistance(cameraNearPlanes[i]);
         mState.back().mCamera->setAspectRatio(1);
         mState.back().mCamera->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
 
@@ -250,11 +253,31 @@ CubeMap::BlendProgress CubeMap::updateBlendState(const Ogre::FrameEvent&evt) {
     }
     return retval;
 }
-
+bool CubeMap::tooSmall(Ogre::Vector3 delta) {
+    if (delta.x<0) delta.x=-delta.x;
+    if (delta.y<0) delta.y=-delta.y;
+    if (delta.z<0) delta.z=-delta.z;
+    if (delta.x<.03125&&delta.y<.03125&&delta.z<.03125) {
+        return true;
+    }
+    return false;
+}
 
 bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
 
     if (mFaceCounter==0) {
+        Ogre::Vector3 curCamera=toOgre(mParent->getPrimaryCamera()->getOgrePosition(),mParent->getOffset());
+        Ogre::Vector3 delta=curCamera-mState[mMapCounter].mLastActualPosition;
+        if (mState[mMapCounter].mLastActualPosition==Ogre::Vector3(0,0,0)) {
+            mState[mMapCounter].mFirstCameraPosition=curCamera;
+        }
+        mState[mMapCounter].mLastActualPosition=curCamera;
+        curCamera+=delta;
+        if (tooSmall(curCamera-mState[mMapCounter].mLastRenderedPosition)&&!(curCamera==mState[mMapCounter].mFirstCameraPosition)) {
+            mFaceCounter=9;//abort abort: this cubemap is too similar!
+        }else {
+            mState[mMapCounter].mLastRenderedPosition=curCamera;
+        }
         mState[mMapCounter].mCamera->setPosition(toOgre(mParent->getPrimaryCamera()->getOgrePosition()+Vector3d(mState[mMapCounter].mCameraDelta),mParent->getOffset()));
     }
     if (mFaceCounter>0&&mFaceCounter<7) {
@@ -264,8 +287,7 @@ bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
         Ogre::Viewport *viewport = mBackbuffer[mFaceCounter]->getBuffer(0)->getRenderTarget()->addViewport( mState[mMapCounter].mCamera );        
         viewport->setOverlaysEnabled(false);
         viewport->setClearEveryFrame( true );
-        viewport->setBackgroundColour( Ogre::ColourValue(0,1,1,1) );
-        printf ("Rendering %d to %s\n",mMapCounter,mBackbuffer[mFaceCounter]->getName().c_str());
+        viewport->setBackgroundColour( Ogre::ColourValue(0,0,0,0) );
     }
 
     BlendProgress progress=DOING_BLENDING;
@@ -285,7 +307,7 @@ bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
       ++mFaceCounter;
     }
 
-    if (mFaceCounter==9) {
+    if (mFaceCounter>=9) {
         for (int i=0;i<6;++i) {
             mState[mMapCounter].mCubeMapTexture->getBuffer(i)->getRenderTarget()->removeAllViewports();
         }
