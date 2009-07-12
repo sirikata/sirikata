@@ -226,7 +226,8 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         }
         DEBUG_OUTPUT (cout << endl);
 
-        btTriangleIndexVertexArray* indexarray = new btTriangleIndexVertexArray(    /// memory leak
+        if (indexarray) delete indexarray;
+        indexarray = new btTriangleIndexVertexArray(    /// memory leak
             indices.size()/3,                      // # of triangles (int)
             &(indices[0]),               // ptr to list of indices (int)
             sizeof(int)*3,          // in bytes (typically 3X sizeof(int) = 12
@@ -241,6 +242,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         mass = 0.0;
 
         /// try to clean up memory usage
+        //vertices.clear();
     }
 }
 
