@@ -183,12 +183,12 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
     if (dynamic) {
         if (shape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
-            colShape = new btSphereShape(btScalar(sizeX));                      /// memory leak?
+            colShape = new btSphereShape(btScalar(sizeX));
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (shape == ShapeBox) {
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
-            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
+            colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5));
             mass = sizeX * sizeY * sizeZ * density;
         }
     }
@@ -196,10 +196,10 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        vector<btVector3>& btVertices = *(new vector<btVector3>());             /// more memory leak
         unsigned int i,j;
 
         if (meshbytes) {
+            btVertices.clear();
             vertices.clear();
             indices.clear();
             parseOgreMesh parser;
@@ -234,13 +234,14 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             (btScalar*) &btVertices[0].x(),              // (btScalar*) pointer to vertex list
             sizeof(btVector3));    // sizeof(btVector3)
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
-        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax); /// memory leak
+        colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
                      " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
 
         mass = 0.0;
 
         /// try to clean up memory usage
+        vertices.clear();
     }
 }
 
@@ -348,8 +349,7 @@ bool BulletSystem::tick() {
         delta = now-lasttime;
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
-        //if (((int)(now-starttime) % 15)<5) {
-        if ((now-starttime) > 15.0) {
+        if ((now-starttime) > 10.0) {
             for (unsigned int i=0; i<physicalObjects.size(); i++) {
                 if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletState().p) {
                     /// if object has been moved, reset bullet position accordingly

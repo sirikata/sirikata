@@ -289,6 +289,7 @@ class bulletObj : public MeshListener {
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
+    vector<btVector3>& btVertices;
     vector<double>& vertices;
     vector<int>& indices;
 public:
@@ -311,6 +312,7 @@ public:
 
     /// public methods
     bulletObj(BulletSystem* sys) :
+            btVertices(*(new vector<btVector3>())),
             vertices(*(new vector<double>())),
             indices (*(new vector<int>())),
             physical(false),
