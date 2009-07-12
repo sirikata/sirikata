@@ -158,8 +158,6 @@ bulletObj::bulletObj(BulletSystem* sys) {
 */
 
 void bulletObj::setScale (const Vector3f &newScale) {
-    /// memory leak -- what happens to the old btBoxShape?  We got no GC on this honey
-    /// also, this only work on boxen
     if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (sizeX==newScale.x && sizeY==newScale.y && sizeZ==newScale.z)
@@ -181,6 +179,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
 
 void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
+    if (colShape) delete colShape;
     if (dynamic) {
         if (shape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
@@ -188,7 +187,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             mass = sizeX*sizeX*sizeX * density * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (shape == ShapeBox) {
-                DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
+            DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
             colShape = new btBoxShape(btVector3(sizeX*.5, sizeY*.5, sizeZ*.5)); /// memory leak?
             mass = sizeX * sizeY * sizeZ * density;
         }

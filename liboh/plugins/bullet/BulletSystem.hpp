@@ -316,6 +316,7 @@ public:
             physical(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
+            colShape(NULL),
             sizeX(0),
             sizeY(0),
             sizeZ(0) {
