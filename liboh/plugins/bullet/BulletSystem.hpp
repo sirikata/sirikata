@@ -295,6 +295,7 @@ class bulletObj : public MeshListener {
     vector<double>& vertices;
     vector<int>& indices;
     btTriangleIndexVertexArray* indexarray;
+    btDefaultMotionState* myMotionState;
 public:
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
