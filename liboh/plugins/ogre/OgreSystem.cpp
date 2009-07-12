@@ -263,11 +263,15 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
         std::vector<String> cubeMapNames;
         
         std::vector<Vector3f> cubeMapOffsets;
+        std::vector<float> cubeMapNearPlanes;
         cubeMapNames.push_back("ExteriorCubeMap");
         cubeMapOffsets.push_back(Vector3f(0,0,0));
-        //cubeMapNames.push_back("InteriorCubeMap");
-        //cubeMapOffsets.push_back(Vector3f(0,0,0));
-        mExternalCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets);
+        cubeMapNearPlanes.push_back(10);
+        cubeMapNames.push_back("InteriorCubeMap");
+        cubeMapOffsets.push_back(Vector3f(0,0,0));
+        cubeMapNearPlanes.push_back(0.1);
+        mExternalCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets, cubeMapNearPlanes);
+        
     }
     return retval;
 }
