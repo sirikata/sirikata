@@ -147,16 +147,6 @@ void bulletObj::setBulletState(positionOrientation po) {
     bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
-/*
-bulletObj::bulletObj(BulletSystem* sys) {
-    DEBUG_OUTPUT(cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;)
-    system = sys;
-    physical=false;
-    velocity = Vector3d(0, 0, 0);
-    bulletBodyPtr=NULL;
-}
-*/
-
 void bulletObj::setScale (const Vector3f &newScale) {
     if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
@@ -255,6 +245,10 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
 bulletObj::~bulletObj() {
     if (btVertices!=NULL)
         btAlignedFree(btVertices);
+    if (myMotionState!=NULL) delete myMotionState;
+    if (indexarray!=NULL) delete indexarray;
+    if (colShape!=NULL) delete colShape;
+
 }
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;

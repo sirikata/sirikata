@@ -289,7 +289,7 @@ class bulletObj : public MeshListener,Noncopyable {
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
-    
+
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
     btScalar* btVertices;//<-- this dude must be aligned on 16 byte boundaries
     vector<double> vertices;
@@ -317,7 +317,9 @@ public:
     /// public methods
     bulletObj(BulletSystem* sys) :
             btVertices(NULL),
+            indexarray(NULL),
             physical(false),
+            myMotionState(NULL),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
             colShape(NULL),
