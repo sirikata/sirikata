@@ -273,7 +273,7 @@ struct positionOrientation {
 
 class BulletSystem;
 
-class bulletObj : public MeshListener {
+class bulletObj : public MeshListener,Noncopyable {
     enum mode {
         Disabled,               /// non-physical, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
@@ -291,7 +291,7 @@ class bulletObj : public MeshListener {
     void setScale (const Vector3f &newScale);
     
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
-    vector<btScalar > btVertices;
+    btScalar* btVertices;//<-- this dude must be aligned on 16 byte boundaries
     vector<double> vertices;
     vector<int> indices;
     btTriangleIndexVertexArray* indexarray;
@@ -316,6 +316,7 @@ public:
 
     /// public methods
     bulletObj(BulletSystem* sys) :
+            btVertices(NULL),
             physical(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
@@ -326,6 +327,7 @@ public:
         system = sys;
         indexarray=0;
     }
+    ~bulletObj();
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);

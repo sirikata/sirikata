@@ -196,7 +196,9 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        btVertices.clear();
+        if (btVertices)
+            btAlignedFree(btVertices);
+        btVertices=NULL;
         unsigned int i,j;
 
         if (meshbytes) {
@@ -206,15 +208,16 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             parser.parseData(meshdata, meshbytes, vertices, indices, bounds);
         }
         DEBUG_OUTPUT (cout << "dbm:mesh " << vertices.size() << " vertices:" << endl);
+        btVertices=(btScalar*)btAlignedAlloc(vertices.size()/3*sizeof(btScalar)*4,16);
         for (i=0; i<vertices.size()/3; i+=1) {
             DEBUG_OUTPUT ( cout << "dbm:mesh");
             for (j=0; j<3; j+=1) {
                 DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
-            btVertices.push_back(vertices[i*3]*sizeX);
-            btVertices.push_back(vertices[i*3+1]*sizeY);
-            btVertices.push_back(vertices[i*3+2]*sizeZ);
-            btVertices.push_back(1);
+            btVertices[i*4]=vertices[i*3]*sizeX;
+            btVertices[i*4+1]=vertices[i*3+1]*sizeY;
+            btVertices[i*4+2]=vertices[i*3+2]*sizeZ;
+            btVertices[i*4+3]=1;
             DEBUG_OUTPUT (cout << endl);
         }
         DEBUG_OUTPUT (cout << endl);
@@ -234,13 +237,13 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             indices.size()/3,                       // # of triangles (int)
             &(indices[0]),                          // ptr to list of indices (int)
             sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
-            btVertices.size()/4,                      // # of vertices (int)
-            &btVertices[0],         // (btScalar*) pointer to vertex list
+            vertices.size()/3,                      // # of vertices (int)
+            btVertices,         // (btScalar*) pointer to vertex list
             sizeof(btVector3));                     // vertex stride, in bytes
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size()/4 << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << vertices.size()/3 << endl);
 
         mass = 0.0;
 
@@ -248,7 +251,10 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         //vertices.clear();						/// inexplicably, I can't do this
     }
 }
-
+bulletObj::~bulletObj() {
+    if (btVertices!=NULL)
+        btAlignedFree(btVertices);
+}
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
