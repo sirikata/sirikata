@@ -291,9 +291,9 @@ class bulletObj : public MeshListener {
     void setScale (const Vector3f &newScale);
     
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
-    vector<btVector3>& btVertices;
-    vector<double>& vertices;
-    vector<int>& indices;
+    vector<btScalar > btVertices;
+    vector<double> vertices;
+    vector<int> indices;
     btTriangleIndexVertexArray* indexarray;
     btDefaultMotionState* myMotionState;
 public:
@@ -316,9 +316,6 @@ public:
 
     /// public methods
     bulletObj(BulletSystem* sys) :
-            btVertices(*(new vector<btVector3>())),
-            vertices(*(new vector<double>())),
-            indices (*(new vector<int>())),
             physical(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),

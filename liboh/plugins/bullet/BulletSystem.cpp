@@ -211,7 +211,10 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             for (j=0; j<3; j+=1) {
                 DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
-            btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
+            btVertices.push_back(vertices[i*3]*sizeX);
+            btVertices.push_back(vertices[i*3+1]*sizeY);
+            btVertices.push_back(vertices[i*3+2]*sizeZ);
+            btVertices.push_back(1);
             DEBUG_OUTPUT (cout << endl);
         }
         DEBUG_OUTPUT (cout << endl);
@@ -231,13 +234,13 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             indices.size()/3,                       // # of triangles (int)
             &(indices[0]),                          // ptr to list of indices (int)
             sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
-            btVertices.size(),                      // # of vertices (int)
-            (btScalar*) &btVertices[0].x(),         // (btScalar*) pointer to vertex list
+            btVertices.size()/4,                      // # of vertices (int)
+            &btVertices[0],         // (btScalar*) pointer to vertex list
             sizeof(btVector3));                     // vertex stride, in bytes
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size()/4 << endl);
 
         mass = 0.0;
 
