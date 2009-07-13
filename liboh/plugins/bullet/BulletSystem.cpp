@@ -265,7 +265,9 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
     system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
-    colShape->calculateLocalInertia(mass,localInertia);
+    if (shape != ShapeMesh) {
+        colShape->calculateLocalInertia(mass,localInertia);
+    }
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(initialPo.p.x, initialPo.p.y, initialPo.p.z));
     startTransform.setRotation(btQuaternion(initialPo.o.x, initialPo.o.y, initialPo.o.z, initialPo.o.w));
