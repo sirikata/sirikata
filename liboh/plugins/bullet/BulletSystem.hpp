@@ -275,7 +275,7 @@ class BulletSystem;
 
 class bulletObj : public MeshListener,Noncopyable {
     enum mode {
-        Disabled,               /// non-physical, remove from physics
+        Disabled,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
         DynamicBox,                 /// fully physical -- collision & dynamics
         DynamicSphere                 /// fully physical -- collision & dynamics
@@ -301,7 +301,7 @@ public:
     float density;
     float friction;
     float bounce;
-    bool physical;            /// anything that bullet sees is physical
+    bool active;              /// anything that bullet sees is active
     bool dynamic;             /// but only some are dynamic (affected by forces)
     shapeID shape;
     positionOrientation initialPo;
@@ -318,9 +318,9 @@ public:
     bulletObj(BulletSystem* sys) :
             btVertices(NULL),
             indexarray(NULL),
-            physical(false),
-            dynamic(false),
             myMotionState(NULL),
+            active(false),
+            dynamic(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
             colShape(NULL),

@@ -94,26 +94,23 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: setPhysical: " << (long)this << " mode=" << pp.mode << " mesh: " << meshname << endl;)
     switch (pp.mode) {
     case Disabled:
-        physical = false;
+        active = false;
         dynamic = false;
         break;
     case Static:
-        physical = true;
         dynamic = false;
         shape = ShapeMesh;
         break;
     case DynamicBox:
-        physical = true;
         dynamic = true;
         shape = ShapeBox;
         break;
     case DynamicSphere:
-        physical = true;
         dynamic = true;
         shape = ShapeSphere;
         break;
     }
-    if (physical) {
+    if (!Disabled) {
         positionOrientation po;
         po.p = meshptr->getPosition();
         po.o = meshptr->getOrientation();
@@ -274,6 +271,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     }
     system->dynamicsWorld->addRigidBody(body);
     bulletBodyPtr=body;
+    active=true;
 }
 
 Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bulletObj* bullobj) {
@@ -290,7 +288,6 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
         const unsigned char* realData = flatData->data();
         DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
         bullobj->buildBulletBody(realData, ev->data().length());
-        objects.push_back(bullobj);
     }
     return Task::EventResponse::del();
 }
@@ -308,7 +305,7 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     obj->sizeY = sizeY;
     obj->sizeZ = sizeZ;
     obj->initialPo = po;
-    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << " shape: " << (int)obj->shape << endl);
+    DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->shape << endl);
     if (obj->dynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0);                /// no mesh data
@@ -325,9 +322,10 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     /// memory issues:
     /// there are a number of objects created during the instantiation of a bulletObj
     /// if they really need to be kept around, we should keep track of them & delete them
-    DEBUG_OUTPUT(cout << "dbm: removing physical object: " << obj << endl;)
+    DEBUG_OUTPUT(cout << "dbm: removing active object: " << obj << endl;)
     for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i] == obj) {
+            DEBUG_OUTPUT(cout << "dbm: erasing this active object at " << i << endl);
             objects.erase(objects.begin()+i);
             dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
 //            delete obj->bulletBodyPtr;
@@ -353,7 +351,7 @@ bool BulletSystem::tick() {
         lasttime = now;
         if ((now-starttime) > 10.0) {
             for (unsigned int i=0; i<objects.size(); i++) {
-                if (objects[i]->physical) {
+                if (objects[i]->active) {
                     if (objects[i]->meshptr->getPosition() != objects[i]->getBulletState().p) {
                         /// if object has been moved, reset bullet position accordingly
                         DEBUG_OUTPUT(cout << "    dbm: item, " << i << " moved by user!"
@@ -371,9 +369,10 @@ bool BulletSystem::tick() {
             //dynamicsWorld->stepSimulation(delta,0);
             dynamicsWorld->stepSimulation(delta,10);
             for (unsigned int i=0; i<objects.size(); i++) {
-                if (objects[i]->physical) {
+                if (objects[i]->active) {
                     po = objects[i]->getBulletState();
-                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p << endl;)
+                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p 
+                            << "obj: " << objects[i] << endl;)
                     objects[i]->meshptr->setPosition(now, po.p, po.o);
                 }
             }
@@ -472,10 +471,10 @@ void BulletSystem::createProxy(ProxyObjectPtr p) {
 
 void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    for (int i=0; i<objects.size(); i++) {
+    for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i]->meshptr==meshptr) {
             DEBUG_OUTPUT(cout << "dbm: destroyProxy, object=" << objects[i] << endl);
-            objects[i]->physical=false;
+            objects[i]->active=false;             /// never too careful
             removePhysicalObject(objects[i]);
             break;
         }
