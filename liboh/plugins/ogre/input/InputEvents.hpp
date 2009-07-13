@@ -48,7 +48,7 @@ class InputEvent : public Task::Event {
     InputDeviceWPtr mDevice;
 
 public:
-    InputEvent(const InputDeviceWPtr &dev, const IdPair &id) 
+    InputEvent(const InputDeviceWPtr &dev, const IdPair &id)
         : Task::Event(id), mDevice(dev) {
     }
 
@@ -57,13 +57,14 @@ public:
         os << &(*dev);
         return IdPair::Secondary(os.str());
     }
-    
+
     virtual ~InputEvent() {}
 
     InputDevicePtr getDevice() const {
         return mDevice.lock();
     }
 };
+typedef std::tr1::shared_ptr<InputEvent> InputEventPtr;
 
 /** Base class for keyboard/mouse/joystick button events. */
 class ButtonEvent : public InputEvent {
@@ -82,7 +83,7 @@ public:
         return IdPair::Secondary(os.str());
     }
     virtual ~ButtonEvent(){}
-    ButtonEvent(const Task::IdPair::Primary&primary, 
+    ButtonEvent(const Task::IdPair::Primary&primary,
                 const InputDevicePtr &dev,
                 bool pressed, unsigned int key, Modifier mod)
         : InputEvent(dev, IdPair(primary,
@@ -92,6 +93,8 @@ public:
          mModifier(mod) {
     }
 };
+typedef std::tr1::shared_ptr<ButtonEvent> ButtonEventPtr;
+
 /** Fired whenever a button has been pushed down. This event is only
     fired when the button is pressed.  Note that both a ButtonReleased
     and a ButtonPressed event will be fired if modifiers change. */
@@ -106,6 +109,7 @@ public:
     }
     virtual ~ButtonPressed(){}
 };
+typedef std::tr1::shared_ptr<ButtonPressed> ButtonPressedEventPtr;
 
 /** Fired whenever a button is no longer held down. */
 class ButtonReleased :public ButtonEvent {
@@ -119,6 +123,7 @@ public:
     }
     virtual ~ButtonReleased(){}
 };
+typedef std::tr1::shared_ptr<ButtonReleased> ButtonReleasedEventPtr;
 
 /** In theory, this might be fired as long as a button is held down.
     In reality, you should be using TextInputEvent for repeated characters,
@@ -136,6 +141,7 @@ public:
     }
     virtual ~ButtonDown(){}
 };
+typedef std::tr1::shared_ptr<ButtonDown> ButtonDownEventPtr;
 
 /** Upon changing the value of a mouse/joystick axis.  NOTE: This does
     not take into account relative (per-frame) versus absolute axes.
@@ -164,6 +170,7 @@ public:
         mValue = value;
     }
 };
+typedef std::tr1::shared_ptr<AxisEvent> AxisEventPtr;
 
 /** SDL event fired as soon as textual input has been entered.
     Usually this corresponds to one ButtonPress/ButtonRelease event.
@@ -186,11 +193,12 @@ public:
         return retval;
     }
 
-    TextInputEvent(const InputDevicePtr &dev, char *text) 
+    TextInputEvent(const InputDevicePtr &dev, char *text)
         : InputEvent(dev, IdPair(getEventId(), getSecondaryId(dev))),
                                  mText(text) {
     }
 };
+typedef std::tr1::shared_ptr<TextInputEvent> TextInputEventPtr;
 
 /** Base class for all pointer motion events. */
 class MouseEvent: public InputEvent {
@@ -200,7 +208,7 @@ public:
     int mCursorType; ///< Platform-dependent value as defined by SDL.
 
     MouseEvent(const IdPair &id,
-               const PointerDevicePtr &dev, 
+               const PointerDevicePtr &dev,
                float x, float y, int cursorType)
         : InputEvent(dev, id) {
         mX = x;
@@ -213,6 +221,7 @@ public:
             InputEvent::getDevice());
     }
 };
+typedef std::tr1::shared_ptr<MouseEvent> MouseEventPtr;
 
 /** Event called when the cursor moves, and no buttons are down. */
 class MouseHoverEvent: public MouseEvent {
@@ -222,11 +231,12 @@ public:
         return retval;
     }
 
-    MouseHoverEvent(const PointerDevicePtr &dev, 
+    MouseHoverEvent(const PointerDevicePtr &dev,
                float x, float y, int cursorType)
         : MouseEvent(IdPair(getEventId(), getSecondaryId(dev)), dev, x, y, cursorType) {
     }
 };
+typedef std::tr1::shared_ptr<MouseHoverEvent> MouseHoverEventPtr;
 
 /** Base class for events involving a mouse click. */
 class MouseDownEvent: public MouseEvent {
@@ -265,7 +275,7 @@ public:
     }
 
     MouseDownEvent(const IdPair::Primary &priId,
-                    const PointerDevicePtr &dev, 
+                    const PointerDevicePtr &dev,
                     float xstart, float ystart, float xend, float yend,
                     float lastx, float lasty,
                     int cursorType, int button,
@@ -282,6 +292,7 @@ public:
         mPressureMax = pressureMax;
     }
 };
+typedef std::tr1::shared_ptr<MouseDownEvent> MouseDownEventPtr;
 
 /** Event when the mouse was clicked (pressed and released
     without moving) */
@@ -293,13 +304,14 @@ public:
         return retval;
     }
 
-    MouseClickEvent(const PointerDevicePtr &dev, 
+    MouseClickEvent(const PointerDevicePtr &dev,
                     float x, float y,
                     int cursorType, int button)
         : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
     }
 };
+typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
 /** Event when the mouse was dragged. If this event fires, then
     you will not get a MouseClickEvent. */
@@ -316,18 +328,19 @@ public:
         return retval;
     }
 
-    MouseDragEvent(const PointerDevicePtr &dev, 
+    MouseDragEvent(const PointerDevicePtr &dev,
                    DragType type,
                    float xstart, float ystart, float xend, float yend,
                    float lastx, float lasty,
                    int cursorType, int button,
                    int pressure, int pressureMin, int pressureMax)
-        : MouseDownEvent(getEventId(), dev, xstart, ystart, 
+        : MouseDownEvent(getEventId(), dev, xstart, ystart,
                          xend, yend, lastx, lasty, cursorType, button,
                          pressure, pressureMin, pressureMax) {
         mType = type;
     }
 };
+typedef std::tr1::shared_ptr<MouseDragEvent> MouseDragEventPtr;
 
 /** Various SDL-specific events relating to the status of the
     top-level window. */
@@ -363,6 +376,7 @@ public:
         return mData2;
     }
 };
+typedef std::tr1::shared_ptr<WindowEvent> WindowEventPtr;
 
 class DragAndDropEvent : public Task::Event {
 public:
@@ -377,6 +391,7 @@ public:
         : Task::Event(getId()), mXCoord(x), mYCoord(y), mFilenames(files) {
     }
 };
+typedef std::tr1::shared_ptr<DragAndDropEvent> DragAndDropEventPtr;
 
 }
 }

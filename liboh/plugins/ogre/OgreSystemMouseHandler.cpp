@@ -44,6 +44,7 @@
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
+#include "InputResponse.hpp"
 #include <task/Event.hpp>
 #include <task/Time.hpp>
 #include <task/EventManager.hpp>
@@ -93,6 +94,9 @@ class OgreSystem::MouseHandler {
         typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
         std::map<int, ClickAction> mClickAction;
     */
+
+    typedef std::map<String, InputResponse*> InputResponseMap;
+    InputResponseMap mInputResponses;
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -733,59 +737,35 @@ private:
         switch (buttonev->mButton) {
           case SDL_SCANCODE_S:
             if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-            {
-                float amount = buttonev->mPressed?1:0;
-                moveAction(Vector3f(0, 0, 1), amount);
-            }
+                mInputResponses["moveBackward"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_W:
             if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-            {
-                float amount = buttonev->mPressed?1:0;
-                moveAction(Vector3f(0, 0, -1), amount);
-            }
+                mInputResponses["moveForward"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_A:
             if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-            {
-                float amount = buttonev->mPressed?1:0;
-                moveAction(Vector3f(-1, 0, 0), amount);
-            }
+                mInputResponses["moveLeft"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_D:
             if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-            {
-                float amount = buttonev->mPressed?1:0;
-                moveAction(Vector3f(1, 0, 0), amount);
-            }
+                mInputResponses["moveRight"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_DOWN:
             if (buttonev->mModifier == 0)
-            {
-                float amount = buttonev->mPressed?1:0;
-                rotateAction(Vector3f(-1, 0, 0), amount);
-            }
+                mInputResponses["rotateXNeg"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_UP:
             if (buttonev->mModifier == 0)
-            {
-                float amount = buttonev->mPressed?1:0;
-                rotateAction(Vector3f(1, 0, 0), amount);
-            }
+                mInputResponses["rotateXPos"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_RIGHT:
             if (buttonev->mModifier == 0)
-            {
-                float amount = buttonev->mPressed?1:0;
-                stableRotateAction(-1.f, amount);
-            }
+                mInputResponses["stableRotateNeg"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_LEFT:
             if (buttonev->mModifier == 0)
-            {
-                float amount = buttonev->mPressed?1:0;
-                stableRotateAction(1, amount);
-            }
+                mInputResponses["stableRotatePos"]->invoke(buttonev);
             break;
         default:
             break;
@@ -795,46 +775,46 @@ private:
         switch (buttonev->mButton) {
           case SDL_SCANCODE_B:
             if (buttonev->mModifier == 0 && buttonev->mPressed)
-                createLightAction();
+                mInputResponses["createLight"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_KP_ENTER:
           case SDL_SCANCODE_RETURN:
             if (buttonev->mModifier == 0 && buttonev->mPressed)
-                enterObjectAction();
+                mInputResponses["enterObject"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_KP_0:
           case SDL_SCANCODE_ESCAPE:
             if (buttonev->mModifier == 0 && buttonev->mPressed)
-                leaveObjectAction();
+                mInputResponses["leaveObject"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_G:
             if (buttonev->mPressed) {
                 if (buttonev->mModifier == 0)
-                    groupObjectsAction();
+                    mInputResponses["groupObjects"]->invoke(buttonev);
                 else if (buttonev->mModifier == InputDevice::MOD_ALT)
-                    ungroupObjectsAction();
+                    mInputResponses["ungroupObjects"]->invoke(buttonev);
             }
             break;
           case SDL_SCANCODE_DELETE:
           case SDL_SCANCODE_KP_PERIOD:
             if (buttonev->mModifier == 0 && buttonev->mPressed)
-                deleteObjectsAction();
+                mInputResponses["deleteObjects"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_V:
             if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                cloneObjectsAction();
+                mInputResponses["cloneObjects"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_D:
             if (buttonev->mModifier == 0 && buttonev->mPressed)
-                cloneObjectsAction();
+                mInputResponses["cloneObjects"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_O:
             if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                importAction();
+                mInputResponses["import"]->invoke(buttonev);
             break;
           case SDL_SCANCODE_S:
             if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                saveSceneAction();
+                mInputResponses["saveScene"]->invoke(buttonev);
             break;
           default:
             break;
@@ -873,6 +853,10 @@ private:
         return EventResponse::nop();
     }
 
+    void zoomAction(float value, Vector2f axes) {
+        zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
+    }
+
     EventResponse axisHandler(EventPtr ev) {
         std::tr1::shared_ptr<AxisEvent> axisev (
             std::tr1::dynamic_pointer_cast<AxisEvent>(ev));
@@ -884,8 +868,7 @@ private:
             //orbitObject(Vector3d(axisev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), axisev->getDevice());
             break;
           case SDLMouse::WHEELY:
-            printf("axisHandler zoomInOut\n");
-            zoomInOut(axisev->mValue, axisev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
+            mInputResponses["zoom"]->invoke(axisev);
             break;
         }
 
@@ -900,10 +883,10 @@ private:
 
         switch(mouseev->mButton) {
           case 1:
-            selectObjectAction(Vector2f(mouseev->mX, mouseev->mY), 1);
+            mInputResponses["selectObject"]->invoke(mouseev);
             break;
           case 3:
-            selectObjectAction(Vector2f(mouseev->mX, mouseev->mY), -1);
+            mInputResponses["selectObjectReverse"]->invoke(mouseev);
             break;
           default:
             break;
@@ -918,7 +901,6 @@ private:
             return EventResponse::nop();
         }
         ActiveDrag * &drag = mActiveDrag[ev->mButton];
-        printf("mouseDragHandler handled\n");
         if (ev->mType == MouseDragEvent::START) {
             if (drag) {
                 delete drag;
@@ -1010,6 +992,38 @@ public:
         mEvents.push_back(mParent->mInputManager->subscribeId(
                 MouseClickEvent::getEventId(),
                 std::tr1::bind(&MouseHandler::mouseClickHandler, this, _1)));
+
+        mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
+        mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
+        mInputResponses["moveLeft"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
+        mInputResponses["moveRight"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(1, 0, 0), _1), 1, 0);
+        mInputResponses["moveDown"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, -1, 0), _1), 1, 0);
+        mInputResponses["moveUp"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 1, 0), _1), 1, 0);
+
+        mInputResponses["rotateXPos"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(1, 0, 0), _1), 1, 0);
+        mInputResponses["rotateXNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
+        mInputResponses["rotateYPos"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(0, 1, 0), _1), 1, 0);
+        mInputResponses["rotateYNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(0, -1, 0), _1), 1, 0);
+        mInputResponses["rotateZPos"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(0, 0, 1), _1), 1, 0);
+        mInputResponses["rotateZNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::rotateAction, this, Vector3f(0, 0, -1), _1), 1, 0);
+
+        mInputResponses["stableRotatePos"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, 1.f, _1), 1, 0);
+        mInputResponses["stableRotateNeg"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::stableRotateAction, this, -1.f, _1), 1, 0);
+
+        mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
+        mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
+        mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
+        mInputResponses["groupObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::groupObjectsAction, this));
+        mInputResponses["ungroupObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::ungroupObjectsAction, this));
+        mInputResponses["deleteObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::deleteObjectsAction, this));
+        mInputResponses["cloneObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cloneObjectsAction, this));
+        mInputResponses["import"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::importAction, this));
+        mInputResponses["saveScene"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::saveSceneAction, this));
+
+        mInputResponses["selectObject"] = new Vector2fInputResponse(std::tr1::bind(&MouseHandler::selectObjectAction, this, _1, 1));
+        mInputResponses["selectObjectReverse"] = new Vector2fInputResponse(std::tr1::bind(&MouseHandler::selectObjectAction, this, _1, -1));
+
+        mInputResponses["zoom"] = new AxisInputResponse(std::tr1::bind(&MouseHandler::zoomAction, this, _1, _2));
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();

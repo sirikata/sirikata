@@ -102,7 +102,8 @@ class CameraEntity;
 class Entity;
 class OgreSystem;
 Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel);
-void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyObjectWPtr> objects, OgreSystem *parent);
+void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
+void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
 void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians);
 
 template <class Iterator>

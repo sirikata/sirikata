@@ -447,20 +447,25 @@ public:
 };
 DragActionRegistry::RegisterClass<PanCameraDrag> pancamera("panCamera");
 
-void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyObjectWPtr> objects, OgreSystem *parent) {
-    if (!dev) {
-        return;
-    }
+void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent) {
+    if (!dev) return;
+    float floatval = value.getCentered();
+    Vector2f axes(
+        dev->getAxis(PointerDevice::CURSORX).getCentered(),
+        dev->getAxis(PointerDevice::CURSORY).getCentered()
+    );
+    zoomInOut(floatval, axes, camera, objects, parent);
+}
+
+void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent) {
     SILOG(input,debug,"zoom "<<value);
 
     Task::AbsTime now = Task::AbsTime::now();
     Location cameraLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
 
-    toMove = Vector3d(
-        pixelToDirection(camera, cameraLoc.getOrientation(),
-                         dev->getAxis(PointerDevice::CURSORX).getCentered(),
-                         dev->getAxis(PointerDevice::CURSORY).getCentered()));
+    toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
+
     double distance;
     float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
     if (!parent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL) &&
@@ -475,7 +480,7 @@ void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera,
     } else {
         toMove *= WORLD_SCALE;
     }
-    toMove *= value.getCentered(); // up == zoom in
+    toMove *= value; // up == zoom in
     cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
     camera->getProxy().resetLocation(now, cameraLoc);
 }
