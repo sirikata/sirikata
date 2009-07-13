@@ -147,16 +147,6 @@ void bulletObj::setBulletState(positionOrientation po) {
     bulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
-/*
-bulletObj::bulletObj(BulletSystem* sys) {
-    DEBUG_OUTPUT(cout << "dbm: I am bulletObj constructor! sys: " << sys << endl;)
-    system = sys;
-    physical=false;
-    velocity = Vector3d(0, 0, 0);
-    bulletBodyPtr=NULL;
-}
-*/
-
 void bulletObj::setScale (const Vector3f &newScale) {
     if (sizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
@@ -168,7 +158,8 @@ void bulletObj::setScale (const Vector3f &newScale) {
     float mass;
     btVector3 localInertia(0,0,0);
     buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
-    colShape->calculateLocalInertia(mass,localInertia);
+    if(dynamic)
+        colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
     bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
@@ -196,7 +187,9 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         /// create a mesh-based static (not dynamic ie forces, though kinematic, ie movable) object
         /// assuming !dynamic; in future, may support dynamic mesh through gimpact collision
         vector<double> bounds;
-        btVertices.clear();
+        if (btVertices)
+            btAlignedFree(btVertices);
+        btVertices=NULL;
         unsigned int i,j;
 
         if (meshbytes) {
@@ -206,12 +199,16 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             parser.parseData(meshdata, meshbytes, vertices, indices, bounds);
         }
         DEBUG_OUTPUT (cout << "dbm:mesh " << vertices.size() << " vertices:" << endl);
+        btVertices=(btScalar*)btAlignedAlloc(vertices.size()/3*sizeof(btScalar)*4,16);
         for (i=0; i<vertices.size()/3; i+=1) {
             DEBUG_OUTPUT ( cout << "dbm:mesh");
             for (j=0; j<3; j+=1) {
                 DEBUG_OUTPUT (cout <<" " << vertices[i*3+j]);
             }
-            btVertices.push_back(btVector3(vertices[i*3]*sizeX, vertices[i*3+1]*sizeY, vertices[i*3+2]*sizeZ));
+            btVertices[i*4]=vertices[i*3]*sizeX;
+            btVertices[i*4+1]=vertices[i*3+1]*sizeY;
+            btVertices[i*4+2]=vertices[i*3+2]*sizeZ;
+            btVertices[i*4+3]=1;
             DEBUG_OUTPUT (cout << endl);
         }
         DEBUG_OUTPUT (cout << endl);
@@ -231,13 +228,13 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             indices.size()/3,                       // # of triangles (int)
             &(indices[0]),                          // ptr to list of indices (int)
             sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
-            btVertices.size(),                      // # of vertices (int)
-            (btScalar*) &btVertices[0].x(),         // (btScalar*) pointer to vertex list
-            sizeof(btVector3));                     // vertex stride, in bytes
+            vertices.size()/3,                      // # of vertices (int)
+            btVertices,         // (btScalar*) pointer to vertex list
+            sizeof(btScalar)*4);                     // vertex stride, in bytes
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
-                     " triangles: " << indices.size()/3 << " verts: " << btVertices.size() << endl);
+                     " triangles: " << indices.size()/3 << " verts: " << vertices.size()/3 << endl);
 
         mass = 0.0;
 
@@ -245,7 +242,14 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         //vertices.clear();						/// inexplicably, I can't do this
     }
 }
+bulletObj::~bulletObj() {
+    if (btVertices!=NULL)
+        btAlignedFree(btVertices);
+    if (myMotionState!=NULL) delete myMotionState;
+    if (indexarray!=NULL) delete indexarray;
+    if (colShape!=NULL) delete colShape;
 
+}
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
@@ -256,7 +260,9 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
     system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
-    colShape->calculateLocalInertia(mass,localInertia);
+    if (dynamic) {
+        colShape->calculateLocalInertia(mass,localInertia);
+    }
     startTransform.setIdentity();
     startTransform.setOrigin(btVector3(initialPo.p.x, initialPo.p.y, initialPo.p.z));
     startTransform.setRotation(btQuaternion(initialPo.o.x, initialPo.o.y, initialPo.o.z, initialPo.o.w));
