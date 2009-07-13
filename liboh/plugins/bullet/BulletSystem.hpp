@@ -319,6 +319,7 @@ public:
             btVertices(NULL),
             indexarray(NULL),
             physical(false),
+            dynamic(false),
             myMotionState(NULL),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
@@ -339,7 +340,6 @@ public:
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    vector<bulletObj*>objects;
     Vector3d gravity;
     double groundlevel;
 
@@ -352,7 +352,7 @@ class BulletSystem: public TimeSteppedSimulation {
 public:
     BulletSystem();
     btDiscreteDynamicsWorld* dynamicsWorld;
-    vector<bulletObj*>physicalObjects;
+    vector<bulletObj*>objects;
     btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(bulletObj* obj, positionOrientation po,
