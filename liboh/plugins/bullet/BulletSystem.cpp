@@ -168,7 +168,8 @@ void bulletObj::setScale (const Vector3f &newScale) {
     float mass;
     btVector3 localInertia(0,0,0);
     buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
-    colShape->calculateLocalInertia(mass,localInertia);
+    if(dynamic)
+        colShape->calculateLocalInertia(mass,localInertia);
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
     bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
@@ -239,7 +240,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             sizeof(int)*3,                          // index stride, in bytes (typically 3X sizeof(int) = 12
             vertices.size()/3,                      // # of vertices (int)
             btVertices,         // (btScalar*) pointer to vertex list
-            sizeof(btVector3));                     // vertex stride, in bytes
+            sizeof(btScalar)*4);                     // vertex stride, in bytes
         btVector3 aabbMin(-10000,-10000,-10000),aabbMax(10000,10000,10000);
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
@@ -265,7 +266,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
     system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
-    if (shape != ShapeMesh) {
+    if (dynamic) {
         colShape->calculateLocalInertia(mass,localInertia);
     }
     startTransform.setIdentity();
