@@ -285,7 +285,7 @@ int main ( int argc,const char**argv ) {
         std::cerr << "Press enter to continue" << std::endl;
         fgetc(stdin);
     }
-    cout << "dbm:debug main begin destruction" << endl;
+    std::cout << "dbm:debug main begin destruction" << std::endl;
     pm->destroy();
     delete graphicsSystem;
     delete physicsSystem;
@@ -294,6 +294,6 @@ int main ( int argc,const char**argv ) {
     delete workQueue;
     plugins.gc();
     SimulationFactory::destroy();
-    cout << "dbm:debug main end destruction" << endl;
+    std::cout << "dbm:debug main end destruction" << std::endl;
     return 0;
 }
