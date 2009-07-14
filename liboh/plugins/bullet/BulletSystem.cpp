@@ -43,8 +43,8 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
-#define DEBUG_OUTPUT(x) x
-//#define DEBUG_OUTPUT(x)
+//#define DEBUG_OUTPUT(x) x
+#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -236,11 +236,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
                      " triangles: " << indices.size()/3 << " verts: " << vertices.size()/3 << endl);
-
         mass = 0.0;
-
-        /// try to clean up memory usage
-        //vertices.clear();      /// inexplicably, I can't do this
     }
 }
 bulletObj::~bulletObj() {
@@ -250,8 +246,9 @@ bulletObj::~bulletObj() {
     if (myMotionState!=NULL) delete myMotionState;
     if (indexarray!=NULL) delete indexarray;
     if (colShape!=NULL) delete colShape;
-
+    if (bulletBodyPtr!=NULL) delete bulletBodyPtr;
 }
+
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
@@ -260,7 +257,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
     buildBulletShape(meshdata, meshbytes, mass);
 
-    system->collisionShapes.push_back(colShape);
+//    system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
     if (dynamic) {
         colShape->calculateLocalInertia(mass,localInertia);
@@ -423,7 +420,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     /// create ground
     groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
-    collisionShapes.push_back(groundShape);
+//    collisionShapes.push_back(groundShape);
     groundTransform.setIdentity();
     groundTransform.setOrigin(btVector3(0,groundlevel-1,0));
     groundShape->calculateLocalInertia(0.0f,localInertia);
@@ -435,6 +432,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     proxyManager->addListener(this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
+    /// we don't delete these, the ProxyManager does (I think -- someone does anyway)
 //    delete tempTferManager;
 //    delete workQueue;
 //    delete eventManager;

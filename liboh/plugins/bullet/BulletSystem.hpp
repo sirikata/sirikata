@@ -356,7 +356,7 @@ public:
     BulletSystem();
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<bulletObj*>objects;
-    btAlignedObjectArray<btCollisionShape*> collisionShapes;
+//    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(bulletObj* obj, positionOrientation po,
                            float density, float friction, float bounce,
