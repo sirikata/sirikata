@@ -485,6 +485,7 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i]->meshptr==meshptr) {
             DEBUG_OUTPUT(cout << "dbm: destroyProxy, object=" << objects[i] << endl);
+            meshptr->MeshProvider::removeListener(objects[i]);
             removePhysicalObject(objects[i]);
             objects.erase(objects.begin()+i);
             break;
