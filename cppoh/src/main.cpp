@@ -285,15 +285,12 @@ int main ( int argc,const char**argv ) {
         std::cerr << "Press enter to continue" << std::endl;
         fgetc(stdin);
     }
-    std::cout << "dbm:debug main begin destruction" << std::endl;
     pm->destroy();
     delete graphicsSystem;
-    delete physicsSystem;
     delete pm;
     delete eventManager;
     delete workQueue;
     plugins.gc();
     SimulationFactory::destroy();
-    std::cout << "dbm:debug main end destruction" << std::endl;
     return 0;
 }

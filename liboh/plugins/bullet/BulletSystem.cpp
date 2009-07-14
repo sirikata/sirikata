@@ -333,11 +333,10 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     DEBUG_OUTPUT(cout << "dbm: removing active object: " << obj << endl;)
     for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i] == obj) {
-            DEBUG_OUTPUT(cout << "dbm: erasing this active object at " << i << endl);
-            objects.erase(objects.begin()+i);
-            dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
-//            delete obj->bulletBodyPtr;
-            delete obj;
+            if (objects[i]->active) {
+                dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
+                delete obj;
+            }
             break;
         }
     }
@@ -435,9 +434,9 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     proxyManager->addListener(this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
-    delete tempTferManager;
-    delete workQueue;
-    delete eventManager;
+//    delete tempTferManager;
+//    delete workQueue;
+//    delete eventManager;
     return true;
 }
 
@@ -486,8 +485,8 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i]->meshptr==meshptr) {
             DEBUG_OUTPUT(cout << "dbm: destroyProxy, object=" << objects[i] << endl);
-            objects[i]->active=false;             /// never too careful
             removePhysicalObject(objects[i]);
+            objects.erase(objects.begin()+i);
             break;
         }
     }
