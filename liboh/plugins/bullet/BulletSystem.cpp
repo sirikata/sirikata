@@ -401,9 +401,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
     groundlevel = 4500.0;
-    btCollisionShape* groundShape;
     btTransform groundTransform;
-    btRigidBody* body;
     btDefaultMotionState* myMotionState;
     btVector3 worldAabbMin(-10000,-10000,-10000);
     btVector3 worldAabbMax(10000,10000,10000);
@@ -426,9 +424,9 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     groundShape->calculateLocalInertia(0.0f,localInertia);
     myMotionState = new btDefaultMotionState(groundTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
-    body = new btRigidBody(rbInfo);
-    body->setRestitution(0.5);                 /// bouncy for fun & profit
-    dynamicsWorld->addRigidBody(body);
+    groundBody = new btRigidBody(rbInfo);
+    groundBody->setRestitution(0.5);                 /// bouncy for fun & profit
+    dynamicsWorld->addRigidBody(groundBody);
 
     proxyManager->addListener(this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
@@ -467,6 +465,8 @@ BulletSystem::~BulletSystem() {
     delete overlappingPairCache;
     delete dispatcher;
     delete collisionConfiguration;
+    delete groundBody;
+    delete groundShape;
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 
