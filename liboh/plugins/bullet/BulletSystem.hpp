@@ -275,7 +275,7 @@ class BulletSystem;
 
 class bulletObj : public MeshListener,Noncopyable {
     enum mode {
-        Disabled,               /// non-physical, remove from physics
+        Disabled,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
         DynamicBox,                 /// fully physical -- collision & dynamics
         DynamicSphere                 /// fully physical -- collision & dynamics
@@ -301,7 +301,7 @@ public:
     float density;
     float friction;
     float bounce;
-    bool physical;            /// anything that bullet sees is physical
+    bool active;              /// anything that bullet sees is active
     bool dynamic;             /// but only some are dynamic (affected by forces)
     shapeID shape;
     positionOrientation initialPo;
@@ -318,8 +318,9 @@ public:
     bulletObj(BulletSystem* sys) :
             btVertices(NULL),
             indexarray(NULL),
-            physical(false),
             myMotionState(NULL),
+            active(false),
+            dynamic(false),
             velocity(Vector3d()),
             bulletBodyPtr(NULL),
             colShape(NULL),
@@ -339,21 +340,25 @@ public:
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    vector<bulletObj*>objects;
     Vector3d gravity;
     double groundlevel;
+    OptionValue* tempTferManager;
+    OptionValue* workQueue;
+    OptionValue* eventManager;
 
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
     btCollisionDispatcher* dispatcher;
     btAxisSweep3* overlappingPairCache;
     btSequentialImpulseConstraintSolver* solver;
+    btCollisionShape* groundShape;
+    btRigidBody* groundBody;
 
 public:
     BulletSystem();
     btDiscreteDynamicsWorld* dynamicsWorld;
-    vector<bulletObj*>physicalObjects;
-    btAlignedObjectArray<btCollisionShape*> collisionShapes;
+    vector<bulletObj*>objects;
+//    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(bulletObj* obj, positionOrientation po,
                            float density, float friction, float bounce,

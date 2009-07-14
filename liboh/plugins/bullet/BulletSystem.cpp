@@ -94,35 +94,28 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: setPhysical: " << (long)this << " mode=" << pp.mode << " mesh: " << meshname << endl;)
     switch (pp.mode) {
     case Disabled:
-        physical = false;
+        active = false;
         dynamic = false;
         break;
     case Static:
-        physical = true;
         dynamic = false;
         shape = ShapeMesh;
         break;
     case DynamicBox:
-        physical = true;
         dynamic = true;
         shape = ShapeBox;
         break;
     case DynamicSphere:
-        physical = true;
         dynamic = true;
         shape = ShapeSphere;
         break;
     }
-    if (physical) {
+    if (!Disabled) {
         positionOrientation po;
         po.p = meshptr->getPosition();
         po.o = meshptr->getOrientation();
         Vector3f size = meshptr->getScale();
         system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, size.x, size.y, size.z);
-    }
-    else {
-        system->removePhysicalObject(this);
-        bulletBodyPtr=NULL;
     }
 }
 
@@ -157,9 +150,17 @@ void bulletObj::setScale (const Vector3f &newScale) {
     sizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
-    if(dynamic)
-        colShape->calculateLocalInertia(mass,localInertia);
+    buildBulletShape(NULL, 0, mass);        /// null, 0 means re-use original vertices
+    if (dynamic) {                          /// inertia meaningless for static objects
+        if (!shape==ShapeMesh) {
+            colShape->calculateLocalInertia(mass,localInertia);
+        }
+        else {
+            /// note: this code path not tested, as we don't yet support dynamic mesh
+            cout << "using bounding box for inertia, Bullet does not calculate for mesh!" << endl;
+            localInertia = btVector3(sizeX, sizeY, sizeZ);      /// does this make sense?  it does to me
+        }
+    }
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
     bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
@@ -235,21 +236,19 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         colShape  = new btBvhTriangleMeshShape(indexarray,false, aabbMin, aabbMax);
         DEBUG_OUTPUT(cout << "dbm: shape=trimesh colShape: " << colShape <<
                      " triangles: " << indices.size()/3 << " verts: " << vertices.size()/3 << endl);
-
         mass = 0.0;
-
-        /// try to clean up memory usage
-        //vertices.clear();						/// inexplicably, I can't do this
     }
 }
 bulletObj::~bulletObj() {
+    DEBUG_OUTPUT(cout << "dbm: bulletObj destructor " << this << endl);
     if (btVertices!=NULL)
         btAlignedFree(btVertices);
     if (myMotionState!=NULL) delete myMotionState;
     if (indexarray!=NULL) delete indexarray;
     if (colShape!=NULL) delete colShape;
-
+    if (bulletBodyPtr!=NULL) delete bulletBodyPtr;
 }
+
 void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
@@ -258,7 +257,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
 
     buildBulletShape(meshdata, meshbytes, mass);
 
-    system->collisionShapes.push_back(colShape);
+//    system->collisionShapes.push_back(colShape);
     DEBUG_OUTPUT(cout << "dbm: mass = " << mass << endl;)
     if (dynamic) {
         colShape->calculateLocalInertia(mass,localInertia);
@@ -278,6 +277,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     }
     system->dynamicsWorld->addRigidBody(body);
     bulletBodyPtr=body;
+    active=true;
 }
 
 Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bulletObj* bullobj) {
@@ -294,7 +294,6 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
         const unsigned char* realData = flatData->data();
         DEBUG_OUTPUT (cout << "dbm downloadFinished: data: " << (char*)&realData[2] << endl);
         bullobj->buildBulletBody(realData, ev->data().length());
-        physicalObjects.push_back(bullobj);
     }
     return Task::EventResponse::del();
 }
@@ -312,11 +311,10 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     obj->sizeY = sizeY;
     obj->sizeZ = sizeZ;
     obj->initialPo = po;
-    DEBUG_OUTPUT(cout << "dbm: adding physical object: " << obj << " shape: " << (int)obj->shape << endl);
+    DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->shape << endl);
     if (obj->dynamic) {
         /// create the object now
         obj->buildBulletBody(NULL, 0);                /// no mesh data
-        physicalObjects.push_back(obj);
     }
     else {
         /// set up a mesh download; callback (downloadFinished) calls buildBulletBody and completes object
@@ -330,12 +328,12 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
     /// memory issues:
     /// there are a number of objects created during the instantiation of a bulletObj
     /// if they really need to be kept around, we should keep track of them & delete them
-    DEBUG_OUTPUT(cout << "dbm: removing physical object: " << obj << endl;)
-    for (unsigned int i=0; i<physicalObjects.size(); i++) {
-        if (physicalObjects[i] == obj) {
-            physicalObjects.erase(physicalObjects.begin()+i);
-            dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
-//            delete obj->bulletBodyPtr;
+    DEBUG_OUTPUT(cout << "dbm: removing active object: " << obj << endl;)
+    for (unsigned int i=0; i<objects.size(); i++) {
+        if (objects[i] == obj) {
+            if (objects[i]->active) {
+                dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
+            }
             delete obj;
             break;
         }
@@ -357,26 +355,31 @@ bool BulletSystem::tick() {
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
         if ((now-starttime) > 10.0) {
-            for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                if (physicalObjects[i]->meshptr->getPosition() != physicalObjects[i]->getBulletState().p) {
-                    /// if object has been moved, reset bullet position accordingly
-                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << " moved by user!"
-                                 << " meshpos: " << physicalObjects[i]->meshptr->getPosition()
-                                 << " bulletpos before reset: " << physicalObjects[i]->getBulletState().p;)
-                    physicalObjects[i]->setBulletState(
-                        positionOrientation (
-                            physicalObjects[i]->meshptr->getPosition(),
-                            physicalObjects[i]->meshptr->getOrientation()
-                        ));
-                    DEBUG_OUTPUT(cout << "bulletpos after reset: " << physicalObjects[i]->getBulletState().p << endl;)
+            for (unsigned int i=0; i<objects.size(); i++) {
+                if (objects[i]->active) {
+                    if (objects[i]->meshptr->getPosition() != objects[i]->getBulletState().p) {
+                        /// if object has been moved, reset bullet position accordingly
+                        DEBUG_OUTPUT(cout << "    dbm: item, " << i << " moved by user!"
+                                     << " meshpos: " << objects[i]->meshptr->getPosition()
+                                     << " bulletpos before reset: " << objects[i]->getBulletState().p;)
+                        objects[i]->setBulletState(
+                            positionOrientation (
+                                objects[i]->meshptr->getPosition(),
+                                objects[i]->meshptr->getOrientation()
+                            ));
+                        DEBUG_OUTPUT(cout << "bulletpos after reset: " << objects[i]->getBulletState().p << endl;)
+                    }
                 }
             }
             //dynamicsWorld->stepSimulation(delta,0);
             dynamicsWorld->stepSimulation(delta,10);
-            for (unsigned int i=0; i<physicalObjects.size(); i++) {
-                po = physicalObjects[i]->getBulletState();
-                DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p << endl;)
-                physicalObjects[i]->meshptr->setPosition(now, po.p, po.o);
+            for (unsigned int i=0; i<objects.size(); i++) {
+                if (objects[i]->active) {
+                    po = objects[i]->getBulletState();
+                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p
+                                 << "obj: " << objects[i] << endl;)
+                    objects[i]->meshptr->setPosition(now, po.p, po.o);
+                }
             }
         }
     }
@@ -387,20 +390,18 @@ bool BulletSystem::tick() {
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
-    OptionValue* transferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
-    OptionValue* workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
-    OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
-    InitializeClassOptions("bulletphysics",this,transferManager, workQueue, eventManager, NULL);
+    tempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
+    workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
+    eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
+    InitializeClassOptions("bulletphysics",this, tempTferManager, workQueue, eventManager, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(options);
-    Transfer::TransferManager* tm = (Transfer::TransferManager*)transferManager->as<void*>();
+    Transfer::TransferManager* tm = (Transfer::TransferManager*)tempTferManager->as<void*>();
     this->transferManager = tm;
 
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
     groundlevel = 4500.0;
-    btCollisionShape* groundShape;
     btTransform groundTransform;
-    btRigidBody* body;
     btDefaultMotionState* myMotionState;
     btVector3 worldAabbMin(-10000,-10000,-10000);
     btVector3 worldAabbMax(10000,10000,10000);
@@ -417,18 +418,22 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     /// create ground
     groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
-    collisionShapes.push_back(groundShape);
+//    collisionShapes.push_back(groundShape);
     groundTransform.setIdentity();
     groundTransform.setOrigin(btVector3(0,groundlevel-1,0));
     groundShape->calculateLocalInertia(0.0f,localInertia);
     myMotionState = new btDefaultMotionState(groundTransform);
     btRigidBody::btRigidBodyConstructionInfo rbInfo(0.0f,myMotionState,groundShape,localInertia);
-    body = new btRigidBody(rbInfo);
-    body->setRestitution(0.5);                 /// bouncy for fun & profit
-    dynamicsWorld->addRigidBody(body);
+    groundBody = new btRigidBody(rbInfo);
+    groundBody->setRestitution(0.5);                 /// bouncy for fun & profit
+    dynamicsWorld->addRigidBody(groundBody);
 
     proxyManager->addListener(this);
-    DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl;)
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
+    /// we don't delete these, the ProxyManager does (I think -- someone does anyway)
+//    delete tempTferManager;
+//    delete workQueue;
+//    delete eventManager;
     return true;
 }
 
@@ -437,8 +442,9 @@ BulletSystem::BulletSystem() {
 }
 
 BulletSystem::~BulletSystem() {
-/// this never gets called AFAICS
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor" << endl);
 
+    /* ///Bullet tutorial way -- but we keep track ourselves in bulletObj
     for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
         btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
         btRigidBody* body = btRigidBody::upcast(obj);
@@ -453,12 +459,15 @@ BulletSystem::~BulletSystem() {
         collisionShapes[j] = 0;
         delete shape;
     }
+    */
     delete dynamicsWorld;
     delete solver;
     delete overlappingPairCache;
     delete dispatcher;
     delete collisionConfiguration;
-    DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem destructor!" << endl;)
+    delete groundBody;
+    delete groundShape;
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 
 void BulletSystem::createProxy(ProxyObjectPtr p) {
@@ -472,6 +481,16 @@ void BulletSystem::createProxy(ProxyObjectPtr p) {
 }
 
 void BulletSystem::destroyProxy(ProxyObjectPtr p) {
+    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    for (unsigned int i=0; i<objects.size(); i++) {
+        if (objects[i]->meshptr==meshptr) {
+            DEBUG_OUTPUT(cout << "dbm: destroyProxy, object=" << objects[i] << endl);
+            meshptr->MeshProvider::removeListener(objects[i]);
+            removePhysicalObject(objects[i]);
+            objects.erase(objects.begin()+i);
+            break;
+        }
+    }
 }
 
 }//namespace sirikata

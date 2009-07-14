@@ -286,6 +286,7 @@ int main ( int argc,const char**argv ) {
         fgetc(stdin);
     }
     pm->destroy();
+    delete physicsSystem;
     delete graphicsSystem;
     delete pm;
     delete eventManager;
