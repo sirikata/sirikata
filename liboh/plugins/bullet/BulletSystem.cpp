@@ -447,6 +447,7 @@ BulletSystem::BulletSystem() {
 
 BulletSystem::~BulletSystem() {
 /// this never gets called AFAICS
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor" << endl);
 
     for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
         btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
