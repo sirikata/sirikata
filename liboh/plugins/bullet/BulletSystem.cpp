@@ -393,12 +393,12 @@ bool BulletSystem::tick() {
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
-    OptionValue* transferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
+    OptionValue* tempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
     OptionValue* workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
     OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
-    InitializeClassOptions("bulletphysics",this,transferManager, workQueue, eventManager, NULL);
+    InitializeClassOptions("bulletphysics",this, tempTferManager, workQueue, eventManager, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(options);
-    Transfer::TransferManager* tm = (Transfer::TransferManager*)transferManager->as<void*>();
+    Transfer::TransferManager* tm = (Transfer::TransferManager*)tempTferManager->as<void*>();
     this->transferManager = tm;
 
     gravity = Vector3d(0, -9.8, 0);
