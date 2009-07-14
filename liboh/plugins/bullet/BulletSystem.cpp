@@ -392,9 +392,9 @@ bool BulletSystem::tick() {
 bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
-    OptionValue* tempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
-    OptionValue* workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
-    OptionValue* eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
+    tempTferManager = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
+    workQueue = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
+    eventManager = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
     InitializeClassOptions("bulletphysics",this, tempTferManager, workQueue, eventManager, NULL);
     OptionSet::getOptions("bulletphysics",this)->parse(options);
     Transfer::TransferManager* tm = (Transfer::TransferManager*)tempTferManager->as<void*>();
@@ -445,8 +445,11 @@ BulletSystem::BulletSystem() {
 }
 
 BulletSystem::~BulletSystem() {
-/// this never gets called AFAICS
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor" << endl);
+//    delete tempTferManager;
+//    delete workQueue;
+//    delete eventManager;
+    return;
 
     for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
         btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];

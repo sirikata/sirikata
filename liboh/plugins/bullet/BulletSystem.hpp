@@ -342,6 +342,9 @@ class BulletSystem: public TimeSteppedSimulation {
                     const String&options);
     Vector3d gravity;
     double groundlevel;
+    OptionValue* tempTferManager;// = new OptionValue("transfermanager","0", OptionValueType<void*>(),"dummy");
+    OptionValue* workQueue;// = new OptionValue("workqueue","0",OptionValueType<void*>(),"Memory address of the WorkQueue");
+    OptionValue* eventManager;// = new OptionValue("eventmanager","0",OptionValueType<void*>(),"Memory address of the EventManager<Event>");
 
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
