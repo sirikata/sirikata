@@ -244,6 +244,7 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
     }
 }
 bulletObj::~bulletObj() {
+    DEBUG_OUTPUT(cout << "dbm: bulletObj destructor " << this << endl);
     if (btVertices!=NULL)
         btAlignedFree(btVertices);
     if (myMotionState!=NULL) delete myMotionState;
@@ -335,8 +336,8 @@ void BulletSystem::removePhysicalObject(bulletObj* obj) {
         if (objects[i] == obj) {
             if (objects[i]->active) {
                 dynamicsWorld->removeRigidBody(obj->bulletBodyPtr);
-                delete obj;
             }
+            delete obj;
             break;
         }
     }
@@ -446,11 +447,8 @@ BulletSystem::BulletSystem() {
 
 BulletSystem::~BulletSystem() {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor" << endl);
-//    delete tempTferManager;
-//    delete workQueue;
-//    delete eventManager;
-    return;
 
+    /* ///Bullet tutorial way -- but we keep track ourselves in bulletObj
     for (int i=dynamicsWorld->getNumCollisionObjects()-1; i>=0 ;i--) {
         btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
         btRigidBody* body = btRigidBody::upcast(obj);
@@ -465,12 +463,13 @@ BulletSystem::~BulletSystem() {
         collisionShapes[j] = 0;
         delete shape;
     }
+    */
     delete dynamicsWorld;
     delete solver;
     delete overlappingPairCache;
     delete dispatcher;
     delete collisionConfiguration;
-    DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem destructor!" << endl;)
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 
 void BulletSystem::createProxy(ProxyObjectPtr p) {
