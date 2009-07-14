@@ -434,7 +434,10 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     dynamicsWorld->addRigidBody(body);
 
     proxyManager->addListener(this);
-    DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl;)
+    DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
+    delete tempTferManager;
+    delete workQueue;
+    delete eventManager;
     return true;
 }
 
