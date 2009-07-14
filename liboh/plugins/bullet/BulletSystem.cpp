@@ -150,9 +150,17 @@ void bulletObj::setScale (const Vector3f &newScale) {
     sizeZ = newScale.z;
     float mass;
     btVector3 localInertia(0,0,0);
-    buildBulletShape(NULL, 0, mass);       /// null, 0 means re-use original vertices
-    if (dynamic)
-        colShape->calculateLocalInertia(mass,localInertia);
+    buildBulletShape(NULL, 0, mass);        /// null, 0 means re-use original vertices
+    if (dynamic) {                          /// inertia meaningless for static objects
+        if (!shape==ShapeMesh) {
+            colShape->calculateLocalInertia(mass,localInertia);
+        }
+        else {
+            /// note: this code path not tested, as we don't yet support dynamic mesh
+            cout << "using bounding box for inertia, Bullet does not calculate for mesh!" << endl;
+            localInertia = btVector3(sizeX, sizeY, sizeZ);      /// does this make sense?  it does to me
+        }
+    }
     bulletBodyPtr->setCollisionShape(colShape);
     bulletBodyPtr->setMassProps(mass, localInertia);
     bulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
@@ -371,8 +379,8 @@ bool BulletSystem::tick() {
             for (unsigned int i=0; i<objects.size(); i++) {
                 if (objects[i]->active) {
                     po = objects[i]->getBulletState();
-                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p 
-                            << "obj: " << objects[i] << endl;)
+                    DEBUG_OUTPUT(cout << "    dbm: item, " << i << ", delta, " << delta.toSeconds() << ", newpos, " << po.p
+                                 << "obj: " << objects[i] << endl;)
                     objects[i]->meshptr->setPosition(now, po.p, po.o);
                 }
             }
