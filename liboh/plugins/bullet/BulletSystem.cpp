@@ -400,7 +400,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
-    groundlevel = -100.0;
+    groundlevel = 0.0;
     btTransform groundTransform;
     btDefaultMotionState* myMotionState;
     btVector3 worldAabbMin(-10000,-10000,-10000);

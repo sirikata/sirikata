@@ -49,6 +49,8 @@ static const InitializeGlobalOptions globalst (
     new OptionValue("scenefile", "scene.csv", OptionValueType<std::string>(), "A text file with locations and filenames of all meshes in a scene.", &scenefile),
     NULL);
 
+#define DEG2RAD 0.0174532925
+
 class DemoProxyManager :public ProxyManager {
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
     typedef std::map<SpaceObjectReference, ProxyObjectPtr > ObjectMap;
@@ -187,10 +189,10 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
-        if (row.size() < 7) {
-            cout << "dbm: could not parse line in .csv, ignoring" << endl;
+        if (row["objtype"][0]=='#' or row["objtype"]==string("")) {
+            return;                                         /// comment or blank line
         }
-        else {
+            else {
             string objtype = row["objtype"];
             pos.x = str2dbl(row["pos_x"]);
             pos.y = str2dbl(row["pos_y"]);
@@ -198,7 +200,18 @@ class DemoProxyManager :public ProxyManager {
             orient.x = str2dbl(row["orient_x"]);
             orient.y = str2dbl(row["orient_y"]);
             orient.z = str2dbl(row["orient_z"]);
-            orient.w = str2dbl(row["orient_w"]);
+            if (row["orient_w"].size()) {
+                orient.w = str2dbl(row["orient_w"]);                /// if w is specified, assume quaternion
+            }
+            else {                                                  /// if no w, Euler angles
+                btQuaternion bq = btQuaternion(DEG2RAD*orient.x, DEG2RAD*orient.y, DEG2RAD*orient.z);
+                   /// we can replace this later if need be
+                orient.x = bq.getX();
+                orient.y = bq.getY();
+                orient.z = bq.getZ();
+                orient.w = bq.getW();
+            }
+            cout << "dbm: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
             Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
             scale.x = str2dbl(row["scale_x"]);
             scale.y = str2dbl(row["scale_y"]);
@@ -267,26 +280,22 @@ class DemoProxyManager :public ProxyManager {
             }
             else if (objtype=="mesh") {
                 int mode=0;
-                int shape=0;
                 double density=0.0;
                 double friction=0.0;
                 double bounce=0.0;
                 if (row["subtype"] == "staticmesh") {
                     mode=bulletObj::Static;
-                    shape=bulletObj::ShapeMesh;
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
                 }
                 else if (row["subtype"] == "dynamicbox") {
                     mode=bulletObj::DynamicBox;
-                    shape=bulletObj::ShapeBox;
                     density = str2dbl(row["density"]);
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
                 }
                 else if (row["subtype"] == "dynamicsphere") {
                     mode=bulletObj::DynamicSphere;
-                    shape=bulletObj::ShapeSphere;
                     density = str2dbl(row["density"]);
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
@@ -301,13 +310,13 @@ class DemoProxyManager :public ProxyManager {
                     assert(false);
                 }
                 addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
-                cout << "dbm: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " shape: " << shape << endl;
+                cout << "dbm: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
             }
             else {
                 cout << "dbm: parse csv error: illegal object type" << endl;
                 assert(false);
             }
-            
+
             /// old way:
 #if 0
             int ret = fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
