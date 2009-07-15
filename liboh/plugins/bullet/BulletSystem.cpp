@@ -37,7 +37,7 @@
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
-#include "BulletSystem.hpp"
+#include <oh/BulletSystem.hpp>
 
 using namespace std;
 using std::tr1::placeholders::_1;
