@@ -39,6 +39,8 @@
 
 namespace Sirikata {
 
+using namespace std;
+    
 static OptionValue *scenefile;
 
 static const InitializeGlobalOptions globalst (
@@ -99,6 +101,80 @@ class DemoProxyManager :public ProxyManager {
 		return mWebView;
     }
 
+    double str2dbl(string s) {
+        float f;
+        if (s=="") return -999.999;
+        sscanf(s.c_str(), "%f", &f);
+        return (double)f;
+    }
+
+    int str2int(string s) {
+        int d;
+        if (s=="") return -99999;
+        sscanf(s.c_str(), "%d", &d);
+        return d;
+    }
+
+    void parse_csv_values(string line, vector<string>& values) {
+        values.clear();
+        string temp("");
+
+        for (unsigned int i=0; i<line.size(); i++) {
+            char c = line[i];
+            if (c!=',') {
+                if ((c!=' ') && (c!='"')) {
+                    temp.push_back(c);
+                }
+            }
+            else {
+                values.push_back(temp);
+                temp.clear();
+            }
+        }
+        values.push_back(temp);
+    }
+
+    vector<string> headings;
+
+    void getline(FILE* f, string& s) {
+        s.clear();
+        while (true) {
+            char c = fgetc(f);
+            if (c<0) {
+                s.clear();
+                break;
+            }
+            if (c==0x0d && s.size()==0) continue;            /// should deal with windows \n
+            if (c==0x0a || c==0x0d) {
+                break;
+            }
+            s.push_back(c);
+        }
+    }
+
+    void parse_csv_headings(FILE* fil) {
+        string line;
+        getline(fil, line);
+        parse_csv_values(line, headings);
+    }
+
+    map<string, string>* parse_csv_line(FILE* fil) {
+        string line;
+        getline(fil, line);
+        vector<string> values;
+        map<string, string> *row;
+        row = (new map<string, string>());
+        if (line.size()>0) {
+            parse_csv_values(line, values);
+            if (values.size() == headings.size()) {
+                for (unsigned int i=0; i < values.size(); i++) {
+                    (*row)[headings[i]] = values[i];
+                }
+            }
+        }
+        return row;
+    }
+    
     void loadSceneObject(FILE *fp) {
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
@@ -108,8 +184,17 @@ class DemoProxyManager :public ProxyManager {
         float friction=3;
         float bounce=4;
 
+        /// dbm new way:
+        map<string, string> *row = parse_csv_line(fp);
+        pos.x = str2dbl(row[0]["pos_x"]);
+        pos.y = str2dbl(row[0]["pos_y"]);
+        pos.z = str2dbl(row[0]["pos_z"]);
+        cout << "dbm: hacking csv: x=" << pos.x << " y=" << pos.y << " z=" << pos.z << endl;
+        
+        /// old way:
         int ret = fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
                &pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
+        
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;
@@ -208,6 +293,7 @@ class DemoProxyManager :public ProxyManager {
         if (!fp) {
             return false;
         }
+        parse_csv_headings(fp);
         while (!feof(fp)) {
             loadSceneObject(fp);
         }
