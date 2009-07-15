@@ -1,3 +1,4 @@
 "objtype","subtype","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","scale_x","scale_y","scale_z","meshURI","diffuse_x","diffuse_y","diffuse_z","ambient"
 "light","directional",0,0,0,0,0,0,1,0,0,0,,1,1,1,1
-"mesh","staticmesh",0,0,0,0.4,0,-0.2,1,10,10,10,"meru://daniel@/cube.mesh",,,,
+"mesh","staticmesh",0,0,0,1,0,0,0.7,10,10,10,"meru://daniel@/cube.mesh",,,,
+"mesh","dynamicsphere",0,20,0,1,0,0,0.7,5,5,5,"meru://daniel@/sphere.mesh",,,,
