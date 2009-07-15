@@ -104,14 +104,14 @@ class DemoProxyManager :public ProxyManager {
 
     double str2dbl(string s) {
         float f;
-        if (s=="") return -999.999;
+        if (s=="") return 0.0;
         sscanf(s.c_str(), "%f", &f);
         return (double)f;
     }
 
     int str2int(string s) {
         int d;
-        if (s=="") return -99999;
+        if (s=="") return 0;
         sscanf(s.c_str(), "%d", &d);
         return d;
     }
@@ -206,18 +206,22 @@ class DemoProxyManager :public ProxyManager {
 
             if (objtype=="camera") {
                 mCamera->resetPositionVelocity(Time::now(), location);
-                return;
+                cout << "dbm: added camera to scene" << endl;
             }
             else if (objtype=="light") {
                 LightInfo::LightTypes lighttype;
-                if (row["lighttype"]=="point") {
+                if (row["subtype"]=="point") {
                     lighttype = LightInfo::POINT;
                 }
-                else if (row["lighttype"]=="spotlight") {
+                else if (row["subtype"]=="spotlight") {
                     lighttype = LightInfo::SPOTLIGHT;
                 }
-                else if (row["lighttype"]=="directional") {
+                else if (row["subtype"]=="directional") {
                     lighttype = LightInfo::DIRECTIONAL;
+                }
+                else {
+                    cout << "dbm: parse csv error: unknown light subtype" << endl;
+                    assert(false);
                 }
                 LightInfo lightInfo;
                 lightInfo.setLightType(lighttype);
@@ -259,6 +263,7 @@ class DemoProxyManager :public ProxyManager {
                 }
                 lightInfo.mWhichFields = LightInfo::ALL;
                 addLightObject(lightInfo, location);
+                cout << "dbm: added light to scene" << endl;
             }
             else if (objtype=="mesh") {
                 int mode=0;
@@ -266,34 +271,41 @@ class DemoProxyManager :public ProxyManager {
                 double density=0.0;
                 double friction=0.0;
                 double bounce=0.0;
-                if (row["physics"] == "staticmesh") {
+                if (row["subtype"] == "staticmesh") {
                     mode=bulletObj::Static;
                     shape=bulletObj::ShapeMesh;
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
                 }
-                else if (row["physics"] == "dynamicbox") {
+                else if (row["subtype"] == "dynamicbox") {
                     mode=bulletObj::DynamicBox;
                     shape=bulletObj::ShapeBox;
                     density = str2dbl(row["density"]);
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
                 }
-                else if (row["physics"] == "dynamicsphere") {
+                else if (row["subtype"] == "dynamicsphere") {
                     mode=bulletObj::DynamicSphere;
                     shape=bulletObj::ShapeSphere;
                     density = str2dbl(row["density"]);
                     friction = str2dbl(row["friction"]);
                     bounce = str2dbl(row["bounce"]);
                 }
+                else {
+                    cout << "dbm: parse csv error: unknown mesh subtype" << endl;
+                    assert(false);
+                }
                 string meshURI = row["meshURI"];
                 if (sizeof(string)==0) {
                     cout << "dbm: parse csv error: no meshURI" << endl;
+                    assert(false);
                 }
                 addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
+                cout << "dbm: added mesh to scene" << endl;
             }
             else {
                 cout << "dbm: parse csv error: illegal object type" << endl;
+                assert(false);
             }
             
             /// old way:
