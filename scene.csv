@@ -1,5 +1,5 @@
 "objtype","subtype","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","scale_x","scale_y","scale_z","density","friction","bounce","meshURI","diffuse_x","diffuse_y","diffuse_z","ambient"
 "light","directional",0,0,0,0,0,0,,0,0,0,,,,,1,1,1,1
-"camera",,-30,10,-30,-135,0,0,,,,,,,,,,,,
-"mesh","staticmesh",0,5,0,0,-22.5,0,,5,5,5,,1,0.6,"meru://daniel@/cube.mesh",,,,
-"mesh","dynamicsphere",0,15,0,0,0,0,,2,2,2,1,1,0.2,"meru://daniel@/sphere.mesh",,,,
+"camera",,-20,4,0,0,-90,0,,,,,,,,,,,,
+"mesh","staticmesh",0,2,0,10,0,0,,2,1,4,,1,0.6,"meru://daniel@/cube.mesh",,,,
+"mesh","dynamicsphere",0,8,0,0,0,0,,0.5,0.5,0.5,1,1,0.2,"meru://daniel@/sphere.mesh",,,,

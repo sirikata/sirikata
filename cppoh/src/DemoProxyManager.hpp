@@ -204,8 +204,8 @@ class DemoProxyManager :public ProxyManager {
                 orient.w = str2dbl(row["orient_w"]);                /// if w is specified, assume quaternion
             }
             else {                                                  /// if no w, Euler angles
-                btQuaternion bq = btQuaternion(DEG2RAD*orient.x, DEG2RAD*orient.y, DEG2RAD*orient.z);
-                   /// we can replace this later if need be
+                /// we can replace this later if need be. btQuat takes yaw, pitch, roll with Z as up.
+                btQuaternion bq = btQuaternion(DEG2RAD*orient.y, DEG2RAD*orient.x, DEG2RAD*orient.z);
                 orient.x = bq.getX();
                 orient.y = bq.getY();
                 orient.z = bq.getZ();
