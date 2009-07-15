@@ -26,7 +26,7 @@ class ObjectSegmentation;
   class Trace;
   class LoadMonitor;
 
-class Forwarder : public MessageDispatcher
+class Forwarder : public MessageDispatcher, public MessageRouter
   {
     private:
     //Unique to forwarder

@@ -49,10 +49,10 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, ServerMessageQueue* smq, Trace* trace)
+LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace)
   : mServerID(server_id),
     mMessageDispatcher(msg_source),
-    mServerMessageQueue(smq),
+    mMessageRouter(msg_router),
     mCurrentTime(0),
     mTrace(trace)
 {
@@ -257,9 +257,8 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
       if (i != mServerID) {
 	printf("Sending server_split to %d\n", i);
 
-	Network::Chunk msg_serialized;
-	CSegChangeMessage msg(origin, 2);
-	SplitRegionf* regions = msg.splitRegions();
+        CSegChangeMessage* msg = new CSegChangeMessage(origin, 2);
+	SplitRegionf* regions = msg->splitRegions();
 
 	regions[0].mNewServerID = mServerID;
 	regions[0].minX = newBox1.min().x;
@@ -277,10 +276,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
 	regions[1].maxY = newBox2.max().y;
 	regions[1].maxZ = newBox2.max().z;
 
-	msg.serialize(msg_serialized, 0);
-
-	mServerMessageQueue->addMessage(i,msg_serialized);
-
+        mMessageRouter->route(msg, i);
       }
     }
   }

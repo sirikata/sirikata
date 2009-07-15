@@ -185,14 +185,14 @@ void *main_loop(void *) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(region, layout, forwarder);
     else if (cseg_type == "lb")
-        cseg = new LBCoordinateSegmentation(server_id, region, layout, forwarder, sq, gTrace);
+        cseg = new LBCoordinateSegmentation(server_id, region, layout, forwarder, forwarder, gTrace);
     else {
         assert(false);
         exit(-1);
     }
 
 
-    LoadMonitor* loadMonitor = new LoadMonitor(server_id, forwarder, sq, cseg);
+    LoadMonitor* loadMonitor = new LoadMonitor(server_id, forwarder, forwarder, sq, cseg);
 
 
 

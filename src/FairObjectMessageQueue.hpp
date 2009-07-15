@@ -8,13 +8,14 @@ namespace FairObjectMessageNamespace {
     class ServerMessagePair {
     private:
         std::pair<ServerID,Network::Chunk> mPair;
+        UniqueMessageID mID;
     public:
-        ServerMessagePair(const ServerID&sid, const Network::Chunk&data):mPair(sid,data){}
+        ServerMessagePair(const ServerID&sid, const Network::Chunk&data,UniqueMessageID id):mPair(sid,data),mID(id){}
         //destructively modifies the data chunk to quickly place it in the queue
-        ServerMessagePair(const ServerID&sid, Network::Chunk&data):mPair(sid,Network::Chunk()){
+        ServerMessagePair(const ServerID&sid, Network::Chunk&data,UniqueMessageID id):mPair(sid,Network::Chunk()),mID(id){
             mPair.second.swap(data);
         }
-        explicit ServerMessagePair(size_t size):mPair(0,Network::Chunk(size)){
+        explicit ServerMessagePair(size_t size):mPair(0,Network::Chunk(size)),mID(0){
 
         }
         unsigned int size()const {
@@ -29,6 +30,10 @@ namespace FairObjectMessageNamespace {
 
         const Network::Chunk data() const {
             return mPair.second;
+        }
+
+        UniqueMessageID id() const {
+            return mID;
         }
     };
 }

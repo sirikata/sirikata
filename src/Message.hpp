@@ -71,8 +71,9 @@ public:
 
 typedef SplitRegion<float> SplitRegionf;
 
-OriginID GetUniqueIDOriginID(uint64 uid);
-uint64 GetUniqueIDMessageID(uint64 uid);
+typedef uint64 UniqueMessageID;
+OriginID GetUniqueIDOriginID(UniqueMessageID uid);
+uint64 GetUniqueIDMessageID(UniqueMessageID uid);
 
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
@@ -82,7 +83,7 @@ public:
     virtual ~Message();
 
     virtual MessageType type() const = 0;
-    uint64 id() const;
+    UniqueMessageID id() const;
 
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
@@ -95,7 +96,7 @@ protected:
     uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
 private:
     static uint64 sIDSource;
-    uint64 mID;
+    UniqueMessageID mID;
 }; // class Message
 
 
@@ -122,7 +123,14 @@ private:
     MessageRecipientMap mMessageRecipients;
 }; // class MessageDispatcher
 
+/** Base class for an object that can route messages to their destination. */
+class MessageRouter {
+public:
+    virtual ~MessageRouter() {}
 
+    virtual void route(Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
+    virtual void route(Message* msg, const UUID& dest_obj, bool is_forward = false) = 0;
+};
 
 // Specific message types
 

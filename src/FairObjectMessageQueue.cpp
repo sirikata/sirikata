@@ -20,15 +20,20 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
     ServerID dest_server_id = lookup(dest_uuid);
+    UniqueMessageID msg_id = msg->id();
 
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
     if (dest_server_id==mServerMessageQueue->getSourceServer()) {
         static bool isReorder=(GetOption(OBJECT_QUEUE)->as<String>()!="fairfifo");
-        if (!isReorder)
-            return mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
+        if (!isReorder) {
+            bool success = mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
+            if (success)
+                mTrace->serverDatagramQueued(mLastTime, dest_server_id, msg_id, msg_serialized.size());
+            return success;
+        }
     }
-    return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
+    return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized,msg_id))==QueueEnum::PushSucceeded;
 }
 
 template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t){
@@ -47,6 +52,8 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
                 break;//potentially need to retry all queues to find the one that can push ok
             }
         }else {
+            mTrace->serverDatagramQueued(t, next_msg->dest(), next_msg->id(), next_msg->data().size());
+
             mClientQueues.reprioritize(objectName,1.0,.0625,0,1);
             ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
             assert(next_msg_popped == next_msg);

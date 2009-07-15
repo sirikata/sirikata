@@ -46,9 +46,10 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
     return sli1.mLoadReading < sli2.mLoadReading;
 }
 
-LoadMonitor::LoadMonitor(ServerID svrID, MessageDispatcher* msg_source, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
+LoadMonitor::LoadMonitor(ServerID svrID, MessageDispatcher* msg_source, MessageRouter* msg_router, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
  : mServerID(svrID),
    mMessageDispatcher(msg_source),
+   mMessageRouter(msg_router),
    mServerMsgQueue(serverMsgQueue),
    mCoordinateSegmentation(cseg),
    mCurrentTime(0),
@@ -116,11 +117,8 @@ void LoadMonitor::sendLoadReadings() {
     if (i != mServerID && handlesAdjacentRegion(i) ) {
       printf("%d handles adjacent region with %d\n", i, mServerID);
 
-      Network::Chunk msg_serialized;
-      LoadStatusMessage msg(origin, mAveragedLoadReading);
-      msg.serialize(msg_serialized, 0);
-
-      mServerMsgQueue->addMessage(i,msg_serialized);
+      LoadStatusMessage* msg = new LoadStatusMessage(origin, mAveragedLoadReading);
+      mMessageRouter->route(msg, i);
     }
   }
 }

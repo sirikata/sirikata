@@ -62,7 +62,7 @@ typedef struct ServerLoadInfo{
 
 class LoadMonitor : public MessageRecipient {
 public:
-    LoadMonitor(ServerID, MessageDispatcher* msg_source, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
+    LoadMonitor(ServerID, MessageDispatcher* msg_source, MessageRouter* msg_router, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
     ~LoadMonitor();
 
   void addLoadReading();
@@ -95,6 +95,7 @@ private:
 
     ServerID mServerID;
     MessageDispatcher* mMessageDispatcher;
+    MessageRouter* mMessageRouter;
     ServerMessageQueue* mServerMsgQueue;
     CoordinateSegmentation* mCoordinateSegmentation;
 

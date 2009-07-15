@@ -34,7 +34,6 @@
 #define _CBR_LB_COORDINATE_SEGMENTATION_HPP_
 
 #include "CoordinateSegmentation.hpp"
-#include "ServerMessageQueue.hpp"
 
 namespace CBR {
 
@@ -137,7 +136,7 @@ typedef struct SegmentedRegion {
 /** Uniform grid implementation of CoordinateSegmentation. */
 class LBCoordinateSegmentation : public CoordinateSegmentation {
 public:
-    LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, ServerMessageQueue*, Trace*);
+    LBCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, MessageRouter*, Trace*);
     virtual ~LBCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -158,7 +157,7 @@ private:
 
     ServerID mServerID;
     MessageDispatcher* mMessageDispatcher;
-    ServerMessageQueue* mServerMessageQueue;
+    MessageRouter* mMessageRouter;
 
     SegmentedRegion mTopLevelRegion;
     Time mCurrentTime;

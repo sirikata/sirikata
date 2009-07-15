@@ -20,11 +20,12 @@ bool FIFOObjectMessageQueue::send(ObjectToObjectMessage* msg) {
     UUID src_uuid = msg->sourceObject();
     UUID dest_uuid = msg->destObject();
     ServerID dest_server_id = lookup(dest_uuid);
+    UniqueMessageID msg_id = msg->id();
 
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
 
-    return mQueue.push(src_uuid, new ServerMessagePair(dest_server_id,msg_serialized))==QueueEnum::PushSucceeded;
+    return mQueue.push(src_uuid, new ServerMessagePair(dest_server_id,msg_serialized,msg_id))==QueueEnum::PushSucceeded;
 }
 
 void FIFOObjectMessageQueue::service(const Time& t){
@@ -36,6 +37,8 @@ void FIFOObjectMessageQueue::service(const Time& t){
 
         bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
         if (!sent_success) break;
+
+        mTrace->serverDatagramQueued(t, next_msg->dest(), next_msg->id(), next_msg->data().size());
 
         ServerMessagePair* next_msg_popped = mQueue.pop(&bytes);
         assert(next_msg_popped == next_msg);
