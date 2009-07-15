@@ -290,7 +290,7 @@ class DemoProxyManager :public ProxyManager {
                 if (sizeof(string)==0) {
                     cout << "dbm: parse csv error: no meshURI" << endl;
                 }
-                addMeshObject(Transfer::URI(row["meshURI"]), location, scale, mode, density, friction, bounce);
+                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
             }
             else {
                 cout << "dbm: parse csv error: illegal object type" << endl;
