@@ -24,15 +24,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
 
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
-    if (dest_server_id==mServerMessageQueue->getSourceServer()) {
-        static bool isReorder=(GetOption(OBJECT_QUEUE)->as<String>()!="fairfifo");
-        if (!isReorder) {
-            bool success = mServerMessageQueue->addMessage(dest_server_id,msg_serialized);
-            if (success)
-                mTrace->serverDatagramQueued(mLastTime, dest_server_id, msg_id, msg_serialized.size());
-            return success;
-        }
-    }
+
     return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized,msg_id))==QueueEnum::PushSucceeded;
 }
 
