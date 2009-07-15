@@ -39,8 +39,8 @@ class RoutableMessageTest : public CxxTest::TestSuite
 {
 public:
     void testSerializeHeader() {
-        const int TEST_DESTINATION_PORT = 100; //one byte
-        const int TEST_SOURCE_PORT = 1000000; // three bytes
+        const uint32 TEST_DESTINATION_PORT = 100; //one byte
+        const uint32 TEST_SOURCE_PORT = 1000000; // three bytes
         RoutableMessageHeader header, headerOut;
         ObjectReference testID(UUID::random());
         std::cout << std::endl<<testID<<std::endl;

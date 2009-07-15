@@ -75,7 +75,7 @@ public:
     void meshChanged(const URI&meshFile);
 
     Vector3f getScale() const {
-        return Vector3f(0,0,0);//fromOgre(getOgreEntity()->getScale());
+        return fromOgre(mSceneNode->getScale());
     }
     void setScale(const Vector3f &scale) {
         mSceneNode->setScale(toOgre(scale));

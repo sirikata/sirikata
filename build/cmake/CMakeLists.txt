@@ -818,17 +818,18 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBOH_SOURCES
                   ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
-                  ${LIBOH_SOURCE_DIR}/ObjectHost.cpp 
-                  ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp 
-                  ${LIBOH_SOURCE_DIR}/HostedObject.cpp 
+                  ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
+                  ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
+                  ${LIBOH_SOURCE_DIR}/HostedObject.cpp
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp
+                  ${LIBOH_SOURCE_DIR}/LightInfo.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyMeshObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyPositionObject.cpp
-                  ${LIBOH_SOURCE_DIR}/ProxyManager.cpp 
+                  ${LIBOH_SOURCE_DIR}/ProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyCameraObject.cpp
-                  ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp					
+                  ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )

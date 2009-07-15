@@ -27,29 +27,25 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH package.
  */
 
 package Sirikata.Protocol;
 
 /////////////Standard Message Container///////////////
 
-//This MessageBody is the standard mechanism to transport messages over the net
+//This MessageBody is the standard mechanism to transport messages over the net. See ReadOnlyMessage for comments.
 message MessageBody {
     reserve 1 to 6;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 
-    //the name of the function(s) to call
     repeated string message_names=7;
 
-    //message to be decoded by the function(s). Length must match the number of strings unless return_status set and function's length is 0
     repeated bytes message_arguments=8;
 
-    //the message id for the function call request, so out of order messages may be detected and return values may be paired.  
     optional int64 id = 9;
 
-    //the message is a response to a previous message.
     enum ReturnStatus {
       SUCCESS = 0;
       NETWORK_FAILURE = 1;
@@ -64,40 +60,52 @@ message ReadOnlyMessage {
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 
-    //the source ObjectReference (space is implicit)
+    //the source ObjectReference. Must be present on the receiver. Ignored if present on the sender.
     optional uuid source_object = 1;
 
-    //the source port from which the message originated
-    optional uuid source_port = 3;
+    //the source port from which the message originated. Must be present on the receiver. Ignored if present on the sender.
+    optional uint32 source_port = 3;
 
-    //the spaceID origin message (in case we have a space routing messages)
+    //the spaceID origin message. Will never be present.
     optional uuid source_space = 1536;
 
-    //the destination ObjectReference (space is implicit) if omitted, space is destination
+    //the destination ObjectReference. Should never be present on the receiver. Must be present for the sender.
     optional uuid destination_object = 2;
 
-    //the destination port that should process the message
-    optional uuid destination_port = 4;
+    //the destination port that should process the message. Should never be present on the receiver. May be present for the sender.
+    optional uint32 destination_port = 4;
 
-    //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
-
+    //spaceID of the destination object. Will never be present.
     optional uuid destination_space = 1537;
 
-    //the name of the function(s) to call
+    //the name of the function(s) to call. message_names MUST be empty if and only if this is a response.
+    // If this is a request and message_names is smaller than message_arguments, the last name in the list is to be used for all the responses.
+    // If message_names is ever larger than message_arguments, this is an error, and the extra message_names are to be ignored.
     repeated string message_names=7;
 
-    //message to be decoded by the function(s). Length must match the number of strings unless return_status set and function's length is 0
+    //message to be decoded by the function(s). If a request, message_arguments determines the length of the request.
+    // If a response, and the length is smaller than the length of the request, it is to be assumed that the bodies of all remaining response messages are empty.
     repeated bytes message_arguments=8;
 
-    //the message id for the function call request, so out of order messages may be detected and return values may be paired.  
+    /** The message id for the function call request, so return values may be paired.
+     *
+     * - If ommitted, a response is not expected.
+     * - If included and the message reaches the endpoint, a response is required, even if it just contains return_status==SUCCESS.
+     *
+     * id MUST be included if this is a response to a previous message. If both id and message_names are omitted, this MessageBody is to be discarded.
+     */
     optional int64 id = 9;
 
-    //the message is a response to a previous message.
+    // optional bool respond_on_failure = 10;
+
     enum ReturnStatus {
       SUCCESS = 0;
       NETWORK_FAILURE = 1;
       SECURITY_FAILURE = 2;
+      TIMEOUT_FAILURE = 3;
     }
+    // REQUIRED if and only if the message is a response to a previous message. If not SUCCESS, message_arugments SHOULD be empty.
+    // Note that return_status applies to the whole MessageBody (including all embedded messages), usually for network errors.
     optional ReturnStatus return_status=16;
 }
 
@@ -115,9 +123,10 @@ message SpaceServices {
 }
 
 //This message is from a space to an object updating its position and orientation (returns void)
+//If sent in response to a LocRequest, the information must be valid.
 message ObjLoc {
 
-    //time that the update was sent out
+    //time that the update was sent out. Required.
     optional time timestamp = 2;
 
     //position of source object
@@ -141,6 +150,17 @@ message ObjLoc {
     }
     //options for this update, right now only force is the option
     optional UpdateFlags update_flags = 6;
+}
+
+message LocRequest {
+  flags32 Fields {
+    POSITION = 0;
+    ORIENTATION = 1;
+    VELOCITY = 2;
+    ROTATIONAL_AXIS = 3;
+    ANGULAR_SPEED = 4;
+  }
+  optional Fields requested_fields = 2; // if omitted, send all fields.
 }
 
 //New Streams can establish an ObjectConnection
@@ -211,4 +231,67 @@ message ProxCall {
 message DelProxQuery {
     //delete a query by client id
     optional uint32 query_id=2;  
+}
+
+
+message GetProp {
+    optional string property_name=2;
+    optional bool check_exists=3 [default=false];
+}
+
+message PropertyResponse {
+    enum ErrorStatus {
+        EXISTS=0;
+        NOT_FOUND=1;
+        FORBIDDEN=2;
+    }
+    optional ErrorStatus error=2; // present if an error occurred or check_exists=true.
+    optional string property_name=3; // If this is a notification.
+    optional string error_message=4;
+}
+
+message Vector3fProperty {
+    optional vector3f value=10;
+}
+
+message StringProperty {
+    optional string value=10;
+}
+
+message PhysicalParameters {
+    enum Mode {
+        NONPHYSICAL=0;
+        STATIC=1;
+        DYNAMIC=2;
+    }
+    optional Mode mode=10;
+    optional float density=11;
+    optional float friction=12;
+    optional float bounce=13;
+}
+
+message LightInfoProperty {
+    optional vector3f diffuse_color=13;
+    optional vector3f specular_color=14;
+    optional float power=15;
+    optional vector3f ambient_color=16;
+    optional vector3f shadow_color=17;
+    optional double light_range=18;
+    optional float constant_falloff=19;
+    optional float linear_falloff=20;
+    optional float quadratic_falloff=21;
+    optional float cone_inner_radians=22;
+    optional float cone_outer_radians=23;
+    optional float cone_falloff=24;
+    enum LightTypes {
+        POINT=0;
+        SPOTLIGHT=1;
+        DIRECTIONAL=2;
+    }
+    optional LightTypes type=25;
+    optional bool casts_shadow=26;
+}
+
+message ParentProperty {
+    optional uuid value=10;
 }

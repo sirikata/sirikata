@@ -48,10 +48,10 @@ void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thu
 }
 }
 
-
 TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io):mRegisteredAddress(Network::Address::null()) {
     mParent=NULL;
     mTopLevelStream=new Network::TCPStream(*io);
+    ObjectHostProxyManager::initialize();
 }
 void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&thus, ObjectHost * oh,  const SpaceID & id) {
     mSpaceID=id;
@@ -101,6 +101,7 @@ void TopLevelSpaceConnection::connectToAddress(const std::tr1::weak_ptr<TopLevel
     }
 }
 TopLevelSpaceConnection::~TopLevelSpaceConnection() {
+    ObjectHostProxyManager::destroy();
     if (mParent) {
         removeFromMap();
         delete mTopLevelStream;
@@ -110,25 +111,85 @@ TopLevelSpaceConnection::~TopLevelSpaceConnection() {
 void ObjectHostProxyManager::initialize() {
 }
 void ObjectHostProxyManager::destroy() {
+    for (ProxyMap::iterator iter = mProxyMap.begin();
+         iter != mProxyMap.end();
+         ++iter) {
+        iter->second.obj->destroy();
+    }
+    mProxyMap.clear();
 }
 void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
-    notify(&ProxyCreationListener::createProxy,newObj);
-    mProxyMap.insert(ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
+    std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
+        ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
+    if (result.second==true) {
+        notify(&ProxyCreationListener::createProxy,newObj);
+    }
+    ++result.first->second.refCount;
 }
 void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &newObj) {
     ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
     if (iter != mProxyMap.end()) {
-        newObj->destroy();
-        notify(&ProxyCreationListener::destroyProxy,newObj);
-        mProxyMap.erase(iter);
+        if ((--iter->second.refCount)==0) {
+            newObj->destroy();
+            notify(&ProxyCreationListener::destroyProxy,newObj);
+            mProxyMap.erase(iter);
+        }
     }
 }
+
+void ObjectHostProxyManager::createObjectProximity(
+        const ProxyObjectPtr &newObj,
+        const UUID &seeker,
+        uint32 queryId)
+{
+    createObject(newObj);
+    QueryMap::iterator iter =
+        mQueryMap.insert(QueryMap::value_type(
+                             std::pair<UUID, uint32>(seeker, queryId),
+                             std::set<ProxyObjectPtr>())).first;
+    bool success = iter->second.insert(newObj).second;
+    assert(success == true);
+}
+
+void ObjectHostProxyManager::destroyObjectProximity(
+        const ProxyObjectPtr &newObj,
+        const UUID &seeker,
+        uint32 queryId)
+{
+    destroyObject(newObj);
+    QueryMap::iterator iter =
+        mQueryMap.find(std::pair<UUID, uint32>(seeker, queryId));
+    if (iter != mQueryMap.end()) {
+        std::set<ProxyObjectPtr>::iterator proxyiter = iter->second.find(newObj);
+        assert (proxyiter != iter->second.end());
+        if (proxyiter != iter->second.end()) {
+            iter->second.erase(proxyiter);
+        }
+    }
+}
+
+void ObjectHostProxyManager::destroyProximityQuery(
+        const UUID &seeker,
+        uint32 queryId)
+{
+    QueryMap::iterator iter =
+        mQueryMap.find(std::pair<UUID, uint32>(seeker, queryId));
+    if (iter != mQueryMap.end()) {
+        std::set<ProxyObjectPtr> &set = iter->second;
+        std::set<ProxyObjectPtr>::const_iterator proxyiter;
+        for (proxyiter = set.begin(); proxyiter != set.end(); ++proxyiter) {
+            destroyObject(*proxyiter);
+        }
+        mQueryMap.erase(iter);
+    }
+}
+
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
     if (id.space() == mSpaceID) {
         ProxyMap::const_iterator iter = mProxyMap.find(id.object());
         if (iter != mProxyMap.end()) {
-            return (*iter).second;
+            return (*iter).second.obj;
         }
     }
     return ProxyObjectPtr();

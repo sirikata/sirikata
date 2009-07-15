@@ -46,8 +46,11 @@ class SIRIKATA_OH_EXPORT SpaceConnection {
   public:
     SpaceConnection(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream):
         mTopLevelStream(topLevel),mStream(stream){}
+/*
     Network::Stream * operator->()const{return mStream;}
-    Network::Stream * operator*()const{return mStream;}
+*/
+    Network::Stream & operator*()const{return *mStream;}
+    Network::Stream * getStream()const{return mStream;}
     const std::tr1::shared_ptr<TopLevelSpaceConnection>&getTopLevelStream()const{return mTopLevelStream;}
     //std::tr1::shared_ptr<TopLevelSpaceConnection>&getTopLevelStream(){return mTopLevelStream;}
     class SIRIKATA_OH_EXPORT Hasher {

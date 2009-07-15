@@ -41,11 +41,13 @@
 #include "CDNConfig.hpp"
 
 #include <oh/ObjectHost.hpp>
+#include <oh/LightInfo.hpp>
 #include <oh/TopLevelSpaceConnection.hpp>
 #include <oh/SpaceConnection.hpp>
 #include <oh/HostedObject.hpp>
 #include <oh/SpaceIDMap.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <ObjectHost_Sirikata.pbj.hpp>
 
 namespace Sirikata {
 
@@ -225,7 +227,16 @@ void parseConfig(
 
 }
 
+#ifdef __GNUC__
+#include <fenv.h>
+#endif
+
 int main ( int argc,const char**argv ) {
+
+#ifdef __GNUC__
+    feraiseexcept(FE_ALL_EXCEPT);
+#endif
+
     using namespace Sirikata;
     PluginManager plugins;
     plugins.load ( DynamicLibrary::filename("ogregraphics") );
@@ -251,26 +262,52 @@ int main ( int argc,const char**argv ) {
 
     ObjectHost *oh = new ObjectHost(spaceMap, ioServ);
     // default port is from Space.cpp
-    oh->connectToSpace(mainSpace);
 
     HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
     firstObject->initializeConnect(
         UUID::random(),
-        Location(Vector3d(0,0,0), Quaternion::identity(),
+        Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
                  Vector3f::nil(), Vector3f::nil(), 0.),
-        "meru:///Bornholm_01.mesh",
+        "meru://daniel@/cube.mesh",
         BoundingSphere3f(Vector3f::nil(),1),
+        NULL,
+        mainSpace);
+    firstObject->setScale(Vector3f(3,3,3));
+        
+    HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh));
+    secondObject->initializeConnect(
+        UUID::random(),
+        Location(Vector3d(0,0,25), Quaternion::identity(),
+                 Vector3f::nil(), Vector3f::nil(), 0.),
+        "",
+        BoundingSphere3f(Vector3f::nil(),0),
+        NULL,
         mainSpace);
         
+    HostedObjectPtr thirdObject (HostedObject::construct<HostedObject>(oh));
+    {
+        LightInfo li;
+        li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
+        li.setLightAmbientColor(Color(.24,.25,.18));
+        li.setLightSpecularColor(Color(0,0,0));
+        li.setLightShadowColor(Color(0,0,0));
+        li.setLightPower(1.0);
+        li.setLightRange(75);
+        li.setLightFalloff(1,0,0.03);
+        li.setLightSpotlightCone(30,40,1);
+        li.setCastsShadow(true);
 
-    Network::IOServiceFactory::runService(ioServ);
-
-    delete oh;
-    Network::IOServiceFactory::destroyIOService(ioServ);
-
-    delete spaceMap;
+        thirdObject->initializeConnect(
+            UUID::random(),
+            Location(Vector3d(10,0,10), Quaternion::identity(),
+                     Vector3f::nil(), Vector3f::nil(), 0.),
+            "",
+            BoundingSphere3f(Vector3f::nil(),0),
+            &li,
+            mainSpace);
+    }
+    ProxyManager *provider = oh->getProxyManager(mainSpace);
     
-#if 0
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     TransferManager *tm;
@@ -292,6 +329,9 @@ int main ( int argc,const char**argv ) {
         os << "--workqueue=" << workQueue << " ";
         graphicsCommandArguments = os.str();
     }
+    if (!provider) {
+        SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
+    }
     String graphicsPluginName ( "ogregraphics" );
     String physicsPluginName ( "bulletphysics" );
     SILOG(cppoh,error,"dbm: initializing graphics");
@@ -308,10 +348,10 @@ int main ( int argc,const char**argv ) {
     else {
         SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
     }
-    pm->initialize();
     if ( graphicsSystem ) {
         while ( graphicsSystem->tick() ) {
             physicsSystem->tick();
+            Network::IOServiceFactory::pollService(ioServ);
         }
     } else {
         SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
@@ -319,13 +359,15 @@ int main ( int argc,const char**argv ) {
         std::cerr << "Press enter to continue" << std::endl;
         fgetc(stdin);
     }
-    pm->destroy();
     delete graphicsSystem;
-    delete pm;
     delete eventManager;
     delete workQueue;
     plugins.gc();
     SimulationFactory::destroy();
-#endif
+
+    delete oh;
+    Network::IOServiceFactory::destroyIOService(ioServ);
+    delete spaceMap;
+
     return 0;
 }

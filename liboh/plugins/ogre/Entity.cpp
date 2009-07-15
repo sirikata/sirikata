@@ -132,7 +132,12 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
 }
 
 void Entity::setOgrePosition(const Vector3d &pos) {
-    mSceneNode->setPosition(toOgre(pos, getScene()->getOffset()));
+    Ogre::Vector3 ogrepos = toOgre(pos, getScene()->getOffset());
+    const Ogre::Vector3 &scale = mSceneNode->getScale();
+    ogrepos.x /= scale.x;
+    ogrepos.y /= scale.y;
+    ogrepos.z /= scale.z;
+    mSceneNode->setPosition(ogrepos);
 }
 void Entity::setOgreOrientation(const Quaternion &orient) {
     mSceneNode->setOrientation(toOgre(orient));

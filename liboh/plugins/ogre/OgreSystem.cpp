@@ -802,20 +802,25 @@ bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
         (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
 
-	static int counter=0;
+    static int counter=0;
     counter++;
- 
-	// Temporary little hack to initialize and load a WebView
-	// since we lack the external infrastructure to do so
 
-	if(WebViewManager::getSingletonPtr())
-	{
-		if(counter == 1)
-			WebViewManager::getSingleton().setDefaultViewport(mRenderTarget->getViewport(0));
+    if(WebViewManager::getSingletonPtr())
+    {
+        // HACK: WebViewManager is static, but points to a RenderTarget! If OgreSystem dies, we will crash.
+        static bool webViewInitialized = false;
+        if(!webViewInitialized) {
+            if (mPrimaryCamera) {
+                WebViewManager::getSingleton().setDefaultViewport(mPrimaryCamera->getViewport());
+                webViewInitialized = true;
+            }
+            // else, keep waiting for a camera to appear (may require connecting to a space).
+        }
+        if (webViewInitialized) {
+            WebViewManager::getSingleton().Update();
+        }
+    }
 
-		WebViewManager::getSingleton().Update();
-	}
-	
     return continueRendering;
 }
 static Time debugStartTime = Time::now();

@@ -36,7 +36,7 @@ namespace Services{
 enum Ports{
     REGISTRATION=1,
     LOC=2,
-    GEOM=3,
+    GEOM=3, // Proximity service: Also known as PROX
     ROUTER=4,
     OBJECT_CONNECTIONS=16383
 };

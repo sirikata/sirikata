@@ -61,17 +61,20 @@ public:
             second=v.size();
         }
     }
-    T begin() {
+    T begin() const {
         return first;
     }
-    T end() {
+    T end() const {
         return first+second;
     }
-    T data() {
+    T data() const {
         return first;
     }
-    size_t size() {
+    size_t size() const {
         return second;
+    }
+    inline size_t length() const {
+        return size();
     }
 };
 

@@ -39,8 +39,8 @@ class SIRIKATA_OH_EXPORT ProxyManager :
 //        public MessageService,
         public Provider<ProxyCreationListener*> {
 public:
-    ProxyManager();
-    virtual ~ProxyManager();
+    ProxyManager() {}
+    virtual ~ProxyManager() {}
     ///Called after providers attached
     virtual void initialize()=0;
     ///Called before providers detatched

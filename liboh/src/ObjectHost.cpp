@@ -129,5 +129,19 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
         }
     }
 }
+
+ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
+    SpaceConnectionMap::const_iterator iter = mSpaceConnections.find(space);
+    if (iter != mSpaceConnections.end()) {
+        std::tr1::shared_ptr<TopLevelSpaceConnection> spaceConnPtr = iter->second.lock();
+        if (spaceConnPtr) {
+            return spaceConnPtr.get();
+        }
+    }
+    return NULL;
+}
+
+
+
 } // namespace Sirikata
 

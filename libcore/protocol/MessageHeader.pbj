@@ -42,7 +42,7 @@ message MessageHeader {
     optional uuid source_object = 1;
 
     //the source port from which the message originated
-    optional uuid source_port = 3;
+    optional uint32 source_port = 3;
 
     //the spaceID origin message (in case we have a space routing messages)
     optional uuid source_space = 1536;
@@ -51,7 +51,7 @@ message MessageHeader {
     optional uuid destination_object = 2;
 
     //the destination port that should process the message
-    optional uuid destination_port = 4;
+    optional uint32 destination_port = 4;
 
     //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
 

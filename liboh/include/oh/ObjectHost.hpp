@@ -54,6 +54,7 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
     void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
     Network::IOService *mSpaceConnectionIO;
+
 public:
     
     /** Caller is responsible for starting a thread
@@ -76,6 +77,8 @@ public:
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID&);
     ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
+
+    ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost
 
 } // namespace Sirikata
