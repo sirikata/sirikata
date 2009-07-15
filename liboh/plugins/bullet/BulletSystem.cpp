@@ -43,8 +43,8 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
-//#define DEBUG_OUTPUT(x) x
-#define DEBUG_OUTPUT(x)
+#define DEBUG_OUTPUT(x) x
+//#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -400,7 +400,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
-    groundlevel = 4500.0;
+    groundlevel = -100.0;
     btTransform groundTransform;
     btDefaultMotionState* myMotionState;
     btVector3 worldAabbMin(-10000,-10000,-10000);

@@ -187,7 +187,7 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
-        if (row.size() == 0) {
+        if (row.size() < 7) {
             cout << "dbm: could not parse line in .csv, ignoring" << endl;
         }
         else {
@@ -301,7 +301,7 @@ class DemoProxyManager :public ProxyManager {
                     assert(false);
                 }
                 addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
-                cout << "dbm: added mesh to scene" << endl;
+                cout << "dbm: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " shape: " << shape << endl;
             }
             else {
                 cout << "dbm: parse csv error: illegal object type" << endl;
