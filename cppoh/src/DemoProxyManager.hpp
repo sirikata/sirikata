@@ -154,7 +154,7 @@ class DemoProxyManager :public ProxyManager {
     map<string, string>* parse_csv_line(FILE* fil) {
         string line;
         getline(fil, line);
-        std::cout << "csv: line-->" << line << "<--" << std::endl;
+        //std::cout << "csv: line-->" << line << "<--" << std::endl;
         vector<string> values;
         map<string, string> *row;
         row = (new map<string, string>());
@@ -177,13 +177,9 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
-        std::cout << "csv: row: ";
-        for (unsigned int i=0; i<row.size(); i++) {
-            std::cout << row[headings[i]] << " ";
-        }
         std::cout << endl;
         if (row["objtype"][0]=='#' or row["objtype"]==string("")) {
-            cout << "csv: loadSceneObject passing, comment or blank line" << endl;
+            //cout << "csv: loadSceneObject passing, comment or blank line" << endl;
             return;                                         /// comment or blank line
         }
         else {
@@ -205,7 +201,7 @@ class DemoProxyManager :public ProxyManager {
                 orient.z = bq.getZ();
                 orient.w = bq.getW();
             }
-            cout << "csv: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
+            //cout << "csv: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
             Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
             scale.x = str2dbl(row["scale_x"]);
             scale.y = str2dbl(row["scale_y"]);
@@ -213,7 +209,7 @@ class DemoProxyManager :public ProxyManager {
 
             if (objtype=="camera") {
                 mCamera->resetPositionVelocity(Time::now(), location);
-                cout << "csv: added camera to scene" << endl;
+                //cout << "csv: added camera to scene" << endl;
             }
             else if (objtype=="light") {
                 LightInfo::LightTypes lighttype;
@@ -227,7 +223,7 @@ class DemoProxyManager :public ProxyManager {
                     lighttype = LightInfo::DIRECTIONAL;
                 }
                 else {
-                    cout << "csv: parse csv error: unknown light subtype" << endl;
+                    cout << "parse csv error: unknown light subtype" << endl;
                     assert(false);
                 }
                 LightInfo lightInfo;
@@ -270,7 +266,7 @@ class DemoProxyManager :public ProxyManager {
                 }
                 lightInfo.mWhichFields = LightInfo::ALL;
                 addLightObject(lightInfo, location);
-                cout << "csv: added light to scene" << endl;
+                //cout << "csv: added light to scene" << endl;
             }
             else if (objtype=="mesh") {
                 int mode=0;
@@ -297,19 +293,19 @@ class DemoProxyManager :public ProxyManager {
                 else if (row["subtype"] == "graphiconly") {
                 }
                 else {
-                    cout << "csv: parse csv error: unknown mesh subtype:" << row["subtype"] << endl;
+                    cout << "parse csv error: unknown mesh subtype:" << row["subtype"] << endl;
                     assert(false);
                 }
                 string meshURI = row["meshURI"];
                 if (sizeof(string)==0) {
-                    cout << "csv: parse csv error: no meshURI" << endl;
+                    cout << "parse csv error: no meshURI" << endl;
                     assert(false);
                 }
                 addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
-                cout << "csv: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
+                //cout << "csv: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
             }
             else {
-                cout << "csv: parse csv error: illegal object type" << endl;
+                cout << "parse csv error: illegal object type" << endl;
                 assert(false);
             }
         }
@@ -443,13 +439,8 @@ class DemoProxyManager :public ProxyManager {
         }
         else {
             parse_csv_headings(fp);
-            std::cout << "csv: scene headings: ";
-            for (unsigned int i=0; i<headings.size(); i++) {
-                std::cout << headings[i] << " ";
-            }
-            std::cout << endl;
             while (!feof(fp)) {
-                std::cout << "csv: loading scene object" << std::endl;
+                //std::cout << "csv: loading scene object" << std::endl;
                 loadSceneObject(fp);
             }
         }

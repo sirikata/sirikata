@@ -686,7 +686,7 @@ private:
             else if (phys.mode==2) subtype="dynamicbox";
             else if (phys.mode==3) subtype="dynamicsphere";
             else {
-                std::cout << "csv: unknown physical mode! " << phys.mode << std::endl;
+                std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
             fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
