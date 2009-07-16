@@ -211,7 +211,7 @@ class DemoProxyManager :public ProxyManager {
                 orient.z = bq.getZ();
                 orient.w = bq.getW();
             }
-            cout << "dbm: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
+            cout << "csv: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
             Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
             scale.x = str2dbl(row["scale_x"]);
             scale.y = str2dbl(row["scale_y"]);
@@ -219,7 +219,7 @@ class DemoProxyManager :public ProxyManager {
 
             if (objtype=="camera") {
                 mCamera->resetPositionVelocity(Time::now(), location);
-                cout << "dbm: added camera to scene" << endl;
+                cout << "csv: added camera to scene" << endl;
             }
             else if (objtype=="light") {
                 LightInfo::LightTypes lighttype;
@@ -233,7 +233,7 @@ class DemoProxyManager :public ProxyManager {
                     lighttype = LightInfo::DIRECTIONAL;
                 }
                 else {
-                    cout << "dbm: parse csv error: unknown light subtype" << endl;
+                    cout << "csv: parse csv error: unknown light subtype" << endl;
                     assert(false);
                 }
                 LightInfo lightInfo;
@@ -276,7 +276,7 @@ class DemoProxyManager :public ProxyManager {
                 }
                 lightInfo.mWhichFields = LightInfo::ALL;
                 addLightObject(lightInfo, location);
-                cout << "dbm: added light to scene" << endl;
+                cout << "csv: added light to scene" << endl;
             }
             else if (objtype=="mesh") {
                 int mode=0;
@@ -301,19 +301,19 @@ class DemoProxyManager :public ProxyManager {
                     bounce = str2dbl(row["bounce"]);
                 }
                 else {
-                    cout << "dbm: parse csv error: unknown mesh subtype" << endl;
+                    cout << "csv: parse csv error: unknown mesh subtype:" << row["subtype"] << endl;
                     assert(false);
                 }
                 string meshURI = row["meshURI"];
                 if (sizeof(string)==0) {
-                    cout << "dbm: parse csv error: no meshURI" << endl;
+                    cout << "csv: parse csv error: no meshURI" << endl;
                     assert(false);
                 }
                 addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
-                cout << "dbm: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
+                cout << "csv: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
             }
             else {
-                cout << "dbm: parse csv error: illegal object type" << endl;
+                cout << "csv: parse csv error: illegal object type" << endl;
                 assert(false);
             }
 
