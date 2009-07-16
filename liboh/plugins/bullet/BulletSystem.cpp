@@ -43,8 +43,8 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
-#define DEBUG_OUTPUT(x) x
-//#define DEBUG_OUTPUT(x)
+//#define DEBUG_OUTPUT(x) x
+#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;

@@ -587,10 +587,10 @@ private:
     }
 
     EventResponse saveScene(EventPtr ev) {
-        std::cout << "saving new scene as scene_new.txt: " << std::endl;
-        FILE *output = fopen("scene_new.txt", "wt");
+        std::cout << "saving new scene as scene_new.csv: " << std::endl;
+        FILE *output = fopen("scene_new.csv", "wt");
         if (!output) {
-            perror("Failed to open scene_new.txt: ");
+            perror("Failed to open scene_new.csv: ");
             return EventResponse::cancel();
         }
         fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
@@ -652,9 +652,12 @@ private:
             const physicalParameters &phys = mesh->getPhysical();
             std::string subtype;
             if (phys.mode==0) subtype="graphiconly";
-            if (phys.mode==1) subtype="staticmesh";
-            if (phys.mode==2) subtype="dynamicbox";
-            if (phys.mode==3) subtype="dynamicsphere";
+            else if (phys.mode==1) subtype="staticmesh";
+            else if (phys.mode==2) subtype="dynamicbox";
+            else if (phys.mode==3) subtype="dynamicsphere";
+            else {
+                std::cout << "csv: unknown physical mode! " << phys.mode << std::endl;
+            }
             fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
@@ -669,9 +672,8 @@ private:
                                     loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
         }
         else {
-            fprintf(fp, "<1 1 1> NULL\n");
+            fprintf(fp, "#unknown object type in dumpObject\n");
         }
-        //std::cout << "test output: " <<  << std::endl;
     }
 
     void dumpObject_old(FILE* fp, Entity* e) {
