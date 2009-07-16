@@ -47,12 +47,14 @@ public:
     ~Duration();
 
     static Duration seconds(float32 dt);
+    static Duration seconds(float64 dt);
     static Duration seconds(uint32 dt);
     static Duration milliseconds(float32 dt);
+    static Duration milliseconds(float64 dt);
     static Duration milliseconds(uint32 dt);
 
-    float32 seconds() const;
-    float32 milliseconds() const;
+    float64 seconds() const;
+    float64 milliseconds() const;
 
     Duration operator+(const Duration& rhs) const;
     Duration& operator+=(const Duration& rhs);
@@ -62,11 +64,15 @@ public:
     Duration operator-(const Duration& rhs) const;
     Duration& operator-=(const Duration& rhs);
 
-    Duration operator*(float s) const;
-    Duration& operator*=(float s);
+    Duration operator*(float32 s) const;
+    Duration operator*(float64 s) const;
+    Duration& operator*=(float32 s);
+    Duration& operator*=(float64 s);
 
-    Duration operator/(float s) const;
-    Duration& operator/=(float s);
+    Duration operator/(float32 s) const;
+    Duration operator/(float64 s) const;
+    Duration& operator/=(float32 s);
+    Duration& operator/=(float64 s);
 
     bool operator<(const Duration& rhs) const;
     bool operator<=(const Duration& rhs) const;

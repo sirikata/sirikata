@@ -57,6 +57,10 @@ Duration Duration::seconds(float32 dt) {
     return Duration( static_cast<uint64>(dt * 1000000.f) );
 }
 
+Duration Duration::seconds(float64 dt) {
+    return Duration( static_cast<uint64>(dt * 1000000.) );
+}
+
 Duration Duration::seconds(uint32 dt) {
     return Duration( static_cast<uint64>(dt) * 1000000 );
 }
@@ -65,16 +69,20 @@ Duration Duration::milliseconds(float32 dt) {
     return Duration( static_cast<uint64>(dt * 1000.f) );
 }
 
+Duration Duration::milliseconds(float64 dt) {
+    return Duration( static_cast<uint64>(dt * 1000.) );
+}
+
 Duration Duration::milliseconds(uint32 dt) {
     return Duration( static_cast<uint64>(dt) * 1000 );
 }
 
-float32 Duration::seconds() const {
-    return static_cast<float32>(mMicrosecs) / 1000000.f;
+float64 Duration::seconds() const {
+    return static_cast<float64>(mMicrosecs) / 1000000.;
 }
 
-float32 Duration::milliseconds() const {
-    return static_cast<float32>(mMicrosecs) / 1000.f;
+float64 Duration::milliseconds() const {
+    return static_cast<float64>(mMicrosecs) / 1000.;
 }
 
 Duration Duration::operator+(const Duration& rhs) const {
@@ -99,20 +107,38 @@ Duration& Duration::operator-=(const Duration& rhs) {
     return  *this;
 }
 
-Duration Duration::operator*(float s) const {
+Duration Duration::operator*(float32 s) const {
     return Duration((uint64)(mMicrosecs * s));
 }
 
-Duration& Duration::operator*=(float s) {
+Duration Duration::operator*(float64 s) const {
+    return Duration((uint64)(mMicrosecs * s));
+}
+
+Duration& Duration::operator*=(float32 s) {
     mMicrosecs = (uint64)(mMicrosecs * s);
     return *this;
 }
 
-Duration Duration::operator/(float s) const {
+Duration& Duration::operator*=(float64 s) {
+    mMicrosecs = (uint64)(mMicrosecs * s);
+    return *this;
+}
+
+Duration Duration::operator/(float32 s) const {
     return Duration((uint64)(mMicrosecs / s));
 }
 
-Duration& Duration::operator/=(float s) {
+Duration Duration::operator/(float64 s) const {
+    return Duration((uint64)(mMicrosecs / s));
+}
+
+Duration& Duration::operator/=(float32 s) {
+    mMicrosecs = (uint64)(mMicrosecs / s);
+    return *this;
+}
+
+Duration& Duration::operator/=(float64 s) {
     mMicrosecs = (uint64)(mMicrosecs / s);
     return *this;
 }
