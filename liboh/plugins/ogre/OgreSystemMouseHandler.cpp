@@ -65,7 +65,7 @@ class OgreSystem::MouseHandler {
     std::vector<SubscriptionId> mEvents;
     typedef std::multimap<InputDevice*, SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
-    
+
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyPositionObjectPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
@@ -76,10 +76,10 @@ class OgreSystem::MouseHandler {
        each cursor should have its own MouseHandler instance */
     std::map<int, DragAction> mDragAction;
     std::map<int, ActiveDrag*> mActiveDrag;
-/*
-    typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
-    std::map<int, ClickAction> mClickAction;
-*/
+    /*
+        typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
+        std::map<int, ClickAction> mClickAction;
+    */
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -89,14 +89,14 @@ class OgreSystem::MouseHandler {
         Entity *mParentEntity;
         OgreSystem *mOgreSys;
         void findNext() {
-            while (!end() && !((*mIter).second->getProxy().getParent() == mParentEntity->id())){
+            while (!end() && !((*mIter).second->getProxy().getParent() == mParentEntity->id())) {
                 ++mIter;
             }
         }
     public:
         SubObjectIterator(Entity *parent) :
-          mParentEntity(parent),
-          mOgreSys(parent->getScene()) {
+                mParentEntity(parent),
+                mOgreSys(parent->getScene()) {
             mIter = mOgreSys->mSceneEntities.begin();
             findNext();
         }
@@ -139,7 +139,7 @@ class OgreSystem::MouseHandler {
 public:
     void clearSelection() {
         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
-             selectIter != mSelectedObjects.end(); ++selectIter) {
+                selectIter != mSelectedObjects.end(); ++selectIter) {
             Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
             if (ent) {
                 ent->setSelected(false);
@@ -188,7 +188,8 @@ private:
                 mouseOver->setSelected(true);
                 mLastShiftSelected = mouseOver->id();
                 // Fire selected event.
-            } else {
+            }
+            else {
                 SILOG(input,info,"Deselected " << (*selectIter)->getObjectReference());
                 Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
                 if (ent) {
@@ -197,11 +198,13 @@ private:
                 mSelectedObjects.erase(selectIter);
                 // Fire deselected event.
             }
-        } else if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
+        }
+        else if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
             SILOG(input,info,"Cleared selection");
             clearSelection();
             mLastShiftSelected = SpaceObjectReference::null();
-        } else {
+        }
+        else {
             // reset selection.
             clearSelection();
             mWhichRayObject+=direction;
@@ -226,7 +229,8 @@ private:
         }
         if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
             zoomInOut(ev->mValue, ev->getDevice(), mParent->mPrimaryCamera, mSelectedObjects, mParent);
-        } else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
+        }
+        else if (ev->mAxis == SDLMouse::WHEELX || ev->mAxis == PointerDevice::RELX) {
             //orbitObject(Vector3d(ev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), ev->getDevice());
         }
         return EventResponse::cancel();
@@ -239,7 +243,7 @@ private:
         while (doUngroupObjects(now)) {
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (ent) {
                 ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr());
@@ -266,12 +270,14 @@ private:
             proxyMgr->createObject(newMeshObject);
             newMeshObject->setMesh(meshObj->getMesh());
             newMeshObject->setScale(meshObj->getScale());
-        } else if (lightObj) {
+        }
+        else if (lightObj) {
             std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId));
             newObj = newLightObject;
             proxyMgr->createObject(newLightObject);
             newLightObject->update(lightObj->getLastLightInfo());
-        } else {
+        }
+        else {
             newObj = ProxyPositionObjectPtr(new ProxyPositionObject(proxyMgr, newId));
             proxyMgr->createObject(newObj);
         }
@@ -279,7 +285,8 @@ private:
             if (parentPtr) {
                 newObj->setParent(parentPtr, now, loc, localLoc);
                 newObj->resetPositionVelocity(now, localLoc);
-            } else {
+            }
+            else {
                 newObj->resetPositionVelocity(now, loc);
             }
         }
@@ -299,7 +306,7 @@ private:
         Task::AbsTime now(Task::AbsTime::now());
         SelectedObjectSet newSelectedObjects;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) {
                 continue;
@@ -323,7 +330,7 @@ private:
         Task::AbsTime now(Task::AbsTime::now());
         ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) continue;
             if (ent->getProxy().getProxyManager() != proxyMgr) {
@@ -331,7 +338,7 @@ private:
                 return EventResponse::nop();
             }
             if (!(ent->getProxy().getParent() == parentId)) {
-                SILOG(input,error,"Multiple select "<< (*iter)->getObjectReference() << 
+                SILOG(input,error,"Multiple select "<< (*iter)->getObjectReference() <<
                       " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
                 return EventResponse::nop();
             }
@@ -353,7 +360,7 @@ private:
             newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *ent = mParent->getEntity((*iter)->getObjectReference());
             if (!ent) continue;
             ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
@@ -369,7 +376,7 @@ private:
         int numUngrouped = 0;
         SelectedObjectSet newSelectedObjects;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *parentEnt = mParent->getEntity((*iter)->getObjectReference());
             if (!parentEnt) {
                 continue;
@@ -390,7 +397,8 @@ private:
                 proxyMgr->destroyObject(parentEnt->getProxyPtr());
                 parentEnt = NULL; // dies.
                 numUngrouped++;
-            } else {
+            }
+            else {
                 newSelectedObjects.insert(parentEnt->getProxyPtr());
             }
         }
@@ -411,7 +419,7 @@ private:
         }
         Entity *parentEnt = NULL;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             parentEnt = mParent->getEntity((*iter)->getObjectReference());
         }
         if (parentEnt) {
@@ -434,7 +442,7 @@ private:
     EventResponse leaveObject(EventPtr ev) {
         Task::AbsTime now(Task::AbsTime::now());
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-             iter != mSelectedObjects.end(); ++iter) {
+                iter != mSelectedObjects.end(); ++iter) {
             Entity *selent = mParent->getEntity((*iter)->getObjectReference());
             if (selent) {
                 selent->setSelected(false);
@@ -448,7 +456,8 @@ private:
             if (parentEnt) {
                 mSelectedObjects.insert(parentEnt->getProxyPtr());
             }
-        } else {
+        }
+        else {
             mCurrentGroup = SpaceObjectReference::null();
         }
         return EventResponse::nop();
@@ -486,7 +495,8 @@ private:
             Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
             newLightObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
             newLightObject->resetPositionVelocity(now, localLoc);
-        } else {
+        }
+        else {
             newLightObject->resetPositionVelocity(now, loc);
         }
         mSelectedObjects.clear();
@@ -513,36 +523,36 @@ private:
         const Quaternion &orient = loc.getOrientation();
 
         switch (buttonev->mButton) {
-          case SDL_SCANCODE_S:
+        case SDL_SCANCODE_S:
             amount*=-1;
-          case SDL_SCANCODE_W:
+        case SDL_SCANCODE_W:
             amount *= WORLD_SCALE;
             loc.setVelocity(direction(orient)*amount);
             loc.setAngularSpeed(0);
             break;
-          case SDL_SCANCODE_A:
+        case SDL_SCANCODE_A:
             amount*=-1;
-          case SDL_SCANCODE_D:
+        case SDL_SCANCODE_D:
             amount *= WORLD_SCALE;
             loc.setVelocity(orient.xAxis()*amount);
             loc.setAngularSpeed(0);
             break;
-          case SDL_SCANCODE_DOWN:
+        case SDL_SCANCODE_DOWN:
             amount*=-1;
-          case SDL_SCANCODE_UP:
+        case SDL_SCANCODE_UP:
             loc.setAxisOfRotation(Vector3f(1,0,0));
             loc.setAngularSpeed(buttonev->mPressed?amount:0);
             loc.setVelocity(Vector3f(0,0,0));
             break;
-          case SDL_SCANCODE_RIGHT:
+        case SDL_SCANCODE_RIGHT:
             amount*=-1;
-          case SDL_SCANCODE_LEFT:
+        case SDL_SCANCODE_LEFT:
             amount*=2;
             loc.setAxisOfRotation(Vector3f(0,1,0));
             loc.setAngularSpeed(buttonev->mPressed?amount:0);
             loc.setVelocity(Vector3f(0,0,0));
             break;
-          default:
+        default:
             break;
         }
         cam->getProxy().setPositionVelocity(now, loc);
@@ -550,110 +560,179 @@ private:
     }
 
     EventResponse import(EventPtr ev) {
-		std::cout << "input path name for import: " << std::endl;
-		std::string filename;
-		// a bit of a cludge right now, type name into console.
+        std::cout << "input path name for import: " << std::endl;
+        std::string filename;
+        // a bit of a cludge right now, type name into console.
         fflush(stdin);
-		while (!feof(stdin)) {
-			int c = fgetc(stdin);
-			if (c == '\r') {
-				c = fgetc(stdin);
-			}
-			if (c=='\n') {
-				break;
-			}
-			if (c=='\033' || c <= 0) {
-				std::cout << "<escape>\n";
-				return EventResponse::nop();
-			}
-			std::cout << (unsigned char)c;
-			filename += (unsigned char)c;
-		}
-		std::cout << '\n';
-		std::vector<std::string> files;
-		files.push_back(filename);
-		mParent->mInputManager->filesDropped(files);
-		return EventResponse::cancel();
-	}
+        while (!feof(stdin)) {
+            int c = fgetc(stdin);
+            if (c == '\r') {
+                c = fgetc(stdin);
+            }
+            if (c=='\n') {
+                break;
+            }
+            if (c=='\033' || c <= 0) {
+                std::cout << "<escape>\n";
+                return EventResponse::nop();
+            }
+            std::cout << (unsigned char)c;
+            filename += (unsigned char)c;
+        }
+        std::cout << '\n';
+        std::vector<std::string> files;
+        files.push_back(filename);
+        mParent->mInputManager->filesDropped(files);
+        return EventResponse::cancel();
+    }
 
     EventResponse saveScene(EventPtr ev) {
-		std::cout << "saving new scene as scene_new.txt: " << std::endl;
-		FILE *output = fopen("scene_new.txt", "wt");
-		if (!output) {
-			perror("Failed to open scene_new.txt: ");
-			return EventResponse::cancel();
-		}
-		OgreSystem::SceneEntitiesMap::const_iterator iter;
-		for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
-			dumpObject(output, iter->second);
-		}
-		fclose(output);
-		return EventResponse::cancel();
-	}
+        std::cout << "saving new scene as scene_new.txt: " << std::endl;
+        FILE *output = fopen("scene_new.txt", "wt");
+        if (!output) {
+            perror("Failed to open scene_new.txt: ");
+            return EventResponse::cancel();
+        }
+        OgreSystem::SceneEntitiesMap::const_iterator iter;
+        for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
+            dumpObject(output, iter->second);
+        }
+        fclose(output);
+        return EventResponse::cancel();
+    }
 
-	void dumpObject(FILE* fp, Entity* e) {
-		Task::AbsTime now = Task::AbsTime::now();
-		ProxyPositionObject *pp = e->getProxyPtr().get();
-		Location loc = pp->globalLocation(now);
-		ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-		ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
-		ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
-		if (camera || mesh || light) {
-			fprintf(fp,"(%f %f %f) [%f %f %f %f] ",
-				loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
-		}
-		if (light) {
-			const char *typestr = "directional";
-			const LightInfo &linfo = light->getLastLightInfo();
-			if (linfo.mType == LightInfo::POINT) {
-				typestr = "point";
-			}
-			if (linfo.mType == LightInfo::SPOTLIGHT) {
-				typestr = "spotlight";
-			}
-			float32 ambientPower, shadowPower;
-			ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-			shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+    //objtype   subtype pos_x   pos_y   pos_z   orient_x    orient_y    orient_z    orient_w    scale_x scale_y scale_z density friction    bounce  meshURI diffuse_x   diffuse_y   diffuse_z   ambient
 
-			fprintf(fp, "<1 1 1> %s [%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>\n", typestr,linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,(int)linfo.mCastsShadow,0.0,1.0,0.0);
-		} else if (mesh) {
-			URI uri = mesh->getMesh();
-			std::string uristr = uri.toString();
-			if (uri.proto().empty()) {
-				uristr = "NULL";
-			}
-			const physicalParameters &phys = mesh->getPhysical();
-			fprintf(fp, "<%f %f %f> {%d %f %f %f} %s\n",mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, (int)phys.mode, phys.density, phys.friction, phys.bounce, uristr.c_str());
-		} else if (camera) {
-			fprintf(fp, "<1 1 1> CAMERA\n");
-		} else {
-			fprintf(fp, "<1 1 1> NULL\n");
-		}
-		//std::cout << "test output: " <<  << std::endl;
-	}
+    void dumpObject(FILE* fp, Entity* e) {
+        Task::AbsTime now = Task::AbsTime::now();
+        ProxyPositionObject *pp = e->getProxyPtr().get();
+        Location loc = pp->globalLocation(now);
+        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
+        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
+        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+
+        ///if (camera || mesh || light) {
+        /// fprintf(fp,"%f %f %f) [%f %f %f %f] ",
+        ///      loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
+///        }
+        if (light) {
+            const char *typestr = "directional";
+            const LightInfo &linfo = light->getLastLightInfo();
+            if (linfo.mType == LightInfo::POINT) {
+                typestr = "point";
+            }
+            if (linfo.mType == LightInfo::SPOTLIGHT) {
+                typestr = "spotlight";
+            }
+            float32 ambientPower, shadowPower;
+            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,",typestr,
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
+
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d,%f,%f,%f\n",
+                    linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
+                    linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
+                    linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
+                    linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
+                    (int)linfo.mCastsShadow,0.0,1.0,0.0);
+        }
+        else if (mesh) {
+            URI uri = mesh->getMesh();
+            std::string uristr = uri.toString();
+            if (uri.proto().empty()) {
+                uristr = "NULL";
+            }
+            const physicalParameters &phys = mesh->getPhysical();
+            std::string subtype;
+            if (phys.mode==0) subtype="graphiconly";
+            if (phys.mode==1) subtype="staticmesh";
+            if (phys.mode==2) subtype="dynamicbox";
+            if (phys.mode==3) subtype="dynamicsphere";
+            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
+
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%s\n",
+                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
+                    phys.friction, phys.bounce, uristr.c_str());
+        }
+        else if (camera) {
+            fprintf(fp, "<1 1 1> CAMERA\n");
+        }
+        else {
+            fprintf(fp, "<1 1 1> NULL\n");
+        }
+        //std::cout << "test output: " <<  << std::endl;
+    }
+
+    void dumpObject_old(FILE* fp, Entity* e) {
+        Task::AbsTime now = Task::AbsTime::now();
+        ProxyPositionObject *pp = e->getProxyPtr().get();
+        Location loc = pp->globalLocation(now);
+        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
+        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
+        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+        if (camera || mesh || light) {
+            fprintf(fp,"(%f %f %f) [%f %f %f %f] ",
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
+        }
+        if (light) {
+            const char *typestr = "directional";
+            const LightInfo &linfo = light->getLastLightInfo();
+            if (linfo.mType == LightInfo::POINT) {
+                typestr = "point";
+            }
+            if (linfo.mType == LightInfo::SPOTLIGHT) {
+                typestr = "spotlight";
+            }
+            float32 ambientPower, shadowPower;
+            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
+            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+
+            fprintf(fp, "<1 1 1> %s [%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>\n", typestr,linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,(int)linfo.mCastsShadow,0.0,1.0,0.0);
+        }
+        else if (mesh) {
+            URI uri = mesh->getMesh();
+            std::string uristr = uri.toString();
+            if (uri.proto().empty()) {
+                uristr = "NULL";
+            }
+            const physicalParameters &phys = mesh->getPhysical();
+            fprintf(fp, "<%f %f %f> {%d %f %f %f} %s\n",mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, (int)phys.mode, phys.density, phys.friction, phys.bounce, uristr.c_str());
+        }
+        else if (camera) {
+            fprintf(fp, "<1 1 1> CAMERA\n");
+        }
+        else {
+            fprintf(fp, "<1 1 1> NULL\n");
+        }
+        //std::cout << "test output: " <<  << std::endl;
+    }
 
 
     ///////////////// DEVICE FUNCTIONS ////////////////
 
     SubscriptionId registerAxisListener(const InputDevicePtr &dev,
-                              EventResponse(MouseHandler::*func)(EventPtr),
-                              int axis) {
+                                        EventResponse(MouseHandler::*func)(EventPtr),
+                                        int axis) {
         Task::IdPair eventId (AxisEvent::getEventId(),
                               AxisEvent::getSecondaryId(dev, axis));
         SubscriptionId subId = mParent->mInputManager->subscribeId(eventId,
-            std::tr1::bind(func, this, _1));
+                               std::tr1::bind(func, this, _1));
         mEvents.push_back(subId);
         mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
         return subId;
     }
 
     SubscriptionId registerButtonListener(const InputDevicePtr &dev,
-                              EventResponse(MouseHandler::*func)(EventPtr),
-                              int button, bool released=false, InputDevice::Modifier mod=0) {
+                                          EventResponse(MouseHandler::*func)(EventPtr),
+                                          int button, bool released=false, InputDevice::Modifier mod=0) {
         Task::IdPair eventId (released?ButtonReleased::getEventId():ButtonPressed::getEventId(),
                               ButtonEvent::getSecondaryId(button, mod, dev));
         SubscriptionId subId = mParent->mInputManager->subscribeId(eventId,
-            std::tr1::bind(func, this, _1));
+                               std::tr1::bind(func, this, _1));
         mEvents.push_back(subId);
         mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*dev, subId));
         return subId;
@@ -666,22 +745,22 @@ private:
             return EventResponse::nop();
         }
         switch (ev->mButton) {
-          case SDL_SCANCODE_Q:
+        case SDL_SCANCODE_Q:
             mDragAction[1] = 0;
             break;
-          case SDL_SCANCODE_W:
+        case SDL_SCANCODE_W:
             mDragAction[1] = DragActionRegistry::get("moveObject");
             break;
-          case SDL_SCANCODE_E:
+        case SDL_SCANCODE_E:
             mDragAction[1] = DragActionRegistry::get("rotateObject");
             break;
-          case SDL_SCANCODE_R:
+        case SDL_SCANCODE_R:
             mDragAction[1] = DragActionRegistry::get("scaleObject");
             break;
-          case SDL_SCANCODE_T:
+        case SDL_SCANCODE_T:
             mDragAction[1] = DragActionRegistry::get("rotateCamera");
             break;
-          case SDL_SCANCODE_Y:
+        case SDL_SCANCODE_Y:
             mDragAction[1] = DragActionRegistry::get("panCamera");
             break;
         }
@@ -694,7 +773,7 @@ private:
             return EventResponse::nop();
         }
         switch (ev->mType) {
-          case InputDeviceEvent::ADDED:
+        case InputDeviceEvent::ADDED:
             if (!!(std::tr1::dynamic_pointer_cast<SDLMouse>(ev->mDevice))) {
                 registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELX);
                 registerAxisListener(ev->mDevice, &MouseHandler::wheelListener, SDLMouse::WHEELY);
@@ -739,15 +818,14 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::setDragMode, SDL_SCANCODE_Y);
             }
             break;
-          case InputDeviceEvent::REMOVED:
-            {
-                DeviceSubMap::iterator iter;
-                while ((iter = mDeviceSubscriptions.find(&*ev->mDevice))!=mDeviceSubscriptions.end()) {
-                    mParent->mInputManager->unsubscribe((*iter).second);
-                    mDeviceSubscriptions.erase(iter);
-                }
+        case InputDeviceEvent::REMOVED: {
+            DeviceSubMap::iterator iter;
+            while ((iter = mDeviceSubscriptions.find(&*ev->mDevice))!=mDeviceSubscriptions.end()) {
+                mParent->mInputManager->unsubscribe((*iter).second);
+                mDeviceSubscriptions.erase(iter);
             }
-            break;
+        }
+        break;
         }
         return EventResponse::nop();
     }
@@ -793,7 +871,7 @@ private:
 public:
     MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
-            std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
+                              std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
                               MouseDragEvent::getEventId(),
@@ -804,18 +882,18 @@ public:
         mDragAction[4] = DragActionRegistry::get("rotateCamera");
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                              IdPair(MouseClickEvent::getEventId(), 
+                              IdPair(MouseClickEvent::getEventId(),
                                      MouseDownEvent::getSecondaryId(1)),
                               std::tr1::bind(&MouseHandler::selectObject, this, _1, 1)));
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                              IdPair(MouseClickEvent::getEventId(), 
+                              IdPair(MouseClickEvent::getEventId(),
                                      MouseDownEvent::getSecondaryId(3)),
                               std::tr1::bind(&MouseHandler::selectObject, this, _1, -1)));
     }
     ~MouseHandler() {
-        for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin(); 
-             iter != mEvents.end(); 
-             ++iter) {
+        for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
+                iter != mEvents.end();
+                ++iter) {
             mParent->mInputManager->unsubscribe(*iter);
         }
     }
@@ -827,7 +905,7 @@ public:
         return mCurrentGroup;
     }
     void addToSelection(const ProxyPositionObjectPtr &obj) {
-		mSelectedObjects.insert(obj);
+        mSelectedObjects.insert(obj);
     }
 };
 
