@@ -171,7 +171,6 @@ class DemoProxyManager :public ProxyManager {
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
-        int mode=0;
         float density=0;
         float friction=0;
         float bounce=0;
