@@ -42,13 +42,6 @@ namespace Sirikata {
 
 using namespace std;
 
-static OptionValue *scenefile;
-
-static const InitializeGlobalOptions globalst (
-    "cppoh",
-    new OptionValue("scenefile", "scene.csv", OptionValueType<std::string>(), "A text file with locations and filenames of all meshes in a scene.", &scenefile),
-    NULL);
-
 #define DEG2RAD 0.0174532925
 
 class DemoProxyManager :public ProxyManager {
@@ -349,8 +342,10 @@ class DemoProxyManager :public ProxyManager {
     }
 
 public:
+    string scenefile;
     DemoProxyManager()
             : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+        scenefile="scene.csv";
     }
 
     virtual void createObject(const ProxyObjectPtr &newObj) {
@@ -377,7 +372,7 @@ public:
                                        Location(Vector3d(0,0,50.), Quaternion::identity(),
                                                 Vector3f::nil(), Vector3f::nil(), 0.));
 
-        if (loadSceneFile(scenefile->as<std::string>())) {
+        if (loadSceneFile(scenefile)) {
             return; // success!
         }
         // Otherwise, load fallback scene.
