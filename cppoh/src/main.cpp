@@ -260,6 +260,7 @@ int main ( int argc,const char**argv ) {
             }
         }
     }
+    
     Provider<ProxyCreationListener*>*provider=pm;
     String graphicsCommandArguments;
     {
