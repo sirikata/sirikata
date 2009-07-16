@@ -1,5 +1,5 @@
 /*  cbr
- *  Options.hpp
+ *  StaticMotionPath.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,49 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OPTIONS_HPP_
-#define _CBR_OPTIONS_HPP_
+#ifndef _CBR_STATIC_MOTION_PATH_HPP_
+#define _CBR_STATIC_MOTION_PATH_HPP_
 
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
-
-#define CBR_MODULE "cbr"
-
-#define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
-
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define STATS_SYNC_FILE      "stats.sync-filename"
-
-#define ANALYSIS_LOC         "analysis.loc"
-#define ANALYSIS_LOCVIS         "analysis.locvis"
-#define ANALYSIS_LOCVIS_SEED         "analysis.locvis.seed"
-#define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
-#define ANALYSIS_LATENCY   "analysis.latency"
-#define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
-#define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
-#define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
-
-#define OBJECT_QUEUE         "object.queue"
-#define OBJECT_STATIC        "object.static"
-#define SERVER_QUEUE         "server.queue"
-
-#define NETWORK_TYPE         "net"
-
-#define SEND_BANDWIDTH       "send-bandwidth"
-#define RECEIVE_BANDWIDTH       "receive-bandwidth"
-
-#define CSEG                "cseg"
+#include "MotionPath.hpp"
 
 namespace CBR {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
+/** Static motion path, i.e. not a motion path at all.  Just has a single initial
+ *  update which has 0 velocityy.
+ */
+class StaticMotionPath : public MotionPath {
+public:
+    StaticMotionPath(const Time& start, const Vector3f& startpos);
 
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
+    virtual const TimedMotionVector3f initial() const;
+    virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
+private:
+    TimedMotionVector3f mMotion;
+}; // class StaticMotionPath
 
 } // namespace CBR
 
-
-#endif //_CBR_OPTIONS_HPP_
+#endif //_CBR_STATIC_MOTION_PATH_HPP_

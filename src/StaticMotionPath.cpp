@@ -1,5 +1,5 @@
 /*  cbr
- *  Options.hpp
+ *  StaticMotionPath.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,49 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OPTIONS_HPP_
-#define _CBR_OPTIONS_HPP_
-
-#include "Utility.hpp"
-#include "ServerNetwork.hpp"
-
-#define CBR_MODULE "cbr"
-
-#define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
-
-#define STATS_TRACE_FILE     "stats.trace-filename"
-#define STATS_SYNC_FILE      "stats.sync-filename"
-
-#define ANALYSIS_LOC         "analysis.loc"
-#define ANALYSIS_LOCVIS         "analysis.locvis"
-#define ANALYSIS_LOCVIS_SEED         "analysis.locvis.seed"
-#define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
-#define ANALYSIS_LATENCY   "analysis.latency"
-#define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
-#define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
-#define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
-
-#define OBJECT_QUEUE         "object.queue"
-#define OBJECT_STATIC        "object.static"
-#define SERVER_QUEUE         "server.queue"
-
-#define NETWORK_TYPE         "net"
-
-#define SEND_BANDWIDTH       "send-bandwidth"
-#define RECEIVE_BANDWIDTH       "receive-bandwidth"
-
-#define CSEG                "cseg"
+#include "StaticMotionPath.hpp"
 
 namespace CBR {
 
-void InitOptions();
-void ParseOptions(int argc, char** argv);
-OptionValue* GetOption(const char* name);
+StaticMotionPath::StaticMotionPath(const Time& start, const Vector3f& startpos) {
+    mMotion = TimedMotionVector3f(start, MotionVector3f(startpos, Vector3f(0,0,0)));
+}
 
-/** Get an option which is a filename and modify it to be server specific. */
-String GetPerServerFile(const char* opt_name, const ServerID& sid);
+const TimedMotionVector3f StaticMotionPath::initial() const {
+    return mMotion;
+}
+
+const TimedMotionVector3f* StaticMotionPath::nextUpdate(const Time& curtime) const {
+    if (mMotion.time() > curtime) return &mMotion;
+    return NULL;
+}
+
 
 } // namespace CBR
-
-
-#endif //_CBR_OPTIONS_HPP_

@@ -36,7 +36,11 @@
 #include "Random.hpp"
 
 #include "QuakeMotionPath.hpp"
+#include "StaticMotionPath.hpp"
 #include "ObjectMessageQueue.hpp"
+
+#include "Options.hpp"
+
 namespace CBR {
 
 ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)
@@ -55,7 +59,10 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
         ObjectInputs* inputs = new ObjectInputs;
 
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
-        inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
+        if (GetOption(OBJECT_STATIC)->as<bool>() == true)
+            inputs->motion = new StaticMotionPath(start, startpos);
+        else
+            inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * randFloat() * 20 );
         inputs->proximityRadius = randFloat() * 90 + 10; // FIXME
 
