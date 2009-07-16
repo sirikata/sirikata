@@ -48,15 +48,14 @@
 #include <task/Time.hpp>
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
-
-
 #include <set>
-
 
 namespace Sirikata {
 namespace Graphics {
 using namespace Input;
 using namespace Task;
+
+#define DEG2RAD 0.0174532925
 
 // Defined in DragActions.cpp.
 
@@ -521,7 +520,7 @@ private:
         CameraEntity *cam = mParent->mPrimaryCamera;
         Location loc = cam->getProxy().extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-
+        
         switch (buttonev->mButton) {
         case SDL_SCANCODE_S:
             amount*=-1;
@@ -590,7 +589,7 @@ private:
         std::cout << "saving new scene as scene_new.csv: " << std::endl;
         FILE *output = fopen("scene_new.csv", "wt");
         if (!output) {
-            perror("Failed to open scene_new.csv: ");
+            perror("Failed to open scene_new.csv");
             return EventResponse::cancel();
         }
         fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
@@ -605,6 +604,26 @@ private:
         return EventResponse::cancel();
     }
 
+    bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
+        /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
+        /// for now, in that case we should revert to quaternion
+        double q1,q2,q3,q0;
+        q2=q.x;
+        q3=q.y;
+        q1=q.z;
+        q0=q.w;
+        roll = std::atan2((2*((q0*q1)+(q2*q3))), (1-(2*(std::pow(q1,2.0)+std::pow(q2,2.0)))));
+        pitch = std::asin((2*((q0*q2)-(q3*q1))));
+        yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
+        pitch /= DEG2RAD;
+        roll /= DEG2RAD;
+        yaw /= DEG2RAD;  
+        if (std::abs(pitch) > 89.0) {
+            return false;
+        }
+        return true;      
+    }
+
     void dumpObject(FILE* fp, Entity* e) {
         Task::AbsTime now = Task::AbsTime::now();
         ProxyPositionObject *pp = e->getProxyPtr().get();
@@ -613,6 +632,24 @@ private:
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
+        /* Ogre's way doesn't jive
+        Ogre::Quaternion quat(loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
+        Ogre::Radian yaw = quat.getYaw();
+        Ogre::Radian pitch = quat.getPitch();
+        Ogre::Radian roll = quat.getRoll();
+        std::cout << "dbm: debug ogre yaw: " << yaw.valueDegrees() << " pitch: " << pitch.valueDegrees() << " roll: " << roll.valueDegrees() << std::endl;
+        */
+        double x,y,z;
+        std::string w("");
+        /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
+        if (!quat2Euler(loc.getOrientation(), x, z, y)) {
+            x=loc.getOrientation().x;
+            y=loc.getOrientation().y;
+            z=loc.getOrientation().z;
+            std::stringstream temp;
+            temp << loc.getOrientation().w;
+            w = temp.str();
+        }
         if (light) {
             const char *typestr = "directional";
             const LightInfo &linfo = light->getLastLightInfo();
@@ -625,9 +662,9 @@ private:
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
             shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,",typestr,
+            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,",typestr,
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
+                    x,y,z,w.c_str());
 
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
@@ -651,18 +688,18 @@ private:
             else {
                 std::cout << "csv: unknown physical mode! " << phys.mode << std::endl;
             }
-            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),
+            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
+                    x,y,z,w.c_str());
 
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
                     phys.friction, phys.bounce, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%f\n",
+            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%s\n",
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
+                                    x,y,z,w.c_str());
         }
         else {
             fprintf(fp, "#unknown object type in dumpObject\n");
