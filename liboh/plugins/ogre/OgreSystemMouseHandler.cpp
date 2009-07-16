@@ -595,7 +595,7 @@ private:
         }
         fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
         fprintf(output, "density,friction,bounce,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
-        fprintf(output, "diffuse_x,diffuse_y,diffuse_z,ambient,specular_x,specular_y,specular_z,shadowpower,");
+        fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
         OgreSystem::SceneEntitiesMap::const_iterator iter;
         for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
@@ -615,10 +615,6 @@ private:
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
-        ///if (camera || mesh || light) {
-        /// fprintf(fp,"%f %f %f) [%f %f %f %f] ",
-        ///      loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
-///        }
         if (light) {
             const char *typestr = "directional";
             const LightInfo &linfo = light->getLastLightInfo();
@@ -635,12 +631,17 @@ private:
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
 
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d,%f,%f,%f\n",
+            /*
+            diffuse_x,diffuse_y,diffuse_z,ambient,");
+            "specular_x,specular_y,specular_z,shadowpower,");
+            "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
+            */
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
                     linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
                     linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
-                    (int)linfo.mCastsShadow,0.0,1.0,0.0);
+                    (int)linfo.mCastsShadow);
         }
         else if (mesh) {
             URI uri = mesh->getMesh();
@@ -663,7 +664,9 @@ private:
                     phys.friction, phys.bounce, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,1,1,1\n");
+            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%f\n",
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
+                                    loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
         }
         else {
             fprintf(fp, "<1 1 1> NULL\n");

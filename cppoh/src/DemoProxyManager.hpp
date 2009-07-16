@@ -121,7 +121,6 @@ class DemoProxyManager :public ProxyManager {
     void parse_csv_values(string line, vector<string>& values) {
         values.clear();
         string temp("");
-
         for (unsigned int i=0; i<line.size(); i++) {
             char c = line[i];
             if (c!=',') {
@@ -164,15 +163,14 @@ class DemoProxyManager :public ProxyManager {
     map<string, string>* parse_csv_line(FILE* fil) {
         string line;
         getline(fil, line);
+        std::cout << "csv: line-->" << line << "<--" << std::endl;
         vector<string> values;
         map<string, string> *row;
         row = (new map<string, string>());
         if (line.size()>0) {
             parse_csv_values(line, values);
-            if (values.size() == headings.size()) {
-                for (unsigned int i=0; i < values.size(); i++) {
-                    (*row)[headings[i]] = values[i];
-                }
+            for (unsigned int i=0; i < values.size(); i++) {
+                (*row)[headings[i]] = values[i];
             }
         }
         return row;
@@ -189,10 +187,16 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
+        std::cout << "csv: row: ";
+        for (int i=0; i<row.size(); i++) {
+            std::cout << row[headings[i]] << " ";
+        }
+        std::cout << endl;
         if (row["objtype"][0]=='#' or row["objtype"]==string("")) {
+            cout << "csv: loadSceneObject passing, comment or blank line" << endl;
             return;                                         /// comment or blank line
         }
-            else {
+        else {
             string objtype = row["objtype"];
             pos.x = str2dbl(row["pos_x"]);
             pos.y = str2dbl(row["pos_y"]);
@@ -331,7 +335,13 @@ class DemoProxyManager :public ProxyManager {
             return false;
         }
         parse_csv_headings(fp);
+        std::cout << "csv: scene headings: ";
+        for (int i=0; i<headings.size(); i++) {
+            std::cout << headings[i] << " ";
+        }
+        std::cout << endl;
         while (!feof(fp)) {
+            std::cout << "csv: loading scene object" << std::endl;
             loadSceneObject(fp);
         }
         fclose(fp);
