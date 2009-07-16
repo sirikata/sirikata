@@ -139,7 +139,7 @@ void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
 
 void LoadMonitor::tick(const Time& t) {
   if (GetOption("monitor-load")->as<bool>() &&
-      t - mCurrentTime > 5000000)
+      t - mCurrentTime > Duration(5000000))
   {
     addLoadReading();
 

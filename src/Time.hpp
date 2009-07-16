@@ -42,7 +42,7 @@ class Duration;
 class Time {
 
 public:
-    Time(uint64 since_epoch);
+    explicit Time(uint64 since_epoch);
     Time(const Time& cpy);
     ~Time();
 

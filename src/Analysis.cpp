@@ -981,7 +981,7 @@ void LatencyAnalysis::PacketData::addPacketSentEvent(ServerDatagramQueuedEvent*s
     mId=sde->id;
     source=sde->source;
     dest=sde->dest;
-    if (_send_start_time==0||_send_start_time>=sde->begin_time()) {
+    if (_send_start_time==Time(0)||_send_start_time>=sde->begin_time()) {
         _send_start_time=sde->time;
         _send_end_time=sde->time;
     }
@@ -991,7 +991,7 @@ void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedE
     mId=sde->id;
     source=sde->source;
     dest=sde->dest;
-    if (_receive_end_time==0||_receive_end_time<=sde->end_time()) {
+    if (_receive_end_time==Time(0)||_receive_end_time<=sde->end_time()) {
         _receive_start_time=sde->begin_time();
         _receive_end_time=sde->end_time();
     }

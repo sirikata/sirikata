@@ -42,7 +42,7 @@ class Time;
 class Duration {
 public:
     Duration();
-    Duration(uint64 microsecs);
+    explicit Duration(uint64 microsecs);
     Duration(const Duration& cpy);
     ~Duration();
 
