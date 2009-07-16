@@ -593,6 +593,10 @@ private:
             perror("Failed to open scene_new.txt: ");
             return EventResponse::cancel();
         }
+        fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
+        fprintf(output, "density,friction,bounce,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
+        fprintf(output, "diffuse_x,diffuse_y,diffuse_z,ambient,specular_x,specular_y,specular_z,shadowpower,");
+        fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
         OgreSystem::SceneEntitiesMap::const_iterator iter;
         for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
             dumpObject(output, iter->second);
@@ -659,7 +663,7 @@ private:
                     phys.friction, phys.bounce, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "<1 1 1> CAMERA\n");
+            fprintf(fp, "camera,,1,1,1\n");
         }
         else {
             fprintf(fp, "<1 1 1> NULL\n");
