@@ -605,8 +605,6 @@ private:
         return EventResponse::cancel();
     }
 
-    //objtype   subtype pos_x   pos_y   pos_z   orient_x    orient_y    orient_z    orient_w    scale_x scale_y scale_z density friction    bounce  meshURI diffuse_x   diffuse_y   diffuse_z   ambient
-
     void dumpObject(FILE* fp, Entity* e) {
         Task::AbsTime now = Task::AbsTime::now();
         ProxyPositionObject *pp = e->getProxyPtr().get();
@@ -631,11 +629,6 @@ private:
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z,loc.getOrientation().w);
 
-            /*
-            diffuse_x,diffuse_y,diffuse_z,ambient,");
-            "specular_x,specular_y,specular_z,shadowpower,");
-            "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
-            */
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
@@ -675,51 +668,6 @@ private:
             fprintf(fp, "#unknown object type in dumpObject\n");
         }
     }
-
-    void dumpObject_old(FILE* fp, Entity* e) {
-        Task::AbsTime now = Task::AbsTime::now();
-        ProxyPositionObject *pp = e->getProxyPtr().get();
-        Location loc = pp->globalLocation(now);
-        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
-        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
-        if (camera || mesh || light) {
-            fprintf(fp,"(%f %f %f) [%f %f %f %f] ",
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
-        }
-        if (light) {
-            const char *typestr = "directional";
-            const LightInfo &linfo = light->getLastLightInfo();
-            if (linfo.mType == LightInfo::POINT) {
-                typestr = "point";
-            }
-            if (linfo.mType == LightInfo::SPOTLIGHT) {
-                typestr = "spotlight";
-            }
-            float32 ambientPower, shadowPower;
-            ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-
-            fprintf(fp, "<1 1 1> %s [%f %f %f %f] [%f %f %f %f] <%lf %f %f %f> <%f %f> [%f] %f %d <%f %f %f>\n", typestr,linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,(int)linfo.mCastsShadow,0.0,1.0,0.0);
-        }
-        else if (mesh) {
-            URI uri = mesh->getMesh();
-            std::string uristr = uri.toString();
-            if (uri.proto().empty()) {
-                uristr = "NULL";
-            }
-            const physicalParameters &phys = mesh->getPhysical();
-            fprintf(fp, "<%f %f %f> {%d %f %f %f} %s\n",mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, (int)phys.mode, phys.density, phys.friction, phys.bounce, uristr.c_str());
-        }
-        else if (camera) {
-            fprintf(fp, "<1 1 1> CAMERA\n");
-        }
-        else {
-            fprintf(fp, "<1 1 1> NULL\n");
-        }
-        //std::cout << "test output: " <<  << std::endl;
-    }
-
 
     ///////////////// DEVICE FUNCTIONS ////////////////
 
