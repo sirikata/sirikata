@@ -164,15 +164,20 @@ void ObjectConnections::connectionCallback(Network::Stream*stream, Network::Stre
             StreamSet::iterator stream_set_iterator;
             if (uwhere!=mActiveStreams.end()&&(stream_set_iterator=std::find(uwhere->second.begin(),uwhere->second.end(),stream))!=uwhere->second.end()) {
                 if (uwhere->second.size()==1&&where->second.connected()) {//As soon as discon message detected, stream is disconnected, so must have had no disconnect message, hence send forged disconnect
-                    forgeDisconnectionMessage(ObjectReference(uwhere->first));
-                    mActiveStreams.erase(uwhere);//erase the active stream
+                    forgeDisconnectionMessage(ObjectReference(uwhere->first)); // forged disconnect may erase the stream.
+                    uwhere=mActiveStreams.find(where->second.uuid()); // so search for it again
+                    if (uwhere != mActiveStreams.end()) {
+                        mActiveStreams.erase(uwhere);//erase the active stream
+                    }
                 }else {
                     uwhere->second.erase(stream_set_iterator);
                 }
             }else if ((twhere=mTemporaryStreams.find(where->second.uuid()))!=mTemporaryStreams.end()) {
-                for (;twhere!=mTemporaryStreams.end()&&twhere->first==where->second.uuid();++twhere) {
+                while (twhere!=mTemporaryStreams.end()&&twhere->first==where->second.uuid()) {
                     if (twhere->second.mStream==stream) {
-                        mTemporaryStreams.erase(twhere);//erase the temporary stream, destroying all pending messages
+                        mTemporaryStreams.erase(twhere++);//erase the temporary stream, destroying all pending messages
+                    } else {
+                        ++twhere;
                     }
                 }
             }else {
