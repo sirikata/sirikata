@@ -42,10 +42,13 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
         bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
         if (!sent_success) {
+            break;
+/*
             mClientQueues.deprioritize(objectName,.75,0,0,1);
             if (++retryCount>retryMax) {
                 break;//potentially need to retry all queues to find the one that can push ok
             }
+*/
         }else {
             mTrace->serverDatagramQueued(t, next_msg->dest(), next_msg->id(), next_msg->data().size());
 
