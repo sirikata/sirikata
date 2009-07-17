@@ -17,7 +17,7 @@ class ClusterBuild:
         return "cd build/cmake"
 
     def cd_to_sst_build(self):
-        return ClusterRunConcatCommands( [cd_to_code(), "cd dependencies/sst"] )
+        return ClusterRunConcatCommands( [self.cd_to_code(), "cd dependencies/sst"] )
 
     def destroy(self):
         destroy_cmd = "rm -rf " + self.config.code_dir
