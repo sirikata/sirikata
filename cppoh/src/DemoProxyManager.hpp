@@ -178,7 +178,7 @@ class DemoProxyManager :public ProxyManager {
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
         std::cout << endl;
-        if (row["objtype"][0]=='#' or row["objtype"]==string("")) {
+        if (row["objtype"][0]=='#' || row["objtype"]==string("")) {
             //cout << "csv: loadSceneObject passing, comment or blank line" << endl;
             return;                                         /// comment or blank line
         }
