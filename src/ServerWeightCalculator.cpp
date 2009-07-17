@@ -34,17 +34,19 @@
 
 namespace CBR {
 
+#define NORMALIZE_MODE NORMALIZE_BY_SEND_RATE
+
 ServerWeightCalculator::ServerWeightCalculator(const ServerID& id, CoordinateSegmentation* cseg, const WeightFunction& weightFunc, ServerMessageQueue* sq)
  : mServerID(id),
    mCSeg(cseg),
    mWeightFunc(weightFunc),
    mSendQueue(sq)
 {
-   
+
     // compute initial weights
     for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
         if (sid == mServerID) continue;
-        calculateWeight(mServerID, sid, NORMALIZE_BY_RECEIVE_RATE);
+        calculateWeight(mServerID, sid, NORMALIZE_MODE);
     }
 
     mCSeg->addListener(this);
@@ -57,7 +59,7 @@ ServerWeightCalculator::~ServerWeightCalculator() {
 void ServerWeightCalculator::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
     for(std::vector<SegmentationInfo>::const_iterator it = new_segmentation.begin(); it != new_segmentation.end(); it++) {
         if (it->server == mServerID) continue;
-        calculateWeight(mServerID, it->server, NORMALIZE_BY_RECEIVE_RATE);
+        calculateWeight(mServerID, it->server, NORMALIZE_MODE);
     }
 }
 
@@ -93,7 +95,7 @@ void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Nor
     }
     mSendQueue->setServerWeight(dest, result);
 
-    //printf("src_server=%d, dest=%d, weight=%f\n", mSendQueue->getSourceServer(), dest, result );
+    printf("src_server=%d, dest=%d, weight=%f\n", mSendQueue->getSourceServer(), dest, result );
 }
 
 } // namespace CBR
