@@ -266,10 +266,11 @@ int main ( int argc,const char**argv ) {
 
     ObjectHost *oh = new ObjectHost(spaceMap, ioServ);
     // default port is from Space.cpp
-
+    unsigned char data[16]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+    memset(data,1,16);
     HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
     firstObject->initializeConnect(
-        UUID::random(),
+        UUID(data,16),
         Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
                  Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
         "meru://daniel@/cube.mesh",
@@ -277,10 +278,10 @@ int main ( int argc,const char**argv ) {
         NULL,
         mainSpace);
     firstObject->setScale(Vector3f(3,3,3));
-        
+    memset(data,2,16);
     HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh));
     secondObject->initializeConnect(
-        UUID::random(),
+        UUID(data,16),
         Location(Vector3d(0,0,25), Quaternion::identity(),
                  Vector3f(0.1,0,0), Vector3f(0,0,1), 0.),
         "",
@@ -300,9 +301,9 @@ int main ( int argc,const char**argv ) {
         li.setLightFalloff(1,0,0.03);
         li.setLightSpotlightCone(30,40,1);
         li.setCastsShadow(true);
-
+        memset(data,3,16);
         thirdObject->initializeConnect(
-            UUID::random(),
+            UUID(data,16),
             Location(Vector3d(10,0,10), Quaternion::identity(),
                      Vector3f::nil(), Vector3f(0,0,1), 0.),
             "",

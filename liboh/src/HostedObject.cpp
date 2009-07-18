@@ -146,6 +146,7 @@ void HostedObject::initializeConnect(
     newObj.set_object_uuid_evidence(objectName);
     newObj.set_bounding_sphere(meshBounds);
     IObjLoc loc = newObj.mutable_requested_object_loc();
+    loc.set_timestamp(Time::now());
     loc.set_position(startingLocation.getPosition());
     loc.set_orientation(startingLocation.getOrientation());
     loc.set_velocity(startingLocation.getVelocity());
