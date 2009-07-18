@@ -49,8 +49,8 @@ protected:
     static const char* proxCallbackName() {
         return "ProxCall";
     }
-    virtual bool forwardThisName(bool registration_or_disconnection,const std::string&name) {        
-        if (registration_or_disconnection) return false;
+    virtual bool forwardThisName(bool disconnection,const std::string&name) {        
+        if (disconnection) return false;
         return name==proxCallbackName()||name=="NewProxQuery"||name=="DelProxQuery";
     }
     enum DidAlterMessage {
@@ -151,7 +151,7 @@ protected:
                         }
                     }
                 }
-                if (!forwardThisName(registration||disconnection,msg.body().message_names(i))) {
+                if (!forwardThisName(disconnection,msg.body().message_names(i))) {
                     if (len==1) return obj_is_deleted;
                     deliverAllMessages=false;
                 }else {

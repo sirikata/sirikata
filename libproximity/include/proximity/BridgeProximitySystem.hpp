@@ -62,9 +62,9 @@ class BridgeProximitySystem : public ObjectSpaceBridgeProximitySystem<MessageSer
         
     }mMulticast;
 protected:
-    virtual bool forwardThisName(bool registration_or_disconnection, const std::string&name) {
-        if (registration_or_disconnection) return true;
-        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<MessageService*>::forwardThisName(registration_or_disconnection,name);
+    virtual bool forwardThisName(bool disconnection, const std::string&name) {
+        if (disconnection) return true;//registration is forwarded by calling NewObj
+        return name=="ObjLoc"||this->ObjectSpaceBridgeProximitySystem<MessageService*>::forwardThisName(disconnection,name);
     }
 
     virtual bool forwardMessagesTo(MessageService*ms){

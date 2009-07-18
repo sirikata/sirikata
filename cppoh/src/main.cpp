@@ -265,18 +265,18 @@ int main ( int argc,const char**argv ) {
     spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
 
     ObjectHost *oh = new ObjectHost(spaceMap, ioServ);
-    // default port is from Space.cpp
+    {//to deallocate HostedObjects before armageddon
     unsigned char data[16]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
     memset(data,1,16);
     HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
     firstObject->initializeConnect(
-        UUID(data,16),
-        Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
-                 Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
-        "meru://daniel@/cube.mesh",
-        BoundingSphere3f(Vector3f::nil(),1),
-        NULL,
-        mainSpace);
+           UUID(data,16),
+            Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
+                     Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
+            "meru://daniel@/cube.mesh",
+            BoundingSphere3f(Vector3f::nil(),1),
+            NULL,
+            mainSpace);
     firstObject->setScale(Vector3f(3,3,3));
     memset(data,2,16);
     HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh));
@@ -365,8 +365,11 @@ int main ( int argc,const char**argv ) {
         fgetc(stdin);
     }
     delete graphicsSystem;
+
+    
     delete eventManager;
     delete workQueue;
+    }
     plugins.gc();
     SimulationFactory::destroy();
 

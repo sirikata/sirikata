@@ -73,7 +73,6 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     mLoc=new Loc;
     Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
     mGeom=new Proximity::BridgeProximitySystem(proxCon,spaceServices.registration_port());
-    mGeom->forwardMessagesTo(this);
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
@@ -91,9 +90,10 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     //mServices[ObjectReference(spaceServices.oseg_port())]=mObjectSegmentation;
     //mServices[ObjectReference(spaceServices.cseg_port())]=mCoordinateSegmentation;
     //mServices[ObjectReference(spaceServices.router_port())]=mRouter;
+    mRegistration->forwardMessagesTo(mObjectConnections);
     mRegistration->forwardMessagesTo(mLoc);
     mRegistration->forwardMessagesTo(mGeom);
-    mRegistration->forwardMessagesTo(mObjectConnections);
+
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
     mLoc->forwardMessagesTo(mObjectConnections);//FIXME: is this necessary
