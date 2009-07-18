@@ -117,11 +117,7 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
             }
         }
     } else if (where->second.connected()) {//ordinary message to connected object
-        if (mSpace) {
-            mSpace->processMessage(hdr,MemoryReference(message_body));
-        } else {
-            SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" because forwardMessagesTo was not called");
-        }
+        processExistingObject(hdr, message_body, true); // forward set to true for now....
     } else {//Not sure if we should verify that a connection request is going through,
             // or if we should just find the size of bytes saved and cap that reasonably
             // this check would have verified a good faith effort to start connecting if (where->second.isConnecting()) {

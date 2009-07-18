@@ -201,6 +201,8 @@ void HostedObject::initializeScripted(const UUID&objectName, const String& scrip
     }
 }
 bool HostedObject::send(const RoutableMessageHeader &hdrOrig, const MemoryReference&body) {
+    assert(hdrOrig.has_destination_object());
+    assert(hdrOrig.has_destination_space());
     SpaceDataMap::iterator where=mSpaceData.find(hdrOrig.destination_space());
     if (where!=mSpaceData.end()) {
         RoutableMessageHeader hdr (hdrOrig);
@@ -218,26 +220,27 @@ void HostedObject::receivedPositionUpdate(
     const ObjLoc &objLoc,
     bool force_reset)
 {
+    force_reset = force_reset || (objLoc.update_flags() & ObjLoc::FORCE);
     if (!objLoc.has_timestamp()) {
         objLoc.set_timestamp(Task::AbsTime::now());
     }
     Location currentLoc = proxy->globalLocation(objLoc.timestamp());
-    if (objLoc.has_position()) {
+    if (force_reset || objLoc.has_position()) {
         currentLoc.setPosition(objLoc.position());
     }
-    if (objLoc.has_orientation()) {
+    if (force_reset || objLoc.has_orientation()) {
         currentLoc.setOrientation(objLoc.orientation());
     }
-    if (objLoc.has_velocity()) {
+    if (force_reset || objLoc.has_velocity()) {
         currentLoc.setVelocity(objLoc.velocity());
     }
-    if (objLoc.has_rotational_axis()) {
+    if (force_reset || objLoc.has_rotational_axis()) {
         currentLoc.setAxisOfRotation(objLoc.rotational_axis());
     }
-    if (objLoc.has_angular_speed()) {
+    if (force_reset || objLoc.has_angular_speed()) {
         currentLoc.setAngularSpeed(objLoc.angular_speed());
     }
-    if (force_reset || (objLoc.update_flags() & ObjLoc::FORCE)) {
+    if (force_reset) {
         proxy->resetPositionVelocity(objLoc.timestamp(), currentLoc);
     } else {
         proxy->setPositionVelocity(objLoc.timestamp(), currentLoc);
@@ -255,6 +258,7 @@ void HostedObject::receivedPropertyUpdate(
         if (parsedProperty.has_value()) {
             ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
             if (proxymesh) {
+                SILOG(cppoh,info, "* Received MESH property update for " << proxy->getObjectReference().object() <<" has mesh URI "<<URI(parsedProperty.value()));
                 proxymesh->setMesh(URI(parsedProperty.value()));
             }
         }
@@ -325,15 +329,17 @@ void HostedObject::receivedPropertyUpdate(
 */
 }
 
-void HostedObject::receivedProxObjectProperties(
+bool HostedObject::receivedProxObjectProperties(
     const SpaceObjectReference &proximateObjectId,
     int32 queryId,
     const std::vector<std::string> &propertyRequests,
     const ReadOnlyMessage &responseMessage)
 {
     if (responseMessage.return_status() != ReadOnlyMessage::SUCCESS) {
-        return;
+        SILOG(cppoh,info,"FAILURE receiving prox object properties "<<proximateObjectId.object());
+        return false;
     }
+    SILOG(cppoh,info,"Received prox object properties "<<proximateObjectId.object());
     bool hasMesh=false;
     bool hasLight=false;
     bool isCamera=false;
@@ -366,13 +372,16 @@ void HostedObject::receivedProxObjectProperties(
         proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
     }
     if (!proxyMgr) {
-        return;
+        return false;
     }
     if (isCamera) {
+        SILOG(cppoh,info, "* I found a camera named " << proximateObjectId.object());
         proxyObj = ProxyPositionObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
     } else if (hasLight && !hasMesh) {
+        SILOG(cppoh,info, "* I found a light named " << proximateObjectId.object());
         proxyObj = ProxyPositionObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
     } else {
+        SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
         proxyObj = ProxyPositionObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
     }
     receivedPositionUpdate(proxyObj, objLoc, true);
@@ -389,19 +398,21 @@ void HostedObject::receivedProxObjectProperties(
             receivedPropertyUpdate(proxyObj, propertyRequests[i], args);
         }
     }
+    return false;
 }
 
 static int32 query_id = 0;
 using Protocol::LocRequest;
 void HostedObject::processMessage(const ReceivedMessage &msg, std::string *response) {
-    std::cout << "Received Message from: " << msg.sourceObject << " port " << msg.sourcePort << " to " << msg.destinationPort << std::endl;
-    std::cout << "Message name: "<<msg.name<<std::endl;
     ObjectHostProxyManager *proxyMgr = NULL;
     ProxyPositionObjectPtr thisObj;
+    std::ostringstream printstr;
+    printstr<<"\t";
     if (msg.perSpaceData) {
         proxyMgr = msg.perSpaceData->mSpaceConnection.getTopLevelStream().get();
         thisObj = msg.perSpaceData->mProxyObject;
     }
+
     if (msg.name == "GetProp") {
         String propertyName;
         Protocol::GetProp getProp;
@@ -417,14 +428,17 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
             } else {
                 *response = getProperty(propertyName);
             }
+            printstr<<"GetProp: "<<propertyName<<" = "<<getProperty(propertyName);
         } else {
+            printstr<<"GetProp: "<<propertyName<<" (404'ed)";
             Protocol::PropertyResponse responseMsg;
             responseMsg.set_error(Protocol::PropertyResponse::NOT_FOUND);
             responseMsg.SerializeToString(response);
         }
     }
-    if (msg.name == "LocRequest") {
+    else if (msg.name == "LocRequest") {
         LocRequest query;
+        printstr<<"LocRequest: Proxy exists = "<<(thisObj?true:false);
         query.ParseFromArray(msg.body.data(), msg.body.length());
         ObjLoc loc;
         Task::AbsTime now = Task::AbsTime::now();
@@ -451,7 +465,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
             return;
         }
     }
-    if (msg.name == "RetObj") {
+    else if (msg.name == "RetObj") {
         if (!msg.perSpaceData) {
             SILOG(objecthost, error, "RetObj message not for any known space.");
             return;
@@ -462,10 +476,13 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
             SpaceObjectReference objectId(msg.sourceObject.space(), ObjectReference(retObj.object_reference()));
             ProxyPositionObjectPtr proxyObj;
             if (hasProperty("IsCamera")) {
+                printstr<<"RetObj: I am now a Camera known as "<<objectId.object();
                 proxyObj = ProxyPositionObjectPtr(new ProxyCameraObject(proxyMgr, objectId));
             } else if (hasProperty("LightInfo") && !hasProperty("MeshURI")) {
+                printstr<<"RetObj. I am now a Light known as "<<objectId.object();
                 proxyObj = ProxyPositionObjectPtr(new ProxyLightObject(proxyMgr, objectId));
             } else {
+                printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
                 proxyObj = ProxyPositionObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
             }
             msg.perSpaceData->mProxyObject = proxyObj;
@@ -482,12 +499,18 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
                     Protocol::NewProxQuery proxQuery;
                     proxQuery.set_query_id(my_query_id);
                     proxQuery.set_max_radius(100);
-                    proxQuery.set_min_solid_angle(0.1);
                     String proxQueryStr;
                     proxQuery.SerializeToString(&proxQueryStr);
+                    RoutableMessageBody body;
+                    body.add_message_names("NewProxQuery");
+                    body.add_message_arguments(proxQueryStr);
+                    String bodyStr;
+                    body.SerializeToString(&bodyStr);
                     RoutableMessageHeader proxHeader;
                     proxHeader.set_destination_port(Services::GEOM);
-                    send(proxHeader, MemoryReference(proxQueryStr));
+                    proxHeader.set_destination_object(ObjectReference::spaceServiceID());
+                    proxHeader.set_destination_space(objectId.space());
+                    send(proxHeader, MemoryReference(bodyStr));
                 }
                 for (PropertyMap::const_iterator iter = mProperties.begin();
                         iter != mProperties.end();
@@ -497,7 +520,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
             }
         }
     }
-    if (msg.name == "ProxCall") {
+    else if (msg.name == "ProxCall") {
         if (!msg.perSpaceData) {
             SILOG(objecthost, error, "ProxCall message not for any known space.");
             return;
@@ -513,10 +536,13 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
             proxyMgr->getProxyObject(proximateObjectId));
         switch (proxCall.proximity_event()) {
           case Protocol::ProxCall::EXITED_PROXIMITY:
+            printstr<<"ProxCall EXITED "<<proximateObjectId.object();
             proxyMgr->destroyObjectProximity(proxyObj, mInternalObjectReference, proxCall.query_id());
             break;
           case Protocol::ProxCall::ENTERED_PROXIMITY:
+            printstr<<"ProxCall ENTERED "<<proximateObjectId.object();
             if (!proxyObj) { // FIXME: We may get one of these for each prox query. Keep track of in-progress queries in ProxyManager.
+                printstr<<" (Not yet known)";
                 RoutableMessageBody body;
                 std::string serializedGetProp;
                 std::vector<std::string> propertyRequests;
@@ -550,6 +576,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
                 std::string serializedBody;
                 body.SerializeToString(&serializedBody);
                 RoutableMessageHeader header;
+                header.set_destination_space(proximateObjectId.space());
                 header.set_destination_object(ObjectReference(proxCall.proximate_object()));
                 mQueries.insert(RunningQueryMap::value_type(
                                     my_query_id,
@@ -564,14 +591,19 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
                 // add timer to (&HostedObject::timedOut, weak_ptr(this), my_query_id)
 
             } else {
+                printstr<<" (Already known)";
                 proxyMgr->createObjectProximity(proxyObj, mInternalObjectReference, proxCall.query_id());
             }
             break;
           case Protocol::ProxCall::STATELESS_PROXIMITY:
+            printstr<<"ProxCall Stateless'ed "<<proximateObjectId.object();
             // Do not create a proxy object in this case: This message is for one-time queries
             break;
         }
+    } else {
+        printstr<<"Unknown message name: "<<msg.name;
     }
+    SILOG(cppoh,debug,printstr.str());
 }
 
 void HostedObject::receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
@@ -583,14 +615,46 @@ void HostedObject::receivedRoutableMessage(const HostedObjectWPtr&thus,const Spa
         return;
     }
 
+    std::string myself_name;
     ReceivedMessage msg (sid, ObjectReference(message.source_object()), MessagePort(message.source_port()), MessagePort(message.destination_port()));
     {
+        std::ostringstream os;
         SpaceDataMap::iterator iter = realThis->mSpaceData.find(sid);
         if (iter != realThis->mSpaceData.end()) {
             msg.perSpaceData = &(iter->second);
         }
+        if (msg.perSpaceData && msg.perSpaceData->mProxyObject) {
+            os << msg.perSpaceData->mProxyObject->getObjectReference().object();
+        } else {
+            os << "[Temporary UUID " << realThis->mInternalObjectReference.toString() << "]";
+        }
+        myself_name = os.str();
+    }
+    {
+        std::ostringstream os;
+        os << "** Message from: " << msg.sourceObject.object() << " port " << msg.sourcePort << " to "<<myself_name<<" port " << msg.destinationPort;
+        SILOG(cppoh,debug,os.str());
+    }
+    /// Handle Return values to queries we sent to someone:
+    if (message.has_return_status()) {
+        if (!message.has_id()) {
+            return; // invalid!
+        }
+        // This is a response message;
+        int64 id = message.id();
+        RunningQueryMap::iterator iter = realThis->mQueries.find(id);
+        if (iter != realThis->mQueries.end()) {
+            if (!(iter->second)(message)) {
+                // The map may have changed... so look it up again to be sure.
+                iter = realThis->mQueries.find(id);
+                if (iter != realThis->mQueries.end()) {
+                    realThis->mQueries.erase(iter);
+                }
+            }
+        }
     }
 
+    /// Parse message_names and message_arguments.
     int numNames = message.message_names_size();
     int numBodies = message.message_arguments_size();
     RoutableMessageBody responseMessage;
@@ -609,16 +673,21 @@ void HostedObject::receivedRoutableMessage(const HostedObjectWPtr&thus,const Spa
 
         if (message.has_id()) {
             std::string response;
+            /// Pass response parameter if we expect a response.
             realThis->processMessage(msg, &response);
-            if (!response.empty()) {
-                responseMessage.set_message_arguments(i, response);
-            }
+            responseMessage.add_message_arguments(response);
         } else {
+            /// Return value not needed.
             realThis->processMessage(msg, NULL);
         }
     }
 
     if (message.has_id()) {
+        /// Send return value--
+        // All message_arguments should be filled for now, even if they are all empty.
+        // Doing otherwise needs special cases...
+        // FIXME: Create a wrapper for RoutableMessageBody so we can handle special cases.
+
         responseMessage.set_id(message.id());
         responseMessage.set_return_status(RoutableMessageBody::SUCCESS);
         RoutableMessageHeader responseHeader;
@@ -628,6 +697,8 @@ void HostedObject::receivedRoutableMessage(const HostedObjectWPtr&thus,const Spa
         if (message.has_source_port()) {
             responseHeader.set_destination_port(message.source_port());
         }
+        responseHeader.set_destination_space(sid);
+
         std::string messageBodyStr;
         responseMessage.SerializeToString(&messageBodyStr);
         realThis->send(responseHeader, MemoryReference(messageBodyStr));

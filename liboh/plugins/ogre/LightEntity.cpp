@@ -59,7 +59,11 @@ float LightEntity::computeClosestPower(
         const Color &target,
         float32 power) {
     //minimize sqrt((source.r*power - target.r)^2 + (source.g*power - target.g) + (source.b*power - target.b));
-    return power * source.dot(target) / source.length();
+    if (source.length()) {
+        return power * source.dot(target) / source.length();
+    } else {
+        return 0;
+    }
 }
 
 void LightEntity::notify(const LightInfo& linfo){

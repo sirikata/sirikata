@@ -55,9 +55,11 @@ using Task::GenEventManager;
 using Transfer::TransferManager;
 
 OptionValue *cdnConfigFile;
+OptionValue *floatExcept;
 InitializeGlobalOptions main_options("",
 //    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
     cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
+    floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
     NULL
 );
 
@@ -233,15 +235,17 @@ void parseConfig(
 
 int main ( int argc,const char**argv ) {
 
-#ifdef __GNUC__
-    feraiseexcept(FE_ALL_EXCEPT);
-#endif
-
     using namespace Sirikata;
     PluginManager plugins;
     plugins.load ( DynamicLibrary::filename("ogregraphics") );
     plugins.load ( DynamicLibrary::filename("bulletphysics") );
     OptionSet::getOptions ( "" )->parse ( argc,argv );
+
+#ifdef __GNUC__
+    if (floatExcept->as<bool>()) {
+        feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
+    }
+#endif
 
     OptionMapPtr transferOptions (new OptionMap);
     {
@@ -267,7 +271,7 @@ int main ( int argc,const char**argv ) {
     firstObject->initializeConnect(
         UUID::random(),
         Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
-                 Vector3f::nil(), Vector3f::nil(), 0.),
+                 Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
         "meru://daniel@/cube.mesh",
         BoundingSphere3f(Vector3f::nil(),1),
         NULL,
@@ -278,7 +282,7 @@ int main ( int argc,const char**argv ) {
     secondObject->initializeConnect(
         UUID::random(),
         Location(Vector3d(0,0,25), Quaternion::identity(),
-                 Vector3f::nil(), Vector3f::nil(), 0.),
+                 Vector3f(0.1,0,0), Vector3f(0,0,1), 0.),
         "",
         BoundingSphere3f(Vector3f::nil(),0),
         NULL,
@@ -300,7 +304,7 @@ int main ( int argc,const char**argv ) {
         thirdObject->initializeConnect(
             UUID::random(),
             Location(Vector3d(10,0,10), Quaternion::identity(),
-                     Vector3f::nil(), Vector3f::nil(), 0.),
+                     Vector3f::nil(), Vector3f(0,0,1), 0.),
             "",
             BoundingSphere3f(Vector3f::nil(),0),
             &li,

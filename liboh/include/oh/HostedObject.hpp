@@ -77,7 +77,8 @@ private:
         PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
     };
 
-    typedef std::tr1::function<void (const ReadOnlyMessage &responseMessage)> QueryCallback;
+    // QueryCallback returns true if the query should remain (this is something agreed upon in the protocol, such as a "recurring" flag.
+    typedef std::tr1::function<bool (const ReadOnlyMessage &responseMessage)> QueryCallback;
     typedef std::map<int64, QueryCallback> RunningQueryMap;
     RunningQueryMap mQueries;
 
@@ -93,7 +94,7 @@ private:
     friend class ::Sirikata::SelfWeakPtr<HostedObject>;
     HostedObject(ObjectHost*parent);
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
-    void receivedProxObjectProperties(const SpaceObjectReference &proximateObjectId, int32 queryId, const std::vector<std::string> &propertyRequests, const ReadOnlyMessage &responseMessage);
+    bool receivedProxObjectProperties(const SpaceObjectReference &proximateObjectId, int32 queryId, const std::vector<std::string> &propertyRequests, const ReadOnlyMessage &responseMessage);
     static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid,const Network::Chunk&);
 public:
     static void disconnectionEvent(const HostedObjectWPtr&thus,const SpaceID&sid,const String&reason);
