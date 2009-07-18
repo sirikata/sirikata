@@ -89,7 +89,7 @@ private:
     ///does the heap management for sent or unsent subscribers based on the passed vector
     Time pushSubscriber(Subscriber*,std::vector<SubscriberTimePair>*);
     ///Push a subscriber who missed a broadcast into the mUnsentSubscribersHeap
-    void pushNewSubscriber(Subscriber*);
+    void pushNewSubscriber(Subscriber*,const Time&);
     ///Push a Subscriber who has just heard a broadcast into the mSentSubscribersHeap
     void pushJustReceivedSubscriber(Subscriber*);
 public:

@@ -22,10 +22,11 @@ Time SubscriptionState::pushSubscriber(Subscriber*subscriber,std::vector<Subscri
     return retval;
 }
 
-void SubscriptionState::pushNewSubscriber(Subscriber*s) {
-    Time retval=pushSubscriber(s,&mUnsentSubscribersHeap);
-    if (mLatestUnsentTime<retval) {
-        mLatestUnsentTime=retval;
+void SubscriptionState::pushNewSubscriber(Subscriber*s,const Time&oldTime) {
+    mUnsentSubscribersHeap.push_back(SubscriberTimePair(oldTime,s));
+    std::push_heap(mUnsentSubscribersHeap.begin(),mUnsentSubscribersHeap.end());
+    if (mLatestUnsentTime<oldTime) {
+        mLatestUnsentTime=oldTime;
     }
 }
 void SubscriptionState::pushJustReceivedSubscriber(Subscriber*s) {
@@ -103,7 +104,7 @@ void SubscriptionState::broadcast(Server*poll,const MemoryReference&data){
                 pushJustReceivedSubscriber(sentEnd->mSubscriber);
             }else {
                 for (iter=sent.begin();iter!=sentEnd;++iter) {
-                    pushNewSubscriber(iter->mSubscriber);
+                    pushNewSubscriber(iter->mSubscriber,iter->mNextUpdateTime);
                 }
                 break;
             }
