@@ -3,36 +3,25 @@
 
 #include "FIFOQueue.hpp"
 #include "ServerMessageQueue.hpp"
+#include "ServerMessagePair.hpp"
+#include "FairQueue.hpp"
+#include "NetworkQueueWrapper.hpp"
 
 namespace CBR {
 class FIFOServerMessageQueue:public ServerMessageQueue {
-    class ServerMessagePair {
-    private:
-        std::pair<ServerID,Network::Chunk> mPair;
-    public:
-        ServerMessagePair(const ServerID&sid, const Network::Chunk&data):mPair(sid,data){}
-        //destructively modifies the data chunk to quickly place it in the queue
-        ServerMessagePair(const ServerID&sid, Network::Chunk&data):mPair(sid,Network::Chunk()){
-            mPair.second.swap(data);
-        }
-        unsigned int size()const {
-            return mPair.second.size();
-        }
-
-        ServerID dest() const {
-            return mPair.first;
-        }
-
-        const Network::Chunk data() const {
-            return mPair.second;
-        }
-    };
 
     FIFOQueue<ServerMessagePair, ServerID> mQueue;
-    uint32 mRate;
-    uint32 mRemainderBytes;
+    // It seems weird that we're using a FairQueue, but we do so to split bandwidth evenly.
+    // Doing round robin would be an alternative.
+    FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
+
+    uint32 mSendRate;
+    uint32 mRecvRate;
+    uint32 mRemainderSendBytes;
+    uint32 mRemainderRecvBytes;
     Time mLastTime;
     Time mLastSendEndTime; // the time at which the last send ended, if there are messages that are too big left in the queue
+    Time mLastReceiveEndTime; // the time at which the last receive ended, if there are messages that are too big left in the queue
 
     typedef std::set<ServerID> ReceiveServerList;
     ReceiveServerList mSourceServers;
@@ -42,7 +31,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     };
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
-    FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
+    FIFOServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service(const Time& t);

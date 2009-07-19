@@ -171,9 +171,9 @@ void *main_loop(void *) {
     ServerMessageQueue* sq = NULL;
     String server_queue_type = GetOption(SERVER_QUEUE)->as<String>();
     if (server_queue_type == "fifo")
-        sq = new FIFOServerMessageQueue(gNetwork,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
+        sq = new FIFOServerMessageQueue(gNetwork,GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
     else if (server_queue_type == "fair")
-        sq = new FairServerMessageQueue(gNetwork, GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
+        sq = new FairServerMessageQueue(gNetwork,GetOption(SEND_BANDWIDTH)->as<uint32>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(), server_id, server_id_map, gTrace);
     else {
         assert(false);
         exit(-1);
