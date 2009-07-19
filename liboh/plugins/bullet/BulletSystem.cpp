@@ -37,7 +37,7 @@
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
-#include "BulletSystem.hpp"
+#include <oh/BulletSystem.hpp>
 
 using namespace std;
 using std::tr1::placeholders::_1;
@@ -91,9 +91,10 @@ void bulletObj::meshChanged (const URI &newMesh) {
 }
 
 void bulletObj::setPhysical (const physicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << (long)this << " mode=" << pp.mode << " mesh: " << meshname << endl;)
+    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " mesh: " << meshname << endl;)
     switch (pp.mode) {
     case Disabled:
+        DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: Disabled" << endl);
         active = false;
         dynamic = false;
         break;
@@ -110,7 +111,8 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
         shape = ShapeSphere;
         break;
     }
-    if (!Disabled) {
+    if (!(pp.mode==Disabled)) {
+        DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: adding to bullet" << endl);
         positionOrientation po;
         po.p = meshptr->getPosition();
         po.o = meshptr->getOrientation();
@@ -400,7 +402,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
 
     gravity = Vector3d(0, -9.8, 0);
     //groundlevel = 3044.0;
-    groundlevel = 4500.0;
+    groundlevel = 0.0;
     btTransform groundTransform;
     btDefaultMotionState* myMotionState;
     btVector3 worldAabbMin(-10000,-10000,-10000);

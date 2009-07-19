@@ -43,6 +43,8 @@
 #include <string>
 #include <oh/ProxyMeshObject.hpp>
 #include <task/EventManager.hpp>
+#include <options/Options.hpp>
+#include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 
 using namespace std;
@@ -274,17 +276,6 @@ struct positionOrientation {
 class BulletSystem;
 
 class bulletObj : public MeshListener,Noncopyable {
-    enum mode {
-        Disabled,               /// non-active, remove from physics
-        Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere                 /// fully physical -- collision & dynamics
-    };
-    enum shapeID {
-        ShapeMesh,
-        ShapeBox,
-        ShapeSphere
-    };
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
@@ -297,6 +288,17 @@ class bulletObj : public MeshListener,Noncopyable {
     btTriangleIndexVertexArray* indexarray;
     btDefaultMotionState* myMotionState;
 public:
+    enum mode {
+        Disabled,               /// non-active, remove from physics
+        Static,                 /// collisions, no dynamic movement (bullet mass==0)
+        DynamicBox,                 /// fully physical -- collision & dynamics
+        DynamicSphere                 /// fully physical -- collision & dynamics
+    };
+    enum shapeID {
+        ShapeMesh,
+        ShapeBox,
+        ShapeSphere
+    };
     /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
     float density;
     float friction;

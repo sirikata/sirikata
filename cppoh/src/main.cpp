@@ -220,6 +220,7 @@ void parseConfig(
 
 int main ( int argc,const char**argv ) {
     using namespace Sirikata;
+    
     PluginManager plugins;
     plugins.load ( DynamicLibrary::filename("ogregraphics") );
     plugins.load ( DynamicLibrary::filename("bulletphysics") );
@@ -248,7 +249,18 @@ int main ( int argc,const char**argv ) {
         return 1;
     }
     OptionSet::getOptions("")->parse(argc,argv);
-    ProxyManager * pm=new DemoProxyManager;
+    DemoProxyManager * pm=new DemoProxyManager;
+    
+    /// not sure about the options -- if they use spaces, this won't work
+    for (int i=1; i<argc; i++) {
+        if (sizeof(argv[i])>=2) {
+            if (argv[i][0] != '-' && argv[i][1] != '-') {
+                pm->scenefile = argv[i];
+                break;
+            }
+        }
+    }
+    
     Provider<ProxyCreationListener*>*provider=pm;
     String graphicsCommandArguments;
     {

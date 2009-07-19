@@ -36,15 +36,13 @@
 #include <oh/ProxyLightObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyWebViewObject.hpp>
+#include <oh/BulletSystem.hpp>
 
 namespace Sirikata {
 
-static OptionValue *scenefile;
+using namespace std;
 
-static const InitializeGlobalOptions globalst (
-    "cppoh",
-    new OptionValue("scenefile", "scene.txt", OptionValueType<std::string>(), "A text file with locations and filenames of all meshes in a scene.", &scenefile),
-    NULL);
+#define DEG2RAD 0.0174532925
 
 class DemoProxyManager :public ProxyManager {
     std::tr1::shared_ptr<ProxyCameraObject> mCamera;
@@ -71,9 +69,7 @@ class DemoProxyManager :public ProxyManager {
         pp.density = density;
         pp.friction = friction;
         pp.bounce = bounce;
-        if (mode) {
-            myObj->setPhysical(pp);
-        }
+        myObj->setPhysical(pp);             /// always do this to ensure parameters are valid
         return myObj;
     }
 
@@ -90,26 +86,242 @@ class DemoProxyManager :public ProxyManager {
     }
     ProxyObjectPtr addWebViewObject(const std::string &url, int width=500, int height=400) {
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
-		std::tr1::shared_ptr <ProxyWebViewObject> mWebView(new ProxyWebViewObject(this, SpaceObjectReference(myId)));
-        	mObjects.insert(ObjectMap::value_type(myId, mWebView));
-		notify(&ProxyCreationListener::createProxy,mWebView);
-		mWebView->resize(width, height);
-		mWebView->setPosition(OverlayPosition(RP_TOPRIGHT));
-		mWebView->loadURL(url);
-		return mWebView;
+        std::tr1::shared_ptr <ProxyWebViewObject> mWebView(new ProxyWebViewObject(this, SpaceObjectReference(myId)));
+        mObjects.insert(ObjectMap::value_type(myId, mWebView));
+        notify(&ProxyCreationListener::createProxy,mWebView);
+        mWebView->resize(width, height);
+        mWebView->setPosition(OverlayPosition(RP_TOPRIGHT));
+        mWebView->loadURL(url);
+        return mWebView;
+    }
+
+    double str2dbl(string s) {
+        float f;
+        if (s=="") return 0.0;
+        sscanf(s.c_str(), "%f", &f);
+        return (double)f;
+    }
+
+    int str2int(string s) {
+        int d;
+        if (s=="") return 0;
+        sscanf(s.c_str(), "%d", &d);
+        return d;
+    }
+
+    void parse_csv_values(string line, vector<string>& values) {
+        values.clear();
+        string temp("");
+        for (unsigned int i=0; i<line.size(); i++) {
+            char c = line[i];
+            if (c!=',') {
+                if ((c!=' ') && (c!='"')) {
+                    temp.push_back(c);
+                }
+            }
+            else {
+                values.push_back(temp);
+                temp.clear();
+            }
+        }
+        values.push_back(temp);
+    }
+
+    vector<string> headings;
+
+    void getline(FILE* f, string& s) {
+        s.clear();
+        while (true) {
+            char c = fgetc(f);
+            if (c<0) {
+                s.clear();
+                break;
+            }
+            if (c==0x0d && s.size()==0) continue;            /// should deal with windows \n
+            if (c==0x0a || c==0x0d) {
+                break;
+            }
+            s.push_back(c);
+        }
+    }
+
+    void parse_csv_headings(FILE* fil) {
+        string line;
+        getline(fil, line);
+        parse_csv_values(line, headings);
+    }
+
+    map<string, string>* parse_csv_line(FILE* fil) {
+        string line;
+        getline(fil, line);
+        //std::cout << "csv: line-->" << line << "<--" << std::endl;
+        vector<string> values;
+        map<string, string> *row;
+        row = (new map<string, string>());
+        if (line.size()>0) {
+            parse_csv_values(line, values);
+            for (unsigned int i=0; i < values.size(); i++) {
+                (*row)[headings[i]] = values[i];
+            }
+        }
+        return row;
     }
 
     void loadSceneObject(FILE *fp) {
         Vector3d pos(0,0,0);
         Quaternion orient(Quaternion::identity());
         Vector3f scale(1,1,1);
+        float density=0;
+        float friction=0;
+        float bounce=0;
+
+        /// dbm new way:
+        map<string, string>& row = *parse_csv_line(fp);
+        std::cout << endl;
+        if (row["objtype"][0]=='#' || row["objtype"]==string("")) {
+            //cout << "csv: loadSceneObject passing, comment or blank line" << endl;
+            return;                                         /// comment or blank line
+        }
+        else {
+            string objtype = row["objtype"];
+            pos.x = str2dbl(row["pos_x"]);
+            pos.y = str2dbl(row["pos_y"]);
+            pos.z = str2dbl(row["pos_z"]);
+            orient.x = str2dbl(row["orient_x"]);
+            orient.y = str2dbl(row["orient_y"]);
+            orient.z = str2dbl(row["orient_z"]);
+            if (row["orient_w"].size()) {
+                orient.w = str2dbl(row["orient_w"]);                /// if w is specified, assume quaternion
+            }
+            else {                                                  /// if no w, Euler angles
+                /// we can replace this later if need be. btQuat takes yaw, pitch, roll with Z as up.
+                btQuaternion bq = btQuaternion(DEG2RAD*orient.y, DEG2RAD*orient.x, DEG2RAD*orient.z);
+                orient.x = bq.getX();
+                orient.y = bq.getY();
+                orient.z = bq.getZ();
+                orient.w = bq.getW();
+            }
+            //cout << "csv: orient: " << orient.x <<","<< orient.y <<","<< orient.z <<","<< orient.w << endl;
+            Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
+            scale.x = str2dbl(row["scale_x"]);
+            scale.y = str2dbl(row["scale_y"]);
+            scale.z = str2dbl(row["scale_z"]);
+
+            if (objtype=="camera") {
+                mCamera->resetPositionVelocity(Time::now(), location);
+                //cout << "csv: added camera to scene" << endl;
+            }
+            else if (objtype=="light") {
+                LightInfo::LightTypes lighttype;
+                if (row["subtype"]=="point") {
+                    lighttype = LightInfo::POINT;
+                }
+                else if (row["subtype"]=="spotlight") {
+                    lighttype = LightInfo::SPOTLIGHT;
+                }
+                else if (row["subtype"]=="directional") {
+                    lighttype = LightInfo::DIRECTIONAL;
+                }
+                else {
+                    cout << "parse csv error: unknown light subtype" << endl;
+                    assert(false);
+                }
+                LightInfo lightInfo;
+                lightInfo.setLightType(lighttype);
+                float ambientPower=1, shadowPower=1;
+                float x,y,z; // Light direction. Assume 0,1,0 for now.
+                x = str2dbl(row["direct_x"]);
+                y = str2dbl(row["direct_y"]);
+                z = str2dbl(row["direct_z"]);
+                string castsshadow=row["shadow"];
+                lightInfo.mDiffuseColor.x = str2dbl(row["diffuse_x"]);
+                lightInfo.mDiffuseColor.y = str2dbl(row["diffuse_y"]);
+                lightInfo.mDiffuseColor.z = str2dbl(row["diffuse_z"]);
+                ambientPower  = str2dbl(row["ambient"]);
+                lightInfo.mSpecularColor.x = str2dbl(row["specular_x"]);
+                lightInfo.mSpecularColor.y = str2dbl(row["specular_y"]);
+                lightInfo.mSpecularColor.z = str2dbl(row["specular_z"]);
+                shadowPower = str2dbl(row["shadowpower"]);
+                lightInfo.mLightRange = str2dbl(row["range"]);
+                lightInfo.mConstantFalloff = str2dbl(row["constfall"]);
+                lightInfo.mLinearFalloff = str2dbl(row["linearfall"]);
+                lightInfo.mQuadraticFalloff = str2dbl(row["quadfall"]);
+                lightInfo.mConeInnerRadians = str2dbl(row["cone_in"]);
+                lightInfo.mConeOuterRadians = str2dbl(row["cone_out"]);
+                lightInfo.mPower = str2dbl(row["power"]);
+                lightInfo.mConeFalloff = str2dbl(row["cone_fall"]);
+                lightInfo.mCastsShadow = castsshadow=="true"?true:false;
+
+                if (lightInfo.mDiffuseColor.length()&&lightInfo.mPower) {
+                    lightInfo.mAmbientColor = lightInfo.mDiffuseColor*(ambientPower/lightInfo.mDiffuseColor.length())/lightInfo.mPower;
+                }
+                else {
+                    lightInfo.mAmbientColor = Vector3f(0,0,0);
+                }
+                if (lightInfo.mSpecularColor.length()&&lightInfo.mPower) {
+                    lightInfo.mShadowColor = lightInfo.mSpecularColor*(shadowPower/lightInfo.mSpecularColor.length())/lightInfo.mPower;
+                }
+                else {
+                    lightInfo.mShadowColor = Vector3f(0,0,0);
+                }
+                lightInfo.mWhichFields = LightInfo::ALL;
+                addLightObject(lightInfo, location);
+                //cout << "csv: added light to scene" << endl;
+            }
+            else if (objtype=="mesh") {
+                int mode=0;
+                double density=0.0;
+                double friction=0.0;
+                double bounce=0.0;
+                if (row["subtype"] == "staticmesh") {
+                    mode=bulletObj::Static;
+                    friction = str2dbl(row["friction"]);
+                    bounce = str2dbl(row["bounce"]);
+                }
+                else if (row["subtype"] == "dynamicbox") {
+                    mode=bulletObj::DynamicBox;
+                    density = str2dbl(row["density"]);
+                    friction = str2dbl(row["friction"]);
+                    bounce = str2dbl(row["bounce"]);
+                }
+                else if (row["subtype"] == "dynamicsphere") {
+                    mode=bulletObj::DynamicSphere;
+                    density = str2dbl(row["density"]);
+                    friction = str2dbl(row["friction"]);
+                    bounce = str2dbl(row["bounce"]);
+                }
+                else if (row["subtype"] == "graphiconly") {
+                }
+                else {
+                    cout << "parse csv error: unknown mesh subtype:" << row["subtype"] << endl;
+                    assert(false);
+                }
+                string meshURI = row["meshURI"];
+                if (sizeof(string)==0) {
+                    cout << "parse csv error: no meshURI" << endl;
+                    assert(false);
+                }
+                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
+                //cout << "csv: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
+            }
+            else {
+                cout << "parse csv error: illegal object type" << endl;
+                assert(false);
+            }
+        }
+    }
+
+    void loadSceneObject_txt(FILE *fp) {
+        Vector3d pos(0,0,0);
+        Quaternion orient(Quaternion::identity());
+        Vector3f scale(1,1,1);
         int mode=0;
-        float density=2;
-        float friction=3;
-        float bounce=4;
+        float density=0;
+        float friction=0;
+        float bounce=0;
 
         int ret = fscanf(fp,"(%lf %lf %lf) [%f %f %f %f] <%f %f %f> ",
-               &pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
+                         &pos.x,&pos.y,&pos.z,&orient.w,&orient.x,&orient.y,&orient.z,&scale.x,&scale.y,&scale.z);
         Location location(pos, orient, Vector3f::nil(), Vector3f::nil(), 0.);
         // Read a line into filename.
         std::string filename;
@@ -125,10 +337,12 @@ class DemoProxyManager :public ProxyManager {
             if (append.length() == 0) {
                 // EOF
                 break;
-            } else if (append[append.length()-1]=='\n') {
+            }
+            else if (append[append.length()-1]=='\n') {
                 filename += append.substr(0, append.length()-1);
                 break;
-            } else {
+            }
+            else {
                 filename += append;
             }
         }
@@ -141,7 +355,8 @@ class DemoProxyManager :public ProxyManager {
             }
             do {
                 ++i;
-            } while (i < filename.length() && isspace(filename[i]));
+            }
+            while (i < filename.length() && isspace(filename[i]));
             filename = filename.substr(i);
         }
         std::string rest;
@@ -152,13 +367,16 @@ class DemoProxyManager :public ProxyManager {
         }
         if (filename=="CAMERA") {
             mCamera->resetPositionVelocity(Time::now(), location);
-        } else if (filename=="point" || filename=="directional" || filename=="spotlight") {
+        }
+        else if (filename=="point" || filename=="directional" || filename=="spotlight") {
             LightInfo::LightTypes lighttype = LightInfo::SPOTLIGHT;
             if (filename=="point") {
                 lighttype = LightInfo::POINT;
-            } else if (filename=="spotlight") {
+            }
+            else if (filename=="spotlight") {
                 lighttype = LightInfo::SPOTLIGHT;
-            } else if (filename=="directional") {
+            }
+            else if (filename=="directional") {
                 lighttype = LightInfo::DIRECTIONAL;
             }
             LightInfo lightInfo;
@@ -176,24 +394,28 @@ class DemoProxyManager :public ProxyManager {
 
             if (lightInfo.mDiffuseColor.length()&&lightInfo.mPower) {
                 lightInfo.mAmbientColor = lightInfo.mDiffuseColor*(ambientPower/lightInfo.mDiffuseColor.length())/lightInfo.mPower;
-            } else {
+            }
+            else {
                 lightInfo.mAmbientColor = Vector3f(0,0,0);
             }
             if (lightInfo.mSpecularColor.length()&&lightInfo.mPower) {
                 lightInfo.mShadowColor = lightInfo.mSpecularColor*(shadowPower/lightInfo.mSpecularColor.length())/lightInfo.mPower;
-            } else {
+            }
+            else {
                 lightInfo.mShadowColor = Vector3f(0,0,0);
             }
             lightInfo.mWhichFields = LightInfo::ALL;
             addLightObject(lightInfo, location);
-        } else if (filename=="NULL") {
+        }
+        else if (filename=="NULL") {
             SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
 
             std::tr1::shared_ptr<ProxyPositionObject> myObj(new ProxyPositionObject(this, myId));
             mObjects.insert(ObjectMap::value_type(myId, myObj));
             notify(&ProxyCreationListener::createProxy, myObj);
             myObj->resetPositionVelocity(Time::now(), location);
-        } else if (!filename.empty()){
+        }
+        else if (!filename.empty()) {
             addMeshObject(Transfer::URI(filename), location, scale, mode, density, friction, bounce);
         }
     }
@@ -208,16 +430,29 @@ class DemoProxyManager :public ProxyManager {
         if (!fp) {
             return false;
         }
-        while (!feof(fp)) {
-            loadSceneObject(fp);
+
+        int len=scenefile.size();
+        if (len>=4 && scenefile[len-4]=='.' && scenefile[len-3]=='t' && scenefile[len-2]=='x' && scenefile[len-1]=='t') {
+            while (!feof(fp)) {
+                loadSceneObject_txt(fp);
+            }
+        }
+        else {
+            parse_csv_headings(fp);
+            while (!feof(fp)) {
+                //std::cout << "csv: loading scene object" << std::endl;
+                loadSceneObject(fp);
+            }
         }
         fclose(fp);
         return true;
     }
 
 public:
+    string scenefile;
     DemoProxyManager()
             : mCamera(new ProxyCameraObject(this, SpaceObjectReference(SpaceID(UUID::null()),ObjectReference(UUID::random())))) {
+        scenefile="scene.csv";
     }
 
     virtual void createObject(const ProxyObjectPtr &newObj) {
@@ -234,17 +469,17 @@ public:
         }
     }
 
-    void initialize(){
+    void initialize() {
         notify(&ProxyCreationListener::createProxy,mCamera);
         mCamera->attach("",0,0);
 
-		addWebViewObject("http://sirikata.com/cgi-bin/virtualchat/irc.cgi", 400, 250);
+        addWebViewObject("http://sirikata.com/cgi-bin/virtualchat/irc.cgi", 400, 250);
 
         mCamera->resetPositionVelocity(Time::now(),
                                        Location(Vector3d(0,0,50.), Quaternion::identity(),
                                                 Vector3f::nil(), Vector3f::nil(), 0.));
 
-        if (loadSceneFile(scenefile->as<std::string>())) {
+        if (loadSceneFile(scenefile)) {
             return; // success!
         }
         // Otherwise, load fallback scene.
