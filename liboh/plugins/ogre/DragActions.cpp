@@ -236,28 +236,33 @@ public:
             Task::AbsTime now(Task::AbsTime::now());
             // one screen width = one full rotation
 			float SNAP_RADIANS = mParent->getInputManager()->mRotateSnap->as<float>();
-            float radianX = 3.14159 * 2 * ev->deltaX();
-            float radianY = 3.14159 * 2 * ev->deltaY();
-            if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
-				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
-					radianX = 0;
-				}
-			} else if (radianY > -SNAP_RADIANS && radianY < SNAP_RADIANS) {
-                radianY = 0;
+            float radianX = 0;
+            float radianY = 0;
+            float radianZ = 0;
+            float sensitivity = 0.25;
+            if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_ALT)) {
+                sensitivity = 0.1;
             }
             if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
-				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
-					radianY = 0;
-				}
-			} else if (radianX > -SNAP_RADIANS && radianX < SNAP_RADIANS) {
-                radianX = 0;
+                radianX = 3.14159 * 2 * -ev->deltaY() * sensitivity;
+                if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+                    radianZ = 3.14159 * 2 * -ev->deltaX() * sensitivity;
+                }
+            }
+            else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+                radianZ = 3.14159 * 2 * -ev->deltaY() * sensitivity;
+            }
+            else {
+                radianY = 3.14159 * 2 * ev->deltaX() * sensitivity;
             }
             for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
                 const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
                 Location loc (ent->extrapolateLocation(now));
-                loc.setOrientation(Quaternion(Vector3f(0,1,0),radianX)*
-                                   Quaternion(Vector3f(1,0,0),radianY)*
-                                   mOriginalRotation[i]);
+                loc.setOrientation(
+                        Quaternion(Vector3f(1,0,0),radianX)*
+                        Quaternion(Vector3f(0,1,0),radianY)*
+                        Quaternion(Vector3f(0,0,1),radianZ)*
+                        mOriginalRotation[i]);
                 ent->resetPositionVelocity(now, loc);
             }
     }
