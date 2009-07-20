@@ -43,9 +43,10 @@ void SubscriptionClient::removeSubscriberHint(const Network::Address&address,
                                                             address,
                                                             uuid));    
 }
-void SubscriptionClinet::addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&individual){
+void SubscriptionClinet::addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
     std::tr1::shared_ptr<IndividualSubscription>i=individual.lock();
     if (i) {
+        i->mFunction(i->mSubscriptionState->mLastDeliveredMessage);//blank state indicates that the stream is connected and future updates will be received
         i->mSubscriptionState->mSubscribers.push_back(individual);//add the subscriber to the list of subscribers in the IO thread rather than the main thread to avoid locks
     }
 }
@@ -60,7 +61,7 @@ void SubscriptionClinet::removeSubscriberFromIOThread(const Network::Address&add
         }
     }
 }
-void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&individual){
+void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
     IOServiceFactory::dispatchServiceMessage(mService,
                                              std::tr1::bind(&SubscriptionClient::addSubscriberFromIOThread,
                                                             this,
@@ -149,6 +150,9 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(std::tr1::weak_ptr<
                                         tooGoodForMe->mSubscriptionState);
     }
 }
+namespace {
+size_t sMaximumSubscriptionStateSize=1360;
+}
 void SubscriptionClient::State::bytesReceived(const std::weak_ptr<State>&weak_thus,
                           const Network::Chunk&data) {
     std::shared_ptr<State> thus=weak_thus.lock();
@@ -167,6 +171,11 @@ void SubscriptionClient::State::bytesReceived(const std::weak_ptr<State>&weak_th
         }
         if (eraseAny) {
             thus->purgeSubscribersFromIOThread();
+        }
+        if (data.size()<sMaximumSubscriptionStateStateSize) {
+            mLastDeliveredMessage=data;
+        }else {
+            mLastDeliveredMessage.resize(0);
         }
     }
 }
@@ -228,7 +237,7 @@ std::tr1::shared_ptr<IndividualSubscription>
                     upgrade_source=where->second;//set the source upgrade, but do not set retval--this will force us to fallthrough to other stream creation mechanisms
                 }else{
                     newSubscription->mSubscriptionState=state;//otherwise use the existing stream even if it's at a higher rate
-                    addSubscriber(newSubscription);//and add a subscriber to it, waiting for the appropriate thread to arrive
+                    addSubscriber(newSubscription,true);//and add a subscriber to it, waiting for the appropriate thread to arrive
                     retval=newSubscription;//set retval: we're done
                 }
             }
@@ -249,7 +258,7 @@ std::tr1::shared_ptr<IndividualSubscription>
                 mBroadcasts.insert(BroadcastMap::value_type(key,state));
                 newSubscription->mSubscriptionState=state;
                 retval=newSubscription;
-                addSubscriber(newSubscription);
+                addSubscriber(newSubscription,false);
             }else {
                 mTopLevelStreams.erase(topLevelStreamIter);
             }

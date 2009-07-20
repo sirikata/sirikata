@@ -68,7 +68,7 @@ class SubscriptionClient {
     void upgradeFromIOThread(const std::weak_ptr<State>&source,
                              const std::weak_ptr<State>&dest);
     
-    void addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&);
+    void addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&, bool sendIntroMessage);
     void removeSubscriberFromIOThreadHint(const Address mAddress;
                                           const UUID &mUUID);
 
@@ -78,7 +78,7 @@ protected:
     ///schedules a work task to upgrade all items from source to destination
     void upgrade(const std::weak_ptr<State>&source,
                  const std::weak_ptr<State>&dest);
-    void addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&);
+    void addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&, bool sendIntroMessage);
     void removeSubscriberHint(const Address &mAddress;
                               const UUID &mUUID);
 
@@ -86,6 +86,7 @@ public:
     class IndividualSubscription;
 protected:
     class State{
+        Network::Chunk mLastDeliveredMessage;
         std::shared_ptr<Network::Stream> mTopLevelStream;
     public:
         ///this function goes through all subscribers of this State and sees if any are dead (probably). Also computes the maximum needed period and potentially downgrades the subscribers if it's too high
