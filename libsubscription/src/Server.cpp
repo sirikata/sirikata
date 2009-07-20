@@ -148,6 +148,8 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
             }else {
                 SILOG(subscription,error,"UUID "<<whichuuid->second.toString()<<" Already in map");
             }
+        }else {
+            state->mLastSentMessage=chunk;
         }
     }else {
         state->broadcast(this,MemoryReference(chunk));

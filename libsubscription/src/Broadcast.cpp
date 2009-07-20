@@ -34,6 +34,7 @@
 #include "subscription/Broadcast.hpp"
 #include <boost/thread.hpp>
 #include "network/TCPStream.hpp"
+#include "Subscription_Subscription.pbj.hpp"
 namespace Sirikata { namespace Subscription {
 
 class Broadcast::UniqueLock: public boost::mutex {};
@@ -74,7 +75,15 @@ public:
     }
 };
 void Broadcast::initiateHandshake(Broadcast::BroadcastStream*stream,const Network::Address&addy,const UUID &name) {
-    //FIXME
+    Protocol::Broadcast message;
+    message.set_broadcast_name(name);
+    String str;
+    if (message.SerializeToString(&str)) {
+        (*stream)->send(MemoryReference(str),Network::ReliableOrdered);
+        //FIXME
+    }else {
+        SILOG(broadcast,error,"Cannot send memory reference to UUID "<<name.toString());
+    }
 }
 std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishBroadcast(const Network::Address&addy, 
                                                                                const UUID&name,
