@@ -35,6 +35,8 @@
 
 #include <util/Platform.hpp>
 #include "input/InputEvents.hpp"
+#include "input/InputEventDescriptor.hpp"
+#include "InputBindingEvent.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -70,6 +72,12 @@ public:
      */
     void invoke(Input::InputEventPtr& evt);
 
+    typedef std::vector<Input::EventDescriptor> InputEventDescriptorList;
+    /** Get a list of InputEventDescriptors which specify the events that this
+     *  response will handle, given a higher level description of the input
+     *  to bind to this response.
+     */
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const = 0;
 protected:
     /** Default action for events that aren't understood. */
     virtual void defaultAction();
@@ -81,6 +89,7 @@ public:
 
     SimpleInputResponse(ResponseCallback cb);
 
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 protected:
     virtual void defaultAction();
 
@@ -96,6 +105,8 @@ public:
 
     virtual void invoke(Input::ButtonPressedEventPtr& evt);
     virtual void invoke(Input::ButtonReleasedEventPtr& evt);
+
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
     ResponseCallback mCallback;
     float mOnValue;
@@ -110,6 +121,8 @@ public:
 
     virtual void invoke(Input::MouseClickEventPtr& evt);
     virtual void invoke(Input::MouseDragEventPtr& evt);
+
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
     ResponseCallback mCallback;
 };
@@ -121,6 +134,8 @@ public:
     AxisInputResponse(ResponseCallback cb);
 
     virtual void invoke(Input::AxisEventPtr& evt);
+
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
     ResponseCallback mCallback;
 };

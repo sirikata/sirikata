@@ -916,8 +916,11 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
   ${GFX}/DragActions.cpp
+  ${GFX}/InputBinding.cpp
+  ${GFX}/InputBindingEvent.cpp
   ${GFX}/InputResponse.cpp
   ${INPUT}/SDLInputManager.cpp
+  ${INPUT}/InputEventDescriptor.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp

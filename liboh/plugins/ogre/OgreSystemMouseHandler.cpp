@@ -45,6 +45,7 @@
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
 #include "InputResponse.hpp"
+#include "InputBinding.hpp"
 #include <task/Event.hpp>
 #include <task/Time.hpp>
 #include <task/EventManager.hpp>
@@ -97,6 +98,8 @@ class OgreSystem::MouseHandler {
 
     typedef std::map<String, InputResponse*> InputResponseMap;
     InputResponseMap mInputResponses;
+
+    InputBinding mInputBinding;
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -723,6 +726,9 @@ private:
         }
     }
 
+    void zoomAction(float value, Vector2f axes) {
+        zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
+    }
 
     ///// Top Level Input Event Handlers //////
 
@@ -733,128 +739,9 @@ private:
             return EventResponse::nop();
         }
 
-        // Movement
-        switch (buttonev->mButton) {
-          case SDL_SCANCODE_S:
-            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-                mInputResponses["moveBackward"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_W:
-            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-                mInputResponses["moveForward"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_A:
-            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-                mInputResponses["moveLeft"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_D:
-            if (buttonev->mModifier == InputDevice::MOD_SHIFT)
-                mInputResponses["moveRight"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_DOWN:
-            if (buttonev->mModifier == 0)
-                mInputResponses["rotateXNeg"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_UP:
-            if (buttonev->mModifier == 0)
-                mInputResponses["rotateXPos"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_RIGHT:
-            if (buttonev->mModifier == 0)
-                mInputResponses["stableRotateNeg"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_LEFT:
-            if (buttonev->mModifier == 0)
-                mInputResponses["stableRotatePos"]->invoke(buttonev);
-            break;
-        default:
-            break;
-        }
-
-        // Various other actions
-        switch (buttonev->mButton) {
-          case SDL_SCANCODE_B:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                mInputResponses["createLight"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_KP_ENTER:
-          case SDL_SCANCODE_RETURN:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                mInputResponses["enterObject"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_KP_0:
-          case SDL_SCANCODE_ESCAPE:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                mInputResponses["leaveObject"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_G:
-            if (buttonev->mPressed) {
-                if (buttonev->mModifier == 0)
-                    mInputResponses["groupObjects"]->invoke(buttonev);
-                else if (buttonev->mModifier == InputDevice::MOD_ALT)
-                    mInputResponses["ungroupObjects"]->invoke(buttonev);
-            }
-            break;
-          case SDL_SCANCODE_DELETE:
-          case SDL_SCANCODE_KP_PERIOD:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                mInputResponses["deleteObjects"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_V:
-            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                mInputResponses["cloneObjects"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_D:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                mInputResponses["cloneObjects"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_O:
-            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                mInputResponses["import"]->invoke(buttonev);
-            break;
-          case SDL_SCANCODE_S:
-            if (buttonev->mModifier == InputDevice::MOD_CTRL && buttonev->mPressed)
-                mInputResponses["saveScene"]->invoke(buttonev);
-            break;
-          default:
-            break;
-        }
-
-        // Drag modes
-        switch (buttonev->mButton) {
-          case SDL_SCANCODE_Q:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("");
-            break;
-          case SDL_SCANCODE_W:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("moveObject");
-            break;
-          case SDL_SCANCODE_E:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("rotateObject");
-            break;
-          case SDL_SCANCODE_R:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("scaleObject");
-            break;
-          case SDL_SCANCODE_T:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("rotateCamera");
-            break;
-          case SDL_SCANCODE_Y:
-            if (buttonev->mModifier == 0 && buttonev->mPressed)
-                setDragModeAction("panCamera");
-            break;
-          default:
-            break;
-        }
+        mInputBinding.handle(buttonev);
 
         return EventResponse::nop();
-    }
-
-    void zoomAction(float value, Vector2f axes) {
-        zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
     }
 
     EventResponse axisHandler(EventPtr ev) {
@@ -863,14 +750,7 @@ private:
         if (!axisev)
             return EventResponse::nop();
 
-        switch(axisev->mAxis) {
-          case SDLMouse::WHEELX:
-            //orbitObject(Vector3d(axisev->mValue.getCentered() * AXIS_TO_RADIANS, 0, 0), axisev->getDevice());
-            break;
-          case SDLMouse::WHEELY:
-            mInputResponses["zoom"]->invoke(axisev);
-            break;
-        }
+        mInputBinding.handle(axisev);
 
         return EventResponse::cancel();
     }
@@ -881,16 +761,7 @@ private:
         if (!mouseev)
             return EventResponse::nop();
 
-        switch(mouseev->mButton) {
-          case 1:
-            mInputResponses["selectObject"]->invoke(mouseev);
-            break;
-          case 3:
-            mInputResponses["selectObjectReverse"]->invoke(mouseev);
-            break;
-          default:
-            break;
-        }
+        mInputBinding.handle(mouseev);
 
         return EventResponse::nop();
     }
@@ -1024,6 +895,51 @@ public:
         mInputResponses["selectObjectReverse"] = new Vector2fInputResponse(std::tr1::bind(&MouseHandler::selectObjectAction, this, _1, -1));
 
         mInputResponses["zoom"] = new AxisInputResponse(std::tr1::bind(&MouseHandler::zoomAction, this, _1, _2));
+
+        mInputResponses["setDragModeNone"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, ""));
+        mInputResponses["setDragModeMoveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "moveObject"));
+        mInputResponses["setDragModeRotateObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "rotateObject"));
+        mInputResponses["setDragModeScaleObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "scaleObject"));
+        mInputResponses["setDragModeRotateCamera"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "rotateCamera"));
+        mInputResponses["setDragModePanCamera"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "panCamera"));
+
+        // Movement
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, InputBindingEvent::KeyModShift), mInputResponses["moveForward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, InputBindingEvent::KeyModShift), mInputResponses["moveBackward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D, InputBindingEvent::KeyModShift), mInputResponses["moveLeft"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, InputBindingEvent::KeyModShift), mInputResponses["moveRight"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["rotateXPos"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["rotateXNeg"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
+        // Various other actions
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, InputBindingEvent::KeyModNone), mInputResponses["groupObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, InputBindingEvent::KeyModAlt), mInputResponses["ungroupObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_PERIOD), mInputResponses["deleteObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, InputBindingEvent::KeyModCtrl), mInputResponses["cloneObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D), mInputResponses["cloneObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, InputBindingEvent::KeyModCtrl), mInputResponses["import"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, InputBindingEvent::KeyModCtrl), mInputResponses["saveScene"]);
+        // Drag modes
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["setDragModeNone"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["setDragModeMoveObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_E), mInputResponses["setDragModeRotateObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_R), mInputResponses["setDragModeScaleObject"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_T), mInputResponses["setDragModeRotateCamera"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Y), mInputResponses["setDragModePanCamera"]);
+
+        // Mouse Zooming
+        mInputBinding.add(InputBindingEvent::Axis(SDLMouse::WHEELY), mInputResponses["zoom"]);
+
+        // Selection
+        mInputBinding.add(InputBindingEvent::MouseClick(1), mInputResponses["selectObject"]);
+        mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();

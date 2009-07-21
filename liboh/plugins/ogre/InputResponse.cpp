@@ -172,6 +172,17 @@ void SimpleInputResponse::defaultAction() {
     mCallback();
 }
 
+InputResponse::InputEventDescriptorList SimpleInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isKey()) {
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyPressed, descriptor.keyModifiers()));
+    }
+
+    return result;
+}
+
+
 
 FloatToggleInputResponse::FloatToggleInputResponse(ResponseCallback cb, float onval, float offval)
  : mCallback(cb),
@@ -188,6 +199,18 @@ void FloatToggleInputResponse::invoke(Input::ButtonReleasedEventPtr& evt) {
     mCallback(mOffValue);
 }
 
+InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isKey()) {
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyPressed, descriptor.keyModifiers()));
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyReleased, descriptor.keyModifiers()));
+    }
+
+    return result;
+}
+
+
 
 Vector2fInputResponse::Vector2fInputResponse(ResponseCallback cb)
  : mCallback(cb)
@@ -201,6 +224,17 @@ void Vector2fInputResponse::invoke(Input::MouseClickEventPtr& evt) {
 void Vector2fInputResponse::invoke(Input::MouseDragEventPtr& evt) {
     mCallback(Vector2f(evt->mX, evt->mY));
 }
+
+InputResponse::InputEventDescriptorList Vector2fInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isMouseClick()) {
+        result.push_back(Input::EventDescriptor::MouseClick(descriptor.mouseClickButton()));
+    }
+
+    return result;
+}
+
 
 
 AxisInputResponse::AxisInputResponse(ResponseCallback cb)
@@ -218,6 +252,16 @@ void AxisInputResponse::invoke(Input::AxisEventPtr& evt) {
         );
         mCallback(val, axes);
     }
+}
+
+InputResponse::InputEventDescriptorList AxisInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isAxis()) {
+        result.push_back(Input::EventDescriptor::Axis(descriptor.axisIndex()));
+    }
+
+    return result;
 }
 
 } // namespace Graphics
