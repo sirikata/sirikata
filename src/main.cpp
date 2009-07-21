@@ -67,9 +67,9 @@
 
 #include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
-//#include "ChordObjectSegmentation.hpp"
+#include "DhtObjectSegmentation.hpp"
 
-#include "OSegHasher.hpp"
+//#include "OSegHasher.hpp"
 
 
 #include "ServerWeightCalculator.hpp"

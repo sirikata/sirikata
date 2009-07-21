@@ -68,7 +68,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
 
       void tickOSeg(const Time&t);
-      void getOSegMessages();
+    //      void getOSegMessages();
+    
 
       const ServerID& serv_id() const; //used to access server id of the processes
 

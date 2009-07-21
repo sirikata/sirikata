@@ -80,6 +80,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
 
 
+  /*
   void Forwarder::getOSegMessages()
   {
     std::vector<Message*> messToSendFromOSegToForwarder;
@@ -95,13 +96,15 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     }
 
   }
+  */
+
 
   /*
     Sends a tick to OSeg.  Receives messages from oseg.  Adds them to mOutgoingQueue.
   */
   void Forwarder::tickOSeg(const Time&t)
   {
-    getOSegMessages();
+    //    getOSegMessages();
 
 
     //bftm tmp, nothing
@@ -371,8 +374,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           if (oseg_change_msg->getMessageDestination() != this->serv_id())
           {
             //route it on to another server
-
-              route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
+            route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
           }
           else
           {
@@ -386,10 +388,8 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         break;
       case MESSAGE_TYPE_OSEG_LOOKUP:
         {
-          OSegLookupMessage* oseg_lookup_msg = dynamic_cast<OSegLookupMessage*> (msg);
-          assert(oseg_lookup_msg != NULL);
-
-          mOSeg->processLookupMessage(oseg_lookup_msg);  //responsible for deleting the message if it has a record of it.
+          printf("\n\nI caugt an oseg lookup message exception in forwarder.cpp\n\n");
+          assert(false);
         }
         break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:

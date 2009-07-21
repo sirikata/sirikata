@@ -371,26 +371,27 @@ void Server::checkObjectMigrations()
 
             // Part 2
 
-          //bftm
-          //          mOSeg->migrateObject(obj_id,new_server_id);
-          //
+            //means that we're migrating from this server to another
+            //bftm
+            mOSeg->migrateObject(obj_id,new_server_id);
+            //says that 
+          
+
 
             // Send out the migrate message
             MigrateMessage* migrate_msg = new MigrateMessage(id());
             migrate_msg->contents.set_source_server(this->id());
             obj_conn->fillMigrateMessage(migrate_msg);
-/*
-	    printf("migrating object %s due to position %s \n",
-		   obj_id.readableHexData().c_str(),
-		   obj_pos.toString().c_str());
-*/
-            mForwarder->route( migrate_msg , new_server_id);
+
+
 
             // Stop any proximity queries for this object
             mProximity->removeQuery(obj_id);
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
+          
+            mForwarder->route( migrate_msg , new_server_id);
 
             // Stop Forwarder from delivering via this Object's
             // connection, destroy said connection
@@ -404,6 +405,7 @@ void Server::checkObjectMigrations()
     for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
         ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
         mObjects.erase(obj_map_it);
+
     }
 }
 

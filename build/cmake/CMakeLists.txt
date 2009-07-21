@@ -218,6 +218,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/DhtObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/Duration.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FIFOObjectMessageQueue.cpp
@@ -236,6 +238,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
+  ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
