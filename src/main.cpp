@@ -65,7 +65,7 @@
 #include "LBCoordinateSegmentation.hpp"
 #include "LoadMonitor.hpp"
 
-#include "LocObjectSegmentation.hpp"
+//#include "LocObjectSegmentation.hpp"
 #include "UniformObjectSegmentation.hpp"
 #include "DhtObjectSegmentation.hpp"
 
