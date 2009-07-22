@@ -56,6 +56,16 @@ using namespace Input;
 using namespace Task;
 
 #define DEG2RAD 0.0174532925
+#ifdef _WIN32
+#undef SDL_SCANCODE_UP
+#define SDL_SCANCODE_UP 0x60
+#undef SDL_SCANCODE_RIGHT
+#define SDL_SCANCODE_RIGHT 0x5e
+#undef SDL_SCANCODE_DOWN
+#define SDL_SCANCODE_DOWN 0x5a
+#undef SDL_SCANCODE_LEFT
+#define SDL_SCANCODE_LEFT 0x5c
+#endif
 
 // Defined in DragActions.cpp.
 
