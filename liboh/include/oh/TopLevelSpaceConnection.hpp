@@ -1,3 +1,4 @@
+
 /*  Sirikata liboh -- Object Host
  *  TopLevelSpaceConnection.hpp
  *
@@ -35,6 +36,7 @@
 
 #include <oh/Platform.hpp>
 #include <oh/ProxyManager.hpp>
+#include <network/Address.hpp>
 
 namespace Sirikata {
 
@@ -79,6 +81,7 @@ public:
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };
 
+class ObjectHost;
 class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager {
     ObjectHost*mParent;
     Network::Address mRegisteredAddress;

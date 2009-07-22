@@ -250,7 +250,6 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
         {
           case SDL_KEYDOWN:
           case SDL_KEYUP:
-			  SILOG(input,info,"Keyboard "<<(int)event->key.keysym.scancode<<"; modifiers" << modifiersFromSDL(event->key.keysym.mod));
             mKeys[event->key.which]->fireButton(
                 mKeys[event->key.which],
                 this, 
@@ -289,7 +288,6 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
             break;
           case SDL_TEXTINPUT:
           if (mHasKeyboardFocus) {
-			  SILOG(input,info,"Text "<<event->text.text);
             fire(Task::EventPtr(new TextInputEvent(
                                     mKeys[event->text.which], 
                                     event->text.text)));

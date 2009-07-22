@@ -115,8 +115,26 @@ public:
     };
 
     ProximityConnection *mProximityConnection;
-    BridgeProximitySystem(ProximityConnection*connection,const unsigned int registrationPort) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationPort),mProximityConnection(connection) {
-        bool retval=mProximityConnection->forwardMessagesTo(this);
+
+    class IncomingProxCallMessages:public MessageService{
+        BridgeProximitySystem*mParent;
+
+    public:
+        IncomingProxCallMessages(BridgeProximitySystem*par) : mParent(par) {}
+        virtual bool forwardMessagesTo(MessageService*ms){return false;}
+        virtual bool endForwardingMessagesTo(MessageService*ms){return false;}
+        virtual void processMessage(const RoutableMessageHeader& mesg,
+                                    MemoryReference message_body) {
+            mParent->internalProcessOpaqueProximityMessage(mesg.has_destination_object()?&mesg.destination_object():NULL,
+                                                           mesg,
+                                                           message_body.data(),
+                                                           message_body.size(),false);
+        }
+
+    }mIncomingMessages;
+
+    BridgeProximitySystem(ProximityConnection*connection,const unsigned int registrationPort) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationPort),mProximityConnection(connection), mIncomingMessages(this) {
+        bool retval=mProximityConnection->forwardMessagesTo(&mIncomingMessages);
         assert(retval);
     }
     enum MessageBundle{

@@ -33,6 +33,9 @@
 #define _SIRIKATA_HOSTED_OBJECT_HPP_
 
 #include <util/SpaceObjectReference.hpp>
+#include <util/RoutableMessageHeader.hpp>
+#include "oh/TopLevelSpaceConnection.hpp"
+#include "oh/ProxyPositionObject.hpp"
 
 namespace Sirikata {
 class ObjectHost;
@@ -43,44 +46,155 @@ typedef std::tr1::shared_ptr<ProxyPositionObject> ProxyPositionObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
 namespace Protocol {
-class ReadOnlyMessage;
 class ObjLoc;
 }
-using Protocol::ReadOnlyMessage;
 using Protocol::ObjLoc;
-
 
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
+
+/////////////// Inner Classes
+
     class PerSpaceData;
 public:
     struct ReceivedMessage {
         SpaceObjectReference sourceObject;
         MessagePort sourcePort;
         MessagePort destinationPort;
+
+        MessagePort getPort() const {
+            return sourcePort;
+        }
+        const SpaceID &getSpace() const {
+            return sourceObject.space();
+        }
+        const ObjectReference &getSender() const {
+            return sourceObject.object();
+        }
+
+        MessagePort getThisPort() const {
+            return destinationPort;
+        }
+        const ProxyPositionObjectPtr &getThisProxy(const HostedObject &hosted) const {
+            return hosted.getProxy(getSpace());
+        }
+        ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
+            const ProxyPositionObjectPtr &obj = getThisProxy(hosted);
+            if (obj) {
+                return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
+            }
+            return NULL;
+        }
+
+        ProxyPositionObjectPtr getSenderProxy(const HostedObject &hosted) const {
+            ObjectHostProxyManager *ohpm = getProxyManager(hosted);
+			if (ohpm) {
+				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getSender())));
+				if (proxyPtr) {
+					return std::tr1::static_pointer_cast<ProxyPositionObject>(proxyPtr);
+				}
+			}
+			return ProxyPositionObjectPtr();
+        }
+
         String name;
         MemoryReference body;
-        PerSpaceData *perSpaceData;
 
         ReceivedMessage(const SpaceID &space, const ObjectReference &source,
                         MessagePort sourcePort, MessagePort destinationPort)
-            : sourceObject(space,source), sourcePort(sourcePort), destinationPort(destinationPort), body("",0), perSpaceData(NULL) {
+            : sourceObject(space,source), sourcePort(sourcePort), destinationPort(destinationPort), body("",0) {
         }
     };
-private:
-    class PerSpaceData {
+
+    class SentMessage;
+    typedef std::tr1::unordered_map<int64, SentMessage*> SentMessageMap;
+
+    class SentMessage {
     public:
-        SpaceConnection mSpaceConnection;
-        ProxyPositionObjectPtr mProxyObject; /// 
-        PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
+        // QueryCallback returns true if the query should remain (this is something agreed upon in the protocol, such as a "recurring" flag.
+        typedef std::tr1::function<bool (const HostedObjectPtr &thus, SentMessage* sentMessage, const RoutableMessage &responseMessage)> QueryCallback;
+
+    private:
+        struct TimerHandler;
+        TimerHandler *mTimerHandle;
+        int64 mId;
+
+        QueryCallback mResponseCallback;
+        RoutableMessageHeader mHeader;
+        RoutableMessageBody *mBody;
+        HostedObjectWPtr mParent;
+    public:
+        SentMessage(const HostedObjectPtr &parent);
+
+        ~SentMessage();
+
+        void setCallback(const QueryCallback &cb) {
+            mResponseCallback = cb;
+        }
+
+        const RoutableMessageBody &body() const {
+            return *mBody;
+        }
+        const RoutableMessageHeader &header() const {
+            return mHeader;
+        }
+        RoutableMessageBody &body() {
+            return *mBody;
+        }
+        RoutableMessageHeader &header() {
+            return mHeader;
+        }
+
+        MessagePort getPort() const {
+            return header().destination_port();
+        }
+        const SpaceID &getSpace() const {
+            return header().destination_space();
+        }
+        const ObjectReference &getRecipient() const {
+            return header().destination_object();
+        }
+
+        MessagePort getThisPort() const {
+            return header().source_port();
+        }
+        const ProxyPositionObjectPtr &getThisProxy(const HostedObject &hosted) const {
+            return hosted.getProxy(getSpace());
+        }
+        ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
+            const ProxyPositionObjectPtr &obj = getThisProxy(hosted);
+            if (obj) {
+                return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
+            }
+            return NULL;
+        }
+
+        ProxyPositionObjectPtr getRecipientProxy(const HostedObject &hosted) const {
+            ObjectHostProxyManager *ohpm = getProxyManager(hosted);
+			if (ohpm) {
+				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getRecipient())));
+				if (proxyPtr) {
+					return std::tr1::static_pointer_cast<ProxyPositionObject>(proxyPtr);
+				}
+			}
+			return ProxyPositionObjectPtr();
+        }
+
+        int64 getId() const {
+            return mId;
+        }
+
+        void send(const HostedObjectPtr &parent, int timeout=0);
+        void gotResponse(const HostedObjectPtr &hostedObj, const SentMessageMap::iterator &iter, const RoutableMessage &msg);
     };
 
-    // QueryCallback returns true if the query should remain (this is something agreed upon in the protocol, such as a "recurring" flag.
-    typedef std::tr1::function<bool (const ReadOnlyMessage &responseMessage)> QueryCallback;
-    typedef std::map<int64, QueryCallback> RunningQueryMap;
-    RunningQueryMap mQueries;
+private:
+////////// Members
+
+    SentMessageMap mSentMessages;
+    int64 mNextQueryId;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap mSpaceData;
@@ -91,13 +205,28 @@ private:
 
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
+
+///////// Constructors/Destructors
+private:
     friend class ::Sirikata::SelfWeakPtr<HostedObject>;
+/// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
     HostedObject(ObjectHost*parent);
-    PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
-    bool receivedProxObjectProperties(const SpaceObjectReference &proximateObjectId, int32 queryId, const std::vector<std::string> &propertyRequests, const ReadOnlyMessage &responseMessage);
-    static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid,const Network::Chunk&);
+
 public:
-    static void disconnectionEvent(const HostedObjectWPtr&thus,const SpaceID&sid,const String&reason);
+/// Destructor: will only be called from shared_ptr::~shared_ptr.
+    ~HostedObject();
+
+
+private:
+//////// Private member functions:
+    PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
+
+//////// Callbacks:
+    struct PrivateCallbacks;
+
+public:
+//////// Public member functions:
+
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
     void initializeConnect(const UUID &objectName, const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const SpaceID&, const HostedObjectWPtr&spaceConnectionHint=HostedObjectWPtr());
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
@@ -106,7 +235,7 @@ public:
     void initializeRestoreFromDatabase(const UUID &objectName);
     ObjectHost *getObjectHost()const {return mObjectHost;}
 
-    std::tr1::shared_ptr<ProxyObject> getProxy(const SpaceID &space) const;
+    const ProxyPositionObjectPtr &getProxy(const SpaceID &space) const;
 
     bool hasProperty(const String &propName) const;
     const String &getProperty(const String &propName) const;

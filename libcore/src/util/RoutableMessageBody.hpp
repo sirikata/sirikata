@@ -74,6 +74,19 @@ public:
         }
         return getDefaultMessageName();
     }
+    std::string* add_message(const std::string &name, const std::string &arguments=std::string()) {
+        if (!message_names_size()) {
+            add_message_names(name);
+        }
+        if (name != message_names(message_names_size()-1)) {
+            while (message_names_size() < message_arguments_size()) {
+                add_message_names(message_names(message_names_size()-1));
+            }
+            add_message_names(name);
+        }
+        add_message_arguments(arguments);
+        return &message_arguments(message_arguments_size()-1);
+    }
 };
 }
 #endif

@@ -78,6 +78,10 @@ public:
     ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
+    Network::IOService *getSpaceIO() const {
+        return mSpaceConnectionIO;
+    }
+
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost
 

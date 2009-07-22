@@ -50,6 +50,7 @@ message MessageBody {
       SUCCESS = 0;
       NETWORK_FAILURE = 1;
       SECURITY_FAILURE = 2;
+      TIMEOUT_FAILURE = 3;
     }
     optional ReturnStatus return_status=16;
 }
@@ -154,11 +155,11 @@ message ObjLoc {
 
 message LocRequest {
   flags32 Fields {
-    POSITION = 0;
-    ORIENTATION = 1;
-    VELOCITY = 2;
-    ROTATIONAL_AXIS = 3;
-    ANGULAR_SPEED = 4;
+    POSITION = 1;
+    ORIENTATION = 2;
+    VELOCITY = 4;
+    ROTATIONAL_AXIS = 8;
+    ANGULAR_SPEED = 16;
   }
   optional Fields requested_fields = 2; // if omitted, send all fields.
 }
@@ -234,20 +235,18 @@ message DelProxQuery {
 }
 
 
-message GetProp {
-    optional string property_name=2;
-    optional bool check_exists=3 [default=false];
-}
-
-message PropertyResponse {
+// If sent as a request/response, the response shall only include
+// fields not provided in the request (i.e. exclude property_name)
+message PropertyUpdate {
     enum ErrorStatus {
         EXISTS=0;
         NOT_FOUND=1;
         FORBIDDEN=2;
     }
-    optional ErrorStatus error=2; // present if an error occurred or check_exists=true.
-    optional string property_name=3; // If this is a notification.
-    optional string error_message=4;
+    optional ErrorStatus error=2; // present only if an error occurred or omit_value=true.
+    optional string property_name=3;
+    optional string error_message=4; // Not used.
+    optional bool omit_value=5; // If true, existence is only determined by ErrorStatus.
 }
 
 message Vector3fProperty {
