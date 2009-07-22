@@ -1,14 +1,19 @@
 #include <util/Platform.hpp>
 #include "persistence/ObjectStorage.hpp"
 #include "SQLiteObjectStorage.hpp"
+#include "persistence/MinitransactionHandlerFactory.hpp"
+#include "persistence/ReadWriteHandlerFactory.hpp"
 static int core_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
-        //SimulationFactory::getSingleton().registerConstructor("ogregraphics",
-        //&OgreSystem::create,
-        //true);
+        MinitransactionHandlerFactory::getSingleton().registerConstructor("sqlite",
+                                                                          std::tr1::bind(&SQLiteObjectStorage::create,true,_1),
+                                                                          true);
+        ReadWriteHandlerFactory::getSingleton().registerConstructor("sqlite",
+                                                                    std::tr1::bind(&SQLiteObjectStorage::create,false,_1),
+                                                                    true);
     }
     core_plugin_refcount++;
 }
@@ -27,7 +32,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            //SimulationFactory::getSingleton().unregisterConstructor("ogregraphics",true);
+            MinitransactionHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
+            ReadWriteHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
         }
     }
 }

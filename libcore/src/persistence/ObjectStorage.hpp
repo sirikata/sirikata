@@ -37,14 +37,14 @@
 
 
 #include "util/UUID.hpp"
-#include "util/Factory.hpp"
+
 
 namespace Sirikata {
 
 /** A key in the storage system. The key is constructed of an object identifier followed
  *  by a hierarchy of names.
  */
-class StorageKey {
+class SIRIKATA_EXPORT StorageKey {
 public:
     StorageKey(const UUID& vwobj, uint32 obj, const String& field);
 
@@ -63,7 +63,7 @@ private:
 };
 
 /** A value in the storage system, just a simple memory buffer. */
-class StorageValue : public MemoryBuffer {
+class SIRIKATA_EXPORT StorageValue : public MemoryBuffer {
 public:
     template<class T> StorageValue(const T& m) : MemoryBuffer(m) {}
     StorageValue(const char* input, std::size_t size) : MemoryBuffer((const unsigned char*)input, (const unsigned char*)input+size) {}
@@ -77,7 +77,7 @@ public:
 /** A storage set, which is simply a set of <key,value> pairs.  This can represent
  *  read sets, write sets, and compare sets.
  */
-class StorageSet {
+class SIRIKATA_EXPORT StorageSet {
 protected:
     typedef std::map<StorageKey, StorageValue*> StorageKeyValueMap;
 
@@ -148,7 +148,7 @@ private:
 };
 
 /** Restricted version of StorageSet that represents a read set. */
-class ReadSet : public StorageSet {
+class SIRIKATA_EXPORT ReadSet : public StorageSet {
 public:
     ReadSet();
     ReadSet(const ReadSet& cpy);
@@ -163,7 +163,7 @@ private:
 };
 
 /** Restricted version of StorageSet that represents a write set. */
-class WriteSet : public StorageSet {
+class SIRIKATA_EXPORT WriteSet : public StorageSet {
 public:
     WriteSet();
     WriteSet(const WriteSet& cpy);
@@ -179,7 +179,7 @@ private:
 };
 
 /** Restricted version of StorageSet that represents a compare set. */
-class CompareSet : public StorageSet {
+class SIRIKATA_EXPORT CompareSet : public StorageSet {
 public:
     CompareSet();
     CompareSet(const CompareSet& cpy);
@@ -198,7 +198,7 @@ private:
  *  a combination of a ReadSet and WriteSet.  Used for temporary and best effort
  *  storage operations.
  */
-class ReadWriteSet {
+class SIRIKATA_EXPORT ReadWriteSet {
 public:
     ReadWriteSet();
     ReadWriteSet(const ReadWriteSet& cpy);
@@ -221,7 +221,7 @@ private:
  *  2) Read values from read set locations
  *  3) Write values to write set locations
  */
-class Minitransaction {
+class SIRIKATA_EXPORT Minitransaction {
 public:
     Minitransaction();
     Minitransaction(const Minitransaction& cpy);
@@ -248,7 +248,7 @@ enum ObjectStorageErrorType {
     ObjectStorageErrorType_Internal
 };
 
-class ObjectStorageError {
+class SIRIKATA_EXPORT ObjectStorageError {
 public:
 
     explicit ObjectStorageError();
@@ -264,7 +264,7 @@ private:
 
 
 /** Base class for ObjectStorage request handlers.  This provides . */
-class ObjectStorageHandler {
+class SIRIKATA_EXPORT ObjectStorageHandler {
 public:
     typedef boost::function1<void, ObjectStorageError> ResultCallback;
 
@@ -283,26 +283,23 @@ protected:
  *  transactions (meaning there's no support for compare sets).  Both temporary
  *  and best effort stored object store systems should implement this interface.
  */
-class ReadWriteHandler : public ObjectStorageHandler {
+class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler {
 public:
     virtual ~ReadWriteHandler();
 
     virtual void apply(ReadWriteSet* rws, const ResultCallback& cb) = 0;
 };
-typedef Factory1<ReadWriteHandler, const String&> ReadWriteHandlerFactory;
-
 
 /** MinitransactionHandler is the abstract base class for implementations which
  *  handle ACID minitransactions.  Transactional storage systems should implement
  *  this interface.
  */
-class MinitransactionHandler : public ObjectStorageHandler {
+class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler {
 public:
     virtual ~MinitransactionHandler();
 
     virtual void apply(Minitransaction* mt, const ResultCallback& cb) = 0;
 };
-typedef Factory1<MinitransactionHandler, const String&> MinitransactionHandlerFactory;
 
 
 /** Base class for object storage.  This replaces the old ObjectStore interface.
@@ -316,7 +313,7 @@ typedef Factory1<MinitransactionHandler, const String&> MinitransactionHandlerFa
  *  greatest guarantees - they are atomic, have read, write, and compare sets, and
  *  guarantee persistence, at the cost of much higher latency.
  */
-class ObjectStorage {
+class SIRIKATA_EXPORT ObjectStorage {
 public:
 
     typedef boost::function2<void, ObjectStorageError, const ReadSet&> ResultCallback;
@@ -339,6 +336,6 @@ private:
     MinitransactionHandler* mTransaction;
 }; // class ObjectStorage
 
-} // namespace Meru
+} // namespace Sirikata
 
 #endif //_OBJECT_STORAGE_HPP_

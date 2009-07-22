@@ -52,6 +52,7 @@ public:
 
     virtual void apply(ReadWriteSet* rws, const ResultCallback& cb);
     virtual void apply(Minitransaction* mt, const ResultCallback& cb);
+    static SQLiteObjectStorage*create(bool transactional,const String&);
 private:
     OptionSet*mOptions;
     Task::WorkQueue *mDiskWorkQueue;

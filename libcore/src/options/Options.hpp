@@ -97,8 +97,16 @@ public:
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);
     static OptionValue* referenceOption(const std::string& module, const void * context_ptr, const std::string &option, OptionValue**pointer=NULL);
-    static std::map<std::string,OptionSet*>* optionSets() {
-        static std::map<std::string,OptionSet*>*retval=new std::map<std::string,OptionSet*>();
+    class StringVoid {
+        String s;
+        const void * v;
+    public:
+        StringVoid(const String &ss,const void*vv) {s=ss;v=vv;}
+        bool operator < (const StringVoid&other) const {return (s==other.s?v<other.v:s<other.s);}
+        bool operator == (const StringVoid&other) const {return (s==other.s&&v==other.v);}
+    };
+    static std::map<StringVoid,OptionSet*>* optionSets() {
+        static std::map<StringVoid,OptionSet*>*retval=new std::map<StringVoid,OptionSet*>();
         return retval;
     }
     static OptionSet*getOptions(const std::string&s, const void *context);

@@ -1,6 +1,8 @@
 #include <util/Platform.hpp>
 #include "SQLite.hpp"
-void check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
+
+namespace Sirikata {
+void SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
 {
 	if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
 		std::cout << msg << " ... ";
@@ -15,8 +17,6 @@ void check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
 		std::cout << std::endl;
 	}
 }
-namespace Meru {
-
 SQLiteDB::SQLiteDB(const String& name) {
     int rc;
 
@@ -37,7 +37,7 @@ sqlite3* SQLiteDB::db() const {
 }
 
 
-AUTO_SINGLETON_STORAGE(SQLite)
+AUTO_SINGLETON_INSTANCE(SQLite);
 
 SQLite::SQLite() {
 }
@@ -93,4 +93,4 @@ SQLiteDBPtr SQLite::open(const String& name) {
     return db;
 }
 
-} // namespace Meru
+} // namespace Sirikata

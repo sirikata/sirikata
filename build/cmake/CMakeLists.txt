@@ -752,6 +752,8 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/FileProtocolHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
+	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
+	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
 	${LIBCORE_SOURCE_DIR}/task/EventManager.cpp
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
@@ -894,6 +896,7 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 SET(LIBCORE_PLUGIN_SQLITE_DIR ${LIBCORE_PLUGIN_DIR}/sqlite)
 SET(LIBCORE_PLUGIN_SQLITE_SOURCES
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLitePlugin.cpp
+        ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLite.cpp
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLiteObjectStorage.cpp)
 
 
@@ -954,7 +957,8 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
-  ${LIBCORE_DIR}/test/RoutableMessageTest.hpp
+  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
+  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
 
  )
 #  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
@@ -962,7 +966,15 @@ ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	LIBRARYDIR ${CXXTESTRoot}
 	OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
 
-SET(TEST_SOURCES ${CXXTEST_CPP_FILE} ${SirikataProtocolDirectory}/Test_protobuf.cc)
+SET(TEST_SOURCES ${CXXTEST_CPP_FILE}
+                 ${SirikataProtocolDirectory}/Test_protobuf.cc 
+                 ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
+                 ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
+                 ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
+                 ${LIBCORE_DIR}/test/SQLiteReadWriteTest.cpp
+                 ${LIBCORE_DIR}/test/ReadWriteHandlerTest.cpp
+
+)
 
 
 #linker flags

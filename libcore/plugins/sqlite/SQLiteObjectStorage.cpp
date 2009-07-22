@@ -19,7 +19,9 @@ static void clearValuesFromStorageSet(StorageSet& ss) {
     }
 }
 
-
+SQLiteObjectStorage*SQLiteObjectStorage::create(bool t, const String&s){
+    return new SQLiteObjectStorage(t,s);
+}
 
 ReadWriteHandler* SQLiteObjectStorage::createReadWriteHandler(const String& pl) {
     return new SQLiteObjectStorage(false, pl);
@@ -35,7 +37,9 @@ Any pointerparser(std::string s) {
     std::stringstream ss(s);
     ss>>temp;
     retval=(Task::WorkQueue*)temp;
-    return retval;
+    Any anyret(retval);
+    Task::WorkQueue * test=anyret.as<Task::WorkQueue*>();
+    return anyret;
 }
 }
 SQLiteObjectStorage::SQLiteObjectStorage(bool transactional, const String& pl)
@@ -46,16 +50,20 @@ SQLiteObjectStorage::SQLiteObjectStorage(bool transactional, const String& pl)
 {
     OptionValue*databaseFile;
     OptionValue*workQueueInstance;
-    InitializeClassOptions("sqlite",this,
+    unsigned char * epoch=NULL;
+    static AtomicValue<int> counter(0);
+    int handle_offset=counter++;
+    InitializeClassOptions("sqlite",epoch+handle_offset,
                            databaseFile=new OptionValue("databasefile","",OptionValueType<String>(),"Sets the database to be used for storage"),
                            workQueueInstance=new OptionValue("workqueue","0","Sets the work queue to be used for disk reads to a common work queue",std::tr1::function<Any(std::string)>(&pointerparser)),NULL);
+    (mOptions=OptionSet::getOptions("sqlite",epoch+handle_offset))->parse(pl);
+
     mDiskWorkQueue=workQueueInstance->as<Task::WorkQueue*>();
     mWorkQueueThread=NULL;
     if(mDiskWorkQueue==NULL) {
         mDiskWorkQueue=&_mLocalWorkQueue;
         mWorkQueueThread=mDiskWorkQueue->createWorkerThreads(1);        
     }
-    (mOptions=OptionSet::getOptions("sqlite",this))->parse(pl);
 
     mDBName = databaseFile->as<String>();
     assert( !mDBName.empty() );
@@ -204,7 +212,7 @@ bool SQLiteObjectStorage::commitTransaction(const SQLiteDBPtr& db) {
 String SQLiteObjectStorage::getTableName(const StorageKey& key) {
     UUID keyVWObj = keyVWObject(key);
 
-    return keyVWObj.rawData();
+    return keyVWObj.rawHexData();
 }
 
 String SQLiteObjectStorage::getKeyName(const StorageKey& key) {

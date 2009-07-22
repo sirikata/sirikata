@@ -236,7 +236,7 @@ class ValueStash:public Stash<OptionValue>, public AutoSingleton<ValueStash> {};
 class QuitOptionsPlugin {
 public:
     ~QuitOptionsPlugin() {
-        for (std::map<std::string,OptionSet*>::iterator i=OptionSet::optionSets()->begin();
+        for (std::map<OptionSet::StringVoid,OptionSet*>::iterator i=OptionSet::optionSets()->begin();
              i!=OptionSet::optionSets()->end();
              ++i) {
             delete i->second;
@@ -370,9 +370,9 @@ void OptionSet::parse(const std::string&args){
         exit(0);
 }
 OptionSet* OptionSet::getOptionsNoLock(const std::string&s, const void * context){
-    std::map<std::string,OptionSet*>::iterator i=optionSets()->find(s);
+    std::map<StringVoid,OptionSet*>::iterator i=optionSets()->find(StringVoid(s,context));
     if (i==optionSets()->end()){
-        return (*optionSets())[s]=new OptionSet;
+        return (*optionSets())[StringVoid(s,context)]=new OptionSet;
     }else{
         return i->second;
     }
