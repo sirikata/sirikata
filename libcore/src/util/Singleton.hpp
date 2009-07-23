@@ -60,8 +60,7 @@ public:
 };
 
 }
-
-#define AUTO_SINGLETON_INSTANCE(ClassName) template<>std::auto_ptr<ClassName>Sirikata::AutoSingleton<ClassName>::sInstance= std::auto_ptr<ClassName>()
+#define AUTO_SINGLETON_INSTANCE(ClassName) template std::auto_ptr<ClassName> Sirikata::AutoSingleton<ClassName>::sInstance; template<>std::auto_ptr<ClassName>Sirikata::AutoSingleton<ClassName>::sInstance
 
 
 #endif
