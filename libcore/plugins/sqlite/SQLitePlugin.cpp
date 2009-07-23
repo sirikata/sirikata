@@ -8,6 +8,7 @@ static int core_plugin_refcount = 0;
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
+        using std::tr1::placeholders::_1;
         MinitransactionHandlerFactory::getSingleton().registerConstructor("sqlite",
                                                                           std::tr1::bind(&SQLiteObjectStorage::create,true,_1),
                                                                           true);

@@ -40,7 +40,6 @@
 
 using namespace Sirikata;
 
-using namespace boost;
 namespace {
 void pollMinitransaction(){}
 }
@@ -130,7 +129,7 @@ static void check_minitransaction_results(ObjectStorageError& error, Minitransac
 static void test_minitransaction(MinitransactionHandler* mth, Minitransaction* trans, ObjectStorageErrorType expected_error, StorageSet expected, int testnum) {
     bool done = false;
 
-    mth->apply(trans, boost::bind(check_minitransaction_results, _1, trans, expected_error, expected, &done, testnum));
+    mth->apply(trans, std::tr1::bind(check_minitransaction_results, _1, trans, expected_error, expected, &done, testnum));
 
     while( !done )
         pollMinitransaction();
@@ -172,7 +171,7 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
 
     // now quickly submit all of them
     for(uint32 i = 0; i < num_trans; i++)
-        fixture.handler->apply(transactions[i], boost::bind(check_stress_test_result, _1, &done));
+        fixture.handler->apply(transactions[i], std::tr1::bind(check_stress_test_result, _1, &done));
 
     while( done.read() < num_trans )
         pollMinitransaction();

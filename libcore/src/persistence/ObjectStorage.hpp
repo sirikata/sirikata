@@ -266,7 +266,7 @@ private:
 /** Base class for ObjectStorage request handlers.  This provides . */
 class SIRIKATA_EXPORT ObjectStorageHandler {
 public:
-    typedef boost::function1<void, ObjectStorageError> ResultCallback;
+    typedef std::tr1::function<void(ObjectStorageError)> ResultCallback;
 
     virtual ~ObjectStorageHandler();
 protected:
@@ -316,7 +316,7 @@ public:
 class SIRIKATA_EXPORT ObjectStorage {
 public:
 
-    typedef boost::function2<void, ObjectStorageError, const ReadSet&> ResultCallback;
+    typedef std::tr1::function<void(ObjectStorageError, const ReadSet&)> ResultCallback;
 
     ObjectStorage(ReadWriteHandler* temp, ReadWriteHandler* bestEffort, MinitransactionHandler* trans);
     ~ObjectStorage();
