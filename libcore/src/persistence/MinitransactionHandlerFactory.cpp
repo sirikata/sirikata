@@ -14,5 +14,7 @@ void MinitransactionHandlerFactory::destroy(){
     AutoSingleton<MinitransactionHandlerFactory>::destroy();
 }
 
+MinitransactionHandlerFactory::MinitransactionHandlerFactory(){}
+MinitransactionHandlerFactory::~MinitransactionHandlerFactory(){}
 
 }

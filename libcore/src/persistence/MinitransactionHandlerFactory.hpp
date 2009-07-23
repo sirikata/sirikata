@@ -44,6 +44,8 @@ class SIRIKATA_EXPORT MinitransactionHandlerFactory
 public:
     static MinitransactionHandlerFactory&getSingleton();
     static void destroy();
+    MinitransactionHandlerFactory();
+    ~MinitransactionHandlerFactory();
 };
 
 }

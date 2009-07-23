@@ -109,6 +109,7 @@ void SQLiteObjectStorage::ApplyReadWriteWorker::operator()() {
             error = mParent->applyWriteSet(db, rws->writes(), retries);
         cb(convertError(error));
     }
+    delete this;
 }
 
 SQLiteObjectStorage::ApplyTransactionWorker::ApplyTransactionWorker(SQLiteObjectStorage*parent, Minitransaction* mt, const ResultCallback&cb){
@@ -151,6 +152,7 @@ void SQLiteObjectStorage::ApplyTransactionWorker::operator()() {
         tries--;
     }
     cb(convertError(error));
+    delete this;
 }
 /*
 void SQLiteObjectStorage::handleResult(const EventPtr& evt) const {
@@ -313,8 +315,8 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr&
 
         rc = sqlite3_step(table_create_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
-
-
+        rc = sqlite3_finalize(table_create_stmt);
+        SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
         // Insert or replace the value
         String value_insert = "INSERT OR REPLACE INTO ";
         value_insert += "\"" + table_name + "\"";
@@ -337,7 +339,6 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr&
 
         rc = sqlite3_finalize(value_insert_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value insert statement");
-
         if (step_rc == SQLITE_BUSY || step_rc == SQLITE_LOCKED)
             return DatabaseLocked;
 

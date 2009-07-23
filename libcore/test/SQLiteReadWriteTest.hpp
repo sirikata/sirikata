@@ -36,7 +36,7 @@
 #include <persistence/ReadWriteHandlerFactory.hpp>
 #include "ReadWriteHandlerTest.hpp"
 namespace ReadWriteTestNs {
-extern const char *databaseReadWritealFilename;
+extern const char *databaseReadWriteFilename;
 void setupReadWritealHandler();
 void teardownReadWritealHandler();
 }
@@ -47,7 +47,7 @@ public:
     static Sirikata::ReadWriteHandler* createReadWritealHandlerFunction(const Sirikata::String&s){
         Sirikata::String arg=s;
         if (arg.find("--databasefile")==Sirikata::String::npos) {
-            arg="--databasefile "+Sirikata::String(ReadWriteTestNs::databaseReadWritealFilename)+arg;
+            arg="--databasefile "+Sirikata::String(ReadWriteTestNs::databaseReadWriteFilename)+arg;
         }
         return Sirikata::ReadWriteHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }

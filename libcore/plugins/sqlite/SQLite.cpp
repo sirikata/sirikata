@@ -56,13 +56,14 @@ SQLiteDBPtr SQLite::open(const String& name) {
         // verify another thread hasn't added it, then add it
         it = mDBs.find(name);
         if (it == mDBs.end()) {
-            mDBs[name] = new ThreadDBPtr();
+            std::tr1::shared_ptr<ThreadDBPtr> newDb(new ThreadDBPtr());
+            mDBs[name]=newDb;
             it = mDBs.find(name);
         }
     }
     assert(it != mDBs.end());
-    ThreadDBPtr* thread_db_ptr_ptr = it->second;
-    assert(thread_db_ptr_ptr != NULL);
+    std::tr1::shared_ptr<ThreadDBPtr> thread_db_ptr_ptr = it->second;
+    assert(thread_db_ptr_ptr);
 
     // Now get the thread specific weak database connection
     WeakSQLiteDBPtr* weak_db_ptr_ptr = thread_db_ptr_ptr->get();

@@ -44,6 +44,8 @@ class SIRIKATA_EXPORT ReadWriteHandlerFactory
 public:
     static ReadWriteHandlerFactory&getSingleton();
     static void destroy();
+    ReadWriteHandlerFactory();
+    virtual ~ReadWriteHandlerFactory();
 };
 
 }

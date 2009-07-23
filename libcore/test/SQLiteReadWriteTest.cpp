@@ -31,14 +31,14 @@
  */
 #include <boost/filesystem.hpp>
 namespace ReadWriteTestNs {
-const char *databaseReadWritealFilename="testReadWrite.db";
+const char *databaseReadWriteFilename="testReadWrite.db";
 void setupReadWritealHandler(){
-    if (boost::filesystem::exists( boost::filesystem::path(databaseReadWritealFilename) ))
-        boost::filesystem::remove( boost::filesystem::path(databaseReadWritealFilename)) ;
+    if (boost::filesystem::exists( boost::filesystem::path(databaseReadWriteFilename) ))
+        boost::filesystem::remove( boost::filesystem::path(databaseReadWriteFilename)) ;
 }
 void teardownReadWritealHandler(){
-    if (boost::filesystem::exists( boost::filesystem::path(databaseReadWritealFilename) ))
-        boost::filesystem::remove( boost::filesystem::path(databaseReadWritealFilename)) ;
+    if (boost::filesystem::exists( boost::filesystem::path(databaseReadWriteFilename) ))
+        boost::filesystem::remove( boost::filesystem::path(databaseReadWriteFilename)) ;
 
 }
 }

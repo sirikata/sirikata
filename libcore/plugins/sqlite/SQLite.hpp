@@ -71,7 +71,7 @@ public:
     static void check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg);
 private:
     typedef boost::thread_specific_ptr<WeakSQLiteDBPtr> ThreadDBPtr;
-    typedef std::map<String, ThreadDBPtr*> DBMap;
+    typedef std::map<String, std::tr1::shared_ptr<ThreadDBPtr> > DBMap;
 
     typedef boost::shared_mutex SharedMutex;
     typedef boost::shared_lock<SharedMutex> SharedLock;

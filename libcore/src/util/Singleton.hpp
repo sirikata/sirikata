@@ -35,30 +35,33 @@
 namespace Sirikata {
 
 template <class T> class AutoSingleton {
-    static T*sInstance;
+    static std::auto_ptr<T>sInstance;
 public:
     static T&getSingleton() {
-        if (sInstance==NULL)
-            sInstance = new T;
-        return *static_cast<T*>(sInstance);
+        if (sInstance.get()==NULL)  {
+            std::auto_ptr<T> tmp(new T);
+            sInstance = tmp;
+        }
+        return *static_cast<T*>(sInstance.get());
     }
     AutoSingleton() {
-        if (sInstance==NULL)
-            sInstance=static_cast<T*>(this);
+        if (sInstance.get()==NULL) {
+            std::auto_ptr<T> tmp(static_cast<T*>(this));
+            sInstance=tmp;
+        }
     }
     virtual ~AutoSingleton() {
-        if (sInstance==this)
-            sInstance=NULL;
+        if (sInstance.get()==this)
+            sInstance.release();
     }
     static void destroy() {
-        delete sInstance;
-        sInstance=NULL;
+        sInstance.reset();
     }
 };
 
 }
 
-#define AUTO_SINGLETON_INSTANCE(ClassName) template<>ClassName*Sirikata::AutoSingleton<ClassName>::sInstance=NULL
+#define AUTO_SINGLETON_INSTANCE(ClassName) template<>std::auto_ptr<ClassName>Sirikata::AutoSingleton<ClassName>::sInstance= std::auto_ptr<ClassName>()
 
 
 #endif
