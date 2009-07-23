@@ -242,6 +242,7 @@ int main ( int argc,const char**argv ) {
     myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
 
     using namespace Sirikata;
+    
     PluginManager plugins;
     plugins.load ( DynamicLibrary::filename("ogregraphics") );
     plugins.load ( DynamicLibrary::filename("bulletphysics") );
@@ -369,6 +370,7 @@ int main ( int argc,const char**argv ) {
         std::cerr << "Press enter to continue" << std::endl;
         fgetc(stdin);
     }
+    delete physicsSystem;
     delete graphicsSystem;
 
     

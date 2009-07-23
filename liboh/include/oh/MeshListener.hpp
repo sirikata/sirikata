@@ -39,10 +39,13 @@ namespace Sirikata {
 using Transfer::URI;
 
 struct physicalParameters {
+    std::string name;
     int mode;
     float density;
     float friction;
     float bounce;
+    int colMask;
+    int colMsg;
 };
 
 class SIRIKATA_OH_EXPORT MeshListener {

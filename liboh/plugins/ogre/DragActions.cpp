@@ -176,36 +176,45 @@ public:
         SILOG(input,insane,"moveSelection: Moving selected objects at distance " << mMoveVector);
     }
     void mouseMoved(MouseDragEventPtr ev) {
-		std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
+        std::cout << "MOVE: mX = "<<ev->mX<<"; mY = "<<ev->mY<<". mXStart = "<< ev->mXStart<<"; mYStart = "<<ev->mYStart<<std::endl;
         if (mSelectedObjects.empty()) {
             SILOG(input,insane,"moveSelection: Found no selected objects");
             return;
         }
         Task::AbsTime now = Task::AbsTime::now();
+    
+        /// dbm new way: ignore camera, just move along global axes
+        Vector3d toMove(0,0,0);
+        double sensitivity = 20.0;
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
-
-        Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mXStart, ev->mYStart));
-        Vector3d endAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mX, ev->mY));
-        Vector3d start, end;
-        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
-            start = startAxis.normal() * (mMoveVector.y/startAxis.y);
-            end = endAxis.normal() * (mMoveVector.y/endAxis.y);
-        } else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
-            start = startAxis.normal() * (mMoveVector.z/startAxis.z);
-            end = endAxis.normal() * (mMoveVector.z/endAxis.z);
-        } else {
+        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_ALT)) sensitivity = 5.0;
+        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT &&
+                mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL))) {
+            toMove.y = ev->deltaY()*sensitivity;
+        }
+        else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
+            if (cameraAxis.z > 0) sensitivity *=-1;
+            toMove.x = ev->deltaX()*sensitivity;
+        }
+        else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+            if (cameraAxis.x < 0) sensitivity *=-1;
+            toMove.z = ev->deltaX()*sensitivity;
+        }
+        else {
+            Vector3d startAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mXStart, ev->mYStart));
+            Vector3d endAxis (pixelToDirection(camera, cameraLoc.getOrientation(), ev->mX, ev->mY));
+            Vector3d start, end;
             float moveDistance = mMoveVector.dot(Vector3d(cameraAxis));
             start = startAxis * moveDistance; // / cameraAxis.dot(startAxis);
             end = endAxis * moveDistance; // / cameraAxis.dot(endAxis);
+            toMove = (end - start);
+            // Prevent moving outside of a small radius so you don't shoot an object into the horizon.
+            if (toMove.length() > 10*mParent->getInputManager()->mWorldScale->as<float>()) {
+                // moving too much.
+                toMove *= (10*mParent->getInputManager()->mWorldScale->as<float>()/toMove.length());
+            }
         }
-        Vector3d toMove (end - start);
-		// Prevent moving outside of a small radius so you don't shoot an object into the horizon.
-		if (toMove.length() > 10*mParent->getInputManager()->mWorldScale->as<float>()) {
-			// moving too much.
-			toMove *= (10*mParent->getInputManager()->mWorldScale->as<float>()/toMove.length());
-		}
-        SILOG(input,debug,"Start "<<start<<"; End "<<end<<"; toMove "<<toMove);
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
             Location toSet (mSelectedObjects[i]->extrapolateLocation(now));
             SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
@@ -221,45 +230,79 @@ class RotateObjectDrag : public ActiveDrag {
     OgreSystem *mParent;
     std::vector<ProxyPositionObjectPtr> mSelectedObjects;
     std::vector<Quaternion > mOriginalRotation;
+    std::vector<Vector3d> mOriginalPosition;
+    CameraEntity *camera;
 public:
     RotateObjectDrag(const DragStartInfo &info)
-        : mParent (info.sys),
-          mSelectedObjects (info.objects.begin(), info.objects.end()) {
-		mOriginalRotation.reserve(mSelectedObjects.size());
-		Task::AbsTime now = Task::AbsTime::now();
-		for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-			Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
-			mOriginalRotation.push_back(currentLoc.getOrientation());
-		}
+            : mParent (info.sys),
+            mSelectedObjects (info.objects.begin(), info.objects.end()) {
+        camera = info.camera;
+        mOriginalRotation.reserve(mSelectedObjects.size());
+        mOriginalPosition.reserve(mSelectedObjects.size());
+        Task::AbsTime now = Task::AbsTime::now();
+        for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+            Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
+            mOriginalRotation.push_back(currentLoc.getOrientation());
+            mOriginalPosition.push_back(currentLoc.getPosition());
+        }
     }
     void mouseMoved(MouseDragEventPtr ev) {
-            Task::AbsTime now(Task::AbsTime::now());
-            // one screen width = one full rotation
-			float SNAP_RADIANS = mParent->getInputManager()->mRotateSnap->as<float>();
-            float radianX = 3.14159 * 2 * ev->deltaX();
-            float radianY = 3.14159 * 2 * ev->deltaY();
-            if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
-				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
-					radianX = 0;
-				}
-			} else if (radianY > -SNAP_RADIANS && radianY < SNAP_RADIANS) {
-                radianY = 0;
+        Task::AbsTime now(Task::AbsTime::now());
+        Location cameraLoc = camera->getProxy().globalLocation(now);
+        Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
+        float radianX = 0;
+        float radianY = 0;
+        float radianZ = 0;
+        float sensitivity = 0.25;
+        Vector3d avgPos(0,0,0);
+        for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
+            const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+            Location loc (ent->extrapolateLocation(now));
+            avgPos += loc.getPosition();
+        }
+        avgPos /= mSelectedObjects.size();
+    
+        int ctlX, ctlZ;
+        if ((cameraAxis.x > 0 && cameraAxis.z > 0)
+                || (cameraAxis.x <= 0 && cameraAxis.z <= 0) ) {
+            ctlX = InputDevice::MOD_SHIFT;
+            ctlZ = InputDevice::MOD_CTRL;
+        }
+        else {
+            ctlX = InputDevice::MOD_CTRL;
+            ctlZ = InputDevice::MOD_SHIFT;
+        }
+        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_ALT)) {
+            sensitivity = 0.1;
+        }
+        if (mParent->getInputManager()->isModifierDown(ctlX)) {
+            if (mParent->getInputManager()->isModifierDown(ctlZ)) {
+                radianZ = 3.14159 * 2 * -ev->deltaX() * sensitivity;
             }
-            if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
-				if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
-					radianY = 0;
-				}
-			} else if (radianX > -SNAP_RADIANS && radianX < SNAP_RADIANS) {
-                radianX = 0;
+            else {
+                if (cameraAxis.z > 0) sensitivity *=-1;
             }
-            for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
-                const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
-                Location loc (ent->extrapolateLocation(now));
-                loc.setOrientation(Quaternion(Vector3f(0,1,0),radianX)*
-                                   Quaternion(Vector3f(1,0,0),radianY)*
-                                   mOriginalRotation[i]);
-                ent->resetPositionVelocity(now, loc);
-            }
+            radianX = 3.14159 * 2 * -ev->deltaY() * sensitivity;
+        }
+        else if (mParent->getInputManager()->isModifierDown(ctlZ)) {
+            if (cameraAxis.x <= 0) sensitivity *=-1;
+            radianZ = 3.14159 * 2 * -ev->deltaY() * sensitivity;
+        }
+        else {
+            radianY = 3.14159 * 2 * ev->deltaX() * sensitivity;    
+        }
+        Quaternion dragRotation (   Quaternion(Vector3f(1,0,0),radianX)*
+                                    Quaternion(Vector3f(0,1,0),radianY)*
+                                    Quaternion(Vector3f(0,0,1),radianZ));
+    
+        for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
+            const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+            Location loc (ent->extrapolateLocation(now));
+            Vector3d localTrans = mOriginalPosition[i] - avgPos;
+            loc.setPosition(avgPos + dragRotation*localTrans);
+            loc.setOrientation(dragRotation*mOriginalRotation[i]);
+            ent->resetPositionVelocity(now, loc);
+        }
     }
 };
 DragActionRegistry::RegisterClass<RotateObjectDrag> rotateobj("rotateObject");
@@ -268,21 +311,49 @@ class ScaleObjectDrag : public RelativeDrag {
     OgreSystem *mParent;
     std::vector<ProxyPositionObjectPtr> mSelectedObjects;
     float dragMultiplier;
+    std::vector<Vector3d> mOriginalPosition;
+    float mTotalScale;
+    CameraEntity *camera;
 public:
     ScaleObjectDrag(const DragStartInfo &info)
-        : RelativeDrag(info.ev->getDevice()),
-          mParent (info.sys),
-          mSelectedObjects (info.objects.begin(), info.objects.end()) {
+            : RelativeDrag(info.ev->getDevice()),
+            mParent (info.sys),
+            mTotalScale(1.0),
+            mSelectedObjects (info.objects.begin(), info.objects.end()) {
+        camera = info.camera;
+        mOriginalPosition.reserve(mSelectedObjects.size());
+        Task::AbsTime now = Task::AbsTime::now();
+        for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
+            Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
+            mOriginalPosition.push_back(currentLoc.getPosition());
+        }
         dragMultiplier = mParent->getInputManager()->mDragMultiplier->as<float>();
     }
     void mouseMoved(MouseDragEventPtr ev) {
+        Task::AbsTime now(Task::AbsTime::now());
+        Vector3d avgPos(0,0,0);
         if (ev->deltaLastY() != 0) {
             float scaleamt = exp(dragMultiplier*ev->deltaLastY());
+            mTotalScale *= scaleamt;
+            for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
+                const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+                if (!ent) {
+                    continue;
+                }
+                Location loc (ent->extrapolateLocation(now));
+                avgPos += loc.getPosition();
+            }
+            avgPos /= mSelectedObjects.size();
             for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
                 const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
                 if (!ent) {
                     continue;
                 }
+                Location loc (ent->extrapolateLocation(now));
+                Vector3d localTrans = mOriginalPosition[i] - avgPos;
+                loc.setPosition(avgPos + localTrans*mTotalScale);
+                std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
+                ent->resetPositionVelocity(now, loc);
                 std::tr1::shared_ptr<ProxyMeshObject> meshptr (
                     std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));
                 if (meshptr) {
