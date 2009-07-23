@@ -65,6 +65,10 @@ using namespace Task;
 #define SDL_SCANCODE_DOWN 0x5a
 #undef SDL_SCANCODE_LEFT
 #define SDL_SCANCODE_LEFT 0x5c
+#undef SDL_SCANCODE_PAGEUP
+#define SDL_SCANCODE_PAGEUP 0x61
+#undef SDL_SCANCODE_PAGEDOWN
+#define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
 // Defined in DragActions.cpp.
