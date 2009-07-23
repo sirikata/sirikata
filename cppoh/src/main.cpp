@@ -248,9 +248,11 @@ int main ( int argc,const char**argv ) {
     OptionSet::getOptions ( "" )->parse ( myargc,myargv );
 
 #ifdef __GNUC__
+#ifndef __APPLE__
     if (floatExcept->as<bool>()) {
         feenableexcept(FE_DIVBYZERO|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW);
     }
+#endif
 #endif
 
     OptionMapPtr transferOptions (new OptionMap);
