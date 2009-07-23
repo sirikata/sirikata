@@ -1045,6 +1045,16 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
     }
     packetFlow.clear();
 
+    struct ServerLatencyInfo {
+        Duration in_latency;
+        size_t in_samples;
+        Duration out_latency;
+        size_t out_samples;
+    };
+
+    ServerLatencyInfo* server_latencies = new ServerLatencyInfo[nservers];
+    memset(server_latencies, 0, nservers * sizeof(ServerLatencyInfo));
+
     Time epoch((uint64)0);
     for(uint32 source_id = 1; source_id <= nservers; source_id++) {
         for(uint32 dest_id = 1; dest_id <= nservers; dest_id++) {
@@ -1070,11 +1080,25 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     }
                 }
             }
+
+            server_latencies[source_id].out_latency += latency;
+            server_latencies[source_id].out_samples += numSamples;
+            server_latencies[dest_id].in_latency += latency;
+            server_latencies[dest_id].in_samples += numSamples;
+
             if (numSamples)
                 latency/=(double)numSamples;
             std::cout << "Server "<<source_id<<" to "<<dest_id<<" : "<<latency<<" ("<<numSamples<<","<<numUnfinished<<")"<<std::endl;
         }
     }
+
+    for(uint32 serv_id = 1; serv_id <= nservers; serv_id++) {
+        if (server_latencies[serv_id].in_samples)
+            std::cout << "Server "<<serv_id<<" In: "<<server_latencies[serv_id].in_latency/(double)server_latencies[serv_id].in_samples<<" ("<<server_latencies[serv_id].in_samples<<")"<<std::endl;
+        if (server_latencies[serv_id].out_samples)
+            std::cout << "Server "<<serv_id<<" Out: "<<server_latencies[serv_id].out_latency/(double)server_latencies[serv_id].out_samples<<" ("<<server_latencies[serv_id].out_samples<<")"<<std::endl;
+    }
+
     // Sort all lists of events by time
     /*    sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
     sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
