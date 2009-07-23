@@ -115,16 +115,8 @@ void FIFOServerMessageQueue::service(const Time& t){
            FIXME at some point we should record this here instead of in Server.cpp
         mTrace->serverDatagramReceived();
         */
-        uint32 offset = 0;
-        ServerMessageHeader hdr = ServerMessageHeader::deserialize(next_msg->data(), offset);
-        assert(hdr.destServer() == mSourceServer);
-        Network::Chunk* payload = new Network::Chunk;
-        Network::Chunk smp_data = next_msg->data(); // BEWARE we unfortunately copy this here because ServerMessagePair won't return a reference, not sure why its that way
-        payload->insert(payload->begin(), smp_data.begin() + offset, smp_data.end());
-        assert( payload->size() == next_msg->data().size() - offset );
-
         ChunkSourcePair csp;
-        csp.chunk = payload;
+        csp.chunk = new Network::Chunk(next_msg->data());
         csp.source = next_msg->dest();
         mReceiveQueue.push( csp );
 
