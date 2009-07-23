@@ -37,7 +37,7 @@
 #include <boost/thread/tss.hpp>
 #include <sqlite3.h>
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 
 /** Represents a SQLite database connection. */
 class SQLiteDB {
@@ -83,6 +83,6 @@ private:
     SharedMutex mDBMutex;
 };
 
-} // namespace Meru
+} }// namespace Sirikata::Persistence
 
 #endif //_SQLITE_HPP_

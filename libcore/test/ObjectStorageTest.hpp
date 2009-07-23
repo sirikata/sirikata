@@ -40,7 +40,7 @@
 
 #define OBJECT_STORAGE_GENERATED_PAIRS 1000
 
-std::vector<Sirikata::StorageKey>& keys();
-std::vector<Sirikata::StorageValue>& values();
+std::vector<Sirikata::Persistence::StorageKey>& keys();
+std::vector<Sirikata::Persistence::StorageValue>& values();
 
 #endif //_OBJECT_STORAGE_TEST_HPP_

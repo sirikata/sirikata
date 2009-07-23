@@ -38,7 +38,7 @@
 
 typedef std::tr1::function<void()> SetupMinitransactionHandlerFunction;
 typedef std::tr1::function<void()> TeardownMinitransactionHandlerFunction;
-typedef std::tr1::function<Sirikata::MinitransactionHandler*(const Sirikata::String&)> CreateMinitransactionHandlerFunction;
+typedef std::tr1::function<Sirikata::Persistence::MinitransactionHandler*(const Sirikata::String&)> CreateMinitransactionHandlerFunction;
 
 
 /** Performs an ordering correctness test on a MinitransactionHandler.

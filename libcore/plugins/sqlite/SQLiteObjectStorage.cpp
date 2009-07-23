@@ -39,7 +39,7 @@
 
 #define OPTION_DATABASE   "db"
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 
 
 static void clearValuesFromStorageSet(StorageSet& ss) {
@@ -432,4 +432,4 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPt
     return None;
 }
 
-} // namespace Meru
+} }// namespace Sirikata::Persistence

@@ -39,6 +39,7 @@
 
 #include "util/AtomicTypes.hpp"
 using namespace Sirikata;
+using namespace Sirikata::Persistence;
 
 
 namespace {

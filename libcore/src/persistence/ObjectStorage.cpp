@@ -35,7 +35,7 @@
 #include "ObjectStorage.hpp"
 
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 
 
 StorageKey::StorageKey(const UUID& vwobj, uint32 obj, const String& field)
@@ -402,4 +402,4 @@ void ObjectStorage::handleTransactionResult(Minitransaction* mt, const ResultCal
 }
 
 
-} // namespace Meru
+} } // namespace Sirikata::Persistence

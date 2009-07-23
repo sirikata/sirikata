@@ -41,12 +41,14 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
         using std::tr1::placeholders::_1;
-        MinitransactionHandlerFactory::getSingleton().registerConstructor("sqlite",
-                                                                          std::tr1::bind(&SQLiteObjectStorage::create,true,_1),
-                                                                          true);
-        ReadWriteHandlerFactory::getSingleton().registerConstructor("sqlite",
-                                                                    std::tr1::bind(&SQLiteObjectStorage::create,false,_1),
-                                                                    true);
+        Persistence::MinitransactionHandlerFactory::getSingleton()
+            .registerConstructor("sqlite",
+                                 std::tr1::bind(&Persistence::SQLiteObjectStorage::create,true,_1),
+                                 true);
+        Persistence::ReadWriteHandlerFactory::getSingleton()
+            .registerConstructor("sqlite",
+                                 std::tr1::bind(&Persistence::SQLiteObjectStorage::create,false,_1),
+                                 true);
     }
     core_plugin_refcount++;
 }
@@ -65,8 +67,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            MinitransactionHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
-            ReadWriteHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
+            Persistence::MinitransactionHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
+            Persistence::ReadWriteHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
         }
     }
 }

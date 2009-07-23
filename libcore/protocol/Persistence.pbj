@@ -111,7 +111,7 @@ message Minitransaction{
 }
 message Response {
   reserve 1 to 6;//in case we ever need to forward these around a bit
-  repeated StorageElement reads=7;
+  repeated StorageValue reads=7;
   optional int64 id=9;
   enum ReturnStatus {
     SUCCESS = 0;

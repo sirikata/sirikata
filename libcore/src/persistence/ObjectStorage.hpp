@@ -39,7 +39,7 @@
 #include "util/UUID.hpp"
 
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence { 
 
 /** A key in the storage system. The key is constructed of an object identifier followed
  *  by a hierarchy of names.
@@ -278,26 +278,39 @@ protected:
     static const String& keyField(const StorageKey& key);
 };
 
+namespace Protocol {
+class StorageKey;
+class StorageValue;
+class StorageElement;
+class CompareElement;
+class ReadSet;
+class WriteSet;
+class ReadWriteSet;
+class Minitransaction;
+class Response;
+}
 /** ReadWriteHandler is the abstract base class for implementations which handle
  *  best effort read/write storage sets.  These implementations don't handle
  *  transactions (meaning there's no support for compare sets).  Both temporary
  *  and best effort stored object store systems should implement this interface.
  */
-class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler {
+class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler, public MessageService {
 public:
     virtual ~ReadWriteHandler();
-
+    virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys)=0;
     virtual void apply(ReadWriteSet* rws, const ResultCallback& cb) = 0;
+    virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::ReadWriteSet*)=0;
 };
 
 /** MinitransactionHandler is the abstract base class for implementations which
  *  handle ACID minitransactions.  Transactional storage systems should implement
  *  this interface.
  */
-class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler {
+class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler, public MessageService {
 public:
     virtual ~MinitransactionHandler();
-
+    virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares)=0;
+    virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::Minitransaction*)=0;
     virtual void apply(Minitransaction* mt, const ResultCallback& cb) = 0;
 };
 
@@ -336,6 +349,6 @@ private:
     MinitransactionHandler* mTransaction;
 }; // class ObjectStorage
 
-} // namespace Sirikata
+} } // namespace Sirikata::Persistence
 
 #endif //_OBJECT_STORAGE_HPP_

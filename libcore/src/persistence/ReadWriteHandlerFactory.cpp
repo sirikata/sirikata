@@ -35,10 +35,10 @@
 #include <persistence/ReadWriteHandlerFactory.hpp>
 
 
-AUTO_SINGLETON_INSTANCE(Sirikata::ReadWriteHandlerFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::ReadWriteHandlerFactory);
 
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 ReadWriteHandlerFactory&ReadWriteHandlerFactory::getSingleton(){
     return AutoSingleton<ReadWriteHandlerFactory>::getSingleton();
 }
@@ -53,4 +53,4 @@ ReadWriteHandlerFactory::~ReadWriteHandlerFactory(){
 }
 
 
-}
+} }

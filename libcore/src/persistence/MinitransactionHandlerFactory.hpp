@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MINITRANSCATIONHANDLERFACTORY_HPP_
 #define _SIRIKATA_MINITRANSACTIONHANDLERFACTORY_HPP_
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 class MinitransactionHandler;
 
 
@@ -49,5 +49,5 @@ public:
     ~MinitransactionHandlerFactory();
 };
 
-}
+} }
 #endif

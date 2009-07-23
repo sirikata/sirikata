@@ -44,14 +44,14 @@ void teardownMinitransactionalHandler();
 class SQLiteMinitransactionTest:public CxxTest::TestSuite
 {
 public:
-    static Sirikata::MinitransactionHandler* createMinitransactionalHandlerFunction(const Sirikata::String&s){
+    static Sirikata::Persistence::MinitransactionHandler* createMinitransactionalHandlerFunction(const Sirikata::String&s){
         Sirikata::String arg=s;
         if (arg.find("--databasefile")==Sirikata::String::npos) {
             arg="--databasefile "+Sirikata::String(MinitransactionTestNs::databaseMinitransactionalFilename)+arg;
         }
-        return Sirikata::MinitransactionHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
+        return Sirikata::Persistence::MinitransactionHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }
-    Sirikata::MinitransactionHandler*mDatabase;
+    Sirikata::Persistence::MinitransactionHandler*mDatabase;
     SQLiteMinitransactionTest() {
         Sirikata::PluginManager plugins;
         plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));

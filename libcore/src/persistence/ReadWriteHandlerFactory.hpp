@@ -32,7 +32,7 @@
 #ifndef _SIRIKATA_READWRITEHANDLERFACTORY_HPP_
 #define _SIRIKATA_READWRITEHANDLERFACTORY_HPP_
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 class ReadWriteHandler;
 
 
@@ -48,5 +48,5 @@ public:
     virtual ~ReadWriteHandlerFactory();
 };
 
-}
+} }
 #endif

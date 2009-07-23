@@ -36,7 +36,7 @@
 #include "task/WorkQueue.hpp"
 #include "SQLite.hpp"
 #include "util/ThreadSafeQueue.hpp"
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 
 /** SQLite based object storage.  This class provides both ReadWriteHandler and
  *  MinitransactionHandler interfaces, but each instance should only be used for
@@ -50,6 +50,14 @@ public:
     static MinitransactionHandler* createMinitransactionHandler(const String& pl);
     virtual ~SQLiteObjectStorage();
 
+    virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares);
+    virtual void apply(const RoutableMessageHeader&rmh,Protocol::Minitransaction*);
+    
+    virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys)=0;
+    virtual void apply(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*);
+    bool forwardMessagesTo(MessageService*);
+    bool endForwardingMessagesTo(MessageService*);
+    void processMessage(const RoutableMessageHeader&,MemoryReference);
     virtual void apply(ReadWriteSet* rws, const ResultCallback& cb);
     virtual void apply(Minitransaction* mt, const ResultCallback& cb);
     static SQLiteObjectStorage*create(bool transactional,const String&);
@@ -140,7 +148,7 @@ private:
     int mBusyTimeout; // locked database timeout in milliseconds
 };
 
-} // namespace Meru
+} }// namespace Sirikata::Persistence
 
 
 #endif //_SQLITE_OBJECT_STORAGE_HPP_

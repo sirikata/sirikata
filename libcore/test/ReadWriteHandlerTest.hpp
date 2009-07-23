@@ -40,7 +40,7 @@
 typedef std::tr1::function<void()> SetupReadWriteHandlerFunction;
 typedef std::tr1::function<void()> TeardownReadWriteHandlerFunction;
 
-typedef std::tr1::function<Sirikata::ReadWriteHandler*(const Sirikata::String&)> CreateReadWriteHandlerFunction;
+typedef std::tr1::function<Sirikata::Persistence::ReadWriteHandler*(const Sirikata::String&)> CreateReadWriteHandlerFunction;
 
 
 /** Performs an ordering correctness test on a ReadWriteHandler.  Note that because ReadWriteHandlers don't guarantee

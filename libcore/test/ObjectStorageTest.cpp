@@ -32,7 +32,7 @@
 #include <util/Platform.hpp>
 #include "ObjectStorageTest.hpp"
 using namespace Sirikata;
-
+using namespace Sirikata::Persistence;
 /* Utilities for ObjectStorage tests.  No tests are defined here or in
  *  ObjectStorageTest.hpp.
  */

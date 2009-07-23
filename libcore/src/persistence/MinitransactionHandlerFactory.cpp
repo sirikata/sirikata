@@ -35,9 +35,9 @@
 #include <persistence/MinitransactionHandlerFactory.hpp>
 
 
-AUTO_SINGLETON_INSTANCE(Sirikata::MinitransactionHandlerFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::MinitransactionHandlerFactory);
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 
 MinitransactionHandlerFactory&MinitransactionHandlerFactory::getSingleton(){
     return AutoSingleton<MinitransactionHandlerFactory>::getSingleton();
@@ -49,4 +49,4 @@ void MinitransactionHandlerFactory::destroy(){
 MinitransactionHandlerFactory::MinitransactionHandlerFactory(){}
 MinitransactionHandlerFactory::~MinitransactionHandlerFactory(){}
 
-}
+} }

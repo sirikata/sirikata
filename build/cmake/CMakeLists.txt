@@ -707,7 +707,7 @@ ENDFOREACH(INCLUDE_NONCE)
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Test Sirikata Subscription
+  Test Sirikata Subscription Persistence
 )
 
 
@@ -1086,7 +1086,7 @@ ADD_PLUGIN_TARGET(sqlite
                     SOURCES ${LIBCORE_PLUGIN_SQLITE_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${SQLite3_LIBRARIES})
+                    LIBRARIES ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 ENDIF()
 
 IF(OGRE_FOUND)
@@ -1096,7 +1096,8 @@ ADD_PLUGIN_TARGET(ogregraphics
                     TARGET_LDFLAGS ${OGRE_LDFLAGS} ${sdl_LDFLAGS} ${AWESOMIUM_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} 
                     LIBRARIES ${OGRE_LIBRARIES} ${sdl_LIBRARIES} ${AWESOMIUM_LIBRARIES}
-                              ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}})
+                              ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}}
+                               ${PROTOCOLBUFFERS_LIBRARIES})
 ENDIF(OGRE_FOUND)
 
 
@@ -1105,8 +1106,8 @@ ADD_PLUGIN_TARGET(prox
                     SOURCES ${LIBPROXIMITY_PLUGIN_PROX_SOURCES}
                     TARGET_CXXFLAGS ${PROX_CFLAGS}
                     TARGET_LDFLAGS ${PROX_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB} ${PROTOCOLBUFFERS_LIBRARIES}
-                    LIBRARIES ${PROX_LIBRARIES})
+                    TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${PROX_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 ENDIF(PROX_FOUND)
 
 SET(LIBOH_PLUGIN_BULLETPHYSICS_DIR ${LIBOH_PLUGIN_DIR}/bullet)

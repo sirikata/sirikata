@@ -32,8 +32,9 @@
 
 #include <util/Platform.hpp>
 #include "SQLite.hpp"
+AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::SQLite);
 
-namespace Sirikata {
+namespace Sirikata { namespace Persistence {
 void SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
 {
 	if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
@@ -69,7 +70,6 @@ sqlite3* SQLiteDB::db() const {
 }
 
 
-AUTO_SINGLETON_INSTANCE(SQLite);
 
 SQLite::SQLite() {
 }
@@ -126,4 +126,4 @@ SQLiteDBPtr SQLite::open(const String& name) {
     return db;
 }
 
-} // namespace Sirikata
+} } // namespace Sirikata::Persistence

@@ -44,14 +44,14 @@ void teardownReadWritealHandler();
 class SQLiteReadWriteTest:public CxxTest::TestSuite
 {
 public:
-    static Sirikata::ReadWriteHandler* createReadWritealHandlerFunction(const Sirikata::String&s){
+    static Sirikata::Persistence::ReadWriteHandler* createReadWritealHandlerFunction(const Sirikata::String&s){
         Sirikata::String arg=s;
         if (arg.find("--databasefile")==Sirikata::String::npos) {
             arg="--databasefile "+Sirikata::String(ReadWriteTestNs::databaseReadWriteFilename)+arg;
         }
-        return Sirikata::ReadWriteHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
+        return Sirikata::Persistence::ReadWriteHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }
-    Sirikata::ReadWriteHandler*mDatabase;
+    Sirikata::Persistence::ReadWriteHandler*mDatabase;
     SQLiteReadWriteTest() {
         Sirikata::PluginManager plugins;
         plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));
