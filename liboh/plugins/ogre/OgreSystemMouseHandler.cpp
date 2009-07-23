@@ -516,9 +516,9 @@ private:
         }
         return EventResponse::nop();
     }
-
+    
     EventResponse moveHandler(EventPtr ev) {
-        Vector3f raxis;
+        Vector3f yawAxis;
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
         std::tr1::shared_ptr<ButtonEvent> buttonev (
@@ -527,11 +527,11 @@ private:
             return EventResponse::nop();
         }
         float amount = buttonev->mPressed?1:0;
-
+    
         CameraEntity *cam = mParent->mPrimaryCamera;
         Location loc = cam->getProxy().extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-        
+    
         switch (buttonev->mButton) {
         case SDL_SCANCODE_S:
             amount*=-1;
@@ -550,22 +550,38 @@ private:
         case SDL_SCANCODE_DOWN:
             amount*=-1;
         case SDL_SCANCODE_UP:
-            loc.setAxisOfRotation(Vector3f(1,0,0));
-            loc.setAngularSpeed(buttonev->mPressed?amount:0);
-            loc.setVelocity(Vector3f(0,0,0));
+            amount *= 0.5;
+            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
+                loc.setAxisOfRotation(Vector3f(1,0,0));
+                loc.setAngularSpeed(buttonev->mPressed?amount:0);
+                loc.setVelocity(Vector3f(0,0,0));
+            }
+            else {
+                amount *= WORLD_SCALE;
+                loc.setVelocity(direction(orient)*amount);
+                loc.setAngularSpeed(0);
+            }
+            break;
+        case SDL_SCANCODE_PAGEDOWN:
+            amount*=-1;
+        case SDL_SCANCODE_PAGEUP:
+            amount *= 0.25;
+            amount *= WORLD_SCALE;
+            std::cout << "dbm debug PAGEUP amount: " << amount << std::endl;
+            loc.setVelocity(Vector3f(0,1,0)*amount);
+            loc.setAngularSpeed(0);
             break;
         case SDL_SCANCODE_RIGHT:
             amount*=-1;
         case SDL_SCANCODE_LEFT:
-            //amount*=2;
+            if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) amount *= 0.25;
+            /// AngularSpeed needs a relative axis, so compute the global Y axis (yawAxis) in local frame
             double p, r, y;
             quat2Euler(loc.getOrientation(), p, r, y);
-            raxis.x = 0;
-            raxis.y = std::cos(p*DEG2RAD);
-            raxis.z = -std::sin(p*DEG2RAD);
-            std::cout << "dbm debug: raxis = " << raxis <<  " pitch: " << p << std::endl;
-            //loc.setAxisOfRotation(Vector3f(0,1,0));
-            loc.setAxisOfRotation(raxis);
+            yawAxis.x = 0;
+            yawAxis.y = std::cos(p*DEG2RAD);
+            yawAxis.z = -std::sin(p*DEG2RAD);
+            loc.setAxisOfRotation(yawAxis);
             loc.setAngularSpeed(buttonev->mPressed?amount:0);
             loc.setVelocity(Vector3f(0,0,0));
             break;
@@ -575,7 +591,7 @@ private:
         cam->getProxy().setPositionVelocity(now, loc);
         return EventResponse::nop();
     }
-
+    
     EventResponse import(EventPtr ev) {
         std::cout << "input path name for import: " << std::endl;
         std::string filename;
@@ -610,8 +626,8 @@ private:
             perror("Failed to open scene_new.csv");
             return EventResponse::cancel();
         }
-        fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
-        fprintf(output, "density,friction,bounce,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
+        fprintf(output, "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
+        fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
         OgreSystem::SceneEntitiesMap::const_iterator iter;
@@ -650,13 +666,6 @@ private:
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
-        /* Ogre's way doesn't jive
-        Ogre::Quaternion quat(loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
-        Ogre::Radian yaw = quat.getYaw();
-        Ogre::Radian pitch = quat.getPitch();
-        Ogre::Radian roll = quat.getRoll();
-        std::cout << "dbm: debug ogre yaw: " << yaw.valueDegrees() << " pitch: " << pitch.valueDegrees() << " roll: " << roll.valueDegrees() << std::endl;
-        */
         double x,y,z;
         std::string w("");
         /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
@@ -680,7 +689,7 @@ private:
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
             shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,",typestr,
+            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,",typestr,
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
@@ -706,16 +715,16 @@ private:
             else {
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
-            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),
+            fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%s\n",
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
-                    phys.friction, phys.bounce, uristr.c_str());
+                    phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%s\n",
+            fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                                     x,y,z,w.c_str());
         }
@@ -803,14 +812,26 @@ private:
                 registerButtonListener(ev->mDevice, &MouseHandler::leaveObject, SDL_SCANCODE_ESCAPE);
                 registerButtonListener(ev->mDevice, &MouseHandler::createLight, SDL_SCANCODE_B);
 
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEUP);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEUP,true);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEDOWN);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_PAGEDOWN,true);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_D,false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_UP, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_DOWN, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, true, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_LEFT, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
+                registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_RIGHT, false, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_W,true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_A,true, InputDevice::MOD_SHIFT);
                 registerButtonListener(ev->mDevice, &MouseHandler::moveHandler, SDL_SCANCODE_S,true, InputDevice::MOD_SHIFT);

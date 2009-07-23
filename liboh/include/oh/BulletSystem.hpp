@@ -256,7 +256,6 @@ public:
 
 
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
-//vector<ProxyMeshObjectPtr>mymesh;
 
 struct positionOrientation {
     Vector3d p;
@@ -276,61 +275,65 @@ struct positionOrientation {
 class BulletSystem;
 
 class bulletObj : public MeshListener,Noncopyable {
+    friend class BulletSystem;
+    enum shapeID {
+        ShapeMesh,
+        ShapeBox,
+        ShapeSphere
+    };
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
 
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
-    btScalar* btVertices;//<-- this dude must be aligned on 16 byte boundaries
-    vector<double> vertices;
-    vector<int> indices;
-    btTriangleIndexVertexArray* indexarray;
-    btDefaultMotionState* myMotionState;
+    btScalar* mBtVertices;//<-- this dude must be aligned on 16 byte boundaries
+    vector<double> mVertices;
+    vector<int> mIndices;
+    btTriangleIndexVertexArray* mIndexArray;
+    btDefaultMotionState* mMotionState;
+    float mDensity;
+    float mFriction;
+    float mBounce;
+    bool mActive;              /// anything that bullet sees is active
+    bool mDynamic;             /// but only some are dynamic (affected by forces)
+    shapeID mShape;
+    positionOrientation mInitialPo;
+    Vector3d mVelocity;
+    btRigidBody* mBulletBodyPtr;
+    btCollisionShape* mColShape;
+    ProxyMeshObjectPtr mMeshptr;
+    URI mMeshname;
+    float mSizeX;
+    float mSizeY;
+    float mSizeZ;
+    string mName;
 public:
+    /// public members -- yes, I use 'em.  No, I don't always thicken my code with gettr/settr's
+    int colMask;
+    int colMsg;
+
     enum mode {
         Disabled,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
         DynamicBox,                 /// fully physical -- collision & dynamics
         DynamicSphere                 /// fully physical -- collision & dynamics
     };
-    enum shapeID {
-        ShapeMesh,
-        ShapeBox,
-        ShapeSphere
-    };
-    /// public members (please, let's not go on about settrs & gettrs -- unnecessary here)
-    float density;
-    float friction;
-    float bounce;
-    bool active;              /// anything that bullet sees is active
-    bool dynamic;             /// but only some are dynamic (affected by forces)
-    shapeID shape;
-    positionOrientation initialPo;
-    Vector3d velocity;
-    btRigidBody* bulletBodyPtr;
-    btCollisionShape* colShape;
-    ProxyMeshObjectPtr meshptr;
-    URI meshname;
-    float sizeX;
-    float sizeY;
-    float sizeZ;
-
     /// public methods
     bulletObj(BulletSystem* sys) :
-            btVertices(NULL),
-            indexarray(NULL),
-            myMotionState(NULL),
-            active(false),
-            dynamic(false),
-            velocity(Vector3d()),
-            bulletBodyPtr(NULL),
-            colShape(NULL),
-            sizeX(0),
-            sizeY(0),
-            sizeZ(0) {
+            mBtVertices(NULL),
+            mIndexArray(NULL),
+            mMotionState(NULL),
+            mActive(false),
+            mDynamic(false),
+            mVelocity(Vector3d()),
+            mBulletBodyPtr(NULL),
+            mColShape(NULL),
+            mSizeX(0),
+            mSizeY(0),
+            mSizeZ(0),
+            mName("") {
         system = sys;
-        indexarray=0;
     }
     ~bulletObj();
     positionOrientation getBulletState();
@@ -339,18 +342,31 @@ public:
     void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
 };
 
+class customDispatch :public btCollisionDispatcher {
+    /// the entire point of this subclass is to flag collisions in collisionPairs
+public:
+    map<btCollisionObject*, bulletObj*>* bt2siri;
+    map<set<bulletObj*>, int> collisionPairs;
+    customDispatch (btCollisionConfiguration* collisionConfiguration,
+                    map<btCollisionObject*, bulletObj*>* bt2siri) :
+            btCollisionDispatcher(collisionConfiguration) {
+        this->bt2siri=bt2siri;
+    }
+};
+
 class BulletSystem: public TimeSteppedSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     Vector3d gravity;
     double groundlevel;
-    OptionValue* tempTferManager;
-    OptionValue* workQueue;
-    OptionValue* eventManager;
+    OptionValue* mTempTferManager;
+    OptionValue* mWorkQueue;
+    OptionValue* mEventManager;
+    Task::AbsTime mStartTime;
 
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;
-    btCollisionDispatcher* dispatcher;
+    customDispatch* dispatcher;
     btAxisSweep3* overlappingPairCache;
     btSequentialImpulseConstraintSolver* solver;
     btCollisionShape* groundShape;
@@ -358,6 +374,7 @@ class BulletSystem: public TimeSteppedSimulation {
 
 public:
     BulletSystem();
+    map<btCollisionObject*, bulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to bulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<bulletObj*>objects;
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;

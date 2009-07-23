@@ -54,21 +54,25 @@ class DemoProxyManager :public ProxyManager {
 
     ProxyObjectPtr addMeshObject(const Transfer::URI &uri, const Location &location,
                                  const Vector3f &scale=Vector3f(1,1,1),
-                                 const int mode=0, const float density=0.f, const float friction=0.f, const float bounce=0.f) {
+                                 const int mode=0, const float density=0.f, const float friction=0.f, 
+                                 const float bounce=0.f, const string name="", const int colMask=0, const int colMsg=0) {
         // parentheses around arguments required to resolve function/constructor ambiguity. This is ugly.
         SpaceObjectReference myId((SpaceID(UUID::null())),(ObjectReference(UUID::random())));
-        std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
+        //std::cout << "Add Mesh Object " << myId << " = " << uri << " mode: " << mode << std::endl;
         std::tr1::shared_ptr<ProxyMeshObject> myObj(new ProxyMeshObject(this, myId));
         mObjects.insert(ObjectMap::value_type(myId, myObj));
         notify(&ProxyCreationListener::createProxy, myObj);
         myObj->resetPositionVelocity(Time::now(), location);
         myObj->setMesh(uri);
         myObj->setScale(scale);
-        physicalParameters pp = {0};
+        physicalParameters pp;
         pp.mode = mode;
         pp.density = density;
         pp.friction = friction;
         pp.bounce = bounce;
+        pp.name = name;
+        pp.colMask = colMask;
+        pp.colMsg = colMsg;
         myObj->setPhysical(pp);             /// always do this to ensure parameters are valid
         return myObj;
     }
@@ -177,7 +181,7 @@ class DemoProxyManager :public ProxyManager {
 
         /// dbm new way:
         map<string, string>& row = *parse_csv_line(fp);
-        std::cout << endl;
+        //std::cout << endl;
         if (row["objtype"][0]=='#' || row["objtype"]==string("")) {
             //cout << "csv: loadSceneObject passing, comment or blank line" << endl;
             return;                                         /// comment or blank line
@@ -301,8 +305,11 @@ class DemoProxyManager :public ProxyManager {
                     cout << "parse csv error: no meshURI" << endl;
                     assert(false);
                 }
-                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce);
-                //cout << "csv: added mesh to scene.  subtype: " << row["subtype"] << " mode: " << mode << " density: " << density << endl;
+                string name = row["name"];
+                int colMask = str2int(row["colMask"]);
+                int colMsg = str2int(row["colMsg"]);
+                addMeshObject(Transfer::URI(meshURI), location, scale, mode, density, friction, bounce, 
+                              name, colMask, colMsg);
             }
             else {
                 cout << "parse csv error: illegal object type" << endl;
