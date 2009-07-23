@@ -129,7 +129,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
     Location location = camera->getProxy().extrapolateLocation(now);
     location.setOrientation((dvorient * dhorient * dragStart).normal());
-    camera->getProxy().resetPositionVelocity(now, location);
+    camera->getProxy().resetLocation(now, location);
 }
 
     void panCamera(CameraEntity *camera, const Vector3d &oldLocalPosition, const Vector3d &toPan) {
@@ -139,7 +139,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
         Location location (camera->getProxy().extrapolateLocation(now));
         location.setPosition(orient * toPan + oldLocalPosition);
-        camera->getProxy().resetPositionVelocity(now, location);
+        camera->getProxy().resetLocation(now, location);
     }
 
 
@@ -147,7 +147,7 @@ void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
 
 
 class MoveObjectDrag : public ActiveDrag {
-    std::vector<ProxyPositionObjectPtr> mSelectedObjects;
+    std::vector<ProxyObjectWPtr> mSelectedObjects;
     std::vector<Vector3d> mPositions;
     CameraEntity *camera;
     OgreSystem *mParent;
@@ -164,8 +164,13 @@ public:
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
         mMoveVector = Vector3d(0,0,0);
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-            mPositions.push_back(mSelectedObjects[i]->extrapolateLocation(now).getPosition());
-            Vector3d deltaPosition (mSelectedObjects[i]->globalLocation(now).getPosition() - cameraLoc.getPosition());
+            ProxyObjectPtr obj (mSelectedObjects[i].lock());
+            if (!obj) {
+                mPositions.push_back(Vector3d(0,0,0));
+                continue;
+            }
+            mPositions.push_back(obj->extrapolateLocation(now).getPosition());
+            Vector3d deltaPosition (obj->globalLocation(now).getPosition() - cameraLoc.getPosition());
             double dist = deltaPosition.dot(Vector3d(cameraAxis));
             if (!foundObject || dist < moveDistance) {
                 foundObject = true;
@@ -216,11 +221,14 @@ public:
             }
         }
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-            Location toSet (mSelectedObjects[i]->extrapolateLocation(now));
-            SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
-            toSet.setPosition(mPositions[i] + toMove);
-            SILOG(input,debug,"moveSelection: NEW " << toSet.getPosition());
-            mSelectedObjects[i]->setPositionVelocity(now, toSet);
+            ProxyObjectPtr obj (mSelectedObjects[i].lock());
+            if (obj) {
+                Location toSet (obj->extrapolateLocation(now));
+                SILOG(input,debug,"moveSelection: OLD " << toSet.getPosition());
+                toSet.setPosition(mPositions[i] + toMove);
+                SILOG(input,debug,"moveSelection: NEW " << toSet.getPosition());
+                obj->setLocation(now, toSet);
+            }
         }
     }
 };
@@ -228,7 +236,7 @@ DragActionRegistry::RegisterClass<MoveObjectDrag> moveobj("moveObject");
 
 class RotateObjectDrag : public ActiveDrag {
     OgreSystem *mParent;
-    std::vector<ProxyPositionObjectPtr> mSelectedObjects;
+    std::vector<ProxyObjectWPtr> mSelectedObjects;
     std::vector<Quaternion > mOriginalRotation;
     std::vector<Vector3d> mOriginalPosition;
     CameraEntity *camera;
@@ -241,9 +249,15 @@ public:
         mOriginalPosition.reserve(mSelectedObjects.size());
         Task::AbsTime now = Task::AbsTime::now();
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-            Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
-            mOriginalRotation.push_back(currentLoc.getOrientation());
-            mOriginalPosition.push_back(currentLoc.getPosition());
+            ProxyObjectPtr obj (mSelectedObjects[i].lock());
+            if (obj) {
+                Location currentLoc = obj->extrapolateLocation(now);
+                mOriginalRotation.push_back(currentLoc.getOrientation());
+                mOriginalPosition.push_back(currentLoc.getPosition());
+            } else {
+                mOriginalRotation.push_back(Quaternion::identity());
+                mOriginalPosition.push_back(Vector3d::nil());
+            }
         }
     }
     void mouseMoved(MouseDragEventPtr ev) {
@@ -256,7 +270,7 @@ public:
         float sensitivity = 0.25;
         Vector3d avgPos(0,0,0);
         for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
-            const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+            ProxyObjectPtr ent (mSelectedObjects[i].lock());
             Location loc (ent->extrapolateLocation(now));
             avgPos += loc.getPosition();
         }
@@ -289,19 +303,20 @@ public:
             radianZ = 3.14159 * 2 * -ev->deltaY() * sensitivity;
         }
         else {
-            radianY = 3.14159 * 2 * ev->deltaX() * sensitivity;    
+            radianY = 3.14159 * 2 * ev->deltaX() * sensitivity;
         }
         Quaternion dragRotation (   Quaternion(Vector3f(1,0,0),radianX)*
                                     Quaternion(Vector3f(0,1,0),radianY)*
                                     Quaternion(Vector3f(0,0,1),radianZ));
-    
+
         for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
-            const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+            ProxyObjectPtr ent (mSelectedObjects[i].lock());
+            if (!ent) continue;
             Location loc (ent->extrapolateLocation(now));
             Vector3d localTrans = mOriginalPosition[i] - avgPos;
             loc.setPosition(avgPos + dragRotation*localTrans);
             loc.setOrientation(dragRotation*mOriginalRotation[i]);
-            ent->resetPositionVelocity(now, loc);
+            ent->resetLocation(now, loc);
         }
     }
 };
@@ -309,7 +324,7 @@ DragActionRegistry::RegisterClass<RotateObjectDrag> rotateobj("rotateObject");
 
 class ScaleObjectDrag : public RelativeDrag {
     OgreSystem *mParent;
-    std::vector<ProxyPositionObjectPtr> mSelectedObjects;
+    std::vector<ProxyObjectWPtr> mSelectedObjects;
     float dragMultiplier;
     std::vector<Vector3d> mOriginalPosition;
     float mTotalScale;
@@ -318,13 +333,14 @@ public:
     ScaleObjectDrag(const DragStartInfo &info)
             : RelativeDrag(info.ev->getDevice()),
             mParent (info.sys),
-            mTotalScale(1.0),
-            mSelectedObjects (info.objects.begin(), info.objects.end()) {
+            mSelectedObjects (info.objects.begin(), info.objects.end()),
+            mTotalScale(1.0) {
         camera = info.camera;
         mOriginalPosition.reserve(mSelectedObjects.size());
         Task::AbsTime now = Task::AbsTime::now();
         for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-            Location currentLoc = mSelectedObjects[i]->extrapolateLocation(now);
+            ProxyObjectPtr obj(mSelectedObjects[i].lock());
+            Location currentLoc = obj->extrapolateLocation(now);
             mOriginalPosition.push_back(currentLoc.getPosition());
         }
         dragMultiplier = mParent->getInputManager()->mDragMultiplier->as<float>();
@@ -335,17 +351,20 @@ public:
         if (ev->deltaLastY() != 0) {
             float scaleamt = exp(dragMultiplier*ev->deltaLastY());
             mTotalScale *= scaleamt;
+            int count = 0;
             for (size_t i = 0; i< mSelectedObjects.size(); ++i) {
-                const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+                ProxyObjectPtr ent (mSelectedObjects[i].lock());
                 if (!ent) {
                     continue;
                 }
                 Location loc (ent->extrapolateLocation(now));
                 avgPos += loc.getPosition();
+                ++count;
             }
-            avgPos /= mSelectedObjects.size();
+            if (!count) return;
+            avgPos /= count;
             for (size_t i = 0; i < mSelectedObjects.size(); ++i) {
-                const ProxyPositionObjectPtr &ent = mSelectedObjects[i];
+                ProxyObjectPtr ent (mSelectedObjects[i].lock());
                 if (!ent) {
                     continue;
                 }
@@ -353,7 +372,7 @@ public:
                 Vector3d localTrans = mOriginalPosition[i] - avgPos;
                 loc.setPosition(avgPos + localTrans*mTotalScale);
                 std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
-                ent->resetPositionVelocity(now, loc);
+                ent->resetLocation(now, loc);
                 std::tr1::shared_ptr<ProxyMeshObject> meshptr (
                     std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));
                 if (meshptr) {
@@ -428,7 +447,7 @@ public:
 };
 DragActionRegistry::RegisterClass<PanCameraDrag> pancamera("panCamera");
 
-void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyPositionObjectPtr> objects, OgreSystem *parent) {
+void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyObjectWPtr> objects, OgreSystem *parent) {
     if (!dev) {
         return;
     }
@@ -458,13 +477,13 @@ void zoomInOut(AxisValue value, const InputDevicePtr &dev, CameraEntity *camera,
     }
     toMove *= value.getCentered(); // up == zoom in
     cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
-    camera->getProxy().resetPositionVelocity(now, cameraLoc);
+    camera->getProxy().resetLocation(now, cameraLoc);
 }
 
 class ZoomCameraDrag : public RelativeDrag {
     OgreSystem *mParent;
     CameraEntity *mCamera;
-    std::set<ProxyPositionObjectPtr> mSelection;
+    std::set<ProxyObjectWPtr> mSelection;
 public:
     ZoomCameraDrag(const DragStartInfo &info)
         : RelativeDrag(info.ev->getDevice()) {
@@ -503,7 +522,7 @@ DragActionRegistry::RegisterClass<ZoomCameraDrag> zoomCamera("zoomCamera");
         Quaternion dhorient2 = Quaternion(Vector3f(0,1,0), -radianX);
         cameraLoc.setPosition(totalPosition + dhorient * distance);
         cameraLoc.setOrientation(dhorient2 * cameraLoc.getOrientation());
-        camera->getProxy().resetPositionVelocity(now, cameraLoc);
+        camera->getProxy().resetLocation(now, cameraLoc);
     }
 
  */
@@ -511,7 +530,7 @@ DragActionRegistry::RegisterClass<ZoomCameraDrag> zoomCamera("zoomCamera");
 class OrbitObjectDrag : public RelativeDrag {
     OgreSystem *mParent;
     CameraEntity *camera;
-    std::vector<ProxyPositionObjectPtr> mSelectedObjects;
+    std::vector<ProxyObjectWPtr> mSelectedObjects;
 //    Vector3d mOrbitCenter;
 //    Vector3d mOriginalPosition;
 public:
@@ -539,7 +558,7 @@ public:
             Vector3d totalPosition (averageSelectedPosition(now, mSelectedObjects.begin(), mSelectedObjects.end()));
             double multiplier = (totalPosition - cameraLoc.getPosition()).length();
             rotateCamera(camera, amount.x, amount.y);
-            panCamera(camera, camera->getProxy().extrapolatePosition(now), amount * multiplier);
+            panCamera(camera, camera->getProxy().extrapolateLocation(now).getPosition(), amount * multiplier);
         }
     }
 };

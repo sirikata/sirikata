@@ -638,7 +638,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
         }
     }
     if (!created) {
-        std::tr1::shared_ptr<ProxyPositionObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyPositionObject>(p);
+        std::tr1::shared_ptr<ProxyObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyObject>(p);
         if (pospxy) {
             Entity *ent=new Entity(
                 this,
@@ -731,7 +731,7 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
                 std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
                 proxyMgr->createObject(newMeshObject);
                 newMeshObject->setMesh((*iter).first.mID);
-                newMeshObject->resetPositionVelocity(now, loc);
+                newMeshObject->resetLocation(now, loc);
                 selectObject(getEntity(newMeshObject));
                 nummesh++;
             }

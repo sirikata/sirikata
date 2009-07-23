@@ -382,7 +382,10 @@ bool BulletSystem::tick() {
                     po = objects[i]->getBulletState();
                     DEBUG_OUTPUT(cout << "    dbm: object, " << objects[i]->mName << ", delta, "
                                  << delta.toSeconds() << ", newpos, " << po.p << "obj: " << objects[i] << endl;)
-                    objects[i]->mMeshptr->setPosition(now, po.p, po.o);
+                    Location loc (objects[i]->mMeshptr->globalLocation(now));
+                    loc.setPosition(po.p);
+                    loc.setOrientation(po.o);
+                    objects[i]->mMeshptr->setLocation(now, loc);
                 }
             }
 

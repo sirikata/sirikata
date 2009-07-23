@@ -34,7 +34,7 @@
 
 #include "OgreSystem.hpp"
 #include <util/UUID.hpp>
-#include <oh/ProxyPositionObject.hpp>
+#include <oh/ProxyObject.hpp>
 #include <oh/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
@@ -51,7 +51,7 @@ class Entity
 {
 protected:
     OgreSystem *const mScene;
-    const std::tr1::shared_ptr<ProxyPositionObject> mProxy;
+    const ProxyObjectPtr mProxy;
 
     Ogre::MovableObject *mOgreObject;
     Ogre::SceneNode *mSceneNode;
@@ -67,14 +67,14 @@ protected:
 
     void setOgreOrientation(const Quaternion &orient);
 public:
-    ProxyPositionObject &getProxy() const {
+    ProxyObject &getProxy() const {
         return *mProxy;
     }
-    const ProxyPositionObjectPtr &getProxyPtr() const {
+    const ProxyObjectPtr &getProxyPtr() const {
         return mProxy;
     }
     Entity(OgreSystem *scene,
-           const ProxyPositionObjectPtr &ppo,
+           const ProxyObjectPtr &ppo,
            const std::string &ogreId,
            Ogre::MovableObject *obj=NULL);
 
@@ -91,7 +91,7 @@ public:
 
     virtual void updateLocation(Time ti, const Location &newLocation);
     virtual void resetLocation(Time ti, const Location &newLocation);
-    virtual void setParent(const ProxyPositionObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
+    virtual void setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation);
     virtual void unsetParent(Time ti, const Location &newLocation);
 
     virtual void destroyed();

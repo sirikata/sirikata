@@ -130,7 +130,6 @@ using ::Sirikata::LightInfo;
 using ::Sirikata::Location;
 using ::Sirikata::Time;
 using ::Sirikata::Duration;
-using ::Sirikata::ProxyPositionObject;
 using ::Sirikata::ProxyCameraObject;
 using ::Sirikata::ProxyMeshObject;
 using ::Sirikata::ProxyLightObject;

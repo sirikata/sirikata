@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 #define _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 #include "MeshListener.hpp"
-#include "ProxyPositionObject.hpp"
+#include "ProxyObject.hpp"
 namespace Sirikata {
 
 typedef Provider<MeshListener*> MeshProvider;
@@ -41,7 +41,7 @@ typedef Provider<MeshListener*> MeshProvider;
 /** Represents any object with an attached mesh. */
 class SIRIKATA_OH_EXPORT ProxyMeshObject
   : public MeshProvider,
-    public ProxyPositionObject {
+    public ProxyObject {
 protected:
     URI mMeshURI;
     Vector3f mScale;

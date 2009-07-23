@@ -54,7 +54,7 @@ class OgreSystem;
 struct DragStartInfo {
     OgreSystem *sys;
     CameraEntity *camera;
-    typedef std::set<ProxyPositionObjectPtr> EntitySet;
+    typedef std::set<ProxyObjectWPtr> EntitySet;
     const EntitySet &objects;
     const Input::MouseDragEventPtr &ev;
 };
@@ -102,21 +102,21 @@ class CameraEntity;
 class Entity;
 class OgreSystem;
 Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel);
-void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyPositionObjectPtr> objects, OgreSystem *parent);
+void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, std::set<ProxyObjectWPtr> objects, OgreSystem *parent);
 void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians);
 
 template <class Iterator>
 inline Vector3d averageSelectedPosition(Task::AbsTime now, Iterator iter, Iterator end) {
     Vector3d totalPosition(0,0,0);
-    if (iter == end) {
-        return totalPosition;
-    }
     size_t count = 0;
     for (;iter != end; ++iter) {
-        const ProxyPositionObjectPtr &ent = *iter;
+        ProxyObjectPtr ent (*iter);
         if (!ent) continue;
         totalPosition += (ent->globalLocation(now).getPosition());
         ++count;
+    }
+    if (!count) {
+        return totalPosition;
     }
     return totalPosition / count;
 }

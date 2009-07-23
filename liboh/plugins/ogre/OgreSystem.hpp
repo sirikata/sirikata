@@ -57,7 +57,7 @@ struct RaySceneQueryResultEntry;
 }
 
 namespace Sirikata {
-class ProxyPositionObject;
+class ProxyObject;
 namespace Input {
 class SDLInputManager;
 }

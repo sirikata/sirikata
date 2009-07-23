@@ -34,8 +34,8 @@
 
 namespace Sirikata {
 
-class ProxyPositionObject;
-typedef std::tr1::shared_ptr<ProxyPositionObject> ProxyPositionObjectPtr;
+class ProxyObject;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 
 class SIRIKATA_OH_EXPORT PositionListener {
@@ -44,7 +44,7 @@ public:
     virtual void resetLocation  (Time timestamp, const Location &newLocation) = 0;
     virtual void updateLocation (Time timestamp, const Location &newLocation) = 0;
     virtual void setParent (
-        const ProxyPositionObjectPtr &parent,
+        const ProxyObjectPtr &parent,
         TemporalValue<Location>::Time timeStamp,
         const Location &absLocation,
         const Location &relLocation) = 0;

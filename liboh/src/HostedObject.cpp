@@ -52,7 +52,7 @@ namespace Sirikata {
 class HostedObject::PerSpaceData {
 public:
     SpaceConnection mSpaceConnection;
-    ProxyPositionObjectPtr mProxyObject; /// 
+    ProxyObjectPtr mProxyObject; /// 
     PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
 };
 
@@ -82,7 +82,7 @@ struct HostedObject::PrivateCallbacks {
         ReceivedMessage msg (sid, ObjectReference(message.source_object()), MessagePort(message.source_port()), MessagePort(message.destination_port()));
         {
             std::ostringstream os;
-            ProxyPositionObjectPtr destinationObject = msg.getThisProxy(*realThis);
+            ProxyObjectPtr destinationObject = msg.getThisProxy(*realThis);
             if (destinationObject) {
                 os << destinationObject->getObjectReference().object();
             } else {
@@ -182,7 +182,7 @@ struct HostedObject::PrivateCallbacks {
         bool hasLight=false;
         bool isCamera=false;
         ObjLoc objLoc;
-        ProxyPositionObjectPtr proxyObj;
+        ProxyObjectPtr proxyObj;
         for (int i = 0; i < sentMessage->body().message_arguments_size() && i < responseMessage.body().message_arguments_size(); ++i) {
             if (sentMessage->body().message_names(i) == "LocRequest") {
                 objLoc.ParseFromString(responseMessage.body().message_arguments(i));
@@ -216,13 +216,13 @@ struct HostedObject::PrivateCallbacks {
         }
         if (isCamera) {
             SILOG(cppoh,info, "* I found a camera named " << proximateObjectId.object());
-            proxyObj = ProxyPositionObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
+            proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
         } else if (hasLight && !hasMesh) {
             SILOG(cppoh,info, "* I found a light named " << proximateObjectId.object());
-            proxyObj = ProxyPositionObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
+            proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, proximateObjectId));
         } else {
             SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
-            proxyObj = ProxyPositionObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
+            proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
         }
         realThis->receivedPositionUpdate(proxyObj, objLoc, true);
         proxyMgr->createObjectProximity(proxyObj, realThis->mInternalObjectReference, queryId);
@@ -329,8 +329,8 @@ void HostedObject::unsetProperty(const String &propName) {
 }
 
 
-static ProxyPositionObjectPtr nullPtr;
-const ProxyPositionObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
+static ProxyObjectPtr nullPtr;
+const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
     SpaceDataMap::const_iterator iter = mSpaceData.find(space);
     if (iter == mSpaceData.end()) {
         return nullPtr;
@@ -444,7 +444,7 @@ bool HostedObject::send(const RoutableMessageHeader &hdrOrig, const MemoryRefere
 }
 
 void HostedObject::receivedPositionUpdate(
-    const ProxyPositionObjectPtr &proxy,
+    const ProxyObjectPtr &proxy,
     const ObjLoc &objLoc,
     bool force_reset)
 {
@@ -472,12 +472,12 @@ void HostedObject::receivedPositionUpdate(
         currentLoc.setAngularSpeed(objLoc.angular_speed());
     }
     if (force_reset) {
-        proxy->resetPositionVelocity(objLoc.timestamp(), currentLoc);
+        proxy->resetLocation(objLoc.timestamp(), currentLoc);
     } else {
         std::ostringstream os;
         os << "Received position update to "<<currentLoc;
         SILOG(cppoh,debug,os.str());
-        proxy->setPositionVelocity(objLoc.timestamp(), currentLoc);
+        proxy->setLocation(objLoc.timestamp(), currentLoc);
     }
 }
 
@@ -487,7 +487,7 @@ using Protocol::LocRequest;
 void HostedObject::processMessage(const ReceivedMessage &msg, std::string *response) {
     std::ostringstream printstr;
     printstr<<"\t";
-    ProxyPositionObjectPtr thisObj = msg.getThisProxy(*this);
+    ProxyObjectPtr thisObj = msg.getThisProxy(*this);
 
     if (msg.name == "GetProp") {
         String propertyName;
@@ -517,7 +517,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
         printstr<<"LocRequest: ";
         query.ParseFromArray(msg.body.data(), msg.body.length());
         ObjLoc loc;
-        ProxyPositionObjectPtr thisObj = msg.getThisProxy(*this);
+        ProxyObjectPtr thisObj = msg.getThisProxy(*this);
         Task::AbsTime now = Task::AbsTime::now();
         if (thisObj) {
             Location globalLoc = thisObj->globalLocation(now);
@@ -555,16 +555,16 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
         retObj.ParseFromArray(msg.body.data(), msg.body.length());
         if (retObj.has_object_reference() && retObj.has_location()) {
             SpaceObjectReference objectId(msg.sourceObject.space(), ObjectReference(retObj.object_reference()));
-            ProxyPositionObjectPtr proxyObj;
+            ProxyObjectPtr proxyObj;
             if (hasProperty("IsCamera")) {
                 printstr<<"RetObj: I am now a Camera known as "<<objectId.object();
-                proxyObj = ProxyPositionObjectPtr(new ProxyCameraObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, objectId));
             } else if (hasProperty("LightInfo") && !hasProperty("MeshURI")) {
                 printstr<<"RetObj. I am now a Light known as "<<objectId.object();
-                proxyObj = ProxyPositionObjectPtr(new ProxyLightObject(proxyMgr, objectId)); 
+                proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId)); 
             } else {
                 printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
-                proxyObj = ProxyPositionObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
+                proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
             }
             perSpaceIter->second.mProxyObject = proxyObj;
             receivedPositionUpdate(proxyObj, retObj.location(), true);
@@ -602,7 +602,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
         }
     }
     else if (msg.name == "ProxCall") {
-        ProxyPositionObjectPtr thisProxy = msg.getThisProxy(*this);
+        ProxyObjectPtr thisProxy = msg.getThisProxy(*this);
         ObjectHostProxyManager *proxyMgr;
         if (false && msg.getSender() != ObjectReference::spaceServiceID()) {
             SILOG(objecthost, error, "ProxCall message not coming from space: "<<msg.getSender());
@@ -618,8 +618,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
         Protocol::ProxCall proxCall;
         proxCall.ParseFromArray(msg.body.data(), msg.body.length());
         SpaceObjectReference proximateObjectId (msg.sourceObject.space(), ObjectReference(proxCall.proximate_object()));
-        ProxyPositionObjectPtr proxyObj = std::tr1::static_pointer_cast<ProxyPositionObject>(
-            proxyMgr->getProxyObject(proximateObjectId));
+        ProxyObjectPtr proxyObj (proxyMgr->getProxyObject(proximateObjectId));
         switch (proxCall.proximity_event()) {
           case Protocol::ProxCall::EXITED_PROXIMITY:
             printstr<<"ProxCall EXITED "<<proximateObjectId.object();
@@ -673,7 +672,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
 }
 
 void HostedObject::receivedPropertyUpdate(
-        const ProxyPositionObjectPtr &proxy,
+        const ProxyObjectPtr &proxy,
         const std::string &propertyName,
         const std::string &arguments)
 {

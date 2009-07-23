@@ -38,7 +38,7 @@
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <oh/ProxyManager.hpp>
-#include <oh/ProxyPositionObject.hpp>
+#include <oh/ProxyObject.hpp>
 #include <oh/ProxyMeshObject.hpp>
 #include <oh/ProxyLightObject.hpp>
 #include "input/InputEvents.hpp"
@@ -80,7 +80,7 @@ class OgreSystem::MouseHandler {
     DeviceSubMap mDeviceSubscriptions;
 
     SpaceObjectReference mCurrentGroup;
-    typedef std::set<ProxyPositionObjectPtr> SelectedObjectSet;
+    typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
     SpaceObjectReference mLastShiftSelected;
 
@@ -153,7 +153,8 @@ public:
     void clearSelection() {
         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
                 selectIter != mSelectedObjects.end(); ++selectIter) {
-            Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+            ProxyObjectPtr obj(selectIter->lock());
+            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (ent) {
                 ent->setSelected(false);
             }
@@ -180,7 +181,8 @@ private:
             if (mouseOver->id() == mLastShiftSelected) {
                 SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
                 if (selectIter != mSelectedObjects.end()) {
-                    Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+                    ProxyObjectPtr obj(selectIter->lock());
+                    Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
                     if (ent) {
                         ent->setSelected(false);
                     }
@@ -203,9 +205,10 @@ private:
                 // Fire selected event.
             }
             else {
-                SILOG(input,info,"Deselected " << (*selectIter)->getObjectReference());
-                Entity *ent = mParent->getEntity((*selectIter)->getObjectReference());
+                ProxyObjectPtr obj(selectIter->lock());
+                Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
                 if (ent) {
+                    SILOG(input,info,"Deselected " << ent->id());
                     ent->setSelected(false);
                 }
                 mSelectedObjects.erase(selectIter);
@@ -257,7 +260,8 @@ private:
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (ent) {
                 ent->getProxy().getProxyManager()->destroyObject(ent->getProxyPtr());
             }
@@ -266,7 +270,7 @@ private:
         return EventResponse::nop();
     }
 
-    Entity *doCloneObject(Entity *ent, const ProxyPositionObjectPtr &parentPtr, Task::AbsTime now) {
+    Entity *doCloneObject(Entity *ent, const ProxyObjectPtr &parentPtr, Task::AbsTime now) {
         SpaceObjectReference newId = SpaceObjectReference(ent->id().space(), ObjectReference(UUID::random()));
         Location loc = ent->getProxy().globalLocation(now);
         Location localLoc = ent->getProxy().extrapolateLocation(now);
@@ -276,7 +280,7 @@ private:
             std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent->getProxyPtr()));
         std::tr1::shared_ptr<ProxyLightObject> lightObj(
             std::tr1::dynamic_pointer_cast<ProxyLightObject>(ent->getProxyPtr()));
-        ProxyPositionObjectPtr newObj;
+        ProxyObjectPtr newObj;
         if (meshObj) {
             std::tr1::shared_ptr<ProxyMeshObject> newMeshObject (new ProxyMeshObject(proxyMgr, newId));
             newObj = newMeshObject;
@@ -291,16 +295,16 @@ private:
             newLightObject->update(lightObj->getLastLightInfo());
         }
         else {
-            newObj = ProxyPositionObjectPtr(new ProxyPositionObject(proxyMgr, newId));
+            newObj = ProxyObjectPtr(new ProxyObject(proxyMgr, newId));
             proxyMgr->createObject(newObj);
         }
         if (newObj) {
             if (parentPtr) {
                 newObj->setParent(parentPtr, now, loc, localLoc);
-                newObj->resetPositionVelocity(now, localLoc);
+                newObj->resetLocation(now, localLoc);
             }
             else {
-                newObj->resetPositionVelocity(now, loc);
+                newObj->resetLocation(now, loc);
             }
         }
         {
@@ -320,14 +324,15 @@ private:
         SelectedObjectSet newSelectedObjects;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) {
                 continue;
             }
             Entity *newEnt = doCloneObject(ent, ent->getProxy().getParentProxy(), now);
             Location loc (ent->getProxy().extrapolateLocation(now));
             loc.setPosition(loc.getPosition() + Vector3d(WORLD_SCALE/2.,0,0));
-            newEnt->getProxy().resetPositionVelocity(now, loc);
+            newEnt->getProxy().resetLocation(now, loc);
             newSelectedObjects.insert(newEnt->getProxyPtr());
             newEnt->setSelected(true);
             ent->setSelected(false);
@@ -344,14 +349,15 @@ private:
         ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) continue;
             if (ent->getProxy().getProxyManager() != proxyMgr) {
                 SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
                 return EventResponse::nop();
             }
             if (!(ent->getProxy().getParent() == parentId)) {
-                SILOG(input,error,"Multiple select "<< (*iter)->getObjectReference() <<
+                SILOG(input,error,"Multiple select "<< ent->id() <<
                       " has parent  "<<ent->getProxy().getParent() << " instead of " << mCurrentGroup);
                 return EventResponse::nop();
             }
@@ -365,16 +371,17 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyPositionObject(proxyMgr, newParentId)));
+        proxyMgr->createObject(ProxyObjectPtr(new ProxyObject(proxyMgr, newParentId)));
         Entity *newParentEntity = mParent->getEntity(newParentId);
-        newParentEntity->getProxy().resetPositionVelocity(now, totalLocation);
+        newParentEntity->getProxy().resetLocation(now, totalLocation);
 
         if (parentEntity) {
             newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
         }
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *ent = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!ent) continue;
             ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
             ent->setSelected(false);
@@ -390,12 +397,13 @@ private:
         SelectedObjectSet newSelectedObjects;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *parentEnt = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *parentEnt = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (!parentEnt) {
                 continue;
             }
             ProxyManager *proxyMgr = parentEnt->getProxy().getProxyManager();
-            ProxyPositionObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
+            ProxyObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
             mCurrentGroup = parentEnt->getProxy().getParent(); // parentParent may be NULL.
             bool hasSubObjects = false;
             for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
@@ -433,7 +441,8 @@ private:
         Entity *parentEnt = NULL;
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            parentEnt = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            parentEnt = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
         }
         if (parentEnt) {
             SelectedObjectSet newSelectedObjects;
@@ -456,7 +465,8 @@ private:
         Task::AbsTime now(Task::AbsTime::now());
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
-            Entity *selent = mParent->getEntity((*iter)->getObjectReference());
+            ProxyObjectPtr obj(iter->lock());
+            Entity *selent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
             if (selent) {
                 selent->setSelected(false);
             }
@@ -507,10 +517,10 @@ private:
         if (parentent) {
             Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
             newLightObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
-            newLightObject->resetPositionVelocity(now, localLoc);
+            newLightObject->resetLocation(now, localLoc);
         }
         else {
-            newLightObject->resetPositionVelocity(now, loc);
+            newLightObject->resetLocation(now, loc);
         }
         mSelectedObjects.clear();
         mSelectedObjects.insert(newLightObject);
@@ -520,7 +530,7 @@ private:
         }
         return EventResponse::nop();
     }
-    
+
     EventResponse moveHandler(EventPtr ev) {
         Vector3f yawAxis;
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -531,11 +541,11 @@ private:
             return EventResponse::nop();
         }
         float amount = buttonev->mPressed?1:0;
-    
+
         CameraEntity *cam = mParent->mPrimaryCamera;
         Location loc = cam->getProxy().extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-    
+
         switch (buttonev->mButton) {
         case SDL_SCANCODE_S:
             amount*=-1;
@@ -592,10 +602,10 @@ private:
         default:
             break;
         }
-        cam->getProxy().setPositionVelocity(now, loc);
+        cam->getProxy().setLocation(now, loc);
         return EventResponse::nop();
     }
-    
+
     EventResponse import(EventPtr ev) {
         std::cout << "input path name for import: " << std::endl;
         std::string filename;
@@ -655,16 +665,16 @@ private:
         yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
         pitch /= DEG2RAD;
         roll /= DEG2RAD;
-        yaw /= DEG2RAD;  
+        yaw /= DEG2RAD;
         if (std::abs(pitch) > 89.0) {
             return false;
         }
-        return true;      
+        return true;
     }
 
     void dumpObject(FILE* fp, Entity* e) {
         Task::AbsTime now = Task::AbsTime::now();
-        ProxyPositionObject *pp = e->getProxyPtr().get();
+        ProxyObject *pp = e->getProxyPtr().get();
         Location loc = pp->globalLocation(now);
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
@@ -941,7 +951,7 @@ public:
     const SpaceObjectReference &getParentGroup() const {
         return mCurrentGroup;
     }
-    void addToSelection(const ProxyPositionObjectPtr &obj) {
+    void addToSelection(const ProxyObjectPtr &obj) {
         mSelectedObjects.insert(obj);
     }
 };

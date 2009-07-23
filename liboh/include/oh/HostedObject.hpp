@@ -35,14 +35,14 @@
 #include <util/SpaceObjectReference.hpp>
 #include <util/RoutableMessageHeader.hpp>
 #include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/ProxyPositionObject.hpp"
+#include "oh/ProxyObject.hpp"
 
 namespace Sirikata {
 class ObjectHost;
 class ProxyObject;
-class ProxyPositionObject;
+class ProxyObject;
 class LightInfo;
-typedef std::tr1::shared_ptr<ProxyPositionObject> ProxyPositionObjectPtr;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp
 namespace Protocol {
@@ -77,26 +77,24 @@ public:
         MessagePort getThisPort() const {
             return destinationPort;
         }
-        const ProxyPositionObjectPtr &getThisProxy(const HostedObject &hosted) const {
+        const ProxyObjectPtr &getThisProxy(const HostedObject &hosted) const {
             return hosted.getProxy(getSpace());
         }
         ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
-            const ProxyPositionObjectPtr &obj = getThisProxy(hosted);
+            const ProxyObjectPtr &obj = getThisProxy(hosted);
             if (obj) {
                 return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
             }
             return NULL;
         }
 
-        ProxyPositionObjectPtr getSenderProxy(const HostedObject &hosted) const {
+        ProxyObjectPtr getSenderProxy(const HostedObject &hosted) const {
             ObjectHostProxyManager *ohpm = getProxyManager(hosted);
 			if (ohpm) {
 				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getSender())));
-				if (proxyPtr) {
-					return std::tr1::static_pointer_cast<ProxyPositionObject>(proxyPtr);
-				}
+				return proxyPtr;
 			}
-			return ProxyPositionObjectPtr();
+			return ProxyObjectPtr();
         }
 
         String name;
@@ -160,26 +158,24 @@ public:
         MessagePort getThisPort() const {
             return header().source_port();
         }
-        const ProxyPositionObjectPtr &getThisProxy(const HostedObject &hosted) const {
+        const ProxyObjectPtr &getThisProxy(const HostedObject &hosted) const {
             return hosted.getProxy(getSpace());
         }
         ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
-            const ProxyPositionObjectPtr &obj = getThisProxy(hosted);
+            const ProxyObjectPtr &obj = getThisProxy(hosted);
             if (obj) {
                 return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
             }
             return NULL;
         }
 
-        ProxyPositionObjectPtr getRecipientProxy(const HostedObject &hosted) const {
+        ProxyObjectPtr getRecipientProxy(const HostedObject &hosted) const {
             ObjectHostProxyManager *ohpm = getProxyManager(hosted);
 			if (ohpm) {
 				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getRecipient())));
-				if (proxyPtr) {
-					return std::tr1::static_pointer_cast<ProxyPositionObject>(proxyPtr);
-				}
+				return proxyPtr;
 			}
-			return ProxyPositionObjectPtr();
+			return ProxyObjectPtr();
         }
 
         int64 getId() const {
@@ -235,7 +231,7 @@ public:
     void initializeRestoreFromDatabase(const UUID &objectName);
     ObjectHost *getObjectHost()const {return mObjectHost;}
 
-    const ProxyPositionObjectPtr &getProxy(const SpaceID &space) const;
+    const ProxyObjectPtr &getProxy(const SpaceID &space) const;
 
     bool hasProperty(const String &propName) const;
     const String &getProperty(const String &propName) const;
@@ -248,8 +244,8 @@ public:
     bool send(const RoutableMessageHeader &hdr, const MemoryReference &body);
 
     void processMessage(const ReceivedMessage &msg, String *returnValue);
-    void receivedPropertyUpdate(const ProxyPositionObjectPtr &proxy, const String &propertyName, const String &arguments);
-    void receivedPositionUpdate(const ProxyPositionObjectPtr &proxy, const ObjLoc &objLoc, bool force_reset);
+    void receivedPropertyUpdate(const ProxyObjectPtr &proxy, const String &propertyName, const String &arguments);
+    void receivedPositionUpdate(const ProxyObjectPtr &proxy, const ObjLoc &objLoc, bool force_reset);
 
     void setScale(Vector3f scale); ///< temporary--ideally this property could be set by others.
 

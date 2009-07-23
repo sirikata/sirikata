@@ -1,67 +1,72 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  ProxyPositionObject.cpp
- *
- *  Copyright (c) 2009, Patrick Reiter Horn
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are
- *  met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
- *    be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include <oh/Platform.hpp>
+#include <oh/ProxyObject.hpp>
 #include <util/Extrapolation.hpp>
-#include <oh/ProxyPositionObject.hpp>
 #include <oh/PositionListener.hpp>
 #include <oh/ProxyManager.hpp>
 
 namespace Sirikata {
 
-void ProxyPositionObject::setPosition(TemporalValue<Location>::Time timeStamp,
-                     const Vector3d &newPos,
-                     const Quaternion &newOri) {
-    Location soon=mLocation.extrapolate(timeStamp);
-    setPositionVelocity(timeStamp,
-                        Location(newPos,
-                                 newOri,
-                                 soon.getVelocity(),
-                                 soon.getAxisOfRotation(),
-                                 soon.getAngularSpeed()));
+ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
+      : mID(id),
+        mManager(man),
+        mLocation(Duration::seconds(.1),
+                  TemporalValue<Location>::Time::null(),
+                  Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
+                           Vector3f(0,0,0),Vector3f(0,1,0),0),
+                  UpdateNeeded()),
+        mParentId(SpaceObjectReference::null()) {}
+
+ProxyObject::~ProxyObject(){}
+
+void ProxyObject::destroy() {
+    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
+    //FIXME mManager->notify(&ProxyCreationListener::destroyProxy);
 }
-void ProxyPositionObject::setPositionVelocity(TemporalValue<Location>::Time timeStamp,
+
+bool ProxyObject::UpdateNeeded::operator() (
+    const Location&updatedValue,
+    const Location&predictedValue) const
+{
+    Vector3f ux,uy,uz,px,py,pz;
+    updatedValue.getOrientation().toAxes(ux,uy,uz);
+    predictedValue.getOrientation().toAxes(px,py,pz);
+    return (updatedValue.getPosition()-predictedValue.getPosition()).lengthSquared()>1.0 ||
+        ux.dot(px)<.9||uy.dot(py)<.9||uz.dot(pz)<.9;
+}
+
+class IsLocationStatic{
+public:
+    bool operator() (const Location&l) const {
+        return l.getVelocity()==Vector3f(0.0,0.0,0.0)
+            &&(l.getAxisOfRotation()==Vector3f(0.0,0.0,0.0)
+               || l.getAngularSpeed()==0.0);
+    }
+};
+bool ProxyObject::isStatic(const TemporalValue<Location>::Time& when) const {
+    return mLocation.templatedPropertyHolds(when,IsLocationStatic());
+}
+
+// protected:
+// Notification that the Parent has been destroyed
+void ProxyObject::destroyed() {
+    unsetParent(TemporalValue<Location>::Time::now());
+}
+
+
+
+void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
                              const Location&location) {
     mLocation.updateValue(timeStamp,
                           location);
     PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
 }
-void ProxyPositionObject::resetPositionVelocity(TemporalValue<Location>::Time timeStamp,
+void ProxyObject::resetLocation(TemporalValue<Location>::Time timeStamp,
                              const Location&location) {
     mLocation.resetValue(timeStamp,
                          location);
     PositionProvider::notify(&PositionListener::resetLocation, timeStamp, location);
 }
-void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
+void ProxyObject::setParent(const ProxyObjectPtr &parent,
                TemporalValue<Location>::Time timeStamp) {
     if (!parent) {
         unsetParent(timeStamp);
@@ -81,7 +86,7 @@ void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
     setParent(parent, timeStamp, globalLoc, localLoc);
 }
 
-void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
+void ProxyObject::setParent(const ProxyObjectPtr &parent,
                TemporalValue<Location>::Time timeStamp,
                const Location &absLocation,
                const Location &relLocation) {
@@ -115,11 +120,11 @@ void ProxyPositionObject::setParent(const ProxyPositionObjectPtr &parent,
                              relLocation);
 }
 
-void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp) {
+void ProxyObject::unsetParent(TemporalValue<Location>::Time timeStamp) {
     unsetParent(timeStamp, globalLocation(timeStamp));
 }
 
-void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp,
+void ProxyObject::unsetParent(TemporalValue<Location>::Time timeStamp,
                const Location &absLocation) {
 
     ProxyObjectPtr oldParent (getParentProxy());
@@ -138,12 +143,14 @@ void ProxyPositionObject::unsetParent(TemporalValue<Location>::Time timeStamp,
                              absLocation);
 }
 
-ProxyPositionObjectPtr ProxyPositionObject::getParentProxy() const {
+ProxyObjectPtr ProxyObject::getParentProxy() const {
     if (getParent() == SpaceObjectReference::null()) {
-        return ProxyPositionObjectPtr();
+        return ProxyObjectPtr();
     }
     ProxyObjectPtr parentProxy(getProxyManager()->getProxyObject(getParent()));
-    return std::tr1::dynamic_pointer_cast<ProxyPositionObject>(parentProxy);
+    return parentProxy;
 }
+
+
 
 }

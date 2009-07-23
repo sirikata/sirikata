@@ -38,7 +38,7 @@ namespace Sirikata {
 namespace Graphics {
 
 Entity::Entity(OgreSystem *scene,
-               const ProxyPositionObjectPtr &ppo,
+               const ProxyObjectPtr &ppo,
                const std::string &ogreId,
                Ogre::MovableObject *obj)
   : mScene(scene),
@@ -161,7 +161,7 @@ void Entity::resetLocation(Time ti, const Location &newLocation) {
     }
 }
 
-void Entity::setParent(const ProxyPositionObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation)
+void Entity::setParent(const ProxyObjectPtr &parent, Time ti, const Location &absLocation, const Location &relLocation)
 {
     Entity *parentEntity = mScene->getEntity(parent);
     if (!parentEntity) {
@@ -180,8 +180,9 @@ void Entity::destroyed() {
     delete this;
 }
 void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
-    setOgrePosition(getProxy().extrapolatePosition(current));
-    setOgreOrientation(getProxy().extrapolateOrientation(current));
+    Location loc (getProxy().extrapolateLocation(current));
+    setOgrePosition(loc.getPosition());
+    setOgreOrientation(loc.getOrientation());
     setStatic(getProxy().isStatic(current));
 }
 

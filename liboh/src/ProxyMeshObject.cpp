@@ -35,7 +35,7 @@
 #include <oh/ProxyMeshObject.hpp>
 namespace Sirikata {
 ProxyMeshObject::ProxyMeshObject(ProxyManager *man, const SpaceObjectReference&id)
-    : ProxyPositionObject(man, id), mScale(1,1,1) {
+    : ProxyObject(man, id), mScale(1,1,1) {
 }
 
 void ProxyMeshObject::setMesh(const URI&meshFile) {

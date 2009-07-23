@@ -35,7 +35,12 @@
 #include <oh/ProxyCameraObject.hpp>
 namespace Sirikata {
 ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id)
-    : ProxyPositionObject(man, id) {
+    : ProxyObject(man, id) {
+}
+
+void ProxyCameraObject::destroy() {
+    detach();
+    ProxyObject::destroy();
 }
 
 void ProxyCameraObject::attach(const String&renderTargetName,
