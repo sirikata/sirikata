@@ -42,8 +42,6 @@ public:
     virtual void deleteObjectStream(const ObjectReference&obc)=0;
     virtual void processMessage(const RoutableMessageHeader&,
                                 MemoryReference message_body)=0;
-    virtual void processMessage(const ObjectReference*,
-                                MemoryReference message)=0;
 };
 
 } }

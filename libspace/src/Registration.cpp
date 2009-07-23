@@ -134,7 +134,7 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                     destination_header.set_destination_object(ObjectReference(delObj.object_reference()));
                     destination_header.set_source_object(ObjectReference::spaceServiceID());
                     destination_header.set_source_port(Services::REGISTRATION);
-                    for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {
+                    for (std::vector<MessageService*>::reverse_iterator i=mServices.rbegin(),ie=mServices.rend();i!=ie;++i) {
                         std::string body_string;
                         body.SerializeToString(&body_string);
                         (*i)->processMessage(destination_header,MemoryReference(body_string));

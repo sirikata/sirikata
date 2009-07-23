@@ -102,20 +102,13 @@ SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::
 void SingleStreamProximityConnection::streamDisconnected() {
     SILOG(proximity,error,"Lost connection with proximity manager");
 }
-void SingleStreamProximityConnection::processMessage(const ObjectReference*obc,
-                                                     MemoryReference message) {
-    ObjectStreamMap::iterator where=mObjectStreams.find(obc?*obc:ObjectReference::null());
-    if (where==mObjectStreams.end()) {
-        SILOG(proximity,error,"Cannot locate object with OR "<<(obc?*obc:ObjectReference::null())<<" in the proximity connection map");
-    }else {
-        where->second->send(message,Network::ReliableOrdered);
-    }
-}
-
 
 void SingleStreamProximityConnection::processMessage(const RoutableMessageHeader&hdr,
                                                      MemoryReference message_body) {
     ObjectStreamMap::iterator where=mObjectStreams.find(hdr.has_source_object()?hdr.source_object():ObjectReference::null());
+    if (where==mObjectStreams.end()) {
+        where=mObjectStreams.find(hdr.has_destination_object()?hdr.destination_object():ObjectReference::null());
+    }
     if (where==mObjectStreams.end()) {
         SILOG(proximity,error,"Cannot locate object with OR "<<hdr.source_object()<<" in the proximity connection map: "<<hdr.has_source_object());
     } else {

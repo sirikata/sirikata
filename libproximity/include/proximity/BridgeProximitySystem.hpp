@@ -88,13 +88,11 @@ protected:
                              const RoutableMessage&opaqueMessage,
                              const void *optionalSerializedMessageBody,
                              size_t optionalSerializedMessageBodySize) {
+        RoutableMessageHeader hdr (opaqueMessage.header());
+        hdr.set_source_object(source);
         if (optionalSerializedMessageBodySize) {
-            RoutableMessageHeader hdr;
-            hdr.set_source_object(source);
             mProximityConnection->processMessage(hdr,MemoryReference(optionalSerializedMessageBody,optionalSerializedMessageBodySize));
         }else {
-            RoutableMessageHeader hdr;
-            hdr.set_source_object(source);
             std::string data;
             opaqueMessage.body().SerializeToString(&data);
             mProximityConnection->processMessage(hdr,MemoryReference(data));

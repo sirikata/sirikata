@@ -60,8 +60,6 @@ public:
     void deleteObjectStream(const ObjectReference&obc);
     void processMessage(const RoutableMessageHeader&,
                         MemoryReference message_body);
-    void processMessage(const ObjectReference*,
-                        MemoryReference message);
 };
 
 } }
