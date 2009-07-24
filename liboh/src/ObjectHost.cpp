@@ -107,12 +107,14 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
     boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);    
     {
         SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
-        for(;where!=mSpaceConnections.end()&&where->first==id;++where) {
+        for(;where!=mSpaceConnections.end()&&where->first==id;) {
             std::tr1::shared_ptr<TopLevelSpaceConnection> temp(where->second.lock());
             if (!temp) {
-                mSpaceConnections.erase(where);
+                where=mSpaceConnections.erase(where);
             }else if(&*temp==example) {
-                mSpaceConnections.erase(where);
+                where=mSpaceConnections.erase(where);
+            }else {
+                ++where;
             }
         }
         {
