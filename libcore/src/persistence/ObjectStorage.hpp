@@ -41,242 +41,6 @@
 
 namespace Sirikata { namespace Persistence { 
 
-/** A key in the storage system. The key is constructed of an object identifier followed
- *  by a hierarchy of names.
- */
-class SIRIKATA_EXPORT StorageKey {
-public:
-    StorageKey(const UUID& vwobj, uint32 obj, const String& field);
-
-    bool operator<(const StorageKey& rhs) const;
-
-    String toString() const;
-private:
-    // These allow the implementations of storage systems to access the
-    // internal representation for efficiency purposes but keeps it
-    // private from the rest of the system.
-    friend class ObjectStorageHandler;
-
-    UUID mVWObject;
-    uint32 mObject;
-    String mField;
-};
-
-/** A value in the storage system, just a simple memory buffer. */
-class SIRIKATA_EXPORT StorageValue : public MemoryBuffer {
-public:
-    template<class T> StorageValue(const T& m) : MemoryBuffer(m) {}
-    StorageValue(const char* input, std::size_t size) : MemoryBuffer((const unsigned char*)input, (const unsigned char*)input+size) {}
-    template <class InputIterator> StorageValue(InputIterator begin, InputIterator end) : MemoryBuffer(begin, end) {}
-    StorageValue() {}
-
-    bool operator==(const StorageValue& rhs) const;
-    bool operator!=(const StorageValue& rhs) const;
-};
-
-/** A storage set, which is simply a set of <key,value> pairs.  This can represent
- *  read sets, write sets, and compare sets.
- */
-class SIRIKATA_EXPORT StorageSet {
-protected:
-    typedef std::map<StorageKey, StorageValue*> StorageKeyValueMap;
-
-public:
-
-    typedef StorageKeyValueMap::iterator iterator;
-    typedef StorageKeyValueMap::const_iterator const_iterator;
-
-    StorageSet();
-    StorageSet(const StorageSet& cpy);
-    ~StorageSet();
-
-    StorageSet& operator=(const StorageSet& rhs);
-
-    /** Get the size of this storage set. */
-    uint32 size() const;
-
-    /** Add a key without a value to this storage set.
-     *  \param key the key to add to the set
-     */
-    void addKey(const StorageKey& key);
-
-    /** Add a key-value pair to this storage set.  The value will be copied.
-     *  \param key the key for the pair
-     *  \param value the value for the pair
-     */
-    void addPair(const StorageKey& key, const StorageValue& value);
-
-    /** Add a key-value pair to this storage set.  The set takes ownership of the value.
-     *  \param key the key for the pair
-     *  \param value the value for the pair
-     */
-    void addPair(const StorageKey& key, StorageValue* value);
-
-    /** Set the value for a key.  The key must already be present in the storage
-     *  set.  The value is copied.
-     *  \param key the key to set the value for
-     *  \param value the value to associate with the key
-     */
-    void setValue(const StorageKey& key, const StorageValue& value);
-
-    /** Set the value for a key.  The key must already be present in the storage
-     *  set.  The set takes ownership of the value.
-     *  \param key the key to set the value for
-     *  \param value the value to associate with the key
-     */
-    void setValue(const StorageKey& key, StorageValue* value);
-
-    /** Get the value for a key.  The key must already be present with a value
-     *  in the storage set.
-     *  \param key the key to get the value for
-     *  \returns a reference to the StorageValue for the given key
-     */
-    const StorageValue& getValue(const StorageKey& key) const;
-
-    /** Returns true if this set contains the specified key.
-     *  \param key the key to check for
-     */
-    bool hasKey(const StorageKey& key) const;
-
-    iterator begin();
-    const_iterator begin() const;
-    iterator end();
-    const_iterator end() const;
-
-private:
-    StorageKeyValueMap mMap;
-};
-
-/** Restricted version of StorageSet that represents a read set. */
-class SIRIKATA_EXPORT ReadSet : public StorageSet {
-public:
-    ReadSet();
-    ReadSet(const ReadSet& cpy);
-    ~ReadSet();
-
-    ReadSet& operator=(const ReadSet& rhs);
-
-private:
-    // These methods from StorageSet are overridden to hide them
-    void addPair(const StorageKey& key, const StorageValue& value);
-    void addPair(const StorageKey& key, StorageValue* value);
-};
-
-/** Restricted version of StorageSet that represents a write set. */
-class SIRIKATA_EXPORT WriteSet : public StorageSet {
-public:
-    WriteSet();
-    WriteSet(const WriteSet& cpy);
-    ~WriteSet();
-
-    WriteSet& operator=(const WriteSet& rhs);
-
-private:
-    // These methods from StorageSet are overridden to hide them
-    void addKey(const StorageKey& key);
-    void setValue(const StorageKey& key, const StorageValue& value);
-    void setValue(const StorageKey& key, StorageValue* value);
-};
-
-/** Restricted version of StorageSet that represents a compare set. */
-class SIRIKATA_EXPORT CompareSet : public StorageSet {
-public:
-    CompareSet();
-    CompareSet(const CompareSet& cpy);
-    ~CompareSet();
-
-    CompareSet& operator=(const CompareSet& rhs);
-
-private:
-    // These methods from StorageSet are overridden to hide them
-    void addKey(const StorageKey& key);
-    void setValue(const StorageKey& key, const StorageValue& value);
-    void setValue(const StorageKey& key, StorageValue* value);
-};
-
-/** Represents a set of read operations and a set of write operations.  Simply
- *  a combination of a ReadSet and WriteSet.  Used for temporary and best effort
- *  storage operations.
- */
-class SIRIKATA_EXPORT ReadWriteSet {
-public:
-    ReadWriteSet();
-    ReadWriteSet(const ReadWriteSet& cpy);
-
-    ReadWriteSet& operator=(const ReadWriteSet& rhs);
-
-    ReadSet& reads();
-    const ReadSet& reads() const;
-    WriteSet& writes();
-    const WriteSet& writes() const;
-
-private:
-    ReadSet mReads;
-    WriteSet mWrites;
-};
-
-/** A storage microtransaction.  Minitransactions perform their operations with
- *  ACID semantics in the following order:
- *  1) Compare values in the compare set, abort if any are not equal
- *  2) Read values from read set locations
- *  3) Write values to write set locations
- */
-class SIRIKATA_EXPORT Minitransaction {
-public:
-    Minitransaction();
-    Minitransaction(const Minitransaction& cpy);
-
-    Minitransaction& operator=(const Minitransaction& rhs);
-
-    CompareSet& compares();
-    const CompareSet& compares() const;
-    ReadSet& reads();
-    const ReadSet& reads() const;
-    WriteSet& writes();
-    const WriteSet& writes() const;
-private:
-    CompareSet mCompares;
-    ReadSet mReads;
-    WriteSet mWrites;
-};
-
-
-enum ObjectStorageErrorType {
-    ObjectStorageErrorType_None,
-    ObjectStorageErrorType_KeyMissing,
-    ObjectStorageErrorType_ComparisonFailed,
-    ObjectStorageErrorType_Internal
-};
-
-class SIRIKATA_EXPORT ObjectStorageError {
-public:
-
-    explicit ObjectStorageError();
-    explicit ObjectStorageError(const ObjectStorageErrorType t);
-    ObjectStorageError(const ObjectStorageErrorType t, const String& msg);
-
-    ObjectStorageErrorType type() const;
-
-private:
-    ObjectStorageErrorType mType;
-    String mMsg;
-};
-
-
-/** Base class for ObjectStorage request handlers.  This provides . */
-class SIRIKATA_EXPORT ObjectStorageHandler {
-public:
-    typedef std::tr1::function<void(ObjectStorageError)> ResultCallback;
-
-    virtual ~ObjectStorageHandler();
-protected:
-    /** Returns the VWObject UUID section of a storage key. */
-    static const UUID& keyVWObject(const StorageKey& key);
-    /** Returns the sub-object ID section of a storage key. */
-    static uint32 keyObject(const StorageKey& key);
-    /** Returns the field name section of a storage key. */
-    static const String& keyField(const StorageKey& key);
-};
 
 namespace Protocol {
 class StorageKey;
@@ -289,6 +53,114 @@ class ReadWriteSet;
 class Minitransaction;
 class Response;
 }
+
+template<class StorageX, class StorageY> void copyStorageKey(StorageX a, const StorageY b) {
+    if(b.has_object_uuid())
+        a.set_object_uuid(b.object_uuid());
+    else a.clear_object_uuid();
+    if(b.has_field_id())
+        a.set_field_id(b.field_id());
+    else a.clear_field_id();
+    if(b.has_field_name())
+        a.set_field_name(b.field_name());
+    else a.clear_field_name();
+}
+
+template<class StorageX, class StorageY> bool sameStorageKey(StorageX a, const StorageY b) {
+    return ((b.has_object_uuid()==false&&a.has_object_uuid()==false)||a.object_uuid()==b.object_uuid())
+        &&((b.has_field_id()==false&&a.has_field_id()==false)||a.field_id()==b.field_id())
+        &&((b.has_field_name()==false&&a.has_field_name()==false)||a.field_id()==b.field_name());
+}
+
+template<class StorageX, class StorageY> bool sameStorageValue(StorageX a, const StorageY b) {
+    return (b.has_data()==false&&a.has_data()==false)||a.data()==b.data();
+}
+template<class StorageX, class StorageY> bool sameStorageElement(StorageX a, const StorageY b) {
+    return sameStorageValue(a,b)&&sameStorageKey(a,b);
+}
+
+
+template<class StorageX, class StorageY> bool sameStorageSet(StorageX a, const StorageY b) {
+    if (a.reads_size()!=b.reads_size())
+        return false;
+    int len=a.reads_size();
+    for (int i=0;i<len;++i) {
+        if (!sameStorageElement(a.reads(i),b.reads(i)))
+            return false;
+    }
+}
+
+
+template<class StorageX, class StorageY> bool sameStorageValues(StorageX a, const StorageY b) {
+    if (a.reads_size()!=b.reads_size())
+        return false;
+    int len=a.reads_size();
+    for (int i=0;i<len;++i) {
+        if (!sameStorageValue(a.reads(i),b.reads(i)))
+            return false;
+    }
+}
+
+
+template<class StorageX, class StorageY> void mergeStorageKey(StorageX a, const StorageY b) {
+    if(b.has_object_uuid())
+        a.set_object_uuid(b.object_uuid());
+    if(b.has_field_id())
+        a.set_field_id(b.field_id());
+    if(b.has_field_name())
+        a.set_field_name(b.field_name());
+}
+template<class StorageX, class StorageY> void copyStorageValue(StorageX a, const StorageY b) {
+    if(b.has_data())
+        a.set_data(b.data());
+    else a.clear_data();
+}
+
+template<class StorageX, class StorageY> void mergeStorageValue(StorageX a, const StorageY b) {
+    if(b.has_data())
+        a.set_data(b.data());
+}
+
+template<class StorageX, class StorageY> void copyStorageElement(StorageX a, const StorageY b) {
+    copyStorageKey(a,b);
+    copyStorageValue(a,b);
+}
+template<class StorageX, class StorageY> void mergeStorageElement(StorageX a, const StorageY b) {
+    mergeStorageKey(a,b);
+    mergeStorageValue(a,b);
+}
+
+template<class StorageX, class StorageY> void copyCompareElement(StorageX a, const StorageY b) {
+    copyStorageKey(a,b);
+    copyStorageValue(a,b);
+    if (b.has_comparator()) {
+        a.set_comparator(a.comparator());        
+    }else {
+        a.clear_comparator();
+    }
+}
+template<class StorageX, class StorageY> void mergeCompareElement(StorageX a, const StorageY b) {
+    mergeStorageKey(a,b);
+    mergeStorageValue(a,b);
+    if (b.has_comparator()) {
+        a.set_comparator(a.comparator());        
+    }
+}
+
+
+
+
+
+
+/** Base class for ObjectStorage request handlers.  This provides . */
+class SIRIKATA_EXPORT ObjectStorageHandler {
+public:
+    typedef std::tr1::function<void(Protocol::Response*)> ResultCallback;
+
+    virtual ~ObjectStorageHandler();
+    virtual void destroyResponse(Protocol::Response*)=0;
+};
+
 /** ReadWriteHandler is the abstract base class for implementations which handle
  *  best effort read/write storage sets.  These implementations don't handle
  *  transactions (meaning there's no support for compare sets).  Both temporary
@@ -297,8 +169,8 @@ class Response;
 class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler, public MessageService {
 public:
     virtual ~ReadWriteHandler();
-    virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys)=0;
-    virtual void apply(ReadWriteSet* rws, const ResultCallback& cb) = 0;
+    virtual Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys)=0;
+    virtual void apply(Protocol::ReadWriteSet* rws, const ResultCallback& cb) = 0;
     virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::ReadWriteSet*)=0;
 };
 
@@ -311,7 +183,7 @@ public:
     virtual ~MinitransactionHandler();
     virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares)=0;
     virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::Minitransaction*)=0;
-    virtual void apply(Minitransaction* mt, const ResultCallback& cb) = 0;
+    virtual void apply(Protocol::Minitransaction* mt, const ResultCallback& cb) = 0;
 };
 
 
@@ -329,20 +201,17 @@ public:
 class SIRIKATA_EXPORT ObjectStorage {
 public:
 
-    typedef std::tr1::function<void(ObjectStorageError, const ReadSet&)> ResultCallback;
+    typedef std::tr1::function<void(const Protocol::Response*)> ResultCallback;
 
     ObjectStorage(ReadWriteHandler* temp, ReadWriteHandler* bestEffort, MinitransactionHandler* trans);
     ~ObjectStorage();
 
-    void temporary(ReadWriteSet* rws, const ResultCallback& cb);
-    void bestEffort(ReadWriteSet* rws, const ResultCallback& cb);
-    void transaction(Minitransaction* mt, const ResultCallback& cb);
+    void temporary(Protocol::ReadWriteSet* rws, const ResultCallback& cb);
+    void bestEffort(Protocol::ReadWriteSet* rws, const ResultCallback& cb);
+    void transaction(Protocol::Minitransaction* mt, const ResultCallback& cb);
 
 private:
     ObjectStorage();
-
-    void handleReadWriteResult(ReadWriteSet* rws, const ResultCallback& cb, const ObjectStorageError& error);
-    void handleTransactionResult(Minitransaction* mt, const ResultCallback& cb, const ObjectStorageError& error);
 
     ReadWriteHandler* mTemporary;
     ReadWriteHandler* mBestEffort;

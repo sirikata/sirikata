@@ -81,6 +81,13 @@ message CompareElement {
     reserve 229376 to 294912;
 }
 
+message StorageSet {
+  reserve 1 to 6;//in case we ever need to forward these around a bit
+  repeated StorageElement reads=7;
+  reserve 1536 to 2560;
+  reserve 229376 to 294912;
+}
+
 message ReadSet {
   reserve 1 to 6;//in case we ever need to forward these around a bit
   repeated StorageElement reads=7;
@@ -102,12 +109,20 @@ message ReadWriteSet {
   optional int64 id=9;
   reserve 1536 to 2560;
   reserve 229376 to 294912;
+  flags64 ReadWriteSetOptions {
+     RETURN_READ_NAMES=1;
+  }
+  optional ReadWriteSetOptions options=11;
 }
 message Minitransaction{
   repeated StorageElement reads=7;
   repeated StorageElement writes=8;
   repeated CompareElement compares=10;
   optional int64 id=9;
+  flags64 TransactionOptions {
+     RETURN_READ_NAMES=1;
+  }
+  optional TransactionOptions options=11;
 }
 message Response {
   reserve 1 to 6;//in case we ever need to forward these around a bit

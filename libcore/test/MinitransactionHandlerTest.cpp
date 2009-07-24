@@ -37,7 +37,7 @@
 #include "MinitransactionHandlerTest.hpp"
 
 #include "util/AtomicTypes.hpp"
-
+#include "Test_Persistence.pbj.hpp"
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 
@@ -66,8 +66,10 @@ public:
     TeardownMinitransactionHandlerFunction teardown;
 };
 
-static void check_fill_minitransaction_handler_result(ObjectStorageError& error, bool* done) {
-    TS_ASSERT_EQUALS( error.type(), ObjectStorageErrorType_None );
+static void check_fill_minitransaction_handler_result(Protocol::Response *response, bool* done, Protocol::Response**returned_response) {
+    if (response->has_return_status())
+        TS_ASSERT_EQUALS(response->return_status(), Protocol::Response::SUCCESS );
+    *returned_response=response;
     *done = true;
 }
 
@@ -76,43 +78,46 @@ static void check_fill_minitransaction_handler_result(ObjectStorageError& error,
  *  \param mth the MinitransactionHandler to fill with <key,value> pairs
  */
 static void fill_minitransaction_handler(MinitransactionHandler* mth) {
-    Minitransaction* trans = new Minitransaction();
-    for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++)
-        trans->writes().addPair( keys()[i], values()[i] );
-
+    using namespace Sirikata::Persistence::Protocol;
+    Minitransaction* trans = mth->createMinitransaction(0,OBJECT_STORAGE_GENERATED_PAIRS,0);
+    for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
+        copyStorageElement(trans->mutable_writes(i),keyvalues()[i]);
+    }
     bool done = false;
-
-    mth->apply(trans, std::tr1::bind(check_fill_minitransaction_handler_result, _1, &done));
-
+    Response*final_reads=NULL;
+    mth->apply(trans, std::tr1::bind(check_fill_minitransaction_handler_result, _1, &done,&final_reads));
     while(!done)
         pollMinitransaction();
-
-    delete trans;
+    TS_ASSERT(final_reads!=NULL);
+    mth->destroyResponse(final_reads);
 }
 
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
-static void check_minitransaction_results(ObjectStorageError& error, Minitransaction* trans, ObjectStorageErrorType expected_error, StorageSet expected, bool* done, int testnum) {
-    TS_ASSERT_EQUALS( error.type(), expected_error );
+static void check_minitransaction_results(MinitransactionHandler* mth, Protocol::Response *response, bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
 
-    if (expected_error != ObjectStorageErrorType_None) {
+
+    if (expected_error != Protocol::Response::SUCCESS) {
+        TS_ASSERT(response->has_return_status());
+        TS_ASSERT_EQUALS( response->return_status(), expected_error );
+        mth->destroyResponse(response);
         *done = true;
         return;
+    }else if (response->has_return_status()) {
+        TS_ASSERT_EQUALS(response->return_status(),Protocol::Response::SUCCESS);
     }
 
-    TS_ASSERT_EQUALS( trans->reads().size(), expected.size() );
-
-    for(ReadSet::iterator read_it = trans->reads().begin(), expected_it = expected.begin(); read_it != trans->reads().end(); read_it++, expected_it++) {
-        TS_ASSERT_EQUALS( read_it->second->size(), expected_it->second->size() );
-        TS_ASSERT_EQUALS(
-            *read_it->second,
-            *expected_it->second
-        );
-        if (!(*read_it->second==*expected_it->second)) {
-            int THIS_TEST_FAILED=-1;
-            TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED)
+    TS_ASSERT_EQUALS( response->reads_size(), expected.reads_size() );
+    int len=response->reads_size();
+    if (len==expected.reads_size()) {
+        for (int i=0;i<len;++i) {
+            TS_ASSERT_EQUALS(response->reads(i).data(),expected.reads(i).data());
+            if (response->reads(i).data()!=expected.reads(i).data()) {
+                int THIS_TEST_FAILED=-1;
+                TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED);
+            }
         }
     }
-
+    mth->destroyResponse(response);
     *done = true;
 }
 
@@ -127,20 +132,21 @@ static void check_minitransaction_results(ObjectStorageError& error, Minitransac
  *  \param expected a StorageSet with the values that should be returned in the ReadSet,
  *                  only used if expected_error is None
  */
-static void test_minitransaction(MinitransactionHandler* mth, Minitransaction* trans, ObjectStorageErrorType expected_error, StorageSet expected, int testnum) {
+static void test_minitransaction(MinitransactionHandler* mth, Protocol::Minitransaction* trans, Protocol::Response::ReturnStatus expected_error, const Protocol::StorageSet &expected, int testnum) {
     bool done = false;
 
-    mth->apply(trans, std::tr1::bind(check_minitransaction_results, _1, trans, expected_error, expected, &done, testnum));
+    mth->apply(trans, std::tr1::bind(check_minitransaction_results, mth, _1, &done, expected_error, expected, testnum));
 
     while( !done )
         pollMinitransaction();
 
-    delete trans;
 }
 
-static void check_stress_test_result(ObjectStorageError& error, AtomicValue<Sirikata::uint32>* done) {
-    TS_ASSERT_EQUALS( error.type(), ObjectStorageErrorType_None );
-
+static void check_stress_test_result(MinitransactionHandler*mth, Protocol::Response* result, AtomicValue<Sirikata::uint32>* done) {
+    if (result->has_return_status()) 
+        TS_ASSERT_EQUALS( result->return_status(), Protocol::Response::SUCCESS );
+    
+    mth->destroyResponse(result);
     (*done)++;
 }
 
@@ -149,6 +155,7 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
                                          String pl, TeardownMinitransactionHandlerFunction _teardown,
                                          uint32 num_trans, uint32 num_ops)
 {
+    using namespace Sirikata::Persistence::Protocol;
     TS_ASSERT(num_ops <= OBJECT_STORAGE_GENERATED_PAIRS);
 
     MinitransactionHandlerTestFixture fixture(_setup, create_handler, pl, _teardown);
@@ -157,13 +164,15 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
     fill_minitransaction_handler(fixture.handler);
 
     std::vector<Minitransaction*> transactions;
-
+    int counter=0;
     // generate a bunch of MinitransactionSets with a lot of items in them
     for(uint32 i = 0; i < num_trans; i++) {
-        Minitransaction* trans = new Minitransaction();
+        Minitransaction* trans = fixture.handler->createMinitransaction(num_ops,num_ops,0);
         for(uint32 j = 0; j < num_ops; j++) {
-            trans->reads().addKey( keys()[j] );
-            trans->writes().addPair( keys()[j], values()[j] );
+            copyStorageKey(trans->mutable_reads(i),keyvalues()[j]);
+
+            copyStorageKey(trans->mutable_writes(i),keyvalues()[j]);
+            copyStorageValue(trans->mutable_writes(i),keyvalues()[(counter+=5)%keyvalues().size()]);
         }
         transactions.push_back(trans);
     }
@@ -172,13 +181,10 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
 
     // now quickly submit all of them
     for(uint32 i = 0; i < num_trans; i++)
-        fixture.handler->apply(transactions[i], std::tr1::bind(check_stress_test_result, _1, &done));
+        fixture.handler->apply(transactions[i], std::tr1::bind(check_stress_test_result, fixture.handler,_1, &done));
 
     while( done.read() < num_trans )
         pollMinitransaction();
-
-    for(uint32 i = 0; i < num_trans; i++)
-        delete transactions[i];
 
     transactions.clear();
 }
@@ -187,82 +193,98 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
 void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _setup, CreateMinitransactionHandlerFunction create_handler,
                                         Sirikata::String pl, TeardownMinitransactionHandlerFunction _teardown) {
     MinitransactionHandlerTestFixture fixture(_setup, create_handler, pl, _teardown);
-
+    using namespace Sirikata::Persistence;
+    using namespace Sirikata::Persistence::Protocol;
     // 0 reads, 0 writes
-    Minitransaction* trans_1 = new Minitransaction();
+    Minitransaction* trans_1 = fixture.handler->createMinitransaction(0,0,0);
     StorageSet expected_1;
-    test_minitransaction(fixture.handler, trans_1, ObjectStorageErrorType_None, expected_1,1);
+    test_minitransaction(fixture.handler, trans_1, Response::SUCCESS, expected_1,1);
 
     // 0 reads, 1 write
-    Minitransaction* trans_2 = new Minitransaction();
-    trans_2->writes().addPair( keys()[0], values()[0] );
+    Minitransaction* trans_2 = fixture.handler->createMinitransaction(0,1,0);
+    copyStorageElement(trans_2->mutable_writes(0),keyvalues()[0]);
     StorageSet expected_2;
-    test_minitransaction(fixture.handler, trans_2, ObjectStorageErrorType_None, expected_2,2);
+    test_minitransaction(fixture.handler, trans_2, Response::SUCCESS, expected_2,2);
 
     // 1 read from last set's write, 0 writes
-    Minitransaction* trans_3 = new Minitransaction();
-    trans_3->reads().addKey( keys()[0] );
+    Minitransaction* trans_3 = fixture.handler->createMinitransaction(1,0,0);
+    copyStorageKey(trans_3->mutable_reads(0), keyvalues()[0] );
     StorageSet expected_3;
-    expected_3.addPair( keys()[0], values()[0] );
-    test_minitransaction(fixture.handler, trans_3, ObjectStorageErrorType_None, expected_3,3);
+    expected_3.add_reads();
+    copyStorageElement(expected_3.mutable_reads(0),keyvalues()[0] );
+
+    test_minitransaction(fixture.handler, trans_3, Response::SUCCESS, expected_3,3);
 
     // 1 read from previous set, 1 write
-    Minitransaction* trans_4 = new Minitransaction();
-    trans_4->reads().addKey( keys()[0] );
-    trans_4->writes().addPair( keys()[1], values()[1] );
+    Minitransaction* trans_4 = fixture.handler->createMinitransaction(1,1,0);
+    copyStorageKey(trans_4->mutable_reads(0), keyvalues()[0] );
+    copyStorageElement(trans_4->mutable_writes(0), keyvalues()[1] );
     StorageSet expected_4;
-    expected_4.addPair( keys()[0], values()[0] );
-    test_minitransaction(fixture.handler, trans_4, ObjectStorageErrorType_None, expected_4,4);
+    expected_4.add_reads();
+    copyStorageElement(expected_4.mutable_reads(0),keyvalues()[0]);
+    test_minitransaction(fixture.handler, trans_4, Response::SUCCESS, expected_4,4);
 
     // 1 successful compare
-    Minitransaction* trans_5 = new Minitransaction();
-    trans_5->compares().addPair( keys()[0], values()[0] );
+    Minitransaction* trans_5 = fixture.handler->createMinitransaction(0,0,1);
+    copyStorageElement(trans_5->mutable_compares(0), keyvalues()[0] );
+    //trans_5->mutable_compares(0).set_comparator(CompareElement::EQUAL);//implicit
     StorageSet expected_5;
-    test_minitransaction(fixture.handler, trans_5, ObjectStorageErrorType_None, expected_5,5);
+    test_minitransaction(fixture.handler, trans_5, Response::SUCCESS, expected_5,5);
 
     // 1 failed compare
-    Minitransaction* trans_6 = new Minitransaction();
-    trans_6->compares().addPair( keys()[0], values()[1] );
+    Minitransaction* trans_6 = fixture.handler->createMinitransaction(0,0,1);
+    copyStorageKey(trans_6->mutable_compares(0),keyvalues()[0]);
+    copyStorageValue(trans_6->mutable_compares(0),keyvalues()[1]);
     StorageSet expected_6;
-    test_minitransaction(fixture.handler, trans_6, ObjectStorageErrorType_ComparisonFailed, expected_6,6);
+    test_minitransaction(fixture.handler, trans_6, Response::COMPARISON_FAILED, expected_6,6);
 
     // 1 successful compare, 1 read
-    Minitransaction* trans_7 = new Minitransaction();
-    trans_7->compares().addPair( keys()[0], values()[0] );
-    trans_7->reads().addKey( keys()[1] );
+    Minitransaction* trans_7 = fixture.handler->createMinitransaction(1,0,0);
+    copyStorageElement(trans_7->mutable_compares(0),keyvalues()[0]);
+    copyStorageKey(trans_7->mutable_reads(0),keyvalues()[1]);
     StorageSet expected_7;
-    expected_7.addPair( keys()[1], values()[1] );
-    test_minitransaction(fixture.handler, trans_7, ObjectStorageErrorType_None, expected_7,7);
+    expected_7.add_reads();    
+    copyStorageElement(expected_7.mutable_reads(0),keyvalues()[1]);
+    test_minitransaction(fixture.handler, trans_7, Response::SUCCESS, expected_7,7);
 
     // 1 failed compare, 1 read (which will not be performed)
-    Minitransaction* trans_8 = new Minitransaction();
-    trans_8->compares().addPair( keys()[0], values()[1] );
-    trans_8->reads().addKey( keys()[1] );
+    Minitransaction* trans_8 = fixture.handler->createMinitransaction(1,0,1);
+    copyStorageKey(trans_8->mutable_compares(0),keyvalues()[0]);
+    copyStorageValue(trans_8->mutable_compares(0),keyvalues()[1]);
+    copyStorageKey(trans_8->mutable_reads(0),keyvalues()[1]);
     StorageSet expected_8;
-    test_minitransaction(fixture.handler, trans_8, ObjectStorageErrorType_ComparisonFailed, expected_8,8);
+    test_minitransaction(fixture.handler, trans_8, Response::COMPARISON_FAILED, expected_8,8);
 
     // 1 successful compare, 1 read, 1 write
-    Minitransaction* trans_9 = new Minitransaction();
-    trans_9->compares().addPair( keys()[0], values()[0] );
-    trans_9->reads().addKey( keys()[1] );
-    trans_9->writes().addPair( keys()[2], values()[2] );
+    Minitransaction* trans_9 = fixture.handler->createMinitransaction(1,1,1);
+    copyStorageElement(trans_9->mutable_compares(0),keyvalues()[0]);
+    copyStorageKey(trans_9->mutable_reads(0),keyvalues()[1]);
+    copyStorageElement(trans_9->mutable_writes(0),keyvalues()[2]);
+
     StorageSet expected_9;
-    expected_9.addPair( keys()[1], values()[1] );
-    test_minitransaction(fixture.handler, trans_9, ObjectStorageErrorType_None, expected_9,9);
+    expected_9.add_reads();
+    copyStorageElement(expected_9.mutable_reads(0),keyvalues()[1]);
+
+    test_minitransaction(fixture.handler, trans_9, Response::SUCCESS, expected_9,9);
 
     // 1 failed compare, 1 read, 1 write (which will not be performed)
-    Minitransaction* trans_10 = new Minitransaction();
-    trans_10->compares().addPair( keys()[0], values()[1] );
-    trans_10->reads().addKey( keys()[1] );
-    trans_10->writes().addPair( keys()[2], values()[3] );
+    Minitransaction* trans_10 = fixture.handler->createMinitransaction(1,1,1);
+    copyStorageKey(trans_9->mutable_compares(0),keyvalues()[0]);
+    copyStorageValue(trans_9->mutable_compares(0),keyvalues()[1]);
+    copyStorageKey(trans_9->mutable_reads(0),keyvalues()[1]);
+    copyStorageKey(trans_9->mutable_writes(0),keyvalues()[2]);
+    copyStorageValue(trans_9->mutable_writes(0),keyvalues()[3]);
+
     StorageSet expected_10;
-    test_minitransaction(fixture.handler, trans_10, ObjectStorageErrorType_ComparisonFailed, expected_10,10);
+    test_minitransaction(fixture.handler, trans_10, Response::COMPARISON_FAILED, expected_10,10);
 
 
     // finally just verify that the previous write did not happen
-    Minitransaction* trans_11 = new Minitransaction();
-    trans_11->reads().addKey( keys()[2] );
+    Minitransaction* trans_11 = fixture.handler->createMinitransaction(1,0,0);
+    
+    copyStorageKey(trans_11->mutable_reads(0),keyvalues()[2]);
     StorageSet expected_11;
-    expected_11.addPair( keys()[2], values()[2] );
-    test_minitransaction(fixture.handler, trans_11, ObjectStorageErrorType_None, expected_11,11);
+    expected_11.add_reads();
+    copyStorageElement(expected_11.mutable_reads(0),keyvalues()[2]);
+    test_minitransaction(fixture.handler, trans_11, Response::SUCCESS, expected_11,11);
 }

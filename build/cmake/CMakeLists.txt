@@ -707,7 +707,7 @@ ENDFOREACH(INCLUDE_NONCE)
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Test Sirikata Subscription Persistence
+  Persistence Sirikata Subscription Test
 )
 
 
@@ -967,7 +967,7 @@ ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
 
 SET(TEST_SOURCES ${CXXTEST_CPP_FILE}
-#                 ${SirikataProtocolDirectory}/Test_protobuf.cc 
+                 ${SirikataProtocolDirectory}/Test_protobuf.cc 
                  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
                  ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
                  ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
@@ -1138,7 +1138,8 @@ ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_OH_LIB})
 SET_TARGET_PROPERTIES(${SPACE_BINARY} ${PROXIMITY_BINARY} ${SUBSCRIPTION_BINARY} ${CPPOH_BINARY} ${TEST_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
-TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB} ${TEST_LIBRARIES}) #${SIRIKATA_PROXIMITY_LIB} 
+TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}
+                      ${TEST_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES}) #${SIRIKATA_PROXIMITY_LIB} 
 TARGET_LINK_LIBRARIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 TARGET_LINK_LIBRARIES(${PROXIMITY_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB})
 TARGET_LINK_LIBRARIES(${SUBSCRIPTION_BINARY} ${SUBSCRIPTION_CORE_LIB} ${SIRIKATA_SUBSCRIPTION_LIB})

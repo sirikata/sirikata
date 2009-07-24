@@ -31,14 +31,14 @@
  */
 #include <util/Platform.hpp>
 #include "ObjectStorageTest.hpp"
+#include "Test_Persistence.pbj.hpp"
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 /* Utilities for ObjectStorage tests.  No tests are defined here or in
  *  ObjectStorageTest.hpp.
  */
 
-static std::vector<StorageKey> sGeneratedKeys;
-static std::vector<StorageValue> sGeneratedValues;
+static std::vector<Protocol::StorageElement> sGeneratedElements;
 
 static bool sGeneratedPairs = false;
 
@@ -47,27 +47,24 @@ static void generate_pairs() {
         String field(rand() % 15 + 1, 'a');
         for(std::size_t j = 0; j < field.size(); j++)
             field[j] = 'a' + (rand() % 25);
-        sGeneratedKeys.push_back( StorageKey(UUID::random(), rand() % 1000, field) );
-    }
-
-    for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
-        int len = rand() % 1000;
-        StorageValue value;
-        for(int j = 0; j < len; j++)
-            value.push_back((char)(rand() % 255));
-        sGeneratedValues.push_back(value);
+        Sirikata::Persistence::Protocol::StorageElement tmp;
+        tmp.set_object_uuid(UUID::random());
+        tmp.set_field_id(rand()%1000);
+        tmp.set_field_name(field);
+        {
+            int len = rand() % 1000;
+            std::string value;
+            for(int j = 0; j < len; j++)
+                value.push_back((char)(rand() % 255));
+            tmp.set_data(value);
+        }
+        sGeneratedElements.push_back(tmp);
     }
     sGeneratedPairs = true;
 }
 
-std::vector<StorageKey>& keys() {
+std::vector<Sirikata::Persistence::Protocol::StorageElement>& keyvalues() {
     if (!sGeneratedPairs)
         generate_pairs();
-    return sGeneratedKeys;
-}
-
-std::vector<StorageValue>& values() {
-    if (!sGeneratedPairs)
-        generate_pairs();
-    return sGeneratedValues;
+    return sGeneratedElements;
 }
