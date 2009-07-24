@@ -46,21 +46,20 @@ namespace Sirikata { namespace Persistence {
  *  database and so can happily coexist.
  */
 class SQLiteObjectStorage : public ReadWriteHandler, public MinitransactionHandler {
+    Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares);
 public:
     static ReadWriteHandler* createReadWriteHandler(const String& pl);
     static MinitransactionHandler* createMinitransactionHandler(const String& pl);
     virtual ~SQLiteObjectStorage();
 
-    virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares);
-    virtual void destroyMinitransaction(Persistence::Protocol::Minitransaction*);
-    virtual void destroyReadWriteSet(Persistence::Protocol::ReadWriteSet*);
+    
     virtual void destroyResponse(Persistence::Protocol::Response*);
     
     virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys);
-    virtual void apply(const RoutableMessageHeader&rmh,Protocol::Minitransaction*);
-    virtual void apply(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*);
-    virtual void apply(Sirikata::Persistence::Protocol::Minitransaction*, const ResultCallback&);
-    virtual void apply(Sirikata::Persistence::Protocol::ReadWriteSet*, const ResultCallback&);
+    virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::Minitransaction*, void(*minitransactionDestruction)(Protocol::Minitransaction*));
+    virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*,void(*)(Protocol::ReadWriteSet*));
+    virtual void applyInternal(Sirikata::Persistence::Protocol::Minitransaction*, const ResultCallback&, void(*minitransactionDestruction)(Protocol::Minitransaction*));
+    virtual void applyInternal(Sirikata::Persistence::Protocol::ReadWriteSet*, const ResultCallback&,void(*)(Protocol::ReadWriteSet*));
 
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
@@ -80,6 +79,7 @@ private:
      */
     class ApplyReadWriteWorker:public Task::WorkItem{
     protected:
+        void (*mDestroyReadWrite)(Protocol::ReadWriteSet*);
         SQLiteObjectStorage*mParent;
         ResultCallback cb;
         Protocol::ReadWriteSet*rws;
@@ -87,13 +87,13 @@ private:
         Protocol::Response::ReturnStatus processReadWrite();
         ApplyReadWriteWorker(){rws=NULL;mResponse=NULL;mParent=NULL;}
     public:
-        ApplyReadWriteWorker(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const ResultCallback&cb);
+        ApplyReadWriteWorker(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const ResultCallback&cb,void (*mDestroyReadWrite)(Protocol::ReadWriteSet*));
         void operator()();
     };
     class ApplyReadWriteMessage:public ApplyReadWriteWorker{
         RoutableMessageHeader hdr;
     public:
-        ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const RoutableMessageHeader&hdr);
+        ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const RoutableMessageHeader&hdr,void (*mDestroyReadWrite)(Protocol::ReadWriteSet*));
         void operator()();
     };
     
@@ -102,6 +102,7 @@ private:
      */
     class ApplyTransactionWorker:public Task::WorkItem{
     protected:
+        void (*mDestroyMinitransaction)(Protocol::Minitransaction*);
         SQLiteObjectStorage*mParent;
         ResultCallback cb;
         Protocol::Minitransaction*mt;
@@ -109,13 +110,13 @@ private:
         Protocol::Response::ReturnStatus processTransaction();
         ApplyTransactionWorker(){mt=NULL;mResponse=NULL;mParent=NULL;}
     public:
-        ApplyTransactionWorker(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, const ResultCallback&cb);
+        ApplyTransactionWorker(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, const ResultCallback&cb,void (*mDestroyMinitransaction)(Protocol::Minitransaction*));
         void operator()();
     };
     class ApplyTransactionMessage:public ApplyTransactionWorker{
         RoutableMessageHeader hdr;
     public:
-        ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, const RoutableMessageHeader&);
+        ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, const RoutableMessageHeader&,void (*mDestroyMinitransaction)(Protocol::Minitransaction*));
         void operator()();
     };
 

@@ -84,7 +84,7 @@ static void check_fill_read_write_handler_result(Protocol::Response *response, b
  */
 static void fill_read_write_handler(ReadWriteHandler* rwh) {
     using namespace Sirikata::Persistence::Protocol;
-    ReadWriteSet* trans = rwh->createReadWriteSet(0,OBJECT_STORAGE_GENERATED_PAIRS);
+    ReadWriteSet* trans = rwh->createReadWriteSet((ReadWriteSet*)NULL,0,OBJECT_STORAGE_GENERATED_PAIRS);
     for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
         copyStorageElement(trans->mutable_writes(i),keyvalues()[i]);
     }
@@ -113,6 +113,7 @@ static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *
             }
         }
     }
+    rwh->destroyResponse(response);
     *done = true;
 }
 
@@ -159,7 +160,7 @@ void stress_test_read_write_handler(SetupReadWriteHandlerFunction _setup, Create
     int counter=0;
     // generate a bunch of MinitransactionSets with a lot of items in them
     for(uint32 i = 0; i < num_sets; i++) {
-        ReadWriteSet* trans = fixture.handler->createReadWriteSet(num_readswrites,num_readswrites);
+        ReadWriteSet* trans = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,num_readswrites,num_readswrites);
         for(uint32 j = 0; j < num_readswrites; j++) {
             copyStorageKey(trans->mutable_reads(j),keyvalues()[j]);
 
@@ -187,18 +188,18 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     ReadWriteHandlerTestFixture fixture(_setup, create_handler, pl, _teardown);
     using namespace Sirikata::Persistence::Protocol;
     // 0 reads, 0 writes
-    ReadWriteSet* trans_1 = fixture.handler->createReadWriteSet(0,0);
+    ReadWriteSet* trans_1 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,0,0);
     StorageSet expected_1;
     test_read_write(fixture.handler, trans_1, Response::SUCCESS, expected_1,1);
 
     // 0 reads, 1 write
-    ReadWriteSet* trans_2 = fixture.handler->createReadWriteSet(0,1);
+    ReadWriteSet* trans_2 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,0,1);
     copyStorageElement(trans_2->mutable_writes(0),keyvalues()[0]);
     StorageSet expected_2;
     test_read_write(fixture.handler, trans_2, Response::SUCCESS, expected_2,2);
 
     // 1 read from last set's write, 0 writes
-    ReadWriteSet* trans_3 = fixture.handler->createReadWriteSet(1,0);
+    ReadWriteSet* trans_3 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
     copyStorageKey(trans_3->mutable_reads(0), keyvalues()[0] );
     StorageSet expected_3;
     expected_3.add_reads();
@@ -207,7 +208,7 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     test_read_write(fixture.handler, trans_3, Response::SUCCESS, expected_3,3);
 
     // 1 read from previous set, 1 write
-    ReadWriteSet* trans_4 = fixture.handler->createReadWriteSet(1,1);
+    ReadWriteSet* trans_4 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,1);
     copyStorageKey(trans_4->mutable_reads(0), keyvalues()[0] );
     copyStorageElement(trans_4->mutable_writes(0), keyvalues()[1] );
     StorageSet expected_4;

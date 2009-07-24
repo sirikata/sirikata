@@ -167,11 +167,30 @@ public:
  *  and best effort stored object store systems should implement this interface.
  */
 class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler, public MessageService {
+    template <class ReadWrite> class DestroyReadWrite {public:
+        static void destroyReadWriteSet(ReadWrite*mt) {delete mt;}
+    };
 public:
     virtual ~ReadWriteHandler();
-    virtual Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys)=0;
-    virtual void apply(Protocol::ReadWriteSet* rws, const ResultCallback& cb) = 0;
-    virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::ReadWriteSet*)=0;
+    template <class ReadWrite> ReadWrite *createReadWriteSet(ReadWrite*mt, int numReadKeys, int numWriteKeys) {
+        if (mt==NULL) mt = new ReadWrite();
+        while(numReadKeys--) {
+            mt->add_reads();
+        }
+        while(numWriteKeys--) {
+            mt->add_writes();
+        }
+        return mt;
+    }
+    template <class ReadWrite> void apply(ReadWrite*rws, const ResultCallback& cb) {
+        applyInternal(rws,cb,&DestroyReadWrite<ReadWrite>::destroyReadWriteSet);
+    }
+    template <class ReadWrite> void applyMessage(const RoutableMessageHeader &rmh,ReadWrite*rws) {
+        applyInternal(rmh,rws,&DestroyReadWrite<ReadWrite>::destroyReadWriteSet);
+    }
+  protected:
+    virtual void applyInternal(Protocol::ReadWriteSet* rws, const ResultCallback& cb,void(*)(Protocol::ReadWriteSet*)) = 0;
+    virtual void applyInternal(const RoutableMessageHeader&hdr,Persistence::Protocol::ReadWriteSet*,void(*)(Protocol::ReadWriteSet*))=0;
 };
 
 /** MinitransactionHandler is the abstract base class for implementations which
@@ -179,44 +198,37 @@ public:
  *  this interface.
  */
 class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler, public MessageService {
+    template <class Minitransaction> class DestroyMinitransaction {public:
+        static void destroyMinitransaction(Minitransaction*mt) {delete mt;}
+    };
 public:
     virtual ~MinitransactionHandler();
-    virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares)=0;
-    virtual void apply(const RoutableMessageHeader&hdr,Persistence::Protocol::Minitransaction*)=0;
-    virtual void apply(Protocol::Minitransaction* mt, const ResultCallback& cb) = 0;
+    //virtual Persistence::Protocol::Minitransaction* createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares)=0;
+    template <class Minitrans> Minitrans* createMinitransaction(Minitrans*mt, int numReadKeys, int numWriteKeys, int numCompares) {
+        if (mt==NULL) mt = new Minitrans();
+        while(numReadKeys--) {
+            mt->add_reads();
+        }
+        while(numWriteKeys--) {
+            mt->add_writes();
+        }
+        while(numCompares--) {
+            mt->add_compares();
+        }
+        return mt;
+    }
+    template <class Minitransaction> void transact(Minitransaction*rws, const ResultCallback& cb) {
+        applyInternal(rws,cb,&DestroyMinitransaction<Minitransaction>::destroyMinitransaction);
+    }
+    template <class Minitransaction> void transactMessage(const RoutableMessageHeader &rmh,Minitransaction*rws) {
+        applyInternal(rmh,rws,&DestroyMinitransaction<Minitransaction>::destroyMinitransaction);
+    }
+    
+  protected:
+    virtual void applyInternal(const RoutableMessageHeader&hdr,Persistence::Protocol::Minitransaction*, void(*minitransactionDestruction)(Protocol::Minitransaction*))=0;
+    virtual void applyInternal(Protocol::Minitransaction* mt, const ResultCallback& cb, void(*minitransactionDestruction)(Protocol::Minitransaction*)) = 0;
 };
 
-
-/** Base class for object storage.  This replaces the old ObjectStore interface.
- *  It provides storage with various levels of guarantees and performance.
- *  The basic interface for all of these is a <key,value> store within an object's
- *  namespace.  Three types of storage are provided.  Temporary storage is not
- *  guaranteed to persist at all.  Best effort does as much as it can to persist
- *  but losses are possible.  Caching will make it look like values have been persisted
- *  even before they have.  Both temporary and best effort only allow reads and writes
- *  and these operations are *not* atomic for the set.  Atomic transactions provide the
- *  greatest guarantees - they are atomic, have read, write, and compare sets, and
- *  guarantee persistence, at the cost of much higher latency.
- */
-class SIRIKATA_EXPORT ObjectStorage {
-public:
-
-    typedef std::tr1::function<void(const Protocol::Response*)> ResultCallback;
-
-    ObjectStorage(ReadWriteHandler* temp, ReadWriteHandler* bestEffort, MinitransactionHandler* trans);
-    ~ObjectStorage();
-
-    void temporary(Protocol::ReadWriteSet* rws, const ResultCallback& cb);
-    void bestEffort(Protocol::ReadWriteSet* rws, const ResultCallback& cb);
-    void transaction(Protocol::Minitransaction* mt, const ResultCallback& cb);
-
-private:
-    ObjectStorage();
-
-    ReadWriteHandler* mTemporary;
-    ReadWriteHandler* mBestEffort;
-    MinitransactionHandler* mTransaction;
-}; // class ObjectStorage
 
 } } // namespace Sirikata::Persistence
 

@@ -55,27 +55,4 @@ MinitransactionHandler::~MinitransactionHandler() {
 }
 
 
-
-
-ObjectStorage::ObjectStorage(ReadWriteHandler* temp, ReadWriteHandler* bestEffort, MinitransactionHandler* trans)
- : mTemporary(temp),
-   mBestEffort(bestEffort),
-   mTransaction(trans)
-{
-}
-   
-
-void ObjectStorage::temporary(Protocol::ReadWriteSet* rws, const ResultCallback& cb) {
-    mTemporary->apply(rws,cb);
-}
-
-void ObjectStorage::bestEffort(Protocol::ReadWriteSet* rws, const ResultCallback& cb) {
-    mBestEffort->apply(rws,cb);
-}
-
-void ObjectStorage::transaction(Protocol::Minitransaction* mt, const ResultCallback& cb) {
-    mTransaction->apply(mt,cb);
-}
-
-
 } } // namespace Sirikata::Persistence

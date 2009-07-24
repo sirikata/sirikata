@@ -32,6 +32,7 @@
 #include <util/Platform.hpp>
 #include "ObjectStorageTest.hpp"
 #include "Test_Persistence.pbj.hpp"
+#include <util/AtomicTypes.hpp>
 using namespace Sirikata;
 using namespace Sirikata::Persistence;
 /* Utilities for ObjectStorage tests.  No tests are defined here or in
@@ -43,17 +44,25 @@ static std::vector<Protocol::StorageElement> sGeneratedElements;
 static bool sGeneratedPairs = false;
 
 static void generate_pairs() {
+    static AtomicValue<int> uuidseed(0);
+    static AtomicValue<int> fieldidseed(0);
+    static AtomicValue<int> fieldnameseed(0);
     for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
+        
         String field(rand() % 15 + 1, 'a');
         for(std::size_t j = 0; j < field.size(); j++)
             field[j] = 'a' + (rand() % 25);
         Sirikata::Persistence::Protocol::StorageElement tmp;
-        tmp.set_object_uuid(UUID::random());
-        tmp.set_field_id(rand()%1000);
-        tmp.set_field_name(field);
+        String testuuid(16,uuidseed++%64);
+        UUID test(testuuid,UUID::BinaryString());
+        tmp.set_object_uuid(test);
+        tmp.set_field_id(++fieldidseed%1000);
+        testuuid[0]='a';
+        tmp.set_field_name(testuuid);
         {
             int len = rand() % 1000;
             std::string value;
+            srand(fieldnameseed++);
             for(int j = 0; j < len; j++)
                 value.push_back((char)(rand() % 255));
             tmp.set_data(value);
