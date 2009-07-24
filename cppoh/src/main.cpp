@@ -244,8 +244,10 @@ int main ( int argc,const char**argv ) {
     using namespace Sirikata;
 
     PluginManager plugins;
-    plugins.load ( DynamicLibrary::filename("ogregraphics") );
-    plugins.load ( DynamicLibrary::filename("bulletphysics") );
+    const char* pluginNames[] = { "ogregraphics", "bulletphysics", NULL};
+    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
+        plugins.load( DynamicLibrary::filename(*plugin_name) );
+
     OptionSet::getOptions ( "" )->parse ( myargc,myargv );
 
 #ifdef __GNUC__
@@ -349,36 +351,36 @@ int main ( int argc,const char**argv ) {
     typedef std::vector<TimeSteppedSimulation*> SimList;
     SimList sims;
 
-    {
-        String graphicsPluginName ( "ogregraphics" );
-        SILOG(cppoh,error,"dbm: initializing graphics");
-        TimeSteppedSimulation *graphicsSystem=
+    struct SimulationRequest {
+        const char* name;
+        bool required;
+    };
+    const uint32 nSimRequests = 2;
+    SimulationRequest simRequests[nSimRequests] = {
+        {"ogregraphics", true},
+        {"bulletphysics", false}
+    };
+    for(uint32 ir = 0; ir < nSimRequests && continue_simulation; ir++) {
+        String simName = simRequests[ir].name;
+        SILOG(cppoh,info,String("Initializing ") + simName);
+        TimeSteppedSimulation *sim =
             SimulationFactory::getSingleton()
-            .getConstructor ( graphicsPluginName ) ( provider,graphicsCommandArguments );
-        if (!graphicsSystem) {
-            SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
-            std::cout << "Press enter to continue" << std::endl;
-            std::cerr << "Press enter to continue" << std::endl;
-            fgetc(stdin);
-            continue_simulation = false;
+            .getConstructor ( simName ) ( provider,graphicsCommandArguments );
+        if (!sim) {
+            if (simRequests[ir].required) {
+                SILOG(cppoh,error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
+                std::cout << "Press enter to continue" << std::endl;
+                std::cerr << "Press enter to continue" << std::endl;
+                fgetc(stdin);
+                continue_simulation = false;
+            }
+            else {
+                SILOG(cppoh,info,String("Couldn't load ") + simName + String(" plugin."));
+            }
         }
         else {
-            sims.push_back(graphicsSystem);
-        }
-    }
-
-    {
-        String physicsPluginName ( "bulletphysics" );
-        SILOG(cppoh,error,"dbm: initializing physics");
-        TimeSteppedSimulation *physicsSystem=
-            SimulationFactory::getSingleton()
-            .getConstructor ( physicsPluginName ) ( provider,graphicsCommandArguments );
-        if (!physicsSystem) {
-            SILOG(cppoh,error,"physicsSystem NULL!");
-        }
-        else {
-            sims.push_back(physicsSystem);
-            SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
+            SILOG(cppoh,info,String("Successfully initialized ") + simName);
+            sims.push_back(sim);
         }
     }
 
