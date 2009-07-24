@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Sirikata Synchronization Utilities
- *  UUID.hpp
+ *  Database.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -49,7 +49,7 @@ public:
         }
     };
     bool operator <(const Key&other) const{
-        return mObject==other.mObject?mField<other.mField:mObject<other.mObject;        
+        return mObject==other.mObject?mField<other.mField:mObject<other.mObject;
     }
     bool operator ==(const Key&other) const{
         return mObject==other.mObject&&mField==other.mField;
@@ -67,7 +67,7 @@ public:
 };
 class Database {
 public:
-    
+
 
 };
 

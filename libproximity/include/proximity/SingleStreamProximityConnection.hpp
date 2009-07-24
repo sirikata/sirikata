@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proximity Connection Class
- *  ProximityConnection.hpp
+/*  Sirikata Proximity Library
+ *  SingleStreamProximityConnection.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -48,7 +48,7 @@ class SIRIKATA_PROXIMITY_EXPORT SingleStreamProximityConnection :public Proximit
     std::tr1::shared_ptr<Network::Stream> mConnectionStream;
     typedef std::tr1::unordered_map<ObjectReference,Network::Stream*,ObjectReference::Hasher> ObjectStreamMap;
     ObjectStreamMap mObjectStreams;
-    
+
 public:
     static ProximityConnection* create(Network::IOService*, const String&);
     void streamDisconnected();

@@ -1,3 +1,35 @@
+/*  Sirikata Proximity Management -- Prox Plugin
+ *  ProxBridge.cpp
+ *
+ *  Copyright (c) 2009, Daniel Reiter Horn
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "proximity/Platform.hpp"
 #include "util/ObjectReference.hpp"
 #include "Prox_Sirikata.pbj.hpp"
@@ -33,7 +65,7 @@ void ProxBridge::update(const Duration&duration,const std::tr1::weak_ptr<Prox::Q
         Network::IOServiceFactory::dispatchServiceMessage(mIO,duration,std::tr1::bind(&ProxBridge::update,this,duration,listen));
     }
 }
-bool ProxBridge::forwardMessagesTo(MessageService*ms){ 
+bool ProxBridge::forwardMessagesTo(MessageService*ms){
     for (int i=0;i<sMaxMessageServices;++i) {
         if(mMessageServices[i]==NULL) {
             mMessageServices[i]=ms;
@@ -42,7 +74,7 @@ bool ProxBridge::forwardMessagesTo(MessageService*ms){
     }
     return false;
 }
-bool ProxBridge::endForwardingMessagesTo(MessageService*ms){ 
+bool ProxBridge::endForwardingMessagesTo(MessageService*ms){
     for (int i=0;i<sMaxMessageServices;++i) {
         if(mMessageServices[i]==ms) {
             for (int j=i+1;j<sMaxMessageServices;++j) {
@@ -57,7 +89,7 @@ bool ProxBridge::endForwardingMessagesTo(MessageService*ms){
 
 ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mListener(new Network::TCPStreamListener(io)),mQueryHandler(handler),mCallback(cb) {
     std::memset(mMessageServices,0,sMaxMessageServices*sizeof(MessageService*));
-    OptionValue*port;    
+    OptionValue*port;
     OptionValue*updateDuration;
     InitializeClassOptions("proxbridge",this,
                           port=new OptionValue("port","6408",OptionValueType<String>(),"sets the port that the proximity bridge should listen on"),
@@ -68,7 +100,7 @@ ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHa
     Network::IOServiceFactory::dispatchServiceMessage(&io,updateDuration->as<Duration>(),std::tr1::bind(&ProxBridge::update,this,updateDuration->as<Duration>(),phandler));
     mListener->listen(Network::Address("127.0.0.1",port->as<String>()),
                       std::tr1::bind(&ProxBridge::newObjectStreamCallback,this,_1,_2));
-   
+
 }
 ProxBridge::~ProxBridge() {
     std::tr1::weak_ptr<Prox::QueryHandler> listener=mQueryHandler;
@@ -104,7 +136,7 @@ void ProxBridge::processMessage(const RoutableMessageHeader&msg,
 }
 
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
-                                               const ObjectReference*object,    
+                                               const ObjectReference*object,
                                                const RoutableMessageHeader&msg,
                                                const void *serializedMessageBody,
                                                size_t serializedMessageBodySize) {
@@ -148,7 +180,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
                     this->newProxQuery(where,new_query,msg.message_arguments(i).data(),msg.message_arguments(i).size());
                 }
             }
-            
+
             if (msg.message_names(i)=="DelProxQuery") {
                 Sirikata::Protocol::DelProxQuery del_query;
                 if (del_query.ParseFromString(msg.message_arguments(i))) {
@@ -160,7 +192,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
                 if (obj_loc.ParseFromString(msg.message_arguments(i))) {
                     this->objLoc(where,obj_loc,msg.message_arguments(i).data(),msg.message_arguments(i).size());
                 }
-                
+
             }
             if (msg.message_names(i)=="DelObj") {
                 Sirikata::Protocol::DelObj del_obj;
@@ -171,7 +203,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
                 }
             }
         }
-    }    
+    }
     return retval;
 }
 ObjectReference ProxBridge::newObj(const Sirikata::Protocol::IRetObj&obj_status,
@@ -183,16 +215,16 @@ ObjectReference ProxBridge::newObj(const Sirikata::Protocol::IRetObj&obj_status,
 }
 ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
                                                         const Sirikata::Protocol::IRetObj&obj_status) {
-    
+
     const Sirikata::Protocol::IObjLoc location=obj_status.location();
-    
+
     BoundingSphere3f sphere=obj_status.bounding_sphere();
     Prox::BoundingSphere3f boundingSphere(sphere.center().convert<Prox::Vector3<Prox::BoundingSphere3f::real> >(),
                                           sphere.radius());
     ObjectStateMap::iterator where;
     UUID object_reference(obj_status.object_reference());
     retval=ObjectReference(object_reference);
-    if ((where=mObjectStreams.find(ObjectReference(object_reference)))!=mObjectStreams.end()) { 
+    if ((where=mObjectStreams.find(ObjectReference(object_reference)))!=mObjectStreams.end()) {
         where->second->mObject->bounds(boundingSphere);
         objLoc(where,location);
     } else {
@@ -259,7 +291,7 @@ public:
             mParent->mCallback(mState->mStream?&*mState->mStream:NULL,message_container,message_container.body());
         }
         std::string toSerialize;
-        for (int i=0;i<ProxBridge::sMaxMessageServices;++i){ 
+        for (int i=0;i<ProxBridge::sMaxMessageServices;++i){
             MessageService*svc;
             if ((svc=mParent->mMessageServices[i])==NULL)
                 break;
@@ -320,7 +352,7 @@ void ProxBridge::delProxQuery(ObjectStateMap::iterator source,
     QueryMap::iterator where=source->second->mQueries.find(del_query.query_id());
     if (where!=source->second->mQueries.end()) {
         delete where->second.mQuery;
-        source->second->mQueries.erase(where);        
+        source->second->mQueries.erase(where);
     }
 }
 void ProxBridge::delObj(ObjectStateMap::iterator source){
@@ -366,7 +398,7 @@ void ProxBridge::processProxCallback(const ObjectReference&destination,
             prox_callback.SerializeToString(&msg.message_arguments(0));
         }
         mCallback(where->second->mStream?&*where->second->mStream:NULL,dest,msg);
-    }else SILOG(prox,warning,"Cannot callback to "<<destination<<" unknown stream");    
+    }else SILOG(prox,warning,"Cannot callback to "<<destination<<" unknown stream");
 }
 
 void ProxBridge::objLoc(ObjectStateMap::iterator where,
@@ -376,7 +408,7 @@ void ProxBridge::objLoc(ObjectStateMap::iterator where,
     Prox::Object::PositionVectorType position(Prox::Time((obj_loc.timestamp()-Time::epoch()).toMicroseconds()),
                                                   obj_loc.position().convert<Prox::Object::PositionVectorType::CoordType>(),
                                                   obj_loc.velocity().convert<Prox::Vector3f>());
-    
+
     where->second->mObject->position(position);
     for (QueryMap::iterator i=where->second->mQueries.begin(),ie=where->second->mQueries.end();i!=ie;++i) {
         if (i->second.mQueryType==QueryState::RELATIVE_STATEFUL||i->second.mQueryType==QueryState::RELATIVE_STATELESS) {
@@ -386,7 +418,7 @@ void ProxBridge::objLoc(ObjectStateMap::iterator where,
             }else {
                 i->second.mQuery->position(position);
             }
-        }            
+        }
     }
 }
     /**
@@ -397,7 +429,7 @@ void ProxBridge::objLoc(const ObjectReference&source, const Sirikata::Protocol::
    ObjectStateMap::iterator where=mObjectStreams.find(source);
    if (where!=mObjectStreams.end()) {
        this->objLoc(where,loc,optionalSerializedObjLoc,optionalSerializedObjLocSize);
-   }else SILOG(prox,warning,"Cannot update object loc for nonexistant object "<<source); 
+   }else SILOG(prox,warning,"Cannot update object loc for nonexistant object "<<source);
 }
 
     /**
@@ -408,7 +440,7 @@ void ProxBridge::delProxQuery(const ObjectReference&source, const Sirikata::Prot
    ObjectStateMap::iterator where=mObjectStreams.find(source);
    if (where!=mObjectStreams.end()) {
        this->delProxQuery(where,del_query,optionalSerializedDelProxQuery,optionalSerializedDelProxQuerySize);
-   }else SILOG(prox,warning,"Cannot delete query for nonexistant object "<<source); 
+   }else SILOG(prox,warning,"Cannot delete query for nonexistant object "<<source);
 }
     /**
      * Objects may be destroyed: indicate loss of interest here
@@ -417,7 +449,7 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
    ObjectStateMap::iterator where=mObjectStreams.find(source);
    if (where!=mObjectStreams.end()) {
        this->delObj(where);
-   }else SILOG(prox,warning,"Cannot delete nonexistant object "<<source); 
+   }else SILOG(prox,warning,"Cannot delete nonexistant object "<<source);
 }
 
 
@@ -425,7 +457,7 @@ void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                                  const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                  const Network::Chunk&data) {
     RoutableMessageHeader hdr;
-    
+
     if (data.size()) {
         MemoryReference bodyData=hdr.ParseFromArray(&*data.begin(),data.size());
         size_t old_size=ref->size();
@@ -473,11 +505,10 @@ void ProxBridge::disconnectionCallback(const std::tr1::shared_ptr<Network::Strea
             if (where!=mObjectStreams.end()) {
                 delObj(where);
             }
-        } 
+        }
         stream->close();
     }
 }
 
 
 } }
-

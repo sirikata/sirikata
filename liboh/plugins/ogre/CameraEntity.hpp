@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  Entity.hpp
+ *  CameraEntity.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.

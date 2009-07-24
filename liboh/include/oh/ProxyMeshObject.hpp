@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  ProxyCameraObject.hpp
+/*  Sirikata Object Host
+ *  ProxyMeshObject.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

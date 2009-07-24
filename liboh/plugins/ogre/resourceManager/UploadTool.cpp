@@ -1,5 +1,6 @@
-/*  Meru
- *  OgreMeshMaterialDependencyTool.cpp
+/*  Sirikata Resource Tools
+ *  UploadTool.cpp
+ *  Renamed from Meru's OgreMeshMaterialDependencyTool.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -192,13 +193,13 @@ DenseDataPtr nativeDataPtr(const Ogre::String&file, Fingerprint *hash=NULL) {
 
 Ogre::DataStream* nativeStream (const Ogre::String&file) {
     for (int i=0;i<num_native_files;++i) {
-        if (file==native_files[i]) 
-            return new Ogre::MemoryDataStream(native_files_data[i],native_files_size[i]);        
+        if (file==native_files[i])
+            return new Ogre::MemoryDataStream(native_files_data[i],native_files_size[i]);
     }
     return NULL;
 }
 
-/**  
+/**
  * this is useful where, in materials, strings are often quoted to help the parser
  * \param s may be a string is surrounded by quotes: if so eliminate those
  * \returns stripped string
@@ -208,7 +209,7 @@ String stripquotes(String s) {
         return s.substr(1,s.length()-2);
     return s;
 }
-/**  
+/**
  * This fuction finds the name of a file in a directory
  * \param input is the full path of the file
  * \returns everything past the last slash if such a slash exists
@@ -250,7 +251,7 @@ class ReplaceMaterialOptionsAndReturn :public ReplaceMaterialOptions {public:
 
 
 /**
- * This function takes in 
+ * This function takes in
  * \param usernameAndServer the input to serverHit, email address form of foo@bar.com
  * \param name the filename to be uploaded to the server
  * \param hash the hash of the file to be uploaded and set to the third level name
@@ -388,7 +389,7 @@ public:
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material name
      * \param filename is the name of the current script which is not used in this context
      */
-  virtual Ogre::String full_replace_lexeme(const Ogre::String &input, 
+  virtual Ogre::String full_replace_lexeme(const Ogre::String &input,
                                            Ogre::String::size_type where_lexeme_start,
                                            Ogre::String::size_type &return_lexeme_end,
                                            const Ogre::String &filename){
@@ -414,19 +415,19 @@ public:
     /**
      * This function gets a callback from the ReplacingDataStream whenever a resource file name is encountered
      * it uses this callback to build up knowledge about dependencies this file requires
-     * \param retval allows text to be inserter at the location replace_reference to be discovered 
+     * \param retval allows text to be inserter at the location replace_reference to be discovered
      * \param input is passed from ReplacingDataStream as the entire data
      * \param pwhere is the location where the texture was discovered and may be shifted to where the next input should be read if something is returned in retval
      * \param second_input is passed from ReplacingDataStream as where the current resource file name was discovered
      * \param filename is the name of the current script file which is not used in this context
      */
-  virtual void replace_reference(Ogre::String&retval, 
+  virtual void replace_reference(Ogre::String&retval,
                                  const Ogre::String&input,
                                  Ogre::String::size_type&pwhere,
                                  Ogre::String::const_iterator second_input,
                                  const Ogre::String&filename) {
       Ogre::String::size_type lexeme_start=second_input-input.begin(),return_lexeme_end;
-      
+
       find_lexeme(input,lexeme_start,return_lexeme_end);
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
@@ -436,28 +437,28 @@ public:
     /**
      * This function gets a callback from the ReplacingDataStream whenever a texture file name is encountered
      * it uses this callback to build up knowledge about dependencies this file requires
-     * \param retval allows text to be inserter at the location replace_reference to be discovered 
+     * \param retval allows text to be inserter at the location replace_reference to be discovered
      * \param input is passed from ReplacingDataStream as the entire data
      * \param pwhere is the location where the texture was discovered and may be shifted to where the next input should be read if something is returned in retval
      * \param second_input is passed from ReplacingDataStream as where the current texture file name was discovered
      * \param filename is the name of the current script file which is not used in this context
      */
   virtual void replace_texture_reference(Ogre::String&retval,
-                                         const Ogre::String&input, 
+                                         const Ogre::String&input,
                                          Ogre::String::size_type&pwhere,
                                          Ogre::String::const_iterator second_input,
                                          bool texture_instead_of_source,
                                          const Ogre::String&filename) {
       Ogre::String::size_type lexeme_start=second_input-input.begin(),return_lexeme_end;
-      
+
       find_lexeme(input,lexeme_start,return_lexeme_end);
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
           depends_on.push_back("../textures/"+dep);
       }
 
-  }  
-  
+  }
+
     /**
      * This function gets a callback from the ReplacingDataStream whenever a material name PROVIDED is directly encountered
      * it uses this callback to build up knowledge about the dependencies in a current resource script
@@ -466,14 +467,14 @@ public:
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material name
      * \param filename is the name of the current script file which is not used in this context
      */
-  virtual Ogre::String replace_lexeme(const Ogre::String &input, 
+  virtual Ogre::String replace_lexeme(const Ogre::String &input,
                                       Ogre::String::size_type where_lexeme_start,
                                       Ogre::String::size_type &return_lexeme_end,
                                       const Ogre::String &filename){
     find_lexeme(input,where_lexeme_start,return_lexeme_end);
     if (where_lexeme_start<return_lexeme_end) {
       Ogre::String depended=input.substr(where_lexeme_start,return_lexeme_end-where_lexeme_start);
-      provides.push_back(depended);    
+      provides.push_back(depended);
       return depended;
     }else {
       return Ogre::String();
@@ -502,7 +503,7 @@ String eliminateFilename(String filename, String provided) {
     return provided;
 }
 /**
- * This class replaces the script names, texture names and material names within a material script 
+ * This class replaces the script names, texture names and material names within a material script
  * Script names need to be fixed up with first or third level names
  * Material names need to be qualified with fixed up script names
  * Texture names need to be fixed up with first or third level names
@@ -536,7 +537,7 @@ public:
      * \param filename is the name of the current script filename which is used to mangle names
      */
 
-  virtual Ogre::String replace_lexeme(const Ogre::String &input, 
+  virtual Ogre::String replace_lexeme(const Ogre::String &input,
                                       Ogre::String::size_type where_lexeme_start,
                                       Ogre::String::size_type &return_lexeme_end,
                                       const Ogre::String &filename){
@@ -561,13 +562,13 @@ public:
      * \param filename is the name of the current script filename which is used to replace referenced names
      * \param texture_reference indicates if this is a texture file being replaced
      */
-    void replace_texture_or_other_reference(Ogre::String&retval, 
+    void replace_texture_or_other_reference(Ogre::String&retval,
                                             const Ogre::String&input,
                                             Ogre::String::size_type&pwhere,
                                             Ogre::String::const_iterator second_input,
                                           const Ogre::String&filename, bool texture_reference) {
       Ogre::String::size_type lexeme_start=second_input-input.begin(),return_lexeme_end;
-      
+
       find_lexeme(input,lexeme_start,return_lexeme_end);
       if (lexeme_start<return_lexeme_end) {
           Ogre::String dep=input.substr(lexeme_start,return_lexeme_end-lexeme_start);
@@ -581,7 +582,7 @@ public:
       }
 
   }
-    
+
     /**
      * This function gets a callback from the ReplacingDataStream whenever a script file name is encountered
      * it uses this callback to replace the script with that scripts's appropriate first or third level name
@@ -591,7 +592,7 @@ public:
      * \param second_input is passed from ReplacingDataStream as where the current material file name was discovered
      * \param filename is the name of the current material which is not used in this context
      */
-  virtual void replace_reference(Ogre::String&retval, 
+  virtual void replace_reference(Ogre::String&retval,
                                  const Ogre::String&input,
                                  Ogre::String::size_type&pwhere,
                                  Ogre::String::const_iterator second_input,
@@ -608,24 +609,24 @@ public:
      * \param filename is the name of the current material which is not used in this context
      */
   virtual void replace_texture_reference(Ogre::String&retval,
-                                         const Ogre::String&input, 
+                                         const Ogre::String&input,
                                          Ogre::String::size_type&pwhere,
                                          Ogre::String::const_iterator second_input,
                                          bool texture_instead_of_source,
                                          const Ogre::String&filename) {
       replace_texture_or_other_reference(retval,input,pwhere,second_input,filename,true);
-  }  
+  }
     /**
      * This function gets a callback from the ReplacingDataStream whenever a material name DEPENDED ON is encountered
      * it uses this callback to replace that material name with a fully qualified material name of the form "<scriptname>:materialname"
-     * An example input may be    
+     * An example input may be
      * \param input is passed from ReplacingDataStream as the entire data
      * \param where_lexeme_start is passed from ReplacingDataStream as where the current material name was discovered
      * \param return_lexeme_end is returned from this function after find_lexeme is run to tear out the material name
      * \param filename is the name of the current material which is not used in this context
      * \returns the new name of the material For example if the input was Foo which lives in file meru://foo@bar/baz then the output would be "meru://foo@bar/baz:Foo"
      */
-  virtual Ogre::String full_replace_lexeme(const Ogre::String &input, 
+  virtual Ogre::String full_replace_lexeme(const Ogre::String &input,
                                            Ogre::String::size_type where_lexeme_start,
                                            Ogre::String::size_type &return_lexeme_end,
                                            const Ogre::String &filename){
@@ -646,7 +647,7 @@ public:
         }else {
               /*
           depends_on.push_back(depended);
-          
+
           DependencyPair * other_dep=getFileData(depended,*username);
           if (other_dep == NULL) {
           }
@@ -655,7 +656,7 @@ public:
           overarching_dependencies->insert(
           return '\"'+getFileURI(depended,*username)+':'+depended+'\"';
 
-               */  
+               */
            return eliminateFilename(filename,depended);
         }
       }else {
@@ -737,7 +738,7 @@ void processFileDependency(ResourceFileUploadData *file,FileMap &filemap, const 
  * \param dst is the name that src name should be replaced with if it is found in the file
  * \param filemap the map of other files that are available to be processed to their hash or high level names. This may modify that map
  * \param materialmap the set of other ogre materials (not scripts, materials within those scripts paired with those respective materials disk filename and third level names
- * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing 
+ * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing
  * \param firstLevelTextures is a list of textures that must be first level due to their not being tileable (as set by the RecordingDependencyDataStream)
  * \param my_dependencies is the list of dependencies that this current file depends on...this is one of the return values of this function
  * \param username is the list of options that are passed in by the caller of this entire library
@@ -760,7 +761,7 @@ bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String 
         /*if (src.find("OffsetMapping.cg")!=std::string::npos) {
           printf ("Found %s\n",src.c_str());
           }*/
-        
+
         if (false) {
             printf("error: self referencial file %s\n",src.diskpath().c_str());
             break;
@@ -776,7 +777,7 @@ bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String 
                     Ogre::String summary =data.length()>200?data.substr(0,200):data;
                     String path = src.diskpath();
                     printf ("ERROR: File %s processed out of order with file beginning with %s\n",path.c_str(),summary.c_str());
-                    
+
                 }
             }
             if (allow_binary&&data.length()>where+strippedsrc.length()&&(data[where+strippedsrc.length()]=='\0'||data[where+strippedsrc.length()]=='\n')) {
@@ -792,7 +793,7 @@ bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String 
                 if (oldlen<data.size()*2&&dst.length()<(((size_t)1)<<31)&&strippedsrc.length()<(((size_t)1)<<31)) {
                     oldlen+=(unsigned int)dst.length();
                     oldlen-=(unsigned int)strippedsrc.length();
-                    
+
                     data[where-4]=oldlen%256;
                     oldlen/=256;
                     data[where-3]=oldlen%256;
@@ -800,7 +801,7 @@ bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String 
                     data[where-2]=oldlen%256;
                     oldlen/=256;
                     data[where-1]=oldlen%256;
-                    data=data.substr(0,where)+dst+data.substr(where+strippedsrc.length());        
+                    data=data.substr(0,where)+dst+data.substr(where+strippedsrc.length());
                     where+=dst.length();
                     retval=true;
                 }else {
@@ -921,7 +922,7 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
           }
       }
   }
-  ReplaceMaterialOptionsAndReturn opts(options);  
+  ReplaceMaterialOptionsAndReturn opts(options);
   opts.disallowedThirdLevelFiles.insert("meru:///UeberShader.hlsl");//this file should be updated manually by devs, not by artists
 
 /////////////// Not sure what this code does at all
@@ -1034,15 +1035,15 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
                 }
             }
             ResourceFileUploadData *mydeps = getFileData(depsecond, opts);
-            
+
             Ogre::DataStreamPtr rds (new DependencyReplacingDataStream (input,depsecond.diskpath(),&opts.mMaterialMap,&opts.mFileMap,mydeps,opts));
             DenseDataPtr data (new DenseData(rds->getAsString()));
-            
+
             //printf ("Processing %s\n",dep->second.c_str());
             //fflush(stdout);
             //replaceAll(data,opts.mFileMap,MaterialMap(),*mydeps,opts, false);
             Fingerprint fileHash=Fingerprint::computeDigest(data->data(), data->length());
-            
+
             mydeps->mHash = fileHash;
             mydeps->mData = data;
         }
@@ -1115,7 +1116,7 @@ EventResponse UploadFinished(UploadStatus *stat, const ResourceFileUpload &curre
     return EventResponse::del();
 }
 
-void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm, 
+void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm,
                                       const std::vector<ResourceFileUpload> &origFilesToUpload,
                                       const ::Sirikata::Transfer::URIContext &hashContext,
                                       const std::tr1::function<void(ResourceStatusMap const &)> &callback) {

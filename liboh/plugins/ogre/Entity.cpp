@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  Entity.hpp
+ *  Entity.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -165,7 +165,7 @@ void Entity::setParent(const ProxyObjectPtr &parent, Time ti, const Location &ab
 {
     Entity *parentEntity = mScene->getEntity(parent);
     if (!parentEntity) {
-        SILOG(ogre,fatal,"No Entity has been created for proxy " << parent->getObjectReference() << 
+        SILOG(ogre,fatal,"No Entity has been created for proxy " << parent->getObjectReference() <<
               " which is to become parent of "<<getProxy().getObjectReference());
         return;
     }

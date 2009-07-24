@@ -1,5 +1,5 @@
 /*  Sirikata Utilities -- Message Packet Header Parser
- *  RoutableMessageBody.hpp
+ *  RoutableMessageHeader.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -139,7 +139,7 @@ public:
                     mHasSourceObject=true;
                     mSourceObject=ObjectReference(parseUUID(curInput,size));
                     continue;
-                  case Sirikata::Protocol::MessageHeader::destination_object_field_tag:                  
+                  case Sirikata::Protocol::MessageHeader::destination_object_field_tag:
                     mHasDestinationObject=true;
                     mDestinationObject=ObjectReference(parseUUID(curInput,size));
                     continue;
@@ -211,14 +211,14 @@ private:
             field_tag/=128;
         }
         return retval;
-    }    
+    }
     std::string::iterator copyKey(std::string&s,std::string::iterator output, unsigned int protoNum, unsigned int size, unsigned int message_type=2) const{
         if (size>=2) {
             --size;
             *output=translateKey(protoNum%16,message_type);
             if (protoNum/16) {
                 *output=(unsigned char)(128+(unsigned char)*output);
-                ++output;    
+                ++output;
                 *output=(protoNum/16)%128;
                 if (protoNum/16/128) {
                     *output=(unsigned char)(128+(unsigned char)*output);
@@ -229,7 +229,7 @@ private:
                         ++output;
                         *output=(protoNum/16/128/128)%128;
                         if (protoNum/16/128/128/128) {
-                            *output=(unsigned char)(128+(unsigned char)*output);                            
+                            *output=(unsigned char)(128+(unsigned char)*output);
                             ++output;
                             *output=(protoNum/16/128/128/128)%128;
                         }

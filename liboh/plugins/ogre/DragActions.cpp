@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Ogre Graphics Plugin
- *  OgreSystemMouseHandler.cpp
+ *  DragActions.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -187,7 +187,7 @@ public:
             return;
         }
         Task::AbsTime now = Task::AbsTime::now();
-    
+
         /// dbm new way: ignore camera, just move along global axes
         Vector3d toMove(0,0,0);
         double sensitivity = 20.0;
@@ -275,7 +275,7 @@ public:
             avgPos += loc.getPosition();
         }
         avgPos /= mSelectedObjects.size();
-    
+
         int ctlX, ctlZ;
         if ((cameraAxis.x > 0 && cameraAxis.z > 0)
                 || (cameraAxis.x <= 0 && cameraAxis.z <= 0) ) {

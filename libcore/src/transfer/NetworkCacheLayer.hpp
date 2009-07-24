@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Transfer management system
- *  NetworkTransfer.hpp
+ *  NetworkCacheLayer.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.

@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proximity Connection Class
- *  ProximityConnectionFactory.hpp
+/*  Sirikata Proximity Library
+ *  ProximitySystemFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -31,7 +31,7 @@
  */
 namespace Sirikata { namespace Proximity {
 
-class SIRIKATA_PROXIMITY_EXPORT ProximitySystemFactory 
+class SIRIKATA_PROXIMITY_EXPORT ProximitySystemFactory
     : public AutoSingleton<ProximitySystemFactory>,
       public Factory3<ProximitySystem*,Network::IOService*,const String &,const ProximitySystem::Callback&>
 {public:

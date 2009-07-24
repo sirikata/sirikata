@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Ogre Graphics Plugin
- *  OgreGraphics.hpp
+ *  OgreSystem.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -261,7 +261,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     if (renderTargetName.empty()) {
         mPrimaryCamera = entity;
         std::vector<String> cubeMapNames;
-        
+
         std::vector<Vector3f> cubeMapOffsets;
         std::vector<float> cubeMapNearPlanes;
         cubeMapNames.push_back("ExteriorCubeMap");
@@ -271,7 +271,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
         cubeMapOffsets.push_back(Vector3f(0,0,0));
         cubeMapNearPlanes.push_back(0.1);
         mExternalCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets, cubeMapNearPlanes);
-        
+
     }
     return retval;
 }
@@ -654,7 +654,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
 			WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 128, 256, OverlayPosition());
 			view->setProxyObject(webviewpxy);
         }
-        
+
     }
 
 }
@@ -712,7 +712,7 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
 
 /*
 ,
-    const std::map<String,int>& user_interface_choices, 
+    const std::map<String,int>& user_interface_choices,
     const std::set<String>& usernames_to_logout
 */
 {
@@ -747,7 +747,7 @@ struct UploadRequest {
     OgreSystem *parent;
     Transfer::TransferManager *mTransferManager;
     void perform() {
-        std::vector<Meru::ResourceFileUpload> allDeps = 
+        std::vector<Meru::ResourceFileUpload> allDeps =
             Meru::ProcessOgreMeshMaterialDependencies(filenames, opts);
         Meru::UploadFilesAndConfirmReplacement(mTransferManager,
                                            allDeps,
@@ -867,7 +867,7 @@ void OgreSystem::postFrame(Time current, Duration frameTime) {
     if (mInternalCubeMap) {
         mInternalCubeMap->frameEnded(evt);
     }
-    
+
 }
 
 }

@@ -1,5 +1,5 @@
 /*  Sirikata Message Plugin Interface
- *  MessagePlugin.hpp
+ *  MessageService.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -50,7 +50,7 @@ public:
      */
     virtual void processMessage(const RoutableMessageHeader&,
                                 MemoryReference message_body)=0;
-    
+
 };
 
 }

@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  MeshObject.cpp
+ *  MeshEntity.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.

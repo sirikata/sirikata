@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Ogre Graphics Plugin
- *  InputEvents.hpp
+ *  InputEvents.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

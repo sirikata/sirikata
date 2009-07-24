@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Ogre Graphics Plugin
- *  OgreGraphics.hpp
+ *  OgreSystem.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -178,7 +178,7 @@ public:
                      int which=0) const;
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
-    virtual bool tick();    
+    virtual bool tick();
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

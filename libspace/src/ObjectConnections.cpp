@@ -1,5 +1,5 @@
 /*  Sirikata libspace -- Object Connection Services
- *  ObjectConnections.hpp
+ *  ObjectConnections.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -330,7 +330,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
                                         }
                                     }
                                     where->second.mTotalMessageSize=0;//reset bytes used
-                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and 
+                                    mActiveStreams[newRef.getAsUUID()].push_back(stream);//setup mStream and
                                 }while (where!=start);
                                 mTemporaryStreams.erase(start);
                                 while ((where=mTemporaryStreams.find(uuid))!=mTemporaryStreams.end()) {

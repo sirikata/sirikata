@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  FileProtocolHandler.hpp
+ *  FileProtocolHandler.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -180,7 +180,7 @@ protected:
 	std::string mPath;
 	DownloadHandler::Callback mCallback;
 public:
-	ExistsTask(const std::string &path, const DownloadHandler::Callback &cb) 
+	ExistsTask(const std::string &path, const DownloadHandler::Callback &cb)
 		: mPath(path), mCallback(cb) {
 	}
 
@@ -218,7 +218,7 @@ protected:
 	int mFd;
 	cache_usize_type mDiskSize;
 public:
-	ReadTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb) 
+	ReadTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb)
 		: mPath(path), mRange(bytes), mCallback(cb), mFd(-1), mDiskSize(0) {
 	}
 
@@ -279,7 +279,7 @@ static const int READ_SIZE = 4096;
 
 class StreamTask : public ReadTask {
 public:
-	StreamTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb) 
+	StreamTask(const std::string &path, const Range &bytes, const DownloadHandler::Callback &cb)
 		: ReadTask(path, bytes, cb) {
 	}
 	virtual void readLoop(float size) {
@@ -330,7 +330,7 @@ public:
 			std::string temporaryPath,
 			SparseData data,
 			const UploadHandler::Callback &cb,
-			bool appendMode = false) 
+			bool appendMode = false)
 		: mPath(path), mTemporaryPath(temporaryPath), mCallback(cb), mFd(-1), mData(data), mAppendMode(appendMode) {
 	}
 	void operator() () {

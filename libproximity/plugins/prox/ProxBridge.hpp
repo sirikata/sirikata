@@ -43,7 +43,7 @@ class ProxBridge : public ProximitySystem {
     OptionSet*mOptions;
     ///The IO service that will handle received messages as well as tick() operations
     Network::IOService*mIO;
-    ///The Stream used to listen for incoming messages. 
+    ///The Stream used to listen for incoming messages.
     Network::StreamListener*mListener;
     //The query handler for proximity: This class will not finish its destructor until all references to mListener are gone.
     std::tr1::shared_ptr<Prox::QueryHandler> mQueryHandler;

@@ -1,5 +1,5 @@
 /*  Sirikata -- Persistence Services
- *  MinitransactionHandlerTest.cpp
+ *  MinitransactionHandlerTest.hpp
  *
  *  Copyright (c) 2008, Stanford University
  *  All rights reserved.

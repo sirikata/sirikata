@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Bullet Graphics Plugin
- *  BulletGraphics.hpp
+ *  BulletSystem.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn & Daniel Braxton Miller
  *  All rights reserved.

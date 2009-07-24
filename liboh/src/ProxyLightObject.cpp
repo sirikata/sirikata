@@ -1,5 +1,5 @@
-/*  Sirikata Utilities -- Sirikata Listener Pattern
- *  ProxyLightObject.hpp
+/*  Sirikata Object Host
+ *  ProxyLightObject.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

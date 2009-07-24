@@ -1,5 +1,5 @@
-/*  Sirikata Persistence Services -- Read/Write storage factory
- *  ReadWriteHandlerFactory.hpp
+/*  Sirikata Persistence Services -- Minitransaction storage factory
+ *  MinitransactionHandlerFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,6 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #ifndef _SIRIKATA_MINITRANSCATIONHANDLERFACTORY_HPP_
 #define _SIRIKATA_MINITRANSACTIONHANDLERFACTORY_HPP_
 

@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host Graphics Interface
- *  GraphicsObject.cpp
+ *  GraphicsObject.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -119,7 +119,7 @@ public:
     String getBoneName(unsigned int which)const;
     ///get worldspace transform of the given bone
     Transform getBoneTransform(unsigned int which)const;
-    
+
     virtual bool attachObject(GraphicsObject*object,
                               const Transform&localPosition);
     virtual bool attachObjectToBone(GraphicsObject*object,

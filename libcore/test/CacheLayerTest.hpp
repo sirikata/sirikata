@@ -1,5 +1,5 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  TransferTest.hpp
+ *  CacheLayerTest.hpp
  *
  *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.

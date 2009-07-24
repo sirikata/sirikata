@@ -1,5 +1,5 @@
 /*  Sirikata Subscription and Broadcasting System -- Subscription Services
- *  Server.hpp
+ *  SubscriptionClient.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -59,7 +59,7 @@ class SubscriptionClient {
             }
         };
     };
-    Network::IOService*mService;    
+    Network::IOService*mService;
     class UniqueLock;
     UniqueLock*mMapLock;
     typedef std::unordered_map<Address,std::weak_ptr<Network::Stream> > TopLevelStreamMap;
@@ -67,7 +67,7 @@ class SubscriptionClient {
 
     void upgradeFromIOThread(const std::weak_ptr<State>&source,
                              const std::weak_ptr<State>&dest);
-    
+
     void addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&, bool sendIntroMessage);
     void removeSubscriberFromIOThreadHint(const Address mAddress;
                                           const UUID &mUUID);
@@ -96,7 +96,7 @@ protected:
         Duration mPeriod;
         std::tr1::shared_ptr<Network::Stream> mStream;
         std::vector<std::tr1::weak_ptr<IndividualSubscription> > mSubscribers;
-        State(const Duration &period, 
+        State(const Duration &period,
               const Network::Address&address,
               const UUID&uuid);
         void setStream(const std::shared_ptr<State>thus, const std::tr1::shared_ptr<Network::Stream>topLevelStream, const String&serialized_introduction=String());
@@ -107,7 +107,7 @@ protected:
                                        const String&reason);
     };
 
-public:    
+public:
     SubscriptionClient(Network::IOService*mService);
     ~SubscriptionClient();
     class IndividualSubscription:public {
@@ -117,20 +117,20 @@ public:
         std::tr1::function<void()> mDisconFunction;
     public:
         std::tr1::shared_ptr<State> mSubscriptionState;
-        
+
         Duration mPeriod;
         void call(const Network::Chunk&chunk)const{
             mFunction(chunk);
         }
     };
-    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address, 
-                                     const Protocol::Subscribe&subscription,                    
+    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address,
+                                     const Protocol::Subscribe&subscription,
                                      const std::tr1::function<void(const Network::Chunk&)>&bytesReceived,
                                      const std::tr1::function<void()>&disconnectionFunction,
                                                            const String&serializedSubscription=String(),
                                                            const std::tr1::shared_ptr<IndividualSubscription>&=std::tr1::shared_ptr<IndividualSubscription>());
-    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address, 
-                                                           const String&subscription, 
+    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address,
+                                                           const String&subscription,
                                                            const std::tr1::function<void(const Network::Chunk&)>&,
                                                            const std::tr1::function<void()>&disconnectionFunction);
 };

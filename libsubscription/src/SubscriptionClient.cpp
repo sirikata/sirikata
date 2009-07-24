@@ -1,3 +1,35 @@
+/*  Sirikata Subscription Library
+ *  SubscriptionClient.cpp
+ *
+ *  Copyright (c) 2009, Daniel Reiter Horn
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH package.
+ */
+
 #include "subscription/Platform.hpp"
 #include "subscription/SubscriptionClient.hpp"
 #include <boost/thread.hpp>
@@ -31,7 +63,7 @@ void SubscriptionClient::upgrade(const std::tr1::weak_ptr<State>&source,
                                              std::tr1::bind(&SubscriptionClient::upgradeFromIOThread,
                                                             this,
                                                             source,
-                                                            dest));    
+                                                            dest));
 }
 
 
@@ -41,7 +73,7 @@ void SubscriptionClient::removeSubscriberHint(const Network::Address&address,
                                              std::tr1::bind(&SubscriptionClient::removeSubscriberFromIOThread,
                                                             this,
                                                             address,
-                                                            uuid));    
+                                                            uuid));
 }
 void SubscriptionClinet::addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
     std::tr1::shared_ptr<IndividualSubscription>i=individual.lock();
@@ -52,7 +84,7 @@ void SubscriptionClinet::addSubscriberFromIOThread(const std::tr1::weak_ptr<Indi
 }
 void SubscriptionClinet::removeSubscriberFromIOThread(const Network::Address&address,
                                                       const UUID&uuid){
-    boost::lock_guard<boost::mutex>lok(*mMapLock);   
+    boost::lock_guard<boost::mutex>lok(*mMapLock);
     BroadcasterMap::iterator where=mBroadcasters.find(AddressUUID(address,uuid));
     if (where!=mBroadcasters.end()) {
         std::tr1::shared_ptr<State> thus=where->second.lock();
@@ -65,23 +97,23 @@ void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscr
     IOServiceFactory::dispatchServiceMessage(mService,
                                              std::tr1::bind(&SubscriptionClient::addSubscriberFromIOThread,
                                                             this,
-                                                            individual));    
+                                                            individual));
 }
 SubscriptionClient::SubscriptionClient(Network::IOService*service):mService(service){
     mMapLock = new UniqueLock;
 }
 
-SubscriptionClient::State::State(const Duration &period, 
+SubscriptionClient::State::State(const Duration &period,
                                  const Network::Address&address,
                                  const UUID&uuid):mAddress(address),mUUID(uuid),mPeriod(period){
-    
+
 }
 void SubscriptionClient::State::setStream(const std::shared_ptr<State> weak_thus,
                       const std::tr1::shared_ptr<Network::Stream>topLevelStream,
                       const String& serializedStream){
     //set the toplevel stream
     thus.mTopLevelStream=topLevelStream;
-    
+
     std::tr1::weak_ptr weak_thus(thus);
     //clone the toplevel stream and bind weak_ptr functions from the state to callback
     thus->mStream=topLevelStream.clone(std::tr1::bind(&State::connectionCallback,
@@ -181,7 +213,7 @@ void SubscriptionClient::State::bytesReceived(const std::weak_ptr<State>&weak_th
 }
 
 void SubscriptionClient::State::connectionCallback(const std::weak_ptr<State>&weak_thus,
-                               const Network::Stream::ConnectionStatus status, 
+                               const Network::Stream::ConnectionStatus status,
                                const String&reason) {
     if (status!=Network::Stream::Connected) {
         std::shared_ptr<State> thus=weak_thus.lock();
@@ -203,10 +235,10 @@ void SubscriptionClient::State::connectionCallback(const std::weak_ptr<State>&we
 }
 
 
-std::tr1::shared_ptr<IndividualSubscription> 
-   SubscriptionClient::subscribe(const Network::Address& address, 
-                                 const UUID & uuid, 
-                                 const Protocol::Subscribe&subscription,                    
+std::tr1::shared_ptr<IndividualSubscription>
+   SubscriptionClient::subscribe(const Network::Address& address,
+                                 const UUID & uuid,
+                                 const Protocol::Subscribe&subscription,
                                  const std::tr1::function<void(const Network::Chunk&)>&cb,
                                  const std::tr1::function<void()>&disconCb,
                                  const String&serializedSubscription=String(),
@@ -223,7 +255,7 @@ std::tr1::shared_ptr<IndividualSubscription>
             new IndividualSubscription(subscription.update_period(),cb,disconCb));
         newSubscription=newerSubscription;
     }
-    {//lock guard   
+    {//lock guard
         std::tr1::shared_ptr<IndividualSubscription> retval;
         boost::lock_guard<boost::mutex>lok(mMapLock);
         AddressUUID key(address,uuid);
@@ -253,7 +285,7 @@ std::tr1::shared_ptr<IndividualSubscription>
 
                 state->setStream(state,topLevelStreamPtr,serializedStream.length()?serializedStream:localSerializedStream);//set state to use a given toplevel stream and serialize
                                                                                                                            //out a broadcast join request
-                
+
                 //put new broadcast into the broadcasts lists
                 mBroadcasts.insert(BroadcastMap::value_type(key,state));
                 newSubscription->mSubscriptionState=state;
@@ -265,7 +297,7 @@ std::tr1::shared_ptr<IndividualSubscription>
         }
         if (!retval) {//make a new connection
             std::shared_ptr<Network::Stream> topLevelStream (new TCPStream(mIOService));
-            
+
             topLevelStream->connect(address,
                                     &Stream::ignoreSubstreamCallback,
                                     &Stream::ignoreConnectionStatus,
@@ -287,9 +319,9 @@ std::tr1::shared_ptr<IndividualSubscription>
     return retval;
 }
 std::tr1::shared_ptr<IndividualSubscription>
-    SubscriptionClient::subscribe(const Network::Address& address, 
-                                  const UUID & uuid, 
-                                  const String&subscription, 
+    SubscriptionClient::subscribe(const Network::Address& address,
+                                  const UUID & uuid,
+                                  const String&subscription,
                                   const std::tr1::function<void(const Network::Chunk&)>&cb,
                                   const std::tr1::function<void()>&disconCb){
     Protocol::Subscribe s;

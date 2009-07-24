@@ -1,5 +1,5 @@
 /*  Sirikata Transfer -- Content Distribution Network
- *  HTTPDownloadHandler.hpp
+ *  FileProtocolHandler.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -109,7 +109,7 @@ class SIRIKATA_EXPORT FileNameHandler :
 
 	struct NameLookupProgress : public ProtocolData<NameLookupHandler> {
 		DownloadHandler::TransferDataPtr mProgress;
-		NameLookupProgress(NameLookupHandlerPtr parent) 
+		NameLookupProgress(NameLookupHandlerPtr parent)
 			:ProtocolData<NameLookupHandler>(parent) {
 		}
 		virtual ~NameLookupProgress() {}
@@ -119,7 +119,7 @@ class SIRIKATA_EXPORT FileNameHandler :
 	};
 	struct NameUploadProgress : public ProtocolData<NameUploadHandler> {
 		UploadHandler::TransferDataPtr mProgress;
-		NameUploadProgress(NameUploadHandlerPtr parent) 
+		NameUploadProgress(NameUploadHandlerPtr parent)
 			:ProtocolData<NameUploadHandler>(parent) {
 		}
 		virtual ~NameUploadProgress() {}

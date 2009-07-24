@@ -1,5 +1,5 @@
-/*  Sirikata libspace -- Registration Services
- *  Registration.hpp
+/*  Sirikata libspace
+ *  Router.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.

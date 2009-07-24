@@ -1,5 +1,5 @@
 /*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  GraphicsFactory.hpp
+ *  SimulationFactory.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_GRAPHICS_FACTORY_
-#define _SIRIKATA_GRAPHICS_FACTORY_
+#ifndef _SIRIKATA_SIMULATION_FACTORY_
+#define _SIRIKATA_SIMULATION_FACTORY_
 #include <oh/Platform.hpp>
 #include <util/ListenerProvider.hpp>
 #include "TimeSteppedSimulation.hpp"
@@ -48,7 +48,7 @@ public:
     static SimulationFactory&getSingleton();
     static void destroy();
 };
-    
+
 
 }
 #endif

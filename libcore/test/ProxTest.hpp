@@ -1,5 +1,5 @@
 /*  Sirikata Tests -- Sirikata Test Suite
- *  SstTest.hpp
+ *  ProxTest.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -61,7 +61,7 @@ class ProxTest : public CxxTest::TestSuite         , MessageService
     void pcThread() {
         mReadyToConnect=true;
         Network::IOServiceFactory::runService(mIO);
-        
+
     }
     Proximity::ProximitySystem* mRemoteProxSystem;
     Proximity::ProximitySystem* mLocalProxSystem;
@@ -83,11 +83,11 @@ public:
         }
         Sirikata::PluginManager plugins;
         plugins.load(DynamicLibrary::filename("prox");
-    
+
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}
         Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
-        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,1); 
+        mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,1);
         mLocalProxSystem->forwardMessagesTo(this);
         mThread=new boost::thread(std::tr1::bind(&ProxTest::pcThread,this));
 
@@ -98,7 +98,7 @@ public:
     static void destroySuite(ProxTest*prox) {
         delete prox;
     }
-    
+
     ~ProxTest() {
         IOServiceFactory::stopService(mIO);
         IOServiceFactory::stopService(mProxIO);
@@ -182,13 +182,13 @@ public:
         return false;
     }
     void processMessage(const ObjectReference*reference, MemoryReference message){
-        
+
         RoutableMessageHeader rmh;
         MemoryReference body=rmh.ParseFromArray(message.data(),message.size());
         if (reference)
             rmh.set_destination_object(*reference);
         this->processMessage(rmh,body);
-                
+
     }
     void processMessage(const RoutableMessageHeader&opaqueMessage, MemoryReference body){
         Protocol::MessageBody mesg;
@@ -205,7 +205,7 @@ public:
                 }else {
                     SILOG(sirikata,warning,"Opaque message named: "<<mesg.message_names(i));
                 }
-            }        
+            }
         }
     }
 };

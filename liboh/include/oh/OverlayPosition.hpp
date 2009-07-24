@@ -1,5 +1,5 @@
 /*  Sirikata Object Host -- Overlay Position
- *  LightInfo.hpp
+ *  OverlayPosition.hpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons
  *  All rights reserved.

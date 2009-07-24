@@ -1,5 +1,6 @@
-/*  Meru
- *  OgreMeshMaterialDependencyTool.hpp
+/*  Sirikata Resource Tools
+ *  UploadTool.hpp
+ *  Renamed from Meru's OgreMeshMaterialDependencyTool.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -80,7 +81,7 @@ public:
     Fingerprint mHash;
     DenseDataPtr mData;
     ResourceFileUpload():mHash(Fingerprint::null()) {
-        
+
     }
     static ResourceFileUpload comparator(const URI &id) {
         ResourceFileUpload retval;
@@ -94,8 +95,8 @@ public:
         return mID==i.mID;
     }
 };
- 
-/** 
+
+/**
  * This class allows a client to pass options it wishes a material export to obey
  */
 class ReplaceMaterialOptions {
@@ -137,7 +138,7 @@ typedef  std::map<DiskFile, ResourceFileUploadData*> FileMap;
 
 /**
  * This helper class wraps
- * all the dependencies a file could have in terms of 
+ * all the dependencies a file could have in terms of
  * materials it depends on
  * and resource files that it uses
  */
@@ -183,7 +184,7 @@ Fingerprint processFileDependency(std::map<String,Fingerprint,SpecialStringSort>
  * \param data is the content of the file (the entire file is stored in the data variable
  * \param filemap the map of other files that are available to be processed to their hash or high level names. This may modify that map
  * \param materialmap the set of other ogre materials (not scripts, materials within those scripts paired with those respective materials disk filename and third level names
- * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing 
+ * \param overarching_dependencies a map from file names to those datafiles' dependencies (be they materials/scripts or texture/source files) This may modify that list due to recursive processing
  * \param firstLevelTextures is a list of textures that must be first level due to their not being tileable (as set by the RecordingDependencyDataStream)
  * \param my_dependencies is the list of dependencies that this current file depends on...this is one of the return values of this function
  * \param OptionsAndOutput is the list of options that are passed in by the caller of this entire library. This tool will return all materials to be written in the OptionsAndOutput varialbe
@@ -191,7 +192,7 @@ Fingerprint processFileDependency(std::map<String,Fingerprint,SpecialStringSort>
  */
 void replaceAll(DenseDataPtr &data, FileMap &filemap, const MaterialMap&materialmap, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary);
 /**
- * This function takes in 
+ * This function takes in
  * \param filenames the list of file names on the hard disk to be uploaded
  * \param opts a set of options (what the username is, etc)
  * \returns a list of files to be uploaded, including their hashes and filenames and data contents These files will have been properly modified to include direct references to
@@ -205,7 +206,7 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
  * \param rm , the resource manager
  * \param filesToUpload is vector of filesToUpload --all of these files should be uploaded
  * \param username_to_resource_upload_choices is a map of previously chosen responses to uploads from usernames
- * \callback is the function to call when its over...it takes a map mapping resource uploads to whether they succeeded so that a second try can be establised, the result of new resource_upload_choices and a set of usernames to logout when this is all over 
+ * \callback is the function to call when its over...it takes a map mapping resource uploads to whether they succeeded so that a second try can be establised, the result of new resource_upload_choices and a set of usernames to logout when this is all over
  * \param actuallyUpload dictates if the file should actually be uploaded
 
    FIXME, Reimplement using Sirikata::Transfer::TransferManager::upload().
@@ -213,8 +214,8 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
  */
 class ResourceManager;
 typedef std::map<ResourceFileUpload,ResourceUploadStatus> ResourceStatusMap;
-void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm, 
-                                      const std::vector<ResourceFileUpload> &filesToUpload, 
+void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm,
+                                      const std::vector<ResourceFileUpload> &filesToUpload,
                                       const URIContext &hashContext,
                                       const std::tr1::function<void(ResourceStatusMap const &)> &callback);
 

@@ -1,5 +1,5 @@
 /*  Sirikata Subscription and Broadcasting System -- Subscription Services
- *  Server.hpp
+ *  Server.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -42,7 +42,7 @@ using namespace Sirikata::Network;
 namespace Sirikata { namespace Subscription {
 
 class Server::UniqueLock :public boost::mutex{
-    
+
 };
 Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*broadcastListener, const Network::Address&broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress){
     mBroadcastIOService=broadcastIOService;
@@ -51,13 +51,13 @@ Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*bro
     if (!broadcastListener->listen(broadcastAddress,std::tr1::bind(&Server::broadcastStreamCallback,this,_1,_2))) {
         SILOG(subscription,error,"Error listening to broadcast on port "<<broadcastAddress.getHostName()<<':'<<broadcastAddress.getService());
     }
-    
+
     mSubscriberListener=subscriberListener;
     if (!subscriberListener->listen(subscriberAddress,std::tr1::bind(&Server::subscriberStreamCallback,this,_1,_2))) {
         SILOG(subscription,error,"Error listening to broadcast on port "<<broadcastAddress.getHostName()<<':'<<broadcastAddress.getService());
     }
 }
-    
+
 void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream::SetCallbacks&cb){
     std::tr1::shared_ptr<Stream> newStreamPtr(newStream);
     std::tr1::weak_ptr<Stream> weakNewStreamPtr(newStreamPtr);
@@ -169,7 +169,7 @@ void Server::initiatePolling(const UUID&name, const Duration&waitTime) {
                                std::tr1::bind(&poll,
                                               thus,
                                               name));
-                                           
+
 }
 void Server::poll(const std::tr1::weak_ptr<Server> &weak_thus, const UUID&name) {
     std::tr1::shared_ptr<Server>thus=weak_thus.lock();
@@ -185,4 +185,3 @@ void Server::poll(const std::tr1::weak_ptr<Server> &weak_thus, const UUID&name) 
 
 
 } }
-
