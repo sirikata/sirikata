@@ -242,7 +242,7 @@ int main ( int argc,const char**argv ) {
     myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
 
     using namespace Sirikata;
-    
+
     PluginManager plugins;
     plugins.load ( DynamicLibrary::filename("ogregraphics") );
     plugins.load ( DynamicLibrary::filename("bulletphysics") );
@@ -295,7 +295,7 @@ int main ( int argc,const char**argv ) {
         BoundingSphere3f(Vector3f::nil(),0),
         NULL,
         mainSpace);
-        
+
     HostedObjectPtr thirdObject (HostedObject::construct<HostedObject>(oh));
     {
         LightInfo li;
@@ -318,7 +318,7 @@ int main ( int argc,const char**argv ) {
             mainSpace);
     }
     ProxyManager *provider = oh->getProxyManager(mainSpace);
-    
+
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     TransferManager *tm;
@@ -343,37 +343,57 @@ int main ( int argc,const char**argv ) {
     if (!provider) {
         SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
     }
-    String graphicsPluginName ( "ogregraphics" );
-    String physicsPluginName ( "bulletphysics" );
-    SILOG(cppoh,error,"dbm: initializing graphics");
-    TimeSteppedSimulation *graphicsSystem=
-        SimulationFactory::getSingleton()
-        .getConstructor ( graphicsPluginName ) ( provider,graphicsCommandArguments );
-    SILOG(cppoh,error,"dbm: initializing physics");
-    TimeSteppedSimulation *physicsSystem=
-        SimulationFactory::getSingleton()
-        .getConstructor ( physicsPluginName ) ( provider,graphicsCommandArguments );
-    if (!physicsSystem) {
-        SILOG(cppoh,error,"physicsSystem NULL!");
-    }
-    else {
-        SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
-    }
-    if ( graphicsSystem ) {
-        while ( graphicsSystem->tick() ) {
-            physicsSystem->tick();
-            Network::IOServiceFactory::pollService(ioServ);
-        }
-    } else {
-        SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
-        std::cout << "Press enter to continue" << std::endl;
-        std::cerr << "Press enter to continue" << std::endl;
-        fgetc(stdin);
-    }
-    delete physicsSystem;
-    delete graphicsSystem;
 
-    
+    bool continue_simulation = true;
+
+    typedef std::vector<TimeSteppedSimulation*> SimList;
+    SimList sims;
+
+    {
+        String graphicsPluginName ( "ogregraphics" );
+        SILOG(cppoh,error,"dbm: initializing graphics");
+        TimeSteppedSimulation *graphicsSystem=
+            SimulationFactory::getSingleton()
+            .getConstructor ( graphicsPluginName ) ( provider,graphicsCommandArguments );
+        if (!graphicsSystem) {
+            SILOG(cppoh,error,"Fatal Error: Unable to load OGRE Graphics plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!");
+            std::cout << "Press enter to continue" << std::endl;
+            std::cerr << "Press enter to continue" << std::endl;
+            fgetc(stdin);
+            continue_simulation = false;
+        }
+        else {
+            sims.push_back(graphicsSystem);
+        }
+    }
+
+    {
+        String physicsPluginName ( "bulletphysics" );
+        SILOG(cppoh,error,"dbm: initializing physics");
+        TimeSteppedSimulation *physicsSystem=
+            SimulationFactory::getSingleton()
+            .getConstructor ( physicsPluginName ) ( provider,graphicsCommandArguments );
+        if (!physicsSystem) {
+            SILOG(cppoh,error,"physicsSystem NULL!");
+        }
+        else {
+            sims.push_back(physicsSystem);
+            SILOG(cppoh,error,"physicsSystem: " << std::hex << (unsigned long)physicsSystem);
+        }
+    }
+
+    while ( continue_simulation ) {
+        for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
+            continue_simulation = continue_simulation && (*it)->tick();
+        }
+        Network::IOServiceFactory::pollService(ioServ);
+    }
+
+    for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
+        delete *it;
+    }
+    sims.clear();
+
     delete eventManager;
     delete workQueue;
     }
