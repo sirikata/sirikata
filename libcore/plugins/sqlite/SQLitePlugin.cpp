@@ -32,9 +32,10 @@
 
 #include <util/Platform.hpp>
 #include "persistence/ObjectStorage.hpp"
-#include "SQLiteObjectStorage.hpp"
 #include "persistence/MinitransactionHandlerFactory.hpp"
 #include "persistence/ReadWriteHandlerFactory.hpp"
+#include "SQLite_Persistence.pbj.hpp"
+#include "SQLiteObjectStorage.hpp"
 static int core_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {

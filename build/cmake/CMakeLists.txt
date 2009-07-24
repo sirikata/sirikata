@@ -724,7 +724,11 @@ ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDI
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Space" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc)
 
+
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc)
+
+
+ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS Persistence INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "SQLite" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/SQLite_protobuf.cc)
 
 ADD_PROTOCOLBUFFERS_CPP_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Proximity" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Proximity_protobuf.cc)
 
@@ -895,6 +899,7 @@ SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterfa
 
 SET(LIBCORE_PLUGIN_SQLITE_DIR ${LIBCORE_PLUGIN_DIR}/sqlite)
 SET(LIBCORE_PLUGIN_SQLITE_SOURCES
+        ${SirikataProtocolDirectory}/SQLite_protobuf.cc
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLitePlugin.cpp
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLite.cpp
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLiteObjectStorage.cpp)

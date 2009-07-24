@@ -71,10 +71,7 @@ message CompareElement {
     optional bytes data=11;    
     enum COMPARATOR {
       EQUAL=0;
-      GREATER=1;
-      GEQUAL=2;
-      LESS=3;
-      LEQUAL=4;
+      NEQUAL=1;
     }
     optional COMPARATOR comparator=12;
     reserve 1536 to 2560;
@@ -126,7 +123,7 @@ message Minitransaction{
 }
 message Response {
   reserve 1 to 6;//in case we ever need to forward these around a bit
-  repeated StorageValue reads=7;
+  repeated StorageElement reads=7;
   optional int64 id=9;
   enum ReturnStatus {
     SUCCESS = 0;

@@ -169,10 +169,10 @@ void stress_test_minitransaction_handler(SetupMinitransactionHandlerFunction _se
     for(uint32 i = 0; i < num_trans; i++) {
         Minitransaction* trans = fixture.handler->createMinitransaction(num_ops,num_ops,0);
         for(uint32 j = 0; j < num_ops; j++) {
-            copyStorageKey(trans->mutable_reads(i),keyvalues()[j]);
+            copyStorageKey(trans->mutable_reads(j),keyvalues()[j]);
 
-            copyStorageKey(trans->mutable_writes(i),keyvalues()[j]);
-            copyStorageValue(trans->mutable_writes(i),keyvalues()[(counter+=5)%keyvalues().size()]);
+            copyStorageKey(trans->mutable_writes(j),keyvalues()[j]);
+            copyStorageValue(trans->mutable_writes(j),keyvalues()[(counter+=5)%keyvalues().size()]);
         }
         transactions.push_back(trans);
     }
@@ -239,7 +239,7 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
     test_minitransaction(fixture.handler, trans_6, Response::COMPARISON_FAILED, expected_6,6);
 
     // 1 successful compare, 1 read
-    Minitransaction* trans_7 = fixture.handler->createMinitransaction(1,0,0);
+    Minitransaction* trans_7 = fixture.handler->createMinitransaction(1,0,1);
     copyStorageElement(trans_7->mutable_compares(0),keyvalues()[0]);
     copyStorageKey(trans_7->mutable_reads(0),keyvalues()[1]);
     StorageSet expected_7;
@@ -269,11 +269,11 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
 
     // 1 failed compare, 1 read, 1 write (which will not be performed)
     Minitransaction* trans_10 = fixture.handler->createMinitransaction(1,1,1);
-    copyStorageKey(trans_9->mutable_compares(0),keyvalues()[0]);
-    copyStorageValue(trans_9->mutable_compares(0),keyvalues()[1]);
-    copyStorageKey(trans_9->mutable_reads(0),keyvalues()[1]);
-    copyStorageKey(trans_9->mutable_writes(0),keyvalues()[2]);
-    copyStorageValue(trans_9->mutable_writes(0),keyvalues()[3]);
+    copyStorageKey(trans_10->mutable_compares(0),keyvalues()[0]);
+    copyStorageValue(trans_10->mutable_compares(0),keyvalues()[1]);
+    copyStorageKey(trans_10->mutable_reads(0),keyvalues()[1]);
+    copyStorageKey(trans_10->mutable_writes(0),keyvalues()[2]);
+    copyStorageValue(trans_10->mutable_writes(0),keyvalues()[3]);
 
     StorageSet expected_10;
     test_minitransaction(fixture.handler, trans_10, Response::COMPARISON_FAILED, expected_10,10);

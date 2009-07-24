@@ -161,10 +161,10 @@ void stress_test_read_write_handler(SetupReadWriteHandlerFunction _setup, Create
     for(uint32 i = 0; i < num_sets; i++) {
         ReadWriteSet* trans = fixture.handler->createReadWriteSet(num_readswrites,num_readswrites);
         for(uint32 j = 0; j < num_readswrites; j++) {
-            copyStorageKey(trans->mutable_reads(i),keyvalues()[j]);
+            copyStorageKey(trans->mutable_reads(j),keyvalues()[j]);
 
-            copyStorageKey(trans->mutable_writes(i),keyvalues()[j]);
-            copyStorageValue(trans->mutable_writes(i),keyvalues()[(counter+=5)%keyvalues().size()]);
+            copyStorageKey(trans->mutable_writes(j),keyvalues()[j]);
+            copyStorageValue(trans->mutable_writes(j),keyvalues()[(counter+=5)%keyvalues().size()]);
         }
         transactions.push_back(trans);
     }

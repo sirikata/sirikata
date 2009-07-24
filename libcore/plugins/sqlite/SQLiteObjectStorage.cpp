@@ -31,23 +31,43 @@
  */
 
 #include <util/Platform.hpp>
-#include "SQLiteObjectStorage.hpp"
 #include "options/Options.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <boost/program_options.hpp>
 
+#include "SQLite_Persistence.pbj.hpp"
+#include "SQLiteObjectStorage.hpp"
 #define OPTION_DATABASE   "db"
 
 namespace Sirikata { namespace Persistence {
 
+ 
+template <typename StorageSet> void clearValuesFromStorageSet(StorageSet &ss) {
+    int len = ss.reads_size();
+    for (int i=0;i<len;++i) {
+        ss.mutable_reads(i).clear_data();
+    }
+}
+template <typename StorageSet> void clearKeysFromStorageSet(StorageSet &ss) {
+    int len = ss.reads_size();
+    for (int i=0;i<len;++i) {
+        ss.mutable_reads(i).clear_object_uuid();
+        ss.mutable_reads(i).clear_field_id();
+        ss.mutable_reads(i).clear_field_name();
+    }
+}
 
-static void clearValuesFromStorageSet(StorageSet& ss) {
-    for(StorageSet::iterator ss_it = ss.begin(); ss_it != ss.end(); ss_it++) {
-        if (ss_it->second != NULL) {
-            delete ss_it->second;
-            ss_it->second = NULL;
-        }
+template <typename StorageSet,typename ReadSet> void mergeKeysFromStorageSet(StorageSet &ss, const ReadSet&other) {
+    int len = other.reads_size();    
+    int sslen = ss.reads_size();    
+    int i;
+    for (i=0;i<sslen;++i) {
+        ss.add_reads();
+        mergeStorageKey(ss.mutable_reads(i),other.reads(i));
+    }
+    for (;i<len;++i) {
+        mergeStorageKey(ss.mutable_reads(i),other.reads(i));
     }
 }
 
@@ -107,75 +127,98 @@ SQLiteObjectStorage::~SQLiteObjectStorage() {
         _mLocalWorkQueue.destroyWorkerThreads(mWorkQueueThread);
     }
 }
+void SQLiteObjectStorage::apply(const RoutableMessageHeader&rmh,Protocol::Minitransaction*mt){
+    assert(mTransactional == true);
 
-void SQLiteObjectStorage::apply(ReadWriteSet* rws, const ResultCallback& cb) {
+    mDiskWorkQueue->enqueue(new ApplyTransactionMessage(this,mt,rmh));
+}
+
+void SQLiteObjectStorage::apply(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*mt){
+    assert(mTransactional == true);
+
+    mDiskWorkQueue->enqueue(new ApplyReadWriteMessage(this,mt,rmh));
+}
+
+void SQLiteObjectStorage::apply(Protocol::ReadWriteSet* rws, const ResultCallback& cb) {
     assert(mTransactional == false);
 
     mDiskWorkQueue->enqueue(new ApplyReadWriteWorker(this,rws,cb));
 }
 
-void SQLiteObjectStorage::apply(Minitransaction* mt, const ResultCallback& cb) {
+void SQLiteObjectStorage::apply(Protocol::Minitransaction* mt, const ResultCallback& cb) {
     assert(mTransactional == true);
+
     mDiskWorkQueue->enqueue(new ApplyTransactionWorker(this,mt,cb));
 }
-SQLiteObjectStorage::ApplyReadWriteWorker::ApplyReadWriteWorker(SQLiteObjectStorage*parent, ReadWriteSet* rws, const ResultCallback&cb){
+SQLiteObjectStorage::ApplyReadWriteWorker::ApplyReadWriteWorker(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const ResultCallback&cb){
     mParent=parent;
     this->rws=rws;
     this->cb=cb;
+    mResponse=NULL;
 }
 
-void SQLiteObjectStorage::ApplyReadWriteWorker::operator()() {
+Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::processReadWrite() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
-
     sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
 
     Error error = DatabaseLocked;
     int retries =mParent->mRetries;
     for(int tries = 0; tries < retries+1 && error != None; tries++)
-        error = mParent->applyReadSet(db, rws->reads());
+        error = mParent->applyReadSet(db, *rws, *mResponse);
     if (error != None) {
-        cb(convertError(error));
+        mResponse->set_return_status(convertError(error));
+        return mResponse->return_status();
     }else {//FIXME do we want to abort the operation (note it's not a transaction) if we failed to read any items? I think so...
         error = DatabaseLocked;
+        if (rws->has_options()&&(rws->options()&Protocol::ReadWriteSet::RETURN_READ_NAMES)!=0) {
+            // make sure read set is clear before each attempt
+            mergeKeysFromStorageSet( *mResponse, *rws );
+        }
+
         for(int tries = 0; tries < retries+1 && error != None; tries++)
-            error = mParent->applyWriteSet(db, rws->writes(), retries);
-        cb(convertError(error));
+            error = mParent->applyWriteSet(db, *rws, retries);
+        mResponse->set_return_status(convertError(error));
+        if (mResponse->return_status()==Protocol::Response::SUCCESS){
+            mResponse->clear_return_status();
+        }
+        return mResponse->return_status();
     }
-    delete this;
 }
 
-SQLiteObjectStorage::ApplyTransactionWorker::ApplyTransactionWorker(SQLiteObjectStorage*parent, Minitransaction* mt, const ResultCallback&cb){
+SQLiteObjectStorage::ApplyTransactionWorker::ApplyTransactionWorker(SQLiteObjectStorage*parent, Protocol::Minitransaction* mt, const ResultCallback&cb){
     mParent=parent;
     this->mt=mt;
     this->cb=cb;
 }
-void SQLiteObjectStorage::ApplyTransactionWorker::operator()() {
+Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::processTransaction() {
     Error error = None;
     SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
-
     sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
     int retries=mParent->mRetries;
     int tries = retries + 1;
     while( tries > 0 ) {
         mParent->beginTransaction(db);
 
-        error = mParent->checkCompareSet(db, mt->compares());
+        error = mParent->checkCompareSet(db, *mt);
         // Errors during compares won't be resolved by retrying
         if (error != None) {
             mParent->rollbackTransaction(db);
             break;
         }
 
-        // make sure read set is clear before each attempt
-        clearValuesFromStorageSet( mt->reads() );
-        error = mParent->applyReadSet(db, mt->reads());
+        error = mParent->applyReadSet(db, *mt, *mResponse);
+        if (mt->has_options()==false&&(mt->options()&Protocol::Minitransaction::RETURN_READ_NAMES)!=0) {
+            // make sure read set is clear before each attempt
+            mergeKeysFromStorageSet( *mResponse, *mt );
+        }
+
         // Errors during reads won't be resolved by retrying
         if (error != None) {
             mParent->rollbackTransaction(db);
             break;
         }
 
-        error = mParent->applyWriteSet(db, mt->writes(), 0);
+        error = mParent->applyWriteSet(db, *mt, 0);
         if (error != None)
             mParent->rollbackTransaction(db);
         else
@@ -183,8 +226,63 @@ void SQLiteObjectStorage::ApplyTransactionWorker::operator()() {
 
         tries--;
     }
-    cb(convertError(error));
+    mResponse->set_return_status(convertError(error));
+    if (mResponse->return_status()==Protocol::Response::SUCCESS) {
+        mResponse->clear_return_status();
+        return Protocol::Response::SUCCESS;
+    }
+    return mResponse->return_status();
+}
+
+void SQLiteObjectStorage::ApplyTransactionWorker::operator() () {
+    mResponse = new Protocol::Response;
+    processTransaction();
+    mParent->destroyMinitransaction(mt);
+    cb(mResponse);
     delete this;
+}
+
+
+void SQLiteObjectStorage::ApplyReadWriteWorker::operator() () {
+    mResponse = new Protocol::Response;
+    processReadWrite();
+    mParent->destroyReadWriteSet(rws);
+    cb(mResponse);
+    delete this;
+}
+SQLiteObjectStorage::ApplyTransactionMessage::ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* mt,const RoutableMessageHeader&hdr){
+    mParent=parent;
+    this->mt=mt;
+    this->hdr=hdr;
+}
+void SQLiteObjectStorage::ApplyReadWriteMessage::operator() () {
+    Protocol::Response response;
+    mResponse = &response;
+    processReadWrite();
+    assert(mResponse!=NULL);
+    mParent->destroyReadWriteSet(rws);
+    hdr.swap_source_and_destination();
+    mParent->forward(hdr,response);
+    mResponse=NULL;
+    delete this;
+}
+void SQLiteObjectStorage::ApplyTransactionMessage::operator() () {
+    Protocol::Response response;
+    mResponse = &response;
+    processTransaction();
+    assert(mResponse!=NULL);
+    mParent->destroyMinitransaction(mt);
+    hdr.swap_source_and_destination();
+    mParent->forward(hdr,response);
+    mResponse=NULL;
+    delete this;
+}
+
+
+SQLiteObjectStorage::ApplyReadWriteMessage::ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws,const RoutableMessageHeader&hdr){
+    mParent=parent;
+    this->rws=rws;
+    this->hdr=hdr;
 }
 /*
 void SQLiteObjectStorage::handleResult(const EventPtr& evt) const {
@@ -243,44 +341,43 @@ bool SQLiteObjectStorage::commitTransaction(const SQLiteDBPtr& db) {
     return true;
 }
 
-String SQLiteObjectStorage::getTableName(const StorageKey& key) {
-    UUID keyVWObj = keyVWObject(key);
-
-    return keyVWObj.rawHexData();
+template<class StorageKey> String SQLiteObjectStorage::getTableName(const StorageKey& key) {
+    return key.object_uuid().rawHexData();
 }
 
-String SQLiteObjectStorage::getKeyName(const StorageKey& key) {
-    uint32 keyObj = keyObject(key);
-
-    return boost::lexical_cast<String>(keyObj) + "_" + keyField(key);
+template <class StorageKey> String SQLiteObjectStorage::getKeyName(const StorageKey& key) {
+    std::stringstream ss(key.field_name());
+    ss<<'_'<<key.field_id();
+    return ss.str();
 }
 
-ObjectStorageError SQLiteObjectStorage::convertError(Error internal) {
+Protocol::Response::ReturnStatus SQLiteObjectStorage::convertError(Error internal) {
     switch(internal) {
       case None:
-        return ObjectStorageError(ObjectStorageErrorType_None);
+        return Protocol::Response::SUCCESS;
         break;
       case KeyMissing:
-        return ObjectStorageError(ObjectStorageErrorType_KeyMissing);
+        return Protocol::Response::KEY_MISSING;
         break;
       case ComparisonFailed:
-        return ObjectStorageError(ObjectStorageErrorType_ComparisonFailed);
+        return Protocol::Response::COMPARISON_FAILED;
         break;
       case DatabaseLocked:
-        return ObjectStorageError(ObjectStorageErrorType_Internal);
+        return Protocol::Response::TIMEOUT_FAILURE;
         break;
+      default:
+        return Protocol::Response::INTERNAL_ERROR;
     }
-    // if we don't even recognize the error, just mark it as internal
-    return ObjectStorageError(ObjectStorageErrorType_Internal);
 }
 
-SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& db, ReadSet& rs) {
-    ReadSet::iterator rs_it = rs.begin();
-    while(rs_it != rs.end()) {
-        const StorageKey& key = rs_it->first;
+template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& db, const ReadSet& rs, Protocol::Response&retval) {
 
-        String table_name = getTableName(key);
-        String key_name = getKeyName(key);
+    int num_reads=rs.reads_size();
+    while (retval.reads_size()<num_reads)
+        retval.add_reads();
+    for (int rs_it=0;rs_it<num_reads;++rs_it) {
+        String table_name = getTableName(rs.reads(rs_it));
+        String key_name = getKeyName(rs.reads(rs_it));
 
         String value_query = "SELECT value FROM ";
         value_query += "\"" + table_name + "\"";
@@ -297,10 +394,10 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& 
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
 
         int step_rc = sqlite3_step(value_query_stmt);
+        bool newStep=true;
         while(step_rc == SQLITE_ROW) {
-            assert(rs_it->second == NULL);
-            rs_it->second = new StorageValue((const char*)sqlite3_column_text(value_query_stmt, 0), sqlite3_column_bytes(value_query_stmt, 0));
-
+            newStep=false;
+            retval.reads(rs_it).set_data((const char*)sqlite3_column_text(value_query_stmt, 0),sqlite3_column_bytes(value_query_stmt, 0));
             step_rc = sqlite3_step(value_query_stmt);
         }
         if (step_rc != SQLITE_DONE) {
@@ -310,12 +407,12 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& 
         rc = sqlite3_finalize(value_query_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
         if (step_rc != SQLITE_DONE) {
-            clearValuesFromStorageSet(rs);
+            clearValuesFromStorageSet(retval);
             return DatabaseLocked;
         }
 
-        if (rs_it->second == NULL) {
-            clearValuesFromStorageSet(rs);
+        if (newStep) {
+            clearValuesFromStorageSet(retval);
             return KeyMissing;
         }
 
@@ -325,13 +422,12 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& 
     return None;
 }
 
-SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr& db, WriteSet& ws, int retries) {
-    WriteSet::iterator ws_it = ws.begin();
-    while(ws_it != ws.end()) {
-        const StorageKey& key = ws_it->first;
+template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr& db, const WriteSet& ws, int retries) {
+    int num_writes=ws.writes_size();
+    for (int ws_it=0;ws_it<num_writes;++ws_it) {
 
-        String table_name = getTableName(key);
-        String key_name = getKeyName(key);
+        String table_name = getTableName(ws.writes(ws_it));
+        String key_name = getKeyName(ws.writes(ws_it));
 
         // Create the table for this object if it doesn't exist yet
         String table_create = "CREATE TABLE IF NOT EXISTS ";
@@ -362,7 +458,7 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr&
         rc = sqlite3_bind_text(value_insert_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value insert statement");
 
-        rc = sqlite3_bind_blob(value_insert_stmt, 2, &(*(ws_it->second))[0], (int)ws_it->second->size(), SQLITE_TRANSIENT);
+        rc = sqlite3_bind_blob(value_insert_stmt, 2, ws.writes(ws_it).data().data(), (int)ws.writes(ws_it).data().size(), SQLITE_TRANSIENT);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
 
         int step_rc = sqlite3_step(value_insert_stmt);
@@ -380,14 +476,12 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr&
     return None;
 }
 
-SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPtr& db, CompareSet& cs) {
-    CompareSet::iterator cs_it = cs.begin();
-    while(cs_it != cs.end()) {
-        const StorageKey& key = cs_it->first;
-        StorageValue* value = cs_it->second;
+template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPtr& db, const CompareSet& cs) {
+    int num_compares=cs.compares_size();
+    for (int cs_it=0;cs_it<num_compares;++cs_it) {
 
-        String table_name = getTableName(key);
-        String key_name = getKeyName(key);
+        String table_name = getTableName(cs.compares(cs_it));
+        String key_name = getKeyName(cs.compares(cs_it));
 
         String value_query = "SELECT value FROM ";
         value_query += "\"" + table_name + "\"";
@@ -404,11 +498,32 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPt
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
 
         int step_rc = sqlite3_step(value_query_stmt);
-        bool equal = true;
+        bool passed_test = true;
 
         if (step_rc == SQLITE_ROW) {
-            StorageValue stored_value((const char*)sqlite3_column_text(value_query_stmt, 0), sqlite3_column_bytes(value_query_stmt, 0));
-            if (*value != stored_value) equal = false;
+            const char *data=(const char*)sqlite3_column_text(value_query_stmt, 0);
+            size_t size=sqlite3_column_bytes(value_query_stmt, 0);
+            if(cs.compares(cs_it).has_data()==false) {
+                passed_test=false; 
+            } else if (cs.compares(cs_it).has_comparator()==false) {
+                if (cs.compares(cs_it).data().length() != size) passed_test = false;
+                else if (0!=memcmp(cs.compares(cs_it).data().data(), data, size)) passed_test = false;
+            }else {
+                switch (cs.compares(cs_it).comparator()) {
+                  case Protocol::CompareElement::EQUAL:
+                    if (cs.compares(cs_it).data().length() != size) passed_test = false;
+                    else if (0!=memcmp(cs.compares(cs_it).data().data(), data, size)) passed_test = false;
+                    break;
+                  case Protocol::CompareElement::NEQUAL:
+                    if (cs.compares(cs_it).data().length() == size
+                        && 0==memcmp(cs.compares(cs_it).data().data(), data, size)) 
+                        passed_test = false;
+                    break;
+                  default:
+                    passed_test=false;
+                    break;
+                }
+            }
         }
         else {
             sqlite3_reset(value_query_stmt); // allow proper clean up
@@ -423,7 +538,7 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPt
         if (step_rc == SQLITE_DONE)
             return KeyMissing;
 
-        if (!equal)
+        if (!passed_test)
             return ComparisonFailed;
 
         cs_it++;
@@ -431,5 +546,100 @@ SQLiteObjectStorage::Error SQLiteObjectStorage::checkCompareSet(const SQLiteDBPt
 
     return None;
 }
+
+Persistence::Protocol::Minitransaction* SQLiteObjectStorage::createMinitransaction(int numReadKeys, int numWriteKeys, int numCompares) {
+    Persistence::Protocol::Minitransaction* retval=new Persistence::Protocol::Minitransaction();
+    while (numReadKeys--) {
+        retval->add_reads();
+    }
+    while (numWriteKeys--) {
+        retval->add_writes();
+    }
+    while (numCompares--) {
+        retval->add_compares();
+    }
+    return retval;
+}
+
+Persistence::Protocol::ReadWriteSet* SQLiteObjectStorage::createReadWriteSet(int numReadKeys, int numWriteKeys) {
+    
+    Persistence::Protocol::ReadWriteSet* retval=new Persistence::Protocol::ReadWriteSet();
+    while (numReadKeys--) {
+        retval->add_reads();
+    }
+    while (numWriteKeys--) {
+        retval->add_writes();
+    }
+    return retval;
+}
+
+void SQLiteObjectStorage::destroyMinitransaction(Persistence::Protocol::Minitransaction*mt) {
+    delete mt;
+}
+
+void SQLiteObjectStorage::destroyReadWriteSet(Persistence::Protocol::ReadWriteSet*rw)  {
+    delete rw;
+}
+
+void SQLiteObjectStorage::destroyResponse(Persistence::Protocol::Response*res) {
+    delete res;
+}
+
+bool SQLiteObjectStorage::forwardMessagesTo(MessageService*ms) {
+    mDiskWorkQueue->enqueue(new AddMessageServiceMessage(this,ms));    
+    return true;
+}
+void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
+    mParent->mInterestedParties.push_back(toAdd);
+}
+
+void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){
+    std::vector<MessageService*>::iterator where=mParent->mInterestedParties.begin();
+    while (where!=mParent->mInterestedParties.end()) {        
+        where=std::find(where,mParent->mInterestedParties.end(),toRemove);
+        if (where!=mParent->mInterestedParties.end()) {            
+            where=mParent->mInterestedParties.erase(where);
+        }
+    }
+    *done=true;
+    delete this;
+}
+
+bool SQLiteObjectStorage::endForwardingMessagesTo(MessageService*ms) {
+    volatile bool complete=false;
+    mDiskWorkQueue->enqueue(new RemoveMessageServiceMessage(this,ms,&complete));    
+    while(!complete) {
+    }
+    delete this;
+    return true;
+}
+
+void SQLiteObjectStorage::processMessage(const RoutableMessageHeader&hdr,MemoryReference ref) {
+    if (mTransactional) {        
+        Protocol::Minitransaction *trans=createMinitransaction(0,0,0);
+        if (trans->ParseFromArray(ref.data(),ref.size())) {
+            apply(hdr,trans);
+        }
+    }else {
+        Protocol::ReadWriteSet *rws=createReadWriteSet(0,0);
+        if (rws->ParseFromArray(ref.data(),ref.size())) {
+            apply(hdr,rws);
+        }        
+
+    }
+
+}
+
+void SQLiteObjectStorage::forward (RoutableMessageHeader&hdr, Protocol::Response&resp) {
+    String databuf;
+    resp.SerializeToString(&databuf);
+    MemoryReference membuf(databuf);
+    for (std::vector<MessageService*>::iterator i=mInterestedParties.begin(),ie=mInterestedParties.end();
+         i!=ie;
+         ++i) {
+        (*i)->processMessage(hdr,membuf);
+    }
+}
+
 
 } }// namespace Sirikata::Persistence

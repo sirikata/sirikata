@@ -327,7 +327,14 @@ public:
         mHasDestinationSpace=true;
     }
 
-
+    void swap_source_and_destination() {
+        std::swap(mHasSourceObject,mHasDestinationObject);
+        std::swap(mSourceObject,mDestinationObject);
+        std::swap(mHasSourceSpace,mHasDestinationSpace);
+        std::swap(mSourceSpace,mDestinationSpace);
+        //std::swap(mHasSourcePort,mHasDestinationPort);
+        std::swap(mSourcePort,mDestinationPort);
+    }
     inline void clear_source_object() {mHasSourceObject=false;}
     inline bool has_source_object() const {return mHasSourceObject;}
     inline const ObjectReference& source_object() const {return mSourceObject;}
