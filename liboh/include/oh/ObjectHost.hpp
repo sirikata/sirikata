@@ -50,7 +50,6 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     SpaceConnectionMap mSpaceConnections;
     AddressConnectionMap mAddressConnections;
     friend class TopLevelSpaceConnection;
-    SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
     void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
     void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
     Network::IOService *mSpaceConnectionIO;
@@ -64,24 +63,32 @@ public:
      * Destroy it with Network::IOServiceFactory::destroyIOService(ioServ);
      */
     ObjectHost(SpaceIDMap *spaceIDMap, Network::IOService*ioServ);
+    /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool forwardMessagesTo(MessageService*){return false;}
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool endForwardingMessagesTo(MessageService*){return false;}
 
+    /// Returns the SpaceID -> Network::Address lookup map.
+    SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
+
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
-    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
-    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID&);
-    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully
+    /// @see connectToSpaceAddress. Looks up the space in the spaceIDMap().
+    std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpace(const SpaceID& space);
+    ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully, but will allow queueing messages. The stream will be deallocated if the return value is discarded. In most cases, this should not be called directly.
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
+    /** Gets an IO service corresponding to this object host.
+        This can be used to schedule timeouts that are guaranteed
+        to be in the correct thread. */
     Network::IOService *getSpaceIO() const {
         return mSpaceConnectionIO;
     }
 
+    /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost
 

@@ -111,7 +111,6 @@ HostedObject::SentMessage::SentMessage(const HostedObjectPtr &parent)
         : mTimerHandle(NULL)
 {
     mBody = new RoutableMessageBody;
-    mParent = parent;
     mId = parent->mNextQueryId++;
     body().set_id(mId);
     parent->mSentMessages.insert(SentMessageMap::value_type(mId, this));
