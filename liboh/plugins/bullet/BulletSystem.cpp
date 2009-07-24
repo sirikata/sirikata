@@ -426,7 +426,7 @@ bool BulletSystem::tick() {
         }
     }
     DEBUG_OUTPUT(cout << endl;)
-    return 0;
+    return true;
 }
 
 void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& dispatcher,
