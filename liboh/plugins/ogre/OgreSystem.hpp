@@ -107,7 +107,6 @@ class OgreSystem: public TimeSteppedSimulation {
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
-    Provider<ProxyCreationListener*>*mProxyManager;
     bool loadBuiltinPlugins();
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,

@@ -90,7 +90,6 @@ OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0)
     mRenderTarget=NULL;
     mSceneManager=NULL;
     mRenderTarget=NULL;
-    mProxyManager=NULL;
     mMouseHandler=NULL;
     mRayQuery=NULL;
 }
@@ -289,7 +288,6 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     return mAttachedCameras.end();
 }
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
-    mProxyManager=proxyManager;
     ++sNumOgreSystems;
     proxyManager->addListener(this);
     //add ogre system options here
@@ -602,7 +600,6 @@ OgreSystem::~OgreSystem() {
         }else ++iter;
         assert(iter!=sActiveOgreScenes.end());
     }
-    mProxyManager->removeListener(this);
     --sNumOgreSystems;
     if (sNumOgreSystems==0) {
         OGRE_DELETE sCDNArchivePlugin;

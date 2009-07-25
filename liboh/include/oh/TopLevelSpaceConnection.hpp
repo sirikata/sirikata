@@ -68,6 +68,7 @@ protected:
     QueryMap mQueryMap; // indexed by {ObjectHost::mInternalObjectReference, ProxCall::query_id()}
     SpaceID mSpaceID;
 public:
+	~ObjectHostProxyManager();
     void initialize();
     void destroy();
 

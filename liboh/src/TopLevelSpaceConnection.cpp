@@ -118,6 +118,9 @@ void ObjectHostProxyManager::destroy() {
     }
     mProxyMap.clear();
 }
+ObjectHostProxyManager::~ObjectHostProxyManager() {
+	destroy();
+}
 void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
     std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
         ProxyMap::value_type(newObj->getObjectReference().object(), newObj));

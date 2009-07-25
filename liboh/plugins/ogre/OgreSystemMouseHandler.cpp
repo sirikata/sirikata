@@ -172,6 +172,9 @@ private:
             return EventResponse::nop();
         }
         CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) {
+            return EventResponse::nop();
+        }
         if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
             // add object.
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), mouseev->mX, mouseev->mY, mWhichRayObject);
@@ -241,6 +244,9 @@ private:
     EventResponse wheelListener(EventPtr evbase) {
         std::tr1::shared_ptr<AxisEvent> ev(std::tr1::dynamic_pointer_cast<AxisEvent>(evbase));
         if (!ev) {
+            return EventResponse::nop();
+        }
+        if (!mParent->mPrimaryCamera) {
             return EventResponse::nop();
         }
         if (ev->mAxis == SDLMouse::WHEELY || ev->mAxis == SDLMouse::RELY) {
@@ -342,6 +348,9 @@ private:
     }
     EventResponse groupObjects(EventPtr ev) {
         if (mSelectedObjects.size()<2) {
+            return EventResponse::nop();
+        }
+        if (!mParent->mPrimaryCamera) {
             return EventResponse::nop();
         }
         SpaceObjectReference parentId = mCurrentGroup;
@@ -490,6 +499,9 @@ private:
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         Task::AbsTime now(Task::AbsTime::now());
         CameraEntity *camera = mParent->mPrimaryCamera;
+        if (!camera) {
+            return EventResponse::nop();
+        }
         SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
         Location loc (camera->getProxy().globalLocation(now));
@@ -543,6 +555,9 @@ private:
         float amount = buttonev->mPressed?1:0;
 
         CameraEntity *cam = mParent->mPrimaryCamera;
+        if (!cam) {
+            return EventResponse::nop();
+        }
         Location loc = cam->getProxy().extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
@@ -880,6 +895,9 @@ private:
     EventResponse doDrag(EventPtr evbase) {
         MouseDragEventPtr ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(evbase));
         if (!ev) {
+            return EventResponse::nop();
+        }
+        if (!mParent->mPrimaryCamera) {
             return EventResponse::nop();
         }
         ActiveDrag * &drag = mActiveDrag[ev->mButton];
