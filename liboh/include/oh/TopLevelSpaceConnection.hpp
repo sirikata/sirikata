@@ -1,4 +1,3 @@
-
 /*  Sirikata liboh -- Object Host
  *  TopLevelSpaceConnection.hpp
  *
@@ -35,52 +34,9 @@
 #define _SIRIKATA_TOP_LEVEL_SPACE_CONNECTION_HPP_
 
 #include <oh/Platform.hpp>
-#include <oh/ProxyManager.hpp>
 #include <network/Address.hpp>
-
+#include <oh/ObjectHostProxyManager.hpp>
 namespace Sirikata {
-
-class SIRIKATA_OH_EXPORT ObjectHostProxyManager :public ProxyManager, public Noncopyable {
-protected:
-    struct ObjectHostProxyInfo {
-        ProxyObjectPtr obj;
-        int refCount;
-        ObjectHostProxyInfo(const ProxyObjectPtr &obj)
-            : obj(obj), refCount(0) {
-        }
-        inline bool operator<(const ObjectHostProxyInfo &other) const {
-            return obj->getObjectReference() < other.obj->getObjectReference();
-        }
-        inline bool operator==(const ObjectHostProxyInfo &other) const {
-            return obj->getObjectReference() == other.obj->getObjectReference();
-        }
-    };
-    class QueryHasher {
-        UUID::Hasher uuidHash;
-    public:
-        size_t operator()(const std::pair<UUID, uint32>&mypair) const{
-            return uuidHash(mypair.first)*17 + mypair.second*19;
-        }
-    };
-    typedef std::tr1::unordered_map<ObjectReference, ObjectHostProxyInfo, ObjectReference::Hasher> ProxyMap;
-    typedef std::tr1::unordered_map<std::pair<UUID, uint32>, std::set<ProxyObjectPtr>, QueryHasher > QueryMap;
-    ProxyMap mProxyMap;
-    QueryMap mQueryMap; // indexed by {ObjectHost::mInternalObjectReference, ProxCall::query_id()}
-    SpaceID mSpaceID;
-public:
-	~ObjectHostProxyManager();
-    void initialize();
-    void destroy();
-
-    void createObject(const ProxyObjectPtr &newObj);
-    void destroyObject(const ProxyObjectPtr &newObj);
-
-    void createObjectProximity(const ProxyObjectPtr &newObj, const UUID &seeker, uint32 queryId);
-    void destroyObjectProximity(const ProxyObjectPtr &newObj, const UUID &seeker, uint32 queryId);
-    void destroyProximityQuery(const UUID &seeker, uint32 queryId);
-
-    ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
-};
 
 class ObjectHost;
 class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager {
