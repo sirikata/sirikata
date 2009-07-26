@@ -866,7 +866,8 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
-                  ${LIBOH_SOURCE_DIR}/HostedObject_Query.cpp
+                  ${LIBOH_SOURCE_DIR}/QueryTracker.cpp
+                  ${LIBOH_SOURCE_DIR}/SentMessage.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp

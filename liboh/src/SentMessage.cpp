@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  HostedObject_Query.cpp
+ *  SentMessage.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -34,9 +34,10 @@
 #include <util/Platform.hpp>
 #include <oh/Platform.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
+#include <oh/ProxyObject.hpp>
+#include <oh/ProxyManager.hpp>
 #include "util/RoutableMessage.hpp"
-#include "oh/HostedObject.hpp"
-#include "oh/ObjectHost.hpp"
+#include "oh/SentMessage.hpp"
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/bind.hpp>
@@ -47,9 +48,10 @@
 
 
 namespace Sirikata {
-class HostedObject::SentMessage::TimerHandler {
+
+class SentMessage::TimerHandler {
     boost::asio::deadline_timer mTimer;
-    HostedObjectWPtr mHostedObject;
+    SentMessage *mSentMessage;
     int64 mMessageId;
 
     void timedOut(const boost::system::error_code &error) {
@@ -57,77 +59,77 @@ class HostedObject::SentMessage::TimerHandler {
         if (error == boost::asio::error::operation_aborted) {
             return; // don't care if the timer was cancelled.
         }
-        HostedObjectPtr obj = mHostedObject.lock();
-        if (!obj) {
-            return;
-        }
-        SentMessageMap::iterator iter = obj->mSentMessages.find(mMessageId);
-        if (iter == obj->mSentMessages.end()) {
-            return;
-        }
-        SentMessage *messageInfo = iter->second;
         RoutableMessage msg;
-        msg.set_source_object(messageInfo->getRecipient());
-        msg.set_source_space(messageInfo->getSpace());
-        msg.set_source_port(messageInfo->getPort());
+        msg.set_source_object(mSentMessage->getRecipient());
+        msg.set_source_space(mSentMessage->getSpace());
+        msg.set_source_port(mSentMessage->getPort());
         msg.body().set_return_status(RoutableMessageBody::TIMEOUT_FAILURE);
-        msg.body().set_id(messageInfo->getId());
-        messageInfo->gotResponse(obj, iter, msg);
+        msg.body().set_id(mSentMessage->getId());
+        mSentMessage->gotResponse(msg);
     }
 public:
-    TimerHandler(const HostedObjectPtr &object, SentMessage *messageInfo, int num_seconds)
-            : mTimer(*object->getObjectHost()->getSpaceIO(),
-                     boost::posix_time::seconds(num_seconds)) {
-        mHostedObject = object;
+    TimerHandler(Network::IOService *io, SentMessage *messageInfo, int num_seconds)
+            : mTimer(*static_cast<boost::asio::io_service*>(io), boost::posix_time::seconds(num_seconds)) {
 
-        if (num_seconds > 0) {
-            mTimer.async_wait(
-                boost::bind(&TimerHandler::timedOut, this, boost::asio::placeholders::error));
-        }
+        mSentMessage = messageInfo;
+        mTimer.async_wait(
+            boost::bind(&TimerHandler::timedOut, this, boost::asio::placeholders::error));
     }
 
     void cancel() {
         mMessageId = -1;
-        mHostedObject = HostedObjectWPtr();
         mTimer.cancel();
     }
 };
 
-void HostedObject::SentMessage::gotResponse(const HostedObjectPtr &hostedObj, const SentMessageMap::iterator &iter, const RoutableMessage &msg) {
-    if (mTimerHandle) {
-        mTimerHandle->cancel();
-        mTimerHandle = NULL;
-    }
-
-    bool keepQuery = mResponseCallback(hostedObj, this, msg);
-
-    if (!keepQuery) {
-        hostedObj->mSentMessages.erase(iter);
-        delete this;
-    }
+bool SentMessage::gotResponse(const RoutableMessage &msg) {
+    unsetTimeout();
+    bool keepQuery = mResponseCallback(this, msg);
+    return keepQuery;
 }
 
-HostedObject::SentMessage::SentMessage(const HostedObjectPtr &parent)
-        : mTimerHandle(NULL)
+SentMessage::SentMessage(int64 newId, QueryTracker *tracker)
+    : mTimerHandle(NULL), mId(newId), mTracker(tracker)
 {
     mBody = new RoutableMessageBody;
-    mId = parent->mNextQueryId++;
     body().set_id(mId);
-    parent->mSentMessages.insert(SentMessageMap::value_type(mId, this));
 }
 
-HostedObject::SentMessage::~SentMessage() {
+SentMessage::~SentMessage() {
+    unsetTimeout();
     delete mBody;
 }
 
-
-void HostedObject::SentMessage::send(const HostedObjectPtr &parent, int timeout) {
-    if (timeout > 0) {
-        mTimerHandle = new TimerHandler(parent, this, timeout);
+void SentMessage::send() {
+    if (mTracker) {
+        mTracker->sendMessage(this);
     }
-    std::string bodyStr;
-    body().SerializeToString(&bodyStr);
-    parent->send(header(), MemoryReference(bodyStr));
 }
+
+void SentMessage::unsetTimeout() {
+    if (mTimerHandle) {
+        mTimerHandle->cancel();
+        mTimerHandle = 0;
+    }
+}
+
+void SentMessage::setTimeout(int timeout) {
+    unsetTimeout();
+    if (mTracker) {
+        Network::IOService *io = mTracker->getIOService();
+        if (io) {
+            mTimerHandle = new TimerHandler(io, this, timeout);
+        }
+    }
+}
+
+ProxyObjectPtr SentMessage::getRecipientProxy(const ProxyManager*pm) const {
+    if (pm) {
+        ProxyObjectPtr proxyPtr (pm->getProxyObject(SpaceObjectReference(getSpace(), getRecipient())));
+        return proxyPtr;
+    }
+    return ProxyObjectPtr();
+}
+
 
 }

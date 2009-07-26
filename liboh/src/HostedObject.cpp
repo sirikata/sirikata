@@ -39,6 +39,7 @@
 #include "oh/SpaceConnection.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
+#include "oh/SentMessage.hpp"
 #include "oh/ObjectHost.hpp"
 #include "oh/ProxyMeshObject.hpp"
 #include "oh/ProxyLightObject.hpp"
@@ -59,12 +60,15 @@ public:
 HostedObject::PerSpaceData::PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream) :mSpaceConnection(topLevel,stream) {}
 
 
-HostedObject::HostedObject(ObjectHost*parent):mInternalObjectReference(UUID::null()) {
+HostedObject::HostedObject(ObjectHost*parent)
+    : mTracker(parent->getSpaceIO()),
+      mInternalObjectReference(UUID::null()) {
     mObjectHost=parent;
-    mNextQueryId=0;
+    mTracker.forwardMessagesTo(this);
 }
 
 HostedObject::~HostedObject() {
+    mTracker.endForwardingMessagesTo(this);
 }
 
 struct HostedObject::PrivateCallbacks {
@@ -97,23 +101,8 @@ struct HostedObject::PrivateCallbacks {
         }
         /// Handle Return values to queries we sent to someone:
         if (message.body().has_return_status()) {
-            if (!message.body().has_id()) {
-                return; // invalid!
-            }
-            // This is a response message;
-            int64 id = message.body().id();
-            SentMessageMap::iterator iter = realThis->mSentMessages.find(id);
-            if (iter != realThis->mSentMessages.end()) {
-                if (iter->second->getSpace() == sid &&
-                    iter->second->getRecipient() == message.source_object())
-                {
-                    iter->second->gotResponse(realThis, iter, message);
-                } else {
-                    std::ostringstream os;
-                    os << "Response message with ID "<<id<<" to object "<<myself_name<<" should come from "<<iter->second->getRecipient() <<" but instead came from " <<message.source_object();
-                    SILOG(cppoh, warning, os.str());
-                }
-            }
+            message.set_source_space(sid);
+            realThis->mTracker.processMessage(message);
             return; // Not a message for us to process.
         }
 
@@ -167,11 +156,16 @@ struct HostedObject::PrivateCallbacks {
     }
 
     static bool receivedProxObjectProperties(
-        const HostedObjectPtr &realThis,
+        const HostedObjectWPtr &weakThis,
         SentMessage* sentMessage,
         const RoutableMessage &responseMessage,
         int32 queryId)
     {
+        HostedObjectPtr realThis(weakThis.lock());
+        if (!realThis) {
+            return false;
+        }
+
         SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
         if (responseMessage.body().return_status() != RoutableMessageBody::SUCCESS) {
             SILOG(cppoh,info,"FAILURE receiving prox object properties "<<proximateObjectId.object());
@@ -238,28 +232,35 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         {
-            SentMessage *request = new SentMessage(realThis);
+            SentMessage *request = realThis->mTracker.create();
             request->header().set_destination_space(proximateObjectId.space());
             request->header().set_destination_object(proximateObjectId.object());
             Protocol::LocRequest loc;
             loc.SerializeToString(request->body().add_message("LocRequest"));
-            request->setCallback(&receivedPositionUpdateResponse);
-            request->send(realThis);
+            request->setCallback(std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2));
+            request->send();
         }
         return false;
     }
 
-    static bool receivedPositionUpdateResponse(const HostedObjectPtr &thus, SentMessage* sentMessage, const RoutableMessage &responseMessage)
+    static bool receivedPositionUpdateResponse(const HostedObjectWPtr &weakThus, SentMessage* sentMessage, const RoutableMessage &responseMessage)
     {
+        HostedObjectPtr thus(weakThus.lock());
+        if (!thus) {
+            return false;
+        }
         Protocol::ObjLoc loc;
         loc.ParseFromString(responseMessage.body().message_arguments(0));
 
-        ProxyManager *pm = sentMessage->getProxyManager(*thus);
+        ProxyManager *pm = thus->getObjectHost()->getProxyManager(sentMessage->getSpace());
         if (pm) {
-            thus->receivedPositionUpdate(sentMessage->getRecipientProxy(*thus),loc,false);
+            ProxyObjectPtr obj(sentMessage->getRecipientProxy(pm));
+            if (obj) {
+                thus->receivedPositionUpdate(obj,loc,false);
+            }
         }
 
-        sentMessage->send(thus); // Resend position update each time we get one.
+        sentMessage->send(); // Resend position update each time we get one.
         return true;
     }
 
@@ -405,8 +406,7 @@ void HostedObject::initializeConnect(
     } else {
         setProperty("IsCamera");
     }
-    bool success = send(messageHeader, MemoryReference(serializedBody));
-    assert(success); //conn should be connected
+    send(messageHeader, MemoryReference(serializedBody));
 }
 
 void HostedObject::initializeRestoreFromDatabase(const UUID &objectName) {
@@ -428,7 +428,11 @@ void HostedObject::initializeScripted(const UUID&objectName, const String& scrip
         //conn->send(initializationPacket,Network::ReliableOrdered);
     }
 }
-bool HostedObject::send(const RoutableMessageHeader &hdrOrig, const MemoryReference&body) {
+void HostedObject::processMessage(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+    send(hdrOrig, body);
+}
+void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+    ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
     SpaceDataMap::iterator where=mSpaceData.find(hdrOrig.destination_space());
@@ -438,9 +442,8 @@ bool HostedObject::send(const RoutableMessageHeader &hdrOrig, const MemoryRefere
         String serialized_header;
         hdr.SerializeToString(&serialized_header);
         where->second.mSpaceConnection.getStream()->send(MemoryReference(serialized_header),body, Network::ReliableOrdered);
-        return true;
     }
-    return false;
+    assert(where!=mSpaceData.end());
 }
 
 void HostedObject::receivedPositionUpdate(
@@ -630,7 +633,7 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
                 printstr<<" (Requesting information...)";
 
                 {
-                    SentMessage *request = new SentMessage(getSharedPtr());
+                    SentMessage *request = mTracker.create();
                     std::vector<std::string> propertyRequests;
 
                     request->header().set_destination_space(proximateObjectId.space());
@@ -651,9 +654,10 @@ void HostedObject::processMessage(const ReceivedMessage &msg, std::string *respo
                         req.SerializeToString(request->body().add_message("GetProp"));
                     }
                     request->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
-                                                        _1, _2, _3,
+                                                        getWeakPtr(), _1, _2,
                                                         proxCall.query_id()));
-                    request->send(getSharedPtr(), 5.0);
+                    request->setTimeout(5.0);
+                    request->send();
                 }
             } else {
                 printstr<<" (Already known)";

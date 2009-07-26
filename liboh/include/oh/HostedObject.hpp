@@ -36,6 +36,7 @@
 #include <util/RoutableMessageHeader.hpp>
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/ProxyObject.hpp"
+#include "oh/QueryTracker.hpp"
 
 namespace Sirikata {
 class ObjectHost;
@@ -53,7 +54,7 @@ using Protocol::ObjLoc;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
+class SIRIKATA_OH_EXPORT HostedObject : public MessageService, public SelfWeakPtr<HostedObject> {
     class PerSpaceData;
 public:
     /** Structure passed to processMessage() upon receiving a message.
@@ -119,139 +120,9 @@ public:
         }
     };
 
-    class SentMessage;
-    /// Each sent query has an int64 id. This maps that id to a SentMessage structure.
-    typedef std::tr1::unordered_map<int64, SentMessage*> SentMessageMap;
-
-    /** A message/query that is sent to another object to have at least one
-        response sent back. A timeout can be specified, in case the other object
-        does not respond to our messages.
-     */
-    class SentMessage {
-    public:
-        /** QueryCallback will be called when the other client responds to our
-            sent query.
-
-            @param thus  A shared_ptr to the HostedObject who sent the message.
-            @param sentMessage  A pointer to this SentMessage.
-            @param responseMessage  A RoutableMessage to be parsed.
-                   The method list of the original message is available in
-                   sentMessage->body().message_names(), and should line up with
-                   the number of arguments in responseMessage.body().message_arguments().
-            @returns  true if the query should remain (this is something agreed upon in the protocol, such as a "recurring" flag), or false if this is a one-shot message.
-
-            @note You must check that responseMessage.return_status() == SUCCESS.
-                  QueryCallback will be called even in the case of a TIMEOUT_FAILURE.
-        */
-        typedef std::tr1::function<bool (const HostedObjectPtr &thus, SentMessage* sentMessage, const RoutableMessage &responseMessage)> QueryCallback;
-
-    private:
-        struct TimerHandler;
-        TimerHandler *mTimerHandle; ///< Holds onto the timeout, if one exists.
-        int64 mId; ///< This query ID. Chosen randomly in the constructor.
-
-        QueryCallback mResponseCallback; ///< Callback, or null if not yet set.
-        RoutableMessageHeader mHeader; ///< Header embedded into the struct
-        RoutableMessageBody *mBody; ///< Body allocated in the constructor.
-    public:
-        /// Constructor takes in a HostedObject.
-        SentMessage(const HostedObjectPtr &parent);
-        /// Destructor to deallocate mBody.
-        ~SentMessage();
-
-        /// sets the callback handler. Must be called at least once.
-        void setCallback(const QueryCallback &cb) {
-            mResponseCallback = cb;
-        }
-
-        /// body accessor, like that of RoutableMessage. (const ver)
-        const RoutableMessageBody &body() const {
-            return *mBody;
-        }
-        /// header accessor, like that of RoutableMessage. (const ver)
-        const RoutableMessageHeader &header() const {
-            return mHeader;
-        }
-        /// body accessor, like that of RoutableMessage.
-        RoutableMessageBody &body() {
-            return *mBody;
-        }
-        /// header accessor, like that of RoutableMessage.
-        RoutableMessageHeader &header() {
-            return mHeader;
-        }
-
-        /** Port of the other object: recipient of this message, and sender
-            of the response(s) */
-        MessagePort getPort() const {
-            return header().destination_port();
-        }
-        /// Space of both this and the other object.
-        const SpaceID &getSpace() const {
-            return header().destination_space();
-        }
-        /** ObjectReference of the other object: recipient of this message, and
-            sender of the response(s) */
-        const ObjectReference &getRecipient() const {
-            return header().destination_object();
-        }
-
-        /** Port of the original sent message in this object. Note that this might
-            differ from the port that the response was sent to
-            (responseMessage.destination_port()), as long as the SpaceID and the
-            ObjectReference is the same */
-        MessagePort getThisPort() const {
-            return header().source_port();
-        }
-        /// The selected ProxyObject corresponding to this object/space combo.
-        const ProxyObjectPtr &getThisProxy(const HostedObject &hosted) const {
-            return hosted.getProxy(getSpace());
-        }
-        /// The ProxyManager corresponding to getSpace().
-        ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
-            const ProxyObjectPtr &obj = getThisProxy(hosted);
-            if (obj) {
-                return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
-            }
-            return NULL;
-        }
-
-        /// The ProxyObject, if one exists, of the other object. May return null.
-        ProxyObjectPtr getRecipientProxy(const HostedObject &hosted) const {
-            ObjectHostProxyManager *ohpm = getProxyManager(hosted);
-			if (ohpm) {
-				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getRecipient())));
-				return proxyPtr;
-			}
-			return ProxyObjectPtr();
-        }
-
-        /// The query ID, which can be used to lookup this in mSentMessages.
-        int64 getId() const {
-            return mId;
-        }
-
-        /** Actually sends this message, after body() and header() have been set.
-            Note that if resending, body() should still contain the same message 
-            that was originally sent out.
-            @param parent  the HostedObject sending this message.
-            @param timeout  If nonzero, will cause a timeout response.
-                            Timeouts only apply to the next callback.
-            @note: send must be called *only* when created, or from a callback.
-            @note: This must be the same object passed into the constructor!
-                   Otherwise, this will not be in the mSentMessagesMap.
-         */
-        void send(const HostedObjectPtr &parent, int timeout=0);
-
-        /// Simulates a response being received from the other object.
-        void gotResponse(const HostedObjectPtr &hostedObj, const SentMessageMap::iterator &iter, const RoutableMessage &msg);
-    };
-
 protected:
 //------- Members
-
-    SentMessageMap mSentMessages;
-    int64 mNextQueryId;
+    QueryTracker mTracker;
 
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap mSpaceData;
@@ -316,12 +187,20 @@ public:
     //FIXME implement SpaceConnection& connect(const SpaceID&space);
     //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
 
+    bool forwardMessagesTo(MessageService*) {
+        return false;
+    }
+    bool endForwardingMessagesTo(MessageService*) {
+        return false;
+    }
+
+    void processMessage(const RoutableMessageHeader &hdr, MemoryReference body);
     /** Sends a message from the space hdr.destination_space() to the object
         hdr.destination_object().
         @param header  A RoutableMessageHeader: must include destination_space/object.
         @param body  An encoded RoutableMessageBody.
     */
-    bool send(const RoutableMessageHeader &hdr, const MemoryReference &body);
+    void send(const RoutableMessageHeader &hdr, MemoryReference body);
 
     /** Handles a single RPC out of a received message.
         @param msg  A ReceivedMessage struct with sender, message_name, and arguments.
