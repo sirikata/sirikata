@@ -31,14 +31,15 @@
  */
 
 #include <subscription/Platform.hpp>
+#include "util/Time.hpp"
+namespace Sirikata{ namespace Subscription { namespace Protocol {
+class Subscribe{};
+
+} } }
 #include <subscription/Server.hpp>
 #include "options/Options.hpp"
 #include "network/IOServiceFactory.hpp"
 
-namespace Sirikata{ namespace Protocol {
-class Subscription;
-
-} }
 
 int main(int argc,const char**argv) {
     using namespace Sirikata;

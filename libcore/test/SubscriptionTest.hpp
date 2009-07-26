@@ -56,6 +56,15 @@ class SubscriptionTest : public CxxTest::TestSuite
     Subscription::Server*mServer;
     Subscription::SubscriptionClient *mSub;
     Subscription::Broadcast *mBroad;
+    boost::thread *mSubThread;
+    boost::thread *mBroadThread;
+    Subscription::Broadcast::BroadcastStream *tBroadcast;
+    Subscription::Broadcast::BroadcastStream *oBroadcast;
+    std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> t100ms;
+    std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> t10ms;
+    std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> t0ms;
+
+    std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> otherTLS;
     void subscriptionThread() {
         Network::IOServiceFactory::runService(mSubIO);
     }
@@ -64,11 +73,19 @@ class SubscriptionTest : public CxxTest::TestSuite
     }
 public:
     SubscriptionTest() {
+        oBroadcast=tBroadcast=NULL;
         mSubIO=Network::IOServiceFactory::makeIOService();
         mBroadIO=Network::IOServiceFactory::makeIOService();
         mBroad = new Subscription::Broadcast(mBroadIO);
         mSub = new Subscription::SubscriptionClient(mSubIO);
-        
+        mServer=new Subscription::Server(mBroadIO,
+                                         new TCPStreamListener(*mBroadIO),
+                                         Network::Address("127.0.0.1","7949"),
+                                         new TCPStreamListener(*mSubIO),
+                                         Network::Address("127.0.0.1","7948"),
+                                         Duration::seconds(3.0));
+        mSubThread=new boost::thread(std::tr1::bind(&SubscriptionTest::subscriptionThread,this));
+        mBroadThread=new boost::thread(std::tr1::bind(&SubscriptionTest::broadcastThread,this));
     }
     static SubscriptionTest*createSuite() {
         return new SubscriptionTest;
@@ -80,11 +97,17 @@ public:
         
         Network::IOServiceFactory::stopService(mSubIO);
         Network::IOServiceFactory::stopService(mBroadIO);
+        delete mServer;
         delete mBroad;
         delete mSub;
         Network::IOServiceFactory::destroyIOService(mSubIO);
         Network::IOServiceFactory::destroyIOService(mBroadIO);
+        mBroadThread->join();
+        mSubThread->join();
+        delete mBroadThread;
+        delete mSubThread;
+    }
+    void testSingleSubscribe(){
         
     }
-    void testSingleSubscribe(){}
 };

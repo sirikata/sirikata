@@ -44,22 +44,24 @@ TCPStreamListener::TCPStreamListener(IOService&io) {
     mTCPAcceptor=NULL;
 }
 bool newAcceptPhase(TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb);
-void handleAccept(TCPSocket*socket,TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb,const boost::system::error_code& error){
+void handleAccept(const std::tr1::shared_ptr<std::auto_ptr<TCPSocket> >&socket,TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb,const boost::system::error_code& error){
     if(error) {
 		boost::system::system_error se(error);
 		SILOG(tcpsst,error, "ERROR IN THE TCP STREAM ACCEPTING PROCESS"<<se.what() << std::endl);
         //FIXME: attempt more?
     }else {
-        ASIOStreamBuilder::beginNewStream(socket,io,cb);
+        TCPSocket*newSocket=socket->release();
+        ASIOStreamBuilder::beginNewStream(newSocket,io,cb);
         newAcceptPhase(listen,io,cb);
     }
 }
 bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
     TCPSocket*socket=new TCPSocket(*io);
+    std::tr1::shared_ptr<std::auto_ptr<TCPSocket> > socketWrapper(new std::auto_ptr<TCPSocket> (socket));
     //need to use boost bind to avoid TR1 errors about compatibility with boost::asio::placeholders
      
     listen->async_accept(*socket,
-                         std::tr1::bind(&handleAccept,socket,listen,io,cb,_1));
+                         std::tr1::bind(&handleAccept,socketWrapper,listen,io,cb,_1));
     return true;
 }
 bool TCPStreamListener::listen (const Address&address,

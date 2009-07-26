@@ -44,12 +44,23 @@ class SubscriptionState;
 class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from_this<Server> {
     class UniqueLock;
     std::tr1::unordered_map<UUID,SubscriptionState*,UUID::Hasher>mSubscriptions;
+    class WaitingStreams {public:
+            std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >mStream;
+        Protocol::Subscribe mSubscriptionRequest;
+        WaitingStreams(){}
+        WaitingStreams(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&strm,
+                       const Protocol::Subscribe&sub):mStream(strm),mSubscriptionRequest(sub){}
+    };
+    typedef std::tr1::unordered_map<UUID,std::vector<WaitingStreams >, UUID::Hasher > WaitingStreamMap;
+    WaitingStreamMap mWaitingStreams;
     std::tr1::unordered_map<SubscriptionState*,UUID>mBroadcasters;
     UniqueLock*mBroadcastersSubscriptionsLock;
     Network::StreamListener*mBroadcastListener;
     Network::IOService*mBroadcastIOService;
     Network::StreamListener*mSubscriberListener;
+    Duration mMaxSubscribeDelay;
     void subscriberStreamCallback(Network::Stream*,Network::Stream::SetCallbacks&);
+    void purgeWaitingSubscriberOnBroadcastIOService(const UUID&uuid, size_t which);
     void subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,const Network::Chunk&);
     void subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Protocol::Subscribe&subscriptionRequest);
     static void subscriberConnectionCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,Network::Stream::ConnectionStatus,const std::string&reason);
@@ -59,7 +70,7 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from
     static void poll(const std::tr1::weak_ptr<Server> &, const UUID&);
 public:
 
-    Server(Network::IOService*broadcastIOSerivce, Network::StreamListener*broadcastListener, const Network::Address& broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress);
+    Server(Network::IOService*broadcastIOSerivce, Network::StreamListener*broadcastListener, const Network::Address& broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay);
     ~Server();
     void initiatePolling(const UUID&, const Duration&waitFor);
 };

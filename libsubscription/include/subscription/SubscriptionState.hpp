@@ -32,7 +32,6 @@
 #ifndef _SIRIKATA_SUBSCRIPTION_STATE_HPP_
 #define _SIRIKATA_SUBSCRIPTION_STATE_HPP_
 #include "util/Time.hpp"
-#include "Subscription_Subscription.pbj.hpp"
 namespace Sirikata { namespace Subscription {
 class Server;
 

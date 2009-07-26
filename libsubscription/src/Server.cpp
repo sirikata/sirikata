@@ -35,6 +35,7 @@
 #include "network/TCPStreamListener.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "util/UUID.hpp"
+#include "Subscription_Subscription.pbj.hpp"
 #include "subscription/Server.hpp"
 #include "subscription/SubscriptionState.hpp"
 #include <boost/thread.hpp>
@@ -44,7 +45,7 @@ namespace Sirikata { namespace Subscription {
 class Server::UniqueLock :public boost::mutex{
 
 };
-Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*broadcastListener, const Network::Address&broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress){
+Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*broadcastListener, const Network::Address&broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay):mMaxSubscribeDelay(maxSubscribeDelay){
     mBroadcastIOService=broadcastIOService;
     mBroadcastersSubscriptionsLock=new UniqueLock;
     mBroadcastListener=broadcastListener;
@@ -57,7 +58,22 @@ Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*bro
         SILOG(subscription,error,"Error listening to broadcast on port "<<broadcastAddress.getHostName()<<':'<<broadcastAddress.getService());
     }
 }
-
+Server::~Server() {
+    delete mBroadcastListener;
+    delete mSubscriberListener;
+    {
+        boost::lock_guard<boost::mutex>lok(*mBroadcastersSubscriptionsLock);
+        std::tr1::unordered_map<UUID,SubscriptionState*,UUID::Hasher>::iterator iter1=mSubscriptions.begin(),iter1e=mSubscriptions.end();
+        //std::tr1::unordered_map<SubscriptionState*,UUID>::iterator iter2=mBroadcasters.begin(),iter2e=mBroadcasters.end();
+        for(;iter1!=iter1e;++iter1) {
+            delete iter1->second;
+        }
+        mBroadcasters.clear();
+        mSubscriptions.clear();
+    }
+    delete mBroadcastersSubscriptionsLock;
+    
+}
 void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream::SetCallbacks&cb){
     std::tr1::shared_ptr<Stream> newStreamPtr(newStream);
     std::tr1::weak_ptr<Stream> weakNewStreamPtr(newStreamPtr);
@@ -83,6 +99,26 @@ void Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
         *stream=std::tr1::shared_ptr<Stream>();
     }
 }
+void Server::purgeWaitingSubscriberOnBroadcastIOService(const UUID&uuid, size_t which){
+    WaitingStreamMap::iterator where=mWaitingStreams.find(uuid);
+    if (where!=mWaitingStreams.end()) {
+        if (which+1==where->second.size()) {
+            mWaitingStreams.erase(where);//last one to be erased
+        }else if (which<where->second.size()) {
+            while (true) {
+                if (where->second[which].mStream) {
+                    //disconnect the stream, since it does not match a thing after the timeout, probably garbage
+                    *where->second[which].mStream=std::tr1::shared_ptr<Stream>();
+                    where->second[which].mStream=std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> > ();
+                }else {
+                    break;
+                }
+                if (which==0) break;
+                --which;
+            }
+        }
+    }
+}
 void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Protocol::Subscribe&subscriptionRequest){
     bool success=false;
     {
@@ -94,6 +130,19 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
                 where->second->registerSubscriber(*stream,subscriptionRequest);
                 success=true;
             }
+        }else {
+            UUID uuid(subscriptionRequest.broadcast_name());
+            std::vector<WaitingStreams>*waiting=&mWaitingStreams[uuid];
+            size_t which=waiting->size();
+            waiting->push_back(WaitingStreams(stream,subscriptionRequest));
+            Network::IOServiceFactory::
+                dispatchServiceMessage(mBroadcastIOService,
+                                       mMaxSubscribeDelay,
+                                       std::tr1::bind(&Server::purgeWaitingSubscriberOnBroadcastIOService,
+                                                      this,
+                                                      uuid,
+                                                      which));
+                           
         }
     }
     if (success) {
@@ -138,10 +187,22 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
             std::tr1::unordered_map<SubscriptionState*,UUID>::iterator whichuuid;
             whichuuid=mBroadcasters.find(state);
             if (whichuuid==mBroadcasters.end()) {
+                UUID uuid=broadcastRegistration.broadcast_name();
                 if (mSubscriptions.find(broadcastRegistration.broadcast_name())==mSubscriptions.end()) {
-                    mSubscriptions[broadcastRegistration.broadcast_name()]=state;
-                    mBroadcasters[state]=broadcastRegistration.broadcast_name();
-                    state->setUUID(broadcastRegistration.broadcast_name());
+                    mSubscriptions[uuid]=state;
+                    mBroadcasters[state]=uuid;
+                    state->setUUID(uuid);
+                    WaitingStreamMap::iterator where=mWaitingStreams.find(uuid);
+                    if (where!=mWaitingStreams.end()) {
+                        for (std::vector<WaitingStreams>::iterator i=where->second.begin(),ie=where->second.end();
+                             i!=ie;
+                             ++i) {
+                            if (i->mStream&&*i->mStream) {
+                                state->registerSubscriber(*i->mStream,i->mSubscriptionRequest);
+                            }
+                        }
+                    }
+                    mWaitingStreams.erase(where);
                 }else {
                     SILOG(subscription,warning,"Duplicate UUID for broadcast "<<broadcastRegistration.broadcast_name().toString()<<" Already in map");
                 }

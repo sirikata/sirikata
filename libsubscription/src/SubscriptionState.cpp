@@ -35,6 +35,7 @@
 #include "network/TCPStream.hpp"
 #include "network/TCPStreamListener.hpp"
 #include "util/UUID.hpp"
+#include "Subscription_Subscription.pbj.hpp"
 #include "subscription/Server.hpp"
 #include "subscription/SubscriptionState.hpp"
 
