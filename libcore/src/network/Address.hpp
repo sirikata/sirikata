@@ -61,6 +61,9 @@ public:
     bool operator==(const Address&other) const{
         return other.mName==mName&&other.mService==mService;
     }
+    bool operator<(const Address&other) const{
+        return other.mName==mName?mService<other.mService:mName<other.mName;
+    }
     Address(const String& name, 
             const String& service) {
         mName=name;

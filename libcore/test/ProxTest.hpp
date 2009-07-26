@@ -82,7 +82,7 @@ public:
             mDeliver[i]=0;
         }
         Sirikata::PluginManager plugins;
-        plugins.load(DynamicLibrary::filename("prox");
+        plugins.load(DynamicLibrary::filename("prox"));
 
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}

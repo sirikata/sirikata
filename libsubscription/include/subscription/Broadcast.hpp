@@ -39,7 +39,7 @@
 
 namespace Sirikata { namespace Subscription {
 
-class Broadcast {
+class SIRIKATA_SUBSCRIPTION_EXPORT Broadcast {
     Network::IOService*mIOService;
     std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<Network::Stream>,Network::Address::Hasher > mTopLevelStreams;
     class UniqueLock;

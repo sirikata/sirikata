@@ -32,24 +32,27 @@
 
 #include "subscription/Platform.hpp"
 #include "subscription/SubscriptionClient.hpp"
+#include "network/IOServiceFactory.hpp"
+#include "network/TCPStream.hpp"
+#include "Subscription_Subscription.pbj.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Subscription {
-class UniqueLock : public boost::mutex {
+class SubscriptionClient::UniqueLock : public boost::mutex {
 
-}
+};
 
 void SubscriptionClient::upgradeFromIOThread(const std::tr1::weak_ptr<State>&weak_source,
                                              const std::tr1::weak_ptr<State>&weak_dest) {
     std::tr1::shared_ptr<State> dest=weak_dest.lock();
     std::tr1::shared_ptr<State> source=weak_source.lock();
     if (dest&&source) {//make sure both source and dest are available
-        for (std::vector<std::tr1::weak_ptr<IndividualSubscription>::iterator i=source->mSubscribers.begin(),ie=source->mSubscribers.end();
+        for (std::vector<std::tr1::weak_ptr<IndividualSubscription> >::iterator i=source->mSubscribers.begin(),ie=source->mSubscribers.end();
              i!=ie;
              ++i) {//for each item in the list
             std::tr1::shared_ptr<IndividualSubscription> individual=i->lock();//if that item is still alive
             if (individual) {
                 individual->mSubscriptionState=dest;//reparent the item
-                dest->mSubscribers.push_back(i);//add the item to the parents queue
+                dest->mSubscribers.push_back(individual);//add the item to the parents queue
             }
         }
         source->mSubscribers.clear();//get it off this queue in case there are pending subscriptions for this defunct subscriptions.
@@ -59,34 +62,36 @@ void SubscriptionClient::upgradeFromIOThread(const std::tr1::weak_ptr<State>&wea
 
 void SubscriptionClient::upgrade(const std::tr1::weak_ptr<State>&source,
                                  const std::tr1::weak_ptr<State>&dest) {
-    IOServiceFactory::dispatchServiceMessage(mService,
-                                             std::tr1::bind(&SubscriptionClient::upgradeFromIOThread,
-                                                            this,
-                                                            source,
-                                                            dest));
+    Network::IOServiceFactory::
+        dispatchServiceMessage(mService,
+                               std::tr1::bind(&SubscriptionClient::upgradeFromIOThread,
+                                              this,
+                                              source,
+                                              dest));
 }
 
 
 void SubscriptionClient::removeSubscriberHint(const Network::Address&address,
                                  const UUID&uuid) {
-    IOServiceFactory::dispatchServiceMessage(mService,
-                                             std::tr1::bind(&SubscriptionClient::removeSubscriberFromIOThread,
-                                                            this,
-                                                            address,
-                                                            uuid));
+    Network::IOServiceFactory::
+        dispatchServiceMessage(mService,
+                               std::tr1::bind(&SubscriptionClient::removeSubscriberFromIOThreadHint,
+                                              this,
+                                              address,
+                                              uuid));
 }
-void SubscriptionClinet::addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
+void SubscriptionClient::addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
     std::tr1::shared_ptr<IndividualSubscription>i=individual.lock();
     if (i) {
         i->mFunction(i->mSubscriptionState->mLastDeliveredMessage);//blank state indicates that the stream is connected and future updates will be received
         i->mSubscriptionState->mSubscribers.push_back(individual);//add the subscriber to the list of subscribers in the IO thread rather than the main thread to avoid locks
     }
 }
-void SubscriptionClinet::removeSubscriberFromIOThread(const Network::Address&address,
-                                                      const UUID&uuid){
-    boost::lock_guard<boost::mutex>lok(*mMapLock);
-    BroadcasterMap::iterator where=mBroadcasters.find(AddressUUID(address,uuid));
-    if (where!=mBroadcasters.end()) {
+void SubscriptionClient::removeSubscriberFromIOThreadHint(Network::Address address,
+                                                          const UUID&uuid){
+    boost::lock_guard<boost::mutex>lok(*static_cast<boost::mutex*>(mMapLock));
+    BroadcastMap::iterator where=mBroadcasts.find(AddressUUID(address,uuid));
+    if (where!=mBroadcasts.end()) {
         std::tr1::shared_ptr<State> thus=where->second.lock();
         if (thus) {
             thus->purgeSubscribersFromIOThread(where->second,this);
@@ -94,49 +99,56 @@ void SubscriptionClinet::removeSubscriberFromIOThread(const Network::Address&add
     }
 }
 void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
-    IOServiceFactory::dispatchServiceMessage(mService,
-                                             std::tr1::bind(&SubscriptionClient::addSubscriberFromIOThread,
-                                                            this,
-                                                            individual));
+    Network::IOServiceFactory::
+        dispatchServiceMessage(mService,
+                               std::tr1::bind(&SubscriptionClient::addSubscriberFromIOThread,
+                                              this,
+                                              individual,
+                                              sendIntroMessage));
 }
 SubscriptionClient::SubscriptionClient(Network::IOService*service):mService(service){
     mMapLock = new UniqueLock;
 }
-
+SubscriptionClient::~SubscriptionClient(){
+    delete mMapLock;
+}
 SubscriptionClient::State::State(const Duration &period,
                                  const Network::Address&address,
-                                 const UUID&uuid):mAddress(address),mUUID(uuid),mPeriod(period){
-
+                                 const UUID&uuid,
+                                 SubscriptionClient *parent):mAddress(address),mUUID(uuid),mPeriod(period){
+    mParent=parent;
 }
-void SubscriptionClient::State::setStream(const std::shared_ptr<State> weak_thus,
+void SubscriptionClient::State::setStream(const std::tr1::shared_ptr<State> thus,
                       const std::tr1::shared_ptr<Network::Stream>topLevelStream,
                       const String& serializedStream){
     //set the toplevel stream
-    thus.mTopLevelStream=topLevelStream;
+    thus->mTopLevelStream=topLevelStream;
 
-    std::tr1::weak_ptr weak_thus(thus);
+    std::tr1::weak_ptr<State> weak_thus(thus);
     //clone the toplevel stream and bind weak_ptr functions from the state to callback
-    thus->mStream=topLevelStream.clone(std::tr1::bind(&State::connectionCallback,
-                                                      weak_thus,
-                                                      _1,
-                                                      _2),
-                                       std::tr1::bind(&State::bytesReceived,
-                                                      weak_thus,
-                                                      _1));
+    std::tr1::shared_ptr<Network::Stream> 
+        clonedStream(topLevelStream->clone(std::tr1::bind(&State::connectionCallback,
+                                                          weak_thus,
+                                                          _1,
+                                                          _2),
+                                           std::tr1::bind(&State::bytesReceived,
+                                                          weak_thus,
+                                                          _1)));
+    thus->mStream=clonedStream;
     if (serializedStream.length()) {//if the message has any substance, send it
-        thus->mStream->send(serializedStream,Network::ReliableUnordered);
+        thus->mStream->send(MemoryReference(serializedStream),Network::ReliableUnordered);
     }
 }
 
-void SubscriptionClient::State::purgeSubscribersFromIOThread(std::tr1::weak_ptr<State>&weak_thus, SubscriptionClient *parent) {
+void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::weak_ptr<State>&weak_thus, SubscriptionClient *parent) {
     //the minimum period in our set of live listeners
-    Duration period(0.0);
+    Duration period(Duration::microseconds(0));
     // an example live listener, without which the above period is meaningless
     std::tr1::shared_ptr<IndividualSubscription> tooGoodForMe;
-
+    
     //start at the end
     size_t i=mSubscribers.size();
-
+    
     while(i>0) {
         --i;//and work down
         std::tr1::shared_ptr<IndividualSubscription> individual=mSubscribers[i].lock();
@@ -163,7 +175,7 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(std::tr1::weak_ptr<
             {
                 boost::lock_guard<boost::mutex>lok(*parent->mMapLock);//lock the map
                 BroadcastMap::iterator where=parent->mBroadcasts.find(AddressUUID(mAddress,mUUID));
-                if (where!=mBroadcasts.end()) {
+                if (where!=parent->mBroadcasts.end()) {
                     parent->mBroadcasts.erase(where);//purge the map of our entry
                 }
             }
@@ -172,22 +184,22 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(std::tr1::weak_ptr<
             subscription.set_update_period(period);//and with the desired slower period
             //FIXME any more properties? we don't have a way to determine to edit the code if there are
             parent->subscribe(mAddress,//call subscribe
-                              mUUID,
                               subscription,
-                              tooGoodForMe.mFunction,
-                              tooGoodForMe.mDisconFunction,
+                              tooGoodForMe->mFunction,
+                              tooGoodForMe->mDisconFunction,
                               String(),
                               tooGoodForMe);//pass the example individual in, so a new one is not created
-            parent->upgradeFromIOThread(weak_this,//work an upgrade path to shift everyone into the new subscription state
+            parent->upgradeFromIOThread(weak_thus,//work an upgrade path to shift everyone into the new subscription state
                                         tooGoodForMe->mSubscriptionState);
+        }
     }
 }
 namespace {
 size_t sMaximumSubscriptionStateSize=1360;
 }
-void SubscriptionClient::State::bytesReceived(const std::weak_ptr<State>&weak_thus,
+void SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&weak_thus,
                           const Network::Chunk&data) {
-    std::shared_ptr<State> thus=weak_thus.lock();
+    std::tr1::shared_ptr<State> thus=weak_thus.lock();
     if (thus) {
         bool eraseAny=false;
         for (std::vector<std::tr1::weak_ptr<IndividualSubscription> >::iterator i
@@ -202,21 +214,21 @@ void SubscriptionClient::State::bytesReceived(const std::weak_ptr<State>&weak_th
             }
         }
         if (eraseAny) {
-            thus->purgeSubscribersFromIOThread();
+            thus->purgeSubscribersFromIOThread(weak_thus,thus->mParent);
         }
-        if (data.size()<sMaximumSubscriptionStateStateSize) {
-            mLastDeliveredMessage=data;
+        if (data.size()<sMaximumSubscriptionStateSize) {
+            thus->mLastDeliveredMessage=data;
         }else {
-            mLastDeliveredMessage.resize(0);
+            thus->mLastDeliveredMessage.resize(0);
         }
     }
 }
 
-void SubscriptionClient::State::connectionCallback(const std::weak_ptr<State>&weak_thus,
+void SubscriptionClient::State::connectionCallback(const std::tr1::weak_ptr<State>&weak_thus,
                                const Network::Stream::ConnectionStatus status,
                                const String&reason) {
     if (status!=Network::Stream::Connected) {
-        std::shared_ptr<State> thus=weak_thus.lock();
+        std::tr1::shared_ptr<State> thus=weak_thus.lock();
         if (thus) {
             for (std::vector<std::tr1::weak_ptr<IndividualSubscription> >::iterator i
                      =thus->mSubscribers.begin(),ie=thus->mSubscribers.end();
@@ -234,19 +246,17 @@ void SubscriptionClient::State::connectionCallback(const std::weak_ptr<State>&we
     }
 }
 
-
-std::tr1::shared_ptr<IndividualSubscription>
+std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
    SubscriptionClient::subscribe(const Network::Address& address,
-                                 const UUID & uuid,
                                  const Protocol::Subscribe&subscription,
                                  const std::tr1::function<void(const Network::Chunk&)>&cb,
                                  const std::tr1::function<void()>&disconCb,
-                                 const String&serializedSubscription=String(),
-                                 const std::tr1::shared_ptr<IndividualSubscription> newSubscription){
+                                 const String&serializedSubscription,
+                                 std::tr1::shared_ptr<IndividualSubscription> newSubscription){
     bool do_upgrade=false;
     std::tr1::weak_ptr<State> upgrade_source;
     std::tr1::weak_ptr<State> upgrade_dest;
-
+    std::tr1::shared_ptr<IndividualSubscription> retval;
     String localSerializedSubscription;
     if (serializedSubscription.length()==0)//serialize out if necessary
         subscription.SerializeToString(&localSerializedSubscription);
@@ -256,13 +266,12 @@ std::tr1::shared_ptr<IndividualSubscription>
         newSubscription=newerSubscription;
     }
     {//lock guard
-        std::tr1::shared_ptr<IndividualSubscription> retval;
-        boost::lock_guard<boost::mutex>lok(mMapLock);
-        AddressUUID key(address,uuid);
+        boost::lock_guard<boost::mutex>lok(*mMapLock);
+        AddressUUID key(address,subscription.broadcast_name());
         BroadcastMap::iterator where=mBroadcasts.find(key);
         TopLevelStreamMap::iterator topLevelStreamIter;
         if (where!=mBroadcasts.end()){//if the specific broadcast can be found
-            std::tr1::shared_ptr<IndividualSubscription>state=where->second.lock();
+            std::tr1::shared_ptr<State>state=where->second.lock();
             if (state) {
                 if (subscription.update_period()<state->mPeriod) {//if the period needs to be upgraded
                     do_upgrade=true;//set do update flag
@@ -276,14 +285,14 @@ std::tr1::shared_ptr<IndividualSubscription>
         }
         //fallback to existing toplevel stream
         if ((!retval)&&(topLevelStreamIter=mTopLevelStreams.find(address))!=mTopLevelStreams.end()) {
-            std::shared_ptr<Network::Stream> topLevelStreamPtr;
-            if ((topLevelStreamPtr=topLevelStreamIter.second->lock())) {//make sure toplevel stream is there
+            std::tr1::shared_ptr<Network::Stream> topLevelStreamPtr;
+            if ((topLevelStreamPtr=topLevelStreamIter->second.lock())) {//make sure toplevel stream is there
                 std::tr1::shared_ptr<State> state(new State(
                                                       subscription.update_period(),
                                                       address,
-                                                      uuid));//setup state
+                                                      subscription.broadcast_name(),this));//setup state
 
-                state->setStream(state,topLevelStreamPtr,serializedStream.length()?serializedStream:localSerializedStream);//set state to use a given toplevel stream and serialize
+                state->setStream(state,topLevelStreamPtr,serializedSubscription.length()?serializedSubscription:localSerializedSubscription);//set state to use a given toplevel stream and serialize
                                                                                                                            //out a broadcast join request
 
                 //put new broadcast into the broadcasts lists
@@ -296,16 +305,20 @@ std::tr1::shared_ptr<IndividualSubscription>
             }
         }
         if (!retval) {//make a new connection
-            std::shared_ptr<Network::Stream> topLevelStream (new TCPStream(mIOService));
+            std::tr1::shared_ptr<Network::Stream> topLevelStream (new Network::TCPStream(*mService));
 
             topLevelStream->connect(address,
-                                    &Stream::ignoreSubstreamCallback,
-                                    &Stream::ignoreConnectionStatus,
-                                    &Stream::ignoreBytesReceived);
-            std::shared_ptr<Network::Stream> state(new State(subscription.update_period(),
-                                                             address,
-                                                             uuid));
-            state->setStream(state,topLevelStream,serializedStream.length()?serializedStream:localSerializedStream);
+                                    &Network::Stream::ignoreSubstreamCallback,
+                                    &Network::Stream::ignoreConnectionStatus,
+                                    &Network::Stream::ignoreBytesReceived);
+            std::tr1::shared_ptr<State> state(new State(subscription.update_period(),
+                                                                  address,
+                                                                  subscription.broadcast_name(),
+                                                                  this));
+            if (do_upgrade) {
+                upgrade_dest=state;
+            }
+            state->setStream(state,topLevelStream,serializedSubscription.length()?serializedSubscription:localSerializedSubscription);
             newSubscription->mSubscriptionState=state;
             state->mSubscribers.push_back(newSubscription);
             mTopLevelStreams.insert(TopLevelStreamMap::value_type(address,topLevelStream));
@@ -314,13 +327,12 @@ std::tr1::shared_ptr<IndividualSubscription>
         }
     }//unlock map lock
     if (do_upgrade) {
-        upgrade(upgrade_source,retval);//coalesce those with lower retval into broadcast with higher retval
+        upgrade(upgrade_source,upgrade_dest);//coalesce those with lower retval into broadcast with higher retval
     }
     return retval;
 }
-std::tr1::shared_ptr<IndividualSubscription>
+std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
     SubscriptionClient::subscribe(const Network::Address& address,
-                                  const UUID & uuid,
                                   const String&subscription,
                                   const std::tr1::function<void(const Network::Chunk&)>&cb,
                                   const std::tr1::function<void()>&disconCb){
@@ -328,10 +340,11 @@ std::tr1::shared_ptr<IndividualSubscription>
     if (s.ParseFromString(subscription)) {
         return subscribe(address,
                          s,
-                         subscription,
                          cb,
-                         disconCb);
+                         disconCb,
+                         subscription);
     }
+    return std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>();
 }
 
 

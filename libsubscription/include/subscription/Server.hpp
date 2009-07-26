@@ -41,7 +41,7 @@ class Subscribe;
 }
 class SubscriptionState;
 
-    class Server:protected std::tr1::enable_shared_from_this<Server> {
+class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from_this<Server> {
     class UniqueLock;
     std::tr1::unordered_map<UUID,SubscriptionState*,UUID::Hasher>mSubscriptions;
     std::tr1::unordered_map<SubscriptionState*,UUID>mBroadcasters;

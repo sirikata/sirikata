@@ -34,19 +34,19 @@
 #include <network/Stream.hpp>
 #include <network/StreamListener.hpp>
 #include <util/UUID.hpp>
+#include <util/Time.hpp>
 namespace Sirikata { namespace Subscription {
-
 namespace Protocol {
 class Subscribe;
 }
-class SubscriptionClient {
+class SIRIKATA_SUBSCRIPTION_EXPORT SubscriptionClient {
     class AddressUUID {
-        Address mAddress;
+        Network::Address mAddress;
         UUID mUUID;
         friend class Hasher;
     public:
-        AddressUUID(const Network::Address&a,const UUID&&u):mAddress(a),mUUID(u) {}
-        AddressUUID():mAddress(Network::Address::NULL),mUUID(UUID::null()) {}
+        AddressUUID(const Network::Address&a,const UUID&u):mAddress(a),mUUID(u) {}
+        AddressUUID():mAddress(Network::Address::null()),mUUID(UUID::null()) {}
         bool operator< (const AddressUUID&other) const{
             return mUUID==other.mUUID?mAddress<other.mAddress:mUUID<other.mUUID;
         }
@@ -55,54 +55,61 @@ class SubscriptionClient {
         }
         class Hasher {public:
             bool operator() (const AddressUUID&au) const{
-                return Address::Hasher()(au.mAddress)^UUID::Hasher()(au.mUUID);
+                return Network::Address::Hasher()(au.mAddress)^UUID::Hasher()(au.mUUID);
             }
         };
     };
     Network::IOService*mService;
     class UniqueLock;
     UniqueLock*mMapLock;
-    typedef std::unordered_map<Address,std::weak_ptr<Network::Stream> > TopLevelStreamMap;
-    typedef std::unordered_map<AddressUUID,std::tr1::weak_ptr<State>,AddressUUID::Hasher> BroadcastMap;
 
-    void upgradeFromIOThread(const std::weak_ptr<State>&source,
-                             const std::weak_ptr<State>&dest);
+public:
+    class IndividualSubscription;
+protected:
+    class State;
+    typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<Network::Stream>,Network::Address::Hasher > TopLevelStreamMap;
+    typedef std::tr1::unordered_map<AddressUUID,std::tr1::weak_ptr<State>,AddressUUID::Hasher> BroadcastMap;
+
+    void upgradeFromIOThread(const std::tr1::weak_ptr<State>&source,
+                             const std::tr1::weak_ptr<State>&dest);
 
     void addSubscriberFromIOThread(const std::tr1::weak_ptr<IndividualSubscription>&, bool sendIntroMessage);
-    void removeSubscriberFromIOThreadHint(const Address mAddress;
+    void removeSubscriberFromIOThreadHint(const Network::Address mAddress,
                                           const UUID &mUUID);
 
-protected:
     TopLevelStreamMap mTopLevelStreams;
     BroadcastMap mBroadcasts;
     ///schedules a work task to upgrade all items from source to destination
-    void upgrade(const std::weak_ptr<State>&source,
-                 const std::weak_ptr<State>&dest);
+    void upgrade(const std::tr1::weak_ptr<State>&source,
+                 const std::tr1::weak_ptr<State>&dest);
     void addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&, bool sendIntroMessage);
-    void removeSubscriberHint(const Address &mAddress;
+    void removeSubscriberHint(const Network::Address &mAddress,
                               const UUID &mUUID);
 
 public:
     class IndividualSubscription;
 protected:
     class State{
+        friend class SubscriptionClient;
         Network::Chunk mLastDeliveredMessage;
-        std::shared_ptr<Network::Stream> mTopLevelStream;
+        std::tr1::shared_ptr<Network::Stream> mTopLevelStream;
+        SubscriptionClient*mParent;
     public:
         ///this function goes through all subscribers of this State and sees if any are dead (probably). Also computes the maximum needed period and potentially downgrades the subscribers if it's too high
-        void purgeSubscribersFromIOThread(std::tr1::weak_ptr<State>&weak_thus, SubscriptionClient *parent);
-        const Address mAddress;
+        void purgeSubscribersFromIOThread(const std::tr1::weak_ptr<State>&weak_thus, SubscriptionClient *parent);
+        const Network::Address mAddress;
         const UUID mUUID;
         Duration mPeriod;
         std::tr1::shared_ptr<Network::Stream> mStream;
         std::vector<std::tr1::weak_ptr<IndividualSubscription> > mSubscribers;
         State(const Duration &period,
               const Network::Address&address,
-              const UUID&uuid);
-        void setStream(const std::shared_ptr<State>thus, const std::tr1::shared_ptr<Network::Stream>topLevelStream, const String&serialized_introduction=String());
-        static void bytesReceived(const std::weak_ptr<State>&,
+              const UUID&uuid,
+              SubscriptionClient *parent);
+        void setStream(const std::tr1::shared_ptr<State>thus, const std::tr1::shared_ptr<Network::Stream>topLevelStream, const String&serialized_introduction=String());
+        static void bytesReceived(const std::tr1::weak_ptr<State>&,
                                   const Network::Chunk&data);
-        static void connectionCallback(const std::weak_ptr<State>&thus,
+        static void connectionCallback(const std::tr1::weak_ptr<State>&thus,
                                        const Network::Stream::ConnectionStatus,
                                        const String&reason);
     };
@@ -110,12 +117,12 @@ protected:
 public:
     SubscriptionClient(Network::IOService*mService);
     ~SubscriptionClient();
-    class IndividualSubscription:public {
-        IndividualSubscription(const std::tr1::function<void(const Network::Chunk&)>function, const Duration&period);
-        friend class Subscriber;
+    class IndividualSubscription {
+        friend class SubscriptionClient;
+        IndividualSubscription(const Duration&period,const std::tr1::function<void(const Network::Chunk&)>function,const std::tr1::function<void()>disconeFunction):mFunction(function),mDisconFunction(disconeFunction),mPeriod(period){}
+    public:
         std::tr1::function<void(const Network::Chunk&)> mFunction;
         std::tr1::function<void()> mDisconFunction;
-    public:
         std::tr1::shared_ptr<State> mSubscriptionState;
 
         Duration mPeriod;
@@ -128,7 +135,7 @@ public:
                                      const std::tr1::function<void(const Network::Chunk&)>&bytesReceived,
                                      const std::tr1::function<void()>&disconnectionFunction,
                                                            const String&serializedSubscription=String(),
-                                                           const std::tr1::shared_ptr<IndividualSubscription>&=std::tr1::shared_ptr<IndividualSubscription>());
+                                                           std::tr1::shared_ptr<IndividualSubscription>individualSubscription=std::tr1::shared_ptr<IndividualSubscription>());
     std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address,
                                                            const String&subscription,
                                                            const std::tr1::function<void(const Network::Chunk&)>&,

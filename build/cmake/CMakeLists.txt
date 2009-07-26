@@ -855,7 +855,7 @@ SET(LIBPROXIMITY_SOURCES
 
 SET(LIBSUBSCRIPTION_SOURCES 
                   ${SirikataProtocolDirectory}/Subscription_protobuf.cc
-
+                  ${LIBSUBSCRIPTION_SOURCE_DIR}/SubscriptionClient.cpp 
                   ${LIBSUBSCRIPTION_SOURCE_DIR}/Server.cpp 
                   ${LIBSUBSCRIPTION_SOURCE_DIR}/Broadcast.cpp 
                   ${LIBSUBSCRIPTION_SOURCE_DIR}/SubscriptionState.cpp
@@ -963,9 +963,9 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
-  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
-  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
-
+#  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
+#  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
+  ${LIBCORE_DIR}/test/SubscriptionTest.hpp
  )
 #  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
@@ -1145,7 +1145,7 @@ SET_TARGET_PROPERTIES(${SPACE_BINARY} ${PROXIMITY_BINARY} ${SUBSCRIPTION_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}
-                      ${TEST_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES}) #${SIRIKATA_PROXIMITY_LIB} 
+                      ${TEST_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES} ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_SUBSCRIPTION_LIB})
 TARGET_LINK_LIBRARIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
 TARGET_LINK_LIBRARIES(${PROXIMITY_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXIMITY_LIB})
 TARGET_LINK_LIBRARIES(${SUBSCRIPTION_BINARY} ${SUBSCRIPTION_CORE_LIB} ${SIRIKATA_SUBSCRIPTION_LIB})
