@@ -161,7 +161,8 @@ SQLiteObjectStorage::ApplyReadWriteWorker::ApplyReadWriteWorker(SQLiteObjectStor
 Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::processReadWrite() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
     sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
-
+    if (rws->has_id())
+        mResponse->set_id(rws->id());
     Error error = DatabaseLocked;
     int retries =mParent->mRetries;
     for(int tries = 0; tries < retries+1 && error != None; tries++)
@@ -180,7 +181,7 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::proc
             error = mParent->applyWriteSet(db, *rws, retries);
         mResponse->set_return_status(convertError(error));
         if (mResponse->return_status()==Protocol::Response::SUCCESS){
-            mResponse->clear_return_status();
+            //mResponse->clear_return_status();
         }
         return mResponse->return_status();
     }
@@ -228,9 +229,11 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::pr
 
         tries--;
     }
+    if (mt->has_id())
+        mResponse->set_id(mt->id());
     mResponse->set_return_status(convertError(error));
     if (mResponse->return_status()==Protocol::Response::SUCCESS) {
-        mResponse->clear_return_status();
+        //mResponse->clear_return_status();
         return Protocol::Response::SUCCESS;
     }
     return mResponse->return_status();
