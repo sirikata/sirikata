@@ -31,16 +31,18 @@
  */
 
 package Sirikata.Subscription.Protocol;
-
+message Address {
+  optional string hostname=1;
+  optional string service=2;
+}
 
 message Subscribe {
     reserve 1 to 6;//in case we ever need to forward these around a bit
+    optional Address broadcast_address=7;
     ///the name of the specific broadcast to listen to
-    optional uuid broadcast_name=7;
+    optional uuid broadcast_name=8;
     ///the maximum frequency to receive updates: empty means every update is broadcast
-    optional duration update_period=8;
-    ///if error exceeds this much per property, send update, irrespective of frequency
-    repeated float max_error=9;//per property
+    optional duration update_period=9;
     
     reserve 1536 to 2560;
     reserve 229376 to 294912;

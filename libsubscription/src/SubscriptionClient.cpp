@@ -182,8 +182,9 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::wea
             Protocol::Subscribe subscription;//make a subscription packet
             subscription.set_broadcast_name(mUUID);//populate it with fields from this
             subscription.set_update_period(period);//and with the desired slower period
+            
             //FIXME any more properties? we don't have a way to determine to edit the code if there are
-            parent->subscribe(mAddress,//call subscribe
+            parent->subscribe(mAddress,
                               subscription,
                               tooGoodForMe->mFunction,
                               tooGoodForMe->mDisconFunction,
@@ -332,17 +333,23 @@ std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
     return retval;
 }
 std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
-    SubscriptionClient::subscribe(const Network::Address& address,
-                                  const String&subscription,
+    SubscriptionClient::subscribe(const String&subscription,
                                   const std::tr1::function<void(const Network::Chunk&)>&cb,
                                   const std::tr1::function<void()>&disconCb){
     Protocol::Subscribe s;
     if (s.ParseFromString(subscription)) {
+        Network::Address address(Network::Address::null());
+        if (s.has_broadcast_address()) {
+            if (s.broadcast_address().has_hostname()&&s.broadcast_address().has_service()) {
+                address=Network::Address(s.broadcast_address().hostname(),
+                                         s.broadcast_address().service());
+            }
+            s.clear_broadcast_address();
+        }
         return subscribe(address,
                          s,
                          cb,
-                         disconCb,
-                         subscription);
+                         disconCb);
     }
     return std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>();
 }

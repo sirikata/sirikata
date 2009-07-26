@@ -130,13 +130,13 @@ public:
             mFunction(chunk);
         }
     };
-    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address,
+    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address&,
                                      const Protocol::Subscribe&subscription,
                                      const std::tr1::function<void(const Network::Chunk&)>&bytesReceived,
                                      const std::tr1::function<void()>&disconnectionFunction,
                                                            const String&serializedSubscription=String(),
                                                            std::tr1::shared_ptr<IndividualSubscription>individualSubscription=std::tr1::shared_ptr<IndividualSubscription>());
-    std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address& address,
+    std::tr1::shared_ptr<IndividualSubscription> subscribe(
                                                            const String&subscription,
                                                            const std::tr1::function<void(const Network::Chunk&)>&,
                                                            const std::tr1::function<void()>&disconnectionFunction);
