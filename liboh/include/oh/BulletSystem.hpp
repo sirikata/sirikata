@@ -225,7 +225,7 @@ public:
             data.push_back(rawdata[i]);
         }
 //        data.pop_back();                                    // why? whence extra byte?
-        printf("read data %d bytes\n", data.size());
+        printf("read data %d bytes\n", (int32)data.size());
         read_chunks(data.size());
         return true;
     }
@@ -248,7 +248,7 @@ public:
         }
         f.close();
         data.pop_back();                                    // why? whence extra byte?
-        printf("read data %d bytes\n", data.size());
+        printf("read data %d bytes\n", (int32)data.size());
         read_chunks(data.size());
         return true;
     }
