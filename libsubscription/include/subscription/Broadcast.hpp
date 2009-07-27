@@ -69,11 +69,11 @@ public:
                                         const std::tr1::function<void(BroadcastStream*,
                                                                       Network::Stream::ConnectionStatus, 
                                                                       const std::string&reason)>& cb);
-    std::tr1::shared_ptr<BroadcastStream> establishBroadcast(const Network::Address&addy, 
-                                                             const UUID&name,
-                                                             const std::tr1::function<void(const std::tr1::weak_ptr<BroadcastStream>&,
-                                                                                           Network::Stream::ConnectionStatus, 
-                                                                                           const std::string&reason)>& cb);
+    std::tr1::shared_ptr<BroadcastStream> establishSharedBroadcast(const Network::Address&addy, 
+                                                                   const UUID&name,
+                                                                   const std::tr1::function<void(const std::tr1::weak_ptr<BroadcastStream>&,
+                                                                                                 Network::Stream::ConnectionStatus, 
+                                                                                                 const std::string&reason)>& cb);
     Broadcast(Network::IOService*service);
     ~Broadcast();
 };

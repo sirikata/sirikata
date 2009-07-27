@@ -82,7 +82,7 @@ void ASIOSocketWrapper::sendLargeChunkItem(const std::tr1::shared_ptr<Multiplexe
     TCPSSTLOG(this,"snd",&*toSend->begin()+originalOffset,bytes_sent,error);
     if (error)  {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
-        SILOG(tcpsst,debug,"Socket disconnected...waiting for recv to trigger error condition\n");
+        SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent+originalOffset!=toSend->size()) {
         sendToWire(parentMultiSocket,toSend,originalOffset+bytes_sent);
     }else {
@@ -95,7 +95,7 @@ void ASIOSocketWrapper::sendLargeDequeItem(const std::tr1::shared_ptr<Multiplexe
     TCPSSTLOG(this,"snd",&*const_toSend.front()->begin()+originalOffset,bytes_sent,error);
     if (error )   {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
-        SILOG(tcpsst,debug,"Socket disconnected...waiting for recv to trigger error condition\n");
+        SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     } else if (bytes_sent+originalOffset!=const_toSend.front()->size()) {
         sendToWire(parentMultiSocket,const_toSend,originalOffset+bytes_sent);
     }else if (const_toSend.size()<2) {
@@ -125,7 +125,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
     }
     if ( error ) {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
-        SILOG(tcpsst,debug,"Socket disconnected...waiting for recv to trigger error condition\n");
+        SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent!=bufferSize) {
 		 
 		 
@@ -269,12 +269,12 @@ void ASIOSocketWrapper::shutdownAndClose() {
     try {
         mSocket->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
     }catch (boost::system::system_error&err) {
-        SILOG(tcpsst,debug,"Error shutting down socket: "<<err.what());
+        SILOG(tcpsst,insane,"Error shutting down socket: "<<err.what());
     }
     try {
         mSocket->close();
     }catch (boost::system::system_error&err) {                
-        SILOG(tcpsst,debug,"Error closing socket: "<<err.what());
+        SILOG(tcpsst,insane,"Error closing socket: "<<err.what());
     }
 }
 

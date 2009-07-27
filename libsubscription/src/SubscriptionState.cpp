@@ -143,6 +143,10 @@ void SubscriptionState::broadcast(Server*poll,const MemoryReference&data){
             }
         }
     }
+    if (!mUnsentSubscribersHeap.empty()) {
+        poll->initiatePolling(mName,mUnsentSubscribersHeap.front().mNextUpdateTime-now);
+    }
+
 }
 
 SubscriptionState::~SubscriptionState(){

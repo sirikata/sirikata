@@ -156,7 +156,7 @@ void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
                 //FIXME is this the correct thing to do?
                 TCPSSTLOG(this,"sendnvr",&*data.data->begin(),data.data->size(),false);                
                 TCPSSTLOG(this,"sendnvr","\n",1,false);
-                thus->mNewRequests.push_back(data);
+                delete data.data;
             }else {
                 //with the connectionMutex acquired, no socket is allowed to be in the mSocketConnectionPhase
                 assert(thus->mSocketConnectionPhase==PRECONNECTION);

@@ -47,18 +47,36 @@
 #include <time.h>
 using namespace Sirikata;
 using namespace Sirikata::Network;
+static unsigned char g_tarray[16]={1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,0};
+static unsigned char g_oarray[16]={2,2,2,2, 2,2,2,2, 2,2,2,2, 2,2,2,0};
 class SubscriptionTest : public CxxTest::TestSuite
 {
+    bool mDisconnected;
     Network::IOService*mSubIO;
     Network::IOService*mBroadIO;
-    AtomicValue<int32> mSubInitStage;
+    AtomicValue<int32> mSubInitStage[3];
+    char key[1024];
+    MemoryReference stdref;
+    void subscriptionCallback(int whichIndex,const Network::Chunk&c){
+        if (!c.empty()) {
+            TS_ASSERT_SAME_DATA(&c[0],key,1024);
+        } else {
+            TS_ASSERT("Size 0 memory chunk"&&0);
+        }
+        ++mSubInitStage[whichIndex];
+    }
+    void subscriptionDiscon(int whichIndex){
+        mSubInitStage[whichIndex]+=(1<<30);
+    }
     AtomicValue<int32> mBroadInitStage;
-    Subscription::Server*mServer;
+    std::tr1::shared_ptr<Subscription::Server>mServer;
     Subscription::SubscriptionClient *mSub;
     Subscription::Broadcast *mBroad;
     boost::thread *mSubThread;
     boost::thread *mBroadThread;
+    UUID tBroadcastUUID;
     Subscription::Broadcast::BroadcastStream *tBroadcast;
+    UUID oBroadcastUUID;
     Subscription::Broadcast::BroadcastStream *oBroadcast;
     std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> t100ms;
     std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> t10ms;
@@ -69,23 +87,43 @@ class SubscriptionTest : public CxxTest::TestSuite
         Network::IOServiceFactory::runService(mSubIO);
     }
     void broadcastThread() {
-        Network::IOServiceFactory::runService(mSubIO);
+        Network::IOServiceFactory::runService(mBroadIO);
     }
+    void broadcastCallback(Network::Stream::ConnectionStatus status, const std::string&reason) { 
+        if (status!=Network::Stream::Connected) {
+            mDisconnected=true;
+        }else {
+            
+        }
+    }
+    Network::Address mBroadcastAddress;
+    Network::Address mSubscriptionAddress;
+    Subscription::Protocol::Subscribe mSubscriptionMessage;
 public:
-    SubscriptionTest() {
+    SubscriptionTest():stdref(&key,1024),tBroadcastUUID(g_tarray,sizeof(g_tarray)),oBroadcastUUID(g_oarray,sizeof(g_oarray)), mBroadcastAddress("127.0.0.1","7949"),mSubscriptionAddress("127.0.0.1","7948"){
+        for (unsigned int i=0;i<sizeof(mSubInitStage)/sizeof(mSubInitStage[0]);++i) {
+            mSubInitStage[i]=AtomicValue<int32>(0);
+        }
+        mDisconnected=false;
         oBroadcast=tBroadcast=NULL;
         mSubIO=Network::IOServiceFactory::makeIOService();
         mBroadIO=Network::IOServiceFactory::makeIOService();
         mBroad = new Subscription::Broadcast(mBroadIO);
         mSub = new Subscription::SubscriptionClient(mSubIO);
-        mServer=new Subscription::Server(mBroadIO,
-                                         new TCPStreamListener(*mBroadIO),
-                                         Network::Address("127.0.0.1","7949"),
-                                         new TCPStreamListener(*mSubIO),
-                                         Network::Address("127.0.0.1","7948"),
-                                         Duration::seconds(3.0));
+        std::tr1::shared_ptr<Subscription::Server> tempServer(new Subscription::Server(mBroadIO,
+                                                                                       new TCPStreamListener(*mBroadIO),
+                                                                                       mBroadcastAddress,
+                                                                                       new TCPStreamListener(*mSubIO),
+                                                                                       mSubscriptionAddress,
+                                                                                       Duration::seconds(3.0),
+                                                                                       1024*1024));
+        mServer=tempServer;
         mSubThread=new boost::thread(std::tr1::bind(&SubscriptionTest::subscriptionThread,this));
         mBroadThread=new boost::thread(std::tr1::bind(&SubscriptionTest::broadcastThread,this));
+        mSubscriptionMessage.mutable_broadcast_address().set_hostname(mSubscriptionAddress.getHostName());
+        mSubscriptionMessage.mutable_broadcast_address().set_service(mSubscriptionAddress.getService());
+        mSubscriptionMessage.set_broadcast_name(tBroadcastUUID);
+        
     }
     static SubscriptionTest*createSuite() {
         return new SubscriptionTest;
@@ -94,20 +132,58 @@ public:
         delete st;
     }
     ~SubscriptionTest() {
+        t100ms=std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription>();
+        t10ms=std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription>();
+        t0ms=std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription>();
+        otherTLS=std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription>();
+        delete tBroadcast;
+        delete oBroadcast;
+#ifdef _WIN32
+            Sleep(300);
+#else
+            sleep(1);
+#endif
         
         Network::IOServiceFactory::stopService(mSubIO);
         Network::IOServiceFactory::stopService(mBroadIO);
-        delete mServer;
+        mBroadThread->join();
+        mSubThread->join();
+        mServer=std::tr1::shared_ptr<Subscription::Server>();
         delete mBroad;
         delete mSub;
         Network::IOServiceFactory::destroyIOService(mSubIO);
         Network::IOServiceFactory::destroyIOService(mBroadIO);
-        mBroadThread->join();
-        mSubThread->join();
+
         delete mBroadThread;
         delete mSubThread;
     }
     void testSingleSubscribe(){
-        
+        memset(key,1,1024);
+        using namespace Sirikata::Subscription;
+        mSubscriptionMessage.set_update_period(Duration::milliseconds(1000.0));//FIXME
+        mSubscriptionMessage.set_broadcast_name(tBroadcastUUID);
+        std::string serialized;
+        mSubscriptionMessage.SerializeToString(&serialized);
+        t10ms=mSub->subscribe(serialized,
+                              std::tr1::bind(&SubscriptionTest::subscriptionCallback,this,1,_1),
+                              std::tr1::bind(&SubscriptionTest::subscriptionDiscon,this,1));
+        tBroadcast=mBroad->establishBroadcast(mBroadcastAddress,
+                                              tBroadcastUUID,
+                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));        
+        oBroadcast=mBroad->establishBroadcast(mBroadcastAddress,
+                                              oBroadcastUUID,
+                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));        
+        (*tBroadcast)->send(stdref,Network::ReliableOrdered);
+
+        for (int i=0;i<92000;++i) {
+#ifdef _WIN32
+            Sleep(i<90?100:3000);
+#else
+            sleep(i<90?0:1);
+#endif
+            if (mSubInitStage[1].read()==1)
+                break;
+        }
+        TS_ASSERT_EQUALS(mSubInitStage[1].read(),1);       
     }
 };

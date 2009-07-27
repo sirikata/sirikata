@@ -45,7 +45,7 @@ namespace Sirikata { namespace Subscription {
 class Server::UniqueLock :public boost::mutex{
 
 };
-Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*broadcastListener, const Network::Address&broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay):mMaxSubscribeDelay(maxSubscribeDelay){
+Server::Server(Network::IOService*broadcastIOService,Network::StreamListener*broadcastListener, const Network::Address&broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay, unsigned int maxMessageSize):mMaxSubscribeDelay(maxSubscribeDelay),mMaxCachedMessageSize(maxMessageSize){
     mBroadcastIOService=broadcastIOService;
     mBroadcastersSubscriptionsLock=new UniqueLock;
     mBroadcastListener=broadcastListener;
@@ -75,11 +75,15 @@ Server::~Server() {
     
 }
 void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream::SetCallbacks&cb){
-    std::tr1::shared_ptr<Stream> newStreamPtr(newStream);
-    std::tr1::weak_ptr<Stream> weakNewStreamPtr(newStreamPtr);
-    std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> >indirectedStream(new std::tr1::shared_ptr<Stream>(newStreamPtr));
-    cb(std::tr1::bind(&Server::subscriberConnectionCallback,indirectedStream,_1,_2),
-       std::tr1::bind(&Server::subscriberBytesReceivedCallback,this,indirectedStream,_1));
+    if (newStream) {
+        std::tr1::shared_ptr<Stream> newStreamPtr(newStream);
+        std::tr1::weak_ptr<Stream> weakNewStreamPtr(newStreamPtr);
+        std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> >indirectedStream(new std::tr1::shared_ptr<Stream>(newStreamPtr));
+        cb(std::tr1::bind(&Server::subscriberConnectionCallback,indirectedStream,_1,_2),
+           std::tr1::bind(&Server::subscriberBytesReceivedCallback,this,indirectedStream,_1));
+    }else {
+        //tls stream deleted
+    }
 }
 void Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Network::Chunk&dat){
     Protocol::Subscribe subscriptionRequest;
@@ -99,22 +103,26 @@ void Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
         *stream=std::tr1::shared_ptr<Stream>();
     }
 }
-void Server::purgeWaitingSubscriberOnBroadcastIOService(const UUID&uuid, size_t which){
-    WaitingStreamMap::iterator where=mWaitingStreams.find(uuid);
-    if (where!=mWaitingStreams.end()) {
-        if (which+1==where->second.size()) {
-            mWaitingStreams.erase(where);//last one to be erased
-        }else if (which<where->second.size()) {
-            while (true) {
-                if (where->second[which].mStream) {
-                    //disconnect the stream, since it does not match a thing after the timeout, probably garbage
-                    *where->second[which].mStream=std::tr1::shared_ptr<Stream>();
-                    where->second[which].mStream=std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> > ();
-                }else {
-                    break;
+void Server::purgeWaitingSubscriberOnBroadcastIOService(const std::tr1::weak_ptr<Server> &weak_thus, const UUID&uuid, size_t which){
+    std::tr1::shared_ptr<Server>thus=weak_thus.lock();
+    if (thus) {
+        WaitingStreamMap::iterator where=thus->mWaitingStreams.find(uuid);
+        if (where!=thus->mWaitingStreams.end()) {
+            SILOG (subscription,debug,"Purging Broadcaster "<<uuid.toString());
+            if (which+1==where->second.size()) {
+                thus->mWaitingStreams.erase(where);//last one to be erased
+            }else if (which<where->second.size()) {
+                while (true) {
+                    if (where->second[which].mStream) {
+                        //disconnect the stream, since it does not match a thing after the timeout, probably garbage
+                        *where->second[which].mStream=std::tr1::shared_ptr<Stream>();
+                        where->second[which].mStream=std::tr1::shared_ptr<std::tr1::shared_ptr<Stream> > ();
+                    }else {
+                        break;
+                    }
+                    if (which==0) break;
+                    --which;
                 }
-                if (which==0) break;
-                --which;
             }
         }
     }
@@ -129,17 +137,20 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
             if (*stream) {
                 where->second->registerSubscriber(*stream,subscriptionRequest);
                 success=true;
+            }else {
+
             }
         }else {
             UUID uuid(subscriptionRequest.broadcast_name());
             std::vector<WaitingStreams>*waiting=&mWaitingStreams[uuid];
             size_t which=waiting->size();
             waiting->push_back(WaitingStreams(stream,subscriptionRequest));
+            std::tr1::weak_ptr<Server> thus=shared_from_this();
             Network::IOServiceFactory::
                 dispatchServiceMessage(mBroadcastIOService,
                                        mMaxSubscribeDelay,
                                        std::tr1::bind(&Server::purgeWaitingSubscriberOnBroadcastIOService,
-                                                      this,
+                                                      thus,
                                                       uuid,
                                                       which));
                            
@@ -201,8 +212,8 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
                                 state->registerSubscriber(*i->mStream,i->mSubscriptionRequest);
                             }
                         }
+                        mWaitingStreams.erase(where);
                     }
-                    mWaitingStreams.erase(where);
                 }else {
                     SILOG(subscription,warning,"Duplicate UUID for broadcast "<<broadcastRegistration.broadcast_name().toString()<<" Already in map");
                 }
@@ -214,12 +225,21 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
         }
     }else {
         state->broadcast(this,MemoryReference(chunk));
+        if (chunk.size()<=mMaxCachedMessageSize) {
+            state->mLastSentMessage=chunk;
+        }else {
+            state->mLastSentMessage.clear();
+        }
     }
 }
 void Server::broadcastStreamCallback(Network::Stream* stream,Network::Stream::SetCallbacks&cb) {
-    SubscriptionState*state=new SubscriptionState(stream);
-    cb(std::tr1::bind(&Server::broadcastConnectionCallback,this,state,_1,_2),
-       std::tr1::bind(&Server::broadcastBytesReceivedCallback,this,state,_1));
+    if (stream ) {
+        SubscriptionState*state=new SubscriptionState(stream);
+        cb(std::tr1::bind(&Server::broadcastConnectionCallback,this,state,_1,_2),
+           std::tr1::bind(&Server::broadcastBytesReceivedCallback,this,state,_1));
+    }else {
+        //tls (top level stream) deleted
+    }
 }
 
 void Server::initiatePolling(const UUID&name, const Duration&waitTime) {

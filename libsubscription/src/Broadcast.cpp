@@ -85,7 +85,7 @@ void Broadcast::initiateHandshake(Broadcast::BroadcastStream*stream,const Networ
         SILOG(broadcast,error,"Cannot send memory reference to UUID "<<name.toString());
     }
 }
-std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishBroadcast(const Network::Address&addy, 
+std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroadcast(const Network::Address&addy, 
                                                                                const UUID&name,
                                                                                const std::tr1::function<void(const std::tr1::weak_ptr<Broadcast::BroadcastStream>&,
                                                                                                              Network::Stream::ConnectionStatus, 

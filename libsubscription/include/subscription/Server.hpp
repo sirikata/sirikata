@@ -41,7 +41,7 @@ class Subscribe;
 }
 class SubscriptionState;
 
-class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from_this<Server> {
+class SIRIKATA_SUBSCRIPTION_EXPORT Server:public std::tr1::enable_shared_from_this<Server> {
     class UniqueLock;
     std::tr1::unordered_map<UUID,SubscriptionState*,UUID::Hasher>mSubscriptions;
     class WaitingStreams {public:
@@ -59,8 +59,9 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from
     Network::IOService*mBroadcastIOService;
     Network::StreamListener*mSubscriberListener;
     Duration mMaxSubscribeDelay;
+    unsigned int mMaxCachedMessageSize;
     void subscriberStreamCallback(Network::Stream*,Network::Stream::SetCallbacks&);
-    void purgeWaitingSubscriberOnBroadcastIOService(const UUID&uuid, size_t which);
+    static void purgeWaitingSubscriberOnBroadcastIOService(const std::tr1::weak_ptr<Server> &,const UUID&uuid, size_t which);
     void subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,const Network::Chunk&);
     void subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Protocol::Subscribe&subscriptionRequest);
     static void subscriberConnectionCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&,Network::Stream::ConnectionStatus,const std::string&reason);
@@ -70,7 +71,7 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Server:protected std::tr1::enable_shared_from
     static void poll(const std::tr1::weak_ptr<Server> &, const UUID&);
 public:
 
-    Server(Network::IOService*broadcastIOSerivce, Network::StreamListener*broadcastListener, const Network::Address& broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay);
+    Server(Network::IOService*broadcastIOSerivce, Network::StreamListener*broadcastListener, const Network::Address& broadcastAddress, Network::StreamListener*subscriberListener, const Network::Address&subscriberAddress, const Duration&maxSubscribeDelay, unsigned int maxCachedMessageSize);
     ~Server();
     void initiatePolling(const UUID&, const Duration&waitFor);
 };
