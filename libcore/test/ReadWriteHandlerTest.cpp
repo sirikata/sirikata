@@ -235,13 +235,27 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
 
     test_read_write(fixture.handler, trans_5, Response::KEY_MISSING, expected_5,5);
 
-    // 1 read to make sure last set's write did not occur, 0 writes
-    ReadWriteSet* trans_6 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
+    // 1 read to make sure last set's write did not occur, 1 write to delete keyvalue[0]
+    ReadWriteSet* trans_6 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,1);
     copyStorageKey(trans_6->mutable_reads(0), keyvalues()[1] );
+    copyStorageKey(trans_6->mutable_writes(0), keyvalues()[0] );//erase 0
     StorageSet expected_6;
     expected_6.add_reads();
     copyStorageElement(expected_6.mutable_reads(0),keyvalues()[1] );
 
     test_read_write(fixture.handler, trans_6, Response::SUCCESS, expected_6,6);
 
+    ReadWriteSet* trans_7 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
+    copyStorageKey(trans_7->mutable_reads(0), keyvalues()[0] );
+    StorageSet expected_7;
+    expected_7.add_reads();
+
+    test_read_write(fixture.handler, trans_7, Response::KEY_MISSING, expected_7,7);
+
+    ReadWriteSet* trans_8 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
+    copyStorageKey(trans_8->mutable_reads(0), keyvalues()[1] );
+    StorageSet expected_8;
+    expected_8.add_reads();
+    copyStorageElement(expected_8.mutable_reads(0),keyvalues()[1] );
+    test_read_write(fixture.handler, trans_8, Response::SUCCESS, expected_8,8);
 }

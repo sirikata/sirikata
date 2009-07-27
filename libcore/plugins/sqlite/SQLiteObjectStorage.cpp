@@ -400,7 +400,7 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
                     // reset the statement so it'll clean up properly
                     rc = sqlite3_reset(value_query_stmt);
                     SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
-                    if (rc==SQLITE_LOCKED)
+                    if (rc==SQLITE_LOCKED||rc==SQLITE_BUSY)
                         locked=true;
                 }         
                 
@@ -408,7 +408,7 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
         }
         rc = sqlite3_finalize(value_query_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
-        if (locked||rc == SQLITE_LOCKED) {
+        if (locked||rc == SQLITE_LOCKED||rc==SQLITE_BUSY) {
             retval.clear_reads();
             return DatabaseLocked;
         }
@@ -449,10 +449,19 @@ template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyW
         rc = sqlite3_finalize(table_create_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
         // Insert or replace the value
-        String value_insert = "INSERT OR REPLACE INTO ";
-        value_insert += "\"" + table_name + "\"";
-        value_insert += " (key, value) VALUES(?, ?)";
 
+        String value_insert = "INSERT OR REPLACE INTO ";
+        if (!ws.writes(ws_it).has_data()) {
+             value_insert = "DELETE FROM ";
+        }
+        value_insert += "\"" + table_name + "\"";
+        if (!ws.writes(ws_it).has_data()) {
+            value_insert+= " WHERE key = ?";
+        }else {
+        //if (ws.writes(ws_it).has_data()) {
+            value_insert += " (key, value) VALUES(?, ?)";
+            //}
+        }
         sqlite3_stmt* value_insert_stmt;
 
         rc = sqlite3_prepare_v2(db->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
@@ -460,9 +469,10 @@ template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyW
 
         rc = sqlite3_bind_text(value_insert_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value insert statement");
-
-        rc = sqlite3_bind_blob(value_insert_stmt, 2, ws.writes(ws_it).data().data(), (int)ws.writes(ws_it).data().size(), SQLITE_TRANSIENT);
-        SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
+        if (ws.writes(ws_it).has_data()) {
+            rc = sqlite3_bind_blob(value_insert_stmt, 2, ws.writes(ws_it).data().data(), (int)ws.writes(ws_it).data().size(), SQLITE_TRANSIENT);
+            SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
+        }
 
         int step_rc = sqlite3_step(value_insert_stmt);
         if (step_rc != SQLITE_OK && step_rc != SQLITE_DONE)
