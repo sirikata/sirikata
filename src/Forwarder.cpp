@@ -17,6 +17,7 @@
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
 
+#include "Random.hpp"
 
 namespace CBR
 {
@@ -153,6 +154,57 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         if (!send_success) break;
         mOutgoingMessages.pop_front();
     }
+
+    // XXXXXXXXXXXXXXXXXXXXXX Generate noise
+
+    if (GetOption(SERVER_QUEUE)->as<String>() == "fair") {
+        for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
+            if (sid == m_serv_ID) continue;
+            while(true) {
+                OriginID origin;
+                origin.id = m_serv_ID;
+
+                NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+
+                uint32 offset = 0;
+                Network::Chunk msg_serialized;
+                offset = noise_msg->serialize(msg_serialized, offset);
+
+                bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
+                if (sent_success)
+                    mTrace->serverDatagramQueued((*mCurrentTime), sid, noise_msg->id(), offset);
+                delete noise_msg;
+                if (!sent_success) break;
+            }
+        }
+    }
+    else {
+        // For FIFO we generate for random servers because they all
+        // share a single internal queue.
+        uint32 nfail = 0;
+        uint32 nservers = mCSeg->numServers();
+        while(nfail < nservers) {
+            ServerID sid = randInt<uint32>(1, nservers);
+            if (sid == m_serv_ID) continue;
+
+            OriginID origin;
+            origin.id = m_serv_ID;
+
+            NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+
+            uint32 offset = 0;
+            Network::Chunk msg_serialized;
+            offset = noise_msg->serialize(msg_serialized, offset);
+
+            bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
+            if (sent_success)
+                mTrace->serverDatagramQueued((*mCurrentTime), sid, noise_msg->id(), offset);
+            delete noise_msg;
+            if (!sent_success) nfail++;
+        }
+    }
+
+    // XXXXXXXXXXXXXXXXXXXXXXXX
 
     mObjectMessageQueue->service(t);
     mServerMessageQueue->service(t);
@@ -352,6 +404,14 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
                 mTrace->subscription((*mCurrentTime), subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                 dest_obj->subscriptionMessage(subs_msg);
               }
+          }
+        break;
+      case MESSAGE_TYPE_NOISE:
+          {
+              NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
+              assert(noise_msg != NULL);
+              delivered = true;
+              delete noise_msg;
           }
         break;
       case MESSAGE_TYPE_MIGRATE:

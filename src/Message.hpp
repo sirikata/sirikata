@@ -51,6 +51,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_LOAD_STATUS   7
 #define MESSAGE_TYPE_OSEG_MIGRATE  8
 #define MESSAGE_TYPE_OSEG_LOOKUP   9
+#define MESSAGE_TYPE_NOISE         10
 
 
 
@@ -217,6 +218,20 @@ private:
 
     Action mAction;
 }; // class SubscriptionMessage
+
+class NoiseMessage : public Message {
+public:
+    NoiseMessage(const OriginID& origin, uint32 noise_sz);
+
+    virtual MessageType type() const;
+
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+private:
+    friend class Message;
+    NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+
+    uint32 mNoiseSize;
+}; // class NoiseMessage
 
 class MigrateMessage : public Message {
 public:

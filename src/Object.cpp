@@ -33,6 +33,7 @@
 #include "Object.hpp"
 #include "Message.hpp"
 #include "ObjectMessageQueue.hpp"
+#include "Random.hpp"
 
 namespace CBR {
 

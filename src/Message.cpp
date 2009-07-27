@@ -113,6 +113,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_OSEG_MIGRATE:
         msg = new OSegMigrateMessage(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_NOISE:
+        msg = new NoiseMessage(wire,offset,_id);
+        break;
       default:
         assert(false);
         break;
@@ -413,6 +416,41 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
     uint8 act = (uint8)mAction;
     memcpy( &wire[offset], &act, sizeof(uint8) );
     offset += sizeof(uint8);
+
+    return offset;
+}
+
+
+NoiseMessage::NoiseMessage(const OriginID& origin, uint32 noise_sz)
+ : Message(origin, true),
+   mNoiseSize(noise_sz)
+{
+}
+
+NoiseMessage::NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+ : Message(_id)
+{
+    memcpy( &mNoiseSize, &wire[offset], sizeof(uint32) );
+    offset += sizeof(uint32);
+
+    // Advance offset without reading any data, by mNoiseSize bytes
+    offset += mNoiseSize;
+}
+
+MessageType NoiseMessage::type() const {
+    return MESSAGE_TYPE_NOISE;
+}
+
+uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+
+    wire.resize( wire.size() + sizeof(uint32) );
+    memcpy( &wire[offset], &mNoiseSize, sizeof(uint32) );
+    offset += sizeof(uint32);
+
+    // Just expand by the number of bytes we want, don't bother setting them to anything
+    wire.resize( wire.size() + mNoiseSize );
+    offset += mNoiseSize;
 
     return offset;
 }

@@ -16,7 +16,7 @@
 
 #include "ObjectSegmentation.hpp"
 
-
+#include "Random.hpp"
 
 #include <iostream>
 #include <iomanip>

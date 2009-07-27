@@ -42,4 +42,11 @@ inline float32 randFloat(float32 minval, float32 maxval) {
     return minval + randFloat() * (maxval - minval);
 }
 
+template<typename inttype>
+inline inttype randInt(inttype minval, inttype maxval) {
+    inttype retval = minval + (inttype)(randFloat() * (maxval - minval + 1));
+    if (retval > maxval) retval = maxval; // Miniscule chance the randFloat() will be 1
+    return retval;
+}
+
 } // namespace CBR
