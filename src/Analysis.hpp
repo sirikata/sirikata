@@ -43,6 +43,9 @@ namespace CBR {
 struct Event;
 struct ObjectEvent;
 struct ServerDatagramEvent;
+struct ServerDatagramSentEvent;
+struct ServerDatagramQueuedEvent;
+struct ServerDatagramReceivedEvent;
 struct ServerDatagramQueueInfoEvent;
 struct PacketEvent;
 struct PacketQueueInfoEvent;
@@ -149,7 +152,46 @@ private:
  *  checking relative bandwidths when under load, etc.
  */
 class LatencyAnalysis {
+    class PacketData {
+        uint32 mSize;
+        uint64 mId;
+        ServerID source;
+        ServerID dest;
+        Time _send_start_time;
+        Time _send_end_time;
+        Time _receive_start_time;
+        Time _receive_end_time;
+        friend class LatencyAnalysis;
+    public:
+
+        PacketData();
+        void addPacketSentEvent(ServerDatagramQueuedEvent*);
+        void addPacketReceivedEvent(ServerDatagramReceivedEvent*);
+    };
+    class SourceDestinationPair{public:
+        ServerID source;
+        ServerID destination;
+        SourceDestinationPair(const ServerID& src, const ServerID&dst) {
+            source=src;
+            destination=dst;
+        }
+        bool operator <  (const SourceDestinationPair &Pair) const{
+            if (Pair.source==source) return destination<Pair.destination;
+            return source<Pair.source;
+        }
+        bool operator ==(const SourceDestinationPair &Pair) const{
+            return Pair.source==source&&Pair.destination==destination;
+        }
+        class Hasher{
+        public:
+            size_t operator()(const SourceDestinationPair&Pair)const {
+                return std::tr1::hash<ServerID>()(Pair.source)^std::tr1::hash<ServerID>()(Pair.destination);
+            }
+        };
+    };
 public:
+    typedef std::tr1::unordered_multimap<SourceDestinationPair,PacketData,SourceDestinationPair::Hasher> ServerPairPacketMap;
+    ServerPairPacketMap mServerPairPacketMap;
     LatencyAnalysis(const char* opt_name, const uint32 nservers);
     ~LatencyAnalysis();
 
@@ -163,7 +205,7 @@ private:
 
 class ObjectSegmentationAnalysis
 {
-  
+
 private:
   std::vector<Time> objectBeginMigrateTimes;
   std::vector<UUID> objectBeginMigrateID;

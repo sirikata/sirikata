@@ -184,12 +184,12 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
           is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
-          
+
           is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
 
           is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
           is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
-  
+
           evt = objBegMig_evt;
         }
         break;
@@ -199,9 +199,9 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         {
           ObjectAcknowledgeMigrateEvent* objAckMig_evt = new ObjectAcknowledgeMigrateEvent;
           is.read( (char*)&objAckMig_evt->time, sizeof(objAckMig_evt->time) );
-          
+
           is.read((char*) &objAckMig_evt->mObjID, sizeof(objAckMig_evt->mObjID) );
-          
+
           is.read((char*) & objAckMig_evt->mAcknowledgeFrom, sizeof(objAckMig_evt->mAcknowledgeFrom));
           is.read((char*) & objAckMig_evt->mAcknowledgeTo, sizeof(objAckMig_evt->mAcknowledgeTo));
 
@@ -268,7 +268,7 @@ private:
 
 
 LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 nservers) {
-    // read in all our data  
+    // read in all our data
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -526,7 +526,7 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
             if (evt == NULL)
                 break;
 
-	    
+
 
             ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
             if (datagram_evt != NULL)
@@ -777,8 +777,8 @@ void BandwidthAnalysis::computeJFI(const ServerID& sender, const ServerID& filte
 
               weight = p_evt->weight;
 
-	      
-            }	  
+
+            }
 
           sum += total_bytes/weight;
           sum_of_squares += (total_bytes/weight) * (total_bytes/weight);
@@ -960,11 +960,34 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
 }
 
 
-
+LatencyAnalysis::PacketData::PacketData():_send_start_time(0),_send_end_time(0),_receive_start_time(0),_receive_end_time(0){
+    mSize=0;
+    mId=0;
+}
+void LatencyAnalysis::PacketData::addPacketSentEvent(ServerDatagramQueuedEvent*sde) {
+    mSize=sde->size;
+    mId=sde->id;
+    source=sde->source;
+    dest=sde->dest;
+    if (_send_start_time==0||_send_start_time>=sde->begin_time()) {
+        _send_start_time=sde->time;
+        _send_end_time=sde->time;
+    }
+}
+void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedEvent*sde) {
+    mSize=sde->size;
+    mId=sde->id;
+    source=sde->source;
+    dest=sde->dest;
+    if (_receive_end_time==0||_receive_end_time<=sde->end_time()) {
+        _receive_start_time=sde->begin_time();
+        _receive_end_time=sde->end_time();
+    }
+}
 LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
     mNumberOfServers = nservers;
-
+    std::tr1::unordered_map<uint64,PacketData> packetFlow;
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -974,13 +997,19 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
             if (evt == NULL)
                 break;
 
-	    
 
-            ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (datagram_evt != NULL) {
-                //insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
+            {
+                ServerDatagramReceivedEvent* datagram_evt = dynamic_cast<ServerDatagramReceivedEvent*>(evt);
+                if (datagram_evt != NULL) {
+                    packetFlow[datagram_evt->id].addPacketReceivedEvent(datagram_evt);
+                }
             }
-
+            {
+                ServerDatagramQueuedEvent* datagram_evt = dynamic_cast<ServerDatagramQueuedEvent*>(evt);
+                if (datagram_evt != NULL) {
+                    packetFlow[datagram_evt->id].addPacketSentEvent(datagram_evt);
+                }
+            }
             PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
             if (packet_evt != NULL) {
                 //insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
@@ -996,7 +1025,40 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
             }
         }
     }
-
+    for (std::tr1::unordered_map<uint64,PacketData>::iterator i=packetFlow.begin(),ie=packetFlow.end();i!=ie;++i) {
+        mServerPairPacketMap.insert(ServerPairPacketMap::value_type(SourceDestinationPair(i->second.source,i->second.dest ),
+                                                                    i->second));
+    }
+    Time epoch((uint64)0);
+    for(uint32 source_id = 1; source_id <= nservers; source_id++) {
+        for(uint32 dest_id = 1; dest_id <= nservers; dest_id++) {
+            Duration latency(0);
+            size_t numSamples=0;
+            size_t numUnfinished=0;
+            SourceDestinationPair key(source_id,dest_id);
+            ServerPairPacketMap::iterator i=mServerPairPacketMap.find(key);
+            for (;i!=mServerPairPacketMap.end()&&i->first== key;++i) {
+                if (i->second._receive_end_time!=epoch&&i->second._send_start_time!=epoch) {
+                    PacketData dat=i->second;
+                    Duration delta=i->second._receive_end_time-i->second._send_start_time;
+                    if (delta>Duration::seconds(0.0f)) {
+                        ++numSamples;
+                        latency+=delta;
+                    }else if (delta<Duration::seconds(0.0f)){
+                        printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.seconds(),0.,(dat._send_end_time-dat._send_start_time).seconds(),(dat._receive_start_time-dat._send_start_time).seconds(),(dat._receive_end_time-dat._send_start_time).seconds(),dat.mSize, (dat._send_start_time-Time(0)).seconds(),(dat._send_end_time-Time(0)).seconds(),(dat._receive_start_time-Time(0)).seconds(),(dat._receive_end_time-Time(0)).seconds());
+                    }
+                }else{
+                    ++numUnfinished;
+                    if (i->second._receive_end_time==epoch&&i->second._send_start_time==epoch) {
+                        printf ("Packet with uninitialized duration\n");
+                    }
+                }
+            }
+            if (numSamples)
+                latency/=(double)numSamples;
+            std::cout << "Server "<<source_id<<" to "<<dest_id<<" : "<<latency<<" ("<<numSamples<<","<<numUnfinished<<")"<<std::endl;
+        }
+    }
     // Sort all lists of events by time
     /*    sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
     sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
@@ -1071,7 +1133,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectAcknowledgeMigrateID.push_back(obj_ack_mig_evt->mObjID);
           objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
           objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
-          
+
         }
       } //end while(is)
 
@@ -1079,7 +1141,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   }//end constructor
 
 
-  
+
   /*
     Nothing to populate in destructor.
   */
@@ -1088,17 +1150,17 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
   }
 
-  
+
   void ObjectSegmentationAnalysis::printData(std::ostream &fileOut)
   {
 
     fileOut<<"\n\nSize of objectMigrateTimes:               "<<objectBeginMigrateTimes.size()<<"\n\n";
     fileOut<<"\n\nSize of objectAcknowledgeMigrateTimes:    "<<(int)objectAcknowledgeMigrateTimes.size()<<"\n\n";
 
-    
+
     fileOut << "\n\n*******************Begin Migrate Messages*************\n\n\n";
 
-    
+
     for (int s=0; s < (int)objectBeginMigrateTimes.size(); ++s)
     {
       fileOut << objectBeginMigrateTimes[s].raw() << "\n";
@@ -1106,7 +1168,7 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut << "          migrate from: " << objectBeginMigrateMigrateFrom[s] << "\n";
       fileOut << "          migrate to:   " << objectBeginMigrateMigrateTo[s] << "\n";
       fileOut << "\n\n";
-  
+
     }
 
     fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
@@ -1119,7 +1181,7 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut << "          acknowledge to:   " << objectAcknowledgeAcknowledgeTo[s] << "\n";
       fileOut << "\n\n";
     }
-  }    
+  }
 
-  
+
 } // namespace CBR
