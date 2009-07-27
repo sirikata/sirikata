@@ -71,4 +71,13 @@ enum LOGGING_LEVEL {
 # define SILOG(module,lvl,value)
 #endif
 
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+// FIXME only works on GCC
+#define NOT_IMPLEMENTED_MSG (String("Not implemented reached in ") + String(__PRETTY_FUNCTION__))
+#else
+#define NOT_IMPLEMENTED_MSG (String("NOT IMPLEMENTED"))
+#endif
+
+#define NOT_IMPLEMENTED(module) SILOG(module,error,NOT_IMPLEMENTED_MSG)
+
 #endif

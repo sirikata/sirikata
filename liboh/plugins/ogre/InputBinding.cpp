@@ -93,7 +93,7 @@ void InputBinding::handle(Input::ButtonReleasedEventPtr& evt) {
 }
 
 void InputBinding::handle(Input::ButtonDownEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 void InputBinding::handle(Input::AxisEventPtr& evt) {
@@ -108,11 +108,11 @@ void InputBinding::handle(Input::AxisEventPtr& evt) {
 }
 
 void InputBinding::handle(Input::TextInputEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 void InputBinding::handle(Input::MouseHoverEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 void InputBinding::handle(Input::MouseClickEventPtr& evt) {
@@ -127,15 +127,15 @@ void InputBinding::handle(Input::MouseClickEventPtr& evt) {
 }
 
 void InputBinding::handle(Input::MouseDragEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 void InputBinding::handle(Input::WindowEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 void InputBinding::handle(Input::DragAndDropEventPtr& evt) {
-    assert(false);
+    NOT_IMPLEMENTED(ogre);
 }
 
 } // namespace Graphics
