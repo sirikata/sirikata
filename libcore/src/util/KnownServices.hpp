@@ -34,10 +34,12 @@
 namespace Sirikata {
 namespace Services{
 enum Ports{
+    RPC=0, // Default MessageBody RPC service
     REGISTRATION=1,
     LOC=2,
     GEOM=3, // Proximity service: Also known as PROX
     ROUTER=4,
+    PERSISTENCE=5,
     OBJECT_CONNECTIONS=16383
 };
 }

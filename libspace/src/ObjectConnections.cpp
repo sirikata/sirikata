@@ -90,7 +90,7 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
         if (success) {
             bool connection=false;
             int i;
-            for (i=0;i<rmb.message_arguments_size();++i){
+            for (i=0;i<rmb.message_size();++i){
                 connection=connection||(rmb.message_names(i)=="NewObj");
             }
             if (connection) {
@@ -140,8 +140,7 @@ void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     rm.header().set_destination_port(Services::REGISTRATION);
     rm.header().set_source_object(ObjectReference::spaceServiceID());//and has appropriately set its identifier
     rm.header().set_source_port(Services::OBJECT_CONNECTIONS);
-    rm.body().add_message_names("DelObj");//with one purpose: to delete itself
-    rm.body().add_message_arguments(NULL,0);    //and serialize the deleted object to the strong
+    rm.body().add_message("DelObj");//with one purpose: to delete itself
     delObj.set_object_reference(ref.getAsUUID());
     delObj.SerializeToString(&rm.body().message_arguments(0));
     std::string serialized_message_body;
@@ -295,7 +294,7 @@ bool ObjectConnections::processNewObject(const RoutableMessageHeader&hdr,MemoryR
     RoutableMessageBody rmb;
     if (hdr.has_destination_object()) {//destination_object is the temporary UUID given for pending connecting objects
         if (rmb.ParseFromArray(body_array.data(),body_array.size())) {
-            if (rmb.message_arguments_size()) {
+            if (rmb.message_size()) {
                 if (rmb.message_names(0)=="RetObj") {//make sure the name of the message is RetObj so it contains the ID
                     Protocol::RetObj ro;
                     if (ro.ParseFromString(rmb.message_arguments(0))) {//grab the message argument

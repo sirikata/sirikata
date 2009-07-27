@@ -51,9 +51,9 @@ public:
     /** QueryCallback will be called when the other client responds to our
         sent query.
 
-        @param thus  A shared_ptr to the HostedObject who sent the message.
         @param sentMessage  A pointer to this SentMessage.
-        @param responseMessage  A RoutableMessage to be parsed.
+        @param responseHeader  A RoutableMessageHeader
+        @param responseBody    A MemoryReference to be parsed of the body
         The method list of the original message is available in
         sentMessage->body().message_names(), and should line up with
         the number of arguments in responseMessage.body().message_arguments().
@@ -62,7 +62,7 @@ public:
         @note You must check that responseMessage.return_status() == SUCCESS.
         QueryCallback will be called even in the case of a TIMEOUT_FAILURE.
     */
-    typedef std::tr1::function<bool (SentMessage* sentMessage, const RoutableMessage &responseMessage)> QueryCallback;
+    typedef std::tr1::function<void (SentMessage* sentMessage, const RoutableMessageHeader &responseHeader, MemoryReference responseBody)> QueryCallback;
 
 private:
     struct TimerHandler;
@@ -70,22 +70,23 @@ private:
     const int64 mId; ///< This query ID. Passed to the constructor.
 
     RoutableMessageHeader mHeader; ///< Header embedded into the struct
-    RoutableMessageBody *mBody; ///< Body allocated in the constructor.
 
     QueryCallback mResponseCallback; ///< Callback, or null if not yet set.
     QueryTracker *const mTracker;
+
+protected:
+    ~SentMessage();
+
+    /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
+    SentMessage(QueryTracker *sender);
+
+    /// Constructor takes in a queryId. Caller is expected to keep track of a map.
+    SentMessage(int64 thisId, QueryTracker *sender);
+
 public:
-    /// body accessor, like that of RoutableMessage. (const ver)
-    const RoutableMessageBody &body() const {
-        return *mBody;
-    }
     /// header accessor, like that of RoutableMessage. (const ver)
     const RoutableMessageHeader &header() const {
         return mHeader;
-    }
-    /// body accessor, like that of RoutableMessage.
-    RoutableMessageBody &body() {
-        return *mBody;
     }
     /// header accessor, like that of RoutableMessage.
     RoutableMessageHeader &header() {
@@ -128,11 +129,6 @@ public:
         return mId;
     }
 
-    /// Constructor takes in a queryId. Caller is expected to keep track of a map.
-    SentMessage(int64 thisId, QueryTracker *sender);
-    /// Destructor to deallocate mBody.
-    ~SentMessage();
-
     QueryTracker *getTracker() const {
         return mTracker;
     }
@@ -156,13 +152,44 @@ public:
     /** Calls the callback handler for this message. Does not validate the
         sender of msg. If you need to check this, use QueryTracker::processMessage().
     */
-    bool gotResponse(const RoutableMessage &msg);
+    void processMessage(const RoutableMessageHeader &msg, MemoryReference body);
 
     /** Actually sends this message, after body() and header() have been set.
         Note that if resending, body() should still contain the same message
         that was originally sent out.
     */
-    void send();
+    void send(MemoryReference body);
+};
+
+template <class Body>
+class SentMessageBody : public SentMessage {
+public:
+private:
+    Body mBody;
+public:
+    SentMessageBody(QueryTracker *tracker)
+        : SentMessage(tracker) {
+    }
+    SentMessageBody(int64 id, QueryTracker *tracker)
+        : SentMessage(id, tracker) {
+    }
+    ~SentMessageBody() {
+    }
+
+    /// body accessor, like that of RoutableMessage. (const ver)
+    const Body &body() const {
+        return mBody;
+    }
+    /// body accessor, like that of RoutableMessage.
+    Body &body() {
+        return mBody;
+    }
+
+    void serializeSend() {
+        std::string bodyStr;
+        body().SerializeToString(&bodyStr);
+        send(MemoryReference(bodyStr));
+    }
 };
 
 }

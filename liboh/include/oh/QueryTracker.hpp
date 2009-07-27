@@ -65,8 +65,15 @@ public:
     /// Destructor: Cancels all ongoing queries with a NETWORK_FAILURE status.
     ~QueryTracker();
 
-    /// Creates a new SentMessage initialized with the next ID number.
-    SentMessage *create();
+    int64 allocateId() {
+        return mNextQueryId++;
+    }
+
+    /// Adds a new SentMessage to the map.
+    void insert(SentMessage *msg);
+
+    /// Removes the SentMessage from this map.
+    bool remove(SentMessage *msg);
 
     /// MessageService interface: sent messages will go through serv.
     bool forwardMessagesTo(MessageService*serv) {
@@ -82,11 +89,9 @@ public:
 
     /// A response has been received from the other object.
     void processMessage(const RoutableMessageHeader&, MemoryReference message_body);
-    /// A response has been received (avoids parsing body again)
-    void processMessage(const RoutableMessage&msg);
 
     /// Sends a message through the MessageService passed to forwardMessagesTo()
-    void sendMessage(SentMessage *msg);
+    void sendMessage(SentMessage *msg, MemoryReference body);
 
     /// Gets the timer IOService, if any.
     Network::IOService *getIOService() {
@@ -97,3 +102,4 @@ public:
 }
 
 #endif
+

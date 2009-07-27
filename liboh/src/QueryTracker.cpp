@@ -34,7 +34,7 @@
 #include <util/Platform.hpp>
 #include <oh/Platform.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
-#include "util/RoutableMessage.hpp"
+#include "util/RoutableMessageHeader.hpp"
 #include "oh/QueryTracker.hpp"
 #include "oh/SentMessage.hpp"
 
@@ -46,64 +46,62 @@ QueryTracker::~QueryTracker() {
     mSentMessages.swap(sentMessageCopy);
     for (SentMessageMap::iterator iter = sentMessageCopy.begin(); iter != sentMessageCopy.end(); ++iter) {
         SentMessage *messageInfo = iter->second;
-        RoutableMessage msg;
+        RoutableMessageHeader msg;
         msg.set_source_object(messageInfo->getRecipient());
         msg.set_source_space(messageInfo->getSpace());
         msg.set_source_port(messageInfo->getPort());
-        msg.body().set_return_status(RoutableMessageBody::NETWORK_FAILURE);
-        msg.body().set_id(messageInfo->getId());
-        messageInfo->gotResponse(msg);
+        msg.set_return_status(RoutableMessageHeader::NETWORK_FAILURE);
+        msg.set_reply_id(messageInfo->getId());
+        messageInfo->processMessage(msg, MemoryReference(NULL,0));
     }
 }
 
-SentMessage *QueryTracker::create() {
-    SentMessage *ret = new SentMessage(mNextQueryId++, this);
+void QueryTracker::insert(SentMessage *ret) {
     mSentMessages.insert(SentMessageMap::value_type(ret->getId(), ret));
-    return ret;
 }
 
-void QueryTracker::sendMessage(SentMessage *msg) {
-    std::string bodyStr;
-    msg->body().SerializeToString(&bodyStr);
+bool QueryTracker::remove(SentMessage *ret) {
+    int64 id = ret->getId();
+    SentMessageMap::iterator iter = mSentMessages.find(id);
+    if (iter != mSentMessages.end()) {
+        mSentMessages.erase(iter);
+        return true;
+    }
+    return false;
+}
+
+void QueryTracker::sendMessage(SentMessage *msg, MemoryReference bodyStr) {
     if (mForwardService) {
-        mForwardService->processMessage(msg->header(), MemoryReference(bodyStr));
+        mForwardService->processMessage(msg->header(), bodyStr);
     }
 }
 
 void QueryTracker::processMessage(const RoutableMessageHeader &msgHeader, MemoryReference body) {
-    RoutableMessage msg(msgHeader);
-    msg.body().ParseFromArray(body.data(), body.size());
-    processMessage(msg);
-}
-
-void QueryTracker::processMessage(const RoutableMessage &message) {
-    if (!message.body().has_return_status()) {
+    if (!msgHeader.has_reply_id()) {
+        SILOG(cppoh, error, "QueryTracker::processMessage called for non-reply");
         return; // Not a response message--shouldn't have gotten here.
     }
-    if (!message.body().has_id()) {
-        return; // invalid!
-    }
     // This is a response message;
-    int64 id = message.body().id();
+    int64 id = msgHeader.reply_id();
     SentMessageMap::iterator iter = mSentMessages.find(id);
     if (iter != mSentMessages.end()) {
-        if (iter->second->getSpace() == message.source_space() &&
-            iter->second->getRecipient() == message.source_object())
+        if (iter->second->getSpace() == msgHeader.source_space() &&
+            iter->second->getRecipient() == msgHeader.source_object())
         {
-            bool keepQuery = iter->second->gotResponse(message);
-            if (!keepQuery) {
-                delete iter->second;
-                mSentMessages.erase(iter);
-            }
+            iter->second->processMessage(msgHeader, body);
         } else {
             ObjectReference dest(ObjectReference::null());
-            if (message.has_destination_object()) {
-                dest = message.destination_object();
+            if (msgHeader.has_destination_object()) {
+                dest = msgHeader.destination_object();
             }
             std::ostringstream os;
-            os << "Response message with ID "<<id<<" to object "<<dest<<" should come from "<<iter->second->getRecipient() <<" but instead came from " <<message.source_object();
+            os << "Response message with ID "<<id<<" to object "<<dest<<
+                " should come from "<<iter->second->getRecipient() <<
+                " but instead came from " <<msgHeader.source_object();
             SILOG(cppoh, warning, os.str());
         }
+    } else {
+        SILOG(cppoh, warning, "Got a reply for unknown query ID "<<id);
     }
 }
 

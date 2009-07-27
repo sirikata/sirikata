@@ -161,8 +161,6 @@ SQLiteObjectStorage::ApplyReadWriteWorker::ApplyReadWriteWorker(SQLiteObjectStor
 Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::processReadWrite() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
     sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
-    if (rws->has_id())
-        mResponse->set_id(rws->id());
     Error error = DatabaseLocked;
     int retries =mParent->mRetries;
     for(int tries = 0; tries < retries+1 && error != None; tries++)
@@ -219,8 +217,6 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::pr
 
         tries--;
     }
-    if (mt->has_id())
-        mResponse->set_id(mt->id());
     mResponse->set_return_status(convertError(error));
     return mResponse->return_status();
 }
@@ -356,7 +352,7 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::convertError(Error interna
         return Protocol::Response::COMPARISON_FAILED;
         break;
       case DatabaseLocked:
-        return Protocol::Response::TIMEOUT_FAILURE;
+        return Protocol::Response::DATABASE_LOCKED;
         break;
       default:
         return Protocol::Response::INTERNAL_ERROR;

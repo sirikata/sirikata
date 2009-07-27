@@ -49,15 +49,28 @@ class RoutableMessageHeader {
     bool mHasSourceObject;
     bool mHasDestinationSpace;
     bool mHasSourceSpace;
+
+    uint64 mMessageId;
+    uint64 mMessageReplyId;
+    uint32 mReturnStatus;
+    bool mHasMessageId;
+    bool mHasMessageReplyId;
+
     std::string mData;
-    static unsigned char translateKey(int key, int message_type) {
-        return key*8+message_type;//(2=length delimited)
-    }
 public:
+    typedef Protocol::MessageHeader::ReturnStatus ReturnStatus;
+    static const ReturnStatus SUCCESS=Protocol::MessageHeader::SUCCESS;
+    static const ReturnStatus NETWORK_FAILURE=Protocol::MessageHeader::NETWORK_FAILURE;
+    static const ReturnStatus TIMEOUT_FAILURE=Protocol::MessageHeader::TIMEOUT_FAILURE;
+    static const ReturnStatus PROTOCOL_ERROR=Protocol::MessageHeader::PROTOCOL_ERROR;
+    static const ReturnStatus PORT_FAILURE=Protocol::MessageHeader::PORT_FAILURE;
+
     RoutableMessageHeader() {
         mDestinationPort=0;
         mSourcePort=0;
         mHasDestinationObject=mHasSourceObject=mHasDestinationSpace=mHasSourceSpace=false;
+        mHasMessageId=mHasMessageReplyId=false;
+        mReturnStatus = SUCCESS;
     }
     RoutableMessageHeader(const ObjectReference &destinationObject,
                           const ObjectReference &sourceObject):mDestinationObject(destinationObject),mSourceObject(sourceObject) {
@@ -65,6 +78,8 @@ public:
         mSourcePort=0;
         mHasDestinationObject=mHasSourceObject=true;
         mHasDestinationSpace=mHasSourceSpace=false;
+        mHasMessageId=mHasMessageReplyId=false;
+        mReturnStatus = SUCCESS;
     }
 private:
     size_t parseLength(const unsigned char*&input, size_t&size) {
@@ -107,6 +122,7 @@ public:
             size_t keyType=parseLength(curInput,size);
             size_t key=(keyType/8);
             if (!isReserved(key)) {
+                //std::cout << "Key "<<key<<" is not reserved. size="<<size<<", pos="<<(curInput-(const unsigned char *)input)<<"\n";
                 curInput=dataStart;
                 size=oldSize;
                 break;
@@ -118,9 +134,25 @@ public:
                       uint64 value=parseLength(curInput,size);
                       if (key==Sirikata::Protocol::MessageHeader::destination_port_field_tag) {
                           mDestinationPort=value;
+                          continue;
                       }
                       if (key==Sirikata::Protocol::MessageHeader::source_port_field_tag) {
                           mSourcePort=value;
+                          continue;
+                      }
+                      if (key==Sirikata::Protocol::MessageHeader::id_field_tag) {
+                          mHasMessageId=true;
+                          mMessageId=value;
+                          continue;
+                      }
+                      if (key==Sirikata::Protocol::MessageHeader::reply_id_field_tag) {
+                          mHasMessageReplyId=true;
+                          mMessageReplyId=value;
+                          continue;
+                      }
+                      if (key==Sirikata::Protocol::MessageHeader::return_status_field_tag) {
+                          mReturnStatus=value;
+                          continue;
                       }
                   }
                 break;
@@ -180,19 +212,19 @@ public:
         return ParseFromArray(size.data(),size.size());
     }
 private:
-    static unsigned int getSize(uint64 uuid, uint32 field_tag) {
-        unsigned int retval=2;
-        field_tag/=16;
-        uuid/=128;
-        while(field_tag) {
+    static unsigned int getIntSize(uint32 myint) {
+        unsigned int retval = 0;
+        do {
             retval++;
-            field_tag/=128;
-        }
-        while(uuid) {
-            retval++;
-            uuid/=128;
-        }
+            myint/=128;
+        } while(myint);
         return retval;
+    }
+    static unsigned int getFieldSize(uint32 field_tag) {
+        return getIntSize(field_tag*8);
+    }
+    static unsigned int getSize(uint64 uuid, uint32 field_tag) {
+        return getIntSize(uuid) + getFieldSize(field_tag);
     }
     static unsigned int getSize(const UUID&uuid, uint32 field_tag) {
         UUID::Data::const_iterator i,ib=uuid.getArray().begin(),ie=uuid.getArray().end();
@@ -204,70 +236,39 @@ private:
             else
                 --retval;
         }
-        retval+=2;
-        field_tag/=16;
-        while(field_tag) {
-            ++retval;
-            field_tag/=128;
-        }
+        retval++; // UUIDs are smaller than 127, length fits in one byte.
+        retval += getFieldSize(field_tag);
         return retval;
     }
-    std::string::iterator copyKey(std::string&s,std::string::iterator output, unsigned int protoNum, unsigned int size, unsigned int message_type=2) const{
-        if (size>=2) {
+
+    std::string::iterator copyIntValue(std::string&s,std::string::iterator output, unsigned int value, unsigned int &size) const{
+        do {
+            assert(size >= 2);
             --size;
-            *output=translateKey(protoNum%16,message_type);
-            if (protoNum/16) {
-                *output=(unsigned char)(128+(unsigned char)*output);
-                ++output;
-                *output=(protoNum/16)%128;
-                if (protoNum/16/128) {
-                    *output=(unsigned char)(128+(unsigned char)*output);
-                    ++output;
-                    *output=(protoNum/16/128)%128;
-                    if (protoNum/16/128/128) {
-                        *output=(unsigned char)(128+(unsigned char)*output);
-                        ++output;
-                        *output=(protoNum/16/128/128)%128;
-                        if (protoNum/16/128/128/128) {
-                            *output=(unsigned char)(128+(unsigned char)*output);
-                            ++output;
-                            *output=(protoNum/16/128/128/128)%128;
-                        }
-                        ++output;
-                    }else {
-                        ++output;
-                    }
-                }else {
-                    ++output;
-                }
-            }else {
-                ++output;
-            }
-        }
+            *output = (value & 127) + (value/128?128:0);
+            value >>= 7;
+            ++output;
+        } while (value);
         return output;
+    }
+    inline std::string::iterator copyKey(std::string&s,std::string::iterator output, unsigned int protoNum, unsigned int size, unsigned int message_type=2) const{
+        return copyIntValue(s, output, (protoNum << 3) | message_type, size);
     }
     std::string::iterator copyInt(std::string&s,std::string::iterator start_output, unsigned int protoNum, uint64 uuid, unsigned int size) const{
         std::string::iterator output=copyKey(s,start_output,protoNum,size,0);
-        while (uuid) {
-            *output=uuid%128+(uuid/128?128:0);
-            uuid/=128;
-            ++output;
-        }
-        return output;
+        return copyIntValue(s, output, uuid, size);
     }
     std::string::iterator copyItem(std::string&s,std::string::iterator start_output, unsigned int protoNum, const UUID&uuid, unsigned int size) const{
         std::string::iterator output=copyKey(s,start_output,protoNum,size,2);
-        if (output!=start_output) {
-            size-=(output-start_output);
-            assert(size>0);
-            size--;
-            *output=size;
-            ++output;
-            s.replace(output,output+size,(const char*)uuid.getArray().begin(),size);
-            return output+size;
-        }
-        output+=size;
-        return output;
+        assert (output!=start_output);
+
+        size-=(output-start_output);
+        assert(size>0 && size<=17);
+        size--;
+        *output=size;
+        ++output;
+        s.replace(output,output+size,(const char*)uuid.getArray().begin(),size);
+        return output+size;
     }
     bool AppendOrSerializeToString(std::string*s,size_t slength)const {
         size_t original_size=slength;
@@ -278,27 +279,47 @@ private:
         size_t sourceSpaceSize=0;
         unsigned int sourcePortSize=0;
         unsigned int destinationPortSize=0;
+        unsigned int sendidSize=0, replyidSize=0, retstatusSize=0;
         if (mHasDestinationObject)total_size+=(destinationObjectSize=getSize(mDestinationObject.getAsUUID(),Sirikata::Protocol::MessageHeader::source_object_field_tag));
         if (mHasSourceObject)total_size+=(sourceObjectSize=getSize(mSourceObject.getAsUUID(),Sirikata::Protocol::MessageHeader::destination_object_field_tag));
         if (mDestinationPort)total_size+=(destinationPortSize=getSize(mDestinationPort,Sirikata::Protocol::MessageHeader::destination_port_field_tag));
         if (mSourcePort)total_size+=(sourcePortSize=getSize(mSourcePort,Sirikata::Protocol::MessageHeader::source_port_field_tag));
         if (mHasDestinationSpace)total_size+=(destinationSpaceSize=getSize(mDestinationSpace.getAsUUID(),Sirikata::Protocol::MessageHeader::source_space_field_tag));
         if (mHasSourceSpace)total_size+=(sourceSpaceSize=getSize(mSourceSpace.getAsUUID(),Sirikata::Protocol::MessageHeader::destination_space_field_tag));
+        if (mHasMessageId)total_size+=(sendidSize=getSize(mMessageId,Sirikata::Protocol::MessageHeader::id_field_tag));
+        if (mHasMessageReplyId)total_size+=(replyidSize=getSize(mMessageReplyId,Sirikata::Protocol::MessageHeader::reply_id_field_tag));
+        if (mReturnStatus!=SUCCESS)total_size+=(retstatusSize=getSize(mReturnStatus,Sirikata::Protocol::MessageHeader::return_status_field_tag));
         s->resize(total_size);
         std::string::iterator output=s->begin();
         output+=original_size;
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_object_field_tag,mSourceObject.getAsUUID(),sourceObjectSize);
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_object_field_tag,mDestinationObject.getAsUUID(),destinationObjectSize);
 
-
+        if (mHasSourceObject) {
+            output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_object_field_tag,mSourceObject.getAsUUID(),sourceObjectSize);
+        }
+        if (mHasDestinationObject) {
+            output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_object_field_tag,mDestinationObject.getAsUUID(),destinationObjectSize);
+        }
         if (mSourcePort) {
             output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::source_port_field_tag,mSourcePort,sourcePortSize);
         }
         if (mDestinationPort) {
             output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::destination_port_field_tag,mDestinationPort,destinationPortSize);
         }
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace.getAsUUID(),sourceSpaceSize);
-        output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace.getAsUUID(),destinationSpaceSize);
+        if (mHasSourceSpace) {
+            output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace.getAsUUID(),sourceSpaceSize);
+        }
+        if (mHasDestinationSpace) {
+            output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace.getAsUUID(),destinationSpaceSize);
+        }
+        if (mHasMessageId) {
+            output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::id_field_tag,mMessageId,sendidSize);
+        }
+        if (mHasMessageReplyId) {
+            output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::reply_id_field_tag,mMessageReplyId,replyidSize);
+        }
+        if (mReturnStatus!=SUCCESS) {
+            output=copyInt(*s,output,Sirikata::Protocol::MessageHeader::return_status_field_tag,mReturnStatus,retstatusSize);
+        }
         if (output!=s->end()) {
             assert(s->end()-output==(ptrdiff_t)mData.size());
             s->replace(output,s->end(),mData);
@@ -314,14 +335,20 @@ public:
     }
     inline void clear_destination_object() {mHasDestinationObject=false;}
     inline bool has_destination_object() const {return mHasDestinationObject;}
-    inline const ObjectReference& destination_object() const {return mDestinationObject;}
+    inline const ObjectReference& destination_object() const {
+        assert(mHasDestinationObject);
+        return mDestinationObject;
+    }
     inline void set_destination_object(const ObjectReference &value) {
         mDestinationObject=value;
         mHasDestinationObject=true;
     }
     inline void clear_destination_space() {mHasDestinationSpace=false;}
     inline bool has_destination_space() const {return mHasDestinationSpace;}
-    inline const SpaceID& destination_space() const {return mDestinationSpace;}
+    inline const SpaceID& destination_space() const {
+        assert(mHasDestinationSpace);
+        return mDestinationSpace;
+    }
     inline void set_destination_space(const SpaceID &value) {
         mDestinationSpace=value;
         mHasDestinationSpace=true;
@@ -334,17 +361,27 @@ public:
         std::swap(mSourceSpace,mDestinationSpace);
         //std::swap(mHasSourcePort,mHasDestinationPort);
         std::swap(mSourcePort,mDestinationPort);
+
+        mHasMessageReplyId = mHasMessageId;
+        mMessageReplyId = mMessageId;
+        mHasMessageId = false;
     }
     inline void clear_source_object() {mHasSourceObject=false;}
     inline bool has_source_object() const {return mHasSourceObject;}
-    inline const ObjectReference& source_object() const {return mSourceObject;}
+    inline const ObjectReference& source_object() const {
+        assert(mHasSourceObject);
+        return mSourceObject;
+    }
     inline void set_source_object(const ObjectReference &value) {
         mSourceObject=value;
         mHasSourceObject=true;
     }
     inline void clear_source_space() {mHasSourceSpace=false;}
     inline bool has_source_space() const {return mHasSourceSpace;}
-    inline const SpaceID& source_space() const {return mSourceSpace;}
+    inline const SpaceID& source_space() const {
+        assert(mHasSourceSpace);
+        return mSourceSpace;
+    }
     inline void set_source_space(const SpaceID &value) {
         mSourceSpace=value;
         mHasSourceSpace=true;
@@ -361,6 +398,47 @@ public:
     inline void set_destination_port(MessagePort port) {
         mDestinationPort=port;
     }
+
+    inline int64 id() const{
+        assert(mHasMessageId);
+        return mMessageId;
+    }
+    inline bool has_id() const{
+        return mHasMessageId;
+    }
+    inline void set_id(int64 id) {
+        mMessageId=id;
+        mHasMessageId = true;
+    }
+    inline void clear_id() {
+        mHasMessageId = false;
+    }
+
+    inline int64 reply_id() const{
+        assert(mHasMessageReplyId);
+        return mMessageReplyId;
+    }
+    inline bool has_reply_id() const{
+        return mHasMessageReplyId;
+    }
+    inline void set_reply_id(int64 id) {
+        mMessageReplyId=id;
+        mHasMessageReplyId = true;
+    }
+    inline void clear_reply_id() {
+        mHasMessageReplyId = false;
+    }
+
+    inline int32 return_status() const{
+        return mReturnStatus;
+    }
+    inline void set_return_status(int32 status) {
+        mReturnStatus=status;
+    }
+
 };
+
+typedef RoutableMessageHeader::ReturnStatus ReturnStatus;
+
 }
 #endif

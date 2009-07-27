@@ -54,71 +54,10 @@ using Protocol::ObjLoc;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public MessageService, public SelfWeakPtr<HostedObject> {
+class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
+//------- Private inner classes
     class PerSpaceData;
-public:
-    /** Structure passed to processMessage() upon receiving a message.
-        Contains a source SpaceObjectReference, and both ports, as well as
-        the method name, and the encoded arguments for that method.
-        Note that the full RoutableMessageBody is split up, and only one method
-        is sent at a time.
-     */
-    struct ReceivedMessage {
-        SpaceObjectReference sourceObject; ///< Full SpaceObjectReference of sender.
-        MessagePort sourcePort; ///< Port of sender.
-        MessagePort destinationPort; ///< Port of reciever.
-
-        String name; ///< method name
-        MemoryReference body; ///< Protobuf encoded body.
-
-        /// Gets the port of the sender (other client), default 0.
-        MessagePort getPort() const {
-            return sourcePort;
-        }
-        /** Gets the space we are in.
-            Note: both sender and receiver must be in the same space. */
-        const SpaceID &getSpace() const {
-            return sourceObject.space();
-        }
-        /// Gets the ObjectReference of the sender (other client).
-        const ObjectReference &getSender() const {
-            return sourceObject.object();
-        }
-
-        /// Gets the port of the recipient (this object). default 0.
-        MessagePort getThisPort() const {
-            return destinationPort;
-        }
-        /// Gets the ProxyObject of the receiver (this object).
-        const ProxyObjectPtr &getThisProxy(const HostedObject &hosted) const {
-            return hosted.getProxy(getSpace());
-        }
-        /** Gets the ProxyManager representing this space. It must contain
-            this object, and it might contain the sender object. */
-        ObjectHostProxyManager *getProxyManager(const HostedObject &hosted) const {
-            const ProxyObjectPtr &obj = getThisProxy(hosted);
-            if (obj) {
-                return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
-            }
-            return NULL;
-        }
-
-        /// Gets the ProxyObject of the sender (other object), if in range.
-        ProxyObjectPtr getSenderProxy(const HostedObject &hosted) const {
-            ObjectHostProxyManager *ohpm = getProxyManager(hosted);
-			if (ohpm) {
-				ProxyObjectPtr proxyPtr (ohpm->getProxyObject(SpaceObjectReference(getSpace(), getSender())));
-				return proxyPtr;
-			}
-			return ProxyObjectPtr();
-        }
-
-        /// Simple constructor, takes only the arguments for the RoutableMessageHeader.
-        ReceivedMessage(const SpaceID &space, const ObjectReference &source,
-                        MessagePort sourcePort, MessagePort destinationPort)
-            : sourceObject(space,source), sourcePort(sourcePort), destinationPort(destinationPort), body("",0) {
-        }
-    };
+    struct PrivateCallbacks;
 
 protected:
 //------- Members
@@ -149,9 +88,6 @@ private:
 //------- Private member functions:
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
 
-//------- Callbacks:
-    struct PrivateCallbacks;
-
 public:
 //------- Public member functions:
 
@@ -168,6 +104,14 @@ public:
 
     /// Gets the proxy object representing this HostedObject inside space.
     const ProxyObjectPtr &getProxy(const SpaceID &space) const;
+
+    ObjectHostProxyManager *getProxyManager(const SpaceID &space) const {
+        ProxyObjectPtr obj = getProxy(space);
+        if (obj) {
+            return static_cast<ObjectHostProxyManager*>(obj->getProxyManager());
+        }
+        return 0;
+    }
 
     /// Checks for a pulbic property named propName.
     bool hasProperty(const String &propName) const;
@@ -187,20 +131,46 @@ public:
     //FIXME implement SpaceConnection& connect(const SpaceID&space);
     //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
 
-    bool forwardMessagesTo(MessageService*) {
-        return false;
-    }
-    bool endForwardingMessagesTo(MessageService*) {
-        return false;
-    }
+    struct : public MessageService {
+        HostedObject *ho;
+        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
+            ho->send(hdr, body);
+        }
+        bool forwardMessagesTo(MessageService*) { return false; }
+        bool endForwardingMessagesTo(MessageService*) { return false; }
+    } mSendService;
 
-    void processMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+    struct : public MessageService {
+        HostedObject *ho;
+        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
+            assert(hdr.has_source_space());
+            ho->processRoutableMessage(hdr, body);
+        }
+        bool forwardMessagesTo(MessageService*) { return false; }
+        bool endForwardingMessagesTo(MessageService*) { return false; }
+    } mReceiveService;
+
+    void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+
     /** Sends a message from the space hdr.destination_space() to the object
         hdr.destination_object().
         @param header  A RoutableMessageHeader: must include destination_space/object.
         @param body  An encoded RoutableMessageBody.
     */
     void send(const RoutableMessageHeader &hdr, MemoryReference body);
+
+    void sendReply(const RoutableMessageHeader &origHdr, MemoryReference body) {
+        RoutableMessageHeader replyHeader(origHdr);
+        replyHeader.swap_source_and_destination();
+        send(replyHeader, body);
+    }
+
+    void sendErrorReply(const RoutableMessageHeader &origHdr, ReturnStatus error) {
+        RoutableMessageHeader replyHeader(origHdr);
+        replyHeader.swap_source_and_destination();
+        replyHeader.set_return_status(error);
+        send(replyHeader, MemoryReference::null());
+    }
 
     /** Handles a single RPC out of a received message.
         @param msg  A ReceivedMessage struct with sender, message_name, and arguments.
@@ -210,7 +180,7 @@ public:
                string is a valid message if a return value does not apply.
         @see ReceivedMessage
     */
-    void processMessage(const ReceivedMessage &msg, String *returnValue);
+    void processRPC(const RoutableMessageHeader &msg, const std::string &name, MemoryReference args, String *returnValue);
     /// Call if you know that a property from some other ProxyObject has changed. FIXME: should this be made private?
     void receivedPropertyUpdate(const ProxyObjectPtr &proxy, const String &propertyName, const String &arguments);
     /// Call if you know that a position for some other ProxyObject has changed. FIXME: should this be made private?

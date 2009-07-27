@@ -44,15 +44,6 @@ message MessageBody {
 
     repeated bytes message_arguments=8;
 
-    optional int64 id = 9;
-
-    enum ReturnStatus {
-      SUCCESS = 0;
-      NETWORK_FAILURE = 1;
-      SECURITY_FAILURE = 2;
-      TIMEOUT_FAILURE = 3;
-    }
-    optional ReturnStatus return_status=16;
 }
 
 //This is the standard message container. All items sent over the wire may be read with the following message format. It should not be used to encode message since header fields may not end up before other fields
@@ -88,26 +79,17 @@ message ReadOnlyMessage {
     // If a response, and the length is smaller than the length of the request, it is to be assumed that the bodies of all remaining response messages are empty.
     repeated bytes message_arguments=8;
 
-    /** The message id for the function call request, so return values may be paired.
-     *
-     * - If ommitted, a response is not expected.
-     * - If included and the message reaches the endpoint, a response is required, even if it just contains return_status==SUCCESS.
-     *
-     * id MUST be included if this is a response to a previous message. If both id and message_names are omitted, this MessageBody is to be discarded.
-     */
-    optional int64 id = 9;
-
-    // optional bool respond_on_failure = 10;
+    optional int64 id = 1538;
+    optional int64 reply_id = 1539;
 
     enum ReturnStatus {
-      SUCCESS = 0;
-      NETWORK_FAILURE = 1;
-      SECURITY_FAILURE = 2;
-      TIMEOUT_FAILURE = 3;
+        SUCCESS = 0;
+        NETWORK_FAILURE = 1; ///< The network connection was interrupted. Usually sent by AA.
+        TIMEOUT_FAILURE = 3; ///< Failed to receive any reply messages. Usually sent by AA.
+        PROTOCOL_ERROR = 4; ///< The message format could not be understood. Usually sent by BB.
+        PORT_FAILURE = 5; ///< Object BB does not understand or handle 'destination_port' messages.
     }
-    // REQUIRED if and only if the message is a response to a previous message. If not SUCCESS, message_arugments SHOULD be empty.
-    // Note that return_status applies to the whole MessageBody (including all embedded messages), usually for network errors.
-    optional ReturnStatus return_status=16;
+    optional ReturnStatus return_status=1540;
 }
 
 /////////////Built-in messages///////////////

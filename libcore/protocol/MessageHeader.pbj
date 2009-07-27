@@ -56,4 +56,41 @@ message MessageHeader {
     //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
 
     optional uuid destination_space = 1537;
+
+    /** The message id, used for pairing message responses.
+     *
+     * - If ommitted, a response is not expected.
+     * - If included and the message reaches the endpoint, a response SHOULD
+     *   be sent even if it is just an empty acknowledgement, but implementations may
+     *   decide not to respond if an id is not used.
+     */
+    optional int64 id = 1538;
+
+    /** The id of the message we are replying to. Required if the
+     * message is a response to a previous message.
+     * Usually only either 'id' or 'reply_id' are present. If both are present,
+     * treat this as a response message and ignore the 'id' field.
+     */
+    optional int64 reply_id = 1539;
+
+    /* In these examples, An object Object Host AA sends to Object BB via space SS.
+     * The original message from AA has an 'id' field. AA then gets a response with
+     * a 'reply_id' and an 'return_status', indicating an error.
+     */
+    enum ReturnStatus {
+        SUCCESS = 0;
+        NETWORK_FAILURE = 1; ///< The network connection was interrupted. Usually sent by AA.
+        TIMEOUT_FAILURE = 3; ///< Failed to receive any reply messages. Usually sent by AA.
+        PROTOCOL_ERROR = 4; ///< The message format could not be understood. Usually sent by BB.
+        PORT_FAILURE = 5; ///< Object BB does not understand or handle 'destination_port' messages.
+    }
+    enum ExampleReturnStatusCodes {
+        SECURITY_FAILURE = 12345; ///< The source has no permission to send messages. Usually sent by SS.
+        HOST_DOES_NOT_EXIST = 123456; ///< BB does not exist, or is not visible to AA. Sent by SS.
+    }
+    /** If not successful, the MessageBody should contain the reason for failure.
+     * return_status applies to the whole message body, and is used for network
+     * or protocol errors.
+     */
+    optional ReturnStatus return_status=1540;
 }

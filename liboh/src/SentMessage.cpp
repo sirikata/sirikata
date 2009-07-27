@@ -36,7 +36,7 @@
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <oh/ProxyObject.hpp>
 #include <oh/ProxyManager.hpp>
-#include "util/RoutableMessage.hpp"
+#include "util/RoutableMessageHeader.hpp"
 #include "oh/SentMessage.hpp"
 
 #include <boost/asio/deadline_timer.hpp>
@@ -59,13 +59,13 @@ class SentMessage::TimerHandler {
         if (error == boost::asio::error::operation_aborted) {
             return; // don't care if the timer was cancelled.
         }
-        RoutableMessage msg;
+        RoutableMessageHeader msg;
         msg.set_source_object(mSentMessage->getRecipient());
         msg.set_source_space(mSentMessage->getSpace());
         msg.set_source_port(mSentMessage->getPort());
-        msg.body().set_return_status(RoutableMessageBody::TIMEOUT_FAILURE);
-        msg.body().set_id(mSentMessage->getId());
-        mSentMessage->gotResponse(msg);
+        msg.set_return_status(RoutableMessageHeader::TIMEOUT_FAILURE);
+        msg.set_reply_id(mSentMessage->getId());
+        mSentMessage->processMessage(msg, MemoryReference(NULL,0));
     }
 public:
     TimerHandler(Network::IOService *io, SentMessage *messageInfo, int num_seconds)
@@ -82,28 +82,32 @@ public:
     }
 };
 
-bool SentMessage::gotResponse(const RoutableMessage &msg) {
+void SentMessage::processMessage(const RoutableMessageHeader &header, MemoryReference body) {
     unsetTimeout();
-    bool keepQuery = mResponseCallback(this, msg);
-    return keepQuery;
+    mResponseCallback(this, header, body);
 }
 
 SentMessage::SentMessage(int64 newId, QueryTracker *tracker)
     : mTimerHandle(NULL), mId(newId), mTracker(tracker)
 {
-    mBody = new RoutableMessageBody;
-    body().set_id(mId);
+    header().set_id(mId);
+    tracker->insert(this);
+}
+
+SentMessage::SentMessage(QueryTracker *tracker)
+    : mTimerHandle(NULL), mId(tracker->allocateId()), mTracker(tracker)
+{
+    header().set_id(mId);
+    tracker->insert(this);
 }
 
 SentMessage::~SentMessage() {
     unsetTimeout();
-    delete mBody;
+    mTracker->remove(this);
 }
 
-void SentMessage::send() {
-    if (mTracker) {
-        mTracker->sendMessage(this);
-    }
+void SentMessage::send(MemoryReference bodystr) {
+    mTracker->sendMessage(this, bodystr);
 }
 
 void SentMessage::unsetTimeout() {

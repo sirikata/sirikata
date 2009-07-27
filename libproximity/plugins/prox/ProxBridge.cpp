@@ -160,10 +160,7 @@ ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMess
 ProximitySystem::OpaqueMessageReturnValue ProxBridge::processOpaqueProximityMessage(std::vector<ObjectReference>&newObjectReferences,
                                                                                     ProxBridge::ObjectStateMap::iterator where,
                                                                                     const Sirikata::RoutableMessageBody&msg) {
-    int numMessages=msg.message_names_size();
-    if (numMessages!=msg.message_arguments_size()) {
-        return OBJECT_NOT_DESTROYED; //FIXME should we assume the rest equal the first
-    }
+    int numMessages=msg.message_size();
     OpaqueMessageReturnValue retval=OBJECT_NOT_DESTROYED;
     for (int i=0;i<numMessages;++i) {
         if (msg.message_names(i)=="RetObj") {
@@ -282,12 +279,10 @@ public:
                 callback_message.set_proximity_event(i->type()==Prox::QueryEvent::Added?Protocol::ProxCall::ENTERED_PROXIMITY:Protocol::ProxCall::EXITED_PROXIMITY);
                 callback_message.set_proximate_object(convertProxObjectId(i->id()));
                 callback_message.set_query_id(mID);
-                message_container.body().add_message_arguments(std::string());
-                callback_message.SerializeToString(&message_container.body().message_arguments(message_container.body().message_arguments_size()-1));
-                message_container.body().add_message_names("ProxCall");
+                callback_message.SerializeToString(message_container.body().add_message("ProxCall", std::string()));
             }
         }
-        if (message_container.body().message_names_size()) {
+        if (message_container.body().message_size()) {
             mParent->mCallback(mState->mStream?&*mState->mStream:NULL,message_container,message_container.body());
         }
         std::string toSerialize;
@@ -390,12 +385,10 @@ void ProxBridge::processProxCallback(const ObjectReference&destination,
         RoutableMessageHeader dest;
         dest.set_destination_object(destination);
         Sirikata::RoutableMessageBody msg;
-        msg.add_message_names("ProxCall");
         if (optionalSerializedProxCallSize) {
-            msg.add_message_arguments(optionalSerializedProxCall,optionalSerializedProxCallSize);
+            msg.add_message("ProxCall",optionalSerializedProxCall,optionalSerializedProxCallSize);
         }else {
-            msg.add_message_arguments(std::string());
-            prox_callback.SerializeToString(&msg.message_arguments(0));
+            prox_callback.SerializeToString(msg.add_message("ProxCall"));
         }
         mCallback(where->second->mStream?&*where->second->mStream:NULL,dest,msg);
     }else SILOG(prox,warning,"Cannot callback to "<<destination<<" unknown stream");

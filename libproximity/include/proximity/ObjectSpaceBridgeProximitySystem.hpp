@@ -77,13 +77,10 @@ protected:
                                                 const void *optionalSerializedSubMessage,
                                                 size_t optionalSerializedSubMessageSize) {
         DidAlterMessage alteration=addressMessage(output,source,destination);
-        output.body().add_message_names(messageName);
         if (optionalSerializedSubMessage&&optionalSerializedSubMessageSize) {
-            output.body().add_message_arguments(optionalSerializedSubMessage,optionalSerializedSubMessageSize);
+            output.body().add_message(messageName, optionalSerializedSubMessage,optionalSerializedSubMessageSize);
         }else {
-            int which=output.body().message_arguments_size();
-            output.body().add_message_arguments(std::string());
-            opaqueMessage.SerializeToString(&output.body().message_arguments(which));
+            opaqueMessage.SerializeToString(output.body().add_message(messageName));
         }
     }
     virtual void deliverMessage(const ObjectReference& destination,
@@ -129,7 +126,7 @@ protected:
             RoutableMessage msg(hdr,serializedMessageBody,serializedMessageBodySize);
             MessageBundle sendState=DELIVER_TO_UNKNOWN;
             bool deliverAllMessages=true;
-            int len=msg.body().message_names_size();
+            int len=msg.body().message_size();
             OpaqueMessageReturnValue obj_is_deleted=OBJECT_NOT_DESTROYED;
             bool disconnection=false;
             bool registration=false;
@@ -141,14 +138,9 @@ protected:
                     }
                     if(msg.body().message_names(i)=="RetObj") {
                         registration=true;
-                        int maxnum=i+1;
-                        if (maxnum==len)
-                            maxnum=msg.body().message_arguments_size();
-                        for (int j=i;j<maxnum;++j){
-                            Sirikata::Protocol::RetObj ro;
-                            ro.ParseFromString(msg.body().message_arguments(j));
-                            newObj(ro,msg.body().message_arguments(j).data(),msg.body().message_arguments(j).size());
-                        }
+                        Sirikata::Protocol::RetObj ro;
+                        ro.ParseFromString(msg.body().message_arguments(i));
+                        newObj(ro,msg.body().message_arguments(i).data(),msg.body().message_arguments(i).size());
                     }
                 }
                 if (!forwardThisName(disconnection,msg.body().message_names(i))) {
@@ -186,26 +178,14 @@ protected:
                 deliverMessage(*object,msg,serializedMessageBody,serializedMessageBodySize);
             }else {
                 //some messages are not considered worth forwarding to the proximity system or there's a mishmash of destinations
-                if (msg.body().message_arguments_size()<len) {
-                    len=msg.body().message_arguments_size();
+                if (msg.body().message_size()<len) {
+                    len=msg.body().message_size();
                 }
                 RoutableMessage newMsg (msg);
-                newMsg.body().clear_message_names();
-                newMsg.body().clear_message_arguments();
-                bool forwardLastMessageType=false;
+                newMsg.body().clear_message();
                 for (int i=0;i<len;++i) {
                     if (forwardThisName(registration||disconnection,msg.body().message_names(i))) {
-                        forwardLastMessageType=true;
-                        newMsg.body().add_message_names(newMsg.body().message_names(i));
-                        newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
-                    }else {
-                        forwardLastMessageType=false;
-                    }
-                }
-                if (forwardLastMessageType) {
-                    int fullSize=msg.body().message_arguments_size();
-                    for (int i=len;i<fullSize;++i) {
-                        newMsg.body().add_message_arguments(newMsg.body().message_arguments(i));
+                        newMsg.body().add_message(msg.body().message_names(i), msg.body().message_arguments(i));
                     }
                 }
                 if (sendState==DELIVER_TO_OBJECT)

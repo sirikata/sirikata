@@ -57,7 +57,14 @@ message StorageElement {
     optional uuid object_uuid=7;
     optional uint64 field_id=8;
     optional string field_name=10;
-    optional bytes data=11;    
+    optional bytes data=11;
+    enum Error {
+        DATABASE_LOCKED = 3;
+        KEY_MISSING = 4;
+        COMPARISON_FAILED = 5;
+        INTERNAL_ERROR = 6;
+    }
+    optional Error error=16;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 }
@@ -68,7 +75,7 @@ message CompareElement {
     optional uuid object_uuid=7;
     optional uint64 field_id=8;
     optional string field_name=10;
-    optional bytes data=11;    
+    optional bytes data=11;
     enum COMPARATOR {
       EQUAL=0;
       NEQUAL=1;
@@ -88,14 +95,12 @@ message StorageSet {
 message ReadSet {
   reserve 1 to 6;//in case we ever need to forward these around a bit
   repeated StorageElement reads=7;
-  optional int64 id=9;
   reserve 1536 to 2560;
   reserve 229376 to 294912;
 }
 message WriteSet {
    reserve 1 to 6;//in case we ever need to forward these around a bit
    repeated StorageElement writes=8;
-   optional int64 id=9;
    reserve 1536 to 2560;
    reserve 229376 to 294912;
 }
@@ -103,7 +108,6 @@ message ReadWriteSet {
   reserve 1 to 6;//in case we ever need to forward these around a bit
   repeated StorageElement reads=7;
   repeated StorageElement writes=8;
-  optional int64 id=9;
   reserve 1536 to 2560;
   reserve 229376 to 294912;
   flags64 ReadWriteSetOptions {
@@ -115,7 +119,6 @@ message Minitransaction{
   repeated StorageElement reads=7;
   repeated StorageElement writes=8;
   repeated CompareElement compares=10;
-  optional int64 id=9;
   flags64 TransactionOptions {
      RETURN_READ_NAMES=1;
   }
@@ -124,15 +127,12 @@ message Minitransaction{
 message Response {
   reserve 1 to 6;//in case we ever need to forward these around a bit
   repeated StorageElement reads=7;
-  optional int64 id=9;
-  enum ReturnStatus {
-    SUCCESS = 0;
-    NETWORK_FAILURE = 1;
-    SECURITY_FAILURE = 2;
-    TIMEOUT_FAILURE = 3;
-    KEY_MISSING = 4;
-    COMPARISON_FAILED = 5;
-    INTERNAL_ERROR = 6;
-  }
-  optional ReturnStatus return_status=16; 
+    enum ReturnStatus {
+        SUCCESS = 0;
+        DATABASE_LOCKED = 3;
+        KEY_MISSING = 4;
+        COMPARISON_FAILED = 5;
+        INTERNAL_ERROR = 6;
+    }
+    optional ReturnStatus return_status=16;
 }

@@ -67,10 +67,8 @@ void Registration::processMessage(const RoutableMessageHeader&header,MemoryRefer
 }
 void Registration::asyncRegister(const RoutableMessageHeader&header,const RoutableMessageBody& body) {
     RoutableMessageBody retval;
-    if (body.has_id())
-        retval.set_id(body.id());//make sure this is a return value for the particular query in question
     //for now do so synchronously in a very short-sighted manner.
-    int num_messages=body.message_arguments_size();
+    int num_messages=body.message_size();
     for (int i=0;i<num_messages;++i) {
         if (body.message_names(i)=="NewObj") {
             Protocol::NewObj newObj;
@@ -110,13 +108,10 @@ void Registration::asyncRegister(const RoutableMessageHeader&header,const Routab
                 destination_header.set_destination_port(header.source_port());
                 destination_header.set_source_object(ObjectReference::spaceServiceID());
                 destination_header.set_source_port(Services::REGISTRATION);
-                retval.add_message_names("RetObj");
-                if (retval.message_arguments_size()==0) {
-                    retval.add_message_arguments(std::string());
-                }else {
-                    retval.message_arguments(0).resize(0);
+                if (header.has_id()) {
+                    destination_header.set_reply_id(header.id());
                 }
-                retObj.SerializeToString(&retval.message_arguments(0));
+                retObj.SerializeToString(retval.add_message("RetObj"));
                 std::string return_message;
                 retval.SerializeToString(&return_message);
                 for (std::vector<MessageService*>::iterator i=mServices.begin(),ie=mServices.end();i!=ie;++i) {

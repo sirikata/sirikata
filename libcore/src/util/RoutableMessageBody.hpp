@@ -32,7 +32,7 @@
 #ifndef _SIRIKATA_ROUTABLE_MESSAGE_BODY_HPP_
 #define _SIRIKATA_ROUTABLE_MESSAGE_BODY_HPP_
 namespace Sirikata {
-class RoutableMessageBody: public Protocol::MessageBody {
+class RoutableMessageBody: private Protocol::MessageBody {
     std::string& getInternalDefaultMessageName() const{
         static std::string default_string;
         return default_string;
@@ -41,12 +41,9 @@ public:
     RoutableMessageBody() {
     }
     const std::string& getDefaultMessageName()const {return getInternalDefaultMessageName();}
-    int message_names_serialized_size()const {
-        return this->Protocol::MessageBody::message_names_size();
-    }
 
 
-    int message_names_size()const {
+    int message_size()const {
         int namesize=this->Protocol::MessageBody::message_names_size();
         int argsize=this->Protocol::MessageBody::message_arguments_size();
         if (argsize>namesize) return argsize;
@@ -55,7 +52,7 @@ public:
     std::string& message_names(int i) {
         int namesize=this->Protocol::MessageBody::message_names_size();
         int argsize=this->Protocol::MessageBody::message_arguments_size();
-        if (i<namesize) {
+        if (i >= 0 && i<namesize) {
             return this->Protocol::MessageBody::message_names(i);
         }
         if (namesize) {
@@ -66,7 +63,7 @@ public:
     const std::string& message_names(int i) const{
         int namesize=this->Protocol::MessageBody::message_names_size();
         int argsize=this->Protocol::MessageBody::message_arguments_size();
-        if (i<namesize) {
+        if (i >= 0 && i<namesize) {
             return this->Protocol::MessageBody::message_names(i);
         }
         if (namesize) {
@@ -75,18 +72,41 @@ public:
         return getDefaultMessageName();
     }
     std::string* add_message(const std::string &name, const std::string &arguments=std::string()) {
+        return add_message(name, arguments.data(), arguments.length());
+    }
+    std::string* add_message(const std::string &name, const void *args, size_t len) {
         if (!message_names_size()) {
             add_message_names(name);
         }
-        if (name != message_names(message_names_size()-1)) {
+        if (name != Protocol::MessageBody::message_names(message_names_size()-1)) {
             while (message_names_size() < message_arguments_size()) {
-                add_message_names(message_names(message_names_size()-1));
+                add_message_names(Protocol::MessageBody::message_names(message_names_size()-1));
             }
             add_message_names(name);
         }
-        add_message_arguments(arguments);
+        add_message_arguments(args, len);
+        return &Protocol::MessageBody::message_arguments(message_arguments_size()-1);
+    }
+    void add_message_reply(std::string args) {
+        add_message_arguments(args);
+    }
+    void add_message_reply(const void *args, size_t len) {
+        add_message_arguments(args, len);
+    }
+    std::string *add_message_reply() {
+        add_message_arguments(std::string());
         return &message_arguments(message_arguments_size()-1);
     }
+    void clear_message() {
+        clear_message_names();
+        clear_message_arguments();
+    }
+
+    using Protocol::MessageBody::message_arguments;
+    using Protocol::MessageBody::ParseFromArray;
+    using Protocol::MessageBody::ParseFromString;
+    using Protocol::MessageBody::SerializeToString;
+    using Protocol::MessageBody::AppendToString;
 };
 }
 #endif

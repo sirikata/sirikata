@@ -795,7 +795,9 @@ bool OgreSystem::renderOneFrame(Time curFrameTime, Duration deltaTime) {
         (*iter++)->preFrame(curFrameTime, deltaTime);
     }
     Ogre::WindowEventUtilities::messagePump();
-    Ogre::Root::getSingleton().renderOneFrame();
+    if (mPrimaryCamera) {
+        Ogre::Root::getSingleton().renderOneFrame();
+    }
     Time postFrameTime = Time::now();
     Duration postFrameDelta = postFrameTime-mLastFrameTime;
     bool continueRendering=mInputManager->tick(postFrameTime,postFrameDelta);

@@ -59,8 +59,8 @@ bool Loc::endForwardingMessagesTo(MessageService*ms) {
 
 void Loc::processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc){
     RoutableMessageBody body;
-    body.add_message_arguments(std::string());
-    loc.SerializeToString(&body.message_arguments(0));
+    ;
+    loc.SerializeToString(body.add_message(std::string()));
     std::string message_body;
     body.SerializeToString(&message_body);
     RoutableMessageHeader destination_header;
@@ -76,10 +76,10 @@ void Loc::processMessage(const ObjectReference&object_reference,const Protocol::
 void Loc::processMessage(const RoutableMessageHeader&header,MemoryReference message_body) {
     RoutableMessageBody body;
     if (body.ParseFromArray(message_body.data(),message_body.size())) {
-        int num_args=body.message_arguments_size();
+        int num_args=body.message_size();
         if (header.has_source_object()&&header.source_object()==ObjectReference::spaceServiceID()&&header.source_port()==Services::REGISTRATION) {
             for (int i=0;i<num_args;++i) {
-                if (body.message_names_serialized_size()==0||body.message_names(i)=="RetObj") {
+                if (body.message_size()==0||body.message_names(i)=="RetObj") {
                     Protocol::RetObj retObj;
                     if (retObj.ParseFromString(body.message_arguments(i))&&retObj.has_location()) {
                         processMessage(ObjectReference(retObj.object_reference()),retObj.location());
