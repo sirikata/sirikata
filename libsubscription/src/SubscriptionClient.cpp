@@ -246,7 +246,12 @@ void SubscriptionClient::State::connectionCallback(const std::tr1::weak_ptr<Stat
         }
     }
 }
-
+std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription> SubscriptionClient::IndividualSubscription::cloneWithDifferentDuration(const Duration&period){
+    Protocol::Subscribe sub;
+    sub.set_broadcast_name(mSubscriptionState->mUUID);
+    sub.set_update_period(period);
+    return mSubscriptionState->mParent->subscribe(mSubscriptionState->mAddress,sub,mFunction,mDisconFunction);
+}
 std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
    SubscriptionClient::subscribe(const Network::Address& address,
                                  const Protocol::Subscribe&subscription,

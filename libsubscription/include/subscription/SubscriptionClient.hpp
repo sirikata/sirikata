@@ -91,6 +91,7 @@ public:
 protected:
     class State{
         friend class SubscriptionClient;
+        friend class IndividualSubscription;
         Network::Chunk mLastDeliveredMessage;
         std::tr1::shared_ptr<Network::Stream> mTopLevelStream;
         SubscriptionClient*mParent;
@@ -129,6 +130,7 @@ public:
         void call(const Network::Chunk&chunk)const{
             mFunction(chunk);
         }
+        std::tr1::shared_ptr<IndividualSubscription> cloneWithDifferentDuration(const Duration&period);
     };
     std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address&,
                                      const Protocol::Subscribe&subscription,
