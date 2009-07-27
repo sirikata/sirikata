@@ -963,8 +963,8 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
-#  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
-#  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
+  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
+  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
   ${LIBCORE_DIR}/test/SubscriptionTest.hpp
  )
 #  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp

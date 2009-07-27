@@ -100,8 +100,8 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
 static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *response, bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
     using namespace Sirikata::Persistence::Protocol;
-    if (response->has_return_status())
-        TS_ASSERT_EQUALS( response->return_status(), Response::SUCCESS );
+    TS_ASSERT(response->has_return_status());
+    TS_ASSERT_EQUALS( response->return_status(), expected_error );
     TS_ASSERT_EQUALS( response->reads_size(), expected.reads_size() );
     int len=response->reads_size();
     if (len==expected.reads_size()) {
@@ -215,4 +215,33 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     expected_4.add_reads();
     copyStorageElement(expected_4.mutable_reads(0),keyvalues()[0]);
     test_read_write(fixture.handler, trans_4, Response::SUCCESS, expected_4,4);
+
+
+
+    // 1 read from previous set 1 failed read, 1 write (not done
+    ReadWriteSet* trans_5 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,2,1);
+    trans_5->mutable_reads(0).set_object_uuid(UUID::random());
+    trans_5->mutable_reads(0).set_field_id(0);
+    trans_5->mutable_reads(0).set_field_name("dne");
+    copyStorageKey(trans_5->mutable_reads(1), keyvalues()[1] );
+
+    copyStorageKey(trans_5->mutable_writes(0), keyvalues()[1] );
+    copyStorageValue(trans_5->mutable_writes(0), keyvalues()[2] );
+
+    StorageSet expected_5;
+    expected_5.add_reads();
+    expected_5.add_reads();
+    copyStorageValue(expected_5.mutable_reads(1),keyvalues()[1]);
+
+    test_read_write(fixture.handler, trans_5, Response::KEY_MISSING, expected_5,5);
+
+    // 1 read to make sure last set's write did not occur, 0 writes
+    ReadWriteSet* trans_6 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
+    copyStorageKey(trans_6->mutable_reads(0), keyvalues()[1] );
+    StorageSet expected_6;
+    expected_6.add_reads();
+    copyStorageElement(expected_6.mutable_reads(0),keyvalues()[1] );
+
+    test_read_write(fixture.handler, trans_6, Response::SUCCESS, expected_6,6);
+
 }

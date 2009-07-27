@@ -95,13 +95,10 @@ static void fill_minitransaction_handler(MinitransactionHandler* mth) {
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
 static void check_minitransaction_results(MinitransactionHandler* mth, Protocol::Response *response, bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
 
-
+    TS_ASSERT(response->has_return_status());
     if (expected_error != Protocol::Response::SUCCESS) {
         TS_ASSERT(response->has_return_status());
         TS_ASSERT_EQUALS( response->return_status(), expected_error );
-        mth->destroyResponse(response);
-        *done = true;
-        return;
     }else if (response->has_return_status()) {
         TS_ASSERT_EQUALS(response->return_status(),Protocol::Response::SUCCESS);
     }
@@ -247,12 +244,14 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
     copyStorageElement(expected_7.mutable_reads(0),keyvalues()[1]);
     test_minitransaction(fixture.handler, trans_7, Response::SUCCESS, expected_7,7);
 
-    // 1 failed compare, 1 read (which will not be performed)
+    // 1 failed compare, 1 read 
     Minitransaction* trans_8 = fixture.handler->createMinitransaction((Minitransaction*)NULL,1,0,1);
     copyStorageKey(trans_8->mutable_compares(0),keyvalues()[0]);
     copyStorageValue(trans_8->mutable_compares(0),keyvalues()[1]);
     copyStorageKey(trans_8->mutable_reads(0),keyvalues()[1]);
     StorageSet expected_8;
+    expected_8.add_reads();
+    copyStorageValue(expected_8.mutable_reads(0),keyvalues()[1]);
     test_minitransaction(fixture.handler, trans_8, Response::COMPARISON_FAILED, expected_8,8);
 
     // 1 successful compare, 1 read, 1 write
@@ -276,6 +275,8 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
     copyStorageValue(trans_10->mutable_writes(0),keyvalues()[3]);
 
     StorageSet expected_10;
+    expected_10.add_reads();
+    copyStorageValue(expected_10.mutable_reads(0),keyvalues()[1]);
     test_minitransaction(fixture.handler, trans_10, Response::COMPARISON_FAILED, expected_10,10);
 
 

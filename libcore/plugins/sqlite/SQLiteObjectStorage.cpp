@@ -172,17 +172,10 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::proc
         return mResponse->return_status();
     }else {//FIXME do we want to abort the operation (note it's not a transaction) if we failed to read any items? I think so...
         error = DatabaseLocked;
-        if (rws->has_options()&&(rws->options()&Protocol::ReadWriteSet::RETURN_READ_NAMES)!=0) {
-            // make sure read set is clear before each attempt
-            mergeKeysFromStorageSet( *mResponse, *rws );
-        }
 
         for(int tries = 0; tries < retries+1 && error != None; tries++)
             error = mParent->applyWriteSet(db, *rws, retries);
         mResponse->set_return_status(convertError(error));
-        if (mResponse->return_status()==Protocol::Response::SUCCESS){
-            //mResponse->clear_return_status();
-        }
         return mResponse->return_status();
     }
 }
@@ -203,19 +196,16 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::pr
         mParent->beginTransaction(db);
 
         error = mParent->checkCompareSet(db, *mt);
-        // Errors during compares won't be resolved by retrying
-        if (error != None) {
-            mParent->rollbackTransaction(db);
-            break;
+
+        Error read_error = None;
+
+        read_error = mParent->applyReadSet(db, *mt, *mResponse);
+
+        if (error==None) {
+            error=read_error;
         }
 
-        error = mParent->applyReadSet(db, *mt, *mResponse);
-        if (mt->has_options()==false&&(mt->options()&Protocol::Minitransaction::RETURN_READ_NAMES)!=0) {
-            // make sure read set is clear before each attempt
-            mergeKeysFromStorageSet( *mResponse, *mt );
-        }
-
-        // Errors during reads won't be resolved by retrying
+        // Errors during compares or reads won't be resolved by retrying
         if (error != None) {
             mParent->rollbackTransaction(db);
             break;
@@ -232,10 +222,6 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::pr
     if (mt->has_id())
         mResponse->set_id(mt->id());
     mResponse->set_return_status(convertError(error));
-    if (mResponse->return_status()==Protocol::Response::SUCCESS) {
-        //mResponse->clear_return_status();
-        return Protocol::Response::SUCCESS;
-    }
     return mResponse->return_status();
 }
 
@@ -380,8 +366,10 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::convertError(Error interna
 template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyReadSet(const SQLiteDBPtr& db, const ReadSet& rs, Protocol::Response&retval) {
 
     int num_reads=rs.reads_size();
+    retval.clear_reads();
     while (retval.reads_size()<num_reads)
         retval.add_reads();
+    SQLiteObjectStorage::Error databaseError=None;
     for (int rs_it=0;rs_it<num_reads;++rs_it) {
         String table_name = getTableName(rs.reads(rs_it));
         String key_name = getKeyName(rs.reads(rs_it));
@@ -393,40 +381,48 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
         int rc;
         char* remain;
         sqlite3_stmt* value_query_stmt;
-
+        bool newStep=true;
+        bool locked=false;
         rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
-
-        rc = sqlite3_bind_text(value_query_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
-        SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
-
-        int step_rc = sqlite3_step(value_query_stmt);
-        bool newStep=true;
-        while(step_rc == SQLITE_ROW) {
-            newStep=false;
-            retval.reads(rs_it).set_data((const char*)sqlite3_column_text(value_query_stmt, 0),sqlite3_column_bytes(value_query_stmt, 0));
-            step_rc = sqlite3_step(value_query_stmt);
-        }
-        if (step_rc != SQLITE_DONE) {
-            // reset the statement so it'll clean up properly
-            sqlite3_reset(value_query_stmt);
+        if (rc==SQLITE_OK) {
+            
+            rc = sqlite3_bind_text(value_query_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
+            SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
+            if (rc==SQLITE_OK) {
+                int step_rc = sqlite3_step(value_query_stmt);
+                while(step_rc == SQLITE_ROW) {
+                    newStep=false;
+                    retval.reads(rs_it).set_data((const char*)sqlite3_column_text(value_query_stmt, 0),sqlite3_column_bytes(value_query_stmt, 0));
+                    step_rc = sqlite3_step(value_query_stmt);
+                }
+                if (step_rc != SQLITE_DONE) {
+                    // reset the statement so it'll clean up properly
+                    rc = sqlite3_reset(value_query_stmt);
+                    SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+                    if (rc==SQLITE_LOCKED)
+                        locked=true;
+                }         
+                
+            }
         }
         rc = sqlite3_finalize(value_query_stmt);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
-        if (step_rc != SQLITE_DONE) {
-            clearValuesFromStorageSet(retval);
+        if (locked||rc == SQLITE_LOCKED) {
+            retval.clear_reads();
             return DatabaseLocked;
         }
 
         if (newStep) {
-            clearValuesFromStorageSet(retval);
-            return KeyMissing;
+            retval.reads(rs_it).clear_data();
+            databaseError=KeyMissing;
         }
-
-        rs_it++;
     }
-
-    return None;
+    if (rs.has_options()&&(rs.options()&Protocol::ReadWriteSet::RETURN_READ_NAMES)!=0) {
+        // make sure read set is clear before each attempt
+        mergeKeysFromStorageSet( retval, rs );
+    }
+    return databaseError;
 }
 
 template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyWriteSet(const SQLiteDBPtr& db, const WriteSet& ws, int retries) {
@@ -477,7 +473,6 @@ template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyW
         if (step_rc == SQLITE_BUSY || step_rc == SQLITE_LOCKED)
             return DatabaseLocked;
 
-        ws_it++;
     }
 
     return None;
@@ -548,7 +543,6 @@ template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::chec
         if (!passed_test)
             return ComparisonFailed;
 
-        cs_it++;
     }
 
     return None;
