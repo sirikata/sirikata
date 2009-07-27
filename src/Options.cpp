@@ -84,6 +84,7 @@ void InitOptions() {
 
         .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
         .addOption(new OptionValue(OBJECT_STATIC, "false", Sirikata::OptionValueType<bool>(), "Whether objects should be static or mobe around."))
+        .addOption(new OptionValue(OBJECT_GLOBAL, "false", Sirikata::OptionValueType<bool>(), "Whether objects should be informed automatically of all other objects."))
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
 
         .addOption(new OptionValue(NETWORK_TYPE, "sst", Sirikata::OptionValueType<String>(), "The networking subsystem to use."))

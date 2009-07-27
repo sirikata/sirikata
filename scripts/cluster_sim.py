@@ -23,6 +23,7 @@ class ClusterSimSettings:
         self.server_queue = 'fair'
         self.object_queue = 'fairfifo'
         self.object_static = 'false'
+        self.object_global = 'false'
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -97,6 +98,7 @@ class ClusterSim:
         cmd += "--server.queue=" + self.settings.server_queue + " "
         cmd += "--object.queue=" + self.settings.object_queue + " "
         cmd += "--object.static=" + self.settings.object_static + " "
+        cmd += "--object.global=" + self.settings.object_global + " "
         ClusterDeploymentRun(self.config, cmd)
 
     def retrieve_data(self):

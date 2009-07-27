@@ -40,6 +40,7 @@ float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
 Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius)
  : mID(id),
+   mGlobalIntroductions(false),
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
@@ -47,6 +48,19 @@ Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* ob
    mObjectMessageQueue(obj_msg_q),
    mProximityRadius(prox_radius)
 {
+}
+
+Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius, const std::set<UUID>& objects)
+ : mID(id),
+   mGlobalIntroductions(true),
+   mMotion(motion),
+   mLocation(mMotion->initial()),
+   mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
+   mOriginID(origin_id),
+   mObjectMessageQueue(obj_msg_q),
+   mProximityRadius(prox_radius)
+{
+    mSubscribers = objects;
 }
 
 
@@ -82,7 +96,9 @@ void Object::checkPositionUpdate(const Time& t) {
                     *it,
                     mLocation
                 );
-            mObjectMessageQueue->send(loc_msg);
+            bool success = mObjectMessageQueue->send(loc_msg);
+            // XXX FIXME do something on failure
+            delete loc_msg;
         }
     }
 }
@@ -94,6 +110,11 @@ void Object::locationMessage(LocationMessage* loc_msg) {
 }
 
 void Object::proximityMessage(ProximityMessage* prox_msg) {
+    if (mGlobalIntroductions) { // we already know about everybody, so we don't need to handle this
+        delete prox_msg;
+        return;
+    }
+
     SubscriptionMessage* subs_msg = NULL;
     if (prox_msg->event() == ProximityMessage::Entered)
         subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Subscribe);
@@ -101,6 +122,7 @@ void Object::proximityMessage(ProximityMessage* prox_msg) {
         subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
 
     mObjectMessageQueue->send(subs_msg);
+    delete subs_msg;
 
     delete prox_msg;
 }

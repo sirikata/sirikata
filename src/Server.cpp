@@ -100,6 +100,10 @@ void Server::tick(const Time& t)
 
 void Server::proximityTick(const Time& t)
 {
+    // If we have global introduction, then we can just ignore proximity evaluation.
+    if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
+        return;
+
   // Check for proximity updates
   std::queue<ProximityEventInfo> proximity_events;
   mProximity->evaluate(t, proximity_events);

@@ -129,7 +129,11 @@ Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
     OriginID origin;
     origin.id = (uint32)(server_id);
 
-    Object* new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), proximityRadius(id));
+    Object* new_obj = NULL;
+    if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
+        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), proximityRadius(id), mObjectIDs);
+    else
+        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), proximityRadius(id));
     mObjects[id] = new_obj;
     return new_obj;
 }

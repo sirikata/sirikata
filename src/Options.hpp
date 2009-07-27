@@ -54,6 +54,7 @@
 
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_STATIC        "object.static"
+#define OBJECT_GLOBAL        "object.global"
 #define SERVER_QUEUE         "server.queue"
 
 #define NETWORK_TYPE         "net"

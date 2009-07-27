@@ -53,7 +53,10 @@ struct MaxDistUpdatePredicate {
 
 class Object {
 public:
+    /** Standard constructor. */
     Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius);
+    /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
+    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius, const std::set<UUID>& objects);
 
     const UUID& uuid() {
         return mID;
@@ -81,6 +84,7 @@ private:
     void checkPositionUpdate(const Time& t);
 
     UUID mID;
+    bool mGlobalIntroductions;
     MotionPath* mMotion;
     TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
