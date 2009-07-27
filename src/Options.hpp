@@ -42,6 +42,7 @@
 
 #define STATS_TRACE_FILE     "stats.trace-filename"
 #define STATS_SYNC_FILE      "stats.sync-filename"
+#define STATS_SAMPLE_RATE    "stats.sample-rate"
 
 #define ANALYSIS_LOC         "analysis.loc"
 #define ANALYSIS_LOCVIS         "analysis.locvis"

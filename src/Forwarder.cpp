@@ -38,7 +38,9 @@ Forwarder::Forwarder(ServerID id)
    mLoadMonitor(NULL),
    mObjects(NULL),
    m_serv_ID(id),
-   mCurrentTime(NULL)
+   mCurrentTime(NULL),
+   mLastSampleTime(0),
+   mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
 {
     //no need to initialize mSelfMessages and mOutgoingMessages.
 }
@@ -133,7 +135,12 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
 
   void Forwarder::tick(const Time&t)
   {
-    mServerMessageQueue->reportQueueInfo(t);
+
+      if (t - mLastSampleTime > mSampleRate) {
+          mServerMessageQueue->reportQueueInfo(t);
+          mLastSampleTime = t;
+      }
+
     mLoadMonitor->tick(t);
 
     tickOSeg(t);//updates oseg

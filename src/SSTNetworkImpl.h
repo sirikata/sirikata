@@ -42,7 +42,7 @@ public:
     void init(void* (*x)(void*));
     void start();
 
-    void reportQueueInfo(const Time& t) const;
+    void reportQueueInfo(const Time& t);
 private slots:
     void handleConnection();
 
@@ -83,6 +83,9 @@ private:
 
     StreamMap mSendConnections;
     StreamMap mReceiveConnections;
+
+    Time mLastSampleTime;
+    Duration mSampleRate;
 }; // class CBRSST
 
 } // namespace CBR

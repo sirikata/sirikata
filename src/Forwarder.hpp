@@ -50,7 +50,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter
 
       std::map<UUID,std::vector<Message*> > mObjectsInTransit;
 
-
+      Time mLastSampleTime;
+      Duration mSampleRate;
 
     //Private Functions
       void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);

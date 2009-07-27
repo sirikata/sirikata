@@ -413,6 +413,9 @@ void *main_loop(void *) {
     Time tbegin = Time(0);
     Time tend = tbegin + duration;
 
+    Duration stats_sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
+    Time last_sample_time = Time(0);
+
     if (sim) {
 
         for(Time t = tbegin; t < tend; t += sim_step){
@@ -428,7 +431,13 @@ void *main_loop(void *) {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
             if (elapsed > duration)
                 break;
-            gNetwork->reportQueueInfo(tbegin + elapsed);
+
+            Duration since_last_sample = (tbegin + elapsed) - last_sample_time;
+            if (since_last_sample > stats_sample_rate) {
+                gNetwork->reportQueueInfo(tbegin + elapsed);
+                last_sample_time = last_sample_time + stats_sample_rate;
+            }
+
             gNetwork->service(tbegin + elapsed);
             cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);

@@ -4,6 +4,8 @@
 #define PROTOCOL_NAME "cbr1.0"
 #define PROTOCOL_DESC "Constant Bit Rate Protocol 1.0"
 
+#include "Options.hpp"
+
 namespace CBR {
 
 SSTStatsListener::SSTStatsListener(Trace* trace, const QTime& start, const Address4& remote)
@@ -29,7 +31,9 @@ static int argc = 1;
 static const char* argv[] = { "blah", NULL };
 
 CBRSST::CBRSST(Trace* trace)
- : mTrace(trace)
+ : mTrace(trace),
+   mLastSampleTime(0),
+   mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
 {
     mApp = new QApplication((int&)argc, (char**)argv);
 }
@@ -163,7 +167,10 @@ void CBRSST::service() {
     mApp->processEvents();
 }
 
-void CBRSST::reportQueueInfo(const Time& t) const {
+void CBRSST::reportQueueInfo(const Time& t) {
+    if (t - mLastSampleTime < mSampleRate)
+        return;
+
     for(StreamMap::const_iterator it = mSendConnections.begin(); it != mSendConnections.end(); it++) {
         uint32 tx_size = it->second.stream->getTransmitBuffer();
         int tx_used_max;
@@ -181,6 +188,8 @@ void CBRSST::reportQueueInfo(const Time& t) const {
         }
         mTrace->packetQueueInfo(t, it->first, tx_size, tx_used, 0, rx_size, rx_used, 0);
     }
+
+    mLastSampleTime = t;
 }
 
 
