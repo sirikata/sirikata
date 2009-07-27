@@ -60,8 +60,8 @@ protected:
     typedef std::map<Key, uint32> SizeMap;
 
 public:
-    FIFOQueue()
-     : mMessages(1024*1024) // FIXME
+    FIFOQueue(uint32 maxsize)
+     : mMessages(maxsize)
     {
     }
 

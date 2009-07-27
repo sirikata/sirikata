@@ -9,7 +9,7 @@ namespace CBR {
 
 FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
-   mQueue(),
+   mQueue(1024*1024*32), // XXX FIXME
    mLastTime(0),
    mRate(bytes_per_second),
    mRemainderBytes(0)
@@ -25,7 +25,10 @@ bool FIFOObjectMessageQueue::send(ObjectToObjectMessage* msg) {
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
 
-    return mQueue.push(src_uuid, new ServerMessagePair(dest_server_id,msg_serialized,msg_id))==QueueEnum::PushSucceeded;
+    ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
+    bool success = mQueue.push(src_uuid,smp)==QueueEnum::PushSucceeded;
+    if (!success) delete smp;
+    return success;
 }
 
 void FIFOObjectMessageQueue::service(const Time& t){

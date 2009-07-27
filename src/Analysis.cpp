@@ -278,8 +278,10 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
             if (evt == NULL)
                 break;
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
-            if (obj_evt == NULL)
+            if (obj_evt == NULL) {
+                delete evt;
                 continue;
+            }
 
             ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
             if (it == mEventLists.end()) {
@@ -526,23 +528,33 @@ BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers
             if (evt == NULL)
                 break;
 
-
+            bool used = false;
 
             ServerDatagramEvent* datagram_evt = dynamic_cast<ServerDatagramEvent*>(evt);
-            if (datagram_evt != NULL)
+            if (datagram_evt != NULL) {
+                used = true;
                 insert_event<ServerDatagramEvent, DatagramEventList, ServerDatagramEventListMap>(datagram_evt, mDatagramEventLists);
+            }
 
             PacketEvent* packet_evt = dynamic_cast<PacketEvent*>(evt);
-            if (packet_evt != NULL)
+            if (packet_evt != NULL) {
+                used = true;
                 insert_event<PacketEvent, PacketEventList, ServerPacketEventListMap>(packet_evt, mPacketEventLists);
+            }
 
             ServerDatagramQueueInfoEvent* datagram_qi_evt = dynamic_cast<ServerDatagramQueueInfoEvent*>(evt);
-            if (datagram_qi_evt != NULL)
+            if (datagram_qi_evt != NULL) {
+                used = true;
                 insert_event<ServerDatagramQueueInfoEvent, DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(datagram_qi_evt, mDatagramQueueInfoEventLists);
+            }
 
             PacketQueueInfoEvent* packet_qi_evt = dynamic_cast<PacketQueueInfoEvent*>(evt);
-            if (packet_qi_evt != NULL)
+            if (packet_qi_evt != NULL) {
+                used = true;
                 insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
+            }
+
+            if (!used) delete evt;
         }
     }
 
@@ -1023,12 +1035,16 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
             if (packet_qi_evt != NULL) {
                 //insert_event<PacketQueueInfoEvent, PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(packet_qi_evt, mPacketQueueInfoEventLists);
             }
+
+            delete evt;
         }
     }
     for (std::tr1::unordered_map<uint64,PacketData>::iterator i=packetFlow.begin(),ie=packetFlow.end();i!=ie;++i) {
         mServerPairPacketMap.insert(ServerPairPacketMap::value_type(SourceDestinationPair(i->second.source,i->second.dest ),
                                                                     i->second));
     }
+    packetFlow.clear();
+
     Time epoch((uint64)0);
     for(uint32 source_id = 1; source_id <= nservers; source_id++) {
         for(uint32 dest_id = 1; dest_id <= nservers; dest_id++) {

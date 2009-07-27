@@ -43,8 +43,10 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
 
-
-    return mServerQueues.push(destinationServer,new ServerMessagePair(destinationServer,with_header))==QueueEnum::PushSucceeded;
+    ServerMessagePair* smp = new ServerMessagePair(destinationServer,with_header);
+    bool success = mServerQueues.push(destinationServer,smp)==QueueEnum::PushSucceeded;
+    if (!success) delete smp;
+    return success;
 }
 
 bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {

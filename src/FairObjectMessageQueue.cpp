@@ -25,7 +25,10 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMe
     Network::Chunk msg_serialized;
     msg->serialize(msg_serialized, 0);
 
-    return mClientQueues.push(src_uuid,new ServerMessagePair(dest_server_id,msg_serialized,msg_id))==QueueEnum::PushSucceeded;
+    ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
+    bool success = mClientQueues.push(src_uuid,smp)==QueueEnum::PushSucceeded;
+    if (!success) delete smp;
+    return success;
 }
 
 template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t){
@@ -59,7 +62,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
 
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(UUID sid, float weight) {
    if (!mClientQueues.hasQueue(sid)) {
-       mClientQueues.addQueue(new Queue(1024*1024)/*FIXME*/,sid,weight);
+       mClientQueues.addQueue(new Queue(1024*64)/*FIXME*/,sid,weight);
    }
 }
 template <class Queue> void FairObjectMessageQueue<Queue>::removeClient(UUID sid) {

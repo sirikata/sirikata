@@ -9,7 +9,7 @@ namespace CBR {
 
 FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
-   mQueue(),
+   mQueue(1024*1024*32), //XXX FIXME
    mRate(bytes_per_second),
    mRemainderBytes(0),
    mLastTime(0),
@@ -36,7 +36,10 @@ bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
 
-    return mQueue.push(destinationServer, new ServerMessagePair(destinationServer,with_header)) == QueueEnum::PushSucceeded;
+    ServerMessagePair* smp = new ServerMessagePair(destinationServer,with_header);
+    bool success = mQueue.push(destinationServer,smp)==QueueEnum::PushSucceeded;
+    if (!success) delete smp;
+    return success;
 }
 
 bool FIFOServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {
@@ -133,7 +136,7 @@ void FIFOServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) co
     float tx_weight = 0;
     uint32 rx_size = 0, rx_used = 0; // no values make sense here since we're not limiting at all
     float rx_weight = 0;
-    
+
     QueueInfo qInfo(tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     queue_info.push_back(qInfo);
   }
