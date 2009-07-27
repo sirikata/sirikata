@@ -80,7 +80,7 @@ public:
 
 	void filesDropped(const std::vector<std::string> &files);
 
-    virtual bool isModifierDown(int modifier) const;
+    virtual bool isModifierDown(Modifier modifier) const;
     virtual bool isCapsLockDown() const;
     virtual bool isNumLockDown() const;
     virtual bool isScrollLockDown() const;

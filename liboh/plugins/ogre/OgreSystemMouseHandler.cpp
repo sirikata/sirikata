@@ -177,7 +177,7 @@ private:
         if (!camera) {
             return;
         }
-        if (mParent->mInputManager->isModifierDown(InputDevice::MOD_SHIFT)) {
+        if (mParent->mInputManager->isModifierDown(Input::MOD_SHIFT)) {
             // add object.
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, mWhichRayObject);
             if (!mouseOver) {
@@ -220,7 +220,7 @@ private:
                 // Fire deselected event.
             }
         }
-        else if (mParent->mInputManager->isModifierDown(InputDevice::MOD_CTRL)) {
+        else if (mParent->mInputManager->isModifierDown(Input::MOD_CTRL)) {
             SILOG(input,info,"Cleared selection");
             clearSelection();
             mLastShiftSelected = SpaceObjectReference::null();
@@ -772,7 +772,7 @@ private:
             return EventResponse::nop();
         }
         ActiveDrag * &drag = mActiveDrag[ev->mButton];
-        if (ev->mType == MouseDragEvent::START) {
+        if (ev->mType == Input::DRAG_START) {
             if (drag) {
                 delete drag;
             }
@@ -789,7 +789,7 @@ private:
         if (drag) {
             drag->mouseMoved(ev);
 
-            if (ev->mType == MouseDragEvent::END) {
+            if (ev->mType == Input::DRAG_END) {
                 delete drag;
                 drag = 0;
             }
@@ -904,10 +904,10 @@ public:
         mInputResponses["setDragModePanCamera"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "panCamera"));
 
         // Movement
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, InputBindingEvent::KeyModShift), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, InputBindingEvent::KeyModShift), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D, InputBindingEvent::KeyModShift), mInputResponses["moveLeft"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, InputBindingEvent::KeyModShift), mInputResponses["moveRight"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_SHIFT), mInputResponses["moveForward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_SHIFT), mInputResponses["moveBackward"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D, Input::MOD_SHIFT), mInputResponses["moveLeft"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_SHIFT), mInputResponses["moveRight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["rotateXPos"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["rotateXNeg"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
@@ -918,14 +918,14 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, InputBindingEvent::KeyModNone), mInputResponses["groupObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, InputBindingEvent::KeyModAlt), mInputResponses["ungroupObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_PERIOD), mInputResponses["deleteObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, InputBindingEvent::KeyModCtrl), mInputResponses["cloneObjects"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D), mInputResponses["cloneObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, InputBindingEvent::KeyModCtrl), mInputResponses["import"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, InputBindingEvent::KeyModCtrl), mInputResponses["saveScene"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["setDragModeNone"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["setDragModeMoveObject"]);

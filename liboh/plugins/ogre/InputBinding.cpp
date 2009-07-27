@@ -71,21 +71,8 @@ void InputBinding::handle(Input::ButtonEventPtr& evt) {
 }
 
 void InputBinding::handle(Input::ButtonPressedEventPtr& evt) {
-    Input::EventDescriptor::KeyEventModifier mods = Input::EventDescriptor::KeyModNone;
-    switch(evt->mModifier) {
-      case InputDevice::MOD_ALT:
-        mods = Input::EventDescriptor::KeyModAlt;
-        break;
-      case InputDevice::MOD_CTRL:
-        mods = Input::EventDescriptor::KeyModCtrl;
-        break;
-      case InputDevice::MOD_SHIFT:
-        mods = Input::EventDescriptor::KeyModShift;
-        break;
-    }
-
     Input::EventDescriptor descriptor =
-        Input::EventDescriptor::Key(evt->mButton, Input::EventDescriptor::KeyPressed, mods);
+        Input::EventDescriptor::Key(evt->mButton, evt->mEvent, evt->mModifier);
 
     Binding::iterator it = mResponses.find(descriptor);
     if (it != mResponses.end()) {
@@ -95,21 +82,8 @@ void InputBinding::handle(Input::ButtonPressedEventPtr& evt) {
 }
 
 void InputBinding::handle(Input::ButtonReleasedEventPtr& evt) {
-    Input::EventDescriptor::KeyEventModifier mods = Input::EventDescriptor::KeyModNone;
-    switch(evt->mModifier) {
-      case InputDevice::MOD_ALT:
-        mods = Input::EventDescriptor::KeyModAlt;
-        break;
-      case InputDevice::MOD_CTRL:
-        mods = Input::EventDescriptor::KeyModCtrl;
-        break;
-      case InputDevice::MOD_SHIFT:
-        mods = Input::EventDescriptor::KeyModShift;
-        break;
-    }
-
     Input::EventDescriptor descriptor =
-        Input::EventDescriptor::Key(evt->mButton, Input::EventDescriptor::KeyReleased, mods);
+        Input::EventDescriptor::Key(evt->mButton, evt->mEvent, evt->mModifier);
 
     Binding::iterator it = mResponses.find(descriptor);
     if (it != mResponses.end()) {

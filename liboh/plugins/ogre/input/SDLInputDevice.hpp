@@ -70,13 +70,13 @@ public:
 
     virtual std::string getAxisName(unsigned int axis) const {
         switch (axis) {
-          case CURSORX:
+          case AXIS_CURSORX:
             return "x (Cursor)";
-          case CURSORY:
+          case AXIS_CURSORY:
             return "y (Cursor)";
-          case RELX:
+          case AXIS_RELX:
             return "x (Relative)";
-          case RELY:
+          case AXIS_RELY:
             return "y (Relative)";
           case WHEELX:
             return "screll-x";
@@ -99,7 +99,7 @@ public:
                     const ::SDL_MouseMotionEvent &ev);
     void fireWheel(const SDLMousePtr &thisptr,
                    SDLInputManager *em,
-                   int xrel, 
+                   int xrel,
                    int yrel);
 };
 

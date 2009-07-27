@@ -72,8 +72,8 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
     }
     return changed;
 }
-bool InputDevice::fireButton(const InputDevicePtr &thisptr, 
-                             GenEventManager *em, 
+bool InputDevice::fireButton(const InputDevicePtr &thisptr,
+                             GenEventManager *em,
                              unsigned int button, bool newState, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
     bool changed = changeButton(button, newState, oldmodifiers);
@@ -100,7 +100,7 @@ bool InputDevice::changeAxis(unsigned int axis, AxisValue newState) {
     return changed;
 }
 
-bool InputDevice::fireAxis(const InputDevicePtr &thisptr, 
+bool InputDevice::fireAxis(const InputDevicePtr &thisptr,
                            GenEventManager *em,
                            unsigned int axis, AxisValue newState) {
     newState.clip();
@@ -148,7 +148,7 @@ void PointerDevice::firePointerClick(
             }
             em->fire(EventPtr(
                 new MouseDragEvent(
-                    thisptr, MouseDragEvent::END,
+                    thisptr, DRAG_END,
                     (*iter).mDragStartX,
                     (*iter).mDragStartY,
                     xPixel+(*iter).mOffsetX,
@@ -194,7 +194,7 @@ void PointerDevice::firePointerMotion(
                     if (xdiff*xdiff + ydiff*ydiff >= mDeadband*mDeadband) {
                         di.mIsDragging = true;
                         em->fire(EventPtr(new MouseDragEvent(
-                                              thisptr, MouseDragEvent::START,
+                                              thisptr, DRAG_START,
                                               di.mDragStartX, di.mDragStartY,
                                               xPixel+di.mOffsetX, yPixel+di.mOffsetY,
                                               di.mDragX+di.mOffsetX, di.mDragY+di.mOffsetY,
@@ -203,7 +203,7 @@ void PointerDevice::firePointerMotion(
                     }
                 } else {
                     em->fire(EventPtr(new MouseDragEvent(
-                                          thisptr, MouseDragEvent::DRAG,
+                                          thisptr, DRAG_DRAG,
                                           di.mDragStartX, di.mDragStartY,
                                           xPixel+di.mOffsetX, yPixel+di.mOffsetY,
                                           di.mDragX+di.mOffsetX, di.mDragY+di.mOffsetY,
@@ -228,4 +228,3 @@ void PointerDevice::firePointerMotion(
 
 }
 }
-

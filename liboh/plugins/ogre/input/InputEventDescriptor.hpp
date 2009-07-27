@@ -39,50 +39,31 @@
 namespace Sirikata {
 namespace Input {
 
+enum EventTypeTag {
+    KeyEventTag = 1,
+    MouseClickEventTag = 2,
+    MouseDragEventTag = 3,
+    AxisEventTag = 4
+};
+
 class EventDescriptor {
 public:
-    enum TypeTag {
-        KeyEventTag = 1,
-        MouseClickEventTag = 2,
-        MouseDragEventTag = 3,
-        AxisEventTag = 4
-    };
-
-    typedef int32 KeyEventButton;
-    // KeyEvent bitfield indicates which events to register for
-    enum KeyEventType {
-        KeyPressed = 1,
-        KeyReleased = 2,
-        KeyBoth = KeyPressed | KeyReleased
-    };
-    enum KeyEventModifier {
-        KeyModNone = 0,
-        KeyModAlt = 1,
-        KeyModCtrl = 2,
-        KeyModShift = 4
-    };
-
-    typedef int32 MouseClickEventButton;
-
-    typedef int32 MouseDragEventButton;
-
-    typedef uint32 AxisIndex;
-
-    static EventDescriptor Key(KeyEventButton button, KeyEventType type = KeyPressed, KeyEventModifier mod = KeyModNone);
-    static EventDescriptor MouseClick(MouseClickEventButton button);
-    static EventDescriptor MouseDrag(MouseDragEventButton button);
+    static EventDescriptor Key(KeyButton button, KeyEvent type = KEY_PRESSED, Modifier mod = MOD_NONE);
+    static EventDescriptor MouseClick(MouseButton button);
+    static EventDescriptor MouseDrag(MouseButton button, MouseDragType type);
     static EventDescriptor Axis(AxisIndex axis);
 
     bool isKey() const;
-    KeyEventButton keyButton() const;
-    KeyEventType keyEvents() const;
-    KeyEventModifier keyModifiers() const;
+    KeyButton keyButton() const;
+    KeyEvent keyEvents() const;
+    Modifier keyModifiers() const;
 
     bool isMouseClick() const;
-    MouseClickEventButton mouseClickButton() const;
+    MouseButton mouseClickButton() const;
 
     bool isMouseDrag() const;
-    MouseDragEventButton mouseDragButton() const;
+    MouseButton mouseDragButton() const;
+    MouseDragType mouseDragType() const;
 
     bool isAxis() const;
     AxisIndex axisIndex() const;
@@ -90,19 +71,20 @@ public:
     bool operator<(const EventDescriptor& rhs) const;
 
 private:
-    TypeTag mTag;
+    EventTypeTag mTag;
 
     union {
         struct {
-            KeyEventButton button;
-            KeyEventType type;
-            KeyEventModifier mod;
+            KeyButton button;
+            KeyEvent type;
+            Modifier mod;
         } key;
         struct {
-            MouseClickEventButton button;
+            MouseButton button;
         } mouseClick;
         struct {
-            MouseDragEventButton button;
+            MouseButton button;
+            MouseDragType type;
         } mouseDrag;
         struct {
             AxisIndex index;

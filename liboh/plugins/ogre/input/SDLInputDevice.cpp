@@ -114,20 +114,20 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     AxisValue xPctFromCenter = AxisValue::from01(event.x / float(screenwid));
     AxisValue yPctFromCenter = AxisValue::from01(1-(event.y / float(screenhei)));
 
-    bool changedx = (getAxis(CURSORX) != xPctFromCenter);
-    bool changedy = (getAxis(CURSORY) != yPctFromCenter);
+    bool changedx = (getAxis(AXIS_CURSORX) != xPctFromCenter);
+    bool changedy = (getAxis(AXIS_CURSORY) != yPctFromCenter);
     if (mRelativeMode) {
         // negate y axis since coordinates start at bottom-left.
         float to_axis(em->mRelativeMouseToAxis->as<float>());
-        fireAxis(thisptr, em, RELX, AxisValue::fromCentered(to_axis*event.xrel));
-        fireAxis(thisptr, em, RELY, AxisValue::fromCentered(-to_axis*event.yrel));
+        fireAxis(thisptr, em, AXIS_RELX, AxisValue::fromCentered(to_axis*event.xrel));
+        fireAxis(thisptr, em, AXIS_RELY, AxisValue::fromCentered(-to_axis*event.yrel));
         // drag events still get fired...
         firePointerMotion(thisptr, em, event.xrel/float(screenwid),
                           -event.yrel/float(screenhei), event.cursor,
                           event.pressure, event.pressure_min, event.pressure_max);
     } else {
-        fireAxis(thisptr, em, CURSORX, xPctFromCenter);
-        fireAxis(thisptr, em, CURSORY, yPctFromCenter);
+        fireAxis(thisptr, em, AXIS_CURSORX, xPctFromCenter);
+        fireAxis(thisptr, em, AXIS_CURSORY, yPctFromCenter);
         if (changedx || changedy) {
             firePointerMotion(thisptr, em, xPctFromCenter.getCentered(),
                               yPctFromCenter.getCentered(), event.cursor,

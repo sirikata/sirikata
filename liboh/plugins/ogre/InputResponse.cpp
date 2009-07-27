@@ -176,7 +176,7 @@ InputResponse::InputEventDescriptorList SimpleInputResponse::getInputEvents(cons
     InputEventDescriptorList result;
 
     if (descriptor.isKey()) {
-        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyPressed, descriptor.keyModifiers()));
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
     }
 
     return result;
@@ -203,8 +203,8 @@ InputResponse::InputEventDescriptorList FloatToggleInputResponse::getInputEvents
     InputEventDescriptorList result;
 
     if (descriptor.isKey()) {
-        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyPressed, descriptor.keyModifiers()));
-        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::EventDescriptor::KeyReleased, descriptor.keyModifiers()));
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
+        result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_RELEASED, descriptor.keyModifiers()));
     }
 
     return result;
@@ -247,8 +247,8 @@ void AxisInputResponse::invoke(Input::AxisEventPtr& evt) {
     InputDevicePtr dev = evt->getDevice();
     if (dev) {
         Vector2f axes(
-            dev->getAxis(PointerDevice::CURSORX).getCentered(),
-            dev->getAxis(PointerDevice::CURSORY).getCentered()
+            dev->getAxis(Input::AXIS_CURSORX).getCentered(),
+            dev->getAxis(Input::AXIS_CURSORY).getCentered()
         );
         mCallback(val, axes);
     }

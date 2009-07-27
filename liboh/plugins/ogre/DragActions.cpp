@@ -193,16 +193,16 @@ public:
         double sensitivity = 20.0;
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3f cameraAxis = -cameraLoc.getOrientation().zAxis();
-        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_ALT)) sensitivity = 5.0;
-        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT &&
-                mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL))) {
+        if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT)) sensitivity = 5.0;
+        if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT &&
+                mParent->getInputManager()->isModifierDown(Input::MOD_CTRL))) {
             toMove.y = ev->deltaY()*sensitivity;
         }
-        else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
+        else if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
             if (cameraAxis.z > 0) sensitivity *=-1;
             toMove.x = ev->deltaX()*sensitivity;
         }
-        else if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+        else if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL)) {
             if (cameraAxis.x < 0) sensitivity *=-1;
             toMove.z = ev->deltaX()*sensitivity;
         }
@@ -279,14 +279,14 @@ public:
         int ctlX, ctlZ;
         if ((cameraAxis.x > 0 && cameraAxis.z > 0)
                 || (cameraAxis.x <= 0 && cameraAxis.z <= 0) ) {
-            ctlX = InputDevice::MOD_SHIFT;
-            ctlZ = InputDevice::MOD_CTRL;
+            ctlX = Input::MOD_SHIFT;
+            ctlZ = Input::MOD_CTRL;
         }
         else {
-            ctlX = InputDevice::MOD_CTRL;
-            ctlZ = InputDevice::MOD_SHIFT;
+            ctlX = Input::MOD_CTRL;
+            ctlZ = Input::MOD_SHIFT;
         }
-        if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_ALT)) {
+        if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT)) {
             sensitivity = 0.1;
         }
         if (mParent->getInputManager()->isModifierDown(ctlX)) {
@@ -420,10 +420,10 @@ public:
             pixelToDirection(camera, cameraLoc.getOrientation(), info.ev->mXStart, info.ev->mYStart));
         mRelativePan = false;
         mStartPan = camera->getProxy().extrapolateLocation(now).getPosition();
-		if (mParent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL)) {
+		if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL)) {
 			float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();
             mPanDistance = WORLD_SCALE;
-		} else if (!mParent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT) &&
+		} else if (!mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT) &&
 				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
             mPanDistance = distance;
         } else if (!info.objects.empty()) {
@@ -451,8 +451,8 @@ void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraE
     if (!dev) return;
     float floatval = value.getCentered();
     Vector2f axes(
-        dev->getAxis(PointerDevice::CURSORX).getCentered(),
-        dev->getAxis(PointerDevice::CURSORY).getCentered()
+        dev->getAxis(Input::AXIS_CURSORX).getCentered(),
+        dev->getAxis(Input::AXIS_CURSORY).getCentered()
     );
     zoomInOut(floatval, axes, camera, objects, parent);
 }
@@ -468,11 +468,11 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
 
     double distance;
     float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
-    if (!parent->getInputManager()->isModifierDown(InputDevice::MOD_CTRL) &&
-        !parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT)) {
+    if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
+        !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
     } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), distance) &&
-               (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(InputDevice::MOD_SHIFT))) {
+               (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {
         Vector3d totalPosition (averageSelectedPosition(now, objects.begin(), objects.end()));

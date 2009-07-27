@@ -42,60 +42,40 @@ namespace Graphics {
 
 class InputBindingEvent {
 public:
-    enum TypeTag {
-        KeyEventTag = 1,
-        MouseClickEventTag = 2,
-        MouseDragEventTag = 3,
-        AxisEventTag = 4
-    };
-
-    typedef Input::EventDescriptor::KeyEventButton KeyEventButton;
-    typedef Input::EventDescriptor::KeyEventModifier KeyEventModifier;
-    static const KeyEventModifier KeyModNone  = Input::EventDescriptor::KeyModNone;
-    static const KeyEventModifier KeyModAlt   = Input::EventDescriptor::KeyModAlt;
-    static const KeyEventModifier KeyModCtrl  = Input::EventDescriptor::KeyModCtrl;
-    static const KeyEventModifier KeyModShift = Input::EventDescriptor::KeyModShift;
-
-    typedef Input::EventDescriptor::MouseClickEventButton MouseClickEventButton;
-
-    typedef Input::EventDescriptor::MouseDragEventButton MouseDragEventButton;
-
-    typedef Input::EventDescriptor::AxisIndex AxisIndex;
-
-    static InputBindingEvent Key(KeyEventButton button, KeyEventModifier mod = KeyModNone);
-    static InputBindingEvent MouseClick(MouseClickEventButton button);
-    static InputBindingEvent MouseDrag(MouseDragEventButton button);
-    static InputBindingEvent Axis(AxisIndex axis);
+    static InputBindingEvent Key(Input::KeyButton button, Input::Modifier mod = Input::MOD_NONE);
+    static InputBindingEvent MouseClick(Input::MouseButton button);
+    static InputBindingEvent MouseDrag(Input::MouseButton button);
+    static InputBindingEvent Axis(Input::AxisIndex axis);
 
     bool isKey() const;
-    KeyEventButton keyButton() const;
-    KeyEventModifier keyModifiers() const;
+    Input::KeyButton keyButton() const;
+    Input::Modifier keyModifiers() const;
 
     bool isMouseClick() const;
-    MouseClickEventButton mouseClickButton() const;
+    Input::MouseButton mouseClickButton() const;
 
     bool isMouseDrag() const;
-    MouseDragEventButton mouseDragButton() const;
+    Input::MouseButton mouseDragButton() const;
 
     bool isAxis() const;
-    AxisIndex axisIndex() const;
+    Input::AxisIndex axisIndex() const;
 
 private:
-    TypeTag mTag;
+    Input::EventTypeTag mTag;
 
     union {
         struct {
-            KeyEventButton button;
-            KeyEventModifier mod;
+            Input::KeyButton button;
+            Input::Modifier mod;
         } key;
         struct {
-            MouseClickEventButton button;
+            Input::MouseButton button;
         } mouseClick;
         struct {
-            MouseDragEventButton button;
+            Input::MouseButton button;
         } mouseDrag;
         struct {
-            AxisIndex index;
+            Input::AxisIndex index;
         } axis;
     } mDescriptor;
 };

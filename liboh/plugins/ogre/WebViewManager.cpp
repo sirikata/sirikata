@@ -564,7 +564,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
 	}
 
 	if (success) {
-		if (e->mType == Sirikata::Input::MouseDragEvent::START) {
+		if (e->mType == Sirikata::Input::DRAG_START) {
 			unsigned int wid,hei;
 			e->getDevice()->getInputManager()->getWindowSize(wid,hei);
 			this->injectMouseMove(((e->mXStart+1)*wid)/2, ((1-e->mYStart)*hei)/2);
@@ -576,7 +576,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
 	onMouseMove(evt);
 
 	if (success) {
-		if (e->mType == Sirikata::Input::MouseDragEvent::END) {
+		if (e->mType == Sirikata::Input::DRAG_END) {
 			success = this->injectMouseUp(awebutton);
 		}
 	}
@@ -597,7 +597,7 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 
 	bool success = true;
 	if(e->getDevice()->isKeyboard()) {
-		success = this->injectKeyEvent(e->mPressed, e->mModifier, e->mButton);
+            success = this->injectKeyEvent(e->pressed(), e->mModifier, e->mButton);
 	}
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();

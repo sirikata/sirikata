@@ -69,10 +69,8 @@ typedef std::tr1::shared_ptr<InputEvent> InputEventPtr;
 /** Base class for keyboard/mouse/joystick button events. */
 class ButtonEvent : public InputEvent {
 public:
-    typedef InputDevice::Modifier Modifier;
-
-    bool mPressed; ///< If the event is ButtonPressed or ButtonReleased
-    unsigned int mButton; ///< Which scancode (keyboard)
+    KeyEvent mEvent; ///< If the event is ButtonPressed or ButtonReleased
+    KeyButton mButton; ///< Which scancode (keyboard)
     Modifier mModifier; ///< OR of all modifier codes (defined by SDL)
 
     static IdPair::Secondary getSecondaryId(int keycode,
@@ -85,12 +83,16 @@ public:
     virtual ~ButtonEvent(){}
     ButtonEvent(const Task::IdPair::Primary&primary,
                 const InputDevicePtr &dev,
-                bool pressed, unsigned int key, Modifier mod)
+                KeyEvent event, unsigned int key, Modifier mod)
         : InputEvent(dev, IdPair(primary,
                        getSecondaryId(key, mod, dev))),
-         mPressed(pressed),
+          mEvent(event),
          mButton(key),
          mModifier(mod) {
+    }
+
+    bool pressed() {
+        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) );
     }
 };
 typedef std::tr1::shared_ptr<ButtonEvent> ButtonEventPtr;
@@ -105,7 +107,7 @@ public:
         return retval;
     }
     ButtonPressed(const InputDevicePtr &dev, unsigned int key, Modifier mod)
-        : ButtonEvent(getEventId(), dev, true, key, mod) {
+        : ButtonEvent(getEventId(), dev, KEY_PRESSED, key, mod) {
     }
     virtual ~ButtonPressed(){}
 };
@@ -119,7 +121,7 @@ public:
         return retval;
     }
     ButtonReleased(const InputDevicePtr &dev, unsigned int key, Modifier mod)
-        : ButtonEvent(getEventId(), dev, false, key, mod) {
+        : ButtonEvent(getEventId(), dev, KEY_RELEASED, key, mod) {
     }
     virtual ~ButtonReleased(){}
 };
@@ -137,7 +139,7 @@ public:
         return retval;
     }
     ButtonDown(const InputDevicePtr &dev, unsigned int key, Modifier mod)
-        : ButtonEvent(getEventId(), dev, true, key, mod) {
+        : ButtonEvent(getEventId(), dev, KEY_DOWN, key, mod) {
     }
     virtual ~ButtonDown(){}
 };
@@ -150,7 +152,7 @@ typedef std::tr1::shared_ptr<ButtonDown> ButtonDownEventPtr;
     On the other hand, a joystick is constantly fired whenever the value changes. */
 class AxisEvent: public InputEvent {
 public:
-    unsigned int mAxis;
+    AxisIndex mAxis;
     AxisValue mValue;
 
     static const IdPair::Primary &getEventId() {
@@ -241,7 +243,7 @@ typedef std::tr1::shared_ptr<MouseHoverEvent> MouseHoverEventPtr;
 /** Base class for events involving a mouse click. */
 class MouseDownEvent: public MouseEvent {
 public:
-    int mButton; ///< The button this event is about.
+    MouseButton mButton; ///< The button this event is about.
     float mXStart; ///< X coordinate when the mouse button was first pressed, -1 to 1
     float mYStart; ///< Y coordinate when the mouse button was pressed, -1 to 1
     float mLastX;
@@ -317,11 +319,7 @@ typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
     you will not get a MouseClickEvent. */
 class MouseDragEvent: public MouseDownEvent {
 public:
-    /** The three types of drag events. The START event will only be
-        triggered once the motion is determined to be a drag (exceeded
-        some number of pixels). The END event happens at the time the
-        mouse button is released (mPressure == 0) */
-    enum DragType { START, DRAG, END } mType;
+    MouseDragType mType;
 
     static const IdPair::Primary &getEventId() {
         static IdPair::Primary retval("MouseDragEvent");
@@ -329,7 +327,7 @@ public:
     }
 
     MouseDragEvent(const PointerDevicePtr &dev,
-                   DragType type,
+                   MouseDragType type,
                    float xstart, float ystart, float xend, float yend,
                    float lastx, float lasty,
                    int cursorType, int button,

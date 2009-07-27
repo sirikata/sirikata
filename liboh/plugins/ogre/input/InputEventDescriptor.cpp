@@ -35,7 +35,7 @@
 namespace Sirikata {
 namespace Input {
 
-EventDescriptor EventDescriptor::Key(KeyEventButton button, KeyEventType type, KeyEventModifier mod) {
+EventDescriptor EventDescriptor::Key(KeyButton button, KeyEvent type, Modifier mod) {
     EventDescriptor result;
     result.mTag = KeyEventTag;
     result.mDescriptor.key.button = button;
@@ -44,17 +44,18 @@ EventDescriptor EventDescriptor::Key(KeyEventButton button, KeyEventType type, K
     return result;
 }
 
-EventDescriptor EventDescriptor::MouseClick(MouseClickEventButton button) {
+EventDescriptor EventDescriptor::MouseClick(MouseButton button) {
     EventDescriptor result;
     result.mTag = MouseClickEventTag;
     result.mDescriptor.mouseClick.button = button;
     return result;
 }
 
-EventDescriptor EventDescriptor::MouseDrag(MouseDragEventButton button) {
+EventDescriptor EventDescriptor::MouseDrag(MouseButton button, MouseDragType type) {
     EventDescriptor result;
     result.mTag = MouseDragEventTag;
     result.mDescriptor.mouseDrag.button = button;
+    result.mDescriptor.mouseDrag.type = type;
     return result;
 }
 
@@ -69,47 +70,56 @@ bool EventDescriptor::isKey() const {
     return mTag == KeyEventTag;
 }
 
-EventDescriptor::KeyEventButton EventDescriptor::keyButton() const {
+KeyButton EventDescriptor::keyButton() const {
     assert(isKey());
     return mDescriptor.key.button;
 }
 
-EventDescriptor::KeyEventType EventDescriptor::keyEvents() const {
+KeyEvent EventDescriptor::keyEvents() const {
     assert(isKey());
     return mDescriptor.key.type;
 }
 
-EventDescriptor::KeyEventModifier EventDescriptor::keyModifiers() const {
+Modifier EventDescriptor::keyModifiers() const {
     assert(isKey());
     return mDescriptor.key.mod;
 }
+
 
 bool EventDescriptor::isMouseClick() const {
     return mTag == MouseClickEventTag;
 }
 
-EventDescriptor::MouseClickEventButton EventDescriptor::mouseClickButton() const {
+MouseButton EventDescriptor::mouseClickButton() const {
     assert(isMouseClick());
     return mDescriptor.mouseClick.button;
 }
+
 
 bool EventDescriptor::isMouseDrag() const {
     return mTag == MouseDragEventTag;
 }
 
-EventDescriptor::MouseDragEventButton EventDescriptor::mouseDragButton() const {
+MouseButton EventDescriptor::mouseDragButton() const {
     assert(isMouseDrag());
     return mDescriptor.mouseDrag.button;
 }
+
+MouseDragType EventDescriptor::mouseDragType() const {
+    assert(isMouseDrag());
+    return mDescriptor.mouseDrag.type;
+}
+
 
 bool EventDescriptor::isAxis() const {
     return mTag == AxisEventTag;
 }
 
-EventDescriptor::AxisIndex EventDescriptor::axisIndex() const {
+AxisIndex EventDescriptor::axisIndex() const {
     assert(isAxis());
     return mDescriptor.axis.index;
 }
+
 
 bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
     // Evaluate easy comparisons first
@@ -132,7 +142,10 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
         return mDescriptor.mouseClick.button < rhs.mDescriptor.mouseClick.button;
 
     if (mTag == MouseDragEventTag)
-        return mDescriptor.mouseDrag.button < rhs.mDescriptor.mouseDrag.button;
+        return mDescriptor.mouseDrag.button < rhs.mDescriptor.mouseDrag.button ||
+            (mDescriptor.mouseDrag.button == rhs.mDescriptor.mouseDrag.button &&
+                (mDescriptor.mouseDrag.type < rhs.mDescriptor.mouseDrag.type)
+            );
 
     if (mTag == AxisEventTag)
         return mDescriptor.axis.index < rhs.mDescriptor.axis.index;

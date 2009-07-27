@@ -35,7 +35,9 @@
 namespace Sirikata {
 namespace Graphics {
 
-InputBindingEvent InputBindingEvent::Key(KeyEventButton button, KeyEventModifier mod) {
+using namespace Input;
+
+InputBindingEvent InputBindingEvent::Key(KeyButton button, Modifier mod) {
     InputBindingEvent result;
     result.mTag = KeyEventTag;
     result.mDescriptor.key.button = button;
@@ -43,14 +45,14 @@ InputBindingEvent InputBindingEvent::Key(KeyEventButton button, KeyEventModifier
     return result;
 }
 
-InputBindingEvent InputBindingEvent::MouseClick(MouseClickEventButton button) {
+InputBindingEvent InputBindingEvent::MouseClick(MouseButton button) {
     InputBindingEvent result;
     result.mTag = MouseClickEventTag;
     result.mDescriptor.mouseClick.button = button;
     return result;
 }
 
-InputBindingEvent InputBindingEvent::MouseDrag(MouseDragEventButton button) {
+InputBindingEvent InputBindingEvent::MouseDrag(MouseButton button) {
     InputBindingEvent result;
     result.mTag = MouseDragEventTag;
     result.mDescriptor.mouseDrag.button = button;
@@ -64,43 +66,47 @@ InputBindingEvent InputBindingEvent::Axis(AxisIndex index) {
     return result;
 }
 
+
 bool InputBindingEvent::isKey() const {
     return mTag == KeyEventTag;
 }
 
-InputBindingEvent::KeyEventButton InputBindingEvent::keyButton() const {
+KeyButton InputBindingEvent::keyButton() const {
     assert(isKey());
     return mDescriptor.key.button;
 }
 
-InputBindingEvent::KeyEventModifier InputBindingEvent::keyModifiers() const {
+Modifier InputBindingEvent::keyModifiers() const {
     assert(isKey());
     return mDescriptor.key.mod;
 }
+
 
 bool InputBindingEvent::isMouseClick() const {
     return mTag == MouseClickEventTag;
 }
 
-InputBindingEvent::MouseClickEventButton InputBindingEvent::mouseClickButton() const {
+MouseButton InputBindingEvent::mouseClickButton() const {
     assert(isMouseClick());
     return mDescriptor.mouseClick.button;
 }
+
 
 bool InputBindingEvent::isMouseDrag() const {
     return mTag == MouseDragEventTag;
 }
 
-InputBindingEvent::MouseDragEventButton InputBindingEvent::mouseDragButton() const {
+MouseButton InputBindingEvent::mouseDragButton() const {
     assert(isMouseDrag());
     return mDescriptor.mouseDrag.button;
 }
+
 
 bool InputBindingEvent::isAxis() const {
     return mTag == AxisEventTag;
 }
 
-InputBindingEvent::AxisIndex InputBindingEvent::axisIndex() const {
+AxisIndex InputBindingEvent::axisIndex() const {
     assert(isAxis());
     return mDescriptor.axis.index;
 }

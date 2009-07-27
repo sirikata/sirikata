@@ -252,9 +252,9 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           case SDL_KEYUP:
             mKeys[event->key.which]->fireButton(
                 mKeys[event->key.which],
-                this, 
-                (unsigned int)event->key.keysym.scancode, 
-                (event->key.state == SDL_PRESSED), 
+                this,
+                (unsigned int)event->key.keysym.scancode,
+                (event->key.state == SDL_PRESSED),
                 modifiersFromSDL(event->key.keysym.mod));
             break;
           case SDL_MOUSEBUTTONDOWN:
@@ -262,13 +262,13 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mMice[event->button.which]->fireButton(
                 mMice[event->button.which],
-                this, 
+                this,
                 event->button.button,
                 (event->button.state == SDL_PRESSED),
                 (1<<SDL_GetCurrentCursor(event->button.which))>>1);
             mMice[event->button.which]->firePointerClick(
                 mMice[event->button.which],
-                this, 
+                this,
                 (2.0*(float)event->button.x)/mWidth - 1,
                 1 - (2.0*(float)event->button.y)/mHeight,
                 SDL_GetCurrentCursor(event->button.which),
@@ -281,7 +281,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mJoy[event->jbutton.which]->fireButton(
                 mJoy[event->jbutton.which],
-                this, 
+                this,
                 event->jbutton.button,
                 event->jbutton.state == SDL_PRESSED);
             }
@@ -289,7 +289,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           case SDL_TEXTINPUT:
           if (mHasKeyboardFocus) {
             fire(Task::EventPtr(new TextInputEvent(
-                                    mKeys[event->text.which], 
+                                    mKeys[event->text.which],
                                     event->text.text)));
             }
             break;
@@ -305,8 +305,8 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mMice[event->wheel.which]->fireWheel(
                 mMice[event->wheel.which],
-                this, 
-                event->wheel.x, 
+                this,
+                event->wheel.x,
                 event->wheel.y);
             }
             break;
@@ -314,8 +314,8 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mJoy[event->wheel.which]->fireAxis(
                 mJoy[event->wheel.which],
-                this, 
-                event->jaxis.axis, 
+                this,
+                event->jaxis.axis,
                 AxisValue::fromCentered(event->jaxis.value/32767.));
             }
             break;
@@ -323,8 +323,8 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mJoy[event->wheel.which]->fireHat(
                 mJoy[event->wheel.which],
-                this, 
-                event->jhat.hat, 
+                this,
+                event->jhat.hat,
                 event->jhat.value);
             }
             break;
@@ -332,9 +332,9 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
           if (mHasKeyboardFocus) {
             mJoy[event->wheel.which]->fireBall(
                 mJoy[event->wheel.which],
-                this, 
-                event->jball.ball, 
-                event->jball.xrel, 
+                this,
+                event->jball.ball,
+                event->jball.xrel,
                 event->jball.yrel);
             }
             break;
@@ -430,21 +430,21 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
 int SDLInputManager::modifiersFromSDL(int sdlMod) {
     int output = 0;
     if (sdlMod & KMOD_SHIFT) {
-        output |= InputDevice::MOD_SHIFT;
+        output |= Input::MOD_SHIFT;
     }
     if (sdlMod & KMOD_CTRL) {
-        output |= InputDevice::MOD_CTRL;
+        output |= Input::MOD_CTRL;
     }
     if (sdlMod & KMOD_ALT) {
-        output |= InputDevice::MOD_ALT;
+        output |= Input::MOD_ALT;
     }
     if (sdlMod & KMOD_GUI) {
-        output |= InputDevice::MOD_GUI;
+        output |= Input::MOD_GUI;
     }
     return output;
 }
 
-bool SDLInputManager::isModifierDown(int whichModifier) const {
+bool SDLInputManager::isModifierDown(Modifier whichModifier) const {
     return !!(modifiersFromSDL(SDL_GetModState()) & whichModifier);
 }
 

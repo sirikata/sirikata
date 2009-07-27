@@ -73,7 +73,7 @@ Select: [Type or pick key]
          Absolute pointer 3: [Keyboard Axis "Up/Down arrow keys"/"Left/Right arrow keys"]
          Return from UI: [ESCAPE]
 
-         Key bindings: 
+         Key bindings:
 [Not implemented, but you can bind buttons to individual keys if you want]
 
 ==== FLASH GAME IS FOCUSED ====
@@ -104,7 +104,7 @@ struct AxisValue {
     bool isNegative() const {
         return value < 0;
     }
-    bool isPositive() const { 
+    bool isPositive() const {
         return value > 0;
     }
 
@@ -154,12 +154,54 @@ typedef std::tr1::shared_ptr<PointerDevice> PointerDevicePtr;
 #undef MOD_ALT
 #endif
 
+typedef uint32 Modifier;
+enum KeyboardModifiers {
+    MOD_NONE  = 0,
+    MOD_SHIFT = 1,
+    MOD_CTRL  = 2,
+    MOD_ALT   = 4,
+    MOD_GUI   = 8
+};
+enum PointerModifiers {
+    //POINTER_STYLUS = 0, // default
+    POINTER_ERASER = (1<<0),
+    POINTER_CURSOR = (1<<1)
+};
+
+enum Axes {
+    AXIS_CURSORX,
+    AXIS_CURSORY,
+    AXIS_RELX,
+    AXIS_RELY,
+    NUM_POINTER_AXES
+};
+
+typedef uint32 AxisIndex;
+
+typedef int32 MouseButton;
+
+typedef int32 KeyButton;
+
+enum KeyEvent {
+    KEY_PRESSED,
+    KEY_DOWN,
+    KEY_RELEASED
+};
+
+/** The three types of drag events. The START event will only be
+    triggered once the motion is determined to be a drag (exceeded
+    some number of pixels). The END event happens at the time the
+    mouse button is released (mPressure == 0) */
+enum MouseDragType {
+    DRAG_START,
+    DRAG_DRAG,
+    DRAG_END
+};
+
 class InputDevice {
-public:
-    typedef uint32 Modifier;
 protected:
     std::string mName;
-	InputManager *mManager;
+    InputManager *mManager;
 
     typedef std::tr1::unordered_map<unsigned int, Modifier> ButtonSet;
     typedef std::vector<AxisValue> AxisVector;
@@ -170,18 +212,6 @@ protected:
     bool changeButton(unsigned int button, bool newState, Modifier &mod);
     bool changeAxis(unsigned int axis, AxisValue newValue);
 public:
-    enum KeyboardModifiers {
-        MOD_SHIFT = 1,
-        MOD_CTRL  = 2,
-        MOD_ALT   = 4,
-        MOD_GUI   = 8
-    };
-    enum PointerModifiers {
-        //POINTER_STYLUS = 0, // default
-        POINTER_ERASER = (1<<0),
-        POINTER_CURSOR = (1<<1)
-    };
-
     const std::string &getName() const {
         return mName;
     }
@@ -209,8 +239,8 @@ public:
     bool fireButton(const InputDevicePtr &thisptr,
                     Task::GenEventManager *em,
                     unsigned int button, bool newState, Modifier mod = 0);
-    bool fireAxis(const InputDevicePtr &thisptr, 
-                  Task::GenEventManager *em, 
+    bool fireAxis(const InputDevicePtr &thisptr,
+                  Task::GenEventManager *em,
                   unsigned int axis, AxisValue newState);
 
     inline AxisValue getAxis(unsigned int axis) const {
@@ -258,8 +288,6 @@ protected:
     virtual void setRelativeMode(bool enabled) = 0;
 
 public:
-    enum Axes {CURSORX, CURSORY, RELX, RELY, NUM_POINTER_AXES};
-
     PointerDevice() : mDeadband(0.0), mRelativeMode(0) {
     }
     void setDragDeadband(float deadband) {

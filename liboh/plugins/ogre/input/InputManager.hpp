@@ -65,7 +65,7 @@ public:
 
 	virtual void getWindowSize(unsigned int &width, unsigned int &height) = 0; // temporary
 
-    virtual bool isModifierDown(int modifier) const = 0;
+    virtual bool isModifierDown(Modifier modifier) const = 0;
     virtual bool isCapsLockDown() const = 0;
     virtual bool isNumLockDown() const = 0;
     virtual bool isScrollLockDown() const = 0;
@@ -81,12 +81,12 @@ public:
         }
         return subscribeId(InputDeviceEvent::getEventId(), func);
     }
- 
+
     void addDevice(const InputDevicePtr &dev) {
         mAllDevices.insert(dev);
         fire(EventPtr(new InputDeviceEvent(InputDeviceEvent::ADDED, dev)));
     }
- 
+
     void removeDevice(const InputDevicePtr &dev) {
         std::set<InputDevicePtr>::iterator iter = mAllDevices.find(dev);
         if (iter != mAllDevices.end()) {
