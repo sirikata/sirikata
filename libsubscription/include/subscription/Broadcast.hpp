@@ -46,7 +46,7 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Broadcast {
     UniqueLock* mUniqueLock;    
 public:
     class BroadcastStreamCallbacks;
-    class BroadcastStream :Noncopyable{
+    class SIRIKATA_SUBSCRIPTION_EXPORT BroadcastStream :Noncopyable{
         const std::tr1::shared_ptr<Network::Stream> mTopLevelStream;
         Network::Stream*mStream;
         friend class BroadcastStreamCallbacks;
