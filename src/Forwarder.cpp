@@ -230,6 +230,10 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       {
         mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
         mTrace->serverDatagramSent((*mCurrentTime), (*mCurrentTime), 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
+      }else {
+          // The more times the message goes through a forward to self loop, the more times this will record, causing an explosion
+          // in trace size.  It's probably not worth recording this information...
+          //mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
       }
       mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }
@@ -287,7 +291,10 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       if (!forwarded_self_msg)
         mTrace->serverDatagramReceived((*mCurrentTime), (*mCurrentTime), source_server, result->id(), offset);
 
-      deliver(result);
+      bool delivered = deliver(result);
+
+      //if (delivered)
+      //  mTrace->serverDatagramReceived((*mCurrentTime), (*mCurrentTime), source_server, result->id(), offset);
     }while (offset<chunk.size());
   }
 
@@ -295,8 +302,9 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
 
   // Delivery interface.  This should be used to deliver received messages to the correct location -
   // the server or object it is addressed to.
-  void Forwarder::deliver(Message* msg)
+  bool Forwarder::deliver(Message* msg)
   {
+      bool delivered = false;
     switch(msg->type()) {
       case MESSAGE_TYPE_PROXIMITY:
           {
@@ -308,6 +316,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
                   forward(prox_msg, prox_msg->destObject());
               else
               {
+                  delivered = true;
                 mTrace->prox((*mCurrentTime), prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
                   dest_obj->proximityMessage(prox_msg);
               }
@@ -323,6 +332,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
                   forward(loc_msg, loc_msg->destObject());
               else
               {
+                  delivered = true;
                 mTrace->loc((*mCurrentTime), loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
                 dest_obj->locationMessage(loc_msg);
               }
@@ -338,6 +348,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
                   forward(subs_msg, subs_msg->destObject());
               else
               {
+                  delivered = true;
                 mTrace->subscription((*mCurrentTime), subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
                 dest_obj->subscriptionMessage(subs_msg);
               }
@@ -345,6 +356,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
+                  delivered = true;
               MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
               assert(migrate_msg != NULL);
 
@@ -378,11 +390,13 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
+              delivered = true;
               dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_LOAD_STATUS:
           {
+              delivered = true;
               dispatchMessage(msg);
           }
           break;
@@ -395,10 +409,11 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
           {
             //route it on to another server
 
-            route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
+              route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
           }
           else
           {
+                  delivered = true;
             //otherwise, deliver to local oseg.
 
             //bftm debug
@@ -409,7 +424,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         break;
       case MESSAGE_TYPE_OSEG_LOOKUP:
         {
-
+            delivered = true;
           OSegLookupMessage* oseg_lookup_msg = dynamic_cast<OSegLookupMessage*> (msg);
           assert(oseg_lookup_msg != NULL);
 
@@ -420,6 +435,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         assert(false);
         break;
     }
+    return delivered;
   }
 
 

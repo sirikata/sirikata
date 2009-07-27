@@ -57,7 +57,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
 
       // Delivery interface.  This should be used to deliver received messages to the correct location -
       // the server or object it is addressed to.
-      void deliver(Message* msg);
+      bool deliver(Message* msg);
 
       // Forward the given message to its proper server.  Use this when a message arrives and the object
       // no longer lives on this server.
