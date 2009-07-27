@@ -158,6 +158,9 @@ public:
         delete mSubThread;
     }
     void testSingleSubscribe(){
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        using std::tr1::placeholders::_3;
         memset(key,1,1024);
         using namespace Sirikata::Subscription;
         mSubscriptionMessage.set_update_period(Duration::milliseconds(1000.0));//FIXME
