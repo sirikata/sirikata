@@ -305,7 +305,7 @@ protected:
      *  finish time. */
     Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
         float queue_frac = weight;
-        Duration transmitTime = Duration::seconds( size / queue_frac );
+        Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
 
         return last_finish_time + transmitTime;
@@ -314,7 +314,7 @@ protected:
     /** Finish time for a packet inserted into an empty queue, i.e. based on the most recent virtual time. */
     Time finishTime(uint32 size, float weight) const {
         float queue_frac = weight;
-        Duration transmitTime = Duration::seconds( size / queue_frac );
+        Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
         if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
 
         return mCurrentVirtualTime + transmitTime;
