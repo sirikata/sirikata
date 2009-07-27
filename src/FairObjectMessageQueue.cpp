@@ -65,7 +65,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
 
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(UUID sid, float weight) {
    if (!mClientQueues.hasQueue(sid)) {
-       mClientQueues.addQueue(new Queue(1024*64)/*FIXME*/,sid,weight);
+       mClientQueues.addQueue(new Queue( GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>()),sid,weight);
    }
 }
 template <class Queue> void FairObjectMessageQueue<Queue>::removeClient(UUID sid) {

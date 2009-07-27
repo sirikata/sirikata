@@ -4,12 +4,13 @@
 #include "Server.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
 FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
  : ServerMessageQueue(net, sid, sidmap, trace),
-   mQueue(1024*1024*32), //XXX FIXME
+   mQueue(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>() * 32), //FIXME * nobjects?
    mReceiveQueues(),
    mSendRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),

@@ -4,12 +4,13 @@
 #include "FIFOServerMessageQueue.hpp"
 #include "FIFOObjectMessageQueue.hpp"
 #include "Message.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
 FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
-   mQueue(1024*1024*32), // XXX FIXME
+   mQueue(GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>() * 32), // FIXME * numObjects?
    mLastTime(0),
    mRate(bytes_per_second),
    mRemainderBytes(0)

@@ -21,7 +21,9 @@ class ClusterSimSettings:
         self.flatness = .001
         self.num_objects = 100
         self.server_queue = 'fair'
+        self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
+        self.object_queue_length = 8192
         self.object_static = 'false'
         self.object_global = 'false'
 
@@ -96,7 +98,9 @@ class ClusterSim:
         cmd += "--capexcessbandwidth=false "
         cmd += "--objects=" + str(self.settings.num_objects) + " "
         cmd += "--server.queue=" + self.settings.server_queue + " "
+        cmd += "--server.queue.length=" + str(self.settings.server_queue_length) + " "
         cmd += "--object.queue=" + self.settings.object_queue + " "
+        cmd += "--object.queue.length=" + str(self.settings.object_queue_length) + " "
         cmd += "--object.static=" + self.settings.object_static + " "
         cmd += "--object.global=" + self.settings.object_global + " "
         ClusterDeploymentRun(self.config, cmd)

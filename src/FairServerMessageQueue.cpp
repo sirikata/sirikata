@@ -3,6 +3,7 @@
 #include "ServerNetworkImpl.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "Message.hpp"
+#include "Options.hpp"
 
 namespace CBR{
 
@@ -170,7 +171,7 @@ void FairServerMessageQueue::service(const Time&t){
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     // send weight
     if (!mServerQueues.hasQueue(sid)) {
-        mServerQueues.addQueue(new Queue<ServerMessagePair*>(1024*1024)/*FIXME*/,sid,weight);
+        mServerQueues.addQueue(new Queue<ServerMessagePair*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
     }
     else
         mServerQueues.setQueueWeight(sid, weight);
