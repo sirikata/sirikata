@@ -465,7 +465,7 @@ MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint6
 
 MigrateMessage::~MigrateMessage() {
     if (mCountSubscribers > 0)
-        delete mSubscribers;
+        delete[] mSubscribers;
 }
 
 MessageType MigrateMessage::type() const {
