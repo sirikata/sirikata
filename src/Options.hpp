@@ -67,6 +67,8 @@
 
 #define CSEG                "cseg"
 
+#define NOISE               "noise"
+
 namespace CBR {
 
 void InitOptions();

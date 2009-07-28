@@ -26,6 +26,7 @@ class ClusterSimSettings:
         self.object_queue_length = 8192
         self.object_static = 'false'
         self.object_global = 'false'
+        self.noise = 'false'
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -103,6 +104,7 @@ class ClusterSim:
         cmd += "--object.queue.length=" + str(self.settings.object_queue_length) + " "
         cmd += "--object.static=" + self.settings.object_static + " "
         cmd += "--object.global=" + self.settings.object_global + " "
+        cmd += "--noise=" + self.settings.noise + " "
         ClusterDeploymentRun(self.config, cmd)
 
     def retrieve_data(self):

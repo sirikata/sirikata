@@ -94,6 +94,7 @@ void InitOptions() {
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
 
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
+        .addOption(new OptionValue(NOISE, "false", Sirikata::OptionValueType<bool>(), "If true, will generate noise packets between servers to fill buffers."))
      ;
 }
 

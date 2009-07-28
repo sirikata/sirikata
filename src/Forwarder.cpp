@@ -164,10 +164,37 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
 
-    if (GetOption(SERVER_QUEUE)->as<String>() == "fair") {
-        for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-            if (sid == m_serv_ID) continue;
-            while(true) {
+    if (GetOption(NOISE)->as<bool>()) {
+        if (GetOption(SERVER_QUEUE)->as<String>() == "fair") {
+            for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
+                if (sid == m_serv_ID) continue;
+                while(true) {
+                    OriginID origin;
+                    origin.id = m_serv_ID;
+
+                    NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+
+                    uint32 offset = 0;
+                    Network::Chunk msg_serialized;
+                    offset = noise_msg->serialize(msg_serialized, offset);
+
+                    bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
+                    if (sent_success)
+                        mTrace->serverDatagramQueued((*mCurrentTime), sid, noise_msg->id(), offset);
+                    delete noise_msg;
+                    if (!sent_success) break;
+                }
+            }
+        }
+        else {
+            // For FIFO we generate for random servers because they all
+            // share a single internal queue.
+            uint32 nfail = 0;
+            uint32 nservers = mCSeg->numServers();
+            while(nfail < nservers) {
+                ServerID sid = randInt<uint32>(1, nservers);
+                if (sid == m_serv_ID) continue;
+
                 OriginID origin;
                 origin.id = m_serv_ID;
 
@@ -181,36 +208,10 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
                 if (sent_success)
                     mTrace->serverDatagramQueued((*mCurrentTime), sid, noise_msg->id(), offset);
                 delete noise_msg;
-                if (!sent_success) break;
+                if (!sent_success) nfail++;
             }
         }
     }
-    else {
-        // For FIFO we generate for random servers because they all
-        // share a single internal queue.
-        uint32 nfail = 0;
-        uint32 nservers = mCSeg->numServers();
-        while(nfail < nservers) {
-            ServerID sid = randInt<uint32>(1, nservers);
-            if (sid == m_serv_ID) continue;
-
-            OriginID origin;
-            origin.id = m_serv_ID;
-
-            NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
-
-            uint32 offset = 0;
-            Network::Chunk msg_serialized;
-            offset = noise_msg->serialize(msg_serialized, offset);
-
-            bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
-            if (sent_success)
-                mTrace->serverDatagramQueued((*mCurrentTime), sid, noise_msg->id(), offset);
-            delete noise_msg;
-            if (!sent_success) nfail++;
-        }
-    }
-
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
     mObjectMessageQueue->service(t);
