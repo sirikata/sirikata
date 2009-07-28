@@ -182,6 +182,7 @@ INCLUDE_DIRECTORIES(BEFORE
 #source files
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
+  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Duration.cpp

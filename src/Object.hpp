@@ -37,6 +37,7 @@
 #include "Time.hpp"
 #include "MotionPath.hpp"
 #include "Message.hpp"
+#include "SolidAngle.hpp"
 
 namespace CBR {
 
@@ -54,19 +55,19 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius);
+    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius, const std::set<UUID>& objects);
+    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
 
-    const UUID& uuid() {
+    const UUID& uuid() const {
         return mID;
     }
 
-    const float proximityRadius() {
-        return mProximityRadius;
+    const SolidAngle queryAngle() const {
+        return mQueryAngle;
     }
 
-    const ObjectSet& subscriberSet() {
+    const ObjectSet& subscriberSet() const {
         return mSubscribers;
     }
 
@@ -91,7 +92,7 @@ private:
     OriginID mOriginID;
     ObjectMessageQueue* mObjectMessageQueue;
     ObjectSet mSubscribers;
-    float mProximityRadius;
+    SolidAngle mQueryAngle;
 }; // class Object
 
 } // namespace CBR

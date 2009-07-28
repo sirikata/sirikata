@@ -33,9 +33,10 @@
 #ifndef _CBR_PROXIMITY_HPP_
 #define _CBR_PROXIMITY_HPP_
 
-#include "Utility.hpp"
-#include "Time.hpp"
-#include "MotionVector.hpp"
+#include "ProxSimulationTraits.hpp"
+#include "CBRLocationServiceCache.hpp"
+#include <prox/QueryHandler.hpp>
+#include <prox/LocationUpdateListener.hpp>
 
 namespace CBR {
 
@@ -80,26 +81,26 @@ class ObjectFactory;
 
 class Proximity {
 public:
+    typedef Prox::Query<ProxSimulationTraits> Query;
+
     Proximity(ObjectFactory* objfactory, LocationService* locservice);
     ~Proximity();
 
     // FIXME these could be more complicated, but we're going for simplicity for now
-    void addQuery(UUID obj, float radius);
+    void addQuery(UUID obj, SolidAngle sa);
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output
     void evaluate(const Time& t, std::queue<ProximityEventInfo>& events);
 private:
     typedef std::set<UUID> ObjectSet;
-    struct QueryState {
-        float radius;
-        ObjectSet neighbors;
-    };
-    typedef std::map<UUID, QueryState*> QueryMap;
+    typedef std::map<UUID, Query*> QueryMap;
 
+    Time mLastTime;
     ObjectFactory* mObjectFactory;
-    LocationService* mLocationService;
     QueryMap mQueries;
+    CBRLocationServiceCache* mLocCache;
+    Prox::QueryHandler<ProxSimulationTraits>* mHandler;
 }; //class Proximity
 
 } // namespace CBR

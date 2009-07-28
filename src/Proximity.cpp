@@ -31,49 +31,64 @@
  */
 
 #include "Proximity.hpp"
-#include "LocationService.hpp"
 #include "ObjectFactory.hpp"
 
 #include <algorithm>
 
+#include <prox/BruteForceQueryHandler.hpp>
+#include <prox/RTreeQueryHandler.hpp>
+
 namespace CBR {
 
 Proximity::Proximity(ObjectFactory* objfactory, LocationService* locservice)
- : mObjectFactory(objfactory),
-   mLocationService(locservice)
+ : mLastTime(0),
+   mObjectFactory(objfactory),
+   mLocCache(NULL),
+   mHandler(NULL)
 {
+    mLocCache = new CBRLocationServiceCache(locservice);
+    Prox::BruteForceQueryHandler<ProxSimulationTraits>* bhandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
+    mHandler = bhandler;
+    mHandler->initialize(mLocCache);
 }
 
 Proximity::~Proximity() {
     while(!mQueries.empty())
         removeQuery( mQueries.begin()->first );
+
+    delete mHandler;
 }
 
-void Proximity::addQuery(UUID obj, float radius) {
+void Proximity::addQuery(UUID obj, SolidAngle sa) {
     assert( mQueries.find(obj) == mQueries.end() );
-    QueryState* qs = new QueryState;
-    qs->radius = radius;
-    mQueries[obj] = qs;
+    mLocCache->startTracking(obj);
+    Query* q = new Query(mLocCache->location(obj), sa);
+    mQueries[obj] = q;
+    mHandler->registerQuery(q);
 }
 
 void Proximity::removeQuery(UUID obj) {
     QueryMap::iterator it = mQueries.find(obj);
     assert(it != mQueries.end());
 
-    QueryState* qs = it->second;
-    delete qs;
-
+    Query* q = it->second;
+    //mHandler->removeQuery(query); FIXME
     mQueries.erase(it);
+    delete q;
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
+    //mHandler->tick(t);
+    mLastTime = t;
+
+/*
     UUID u("17988194-72ce-2b8d-4ba7-fa536508b8f2",UUID::HumanReadable());
     UUID x("9806a31e-f7ad-86cf-522a-4abcacdd2c80",UUID::HumanReadable());
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         QueryState* query_state = query_it->second;
         Vector3f query_pos = mLocationService->currentPosition(query_id);
-       
+
         // generate new neighbor set
         ObjectSet new_neighbors;
         for(ObjectFactory::iterator object_it = mObjectFactory->begin(); object_it != mObjectFactory->end(); object_it++) {
@@ -116,6 +131,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
         // update to new neighbor list
         query_state->neighbors = new_neighbors;
     }
+*/
 }
 
 

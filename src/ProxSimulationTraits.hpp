@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectFactory.hpp
+ *  ProxSimulationTraits.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,55 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _CBR_PROX_SIMULATION_TRAITS_HPP_
+#define _CBR_PROX_SIMULATION_TRAITS_HPP_
+
 #include "Utility.hpp"
-#include "Duration.hpp"
-#include "SolidAngle.hpp"
-#include "Server.hpp"
+#include "Time.hpp"
+#include "MotionVector.hpp"
 
 namespace CBR {
-class ObjectMessageQueue;
-class MotionPath;
-class Object;
 
-/** Generates objects for the simulation.  This class actually has 2 jobs.
- *  First, it generates MotionPaths for every object that will exist in the
- *  system.  Second, when requested, it should generate an Object for performing
- *  full simulation of the object on the local server.
- */
-class ObjectFactory {
-    typedef std::set<UUID> ObjectIDSet;
-    struct ObjectInputs {
-        MotionPath* motion;
-        BoundingSphere3f bounds;
-        SolidAngle queryAngle;
-    };
-    typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
-    typedef std::map<UUID, Object*> ObjectMap;
+class ProxSimulationTraits {
 public:
-    typedef ObjectIDSet::iterator iterator;
-    typedef ObjectIDSet::const_iterator const_iterator;
+    typedef float32 realType;
 
-    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
-    ~ObjectFactory();
+    typedef Vector3f Vector3Type;
+    typedef TimedMotionVector3f MotionVector3Type;
 
-    iterator begin();
-    const_iterator begin() const;
-    iterator end();
-    const_iterator end() const;
+    typedef BoundingSphere3f BoundingSphereType;
 
-    MotionPath* motion(const UUID& id);
-    BoundingSphere3f bounds(const UUID& id);
-    SolidAngle queryAngle(const UUID& id);
-    Object* object(const UUID& id, const ServerID& server);
-    void destroyObject(const UUID& id);
+    typedef SolidAngle SolidAngleType;
 
-    void setObjectMessageQueue(ObjectMessageQueue* sq);
+    typedef UUID ObjectIDType;
 
-private:
-    ObjectIDSet mObjectIDs;
-    ObjectInputsMap mInputs;
-    ObjectMap mObjects;
-    ObjectMessageQueue* mObjectMessageQueue;
-}; // class ObjectFactory
+    typedef Time TimeType;
+    typedef Duration DurationType;
+}; // class ProxSimulationTraits
 
 } // namespace CBR
+
+#endif //_CBR_PROX_SIMULATION_TRAITS_HPP_

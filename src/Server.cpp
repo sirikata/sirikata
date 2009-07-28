@@ -50,7 +50,7 @@ Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, Lo
         Object* obj = obj_factory->object(obj_id, this->id());
         mObjects[obj_id] = obj;
         // Register proximity query
-        mProximity->addQuery(obj_id, obj_factory->getProximityRadius(obj_id)); // FIXME how to set proximity radius?
+        mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
       }
     }
     mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime);    //run initialization for forwarder
@@ -180,10 +180,10 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj)
   origin.id = (uint32)id();
 
   MigrateMessage* migrate_msg = new MigrateMessage(origin,
-                                                   obj_id,
-                                                   obj->proximityRadius(),
-                                                   obj->subscriberSet().size(),
-                                                   this->id());
+      obj_id,
+      obj->queryAngle(),
+      obj->subscriberSet().size(),
+      this->id());
   ObjectSet::iterator it;
   int i=0;
   UUID* migrate_msg_subscribers = migrate_msg->subscriberList();

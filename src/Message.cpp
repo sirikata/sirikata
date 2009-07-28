@@ -457,10 +457,10 @@ uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount, ServerID from)
+MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from)
  : Message(origin, true),
    mObject(obj),
-   mProximityRadius(proxRadius),
+   mQueryAngle(queryAngle),
    mCountSubscribers(subscriberCount),
    mFrom(from)
 {
@@ -477,10 +477,10 @@ MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint6
     offset += UUID::static_size;
     mObject = UUID(raw_object, UUID::static_size);
 
-    float proximityRadius;
-    memcpy(&proximityRadius, &wire[offset], sizeof(proximityRadius));
-    offset += sizeof(float);
-    mProximityRadius = proximityRadius;
+    float64 sa;
+    memcpy(&sa, &wire[offset], sizeof(sa));
+    offset += sizeof(float64);
+    mQueryAngle = SolidAngle(sa);
 
     uint16_t countSubscribers;
     memcpy(&countSubscribers, &wire[offset], sizeof(countSubscribers));
@@ -518,15 +518,16 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
 
     uint32 uuid_size = UUID::static_size;
-    wire.resize( wire.size() + uuid_size + sizeof(mProximityRadius) +
+    wire.resize( wire.size() + uuid_size + sizeof(float64) +
 		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers + sizeof(ServerID));
 
 
     memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
     offset += uuid_size;
 
-    memcpy( &wire[offset], &mProximityRadius, sizeof(mProximityRadius) );
-    offset += sizeof(mProximityRadius);
+    float64 sa_as_float = mQueryAngle.asFloat();
+    memcpy( &wire[offset], &sa_as_float, sizeof(sa_as_float) );
+    offset += sizeof(sa_as_float);
 
     memcpy( &wire[offset], &mCountSubscribers, sizeof(mCountSubscribers) );
     offset += sizeof(mCountSubscribers);
@@ -542,8 +543,8 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     return offset;
 }
 
-const float MigrateMessage::proximityRadius() const {
-    return mProximityRadius;
+const SolidAngle MigrateMessage::queryAngle() const {
+    return mQueryAngle;
 }
 
 const int MigrateMessage::subscriberCount() const {

@@ -64,7 +64,7 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
         else
             inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * randFloat() * 20 );
-        inputs->proximityRadius = randFloat() * 90 + 10; // FIXME
+        inputs->queryAngle = SolidAngle(SolidAngle::Max / 1000.f); // FIXME how to set this? variability by objects?
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -112,10 +112,10 @@ BoundingSphere3f ObjectFactory::bounds(const UUID& id) {
     return mInputs[id]->bounds;
 }
 
-float ObjectFactory::proximityRadius(const UUID& id) {
+SolidAngle ObjectFactory::queryAngle(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
     assert( mInputs.find(id) != mInputs.end() );
-    return mInputs[id]->proximityRadius;
+    return mInputs[id]->queryAngle;
 }
 
 Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
@@ -131,9 +131,9 @@ Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
 
     Object* new_obj = NULL;
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), proximityRadius(id), mObjectIDs);
+        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), queryAngle(id), mObjectIDs);
     else
-        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), proximityRadius(id));
+        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), queryAngle(id));
     mObjects[id] = new_obj;
     return new_obj;
 }

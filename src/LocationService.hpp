@@ -43,7 +43,7 @@ class LocationServiceListener {
 public:
     virtual ~LocationServiceListener();
 
-    virtual void localObjectAdded(const UUID& uuid) = 0;
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
     virtual void localObjectRemoved(const UUID& uuid) = 0;
 
     virtual void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;

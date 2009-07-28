@@ -39,7 +39,7 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
-Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius)
+Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle)
  : mID(id),
    mGlobalIntroductions(false),
    mMotion(motion),
@@ -47,11 +47,11 @@ Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* ob
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mOriginID(origin_id),
    mObjectMessageQueue(obj_msg_q),
-   mProximityRadius(prox_radius)
+   mQueryAngle(queryAngle)
 {
 }
 
-Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, float prox_radius, const std::set<UUID>& objects)
+Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects)
  : mID(id),
    mGlobalIntroductions(true),
    mMotion(motion),
@@ -59,7 +59,7 @@ Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* ob
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mOriginID(origin_id),
    mObjectMessageQueue(obj_msg_q),
-   mProximityRadius(prox_radius)
+   mQueryAngle(queryAngle)
 {
     mSubscribers = objects;
 }
@@ -139,7 +139,7 @@ void Object::subscriptionMessage(SubscriptionMessage* subs_msg) {
 
 void Object::migrateMessage(MigrateMessage* migrate_msg) {
     mID = migrate_msg->object();
-    mProximityRadius = migrate_msg->proximityRadius();
+    mQueryAngle = migrate_msg->queryAngle();
 
     for (int i = 0; i < migrate_msg->subscriberCount(); i++) {
       addSubscriber(migrate_msg->subscriberList()[i]);

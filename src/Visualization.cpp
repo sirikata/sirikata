@@ -15,7 +15,7 @@ void LocationVisualization::mainLoop() {
         ObjectEvent*oe=*mCurEvent;
         if (oe->end_time()>mCurTime) {
             break;
-        }        
+        }
 
         ProximityEvent*pe;
         if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
@@ -47,13 +47,13 @@ void LocationVisualization::mainLoop() {
             }
         }
 
-	if (mSegmentationChangeIterator != mSegmentationChangeEvents.end()) {	  
-	  if ((*mSegmentationChangeIterator)->begin_time() <= mCurTime) {	  
+	if (mSegmentationChangeIterator != mSegmentationChangeEvents.end()) {
+	  if ((*mSegmentationChangeIterator)->begin_time() <= mCurTime) {
 	    mDynamicBoxes.push_back((*mSegmentationChangeIterator)->bbox);
-	    mSegmentationChangeIterator++;	    
+	    mSegmentationChangeIterator++;
 	  }
 	}
-        
+
         ++mCurEvent;
 
     }
@@ -90,12 +90,12 @@ void LocationVisualization::mainLoop() {
     //glScalef(1,1,1);
     glScalef(2.0/bboxwidest.diag().x,2.0/bboxwidest.diag().y,2.0);
     glTranslatef(-centre.x,-centre.y,0);
-    
+
     glBegin(GL_QUADS);
     int k=0;
     for (i=minServerID;i<maxServerID;++i) {
       BoundingBoxList bboxList=mSeg->serverRegion(i);
-      
+
       for (uint j=0;j<bboxList.size(); j++) {
 	BoundingBox3f bbox = bboxList[j];
         glColor3f(0,0, (k/(float)maxServerID));	/* set current color to white */
@@ -107,32 +107,34 @@ void LocationVisualization::mainLoop() {
       }
     }
 
-    for (i=0;i<mDynamicBoxes.size();++i) {    
+    for (i=0;i<mDynamicBoxes.size();++i) {
 	BoundingBox3f bbox = mDynamicBoxes[i];
         glColor3f(0,0, (k/(float)maxServerID));	/* set current color to white */
 	glVertex2f(bbox.min().x,bbox.min().y);
         glVertex2f(bbox.min().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.max().y);
         glVertex2f(bbox.max().x,bbox.min().y);
-	k++;      
+	k++;
     }
 
     glEnd();
-   
+
 
     glPointSize(2);
-    glBegin(GL_POINTS); 
+    glBegin(GL_POINTS);
     for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
         Vector3f pos=mLoc->currentPosition(*it);
         if (*it==mObserver) {
             glEnd();
             glColor3f(.125,.125,.125);
+/* FIXME this no longer makes sense since we're using solid angle queries
             glBegin(GL_LINE_STRIP);
             float rad=mFactory->getProximityRadius(*it);
             for (int i=0;i<180;++i) {
                 glVertex2f(pos.x+rad*cos(3.141526536*i/90),pos.y+rad*sin(3.141526536*i/90));
             }
             glEnd();
+*/
             glBegin(GL_POINTS);
             glColor3f(1,0,0);
         }else {
@@ -175,7 +177,7 @@ void LocationVisualization::mainLoop() {
 void main_loop() {
   static LocationVisualization*sVis=gVis;
   sVis->mainLoop();
-  
+
 }
 LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*factory, LocationService*loc_serv, CoordinateSegmentation*cseg):
     LocationErrorAnalysis(opt_name,nservers),mCurTime(0){
@@ -184,7 +186,7 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
     mSeg=cseg;
     mSamplingRate=Duration::milliseconds(30.0f);
 
-    // read in all our data  
+    // read in all our data
     for(uint32 server_id = 1; server_id <= nservers; server_id++) {
         String loc_file = GetPerServerFile(opt_name, server_id);
         std::ifstream is(loc_file.c_str(), std::ios::in);
@@ -204,7 +206,7 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
 }
 
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
-    
+
     int argc=1; char argvv[]="test";
 
     std::cout << "Observer is: "  << observer.readableHexData() << "\n";
@@ -223,7 +225,7 @@ void LocationVisualization::displayError(const UUID&observer, const Duration&sam
         mCurTime=(*mCurEvent)->begin_time();
     }
     glutIdleFunc(&main_loop);
-    glutDisplayFunc(&main_loop);    
+    glutDisplayFunc(&main_loop);
     glutMainLoop();
 }
 

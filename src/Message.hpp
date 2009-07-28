@@ -235,7 +235,7 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const OriginID& origin, const UUID& obj, float proxRadius, uint16_t subscriberCount, ServerID from);
+    MigrateMessage(const OriginID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from);
 
     ~MigrateMessage();
 
@@ -243,7 +243,7 @@ public:
 
     const UUID& object() const;
 
-    const float proximityRadius() const;
+    const SolidAngle queryAngle() const;
 
     const int subscriberCount() const;
 
@@ -260,7 +260,7 @@ private:
 
     UUID mObject;
 
-    float mProximityRadius;
+    SolidAngle mQueryAngle;
 
     uint16_t mCountSubscribers;
     UUID* mSubscribers;
