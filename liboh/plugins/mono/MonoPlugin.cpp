@@ -40,16 +40,39 @@
 #include "MonoObject.hpp"
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
+
+bool loadDependencyAssembly(Mono::MonoSystem*mono_system, const Sirikata::String&assembly) {
+    return   mono_system->loadAssembly(assembly,"../../../dependencies/IronPython")
+        || mono_system->loadAssembly(assembly,"../../../dependencies/Cecil")
+        ||mono_system->loadAssembly(assembly,"../../dependencies/IronPython")
+        ||mono_system->loadAssembly(assembly,"../../dependencies/Cecil")
+        ||mono_system->loadAssembly(assembly,".")
+        ||mono_system->loadAssembly(assembly,"bin")
+        ||mono_system->loadAssembly(assembly,"dependencies/IronPython")
+        ||mono_system->loadAssembly(assembly,"dependencies/Cecil");
+}
+bool loadCustomAssembly(Mono::MonoSystem*mono_system, const Sirikata::String&assembly) {
+    return   
+            mono_system->loadAssembly(assembly,".")
+            ||mono_system->loadAssembly(assembly,"bin")
+            ||mono_system->loadAssembly(assembly,"Release")
+            ||mono_system->loadAssembly(assembly,"Debug");
+}
+
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
         Mono::Domain d=mono_system->createDomain();
-        bool retval=mono_system->loadAssembly("ConsoleTest","/home/daniel/Desktop/iron/IronPython-2.0.1/package");
-        Mono::Assembly ass=d.getAssembly("ConsoleTest");
+        bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
+        retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
+ 
+        bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime");
+        
+        Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("ConsoleTest");
         cls.send("Construct");
-        printf ("Mono Initialized %d\n",(int) retval);
+        printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
 /*
         SimulationFactory::getSingleton().registerConstructor("mono",
                                                             &MonoSystem::create,

@@ -364,11 +364,22 @@ IF(NOT MONO_ROOT)
 ENDIF()
 FIND_PACKAGE(Mono)
 IF(MONO_FOUND)
-ADD_DEFINITIONS(-DHAVE_MONO)
-ADD_DEFINITIONS(-DMONO_VERSION_MAJOR=${MONO_MAJOR_VERSION})
-ADD_DEFINITIONS(-DMONO_VERSION_MINOR=${MONO_MINOR_VERSION})
-ADD_DEFINITIONS(-DMONO_VERSION_MICRO=${MONO_SUBMINOR_VERSION})
-ENDIF()
+  ADD_DEFINITIONS(-DHAVE_MONO)
+  ADD_DEFINITIONS(-DMONO_VERSION_MAJOR=${MONO_MAJOR_VERSION})
+  ADD_DEFINITIONS(-DMONO_VERSION_MINOR=${MONO_MINOR_VERSION})
+  ADD_DEFINITIONS(-DMONO_VERSION_MICRO=${MONO_SUBMINOR_VERSION})
+  IF(EXISTS ${PLATFORM_LIBS}/IronPython)
+    SET(IRON_PYTHON_ROOT ${PLATFORM_LIBS}/IronPython)
+    SET(IRON_PYTHON_LIBRARIES
+      -r:${IRON_PYTHON_ROOT}/IronPython.dll 
+      -r:${IRON_PYTHON_ROOT}/IronPython.Modules.dll
+      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.dll
+      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.Core.dll
+#      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.ExtensionAttribute.dll
+       )
+  ENDIF(EXISTS ${PLATFORM_LIBS}/IronPython)
+  FIND_PACKAGE(Cecil)
+ENDIF(MONO_FOUND)
 
 #dependency: protocolbuffers
 IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs/bin)
@@ -749,6 +760,29 @@ IF(OGRE_ZIP_PATH)
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${SirikataOgreCoreZipCpp})
 ENDIF()
 #source files
+SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
+
+IF(MONO_FOUND)
+  FILE(GLOB SirikataScriptSources ${ScriptsRoot}/*.cs )
+  SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+  SET(SirikataScriptRuntime_LIBRARY ${SirikataScriptRuntime_LIBRARY_DIR}/Sirikata.Runtime.dll)
+  ADD_CUSTOM_TARGET(SirikataScriptRuntime ALL
+                  DEPENDS ${SirikataScriptSources} ${SirikataScriptRuntime_LIBRARY}
+                  COMMENT "Checking Sirikata.Runtime.dll")
+  ADD_CUSTOM_COMMAND(OUTPUT ${SirikataScriptRuntime_LIBRARY}
+                   COMMAND ${GMCS_EXECUTABLE} -debug
+                                     -target:library
+                                     -out:${SirikataScriptRuntime_LIBRARY}
+                                     -warn:2
+                                     ${CECIL_LIBRARIES}
+                                     ${IRON_PYTHON_LIBRARIES}
+                                     ${SirikataScriptSources}
+                   DEPENDS ${SirikataScriptSources}
+                   COMMENT "Building Sirikata.Runtime.dll")
+  SET(SirikataScriptRuntimeBuildOutputs ${SirikataScriptRuntime_LIBRARY} ${SirikataScriptRuntime_LIBRARY}.mdb)
+  SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${SirikataScriptRuntimeBuildOutputs}")
+
+ENDIF()
 
 SET(SIRIKATA_CORE_SOURCES
 	${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
