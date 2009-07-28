@@ -1138,11 +1138,27 @@ ENDIF()
 
 SET(LIBOH_PLUGIN_MONO_DIR ${LIBOH_PLUGIN_DIR}/mono)
 SET(LIBOH_PLUGIN_MONO_SOURCES
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoArray.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoPlugin.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoSystem.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoClass.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoAssembly.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoContext.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoConvert.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoDelegate.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoDomain.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoException.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoIDictionary.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoIList.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoMethodLookupCache.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoObject.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoPropertyLookupCache.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoThread.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoUtil.cpp
     )
 IF(MONO_FOUND)
 ADD_PLUGIN_TARGET(mono
-                    SOURCES ${LIBOH_PLUGIN_BULLETPHYSICS_SOURCES}
+                    SOURCES ${LIBOH_PLUGIN_MONO_SOURCES}
                     TARGET_CXXFLAGS ${MONO_CFLAGS}
                     TARGET_LDFLAGS ${MONO_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}

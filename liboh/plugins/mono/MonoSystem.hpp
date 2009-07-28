@@ -32,6 +32,62 @@
 
 #ifndef _SIRIKATA_MONO_SYSTEM_HPP_
 #define _SIRIKATA_MONO_SYSTEM_HPP_
+#include "MonoDefs.hpp"
+#include <mono/metadata/mono-gc.h>
+namespace Mono {
+
+class MonoSystem {
+public:
+    MonoSystem();
+    ~MonoSystem();
+
+    /** Create a new AppDomain in this virtual machine. */
+    Domain createDomain();
+
+    /** List all loaded assemblies for this virtual machine to stdout. For debugging purposes only. */
+    void listAssemblies();
+
+    /** Load the assembly with the given name. This can be a full AssemblyName, e.g.
+     *  mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089.
+     *  Returns true if successful, false otherwise.  This doesn't result in any references
+     *  to the Assembly, you must use the Assembly with a Domain to create a
+     *  reference.
+     *  \param name the name of the assembly
+     */
+    bool loadAssembly(const Sirikata::String& name) const;
+
+    /** Load the assembly with the given name. This can be a full AssemblyName, e.g.
+     *  mscorlib, Version=1.0.5000.0, Culture=neutral, PublicKeyToken=b77a5c561934e089.
+     *  Returns true if successful, false otherwise.  This doesn't result in any references
+     *  to the Assembly, you must use the Assembly with a Domain to create a
+     *  reference.
+     *  \param name the name of the assembly
+     *  \param dir an additional directory to search for the assembly in
+     */
+    bool loadAssembly(const Sirikata::String& name, const Sirikata::String& dir) const;
+
+    /** Load an assembly from memory.
+     *  \param membuf pointer to the raw buffer holding the assembly image
+     *  \param len the length of the buffer in bytes
+     */
+    bool loadMemoryAssembly(char* membuf, unsigned int len) const;
+
+    /** Run the garbage collector.*/
+    void GC() const;
+private:
+    /** Search for the given class in the given namespace in any of the loaded assemblies.
+     *  If you know the assembly its in, access it directly as this is inefficient.
+     *  \param name_space the namespace to search for the class in
+     *  \param klass the name of the class to look for
+     */
+    Class getClass(const Sirikata::String& name_space, const Sirikata::String& klass);
+
+    Domain mDomain;
+    std::vector<Assembly> mAssemblies;
+    Sirikata::String mWorkDir;
+};
+
+}
 
 
 #endif

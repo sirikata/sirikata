@@ -31,13 +31,25 @@
  */
 
 #include <oh/Platform.hpp>
-#include <oh/SimulationFactory.hpp>
+#include "MonoDefs.hpp"
+#include "MonoDomain.hpp"
 #include "MonoSystem.hpp"
+///these includes are for fiddling around
+#include "MonoAssembly.hpp"
+#include "MonoClass.hpp"
+#include "MonoObject.hpp"
 static int core_plugin_refcount = 0;
-
+Mono::MonoSystem * mono_system;
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
+        mono_system = new Mono::MonoSystem();
+        Mono::Domain d=mono_system->createDomain();
+        bool retval=mono_system->loadAssembly("ConsoleTest","/home/daniel/Desktop/iron/IronPython-2.0.1/package");
+        Mono::Assembly ass=d.getAssembly("ConsoleTest");
+        Mono::Class cls =ass.getClass("ConsoleTest");
+        cls.send("Construct");
+        printf ("Mono Initialized %d\n",(int) retval);
 /*
         SimulationFactory::getSingleton().registerConstructor("mono",
                                                             &MonoSystem::create,
@@ -60,8 +72,10 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     if (core_plugin_refcount>0) {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
-        if (core_plugin_refcount==0)
+        if (core_plugin_refcount==0) {
+            delete mono_system;
             //SimulationFactory::getSingleton().unregisterConstructor("mono",true);
+        }
     }
 }
 
