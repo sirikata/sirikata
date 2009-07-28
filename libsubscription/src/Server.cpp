@@ -141,6 +141,7 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
 
             }
         }else {
+			success=true;
             UUID uuid(subscriptionRequest.broadcast_name());
             std::vector<WaitingStreams>*waiting=&mWaitingStreams[uuid];
             size_t which=waiting->size();
@@ -156,7 +157,7 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
                            
         }
     }
-    if (success) {
+    if (!success) {
         std::tr1::shared_ptr<Stream> strongStream(*stream);
         if(strongStream) {
             strongStream->close();
