@@ -300,7 +300,7 @@ private:
         output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::source_space_field_tag,mSourceSpace.getAsUUID(),sourceSpaceSize);
         output=copyItem(*s,output,Sirikata::Protocol::MessageHeader::destination_space_field_tag,mDestinationSpace.getAsUUID(),destinationSpaceSize);
         if (output!=s->end()) {
-            assert(s->end()-output==(ssize_t)mData.size());
+            assert(s->end()-output==(ptrdiff_t)mData.size());
             s->replace(output,s->end(),mData);
         }
         return true;

@@ -31,6 +31,7 @@
  */
 
 #include <util/Platform.hpp>
+#include <boost/thread.hpp>
 #include "SQLite.hpp"
 AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::SQLite);
 

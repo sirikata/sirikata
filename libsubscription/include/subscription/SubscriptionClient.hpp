@@ -62,11 +62,24 @@ class SIRIKATA_SUBSCRIPTION_EXPORT SubscriptionClient {
     Network::IOService*mService;
     class UniqueLock;
     UniqueLock*mMapLock;
-
-public:
-    class IndividualSubscription;
 protected:
     class State;
+public:
+    class SIRIKATA_SUBSCRIPTION_EXPORT IndividualSubscription {
+        friend class SubscriptionClient;
+        IndividualSubscription(const Duration&period,const std::tr1::function<void(const Network::Chunk&)>function,const std::tr1::function<void()>disconeFunction):mFunction(function),mDisconFunction(disconeFunction),mPeriod(period){}
+    public:
+        std::tr1::function<void(const Network::Chunk&)> mFunction;
+        std::tr1::function<void()> mDisconFunction;
+        std::tr1::shared_ptr<State> mSubscriptionState;
+
+        Duration mPeriod;
+        void call(const Network::Chunk&chunk)const{
+            mFunction(chunk);
+        }
+        std::tr1::shared_ptr<IndividualSubscription> cloneWithDifferentDuration(const Duration&period);
+    };
+protected:
     typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<Network::Stream>,Network::Address::Hasher > TopLevelStreamMap;
     typedef std::tr1::unordered_map<AddressUUID,std::tr1::weak_ptr<State>,AddressUUID::Hasher> BroadcastMap;
 
@@ -86,9 +99,6 @@ protected:
     void removeSubscriberHint(const Network::Address &mAddress,
                               const UUID &mUUID);
 
-public:
-    class IndividualSubscription;
-protected:
     class State{
         friend class SubscriptionClient;
         friend class IndividualSubscription;
@@ -118,20 +128,7 @@ protected:
 public:
     SubscriptionClient(Network::IOService*mService);
     ~SubscriptionClient();
-    class IndividualSubscription {
-        friend class SubscriptionClient;
-        IndividualSubscription(const Duration&period,const std::tr1::function<void(const Network::Chunk&)>function,const std::tr1::function<void()>disconeFunction):mFunction(function),mDisconFunction(disconeFunction),mPeriod(period){}
-    public:
-        std::tr1::function<void(const Network::Chunk&)> mFunction;
-        std::tr1::function<void()> mDisconFunction;
-        std::tr1::shared_ptr<State> mSubscriptionState;
 
-        Duration mPeriod;
-        void call(const Network::Chunk&chunk)const{
-            mFunction(chunk);
-        }
-        std::tr1::shared_ptr<IndividualSubscription> cloneWithDifferentDuration(const Duration&period);
-    };
     std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address&,
                                      const Protocol::Subscribe&subscription,
                                      const std::tr1::function<void(const Network::Chunk&)>&bytesReceived,

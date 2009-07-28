@@ -163,7 +163,7 @@ public:
         using std::tr1::placeholders::_3;
         memset(key,1,1024);
         using namespace Sirikata::Subscription;
-        mSubscriptionMessage.set_update_period(Duration::milliseconds(1000.0));//FIXME
+        mSubscriptionMessage.set_update_period(Duration::milliseconds(100.0));//FIXME
         mSubscriptionMessage.set_broadcast_name(tBroadcastUUID);
         std::string serialized;
         mSubscriptionMessage.SerializeToString(&serialized);
@@ -178,7 +178,7 @@ public:
                                               std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));        
         (*tBroadcast)->send(stdref,Network::ReliableOrdered);
 
-        for (int i=0;i<92000;++i) {
+        for (int i=0;i<93;++i) {
 #ifdef _WIN32
             Sleep(i<90?100:3000);
 #else

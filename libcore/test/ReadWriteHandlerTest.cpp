@@ -33,7 +33,8 @@
 
 // These methods are just helpers and generic tests for ReadWriteHandlers.  No tests are
 // actually setup in this file.
-#include <util/Platform.hpp>
+#include "util/Standard.hh"
+
 #include <cxxtest/TestSuite.h>
 #include "ReadWriteHandlerTest.hpp"
 

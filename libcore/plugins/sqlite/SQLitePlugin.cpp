@@ -31,6 +31,7 @@
  */
 
 #include <util/Platform.hpp>
+#include <boost/thread.hpp>
 #include "persistence/ObjectStorage.hpp"
 #include "persistence/MinitransactionHandlerFactory.hpp"
 #include "persistence/ReadWriteHandlerFactory.hpp"

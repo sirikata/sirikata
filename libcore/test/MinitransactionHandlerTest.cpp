@@ -32,7 +32,7 @@
 
 // These methods are just helpers and generic tests for MinitransactionHandlers.  No tests are
 // actually setup in this file.
-#include <util/Platform.hpp>
+#include "util/Standard.hh"
 #include <cxxtest/TestSuite.h>
 #include "MinitransactionHandlerTest.hpp"
 

@@ -29,6 +29,8 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "util/Standard.hh"
+
 #include <boost/filesystem.hpp>
 namespace ReadWriteTestNs {
 const char *databaseReadWriteFilename="testReadWrite.db";

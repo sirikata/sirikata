@@ -74,7 +74,7 @@ public:
                                            &MinitransactionTestNs::teardownMinitransactionalHandler);
     }
 
-    void testStressMinitransactionHandlerOrder( void ) {
+    void xestStressMinitransactionHandlerOrder( void ) {
         stress_test_minitransaction_handler(&MinitransactionTestNs::setupMinitransactionalHandler,
                                             &SQLiteMinitransactionTest::createMinitransactionalHandlerFunction,
                                             "",
@@ -82,7 +82,7 @@ public:
                                             10,
                                             1);
     }
-    void testStressMinitransactionHandlerOrder2( void ) {
+    void xestStressMinitransactionHandlerOrder2( void ) {
         stress_test_minitransaction_handler(&MinitransactionTestNs::setupMinitransactionalHandler,
                                             &SQLiteMinitransactionTest::createMinitransactionalHandlerFunction,
                                             "",
@@ -90,7 +90,7 @@ public:
                                             10,
                                             2);
     }
-    void xxtestStressMinitransactionHandlerOrder10( void ) {
+    void xestStressMinitransactionHandlerOrder10( void ) {
         stress_test_minitransaction_handler(&MinitransactionTestNs::setupMinitransactionalHandler,
                                             &SQLiteMinitransactionTest::createMinitransactionalHandlerFunction,
                                             "",

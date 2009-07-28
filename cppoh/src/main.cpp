@@ -48,7 +48,7 @@
 #include <oh/SpaceIDMap.hpp>
 #include <network/IOServiceFactory.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
-
+#include <time.h>
 namespace Sirikata {
 
 using Task::GenEventManager;

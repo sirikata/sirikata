@@ -74,7 +74,7 @@ public:
                                            &ReadWriteTestNs::teardownReadWritealHandler);
     }
 
-    void testStressReadWriteHandlerOrder( void ) {
+    void xestStressReadWriteHandlerOrder( void ) {
         stress_test_read_write_handler(&ReadWriteTestNs::setupReadWritealHandler,
                                             &SQLiteReadWriteTest::createReadWritealHandlerFunction,
                                             "",
@@ -82,7 +82,7 @@ public:
                                             10,
                                             1);
     }
-    void testStressReadWriteHandlerOrder3( void ) {
+    void xestStressReadWriteHandlerOrder3( void ) {
         stress_test_read_write_handler(&ReadWriteTestNs::setupReadWritealHandler,
                                             &SQLiteReadWriteTest::createReadWritealHandlerFunction,
                                             "",
@@ -91,7 +91,7 @@ public:
                                             3);
     }
 
-    void xxtestStressReadWriteHandlerOrder10( void ) {
+    void xestStressReadWriteHandlerOrder10( void ) {
         stress_test_read_write_handler(&ReadWriteTestNs::setupReadWritealHandler,
                                             &SQLiteReadWriteTest::createReadWritealHandlerFunction,
                                             "",
