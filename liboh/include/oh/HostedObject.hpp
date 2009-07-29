@@ -56,7 +56,12 @@ typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
 //------- Private inner classes
-    class PerSpaceData;
+    class PerSpaceData {
+    public:
+        SpaceConnection mSpaceConnection;
+        ProxyObjectPtr mProxyObject; /// 
+        PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
+    };
     struct PrivateCallbacks;
 
 protected:

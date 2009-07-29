@@ -31,6 +31,7 @@
  */
 
 #include <oh/Platform.hpp>
+#include "oh/SpaceConnection.hpp"
 #include <oh/HostedObject.hpp>
 #include <oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
@@ -40,7 +41,6 @@
 #include <task/WorkQueue.hpp>
 #include "graphics/GraphicsObject.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
-#include "oh/SpaceConnection.hpp"
 
 namespace Sirikata {
 

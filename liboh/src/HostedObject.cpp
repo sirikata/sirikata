@@ -53,12 +53,7 @@ namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 
-class HostedObject::PerSpaceData {
-public:
-    SpaceConnection mSpaceConnection;
-    ProxyObjectPtr mProxyObject; /// 
-    PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
-};
+
 
 HostedObject::PerSpaceData::PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream) :mSpaceConnection(topLevel,stream) {}
 
