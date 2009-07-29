@@ -46,6 +46,8 @@ void ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CShar
 
 namespace Sirikata {
 
+typedef uint32 MessagePort;
+
 /** A reference to an object in a space.  This can be used as
  *  an address to send a message to an object via a space.
  *  SpaceObjectReferences are specific to spaces, i.e. they are not

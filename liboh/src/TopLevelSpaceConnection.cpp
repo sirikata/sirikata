@@ -36,6 +36,8 @@
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/SpaceIDMap.hpp"
 #include "oh/ObjectHost.hpp"
+#include "oh/HostedObject.hpp"
+
 namespace Sirikata {
 namespace {
 void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,Network::Stream::ConnectionStatus status,const std::string&reason){
@@ -106,6 +108,26 @@ TopLevelSpaceConnection::~TopLevelSpaceConnection() {
         removeFromMap();
         delete mTopLevelStream;
     }
+}
+
+void TopLevelSpaceConnection::registerHostedObject(const ObjectReference &mRef, const HostedObjectPtr &hostedObj) {
+    mHostedObjects.insert(HostedObjectMap::value_type(mRef, hostedObj));
+}
+void TopLevelSpaceConnection::unregisterHostedObject(const ObjectReference &mRef) {
+    HostedObjectMap::iterator iter = mHostedObjects.find(mRef);
+    assert (iter != mHostedObjects.end());
+    if (iter != mHostedObjects.end()) {
+        mHostedObjects.erase(iter);
+    }
+}
+HostedObjectPtr TopLevelSpaceConnection::getHostedObject(const ObjectReference &mref) const {
+    HostedObjectMap::const_iterator iter = mHostedObjects.find(mref);
+    if (iter != mHostedObjects.end()) {
+        HostedObjectPtr obj(iter->second.lock());
+        assert(obj);
+        return obj;
+    }
+    return HostedObjectPtr();
 }
 
 }

@@ -34,7 +34,8 @@
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <oh/Platform.hpp>
-#include <util/SpaceID.hpp>
+#include <util/MessageService.hpp>
+#include <util/SpaceObjectReference.hpp>
 #include <network/Address.hpp>
 namespace Sirikata {
 class ProxyManager;
@@ -42,10 +43,20 @@ class SpaceIDMap;
 class TopLevelSpaceConnection;
 class SpaceConnection;
 
+namespace Task {
+class WorkQueue;
+}
+class HostedObject;
+typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+
 class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     SpaceIDMap *mSpaceIDMap;
     typedef std::tr1::unordered_multimap<SpaceID,std::tr1::weak_ptr<TopLevelSpaceConnection>,SpaceID::Hasher> SpaceConnectionMap;
     typedef std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<TopLevelSpaceConnection>,Network::Address::Hasher> AddressConnectionMap;
+
+    typedef std::tr1::unordered_map<UUID, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
+    typedef std::map<MessagePort, MessageService *> ServicesMap;
     
     SpaceConnectionMap mSpaceConnections;
     AddressConnectionMap mAddressConnections;
@@ -53,6 +64,13 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     void insertAddressMapping(const Network::Address&, const std::tr1::weak_ptr<TopLevelSpaceConnection>&);
     void removeTopLevelSpaceConnection(const SpaceID&, const Network::Address&, const TopLevelSpaceConnection*);
     Network::IOService *mSpaceConnectionIO;
+
+    Task::WorkQueue *volatile mMessageQueue;
+    struct AtomicInt;
+    AtomicInt *mEnqueuers;
+
+    HostedObjectMap mHostedObjects;
+    ServicesMap mServices;
 
 public:
     
@@ -62,7 +80,7 @@ public:
      *
      * Destroy it with Network::IOServiceFactory::destroyIOService(ioServ);
      */
-    ObjectHost(SpaceIDMap *spaceIDMap, Network::IOService*ioServ);
+    ObjectHost(SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
@@ -70,9 +88,33 @@ public:
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool endForwardingMessagesTo(MessageService*){return false;}
 
+    void registerService(MessagePort port, MessageService *serv) {
+        mServices.insert(ServicesMap::value_type(port, serv));
+        serv->forwardMessagesTo(this);
+    }
+    void unregisterService(MessagePort port) {
+        ServicesMap::iterator iter = mServices.find(port);
+        if (iter != mServices.end()) {
+            iter->second->endForwardingMessagesTo(this);
+            mServices.erase(iter);
+        }
+    }
+    MessageService *getService(MessagePort port) const {
+        ServicesMap::const_iterator iter = mServices.find(port);
+        if (iter != mServices.end()) {
+            return iter->second;
+        }
+        return NULL;
+    }
+
+    void registerHostedObject(const HostedObjectPtr &obj);
+    void unregisterHostedObject(const UUID &objID);
+    HostedObjectPtr getHostedObject(const UUID &id) const;
+
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
 
+    class MessageProcessor;
     ///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);

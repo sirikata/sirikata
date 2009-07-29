@@ -269,13 +269,14 @@ int main ( int argc,const char**argv ) {
     initializeProtocols();
 
     Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
-
+    Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
+    Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
 
     SpaceID mainSpace(UUID("12345678-1111-1111-1111-DEFA01759ACE",UUID::HumanReadable()));
     SpaceIDMap *spaceMap = new SpaceIDMap;
     spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
 
-    ObjectHost *oh = new ObjectHost(spaceMap, ioServ);
+    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ);
     {//to deallocate HostedObjects before armageddon
     HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
     firstObject->initializeConnect(
@@ -319,10 +320,9 @@ int main ( int argc,const char**argv ) {
             &li,
             mainSpace);
     }
+    }
     ProxyManager *provider = oh->getProxyManager(mainSpace);
 
-    Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
-    Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
     TransferManager *tm;
     try {
         tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
@@ -391,18 +391,18 @@ int main ( int argc,const char**argv ) {
         Network::IOServiceFactory::pollService(ioServ);
     }
 
+    delete oh;
+
+    delete eventManager;
+    delete workQueue;
+
     for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
     }
     sims.clear();
-
-    delete eventManager;
-    delete workQueue;
-    }
     plugins.gc();
     SimulationFactory::destroy();
 
-    delete oh;
     Network::IOServiceFactory::destroyIOService(ioServ);
     delete spaceMap;
 

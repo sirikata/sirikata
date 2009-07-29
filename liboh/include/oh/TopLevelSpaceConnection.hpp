@@ -38,11 +38,19 @@
 #include <oh/ObjectHostProxyManager.hpp>
 namespace Sirikata {
 
+class HostedObject;
+typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
+typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class ObjectHost;
+
 class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager {
+    typedef std::tr1::unordered_map<ObjectReference,HostedObjectWPtr,ObjectReference::Hasher> HostedObjectMap;
+
     ObjectHost*mParent;
     Network::Address mRegisteredAddress;
     Network::Stream *mTopLevelStream;
+    HostedObjectMap mHostedObjects;
+
     void removeFromMap();
     static void connectToAddress(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*oh,const Network::Address*addy);
 
@@ -58,6 +66,10 @@ class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager 
     ///connects the SST stream to the given IP address unless it is null
     void connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*,const SpaceID&,const Network::Address&addy);
     void connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*,const SpaceID&);
+
+    void registerHostedObject(const ObjectReference &mRef, const HostedObjectPtr &hostedObj);
+    void unregisterHostedObject(const ObjectReference &mRef);
+    HostedObjectPtr getHostedObject(const ObjectReference &mref) const;
 };
 /*
 class HostedObjectListener {

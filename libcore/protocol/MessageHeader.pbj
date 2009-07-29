@@ -83,10 +83,10 @@ message MessageHeader {
         TIMEOUT_FAILURE = 3; ///< Failed to receive any reply messages. Usually sent by AA.
         PROTOCOL_ERROR = 4; ///< The message format could not be understood. Usually sent by BB.
         PORT_FAILURE = 5; ///< Object BB does not understand or handle 'destination_port' messages.
+        UNKNOWN_OBJECT = 6; ///< BB does not exist, or is not visible to AA. Sent by SS.
     }
     enum ExampleReturnStatusCodes {
         SECURITY_FAILURE = 12345; ///< The source has no permission to send messages. Usually sent by SS.
-        HOST_DOES_NOT_EXIST = 123456; ///< BB does not exist, or is not visible to AA. Sent by SS.
     }
     /** If not successful, the MessageBody should contain the reason for failure.
      * return_status applies to the whole message body, and is used for network

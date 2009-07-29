@@ -35,8 +35,6 @@
 #include "Protocol_MessageHeader.pbj.hpp"
 namespace Sirikata {
 
-typedef uint32 MessagePort;
-
 class RoutableMessageHeader {
 
     ObjectReference mDestinationObject;
@@ -64,6 +62,7 @@ public:
     static const ReturnStatus TIMEOUT_FAILURE=Protocol::MessageHeader::TIMEOUT_FAILURE;
     static const ReturnStatus PROTOCOL_ERROR=Protocol::MessageHeader::PROTOCOL_ERROR;
     static const ReturnStatus PORT_FAILURE=Protocol::MessageHeader::PORT_FAILURE;
+    static const ReturnStatus UNKNOWN_OBJECT=Protocol::MessageHeader::UNKNOWN_OBJECT;
 
     RoutableMessageHeader() {
         mDestinationPort=0;

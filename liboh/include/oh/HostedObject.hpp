@@ -150,7 +150,13 @@ public:
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mReceiveService;
 
+    const UUID &getUUID() {
+        return mInternalObjectReference;
+    }
+
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
+
+    void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
 
     /** Sends a message from the space hdr.destination_space() to the object
         hdr.destination_object().

@@ -73,6 +73,7 @@ HostedObject::HostedObject(ObjectHost*parent)
 }
 
 HostedObject::~HostedObject() {
+    mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mTracker.endForwardingMessagesTo(&mSendService);
 }
 
@@ -344,6 +345,7 @@ void HostedObject::initializeConnect(
     const SpaceID&spaceID, const HostedObjectWPtr&spaceConnectionHint)
 {
     mInternalObjectReference=objectName;
+    mObjectHost->registerHostedObject(getSharedPtr());
 
     std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
 
@@ -406,6 +408,7 @@ void HostedObject::initializeRestoreFromDatabase(const UUID &objectName) {
 }
 void HostedObject::initializeScripted(const UUID&objectName, const String& script, const SpaceID&id,const HostedObjectWPtr&spaceConnectionHint) {
     mInternalObjectReference=objectName;
+    mObjectHost->registerHostedObject(getSharedPtr());
     if (id!=SpaceID::null()) {
         //bind script to object...script might be a remote ID, so need to bind download target, etc
         std::tr1::shared_ptr<HostedObject> parentObject=spaceConnectionHint.lock();
@@ -452,7 +455,7 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     }
 }
 
-void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
     ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
@@ -460,11 +463,35 @@ void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference bo
     if (where!=mSpaceData.end()) {
         RoutableMessageHeader hdr (hdrOrig);
         hdr.clear_destination_space();
+        hdr.clear_source_space();
+        hdr.clear_source_object();
         String serialized_header;
         hdr.SerializeToString(&serialized_header);
         where->second.mSpaceConnection.getStream()->send(MemoryReference(serialized_header),body, Network::ReliableOrdered);
     }
     assert(where!=mSpaceData.end());
+}
+
+void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
+    assert(hdrOrig.has_destination_object());
+    if (!hdrOrig.has_destination_space() || hdrOrig.destination_space() == SpaceID::null()) {
+        RoutableMessageHeader hdr (hdrOrig);
+        hdr.set_destination_space(SpaceID::null());
+        hdr.set_source_object(ObjectReference(mInternalObjectReference));
+        mObjectHost->processMessage(hdr, body);
+        return;
+    }
+    SpaceDataMap::iterator where=mSpaceData.find(hdrOrig.destination_space());
+    if (where!=mSpaceData.end()) {
+        const ProxyObjectPtr &obj = where->second.mProxyObject;
+        if (obj) {
+            RoutableMessageHeader hdr (hdrOrig);
+            hdr.set_source_object(obj->getObjectReference().object());
+            mObjectHost->processMessage(hdr, body);
+        } else {
+            sendViaSpace(hdrOrig, body);
+        }
+    }
 }
 
 void HostedObject::receivedPositionUpdate(
@@ -567,6 +594,18 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             return;
         }
     }
+    else if (name == "DelObj") {
+        SpaceDataMap::iterator perSpaceIter = mSpaceData.find(msg.source_space());
+        if (perSpaceIter == mSpaceData.end()) {
+            SILOG(objecthost, error, "DelObj message not for any known space.");
+            return;
+        }
+        TopLevelSpaceConnection *proxyMgr =
+            perSpaceIter->second.mSpaceConnection.getTopLevelStream().get();
+        if (thisObj && proxyMgr) {
+            proxyMgr->unregisterHostedObject(thisObj->getObjectReference().object());
+        }
+    }
     else if (name == "RetObj") {
         SpaceDataMap::iterator perSpaceIter = mSpaceData.find(msg.source_space());
         if (msg.source_object() != ObjectReference::spaceServiceID()) {
@@ -578,7 +617,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             return;
         }
         // getProxyManager() does not work because we have not yet created our ProxyObject.
-        ObjectHostProxyManager *proxyMgr =
+        TopLevelSpaceConnection *proxyMgr =
             perSpaceIter->second.mSpaceConnection.getTopLevelStream().get();
 
         Protocol::RetObj retObj;
@@ -597,6 +636,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
             }
             perSpaceIter->second.mProxyObject = proxyObj;
+            proxyMgr->registerHostedObject(objectId.object(), getSharedPtr());
             receivedPositionUpdate(proxyObj, retObj.location(), true);
             if (proxyMgr) {
                 proxyMgr->createObject(proxyObj);

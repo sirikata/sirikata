@@ -31,28 +31,159 @@
  */
 
 #include <oh/Platform.hpp>
+#include <oh/HostedObject.hpp>
 #include <oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <util/AtomicTypes.hpp>
+#include <util/RoutableMessageHeader.hpp>
+#include <task/WorkQueue.hpp>
 #include "graphics/GraphicsObject.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/SpaceConnection.hpp"
 
 namespace Sirikata {
 
-ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Network::IOService *ioServ) {
+struct ObjectHost::AtomicInt : public AtomicValue<int> {
+};
+
+ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ) {
     mSpaceIDMap = spaceMap;
+    mMessageQueue = messageQueue;
     mSpaceConnectionIO=ioServ;
+    mEnqueuers = new AtomicInt;
 }
 
 ObjectHost::~ObjectHost() {
+    Task::WorkQueue *queue = mMessageQueue;
+    mMessageQueue = NULL;
+    while (*mEnqueuers) {
+        // silently wait for everyone to finish adding themselves.
+    }
+    queue->dequeueAll(); // filter through everything that might have an ObjectHost message in it.
 }
 
-///This method checks if the message is destined for any named mServices. If not, it gives it to mRouter
-void ObjectHost::processMessage(const RoutableMessageHeader&header,
-                                MemoryReference message_body) {
+class ObjectHost::MessageProcessor : public Task::WorkItem {
+    ObjectHost *parent;
+    RoutableMessageHeader header;
+    std::string body;
+public:
+    MessageProcessor(ObjectHost *parent,
+                     const RoutableMessageHeader&header,
+                     MemoryReference message_body)
+        : parent(parent), header(header), body((char*)message_body.begin(), (char*)message_body.end()) {
+    }
+    ~MessageProcessor() {
+    }
 
+    void operator() () {
+        AutoPtr delete_me(this);
+
+        if (header.destination_space() == SpaceID::null()) {
+            ReturnStatus status = RoutableMessageHeader::SUCCESS;
+            if (header.destination_object() == ObjectReference::spaceServiceID()) {
+                MessageService *destService = parent->getService(header.destination_port());
+                if (destService) {
+                    destService->processMessage(header, MemoryReference(body));
+                    return;
+                }
+                status = RoutableMessageHeader::PORT_FAILURE;
+            } else {
+                HostedObjectPtr dest = parent->getHostedObject(header.destination_object().getAsUUID());
+                if (dest) {
+                    dest->processRoutableMessage(header, MemoryReference(body));
+                    return;
+                }
+                status = RoutableMessageHeader::UNKNOWN_OBJECT;
+            }
+            if (status) {
+                RoutableMessageHeader response(header);
+                response.swap_source_and_destination();
+                response.set_return_status(false);
+                if (header.source_object() == ObjectReference::spaceServiceID()) {
+                    MessageService *srcService = parent->getService(header.destination_port());
+                    if (srcService) {
+                        srcService->processMessage(response, MemoryReference::null());
+                    } else {
+                        // Neither source service nor destination exist.
+                    }
+                } else {
+                    HostedObjectPtr src = parent->getHostedObject(header.source_object().getAsUUID());
+                    if (src) {
+                        src->processRoutableMessage(response, MemoryReference::null());
+                    } else {
+                        // Neither source object nor destination exist.
+                    }
+                }
+            }
+        } else {
+            std::tr1::shared_ptr<TopLevelSpaceConnection> tlsc;
+            SpaceConnectionMap::iterator iter = parent->mSpaceConnections.find(header.destination_space());
+            if (iter != parent->mSpaceConnections.end()) {
+                tlsc = iter->second.lock();
+            }
+            HostedObjectPtr dest;
+            if (!tlsc) {
+                SILOG(cppoh, error, "Invalid destination space in ObjectHost::processMessage");
+                // ERROR: the space does not exist on this OH.
+                assert(tlsc);
+                return;
+            }
+            if (header.destination_object() != ObjectReference::spaceServiceID()) {
+                dest = tlsc->getHostedObject(header.destination_object());
+            }
+            if (dest) {
+                dest->processRoutableMessage(header, MemoryReference(body));
+            } else {
+                HostedObjectPtr src;
+                if (tlsc) {
+                    src = tlsc->getHostedObject(header.source_object());
+                }
+                if (src) {
+                    src->sendViaSpace(header, MemoryReference(body));
+                } else {
+                    // ERROR: neither sender nor receiver exist on this OH...
+                    return;
+                }
+            }
+        }
+    }
+};
+
+void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
+    assert(header.has_destination_space());
+    assert(header.has_destination_object());
+    assert(header.has_source_object());
+    assert(!header.has_source_space() || header.source_space() == header.destination_space());
+    ++mEnqueuers;
+    Task::WorkQueue *queue = mMessageQueue;
+    if (queue) {
+        queue->enqueue(new MessageProcessor(this, header, message_body));
+    }
+    --mEnqueuers;
 }
+
+void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
+    mHostedObjects.insert(HostedObjectMap::value_type(obj->getUUID(), obj));
+}
+void ObjectHost::unregisterHostedObject(const UUID &objID) {
+    HostedObjectMap::iterator iter = mHostedObjects.find(objID);
+    if (iter != mHostedObjects.end()) {
+        mHostedObjects.erase(iter);
+    }
+}
+HostedObjectPtr ObjectHost::getHostedObject(const UUID &id) const {
+    HostedObjectMap::const_iterator iter = mHostedObjects.find(id);
+    if (iter != mHostedObjects.end()) {
+//        HostedObjectPtr obj(iter->second.lock());
+//        assert(obj);
+//        return obj;
+        return iter->second;
+    }
+    return HostedObjectPtr();
+}
+
+
 namespace{
     boost::recursive_mutex gSpaceConnectionMapLock;
 }

@@ -65,7 +65,8 @@ public:
         return first;
     }
     T end() const {
-        return first+second;
+        // FIXME: If second really is measured in bytes, why do we use void* and not char*?
+        return (void*)(((char*)first)+second);
     }
     T data() const {
         return first;
