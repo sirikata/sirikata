@@ -100,10 +100,14 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
 
 void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
     startTracking(uuid);
+    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->locationConnected(uuid, loc, bounds);
 }
 
 void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid) {
     stopTracking(uuid);
+    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->locationDisconnected(uuid);
 }
 
 

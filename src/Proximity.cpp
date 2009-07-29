@@ -59,10 +59,9 @@ Proximity::~Proximity() {
     delete mHandler;
 }
 
-void Proximity::addQuery(UUID obj, SolidAngle sa) {
+void Proximity::addQuery(UUID obj, const TimedMotionVector3f& loc, SolidAngle sa) {
     assert( mQueries.find(obj) == mQueries.end() );
-    mLocCache->startTracking(obj);
-    Query* q = new Query(mLocCache->location(obj), sa);
+    Query* q = new Query(loc, sa);
     mQueries[obj] = q;
     mHandler->registerQuery(q);
 }
@@ -78,61 +77,30 @@ void Proximity::removeQuery(UUID obj) {
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
-    //mHandler->tick(t);
+    mHandler->tick(t);
     mLastTime = t;
 
-/*
-    UUID u("17988194-72ce-2b8d-4ba7-fa536508b8f2",UUID::HumanReadable());
-    UUID x("9806a31e-f7ad-86cf-522a-4abcacdd2c80",UUID::HumanReadable());
+    typedef std::deque<QueryEvent> QueryEventList;
+
     for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
         UUID query_id = query_it->first;
-        QueryState* query_state = query_it->second;
-        Vector3f query_pos = mLocationService->currentPosition(query_id);
+        Query* query = query_it->second;
 
-        // generate new neighbor set
-        ObjectSet new_neighbors;
-        for(ObjectFactory::iterator object_it = mObjectFactory->begin(); object_it != mObjectFactory->end(); object_it++) {
-            UUID obj_id = *object_it;
-            if (obj_id == query_id) continue;
-            Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-            query_pos.z=0;
-            obj_pos.z=0;
-            if ( (query_pos - obj_pos).lengthSquared() < query_state->radius*query_state->radius ) {
-                new_neighbors.insert(obj_id);
-                if (query_id==u&&obj_id==x) {
-                    //printf ("huzzah\n");
-                }
+        QueryEventList evts;
+        query->popEvents(evts);
 
-            }
+        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
+            if (evt_it->type() == QueryEvent::Added)
+                events.push(ProximityEventInfo(query_id, evt_it->id(), mLocCache->location(evt_it->id()), ProximityEventInfo::Entered));
+            else
+                events.push(ProximityEventInfo(query_id, evt_it->id(), ProximityEventInfo::Exited));
         }
-
-        // generate difference set
-        ObjectSet added_objs;
-        std::set_difference(
-            new_neighbors.begin(), new_neighbors.end(),
-            query_state->neighbors.begin(), query_state->neighbors.end(),
-            std::inserter(added_objs, added_objs.begin())
-        );
-
-        ObjectSet removed_objs;
-        std::set_difference(
-            query_state->neighbors.begin(), query_state->neighbors.end(),
-            new_neighbors.begin(), new_neighbors.end(),
-            std::inserter(removed_objs, removed_objs.begin())
-        );
-
-
-        for(ObjectSet::iterator it = added_objs.begin(); it != added_objs.end(); it++)
-            events.push(ProximityEventInfo(query_id, *it, mLocationService->location(*it), ProximityEventInfo::Entered));
-
-        for(ObjectSet::iterator it = removed_objs.begin(); it != removed_objs.end(); it++)
-            events.push(ProximityEventInfo(query_id, *it, ProximityEventInfo::Exited));
-
-        // update to new neighbor list
-        query_state->neighbors = new_neighbors;
     }
-*/
 }
 
+void Proximity::queryHasEvents(Query* query) {
+    // Currently we don't use this directly, we just always iterate over all queries and check them.
+    // FIXME we could store this information and only check the ones we get callbacks for here
+}
 
 } // namespace CBR

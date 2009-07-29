@@ -79,19 +79,23 @@ private:
 class LocationService;
 class ObjectFactory;
 
-class Proximity {
+class Proximity : Prox::QueryEventListener<ProxSimulationTraits> {
 public:
     typedef Prox::Query<ProxSimulationTraits> Query;
+    typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
 
     Proximity(ObjectFactory* objfactory, LocationService* locservice);
     ~Proximity();
 
     // FIXME these could be more complicated, but we're going for simplicity for now
-    void addQuery(UUID obj, SolidAngle sa);
+    void addQuery(UUID obj, const TimedMotionVector3f& pos, SolidAngle sa);
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output
     void evaluate(const Time& t, std::queue<ProximityEventInfo>& events);
+
+    // QueryEventListener Interface
+    void queryHasEvents(Query* query);
 private:
     typedef std::set<UUID> ObjectSet;
     typedef std::map<UUID, Query*> QueryMap;
