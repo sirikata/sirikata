@@ -7,3 +7,10 @@ def fact(i):
         return 1;
     return i*fact(i-1);
 print fact(9)
+class exampleclass:
+    def __init__(self,startval):
+        self.val=startval
+    def func(self,otherval):
+        self.val+=otherval
+        print self.val
+        return self.val;

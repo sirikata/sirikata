@@ -32,6 +32,8 @@
 
 #include <subscription/Platform.hpp>
 #include "util/Time.hpp"
+#include "util/PluginManager.hpp"
+
 namespace Sirikata{ namespace Subscription { namespace Protocol {
 class Subscribe{};
 
@@ -46,6 +48,11 @@ int main(int argc,const char**argv) {
     OptionSet::getOptions("")->parse(argc,argv);
     Network::IOService*io=Network::IOServiceFactory::makeIOService();
     //FIXME
-    Network::IOServiceFactory::runService(io);
+    //Network::IOServiceFactory::runService(io);
+    PluginManager plugins;    
+    const char* pluginNames[] = { "mono", NULL};
+    for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
+        plugins.load( DynamicLibrary::filename(*plugin_name) );
+
     return 0;
 }

@@ -376,8 +376,24 @@ using Microsoft.Scripting.Hosting.Shell;
                 Console.Write(sb.ToString());
                 return 0;
             }
-            ScriptSource _source=_engine.CreateScriptSourceFromFile("test.py");//.ExecuteProgram();
-            int exitCode=_source.ExecuteProgram();
+            //ScriptEngine engine=_runtime.GetEngineByTypeName("IronPython");
+            ScriptScope scope1 = _engine.CreateScope();
+            scope1.SetVariable("x",5);
+            scope1.SetVariable("y",2);
+            ScriptScope scope2 = _engine.CreateScope();
+            scope2.SetVariable("x",6);
+            scope2.SetVariable("y",4);
+            ScriptSource initsource= _engine.CreateScriptSourceFromString("import test\nmyclass=test.exampleclass(y)\n",SourceCodeKind.Statements);
+            ScriptSource source= _engine.CreateScriptSourceFromString("retval=myclass.func(x)",SourceCodeKind.Statements);
+            initsource.Execute(scope1);
+            initsource.Execute(scope2);
+            source.Execute(scope1);
+            source.Execute(scope2);
+            source.Execute(scope1);
+            source.Execute(scope2);
+            int result=(int)scope2.GetVariable<int>("retval");
+            Console.WriteLine("Final Result {0}",result);
+            int exitCode=0;
 /*  //runs python console--would block
             IConsole console = CreateConsole(Engine, commandLine, consoleOptions);
 
