@@ -754,16 +754,16 @@ void WebView::injectKeyEvent(bool press, int modifiers, int scancode) {
 	bool numpad = false;
 	unsigned int vk_code = mapSDLToWindows((SDL_scancode)scancode, numpad);
 	int awemods = 0;
-	if (modifiers &Input::InputDevice::MOD_SHIFT) {
+	if (modifiers &Input::MOD_SHIFT) {
 		awemods |= Awesomium::SHIFT_MOD;
 	}
-	if (modifiers &Input::InputDevice::MOD_CTRL) {
+	if (modifiers &Input::MOD_CTRL) {
 		awemods |= Awesomium::CONTROL_MOD;
 	}
-	if (modifiers &Input::InputDevice::MOD_ALT) {
+	if (modifiers &Input::MOD_ALT) {
 		awemods |= Awesomium::ALT_MOD;
 	}
-	if (modifiers &Input::InputDevice::MOD_GUI) {
+	if (modifiers &Input::MOD_GUI) {
 		awemods |= Awesomium::META_MOD;
 	}
 	if (numpad) {
