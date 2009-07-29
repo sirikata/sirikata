@@ -91,7 +91,7 @@ ELSE()
 
 ENDIF()
 
-IF(MONO_LOOK_FOR_LIBRARIES)
+IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
 
   IF(WIN32)  # Windows
 
@@ -251,6 +251,8 @@ ELSE(MONO_FOUND)
     ELSE(MONO_ONLY_LIBRARIES_REQUIRED)
       MESSAGE(FATAL_ERROR "Could not find one or more of the following: mono, mcs, gmcs, gacutil, Mono development files")
     ENDIF(MONO_ONLY_LIBRARIES_REQUIRED)
+  ELSE(MONO_FIND_REQUIRED)
+    MESSAGE(STATUS "Could not find Mono development files! Building without scripting support.")
   ENDIF(MONO_FIND_REQUIRED)
 ENDIF(MONO_FOUND)
 
