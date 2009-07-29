@@ -71,12 +71,13 @@ void Proximity::removeQuery(UUID obj) {
     assert(it != mQueries.end());
 
     Query* q = it->second;
-    //mHandler->removeQuery(query); FIXME
     mQueries.erase(it);
-    delete q;
+    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
+    if ( ((uint32)(t-Time(0)).seconds()) - ((uint32)(mLastTime-Time(0)).seconds()) > 0)
+        printf("Objects: %d, Queries: %d\n", mHandler->numObjects(), mHandler->numQueries());
     mHandler->tick(t);
     mLastTime = t;
 
