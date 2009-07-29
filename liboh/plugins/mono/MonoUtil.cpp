@@ -638,7 +638,7 @@ MonoMethod* mono_object_get_property_set(MonoObject* obj, const char* name) {
 //#####################################################################
 // Function NativePtrToUInt64
 //#####################################################################
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 Sirikata::uint64 NativePtrToUInt64(void* ptr) {
     return (Sirikata::uint64)ptr;
 }
@@ -646,7 +646,7 @@ Sirikata::uint64 NativePtrToUInt64(void* ptr) {
 //#####################################################################
 // Function FreeNativeString
 //#####################################################################
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void FreeNativeString(void* ptr) {
     delete[] ((char*)ptr);
 }

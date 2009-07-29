@@ -56,7 +56,7 @@ void ConvertVector3(const Sirikata::Vector3d& in, CSharpVector3* out) {
     out->z = in.z;
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void ConvertVector3CPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::Vector3d* arg = (Sirikata::Vector3d*)jarg;
     CSharpVector3* out = (CSharpVector3*)jout;
@@ -72,7 +72,7 @@ Sirikata::Vector3d Vector3d(CSharpVector3* in) {
     return Sirikata::Vector3d(in->x, in->y, in->z);
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertVector3CSharpToCPP(CSharpVector3* csharp_vec3) {
     return (void*) new Sirikata::Vector3d( Vector3d(csharp_vec3) );
 }
@@ -88,7 +88,7 @@ void ConvertQuaternion(const Sirikata::Quaternion& in, CSharpQuaternion* out) {
     out->z = in.z;
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void ConvertQuaternionCPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::Quaternion* arg = (Sirikata::Quaternion*)jarg;
     CSharpQuaternion* out = (CSharpQuaternion*)jout;
@@ -101,7 +101,7 @@ void ConvertQuaternionCPPToCSharpAndFree(void* jarg, void* jout) {
     return ::Sirikata::Quaternion(in->w, in->x, in->y, in->z, ::Sirikata::Quaternion::WXYZ());
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertQuaternionCSharpToCPP(CSharpQuaternion* csharp_quat) {
     return (void*) new Sirikata::Quaternion( Quaternion(csharp_quat) );
 }
@@ -117,7 +117,7 @@ void ConvertLocation(const Sirikata::Location& in, CSharpLocation* out) {
     out->angVelocityRadians=in.getAngularSpeed();
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void ConvertLocationCPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::Location* arg = (Sirikata::Location*)jarg;
     CSharpLocation* out = (CSharpLocation*)jout;
@@ -136,7 +136,7 @@ Sirikata::Location Location(CSharpLocation* in) {
     );
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertLocationCSharpToCPP(CSharpLocation* csharp_loc) {
     return (void*) new Sirikata::Location( Location(csharp_loc) );
 }
@@ -245,7 +245,7 @@ void ConvertSpaceObjectReference(const Sirikata::SpaceObjectReference& in, CShar
     ConvertObjectReference(in.object(), &out->reference);
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void ConvertSpaceObjectReferenceCPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::SpaceObjectReference* arg = (Sirikata::SpaceObjectReference*)jarg;
     CSharpSpaceObjectReference* out = (CSharpSpaceObjectReference*)jout;
@@ -260,7 +260,7 @@ Sirikata::SpaceObjectReference SpaceObjectReference(CSharpSpaceObjectReference* 
     );
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertSpaceObjectReferenceCSharpToCPP(CSharpSpaceObjectReference* csharp_sor) {
     return (void*) new Sirikata::SpaceObjectReference( SpaceObjectReference(csharp_sor) );
 }
@@ -274,7 +274,7 @@ Sirikata::int64 ConvertTime(const Sirikata::Time& in) {
     return (in-Time(0.0)).toMicroseconds() * 10;
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 Sirikata::int64 ConvertTimeCPPToCSharpAndFree(void* jarg) {
     Sirikata::Time* arg = (Sirikata::Time*)jarg;
     Sirikata::int64 ticks = ConvertTime(*arg);
@@ -286,7 +286,7 @@ Sirikata::Time Time(Sirikata::int64 ticks) {
     return Sirikata::Time::microseconds(ticks / 10);
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertTimeCSharpToCPP(Sirikata::int64 csharp_time) {
     return (void*) new Sirikata::Time( Time(csharp_time) );
 }
@@ -299,7 +299,7 @@ void ConvertDuration(const Sirikata::Duration& in, CSharpDuration* out) {
     out->ticks = in.toMicroseconds() * 10;
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void ConvertDurationCPPToCSharpAndFree(void* jarg, void* jout) {
     Sirikata::Duration* arg = (Sirikata::Duration*)jarg;
     CSharpDuration* out = (CSharpDuration*)jout;
@@ -311,7 +311,7 @@ Sirikata::Duration Duration(CSharpDuration* in) {
     return Sirikata::Duration::microseconds(in->ticks / 10);
 }
 
-SIRIKATA_EXPORT_C
+SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertDurationCSharpToCPP(CSharpDuration* csharp_duration) {
     return (void*) new Sirikata::Duration( Duration(csharp_duration) );
 }

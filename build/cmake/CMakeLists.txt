@@ -911,7 +911,8 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp
-                  ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp )
+                  ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp )
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(SUBSCRIPTION_SOURCES ${SUBSCRIPTION_SOURCE_DIR}/main.cpp )
