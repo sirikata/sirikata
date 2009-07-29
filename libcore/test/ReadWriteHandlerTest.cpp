@@ -45,7 +45,7 @@ using namespace Sirikata::Persistence;
 
 
 namespace {
-void pollMinitransaction(){}
+void pollReadWrite(){}
 
 }
 
@@ -93,7 +93,7 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
     Response*final_reads=NULL;
     rwh->apply(trans, std::tr1::bind(check_fill_read_write_handler_result, _1, &done,&final_reads));
     while(!done)
-        pollMinitransaction();
+        pollReadWrite();
     TS_ASSERT(final_reads!=NULL);
     rwh->destroyResponse(final_reads);
 }
@@ -132,7 +132,7 @@ static void test_read_write(ReadWriteHandler* rwh, Protocol::ReadWriteSet* trans
     rwh->apply(trans, std::tr1::bind(check_read_write_results, rwh, _1, &done, expected_error, expected, testnum));
 
     while( !done )
-        pollMinitransaction();
+        pollReadWrite();
 
 }
 
@@ -159,7 +159,7 @@ void stress_test_read_write_handler(SetupReadWriteHandlerFunction _setup, Create
 
     std::vector<ReadWriteSet*> transactions;
     int counter=0;
-    // generate a bunch of MinitransactionSets with a lot of items in them
+    // generate a bunch of ReadWriteSets with a lot of items in them
     for(uint32 i = 0; i < num_sets; i++) {
         ReadWriteSet* trans = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,num_readswrites,num_readswrites);
         for(uint32 j = 0; j < num_readswrites; j++) {
@@ -178,7 +178,7 @@ void stress_test_read_write_handler(SetupReadWriteHandlerFunction _setup, Create
         fixture.handler->apply(transactions[i], std::tr1::bind(check_stress_test_result, fixture.handler, _1, &done));
 
     while( done.read() < num_sets )
-        pollMinitransaction();
+        pollReadWrite();
 
    transactions.clear();
 }
