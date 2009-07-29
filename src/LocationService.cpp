@@ -51,6 +51,16 @@ void LocationService::removeListener(LocationServiceListener* listener) {
     mListeners.erase(it);
 }
 
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->localObjectAdded(uuid, loc, bounds);
+}
+
+void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->localObjectRemoved(uuid);
+}
+
 void LocationService::notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationUpdated(uuid, newval);

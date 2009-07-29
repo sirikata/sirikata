@@ -73,6 +73,8 @@ public:
     virtual void removeListener(LocationServiceListener* listener);
 
 protected:
+    void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
+    void notifyLocalObjectRemoved(const UUID& uuid) const;
     void notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
 

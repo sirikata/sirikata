@@ -103,10 +103,12 @@ BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
 
 void OracleLocationService::addLocalObject(const UUID& uuid) {
     // This is an oracle, so we don't need to track these.
+    notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 void OracleLocationService::removeLocalObject(const UUID& uuid) {
     // This is an oracle, so we don't need to track these.
+    notifyLocalObjectRemoved(uuid);
 }
 
 
