@@ -428,11 +428,17 @@ public:
         mHasMessageReplyId = false;
     }
 
-    inline int32 return_status() const{
-        return mReturnStatus;
+    inline ReturnStatus return_status() const{
+        return (ReturnStatus)mReturnStatus;
+    }
+    inline bool has_return_status() const{
+        return mReturnStatus != SUCCESS;
     }
     inline void set_return_status(int32 status) {
         mReturnStatus=status;
+    }
+    inline void set_return_status(ReturnStatus status) {
+        mReturnStatus=(int32)status;
     }
 
 };

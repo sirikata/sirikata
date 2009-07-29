@@ -58,13 +58,12 @@ message StorageElement {
     optional uint64 field_id=8;
     optional string field_name=10;
     optional bytes data=11;
-    enum Error {
-        DATABASE_LOCKED = 3;
+    optional int32 index=15;
+    enum ReturnStatus {
         KEY_MISSING = 4;
-        COMPARISON_FAILED = 5;
         INTERNAL_ERROR = 6;
     }
-    optional Error error=16;
+    optional ReturnStatus return_status=16;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
 }
@@ -127,12 +126,12 @@ message Minitransaction{
 message Response {
   reserve 1 to 6;//in case we ever need to forward these around a bit
   repeated StorageElement reads=7;
-    enum ReturnStatus {
-        SUCCESS = 0;
-        DATABASE_LOCKED = 3;
-        KEY_MISSING = 4;
-        COMPARISON_FAILED = 5;
-        INTERNAL_ERROR = 6;
-    }
-    optional ReturnStatus return_status=16;
+  enum ReturnStatus {
+      SUCCESS = 0; // Default
+      DATABASE_LOCKED = 3;
+      KEY_MISSING = 4;
+      COMPARISON_FAILED = 5;
+      INTERNAL_ERROR = 6;
+  }
+  optional ReturnStatus return_status=16; // Only for transactions
 }

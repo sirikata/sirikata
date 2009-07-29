@@ -33,6 +33,7 @@
 #include <util/Platform.hpp>
 #include <oh/Platform.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
+#include <ObjectHost_Persistence.pbj.hpp>
 #include "util/RoutableMessage.hpp"
 #include "util/KnownServices.hpp"
 #include "network/Stream.hpp"
@@ -97,8 +98,115 @@ struct HostedObject::PrivateCallbacks {
 
         realThis->processRoutableMessage(header, bodyData);
     }
+
+    typedef SentMessageBody<Persistence::Protocol::ReadWriteSet> SentPersistence;
+    static void handlePersistenceResponse(
+        HostedObject *realThis,
+        const RoutableMessageHeader &origHeader,
+        SentMessage *sent,
+        const RoutableMessageHeader &header,
+        MemoryReference bodyData)
+    {
+        std::auto_ptr<SentPersistence> sentDestruct(static_cast<SentPersistence*>(sent));
+        SILOG(cppoh,debug,"Got some persistence back: stat = "<<header.return_status());
+        if (header.has_return_status()) {
+            Persistence::Protocol::Response resp;
+            for (int i = 0, respIndex=0; i < sentDestruct->body().reads_size(); i++, respIndex++) {
+                Persistence::Protocol::IStorageElement field = resp.add_reads();
+                if (sentDestruct->body().reads(i).has_index()) {
+                    field.set_index(sentDestruct->body().reads(i).index());
+                }
+                if (sentDestruct->body().options() & Persistence::Protocol::ReadWriteSet::RETURN_READ_NAMES) {
+                    field.set_field_name(sentDestruct->body().reads(i).field_name());
+                }
+                field.set_return_status(Persistence::Protocol::StorageElement::KEY_MISSING);
+            }
+            std::string errorData;
+            resp.SerializeToString(&errorData);
+            realThis->sendReply(origHeader, MemoryReference(errorData));
+        } else {
+            realThis->sendReply(origHeader, bodyData);
+        }
+    }
     static void handlePersistenceMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
-        SILOG(objecthost, info, "Received Persistence query!");
+        using namespace Persistence::Protocol;
+
+        ReadWriteSet rws;
+        rws.ParseFromArray(bodyData.data(), bodyData.length());
+
+        Response immedResponse;
+        int immedIndex = 0;
+
+        SentPersistence *persistenceMsg = new SentPersistence(&realThis->mTracker);
+        int outIndex = 0;
+        ReadWriteSet &outMessage = persistenceMsg->body();
+        SILOG(cppoh,debug,"Got a Persistence message: reads size = "<<rws.reads_size());
+
+        for (int i = 0, rwsIndex=0 ; i < rws.reads_size(); i++, rwsIndex++) {
+            if (rws.reads(i).has_index()) {
+                rwsIndex = rws.reads(i).index();
+            }
+            std::string name;
+            if (rws.reads(i).has_field_name()) {
+                name = rws.reads(i).field_name();
+            }
+            bool fail = false;
+            if (name.empty() || name[0] == '_') {
+                SILOG(cppoh,debug,"Invalid GetProp: "<<name);
+                fail = true;
+            } else {
+                if (realThis->hasProperty(name)) {
+                    // Cached property--respond immediately.
+                    SILOG(cppoh,debug,"Cached GetProp: "<<name<<" = "<<realThis->getProperty(name));
+                    IStorageElement el = immedResponse.add_reads();
+                    if (immedIndex != rwsIndex) {
+                        el.set_index(rwsIndex);
+                    }
+                    immedIndex = rwsIndex+1;
+                    if (rws.options() & ReadWriteSet::RETURN_READ_NAMES) {
+                        el.set_field_name(rws.reads(i).field_name());
+                    }
+                    el.set_data(realThis->getProperty(name));
+                } else {
+                    SILOG(cppoh,debug,"Forward GetProp: "<<name<<" to Persistence");
+                    IStorageElement el = outMessage.add_reads();
+                    if (outIndex != rwsIndex) {
+                        el.set_index(rwsIndex);
+                    }
+                    outIndex = rwsIndex+1;
+                    el.set_field_name(rws.reads(i).field_name());
+                    el.set_object_uuid(realThis->getUUID());
+                }
+            }
+            if (fail) {
+                IStorageElement el = immedResponse.add_reads();
+                if (immedIndex != rwsIndex) {
+                    el.set_index(rwsIndex);
+                }
+                immedIndex = rwsIndex+1;
+                if (rws.options() & ReadWriteSet::RETURN_READ_NAMES) {
+                    el.set_field_name(rws.reads(i).field_name());
+                }
+                el.set_return_status(StorageElement::KEY_MISSING);
+            }
+        }
+        if (immedResponse.reads_size()) {
+            SILOG(cppoh,debug,"ImmedResponse: "<<immedResponse.reads_size());
+            std::string respStr;
+            immedResponse.SerializeToString(&respStr);
+            RoutableMessageHeader respHeader (header);
+            realThis->sendReply(respHeader, MemoryReference(respStr));
+        }
+        if (outMessage.reads_size()) {
+            SILOG(cppoh,debug,"ForwardToPersistence: "<<outMessage.reads_size());
+            persistenceMsg->header().set_destination_space(SpaceID::null());
+            persistenceMsg->header().set_destination_object(ObjectReference::spaceServiceID());
+            persistenceMsg->header().set_destination_port(Services::PERSISTENCE);
+            persistenceMsg->setCallback(std::tr1::bind(&handlePersistenceResponse, realThis, header, _1, _2, _3));
+            persistenceMsg->serializeSend();
+        } else {
+            delete persistenceMsg;
+        }
     }
     static void handleRPCMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
         /// Parse message_names and message_arguments.
@@ -135,51 +243,114 @@ struct HostedObject::PrivateCallbacks {
         }
     }
 
-    static void receivedProxObjectProperties(
+    static void receivedProxObjectLocation(
         const HostedObjectWPtr &weakThis,
-        SentMessage* sentMessageBase,
+        SentMessage* sentMessage,
         const RoutableMessageHeader &hdr,
         MemoryReference bodyData,
         int32 queryId)
     {
-        RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
-        std::auto_ptr<RPCMessage> sentMessage(static_cast<RPCMessage*>(sentMessageBase));
+        std::auto_ptr<RPCMessage> destructor(static_cast<RPCMessage*>(sentMessage));
         HostedObjectPtr realThis(weakThis.lock());
         if (!realThis) {
             return;
         }
 
-        SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
+        RoutableMessage responseMessage(hdr, bodyData.data(), bodyData.length());
         if (responseMessage.header().return_status() != RoutableMessageHeader::SUCCESS) {
-            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<proximateObjectId.object());
+            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<sentMessage->getRecipient());
             return;
         }
-        SILOG(cppoh,info,"Received prox object properties "<<proximateObjectId.object());
+        ObjLoc objLoc;
+        objLoc.ParseFromString(responseMessage.body().message_arguments(0));
+
+        SentPersistence *request = new SentPersistence(&realThis->mTracker);
+
+        request->header().set_destination_space(sentMessage->getSpace());
+        request->header().set_destination_object(sentMessage->getRecipient());
+        request->header().set_destination_port(Services::PERSISTENCE);
+
+        request->body().add_reads().set_field_name("MeshURI");
+        request->body().add_reads().set_field_name("MeshScale");
+        request->body().add_reads().set_field_name("PhysicalParameters");
+        request->body().add_reads().set_field_name("LightInfo");
+        request->body().add_reads().set_field_name("_Passwd");
+        request->body().add_reads().set_field_name("IsCamera");
+        request->body().add_reads().set_field_name("Parent");
+        request->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
+                                            weakThis, _1, _2, _3,
+                                            queryId, objLoc));
+        request->setTimeout(5.0);
+        request->serializeSend();
+    }
+    static void receivedProxObjectProperties(
+        const HostedObjectWPtr &weakThis,
+        SentMessage* sentMessageBase,
+        const RoutableMessageHeader &hdr,
+        MemoryReference bodyData,
+        int32 queryId,
+        const ObjLoc &objLoc)
+    {
+        using namespace Persistence::Protocol;
+        Response response;
+        response.ParseFromArray(bodyData.data(), bodyData.length());
+        SentPersistence *sentMessage = (static_cast<SentPersistence*>(sentMessageBase));
+        std::auto_ptr<SentPersistence> sentMessageDestructor;
+        HostedObjectPtr realThis(weakThis.lock());
+        if (!realThis) {
+            sentMessageDestructor.reset(sentMessage);
+            return;
+        }
+
+        SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
+        bool persistence_error = false;
+        if (hdr.return_status() != RoutableMessageHeader::SUCCESS) {
+            SILOG(cppoh,info,"FAILURE receiving prox object properties "<<
+                  proximateObjectId.object()<<": Error = "<<hdr.return_status());
+            persistence_error = true;
+        }
+        SILOG(cppoh,debug,"Received prox object properties "<<proximateObjectId.object()<<": reads size = "<<response.reads_size());
+        int index = 0;
+        for (int i = 0, index = 0; i < response.reads_size(); i++, index++) {
+            if (response.reads(i).has_index()) {
+                index = response.reads(i).index();
+            }
+            if (index >= 0 && index < sentMessage->body().reads_size()) {
+                if (response.reads(i).has_data()) {
+                    sentMessage->body().reads(index).set_data(response.reads(i).data());
+                } else {
+                    sentMessage->body().reads(index).set_return_status(response.reads(i).return_status());
+                }
+            }
+        }
+        bool haveAll = true;
+        for (int i = 0; i < sentMessage->body().reads_size(); i++) {
+            if (!sentMessage->body().reads(i).has_data() && !sentMessage->body().reads(i).has_return_status()) {
+                haveAll = false;
+            }
+        }
+        if (persistence_error || haveAll) {
+            sentMessageDestructor.reset(sentMessage); // No more messages--clean up.
+        } else {
+            return; // More messages will come.
+        }
         bool hasMesh=false;
         bool hasLight=false;
         bool isCamera=false;
-        ObjLoc objLoc;
         ProxyObjectPtr proxyObj;
-        for (int i = 0; i < sentMessage->body().message_size() && i < responseMessage.body().message_size(); ++i) {
-            if (sentMessage->body().message_names(i) == "LocRequest") {
-                objLoc.ParseFromString(responseMessage.body().message_arguments(i));
-            } else if (sentMessage->body().message_names(i) == "GetProp") {
-                Protocol::PropertyUpdate propSent, prop;
-                prop.ParseFromString(responseMessage.body().message_arguments(i));
-                propSent.ParseFromString(sentMessage->body().message_arguments(i));
-                prop.MergeFrom(propSent);
-                if (prop.has_error()) {
-                    continue;
-                }
-                if (prop.property_name() == "MeshURI") {
-                    hasMesh = true;
-                }
-                if (prop.property_name() == "LightInfo") {
-                    hasLight = true;
-                }
-                if (prop.property_name() == "IsCamera") {
-                    isCamera = true;
-                }
+        for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
+            if (sentMessage->body().reads(i).has_return_status()) {
+                continue;
+            }
+            const std::string &field = sentMessage->body().reads(i).field_name();
+            if (field == "MeshURI") {
+                hasMesh = true;
+            }
+            if (field == "LightInfo") {
+                hasLight = true;
+            }
+            if (field == "IsCamera") {
+                isCamera = true;
             }
         }
         ObjectHostProxyManager *proxyMgr = NULL;
@@ -203,16 +374,12 @@ struct HostedObject::PrivateCallbacks {
         }
         realThis->receivedPositionUpdate(proxyObj, objLoc, true);
         proxyMgr->createObjectProximity(proxyObj, realThis->mInternalObjectReference, queryId);
-        for (int i = 0; i < sentMessage->body().message_size() && i < responseMessage.body().message_size(); ++i) {
-            if (sentMessage->body().message_names(i) == "GetProp") {
-                Protocol::PropertyUpdate resp, sent;
-                resp.ParseFromString(responseMessage.body().message_arguments(i));
-                sent.ParseFromString(sentMessage->body().message_arguments(i));
-                resp.MergeFrom(sent);
-                if (!resp.has_error()) {
-                    realThis->receivedPropertyUpdate(proxyObj, resp.property_name(), responseMessage.body().message_arguments(i));
-                }
+        for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
+            if (sentMessage->body().reads(i).has_return_status()) {
+                continue;
             }
+            const std::string &field = sentMessage->body().reads(i).field_name();
+            realThis->receivedPropertyUpdate(proxyObj, sentMessage->body().reads(i).field_name(), sentMessage->body().reads(i).data());
         }
         {
             RPCMessage *request = new RPCMessage(&realThis->mTracker);
@@ -535,30 +702,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
     printstr<<"\t";
     ProxyObjectPtr thisObj = getProxy(msg.source_space());
 
-    if (name == "GetProp") {
-        String propertyName;
-        Protocol::PropertyUpdate getProp;
-        getProp.ParseFromArray(args.data(), args.length());
-        if (getProp.has_property_name()) {
-            propertyName = getProp.property_name();
-        }
-        if (hasProperty(propertyName)) {
-            if (getProp.omit_value()) {
-                Protocol::PropertyUpdate responseMsg;
-                responseMsg.set_error(Protocol::PropertyUpdate::EXISTS);
-                responseMsg.SerializeToString(response);
-            } else {
-                *response = getProperty(propertyName);
-            }
-            printstr<<"GetProp: "<<propertyName<<" = "<<getProperty(propertyName);
-        } else {
-            printstr<<"GetProp: "<<propertyName<<" (404'ed)";
-            Protocol::PropertyUpdate responseMsg;
-            responseMsg.set_error(Protocol::PropertyUpdate::NOT_FOUND);
-            responseMsg.SerializeToString(response);
-        }
-    }
-    else if (name == "LocRequest") {
+    if (name == "LocRequest") {
         LocRequest query;
         printstr<<"LocRequest: ";
         query.ParseFromArray(args.data(), args.length());
@@ -697,31 +841,17 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 printstr<<" (Requesting information...)";
 
                 {
-                    RPCMessage *request = new RPCMessage(&mTracker);
-                    std::vector<std::string> propertyRequests;
-
-                    request->header().set_destination_space(proximateObjectId.space());
-                    request->header().set_destination_object(proximateObjectId.object());
-
+                    RPCMessage *locRequest = new RPCMessage(&mTracker);
+                    locRequest->header().set_destination_space(proximateObjectId.space());
+                    locRequest->header().set_destination_object(proximateObjectId.object());
                     LocRequest loc;
-                    loc.SerializeToString(request->body().add_message("LocRequest"));
-                    Protocol::PropertyUpdate req;
-                    propertyRequests.push_back("MeshURI");
-                    propertyRequests.push_back("MeshScale");
-                    propertyRequests.push_back("PhysicalParameters");
-                    propertyRequests.push_back("LightInfo");
-                    propertyRequests.push_back("Parent");
-                    propertyRequests.push_back("IsCamera");
-                    propertyRequests.push_back("GroupName");
-                    for (size_t i = 0; i < propertyRequests.size(); ++i) {
-                        req.set_property_name(propertyRequests[i]);
-                        req.SerializeToString(request->body().add_message("GetProp"));
-                    }
-                    request->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
+                    loc.SerializeToString(locRequest->body().add_message("LocRequest"));
+
+                    locRequest->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectLocation,
                                                         getWeakPtr(), _1, _2, _3,
                                                         proxCall.query_id()));
-                    request->setTimeout(5.0);
-                    request->serializeSend();
+                    locRequest->setTimeout(5.0);
+                    locRequest->serializeSend();
                 }
             } else {
                 printstr<<" (Already known)";

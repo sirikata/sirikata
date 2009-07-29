@@ -99,7 +99,7 @@ public:
             if (status) {
                 RoutableMessageHeader response(header);
                 response.swap_source_and_destination();
-                response.set_return_status(false);
+                response.set_return_status(status);
                 if (header.source_object() == ObjectReference::spaceServiceID()) {
                     MessageService *srcService = parent->getService(header.destination_port());
                     if (srcService) {

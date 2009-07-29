@@ -217,19 +217,6 @@ message DelProxQuery {
 }
 
 
-// If sent as a request/response, the response shall only include
-// fields not provided in the request (i.e. exclude property_name)
-message PropertyUpdate {
-    enum ErrorStatus {
-        EXISTS=0;
-        NOT_FOUND=1;
-        FORBIDDEN=2;
-    }
-    optional ErrorStatus error=2; // present only if an error occurred or omit_value=true.
-    optional string property_name=3;
-    optional string error_message=4; // Not used.
-    optional bool omit_value=5; // If true, existence is only determined by ErrorStatus.
-}
 
 message Vector3fProperty {
     optional vector3f value=10;
