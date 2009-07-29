@@ -44,6 +44,12 @@ EventDescriptor EventDescriptor::Key(KeyButton button, KeyEvent type, Modifier m
     return result;
 }
 
+EventDescriptor EventDescriptor::MouseHover() {
+    EventDescriptor result;
+    result.mTag = MouseHoverEventTag;
+    return result;
+}
+
 EventDescriptor EventDescriptor::MouseClick(MouseButton button) {
     EventDescriptor result;
     result.mTag = MouseClickEventTag;
@@ -65,6 +71,26 @@ EventDescriptor EventDescriptor::Axis(AxisIndex index) {
     result.mDescriptor.axis.index = index;
     return result;
 }
+
+EventDescriptor EventDescriptor::Text() {
+    EventDescriptor result;
+    result.mTag = TextEventTag;
+    return result;
+}
+
+EventDescriptor EventDescriptor::Window(WindowEventType type) {
+    EventDescriptor result;
+    result.mTag = WindowEventTag;
+    result.mDescriptor.window.type = type;
+    return result;
+}
+
+EventDescriptor EventDescriptor::DragAndDrop() {
+    EventDescriptor result;
+    result.mTag = DragAndDropEventTag;
+    return result;
+}
+
 
 bool EventDescriptor::isKey() const {
     return mTag == KeyEventTag;
@@ -138,6 +164,9 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
                 )
             );
 
+    if (mTag == MouseHoverEventTag)
+        return false;
+
     if (mTag == MouseClickEventTag)
         return mDescriptor.mouseClick.button < rhs.mDescriptor.mouseClick.button;
 
@@ -149,6 +178,15 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
 
     if (mTag == AxisEventTag)
         return mDescriptor.axis.index < rhs.mDescriptor.axis.index;
+
+    if (mTag == TextEventTag)
+        return false;
+
+    if (mTag == WindowEventTag)
+        return mDescriptor.window.type < rhs.mDescriptor.window.type;
+
+    if (mTag == DragAndDropEventTag)
+        return false;
 
     assert(false); // we should have checked all types of tags by now
 }

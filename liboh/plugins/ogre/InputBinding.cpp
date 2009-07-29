@@ -50,92 +50,14 @@ void InputBinding::add(const InputBindingEvent& evt, InputResponse* response) {
         mResponses[*it] = response;
 }
 
-void InputBinding::handle(Input::ButtonEventPtr& evt) {
-    ButtonPressedEventPtr pressed_ev = std::tr1::dynamic_pointer_cast<ButtonPressed>(evt);
-    if (pressed_ev) {
-        this->handle(pressed_ev);
-        return;
-    }
-
-    ButtonReleasedEventPtr released_ev = std::tr1::dynamic_pointer_cast<ButtonReleased>(evt);
-    if (released_ev) {
-        this->handle(released_ev);
-        return;
-    }
-
-    ButtonDownEventPtr down_ev = std::tr1::dynamic_pointer_cast<ButtonDown>(evt);
-    if (down_ev) {
-        this->handle(down_ev);
-        return;
-    }
-}
-
-void InputBinding::handle(Input::ButtonPressedEventPtr& evt) {
-    Input::EventDescriptor descriptor =
-        Input::EventDescriptor::Key(evt->mButton, evt->mEvent, evt->mModifier);
+void InputBinding::handle(Input::InputEventPtr& evt) {
+    Input::EventDescriptor descriptor = evt->getDescriptor();
 
     Binding::iterator it = mResponses.find(descriptor);
     if (it != mResponses.end()) {
         InputResponse* response = it->second;
         response->invoke(evt);
     }
-}
-
-void InputBinding::handle(Input::ButtonReleasedEventPtr& evt) {
-    Input::EventDescriptor descriptor =
-        Input::EventDescriptor::Key(evt->mButton, evt->mEvent, evt->mModifier);
-
-    Binding::iterator it = mResponses.find(descriptor);
-    if (it != mResponses.end()) {
-        InputResponse* response = it->second;
-        response->invoke(evt);
-    }
-}
-
-void InputBinding::handle(Input::ButtonDownEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
-}
-
-void InputBinding::handle(Input::AxisEventPtr& evt) {
-    Input::EventDescriptor descriptor =
-        Input::EventDescriptor::Axis(evt->mAxis);
-
-    Binding::iterator it = mResponses.find(descriptor);
-    if (it != mResponses.end()) {
-        InputResponse* response = it->second;
-        response->invoke(evt);
-    }
-}
-
-void InputBinding::handle(Input::TextInputEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
-}
-
-void InputBinding::handle(Input::MouseHoverEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
-}
-
-void InputBinding::handle(Input::MouseClickEventPtr& evt) {
-    Input::EventDescriptor descriptor =
-        Input::EventDescriptor::MouseClick(evt->mButton);
-
-    Binding::iterator it = mResponses.find(descriptor);
-    if (it != mResponses.end()) {
-        InputResponse* response = it->second;
-        response->invoke(evt);
-    }
-}
-
-void InputBinding::handle(Input::MouseDragEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
-}
-
-void InputBinding::handle(Input::WindowEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
-}
-
-void InputBinding::handle(Input::DragAndDropEventPtr& evt) {
-    NOT_IMPLEMENTED(ogre);
 }
 
 } // namespace Graphics

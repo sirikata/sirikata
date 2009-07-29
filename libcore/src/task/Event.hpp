@@ -191,6 +191,14 @@ public:
 	/// Public Secondary key.
 	Secondary mSecId;
 
+        const Primary& primary() const {
+            return mPriId;
+        }
+
+        const Secondary& secondary() const {
+            return mSecId;
+        }
+
 	/// Prints out an ID -- Use for debugging only.
 	inline friend std::ostream& operator << (
 				std::ostream &os,

@@ -50,6 +50,40 @@ IdPair::Primary WindowEvent::FocusGained("WindowFocused");
 IdPair::Primary WindowEvent::FocusLost("WindowUnfocused");
 IdPair::Primary WindowEvent::Quit("Quit");
 
+EventDescriptor WindowEvent::getDescriptor() const {
+    WindowEventType t = (WindowEventType)-1;
+    if (getId().primary() == Shown)
+        t = WindowShown;
+    else if (getId().primary() == Hidden)
+        t = WindowHidden;
+    else if (getId().primary() == Exposed)
+        t = WindowExposed;
+    else if (getId().primary() == Moved)
+        t = WindowMoved;
+    else if (getId().primary() == Resized)
+        t = WindowResized;
+    else if (getId().primary() == Minimized)
+        t = WindowMinimized;
+    else if (getId().primary() == Maximized)
+        t = WindowMaximized;
+    else if (getId().primary() == Restored)
+        t = WindowRestored;
+    else if (getId().primary() == MouseEnter)
+        t = WindowMouseEnter;
+    else if (getId().primary() == MouseLeave)
+        t = WindowMouseLeave;
+    else if (getId().primary() == FocusGained)
+        t = WindowFocusGained;
+    else if (getId().primary() == FocusLost)
+        t = WindowFocusLost;
+    else if (getId().primary() == Quit)
+        t = WindowQuit;
+    else
+        assert(false);
+
+    return EventDescriptor::Window(t);
+}
+
 IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
 
 }

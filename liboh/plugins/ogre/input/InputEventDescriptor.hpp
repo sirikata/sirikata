@@ -34,24 +34,32 @@
 #define _SIRIKATA_INPUT_EVENT_DESCRIPTOR_HPP_
 
 #include <util/Platform.hpp>
-#include "InputEvents.hpp"
+#include "InputDevice.hpp"
 
 namespace Sirikata {
 namespace Input {
 
 enum EventTypeTag {
     KeyEventTag = 1,
-    MouseClickEventTag = 2,
-    MouseDragEventTag = 3,
-    AxisEventTag = 4
+    MouseHoverEventTag = 2,
+    MouseClickEventTag = 3,
+    MouseDragEventTag = 4,
+    AxisEventTag = 5,
+    TextEventTag = 6,
+    WindowEventTag = 7,
+    DragAndDropEventTag = 8
 };
 
 class EventDescriptor {
 public:
     static EventDescriptor Key(KeyButton button, KeyEvent type = KEY_PRESSED, Modifier mod = MOD_NONE);
+    static EventDescriptor MouseHover();
     static EventDescriptor MouseClick(MouseButton button);
     static EventDescriptor MouseDrag(MouseButton button, MouseDragType type);
     static EventDescriptor Axis(AxisIndex axis);
+    static EventDescriptor Text();
+    static EventDescriptor Window(WindowEventType type);
+    static EventDescriptor DragAndDrop();
 
     bool isKey() const;
     KeyButton keyButton() const;
@@ -89,6 +97,9 @@ private:
         struct {
             AxisIndex index;
         } axis;
+        struct {
+            WindowEventType type;
+        } window;
     } mDescriptor;
 };
 

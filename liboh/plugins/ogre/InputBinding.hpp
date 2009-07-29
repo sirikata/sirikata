@@ -50,18 +50,7 @@ public:
 
     void add(const InputBindingEvent& evt, InputResponse* response);
 
-    void handle(Input::ButtonEventPtr& evt);
-    void handle(Input::ButtonPressedEventPtr& evt);
-    void handle(Input::ButtonReleasedEventPtr& evt);
-    void handle(Input::ButtonDownEventPtr& evt);
-    void handle(Input::AxisEventPtr& evt);
-    void handle(Input::TextInputEventPtr& evt);
-    void handle(Input::MouseHoverEventPtr& evt);
-    void handle(Input::MouseClickEventPtr& evt);
-    void handle(Input::MouseDragEventPtr& evt);
-    void handle(Input::WindowEventPtr& evt);
-    void handle(Input::DragAndDropEventPtr& evt);
-
+    void handle(Input::InputEventPtr& evt);
 private:
     Binding mResponses;
 }; // class InputBinding

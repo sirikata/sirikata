@@ -739,7 +739,8 @@ private:
             return EventResponse::nop();
         }
 
-        mInputBinding.handle(buttonev);
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
 
         return EventResponse::nop();
     }
@@ -750,7 +751,8 @@ private:
         if (!axisev)
             return EventResponse::nop();
 
-        mInputBinding.handle(axisev);
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
 
         return EventResponse::cancel();
     }
@@ -761,7 +763,8 @@ private:
         if (!mouseev)
             return EventResponse::nop();
 
-        mInputBinding.handle(mouseev);
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
 
         return EventResponse::nop();
     }
@@ -771,6 +774,10 @@ private:
         if (!ev) {
             return EventResponse::nop();
         }
+
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
+        mInputBinding.handle(inputev);
+
         ActiveDrag * &drag = mActiveDrag[ev->mButton];
         if (ev->mType == Input::DRAG_START) {
             if (drag) {

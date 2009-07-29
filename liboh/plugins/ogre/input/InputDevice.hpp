@@ -198,6 +198,22 @@ enum MouseDragType {
     DRAG_END
 };
 
+enum WindowEventType {
+    WindowShown,
+    WindowHidden,
+    WindowExposed,
+    WindowMoved,
+    WindowResized,
+    WindowMinimized,
+    WindowMaximized,
+    WindowRestored,
+    WindowMouseEnter,
+    WindowMouseLeave,
+    WindowFocusGained,
+    WindowFocusLost,
+    WindowQuit
+};
+
 class InputDevice {
 protected:
     std::string mName;
