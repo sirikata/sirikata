@@ -136,7 +136,7 @@ public:
     //FIXME implement SpaceConnection& connect(const SpaceID&space);
     //FIXME implement SpaceConnection& connect(const SpaceID&space, const SpaceConnection&example);
 
-    struct : public MessageService {
+    struct SendService: public MessageService {
         HostedObject *ho;
         void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
             ho->send(hdr, body);
@@ -145,7 +145,7 @@ public:
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mSendService;
 
-    struct : public MessageService {
+    struct ReceiveService: public MessageService {
         HostedObject *ho;
         void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
             assert(hdr.has_source_space());

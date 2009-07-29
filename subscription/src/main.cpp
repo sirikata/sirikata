@@ -50,7 +50,7 @@ int main(int argc,const char**argv) {
     //FIXME
     //Network::IOServiceFactory::runService(io);
     PluginManager plugins;    
-    const char* pluginNames[] = { "mono", NULL};
+    const char* pluginNames[] = { "monoscript", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( DynamicLibrary::filename(*plugin_name) );
 
