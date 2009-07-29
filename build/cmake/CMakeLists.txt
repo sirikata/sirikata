@@ -1187,6 +1187,8 @@ SET(LIBOH_PLUGIN_MONO_SOURCES
  ${LIBOH_PLUGIN_MONO_DIR}/MonoIList.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoMethodLookupCache.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoObject.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoVWObjectScriptManager.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoVWObjectScript.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoPropertyLookupCache.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoThread.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoUtil.cpp

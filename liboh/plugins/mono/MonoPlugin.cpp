@@ -38,6 +38,8 @@
 #include "MonoAssembly.hpp"
 #include "MonoClass.hpp"
 #include "MonoObject.hpp"
+#include "MonoVWObjectScriptManager.hpp"
+#include "oh/ObjectScriptManagerFactory.hpp"
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
 
@@ -63,6 +65,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
+        ObjectScriptManagerFactory::getSingleton().registerConstructor("mono",
+                                                                       std::tr1::bind(&Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,mono_system,_1),
+                                                                       true);
         Mono::Domain d=mono_system->createDomain();
         bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
         retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
@@ -96,6 +101,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("mono",true);
             delete mono_system;
             //SimulationFactory::getSingleton().unregisterConstructor("mono",true);
         }

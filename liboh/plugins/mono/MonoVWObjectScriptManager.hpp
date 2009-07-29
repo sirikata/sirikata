@@ -1,7 +1,7 @@
 /*  Sirikata liboh -- Object Host
- *  HostedObject.cpp
+ *  MonoObjectScriptManager.cpp
  *
- *  Copyright (c) 2009, Patrick Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,22 +29,27 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _OBJECT_SCRIPT_MANAGER_HPP_
-#define _OBJECT_SCRIPT_MANAGER_HPP_
-
+#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#include "oh/ObjectScriptManager.hpp"
+namespace Mono {
+class MonoSystem;
+}
 namespace Sirikata {
-
 class HostedObject;
 class ObjectScript;
 
-class SIRIKATA_OH_EXPORT ObjectScriptManager  {
+class MonoVWObjectScriptManager : public ObjectScriptManager {
+    Mono::MonoSystem * mSystem;
   public:
-    typedef std::map<std::string,std::string> Arguments;
+    MonoVWObjectScriptManager(Mono::MonoSystem*system, const Sirikata::String&arguments);
+    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem *monosystem,const Sirikata::String&arguments) {
+        return new MonoVWObjectScriptManager(monosystem,arguments);
+    }
     virtual ObjectScript *createObjectScript(HostedObject* ho,
-                                             const Arguments &args)=0;
-    virtual void destroyObjectScript(ObjectScript*toDestroy)=0;
-    virtual ~ObjectScriptManager(){}
+                                             const Arguments &args);
+    virtual void destroyObjectScript(ObjectScript*toDestroy);
+    virtual ~MonoVWObjectScriptManager();
 };
-
 }
 #endif
