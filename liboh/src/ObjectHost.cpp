@@ -49,14 +49,14 @@
 namespace Sirikata {
 
 struct ObjectHost::AtomicInt : public AtomicValue<int> {
+    AtomicInt(int val) : AtomicValue<int>(val) {}
 };
 
 ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ) {
     mSpaceIDMap = spaceMap;
     mMessageQueue = messageQueue;
     mSpaceConnectionIO=ioServ;
-    mEnqueuers = new AtomicInt;
-    mScriptManager=ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
+    mEnqueuers = new AtomicInt(0);
 }
 
 ObjectHost::~ObjectHost() {

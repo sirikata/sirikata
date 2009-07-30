@@ -47,6 +47,9 @@
 #include <oh/HostedObject.hpp>
 #include <oh/SpaceIDMap.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <util/KnownServices.hpp>
+#include <persistence/ObjectStorage.hpp>
+#include <persistence/ReadWriteHandlerFactory.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <time.h>
 namespace Sirikata {
@@ -56,10 +59,12 @@ using Transfer::TransferManager;
 
 OptionValue *cdnConfigFile;
 OptionValue *floatExcept;
+OptionValue *dbFile;
 InitializeGlobalOptions main_options("",
 //    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
     cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
     floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
+    dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
     NULL
 );
 
@@ -276,7 +281,13 @@ int main ( int argc,const char**argv ) {
     SpaceIDMap *spaceMap = new SpaceIDMap;
     spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
 
+    plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));
+    Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
+        .getConstructor("sqlite")(String("--databasefile ")+dbFile->as<String>());
+
     ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ);
+    oh->registerService(Services::PERSISTENCE, database);
+
     {//to deallocate HostedObjects before armageddon
     HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
     firstObject->initializeConnect(
@@ -392,6 +403,9 @@ int main ( int argc,const char**argv ) {
     }
 
     delete oh;
+
+    // delete after OH in case objects want to do last-minute state flushes
+    delete database;
 
     delete eventManager;
     delete workQueue;
