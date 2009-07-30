@@ -76,7 +76,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime");
         
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
-        Mono::Class cls =ass.getClass("ConsoleTest");
+        Mono::Class cls =ass.getClass("PythonObject");
         cls.instance(d.Array(d.String(String()).type(),0));
         printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
 /*

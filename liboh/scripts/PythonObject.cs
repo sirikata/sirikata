@@ -38,8 +38,8 @@ using IronPython.Runtime;
 using Microsoft.Scripting.Hosting.Shell;
 
 
-    public class ConsoleTest {
-        private int _exitCode;
+public class PythonObject {
+
         private ConsoleHostOptionsParser _optionsParser;
         private ScriptRuntime _runtime;
         private ScriptEngine _engine;
@@ -119,14 +119,6 @@ using Microsoft.Scripting.Hosting.Shell;
 
         #endregion
 
-        /// <summary>
-        /// To be called from entry point.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public int Run() {
-
-            return _exitCode;
-        }
 
         private static void InsertSearchPaths(IDictionary<string, object> options, ICollection<string> paths) {
             if (options != null && paths != null && paths.Count > 0) {
@@ -146,7 +138,6 @@ using Microsoft.Scripting.Hosting.Shell;
 
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
-            //ScriptEngine engine=_runtime.GetEngineByTypeName("IronPython");
             ScriptScope scope1 = _engine.CreateScope();
             scope1.SetVariable("x",5);
             scope1.SetVariable("y",2);
@@ -185,4 +176,4 @@ using Microsoft.Scripting.Hosting.Shell;
                 e = e.InnerException;
             }
         }
-    }
+}
