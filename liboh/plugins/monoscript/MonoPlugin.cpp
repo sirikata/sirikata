@@ -78,10 +78,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("PythonObject");
-        //Mono::Object pyobj=cls.send("CreatePythonObject",d.Array(d.String(String()).type(),0));
         Mono::Object monoobj=cls.instance(d.Array(d.String(String()).type(),0));
         try {
-            monoobj.listMethods();
             monoobj.send("processRPC",d.ByteArray("",0),d.String("rpctest"),d.ByteArray("",0));
         }catch (Mono::Exception&e) {
             SILOG(mono,error,"Error processing rpc"<<e);

@@ -65,7 +65,8 @@ MonoSystem::~MonoSystem() {
 // Function createDomain
 //#####################################################################
 Domain MonoSystem::createDomain() {
-    return Domain(mono_domain_create());
+    NOT_IMPLEMENTED(mono);
+    return Domain::root();//(mono_domain_create());
 }
 
 //#####################################################################
