@@ -31,6 +31,9 @@
  */
 #ifndef _MONO_VWOBJECT_SCRIPT_HPP
 #define _MONO_VWOBJECT_SCRIPT_HPP
+#include "MonoDefs.hpp"
+#include "MonoObject.hpp"
+#include "MonoDomain.hpp"
 #include "oh/ObjectScript.hpp"
 
 
@@ -43,6 +46,8 @@ class HostedObject;
 
 class MonoVWObjectScript : public ObjectScript{
     HostedObject*mParent;
+    Mono::Domain mDomain;
+    Mono::Object mObject;
 public:
     MonoVWObjectScript(Mono::MonoSystem*, HostedObject*, const ObjectScriptManager::Arguments&args);
     ~MonoVWObjectScript();
