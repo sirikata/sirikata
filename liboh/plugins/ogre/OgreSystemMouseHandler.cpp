@@ -309,7 +309,7 @@ private:
             newLightObject->update(lightObj->getLastLightInfo());
         }
         else {
-            newObj = ProxyObjectPtr(new ProxyObject(proxyMgr, newId));
+            newObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newId));
             proxyMgr->createObject(newObj);
         }
         if (newObj) {
@@ -389,7 +389,7 @@ private:
         }
 
         SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-        proxyMgr->createObject(ProxyObjectPtr(new ProxyObject(proxyMgr, newParentId)));
+        proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId)));
         Entity *newParentEntity = mParent->getEntity(newParentId);
         newParentEntity->getProxy().resetLocation(now, totalLocation);
 
@@ -639,8 +639,8 @@ private:
             perror("Failed to open scene_new.csv");
             return;
         }
-        fprintf(output,
-        "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
+        fprintf(output, "objtype,subtype,name,parent,");
+        fprintf(output, "pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
         fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
@@ -671,6 +671,15 @@ private:
         return true;
     }
 
+    string physicalName(ProxyMeshObject *obj) {
+        std::string name = obj->getPhysical().name;
+        if (name.empty()) {
+            std::ostringstream os;
+            os << "obj" << (ObjectReference::Hasher()(obj->getObjectReference().object())%1677217);
+            name = os.str();
+        }
+        return name;
+    }
     void dumpObject(FILE* fp, Entity* e) {
         Task::AbsTime now = Task::AbsTime::now();
         ProxyObject *pp = e->getProxyPtr().get();
@@ -690,6 +699,14 @@ private:
             temp << loc.getOrientation().w;
             w = temp.str();
         }
+        string parent;
+        ProxyObjectPtr parentObj = pp->getParentProxy();
+        if (parentObj) {
+            ProxyMeshObject *parentMesh = dynamic_cast<ProxyMeshObject*>(parentObj.get());
+            if (parentMesh) {
+                parent = physicalName(parentMesh);
+            }
+        }
         if (light) {
             const char *typestr = "directional";
             const LightInfo &linfo = light->getLastLightInfo();
@@ -702,7 +719,7 @@ private:
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
             shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,,,,",typestr,
+            fprintf(fp, "light,%s,,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
@@ -717,7 +734,7 @@ private:
             URI uri = mesh->getMesh();
             std::string uristr = uri.toString();
             if (uri.proto().empty()) {
-                uristr = "NULL";
+                uristr = "";
             }
             const physicalParameters &phys = mesh->getPhysical();
             std::string subtype;
@@ -740,7 +757,8 @@ private:
             default:
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
-            fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),
+            std::string name = physicalName(mesh);
+            fprintf(fp, "mesh,%s,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),name.c_str(),parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
@@ -750,7 +768,7 @@ private:
                     phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",
+            fprintf(fp, "camera,,,%s,%f,%f,%f,%f,%f,%f,%s\n",parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                                     x,y,z,w.c_str());
         }
