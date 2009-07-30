@@ -71,7 +71,6 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
 
     HostedObjectMap mHostedObjects;
     ServicesMap mServices;
-    ObjectScriptManager *mScriptManager;
 public:
 
     /** Caller is responsible for starting a thread
@@ -88,10 +87,15 @@ public:
     ///ObjectHost does not forward messages to other services, only to objects it owns
     bool endForwardingMessagesTo(MessageService*){return false;}
 
+    /** Register a global space-like service for null Space, null Object.
+        @param port  The service port number (i.e. Services::PERSISTENCE)
+        @param serv  MessageService* -- make sure to unregister before deleting.
+    */
     void registerService(MessagePort port, MessageService *serv) {
         mServices.insert(ServicesMap::value_type(port, serv));
         serv->forwardMessagesTo(this);
     }
+    /// Unregister a global service. Unnecessary if you delete the ObjectHost first.
     void unregisterService(MessagePort port) {
         ServicesMap::iterator iter = mServices.find(port);
         if (iter != mServices.end()) {
@@ -99,6 +103,7 @@ public:
             mServices.erase(iter);
         }
     }
+    /// Lookup a global service by port number.
     MessageService *getService(MessagePort port) const {
         ServicesMap::const_iterator iter = mServices.find(port);
         if (iter != mServices.end()) {
@@ -107,8 +112,15 @@ public:
         return NULL;
     }
 
+    /** Register object by private UUID, so that it is possible to
+        talk to objects/services which are not part of any space.
+        Done automatically by HostedObject::initialize* functions.
+    */
     void registerHostedObject(const HostedObjectPtr &obj);
+    /// Unregister a private UUID. Done automatically by ~HostedObject.
     void unregisterHostedObject(const UUID &objID);
+
+    /** Lookup HostedObject by private UUID. */
     HostedObjectPtr getHostedObject(const UUID &id) const;
 
     /// Returns the SpaceID -> Network::Address lookup map.
@@ -129,7 +141,6 @@ public:
     Network::IOService *getSpaceIO() const {
         return mSpaceConnectionIO;
     }
-    ObjectScriptManager*getScriptManager()const{return mScriptManager;}
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost

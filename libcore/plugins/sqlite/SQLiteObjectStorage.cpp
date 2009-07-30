@@ -591,6 +591,7 @@ bool SQLiteObjectStorage::forwardMessagesTo(MessageService*ms) {
 }
 void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
     mParent->mInterestedParties.push_back(toAdd);
+    // FIXME: delete this???
 }
 
 void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){

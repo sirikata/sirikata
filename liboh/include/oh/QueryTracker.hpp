@@ -65,6 +65,7 @@ public:
     /// Destructor: Cancels all ongoing queries with a NETWORK_FAILURE status.
     ~QueryTracker();
 
+    /// Returns the next allocated ID. Used in the SentMessage(QueryTracker*) constrcutor.
     int64 allocateId() {
         return mNextQueryId++;
     }

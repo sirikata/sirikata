@@ -56,24 +56,35 @@ namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 
+class HostedObject::PerSpaceData {
+public:
+    SpaceConnection mSpaceConnection;
+    ProxyObjectPtr mProxyObject; /// 
+    PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream)
+        :mSpaceConnection(topLevel,stream) {
+    }
+};
 
 
-HostedObject::PerSpaceData::PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream) :mSpaceConnection(topLevel,stream) {}
-
-
-HostedObject::HostedObject(ObjectHost*parent)
+HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     : mTracker(parent->getSpaceIO()),
-      mInternalObjectReference(UUID::null()) {
+      mInternalObjectReference(objectName) {
+    mSpaceData = new SpaceDataMap;
     mObjectHost=parent;
     mObjectScript=NULL;
     mSendService.ho = this;
     mReceiveService.ho = this;
     mTracker.forwardMessagesTo(&mSendService);
+    mScript = NULL;
 }
 
 HostedObject::~HostedObject() {
+    if (mObjectScript) {
+        delete mObjectScript;
+    }
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mTracker.endForwardingMessagesTo(&mSendService);
+    delete mSpaceData;
 }
 
 struct HostedObject::PrivateCallbacks {
@@ -357,9 +368,9 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         ObjectHostProxyManager *proxyMgr = NULL;
-        SpaceDataMap::const_iterator iter = realThis->mSpaceData.find(proximateObjectId.space());
+        SpaceDataMap::const_iterator iter = realThis->mSpaceData->find(proximateObjectId.space());
         ObjectReference myObjectReference;
-        if (iter != realThis->mSpaceData.end()) {
+        if (iter != realThis->mSpaceData->end()) {
             proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
         }
         if (!proxyMgr) {
@@ -427,9 +438,9 @@ struct HostedObject::PrivateCallbacks {
     static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
         std::tr1::shared_ptr<HostedObject>thus=weak_thus.lock();
         if (thus) {
-            SpaceDataMap::iterator where=thus->mSpaceData.find(sid);
-            if (where!=thus->mSpaceData.end()) {
-                thus->mSpaceData.erase(where);//FIXME do we want to back this up to the database first?
+            SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
+            if (where!=thus->mSpaceData->end()) {
+                thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
             }
         }
     }
@@ -447,7 +458,7 @@ struct HostedObject::PrivateCallbacks {
 HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,const std::tr1::shared_ptr<TopLevelSpaceConnection>&tls) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
-    SpaceDataMap::iterator iter = mSpaceData.insert(
+    SpaceDataMap::iterator iter = mSpaceData->insert(
         SpaceDataMap::value_type(
             sid,
             PerSpaceData(tls,
@@ -492,8 +503,8 @@ void HostedObject::unsetProperty(const String &propName) {
 
 static ProxyObjectPtr nullPtr;
 const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
-    SpaceDataMap::const_iterator iter = mSpaceData.find(space);
-    if (iter == mSpaceData.end()) {
+    SpaceDataMap::const_iterator iter = mSpaceData->find(space);
+    if (iter == mSpaceData->end()) {
         return nullPtr;
     }
     return iter->second.mProxyObject;
@@ -504,35 +515,21 @@ using Sirikata::Protocol::NewObj;
 using Sirikata::Protocol::IObjLoc;
 
 void HostedObject::initializeConnect(
-    const UUID &objectName, const Location&startingLocation,
+    const Location&startingLocation,
     const String&mesh, const BoundingSphere3f&meshBounds,
     const LightInfo *lightInfo,
-    const SpaceID&spaceID, const HostedObjectWPtr&spaceConnectionHint)
+    const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint)
 {
-    mInternalObjectReference=objectName;
     mObjectHost->registerHostedObject(getSharedPtr());
 
-    std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
+    connectToSpace(spaceID, spaceConnectionHint);
 
-    HostedObjectPtr spaceConnectionHintPtr;
-    if (spaceConnectionHintPtr = spaceConnectionHint.lock()) {
-        SpaceDataMap::const_iterator iter = spaceConnectionHintPtr->mSpaceData.find(spaceID);
-        if (iter != spaceConnectionHintPtr->mSpaceData.end()) {
-            topLevelConnection = iter->second.mSpaceConnection.getTopLevelStream();
-        }
-    }
-    if (!topLevelConnection) {
-        topLevelConnection = mObjectHost->connectToSpace(spaceID);
-    }
-    PerSpaceData &psd = cloneTopLevelStream(spaceID,topLevelConnection);
-    SpaceConnection &conn = psd.mSpaceConnection;
-    //psd.mProxyObject = ProxyObjectPtr(new ProxyMeshObject(topLevelConnection.get(), SpaceObjectRefernce(spaceID, obj)
     RoutableMessageHeader messageHeader;
     messageHeader.set_destination_object(ObjectReference::spaceServiceID());
     messageHeader.set_destination_space(spaceID);
     messageHeader.set_destination_port(Services::REGISTRATION);
     NewObj newObj;
-    newObj.set_object_uuid_evidence(objectName);
+    newObj.set_object_uuid_evidence(getUUID());
     newObj.set_bounding_sphere(meshBounds);
     IObjLoc loc = newObj.mutable_requested_object_loc();
     loc.set_timestamp(Time::now());
@@ -566,10 +563,10 @@ void HostedObject::initializeConnect(
         setProperty("IsCamera");
     }
     send(messageHeader, MemoryReference(serializedBody));
-    initializeScript();
 }
-void HostedObject::initializeScript() {
-    if (mObjectHost->getScriptManager()) {
+void HostedObject::initializePythonScript() {
+    ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
+    if (mgr) {
         ObjectScriptManager::Arguments args;
         args["Assembly"]="Sirikata.Runtime";
         args["Class"]="PythonObject";
@@ -577,25 +574,29 @@ void HostedObject::initializeScript() {
         args["PythonModule"]="test";
         args["PythonClass"]="exampleclass";
         
-        mObjectScript=mObjectHost->getScriptManager()->createObjectScript(this,args);
+        mObjectScript=mgr->createObjectScript(this,args);
         if (mObjectScript) {
             mObjectScript->tick();
         }
     }
 }
-void HostedObject::initializeRestoreFromDatabase(const UUID &objectName) {
-    initializeConnect(objectName, Location(), String(), BoundingSphere3f(), NULL, SpaceID::null(), HostedObjectWPtr());
-    initializeScript();
+void HostedObject::initializeRestoreFromDatabase() {
+    initializeConnect(Location(), String(), BoundingSphere3f(), NULL, SpaceID::null(), HostedObjectPtr());
 }
-void HostedObject::initializeScripted(const UUID&objectName, const String& script, const SpaceID&id,const HostedObjectWPtr&spaceConnectionHint) {
-    mInternalObjectReference=objectName;
+void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
+    assert(!mObjectScript); // Don't want to kill a live script!
     mObjectHost->registerHostedObject(getSharedPtr());
+    ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
+    if (mgr) {
+        mObjectScript = mgr->createObjectScript(this, args);
+    }
+}
+void HostedObject::connectToSpace(const SpaceID&id,const HostedObjectPtr&spaceConnectionHint) {
     if (id!=SpaceID::null()) {
         //bind script to object...script might be a remote ID, so need to bind download target, etc
-        std::tr1::shared_ptr<HostedObject> parentObject=spaceConnectionHint.lock();
         std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection;
         SpaceDataMap::iterator where;
-        if (parentObject&&(where=parentObject->mSpaceData.find(id))!=mSpaceData.end()) {
+        if (spaceConnectionHint&&(where=spaceConnectionHint->mSpaceData->find(id))!=mSpaceData->end()) {
             topLevelConnection=where->second.mSpaceConnection.getTopLevelStream();
         }else {
             topLevelConnection=mObjectHost->connectToSpace(id);
@@ -603,8 +604,9 @@ void HostedObject::initializeScripted(const UUID&objectName, const String& scrip
 
         // sending initial packet is done by the script!
         //conn->send(initializationPacket,Network::ReliableOrdered);
+        PerSpaceData &psd = cloneTopLevelStream(id,topLevelConnection);
+        // return &(psd.mSpaceConnection);
     }
-    initializeScript();
 }
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {
@@ -634,7 +636,11 @@ void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, M
     } else if (header.destination_port() == Services::PERSISTENCE) {
         PrivateCallbacks::handlePersistenceMessage(this, header, bodyData);
     } else {
-        sendErrorReply(header, RoutableMessageHeader::PORT_FAILURE);
+        if (mObjectScript) {
+            mObjectScript->processMessage(header, bodyData);
+        } else {
+            sendErrorReply(header, RoutableMessageHeader::PORT_FAILURE);
+        }
     }
 }
 
@@ -642,8 +648,8 @@ void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryRefe
     ///// MessageService::processMessage
     assert(hdrOrig.has_destination_object());
     assert(hdrOrig.has_destination_space());
-    SpaceDataMap::iterator where=mSpaceData.find(hdrOrig.destination_space());
-    if (where!=mSpaceData.end()) {
+    SpaceDataMap::iterator where=mSpaceData->find(hdrOrig.destination_space());
+    if (where!=mSpaceData->end()) {
         RoutableMessageHeader hdr (hdrOrig);
         hdr.clear_destination_space();
         hdr.clear_source_space();
@@ -652,7 +658,7 @@ void HostedObject::sendViaSpace(const RoutableMessageHeader &hdrOrig, MemoryRefe
         hdr.SerializeToString(&serialized_header);
         where->second.mSpaceConnection.getStream()->send(MemoryReference(serialized_header),body, Network::ReliableOrdered);
     }
-    assert(where!=mSpaceData.end());
+    assert(where!=mSpaceData->end());
 }
 
 void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference body) {
@@ -664,8 +670,8 @@ void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference bo
         mObjectHost->processMessage(hdr, body);
         return;
     }
-    SpaceDataMap::iterator where=mSpaceData.find(hdrOrig.destination_space());
-    if (where!=mSpaceData.end()) {
+    SpaceDataMap::iterator where=mSpaceData->find(hdrOrig.destination_space());
+    if (where!=mSpaceData->end()) {
         const ProxyObjectPtr &obj = where->second.mProxyObject;
         if (obj) {
             RoutableMessageHeader hdr (hdrOrig);
@@ -751,12 +757,12 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             loc.SerializeToString(response);
         } else {
             SILOG(objecthost, error, "LocRequest message not for any known object.");
-            return;
         }
+        return;
     }
     else if (name == "DelObj") {
-        SpaceDataMap::iterator perSpaceIter = mSpaceData.find(msg.source_space());
-        if (perSpaceIter == mSpaceData.end()) {
+        SpaceDataMap::iterator perSpaceIter = mSpaceData->find(msg.source_space());
+        if (perSpaceIter == mSpaceData->end()) {
             SILOG(objecthost, error, "DelObj message not for any known space.");
             return;
         }
@@ -767,12 +773,12 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         }
     }
     else if (name == "RetObj") {
-        SpaceDataMap::iterator perSpaceIter = mSpaceData.find(msg.source_space());
+        SpaceDataMap::iterator perSpaceIter = mSpaceData->find(msg.source_space());
         if (msg.source_object() != ObjectReference::spaceServiceID()) {
             SILOG(objecthost, error, "RetObj message not coming from space: "<<msg.source_object());
             return;
         }
-        if (perSpaceIter == mSpaceData.end()) {
+        if (perSpaceIter == mSpaceData->end()) {
             SILOG(objecthost, error, "RetObj message not for any known space.");
             return;
         }
@@ -885,9 +891,18 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             break;
         }
     } else {
-        printstr<<"Unknown message name: "<<name;
+        printstr<<"Message to be handled in script: "<<name;
     }
     SILOG(cppoh,debug,printstr.str());
+    if (mObjectScript) {
+        MemoryBuffer returnCopy;
+        mObjectScript->processRPC(msg, name, args, returnCopy);
+        if (response) {
+            response->reserve(returnCopy.size());
+            std::copy(returnCopy.begin(), returnCopy.end(),
+                      std::insert_iterator<std::string>(*response, response->begin()));
+        }
+    }
 }
 
 void HostedObject::receivedPropertyUpdate(

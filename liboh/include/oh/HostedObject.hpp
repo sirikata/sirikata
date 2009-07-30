@@ -57,19 +57,14 @@ typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
 //------- Private inner classes
-    class PerSpaceData {
-    public:
-        SpaceConnection mSpaceConnection;
-        ProxyObjectPtr mProxyObject; /// 
-        PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
-    };
+    class PerSpaceData;
     struct PrivateCallbacks;
 protected:
 //------- Members
     QueryTracker mTracker;
     
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
-    SpaceDataMap mSpaceData;
+    SpaceDataMap *mSpaceData;
 
     // name -> encoded property message
     typedef std::map<String, String> PropertyMap;
@@ -77,12 +72,13 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
+    ObjectScript *mScript;
 
 //------- Constructors/Destructors
 private:
     friend class ::Sirikata::SelfWeakPtr<HostedObject>;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHost*parent);
+    HostedObject(ObjectHost*parent, const UUID &uuid);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -90,7 +86,7 @@ public:
 
 
 private:
-    void initializeScript();//FIXME this is a temporary function
+    void initializePythonScript();//FIXME this is a temporary function
 //------- Private member functions:
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
 
@@ -98,11 +94,11 @@ public:
 //------- Public member functions:
 
     ///makes a new objects with objectName startingLocation mesh and a space to connect to
-    void initializeConnect(const UUID &objectName, const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const SpaceID&, const HostedObjectWPtr&spaceConnectionHint=HostedObjectWPtr());
+    void initializeConnect(const Location&startingLocation,const String&mesh, const BoundingSphere3f&meshBounds, const LightInfo *lights, const SpaceID&, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScripted(const UUID &objectName, const String&script, const SpaceID&id, const HostedObjectWPtr&spaceConnectionHint=HostedObjectWPtr() );
+    void initializeScript(const String&script, const std::map<String,String> &args);
     /// Attempt to restore this item from database including script [not implemented]
-    void initializeRestoreFromDatabase(const UUID &objectName);
+    void initializeRestoreFromDatabase();
     /** Gets the ObjectHost (usually one per host).
         See getProxy(space)->getProxyManger() for the per-space object.
     */
@@ -156,28 +152,62 @@ public:
         bool endForwardingMessagesTo(MessageService*) { return false; }
     } mReceiveService;
 
-    const UUID &getUUID() {
+    /** Returns the internal object reference, which can be used for connecting
+        to a space, talking to other objects within this object host, and
+        persistence messages.
+    */
+    const UUID &getUUID() const {
         return mInternalObjectReference;
     }
+    /// Returns QueryTracker object that tracks of message ids awaiting reply.
     QueryTracker*getTracker(){return &mTracker;}
+    /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
     const QueryTracker*getTracker()const {return &mTracker;}
+
+    // No reason to allow talking directly to the script--just send a message to the object.
+    //ObjectScript* getScript() const { return mScript; }
+
+    /** Called once per frame, at a certain framerate. */
+    void tick();
+
+    /** Initiate connection process to a space, but do not send any messages yet.
+        After calling connectToSpace, it is immediately possible to send() a NewObj
+        message, however any other message must wait until you receive the RetObj
+        for that space.
+    */
+    void connectToSpace(const SpaceID&id,const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr() );
+
+    /** Handles an incoming message, then passes the message to the scripting language. */
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
+    /** Sends directly via an attached space, without going through the ObjectHost.
+        No messages with a null SpaceId (i.e. for a local object or message service)
+        may be delivered using this path.
+        @see send
+    */
     void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
 
     /** Sends a message from the space hdr.destination_space() to the object
-        hdr.destination_object().
+        hdr.destination_object(). Note that this will properly route locally destined
+        messages via a WorkQueue in the ObjectHost.
         @param header  A RoutableMessageHeader: must include destination_space/object.
         @param body  An encoded RoutableMessageBody.
     */
-    void send(const RoutableMessageHeader &hdr, MemoryReference body);
+    void send(const RoutableMessageHeader &header, MemoryReference body);
 
+    /** Equivalent to header.swap_source_and_destination(); send(header, body);
+        @see send.
+    */
     void sendReply(const RoutableMessageHeader &origHdr, MemoryReference body) {
         RoutableMessageHeader replyHeader(origHdr);
         replyHeader.swap_source_and_destination();
         send(replyHeader, body);
     }
 
+    /** Equivalent to header.swap_source_and_destination();
+        header.set_return_status(error); send(header, NULL);
+        @see send.
+    */
     void sendErrorReply(const RoutableMessageHeader &origHdr, ReturnStatus error) {
         RoutableMessageHeader replyHeader(origHdr);
         replyHeader.swap_source_and_destination();

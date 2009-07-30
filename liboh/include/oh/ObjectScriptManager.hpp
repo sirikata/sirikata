@@ -37,12 +37,20 @@ namespace Sirikata {
 class HostedObject;
 class ObjectScript;
 
+/** Script factory -- generally have one per shared dynamic library.
+    To access an instance, @see ObjectScriptManagerFactory. */
 class SIRIKATA_OH_EXPORT ObjectScriptManager  {
   public:
+    /// String->String map, used to pass arbitrary arguments into a script.
     typedef std::map<std::string,std::string> Arguments;
+    /** Create a script linked to this HostedObject.
+        Called by HostedObject::initializeScripted().
+    */
     virtual ObjectScript *createObjectScript(HostedObject* ho,
                                              const Arguments &args)=0;
+    /// Delete this ObjectScript instance.
     virtual void destroyObjectScript(ObjectScript*toDestroy)=0;
+    /// Destructor: called from the plugin itself.
     virtual ~ObjectScriptManager(){}
 };
 

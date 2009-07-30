@@ -34,13 +34,22 @@
 
 namespace Sirikata {
 
+/** Script running in a plugin. Can be in C++, or this interface
+    can be passed on to a script.
+    @see ObjectScriptManager for how to instantiate one of these.
+*/
 class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
   public:
+    /// Called every frame. Might not be necessary if the script runs in a separate thread.
     virtual void tick() = 0;
 
+    /// RPC messages are handled specially because they are usually gathered into a single message.
     virtual bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue) = 0;
 
+    /// Send an arbitrary message on a non-RPC port to the script.
     virtual void processMessage(const RoutableMessageHeader &receivedHeader, MemoryReference body) = 0;
+
+    /// Destructor: called from the plugin itself.
     ~ObjectScript(){}
 };
 

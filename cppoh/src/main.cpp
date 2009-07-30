@@ -249,7 +249,7 @@ int main ( int argc,const char**argv ) {
     using namespace Sirikata;
 
     PluginManager plugins;
-    const char* pluginNames[] = { "monoscript", "ogregraphics", "bulletphysics", NULL};
+    const char* pluginNames[] = { "monoscript", "sqlite", "ogregraphics", "bulletphysics", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( DynamicLibrary::filename(*plugin_name) );
 
@@ -281,7 +281,6 @@ int main ( int argc,const char**argv ) {
     SpaceIDMap *spaceMap = new SpaceIDMap;
     spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
 
-    plugins.load(Sirikata::DynamicLibrary::filename("sqlite"));
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+dbFile->as<String>());
 
@@ -289,9 +288,8 @@ int main ( int argc,const char**argv ) {
     oh->registerService(Services::PERSISTENCE, database);
 
     {//to deallocate HostedObjects before armageddon
-    HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh));
+    HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
     firstObject->initializeConnect(
-            UUID::random(),
             Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
                      Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
             "meru://daniel@/cube.mesh",
@@ -300,9 +298,8 @@ int main ( int argc,const char**argv ) {
             mainSpace);
     firstObject->setScale(Vector3f(3,3,3));
 
-    HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh));
+    HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
     secondObject->initializeConnect(
-        UUID::random(),
         Location(Vector3d(0,0,25), Quaternion::identity(),
                  Vector3f(0.1,0,0), Vector3f(0,0,1), 0.),
         "",
@@ -310,7 +307,7 @@ int main ( int argc,const char**argv ) {
         NULL,
         mainSpace);
 
-    HostedObjectPtr thirdObject (HostedObject::construct<HostedObject>(oh));
+    HostedObjectPtr thirdObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
     {
         LightInfo li;
         li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
@@ -323,13 +320,31 @@ int main ( int argc,const char**argv ) {
         li.setLightSpotlightCone(30,40,1);
         li.setCastsShadow(true);
         thirdObject->initializeConnect(
-            UUID::random(),
             Location(Vector3d(10,0,10), Quaternion::identity(),
                      Vector3f::nil(), Vector3f(0,0,1), 0.),
             "",
             BoundingSphere3f(Vector3f::nil(),0),
             &li,
             mainSpace);
+    }
+
+    HostedObjectPtr scriptedObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
+    {
+    std::map<String,String> args;
+    args["Assembly"]="Sirikata.Runtime";
+    args["Class"]="PythonObject";
+    args["Namespace"]="Sirikata.Runtime";
+    args["PythonModule"]="test";
+    args["PythonClass"]="exampleclass";
+    scriptedObject->initializeScript("mono", args);
+    scriptedObject->initializeConnect(
+            Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
+                     Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
+            "meru://daniel@/cube.mesh",
+            BoundingSphere3f(Vector3f::nil(),1),
+            NULL,
+            mainSpace);
+    scriptedObject->setScale(Vector3f(3,3,3));
     }
     }
     ProxyManager *provider = oh->getProxyManager(mainSpace);
