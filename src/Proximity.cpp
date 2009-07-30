@@ -67,7 +67,7 @@ void Proximity::addQuery(UUID obj, SolidAngle sa) {
 
 void Proximity::removeQuery(UUID obj) {
     QueryMap::iterator it = mQueries.find(obj);
-    assert(it != mQueries.end());
+    if (it == mQueries.end()) return;
 
     Query* q = it->second;
     mQueries.erase(it);

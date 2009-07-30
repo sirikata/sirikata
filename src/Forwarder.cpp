@@ -17,6 +17,8 @@
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
 
+#include "Proximity.hpp"
+
 #include "Random.hpp"
 
 namespace CBR
@@ -37,6 +39,7 @@ Forwarder::Forwarder(ServerID id)
    mServerMessageQueue(NULL),
    mLoadMonitor(NULL),
    mObjects(NULL),
+   mProximity(NULL),
    m_serv_ID(id),
    mCurrentTime(NULL),
    mLastSampleTime(0),
@@ -54,7 +57,7 @@ Forwarder::Forwarder(ServerID id)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime)
+void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox)
   {
       mTrace = trace;
       mCSeg = cseg;
@@ -66,6 +69,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       mLoadMonitor = lm;
     mObjects     = objMap;
     mCurrentTime = currTime;
+    mProximity = prox;
   }
 
   //used to access server id, which was given in initialization
@@ -454,6 +458,9 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
               {
                 route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
               }
+
+              // Finally, subscribe the object for proximity queries
+              mProximity->addQuery(obj_id, obj->queryAngle());
           }
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:

@@ -53,7 +53,7 @@ Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, Lo
         mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
       }
     }
-    mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime);    //run initialization for forwarder
+    mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime, mProximity);    //run initialization for forwarder
 
   }
 
@@ -159,6 +159,9 @@ void Server::checkObjectMigrations()
 		   obj_pos.toString().c_str());
 */
             mForwarder->route( migrate_msg , new_server_id);
+
+            // Stop any proximity queries for this object
+            mProximity->removeQuery(obj_id);
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);

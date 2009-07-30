@@ -25,6 +25,7 @@ class ObjectSegmentation;
   class Network;
   class Trace;
   class LoadMonitor;
+class Proximity;
 
 class Forwarder : public MessageDispatcher, public MessageRouter
   {
@@ -44,6 +45,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       ServerMessageQueue* mServerMessageQueue;
       LoadMonitor* mLoadMonitor;
       ObjectMap* mObjects; //will be used in object() lookup call and possibly in migrate
+      Proximity* mProximity;
       ServerID m_serv_ID;//Keeps copy of server id on forwarder.  necessary for sending messages to objects.
 
       Time* mCurrentTime;
@@ -82,7 +84,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
     public:
       Forwarder(ServerID id);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime);
+      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox);
 
       void tick(const Time&t);
 
