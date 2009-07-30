@@ -44,12 +44,17 @@ public class PythonObject {
         private ScriptRuntime _runtime;
         private ScriptEngine _engine;
         private OptionsParser _languageOptionsParser;
-
+        private ScriptScope _scope;
+        private ScriptSource _processMessageSource;
+        private ScriptSource _processRPCSource;
+        private ScriptSource _processTickSource;
+        private object _pythonObject;
+        public object PyObject  { get { return _pythonObject; } }
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
+    
 
-
-        public ConsoleTest(string[] args) {
+        public PythonObject(string[] args) {
 
             ScriptRuntimeSetup runtimeSetup = ScriptRuntimeSetup.ReadConfiguration();
             ConsoleHostOptions options = new ConsoleHostOptions();
@@ -87,7 +92,7 @@ public class PythonObject {
             } catch (Exception e) {
                 Console.Error.WriteLine(e.Message);
             }
-
+            _scope= _engine.CreateScope();
             RunCommandLine(args);
         }
 
@@ -128,37 +133,64 @@ public class PythonObject {
             }
         }
 
-
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        private int RunCommandLine(string []args) {
-            Console.WriteLine("helloish");
-            Debug.Assert(_engine != null);
-
-
-            ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
-
-            ScriptScope scope1 = _engine.CreateScope();
-            scope1.SetVariable("x",5);
-            scope1.SetVariable("y",2);
-            ScriptScope scope2 = _engine.CreateScope();
-            scope2.SetVariable("x",6);
-            scope2.SetVariable("y",4);
-            ScriptSource initsource= _engine.CreateScriptSourceFromString("import test\nmyclass=test.exampleclass(y)\n",SourceCodeKind.Statements);
-            ScriptSource source= _engine.CreateScriptSourceFromString("retval=myclass.func(x)",SourceCodeKind.Statements);
-            initsource.Execute(scope1);
-            initsource.Execute(scope2);
-            source.Execute(scope1);
-            source.Execute(scope2);
-            source.Execute(scope1);
-            source.Execute(scope2);
-            int result=(int)scope2.GetVariable<int>("retval");
-            Console.WriteLine("Final Result {0}",result);
-            int exitCode=0;
-
-            return exitCode;
+        private static bool IsSanitized(string inputStr ) {
+            if (string.IsNullOrEmpty(inputStr))
+                return false;
+            for (int i = 0; i < inputStr.Length; i++)
+            {
+                if (!(char.IsLetter(inputStr[i])) && (!(char.IsNumber(inputStr[i]))))
+                    if (inputStr[i]!='.'&&inputStr[i]!='_')
+                        return false;
+            }
+            return true;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
+        private void RunCommandLine(string []args) {
+            Debug.Assert(_engine != null);
+            string arglist="";
+            string python_module="test";
+            string python_class="exampleclass";
+            for (int i=0;i+1<args.Length;i+=2) {
+                if (IsSanitized(args[i+1])) {
+                    if (args[i]=="PythonModule") {
+                        python_module=args[i+1];
+                    }else if (args[i]=="PythonClass") {
+                        python_class=args[i+1];
+                    }else {
+                        _scope.SetVariable(args[i],args[i+1]);
+                        if (arglist.Length!=0)
+                            arglist+=",";
+                        arglist+=args[i]+"="+args[i+1];
+                    }
+                }
+            }
+            ScriptSource initsource=_engine.CreateScriptSourceFromString("from "+python_module+" import "+python_class+";retval="+python_class+"("+arglist+");",SourceCodeKind.Statements);
+            initsource.Execute(_scope);
+            return ;
+            _pythonObject=_scope.GetVariable("retval");
+            _processMessageSource=_engine.CreateScriptSourceFromString("retval.processMessage(header,body)",SourceCodeKind.Expression);
+            _processRPCSource=_engine.CreateScriptSourceFromString("retval.processRPC(header,name,args)",SourceCodeKind.Expression);
+            _processTickSource=_engine.CreateScriptSourceFromString("retval.tick(curTime)",SourceCodeKind.Expression);
+        }
+        public virtual void processMessage(byte[] header, byte[] body) {
+            _scope.SetVariable("header",header);
+            _scope.SetVariable("body",body);
+            _scope.SetVariable("retval",_pythonObject);
+            _processMessageSource.Execute(_scope);
+        }
+        public virtual Array processRPC(byte[] header, string name, byte[] args) {
+            _scope.SetVariable("header",header);
+            _scope.SetVariable("name",name);
+            _scope.SetVariable("args",args);
+            _scope.SetVariable("retval",_pythonObject);
+            return _processMessageSource.Execute<Array>(_scope);
+        }
+        public virtual void tick(System.DateTime time) {
+            _scope.SetVariable("curTime",time);
+            _scope.SetVariable("retval",_pythonObject);
+            _processTickSource.Execute(_scope);
+        }
         protected virtual void UnhandledException(ScriptEngine engine, Exception e) {
             Console.Error.Write("Unhandled exception");
             Console.Error.WriteLine(':');

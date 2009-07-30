@@ -38,7 +38,7 @@ class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
   public:
     virtual void tick() = 0;
 
-    virtual bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, std::string &returnValue) = 0;
+    virtual bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue) = 0;
 
     virtual void processMessage(const RoutableMessageHeader &receivedHeader, MemoryReference body) = 0;
     ~ObjectScript(){}

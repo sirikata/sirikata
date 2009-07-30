@@ -113,13 +113,13 @@ bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
     NOT_IMPLEMENTED(mono);
     return false;
 }
-bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, std::string &returnValue){
+bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
     std::string header;
     receivedHeader.SerializeToString(&header);
     try {
-        Mono::Object retval=mObject.send("processRPC",mDomain.String(name),mDomain.String(header),mDomain.String((const char*)args.data(),(int)args.size()));
+        Mono::Object retval=mObject.send("processRPC",mDomain.String(name),mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)args.data(),(int)args.size()));
         if (!retval.null()) {
-            returnValue=retval.unboxString();
+            returnValue=retval.unboxByteArray();
             return true;
         }
         return false;
@@ -140,7 +140,7 @@ void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHead
     std::string header;
     receivedHeader.SerializeToString(&header);
     try {
-        Mono::Object retval=mObject.send("processMessage",mDomain.String(header),mDomain.String((const char*)body.data(),(int)body.size()));
+        Mono::Object retval=mObject.send("processMessage",mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)body.data(),(unsigned int)body.size()));
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"Message Exception "<<e);
     }
