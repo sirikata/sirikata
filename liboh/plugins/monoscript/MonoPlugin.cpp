@@ -39,6 +39,7 @@
 #include "MonoClass.hpp"
 #include "MonoObject.hpp"
 #include "MonoVWObjectScriptManager.hpp"
+#include "MonoArray.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
@@ -76,7 +77,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("ConsoleTest");
-        cls.send("Construct");
+        cls.instance(d.Array(d.String(String()).type(),0));
         printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
 /*
         SimulationFactory::getSingleton().registerConstructor("mono",

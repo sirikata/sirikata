@@ -48,131 +48,12 @@ using Microsoft.Scripting.Hosting.Shell;
         public ConsoleHostOptions Options { get { return _optionsParser.Options; } }
         public ScriptRuntimeSetup RuntimeSetup { get { return _optionsParser.RuntimeSetup; } }
 
-        public ScriptEngine Engine { get { return _engine; } }
-        public ScriptRuntime Runtime { get { return _runtime; } }
 
-        public ConsoleTest() {
-        }
+        public ConsoleTest(string[] args) {
 
-
-        /// <summary>
-        /// Console Host entry-point .exe name.
-        /// </summary>
-        protected virtual string ExeName {
-            get {
-#if !SILVERLIGHT
-                Assembly entryAssembly = Assembly.GetEntryAssembly();
-                //Can be null if called from unmanaged code (VS integration scenario)
-                return entryAssembly != null ? entryAssembly.GetName().Name : "ConsoleHost";
-#else
-                return "ConsoleHost";
-#endif
-            }
-        }
-
-        #region Customization
-
-        protected virtual void ParseHostOptions(string[] args) {
-            _optionsParser.Parse(args);
-        }
-
-        protected virtual ScriptRuntimeSetup CreateRuntimeSetup() {
-            ScriptRuntimeSetup setup = ScriptRuntimeSetup.ReadConfiguration();
-
-            string provider = Provider.AssemblyQualifiedName;
-/*FIXME
-            if (!setup.LanguageSetups.Any(s => s.TypeName == provider)) {
-                ScriptRuntimeSetup languageSetup = CreateLanguageSetup();
-                if (languageSetup != null) {
-                    setup.LanguageSetups.Add(languageSetup);
-                }
-            }
-*/
-            return setup;
-        }
-
-        protected virtual LanguageSetup CreateLanguageSetup() {
-            return Python.CreateLanguageSetup(null);
-        }
-
-        protected virtual PlatformAdaptationLayer PlatformAdaptationLayer {
-            get { return PlatformAdaptationLayer.Default; }
-        }
-
-        protected virtual Type Provider {
-            get { return typeof(PythonContext); }
-        }
-
-        private string GetLanguageProvider(ScriptRuntimeSetup setup) {
-            Type providerType = Provider;
-            if (providerType != null) {
-                return providerType.AssemblyQualifiedName;
-            }
-            
-            if (Options.HasLanguageProvider) {
-                return Options.LanguageProvider;
-            }
-
-            if (Options.RunFile != null) {
-                string ext = Path.GetExtension(Options.RunFile);
-                foreach (LanguageSetup lang in setup.LanguageSetups) {
-                    /*FIXME
-                    if (lang.FileExtensions.Any(e => DlrConfiguration.FileExtensionComparer.Equals(e, ext))) {
-                        return lang.TypeName;
-                    }
-                    */
-                }
-            }
-
-            throw new InvalidOptionException("No language specified.");
-        }
-
-        protected virtual CommandLine CreateCommandLine() {
-            return new CommandLine();
-        }
-
-        protected virtual OptionsParser CreateOptionsParser() {
-            return new OptionsParser<ConsoleOptions>();
-        }
-
-        protected virtual IConsole CreateConsole(ScriptEngine engine, CommandLine commandLine, ConsoleOptions options) {
-            ContractUtils.RequiresNotNull(commandLine, "commandLine");
-            ContractUtils.RequiresNotNull(options, "options");
-
-            if (options.TabCompletion) {
-                return CreateSuperConsole(commandLine, options.ColorfulConsole);
-            } else {
-                return new BasicConsole(options.ColorfulConsole);
-            }
-        }
-
-        // The advanced console functions are in a special non-inlined function so that 
-        // dependencies are pulled in only if necessary.
-        [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole CreateSuperConsole(CommandLine commandLine, bool isColorful) {
-            return new SuperConsole(commandLine, isColorful);
-        }
-
-        #endregion
-
-        /// <summary>
-        /// To be called from entry point.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public int Run(string[] args) {
-
-            ScriptRuntimeSetup runtimeSetup = CreateRuntimeSetup();
+            ScriptRuntimeSetup runtimeSetup = ScriptRuntimeSetup.ReadConfiguration();
             ConsoleHostOptions options = new ConsoleHostOptions();
             _optionsParser = new ConsoleHostOptionsParser(options, runtimeSetup);
-            if (args!=null) {
-                try {
-                    ParseHostOptions(args);
-                } catch (InvalidOptionException e) {
-                    Console.Error.WriteLine("Invalid argument: " + e.Message);
-                    return _exitCode = 1;
-                }
-            }
-            SetEnvironment();
 
             string provider = GetLanguageProvider(runtimeSetup);
 
@@ -191,13 +72,12 @@ using Microsoft.Scripting.Hosting.Shell;
             // inserts search paths for all languages (/paths option):
             InsertSearchPaths(runtimeSetup.Options, Options.SourceUnitSearchPaths);
             
-            _languageOptionsParser = CreateOptionsParser();
+            _languageOptionsParser = new OptionsParser<ConsoleOptions>();
 
             try {
-                _languageOptionsParser.Parse(Options.IgnoredArgs.ToArray(), runtimeSetup, languageSetup, PlatformAdaptationLayer);
+                _languageOptionsParser.Parse(Options.IgnoredArgs.ToArray(), runtimeSetup, languageSetup, PlatformAdaptationLayer.Default);
             } catch (InvalidOptionException e) {
                 Console.Error.WriteLine(e.Message);
-                return _exitCode = -1;
             }
 
             _runtime = new ScriptRuntime(runtimeSetup);
@@ -206,10 +86,45 @@ using Microsoft.Scripting.Hosting.Shell;
                 _engine = _runtime.GetEngineByTypeName(provider);
             } catch (Exception e) {
                 Console.Error.WriteLine(e.Message);
-                return _exitCode = 1;
             }
 
-            Execute();
+            RunCommandLine(args);
+        }
+
+
+        #region Customization
+
+        protected virtual LanguageSetup CreateLanguageSetup() {
+            return Python.CreateLanguageSetup(null);
+        }
+
+        protected virtual Type Provider {
+            get { return typeof(PythonContext); }
+        }
+
+        private string GetLanguageProvider(ScriptRuntimeSetup setup) {
+            Type providerType = Provider;
+            if (providerType != null) {
+                return providerType.AssemblyQualifiedName;
+            }
+            
+            if (Options.HasLanguageProvider) {
+                return Options.LanguageProvider;
+            }
+
+            throw new InvalidOptionException("No language specified.");
+        }
+
+
+
+        #endregion
+
+        /// <summary>
+        /// To be called from entry point.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        public int Run() {
+
             return _exitCode;
         }
 
@@ -221,161 +136,16 @@ using Microsoft.Scripting.Hosting.Shell;
             }
         }
 
-        #region Printing help
 
-        protected virtual void PrintHelp() {
-            Console.WriteLine(GetHelp());
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        protected virtual string GetHelp() {
-            StringBuilder sb = new StringBuilder();
-
-            string[,] optionsHelp = Options.GetHelp();
-
-            sb.AppendLine(String.Format("Usage: {0}.exe [<dlr-options>] [--] [<language-specific-command-line>]", ExeName));
-            sb.AppendLine();
-
-            sb.AppendLine("DLR options (both slash or dash could be used to prefix options):");
-            ArrayUtils.PrintTable(sb, optionsHelp);
-            sb.AppendLine();
-
-            sb.AppendLine("Language specific command line:");
-            PrintLanguageHelp(sb);
-            sb.AppendLine();
-
-            return sb.ToString();
-        }
-
-        public void PrintLanguageHelp(StringBuilder output) {
-            ContractUtils.RequiresNotNull(output, "output");
-
-            string commandLine, comments;
-            string[,] options, environmentVariables;
-
-            CreateOptionsParser().GetHelp(out commandLine, out options, out environmentVariables, out comments);
-
-            // only display language specific options if one or more optinos exists.
-            if (commandLine != null || options != null || environmentVariables != null || comments != null) {
-                if (commandLine != null) {
-                    output.AppendLine(commandLine);
-                    output.AppendLine();
-                }
-
-                if (options != null) {
-                    output.AppendLine("Options:");
-                    ArrayUtils.PrintTable(output, options);
-                    output.AppendLine();
-                }
-
-                if (environmentVariables != null) {
-                    output.AppendLine("Environment variables:");
-                    ArrayUtils.PrintTable(output, environmentVariables);
-                    output.AppendLine();
-                }
-
-                if (comments != null) {
-                    output.Append(comments);
-                    output.AppendLine();
-                }
-
-                output.AppendLine();
-            }
-        }
-
-        #endregion
-
-        private void Execute() {
-/*
-#if !SILVERLIGHT
-            if (_languageOptionsParser.CommonConsoleOptions.IsMta) {
-                Thread thread = new Thread(ExecuteInternal);
-                thread.SetApartmentState(ApartmentState.MTA);
-                thread.Start();
-                thread.Join();
-                return;
-            }
-#endif
-*/
-            ExecuteInternal();
-        }
-
-        protected virtual void ExecuteInternal() {
-            Debug.Assert(_engine != null);
-
-            switch (Options.RunAction) {
-                case ConsoleHostOptions.Action.None:
-                case ConsoleHostOptions.Action.RunConsole:
-                    _exitCode = RunCommandLine();
-                    break;
-
-                case ConsoleHostOptions.Action.RunFile:
-                    _exitCode = RunFile();
-                    break;
-
-                default:
-                    throw Assert.Unreachable;
-            }
-        }
-
-        private void SetEnvironment() {
-            Debug.Assert(Options.EnvironmentVars != null);
-
-#if !SILVERLIGHT
-            foreach (string env in Options.EnvironmentVars) {
-                if (!String.IsNullOrEmpty(env)) {
-                    string[] var_def = env.Split('=');
-                    System.Environment.SetEnvironmentVariable(var_def[0], (var_def.Length > 1) ? var_def[1] : "");
-                }
-            }
-#endif
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private int RunFile() {
-            Debug.Assert(_engine != null);
-
-            int result = 0;
-            try {
-                return _engine.CreateScriptSourceFromFile(Options.RunFile).ExecuteProgram();
-#if SILVERLIGHT 
-            } catch (ExitProcessException e) {
-                result = e.ExitCode;
-#endif
-            } catch (Exception e) {
-                UnhandledException(Engine, e);
-                result = 1;
-            } finally {
-                try {
-                    Snippets.Shared.Dump();
-                } catch (Exception) {
-                    result = 1;
-                }
-            }
-
-            return result;
-        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        private int RunCommandLine() {
+        private int RunCommandLine(string []args) {
             Console.WriteLine("helloish");
             Debug.Assert(_engine != null);
 
-            CommandLine commandLine = CreateCommandLine();
+
             ConsoleOptions consoleOptions = _languageOptionsParser.CommonConsoleOptions;
 
-            if (consoleOptions.PrintVersionAndExit) {
-                Console.WriteLine("{0} {1} on .NET {2}", Engine.Setup.DisplayName, Engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
-                return 0;
-            }
-
-            if (consoleOptions.PrintUsageAndExit) {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendFormat("Usage: {0}.exe ", ExeName);
-                PrintLanguageHelp(sb);
-                Console.Write(sb.ToString());
-                return 0;
-            }
             //ScriptEngine engine=_runtime.GetEngineByTypeName("IronPython");
             ScriptScope scope1 = _engine.CreateScope();
             scope1.SetVariable("x",5);
@@ -394,28 +164,7 @@ using Microsoft.Scripting.Hosting.Shell;
             int result=(int)scope2.GetVariable<int>("retval");
             Console.WriteLine("Final Result {0}",result);
             int exitCode=0;
-/*  //runs python console--would block
-            IConsole console = CreateConsole(Engine, commandLine, consoleOptions);
 
-            try {
-                if (consoleOptions.HandleExceptions) {
-                    try {
-                        exitCode = commandLine.Run(Engine, console, consoleOptions);
-                    } catch (Exception e) {
-                        UnhandledException(Engine, e);
-                        exitCode = 1;
-                    }
-                } else {
-                    exitCode = commandLine.Run(Engine, console, consoleOptions);
-                }
-            } finally {
-                try {
-                    Snippets.Shared.Dump();
-                } catch (Exception) {
-                    exitCode = 1;
-                }
-            }
-*/
             return exitCode;
         }
 
@@ -435,13 +184,5 @@ using Microsoft.Scripting.Hosting.Shell;
                 output.WriteLine(e);
                 e = e.InnerException;
             }
-        }
-        static void Main (string[]args) {
-            new ConsoleTest().Run(args);
-        }
-        public static ConsoleTest Construct() {
-            ConsoleTest retval=new ConsoleTest();
-            retval.Run(null);
-            return retval;
         }
     }
