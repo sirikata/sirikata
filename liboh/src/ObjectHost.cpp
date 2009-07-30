@@ -41,6 +41,10 @@
 #include <task/WorkQueue.hpp>
 #include "graphics/GraphicsObject.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
+#include "oh/ObjectScriptManager.hpp"
+#include "oh/ObjectScript.hpp"
+#include "oh/ObjectScriptManagerFactory.hpp"
+
 
 namespace Sirikata {
 
@@ -52,6 +56,7 @@ ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Netw
     mMessageQueue = messageQueue;
     mSpaceConnectionIO=ioServ;
     mEnqueuers = new AtomicInt;
+    mScriptManager=ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
 }
 
 ObjectHost::~ObjectHost() {

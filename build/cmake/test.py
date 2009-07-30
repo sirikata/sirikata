@@ -19,4 +19,13 @@ class exampleclass:
     def processMessage(self,header,body):
         print "Got a message"
     def tick(self,tim):
-        print "Current time is "+str(tim);
+        x=str(tim)
+        print "Current time is "+x;
+        #HostedObject.SendMessage(tuple(Byte(ord(c)) for c in x));# this seems to get into hosted object...but fails due to bad encoding
+from Sirikata.Runtime import HostedObject
+from System import Array, Byte
+
+print dir(HostedObject)
+x="hello worlds"
+
+#

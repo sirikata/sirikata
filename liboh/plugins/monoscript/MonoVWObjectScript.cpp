@@ -48,7 +48,7 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
     String reserved_string_class="Class";
     String reserved_string_namespace="Namespace";
     String reserved_string_function="Function";
-    String assembly_name="PythonObject";
+    String assembly_name;//="Sirikata.Runtime";
     ObjectScriptManager::Arguments::const_iterator i=args.begin(),j,func_iter;
     if ((i=args.find(reserved_string_assembly))!=args.end()) {
         assembly_name=i->second;
@@ -57,8 +57,8 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
     mono_system->loadAssembly(assembly_name);
     try {
         Mono::Assembly ass=mDomain.getAssembly(i->second);
-        String class_name;
-        String namespace_name;
+        String class_name;//="PythonObject";
+        String namespace_name;//="Sirikata.Runtime";
         
         if ((i=args.find(reserved_string_class))!=args.end()) {        
             ++ignored_args;
@@ -71,7 +71,7 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
         if ((func_iter=args.find(reserved_string_function))!=args.end()) {        
             ++ignored_args;
         }
-        MonoContext::getSingleton().push();
+        MonoContext::getSingleton().push(MonoContextData());
         MonoContext::getSingleton().setVWObject(ho,mDomain);
         try {
             
@@ -117,7 +117,7 @@ bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
     return false;
 }
 bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
-    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().push(MonoContextData());
     MonoContext::getSingleton().setVWObject(mParent,mDomain);
     std::string header;
     receivedHeader.SerializeToString(&header);
@@ -139,7 +139,7 @@ bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader,
     return true;
 }
 void MonoVWObjectScript::tick(){
-    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().push(MonoContextData());
     MonoContext::getSingleton().setVWObject(mParent,mDomain);
     try {
         Mono::Object retval=mObject.send("tick",mDomain.Time(Time::now()));
@@ -151,7 +151,7 @@ void MonoVWObjectScript::tick(){
 void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHeader , MemoryReference body){
     std::string header;
     receivedHeader.SerializeToString(&header);
-    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().push(MonoContextData());
     MonoContext::getSingleton().setVWObject(mParent,mDomain);
     try {
         Mono::Object retval=mObject.send("processMessage",mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)body.data(),(unsigned int)body.size()));

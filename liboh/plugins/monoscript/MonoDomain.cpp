@@ -336,7 +336,7 @@ Object Domain::SpaceObjectReference(const Sirikata::SpaceObjectReference& sor) {
     CSharpSpaceObjectReference cssor;
     ConvertSpaceObjectReference(sor, &cssor);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "SpaceObjectReference", &cssor);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "SpaceObjectReference", &cssor);
 }
 
 
@@ -359,21 +359,21 @@ Object Domain::Vector3(const Sirikata::Vector3f& v3) {
     CSharpVector3 csvec3;
     ConvertVector3(v3, &csvec3);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "Vector3", &csvec3);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "Vector3", &csvec3);
 }
 
 Object Domain::Vector3(const Sirikata::Vector3d& v3) {
     CSharpVector3 csvec3;
     ConvertVector3(v3, &csvec3);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "Vector3", &csvec3);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "Vector3", &csvec3);
 }
 
 Object Domain::Color(const Sirikata::Vector4f& color) {
     CSharpColor cscolor;
     ConvertColor(color, &cscolor);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "Color", &cscolor);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "Color", &cscolor);
 }
 
 //#####################################################################
@@ -383,7 +383,7 @@ Object Domain::Quaternion(const Sirikata::Quaternion& quat) {
     CSharpQuaternion csquat;
     ConvertQuaternion(quat, &csquat);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "Quaternion", &csquat);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "Quaternion", &csquat);
 }
 
 //#####################################################################
@@ -393,25 +393,25 @@ Object Domain::Location(const Sirikata::Location& loc) {
     CSharpLocation csloc;
     ConvertLocation(loc, &csloc);
 
-    return boxObject("Meru.Runtime", "Meru.Runtime", "Location", &csloc);
+    return boxObject("Sirikata.Runtime", "Sirikata.Runtime", "Location", &csloc);
 }
 
 Class Domain::AssemblyReaderClass() {
-    return getAssembly("Meru.Runtime").getClass("Meru.Runtime.Assemblies", "AssemblyReader");
+    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime.Assemblies", "AssemblyReader");
 }
 
 Object Domain::AssemblyRewriter() {
-    return getAssembly("Meru.Runtime").getClass("Meru.Runtime.Assemblies", "AssemblyRewriter").instance();
+    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime.Assemblies", "AssemblyRewriter").instance();
 }
 
 /*
 Object Domain::TimerID(Sirikata::Scripting::TimerID id) {
-    return getAssembly("Meru.Runtime").getClass("Meru.Runtime", "TimerID").instance( Int32(id) );
+    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "TimerID").instance( Int32(id) );
 }
 */
 /*
 Object Domain::ResourceID(const Sirikata::ResourceID &id) {
-    return getAssembly("Meru.Runtime").getClass("Meru.Runtime", "ResourceID").instance( String(id.toString()) );
+    return getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "ResourceID").instance( String(id.toString()) );
 }
 */
 } // namespace Mono

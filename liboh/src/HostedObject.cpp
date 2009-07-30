@@ -47,7 +47,9 @@
 #include "oh/ProxyLightObject.hpp"
 #include "oh/ProxyCameraObject.hpp"
 #include "oh/LightInfo.hpp"
-
+#include "oh/ObjectScriptManager.hpp"
+#include "oh/ObjectScript.hpp"
+#include "oh/ObjectScriptManagerFactory.hpp"
 #include <util/KnownServices.hpp>
 
 namespace Sirikata {
@@ -63,6 +65,7 @@ HostedObject::HostedObject(ObjectHost*parent)
     : mTracker(parent->getSpaceIO()),
       mInternalObjectReference(UUID::null()) {
     mObjectHost=parent;
+    mObjectScript=NULL;
     mSendService.ho = this;
     mReceiveService.ho = this;
     mTracker.forwardMessagesTo(&mSendService);
@@ -563,10 +566,26 @@ void HostedObject::initializeConnect(
         setProperty("IsCamera");
     }
     send(messageHeader, MemoryReference(serializedBody));
+    initializeScript();
 }
-
+void HostedObject::initializeScript() {
+    if (mObjectHost->getScriptManager()) {
+        ObjectScriptManager::Arguments args;
+        args["Assembly"]="Sirikata.Runtime";
+        args["Class"]="PythonObject";
+        args["Namespace"]="Sirikata.Runtime";
+        args["PythonModule"]="test";
+        args["PythonClass"]="exampleclass";
+        
+        mObjectScript=mObjectHost->getScriptManager()->createObjectScript(this,args);
+        if (mObjectScript) {
+            mObjectScript->tick();
+        }
+    }
+}
 void HostedObject::initializeRestoreFromDatabase(const UUID &objectName) {
     initializeConnect(objectName, Location(), String(), BoundingSphere3f(), NULL, SpaceID::null(), HostedObjectWPtr());
+    initializeScript();
 }
 void HostedObject::initializeScripted(const UUID&objectName, const String& script, const SpaceID&id,const HostedObjectWPtr&spaceConnectionHint) {
     mInternalObjectReference=objectName;
@@ -581,9 +600,11 @@ void HostedObject::initializeScripted(const UUID&objectName, const String& scrip
         }else {
             topLevelConnection=mObjectHost->connectToSpace(id);
         }
+
         // sending initial packet is done by the script!
         //conn->send(initializationPacket,Network::ReliableOrdered);
     }
+    initializeScript();
 }
 
 void HostedObject::processRoutableMessage(const RoutableMessageHeader &header, MemoryReference bodyData) {

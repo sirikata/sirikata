@@ -34,10 +34,8 @@ using Microsoft.Scripting;
 
 using IronPython.Hosting;
 using IronPython.Runtime;
-
 using Microsoft.Scripting.Hosting.Shell;
-
-
+namespace Sirikata.Runtime {
 public class PythonObject {
 
         private ConsoleHostOptionsParser _optionsParser;
@@ -92,6 +90,8 @@ public class PythonObject {
             } catch (Exception e) {
                 Console.Error.WriteLine(e.Message);
             }
+            _runtime.LoadAssembly(System.Reflection.Assembly.GetExecutingAssembly());
+            _runtime.LoadAssembly(provider.GetType().Assembly);
             _scope= _engine.CreateScope();
             RunCommandLine(args);
         }
@@ -165,9 +165,12 @@ public class PythonObject {
                     }
                 }
             }
-            ScriptSource initsource=_engine.CreateScriptSourceFromString("from "+python_module+" import "+python_class+";retval="+python_class+"("+arglist+");",SourceCodeKind.Statements);
+            ScriptSource initsource=_engine.CreateScriptSourceFromString("from "+python_module+" import "+python_class,SourceCodeKind.Statements);
+            
             initsource.Execute(_scope);
-            _pythonObject=_scope.GetVariable("retval");
+            initsource=_engine.CreateScriptSourceFromString(python_class+"("+arglist+")",SourceCodeKind.Expression);
+            _pythonObject=initsource.Execute(_scope);
+            _scope.SetVariable("retval",_pythonObject);
             _processMessageSource=_engine.CreateScriptSourceFromString("retval.processMessage(header,body)",SourceCodeKind.Expression);
             _processRPCSource=_engine.CreateScriptSourceFromString("retval.processRPC(header,name,args)",SourceCodeKind.Expression);
             _processTickSource=_engine.CreateScriptSourceFromString("retval.tick(curTime)",SourceCodeKind.Expression);
@@ -211,4 +214,5 @@ public class PythonObject {
                 e = e.InnerException;
             }
         }
+}
 }

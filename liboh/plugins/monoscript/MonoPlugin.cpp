@@ -42,6 +42,8 @@
 #include "MonoArray.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
 #include "MonoException.hpp"
+#include "MonoHostedObjectExports.hpp"
+#include "MonoContext.hpp"
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
 
@@ -67,15 +69,17 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
-        ObjectScriptManagerFactory::getSingleton().registerConstructor("mono",
+        ObjectScriptManagerFactory::getSingleton().registerConstructor("monoscripting",
                                                                        std::tr1::bind(&Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,mono_system,_1),
                                                                        true);
+        MonoContext::getSingleton().initializeThread();
+        Sirikata::InitHostedObjectExports();
         Mono::Domain d=mono_system->createDomain();
         bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
         retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
  
         bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime");
-        
+        /*
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("PythonObject");
         Mono::Object monoobj=cls.instance(d.Array(d.String(String()).type(),0));
@@ -85,12 +89,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         }catch (Mono::Exception&e) {
             SILOG(mono,error,"Error processing rpc"<<e);
         }
+        */
         printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
-/*
-        SimulationFactory::getSingleton().registerConstructor("mono",
-                                                            &MonoSystem::create,
-                                                            true);
-*/
+        
     }
     core_plugin_refcount++;
 }
@@ -109,9 +110,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("mono",true);
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monosystem",true);
             delete mono_system;
-            //SimulationFactory::getSingleton().unregisterConstructor("mono",true);
         }
     }
 }

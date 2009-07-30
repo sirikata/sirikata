@@ -109,9 +109,9 @@ namespace Sirikata {
 void 
 InitHostedObjectExports () {
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::GetUUID", (void*)Mono_Context_CurrentUUID);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::SendMessage", (void*)Mono_Context_SendMessage);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::CallFunction", (void*)Mono_Context_CallFunction);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::CallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
-    mono_add_internal_call ("Sirikata.Runtime.HostedObject::TickPeriod", (void*)Mono_Context_TickDelay);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTickPeriod", (void*)Mono_Context_TickDelay);
 }
 }

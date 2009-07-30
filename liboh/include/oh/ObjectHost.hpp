@@ -42,7 +42,7 @@ class ProxyManager;
 class SpaceIDMap;
 class TopLevelSpaceConnection;
 class SpaceConnection;
-
+class ObjectScriptManager;
 namespace Task {
 class WorkQueue;
 }
@@ -71,9 +71,9 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
 
     HostedObjectMap mHostedObjects;
     ServicesMap mServices;
-
+    ObjectScriptManager *mScriptManager;
 public:
-    
+
     /** Caller is responsible for starting a thread
      *
      * @param ioServ = Network::IOServiceFactory::makeIOService();
@@ -129,7 +129,7 @@ public:
     Network::IOService *getSpaceIO() const {
         return mSpaceConnectionIO;
     }
-
+    ObjectScriptManager*getScriptManager()const{return mScriptManager;}
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost

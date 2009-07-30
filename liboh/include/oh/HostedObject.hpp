@@ -51,6 +51,7 @@ class ObjLoc;
 }
 using Protocol::ObjLoc;
 
+class ObjectScript;
 class HostedObject;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
@@ -73,7 +74,7 @@ protected:
     // name -> encoded property message
     typedef std::map<String, String> PropertyMap;
     PropertyMap mProperties;
-
+    ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
 
@@ -89,6 +90,7 @@ public:
 
 
 private:
+    void initializeScript();//FIXME this is a temporary function
 //------- Private member functions:
     PerSpaceData &cloneTopLevelStream(const SpaceID&,const std::tr1::shared_ptr<TopLevelSpaceConnection>&);
 
