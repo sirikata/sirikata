@@ -54,7 +54,7 @@ std::string getCurrentWorkingDirectory()
 	return "";
 }
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory)
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
 	  mouseButtonRDown(false), zOrderCounter(5),
@@ -71,13 +71,6 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputM
 	//tooltipWebView->bind("resizeTooltip", JSDelegate(this, &WebViewManager::onResizeTooltip));
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
-
-	inputMgr->subscribe(Sirikata::Input::MouseHoverEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseMove, this, _1));
-	inputMgr->subscribe(Sirikata::Input::MouseDragEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseDrag, this, _1));
-	inputMgr->subscribe(Sirikata::Input::MouseClickEvent::getEventId(), std::tr1::bind(&WebViewManager::onMouseClick, this, _1));
-	inputMgr->subscribe(Sirikata::Input::ButtonPressed::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
-	inputMgr->subscribe(Sirikata::Input::ButtonReleased::getEventId(), std::tr1::bind(&WebViewManager::onButton, this, _1));
-	inputMgr->subscribe(Sirikata::Input::TextInputEvent::getEventId(), std::tr1::bind(&WebViewManager::onKeyTextInput, this, _1));
 #endif
 }
 

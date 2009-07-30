@@ -103,6 +103,13 @@ public:
 		retval.mResp=DELETE_LISTENER_AND_CANCEL_EVENT;
 		return retval;
 	}
+
+        bool operator==(const EventResponse& other) {
+            return (mResp == other.mResp);
+        }
+        bool operator!=(const EventResponse& other) {
+            return (mResp != other.mResp);
+        }
 };
 
 /**

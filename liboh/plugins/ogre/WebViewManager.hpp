@@ -58,7 +58,7 @@ class WebView;
 enum MouseButtonID
 {
 	LeftMouseButton = 0,
-	RightMouseButton, 
+	RightMouseButton,
 	MiddleMouseButton
 };
 
@@ -81,7 +81,7 @@ public:
 	*
 	* @throws	Ogre::Exception::ERR_INTERNAL_ERROR		Throws this when LLMozLib fails initialization
 	*/
-	WebViewManager(Ogre::Viewport* defaultViewport, Input::SDLInputManager* inputMgr, const std::string &baseDirectory = "WebViewLocal");
+	WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory = "WebViewLocal");
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).
@@ -114,12 +114,12 @@ public:
 	/**
 	* Creates a WebView.
 	*/
-	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition, 
+	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 		bool asyncRender = false, int maxAsyncRenderRate = 70, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
 
 	/**
-	* Creates a WebViewMaterial. WebViewMaterials are just like WebViews except that they lack a movable overlay element. 
-	* Instead, you handle the material and apply it to anything you like. Mouse input for WebViewMaterials should be 
+	* Creates a WebViewMaterial. WebViewMaterials are just like WebViews except that they lack a movable overlay element.
+	* Instead, you handle the material and apply it to anything you like. Mouse input for WebViewMaterials should be
 	* injected via the WebView::injectMouse_____ API calls instead of the global WebViewManager::injectMouse_____ calls.
 	*/
 	WebView* createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
@@ -168,7 +168,7 @@ public:
 	WebView* getFocusedWebView();
 
 	/**
-	* Injects the mouse's current position into WebViewManager. Used to generally keep track of where the mouse 
+	* Injects the mouse's current position into WebViewManager. Used to generally keep track of where the mouse
 	* is for things like moving WebViews around, telling the internal pages of each WebView where the mouse is and
 	* where the user has clicked, etc. (not applicable to WebViewMaterials)
 	*
@@ -185,7 +185,7 @@ public:
 	* @param	relScroll	The relative Scroll-Value of the mouse.
 	*
 	* @note
-	*	To inject this using OIS: on a OIS::MouseListener::MouseMoved event, simply 
+	*	To inject this using OIS: on a OIS::MouseListener::MouseMoved event, simply
 	*	inject "arg.state.Z.rel" of the "MouseEvent".
 	*
 	* @return	Returns True if the mouse wheel was scrolled while a WebView was focused, False otherwise.
@@ -203,7 +203,7 @@ public:
 	bool injectMouseDown(int buttonID);
 
 	/**
-	* Injects mouse up events into WebViewManager. Used to know when the user has released a mouse button 
+	* Injects mouse up events into WebViewManager. Used to know when the user has released a mouse button
 	* and which button they used. (not applicable to WebViewMaterials)
 	*
 	* @param	buttonID	The ID of the button that was released. Left = 0, Right = 1, Middle = 2.
@@ -243,6 +243,7 @@ protected:
 	void onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
+public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseClick(Sirikata::Task::EventPtr evt);

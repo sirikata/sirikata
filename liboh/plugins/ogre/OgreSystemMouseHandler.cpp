@@ -52,6 +52,8 @@
 #include <SDL_keysym.h>
 #include <set>
 
+#include "WebViewManager.hpp"
+
 namespace Sirikata {
 namespace Graphics {
 using namespace Input;
@@ -739,6 +741,11 @@ private:
             return EventResponse::nop();
         }
 
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onButton(buttonev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
+
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
 
@@ -757,11 +764,50 @@ private:
         return EventResponse::cancel();
     }
 
+    EventResponse textInputHandler(EventPtr ev) {
+        std::tr1::shared_ptr<TextInputEvent> textev (
+            std::tr1::dynamic_pointer_cast<TextInputEvent>(ev));
+        if (!textev)
+            return EventResponse::nop();
+
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onKeyTextInput(textev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
+
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
+
+        return EventResponse::nop();
+    }
+
+    EventResponse mouseHoverHandler(EventPtr ev) {
+        std::tr1::shared_ptr<MouseHoverEvent> mouseev (
+            std::tr1::dynamic_pointer_cast<MouseHoverEvent>(ev));
+        if (!mouseev)
+            return EventResponse::nop();
+
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onMouseMove(mouseev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
+
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
+
+        return EventResponse::nop();
+    }
+
     EventResponse mouseClickHandler(EventPtr ev) {
         std::tr1::shared_ptr<MouseClickEvent> mouseev (
             std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
         if (!mouseev)
             return EventResponse::nop();
+
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
@@ -774,6 +820,11 @@ private:
         if (!ev) {
             return EventResponse::nop();
         }
+
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onMouseDrag(ev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
         mInputBinding.handle(inputev);
@@ -864,12 +915,20 @@ public:
         mDragAction[4] = DragActionRegistry::get("rotateCamera");
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
-                              MouseDragEvent::getEventId(),
-                              std::tr1::bind(&MouseHandler::mouseDragHandler, this, _1)));
+                MouseHoverEvent::getEventId(),
+                std::tr1::bind(&MouseHandler::mouseHoverHandler, this, _1)));
+
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                MouseDragEvent::getEventId(),
+                std::tr1::bind(&MouseHandler::mouseDragHandler, this, _1)));
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
                 MouseClickEvent::getEventId(),
                 std::tr1::bind(&MouseHandler::mouseClickHandler, this, _1)));
+
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                TextInputEvent::getEventId(),
+                std::tr1::bind(&MouseHandler::textInputHandler, this, _1)));
 
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
         mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
