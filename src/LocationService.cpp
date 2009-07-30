@@ -61,14 +61,35 @@ void LocationService::notifyLocalObjectRemoved(const UUID& uuid) const {
         (*it)->localObjectRemoved(uuid);
 }
 
-void LocationService::notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+void LocationService::notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationUpdated(uuid, newval);
+        (*it)->localLocationUpdated(uuid, newval);
 }
 
-void LocationService::notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
+void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->boundsUpdated(uuid, newval);
+        (*it)->localBoundsUpdated(uuid, newval);
+}
+
+
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaObjectAdded(uuid, loc, bounds);
+}
+
+void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaObjectRemoved(uuid);
+}
+
+void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaLocationUpdated(uuid, newval);
+}
+
+void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        (*it)->replicaBoundsUpdated(uuid, newval);
 }
 
 } // namespace CBR

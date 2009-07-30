@@ -45,9 +45,13 @@ public:
 
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
     virtual void localObjectRemoved(const UUID& uuid) = 0;
+    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 
-    virtual void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
-    virtual void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
+    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 }; // class LocationServiceListener
 
 /** Interface for location services.  This provides a way for other components
@@ -75,8 +79,14 @@ public:
 protected:
     void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
     void notifyLocalObjectRemoved(const UUID& uuid) const;
-    void notifyLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
-    void notifyBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
+    void notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
+    void notifyLocalBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
+
+
+    void notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
+    void notifyReplicaObjectRemoved(const UUID& uuid) const;
+    void notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
+    void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
 
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;

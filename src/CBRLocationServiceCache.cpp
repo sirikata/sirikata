@@ -34,12 +34,13 @@
 
 namespace CBR {
 
-CBRLocationServiceCache::CBRLocationServiceCache(LocationService* locservice)
+CBRLocationServiceCache::CBRLocationServiceCache(LocationService* locservice, bool replicas)
  : Prox::LocationServiceCache<ProxSimulationTraits>(),
    LocationServiceListener(),
    mLoc(locservice),
    mListeners(),
-   mObjects()
+   mObjects(),
+   mWithReplicas(replicas)
 {
     assert(mLoc != NULL);
     mLoc->addListener(this);
@@ -99,12 +100,49 @@ void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* liste
 }
 
 void CBRLocationServiceCache::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    objectAdded(uuid, loc, bounds);
+}
+
+void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid) {
+    objectRemoved(uuid);
+}
+
+void CBRLocationServiceCache::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    locationUpdated(uuid, newval);
+}
+
+void CBRLocationServiceCache::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+    boundsUpdated(uuid, newval);
+}
+
+void CBRLocationServiceCache::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    if (mWithReplicas)
+        objectAdded(uuid, loc, bounds);
+}
+
+void CBRLocationServiceCache::replicaObjectRemoved(const UUID& uuid) {
+    if (mWithReplicas)
+        objectRemoved(uuid);
+}
+
+void CBRLocationServiceCache::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    if (mWithReplicas)
+        locationUpdated(uuid, newval);
+}
+
+void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+    if (mWithReplicas)
+        boundsUpdated(uuid, newval);
+}
+
+
+void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
     startTracking(uuid);
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationConnected(uuid, loc, bounds);
 }
 
-void CBRLocationServiceCache::localObjectRemoved(const UUID& uuid) {
+void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
     stopTracking(uuid);
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationDisconnected(uuid);

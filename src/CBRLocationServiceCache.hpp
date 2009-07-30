@@ -46,7 +46,11 @@ class CBRLocationServiceCache : public Prox::LocationServiceCache<ProxSimulation
 public:
     typedef Prox::LocationUpdateListener<ProxSimulationTraits> LocationUpdateListener;
 
-    CBRLocationServiceCache(LocationService* locservice);
+    /** Constructs a CBRLocationServiceCache which caches entries from locservice.  If
+     *  replicas is true, then it caches replica entries from locservice, in addition
+     *  to the local entries it always caches.
+     */
+    CBRLocationServiceCache(LocationService* locservice, bool replicas);
     virtual ~CBRLocationServiceCache();
 
     /* LocationServiceCache members. */
@@ -62,9 +66,20 @@ public:
     /* LocationServiceListener members. */
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     virtual void localObjectRemoved(const UUID& uuid);
-    virtual void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
-    virtual void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 private:
+    // These do the actual work for the LocationServiceListener methods.  Local versions always
+    // call these, replica versions only call them if replica tracking is on
+    void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void objectRemoved(const UUID& uuid);
+    void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+
     CBRLocationServiceCache();
 
     LocationService* mLoc;
@@ -78,6 +93,7 @@ private:
     };
     typedef std::map<UUID, ObjectData> ObjectDataMap;
     ObjectDataMap mObjects;
+    bool mWithReplicas;
 };
 
 } // namespace CBR

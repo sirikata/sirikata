@@ -46,7 +46,7 @@ Proximity::Proximity(ObjectFactory* objfactory, LocationService* locservice)
    mLocCache(NULL),
    mHandler(NULL)
 {
-    mLocCache = new CBRLocationServiceCache(locservice);
+    mLocCache = new CBRLocationServiceCache(locservice, false);
     Prox::BruteForceQueryHandler<ProxSimulationTraits>* bhandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
     mHandler = bhandler;
     mHandler->initialize(mLocCache);

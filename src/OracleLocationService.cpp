@@ -67,7 +67,7 @@ void OracleLocationService::tick(const Time& t) {
         LocationInfo& locinfo = it->second;
         if(locinfo.has_next && locinfo.next.time() <= t) {
             locinfo.location = locinfo.next;
-            notifyLocationUpdated(it->first, locinfo.location);
+            notifyLocalLocationUpdated(it->first, locinfo.location);
             const TimedMotionVector3f* next = locinfo.path->nextUpdate(t);
             if (next == NULL)
                 locinfo.has_next = false;
