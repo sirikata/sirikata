@@ -32,6 +32,9 @@
 #include "oh/Platform.hpp"
 #include "MonoObject.hpp"
 class MonoContextData;
+#include "oh/SpaceConnection.hpp"
+#include "oh/HostedObject.hpp"
+#include "MonoDomain.hpp"
 #include "MonoDelegate.hpp"
 #include "MonoMethodLookupCache.hpp"
 

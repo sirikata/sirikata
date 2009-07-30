@@ -17,8 +17,10 @@ class MonoContext;
 class MonoContextData {
 private:
     friend class MonoContext;
-
-    Sirikata::UUID Object;
+    Mono::Domain CurrentDomain;
+    std::tr1::weak_ptr<Sirikata::HostedObject> Object;
+public:
+    MonoContextData();
 };
 
 
@@ -35,7 +37,7 @@ public:
      *  All context state will have default values.
      */
     void initializeThread();
-
+    static  MonoContext&getSingleton();
     /** Get the current context data. */
     MonoContextData& current();
     const MonoContextData& current() const;
@@ -55,14 +57,17 @@ public:
     /** Get the current VWObject being called.
      *  May return a null object.
      */
-    Sirikata::UUID getVWObject() const;
+    std::tr1::shared_ptr<Sirikata::HostedObject> getVWObject() const;
 
     /** Set the current VWObject being called.
      *  Its safe to set the object to null.
      */
-    void setVWObject(const Sirikata::UUID& vwobj);
-
-
+    void setVWObject(Sirikata::HostedObject* vwobj, const Mono::Domain &current_domain);
+    
+    /**
+     * Get the domain the object was allocated and is running under
+     */
+    Mono::Domain& getDomain() const;
     /** Get the UUID of the current VWObject
      *  being called.  If the object is null,
      *  then a null UUID will be returned.
@@ -75,7 +80,7 @@ private:
 }; // class Context
 
 
-void MonoContextInit();
+
 
 } // namespace Sirikata
 

@@ -107,6 +107,7 @@ SentMessage::~SentMessage() {
 }
 
 void SentMessage::send(MemoryReference bodystr) {
+    mHeader.set_id(mId);
     mTracker->sendMessage(this, bodystr);
 }
 

@@ -162,7 +162,7 @@ public:
     ::Mono::Array Array(const Class& klass, int sz);
 
     /** Create a Mono Byte[] that contains the provided data. */
-    ::Mono::Array ByteArray(const char* data, unsigned int length);
+    ::Mono::Array ByteArray(const void* data, unsigned int length);
 
     /** Create a Mono Byte[] that contains the provided data. */
     ::Mono::Array ByteArray(const Sirikata::MemoryBuffer& data);

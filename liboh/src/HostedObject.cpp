@@ -108,7 +108,7 @@ struct HostedObject::PrivateCallbacks {
         MemoryReference bodyData)
     {
         std::auto_ptr<SentPersistence> sentDestruct(static_cast<SentPersistence*>(sent));
-        SILOG(cppoh,debug,"Got some persistence back: stat = "<<header.return_status());
+        SILOG(cppoh,debug,"Got some persistence back: stat = "<<(int)header.return_status());
         if (header.has_return_status()) {
             Persistence::Protocol::Response resp;
             for (int i = 0, respIndex=0; i < sentDestruct->body().reads_size(); i++, respIndex++) {
@@ -306,7 +306,7 @@ struct HostedObject::PrivateCallbacks {
         bool persistence_error = false;
         if (hdr.return_status() != RoutableMessageHeader::SUCCESS) {
             SILOG(cppoh,info,"FAILURE receiving prox object properties "<<
-                  proximateObjectId.object()<<": Error = "<<hdr.return_status());
+                  proximateObjectId.object()<<": Error = "<<(int)hdr.return_status());
             persistence_error = true;
         }
         SILOG(cppoh,debug,"Received prox object properties "<<proximateObjectId.object()<<": reads size = "<<response.reads_size());

@@ -81,6 +81,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         Mono::Object monoobj=cls.instance(d.Array(d.String(String()).type(),0));
         try {
             monoobj.send("processRPC",d.ByteArray("",0),d.String("rpctest"),d.ByteArray("",0));
+            monoobj.send("tick",d.Time(Time::now()));
         }catch (Mono::Exception&e) {
             SILOG(mono,error,"Error processing rpc"<<e);
         }

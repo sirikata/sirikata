@@ -19,4 +19,4 @@ class exampleclass:
     def processMessage(self,header,body):
         print "Got a message"
     def tick(self,tim):
-        print "Current time is "+tim.Ticks();
+        print "Current time is "+str(tim);

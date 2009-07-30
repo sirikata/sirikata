@@ -240,6 +240,10 @@ public:
      *  represent a byte array.
      */
     Sirikata::MemoryBuffer unboxByteArray() const;
+    /** Returns a buffer containing the contents of the byte array. The object *must*
+     *  represent a byte array.
+     */
+    void unboxInPlaceByteArray(Sirikata::MemoryBuffer&) const;
 
     /** "Unbox" a Mono Vector3f into a C++ Vector3f */
     Sirikata::Vector3f unboxVector3f() const;

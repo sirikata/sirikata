@@ -38,7 +38,7 @@
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
 #include "util/RoutableMessageHeader.hpp"
-
+#include "MonoContext.hpp"
 namespace Sirikata {
 
 MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObject*ho, const ObjectScriptManager::Arguments&args):mDomain(mono_system->createDomain()){
@@ -71,7 +71,10 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
         if ((func_iter=args.find(reserved_string_function))!=args.end()) {        
             ++ignored_args;
         }
+        MonoContext::getSingleton().push();
+        MonoContext::getSingleton().setVWObject(ho,mDomain);
         try {
+            
             Mono::Class class_type=ass.getClass(namespace_name,class_name);
             Mono::Object exampleString=mDomain.String(String());
             Mono::Array mono_args=Mono::Array(mDomain.Array(exampleString.type(),(args.size()-ignored_args)*2));
@@ -95,7 +98,7 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
         } catch (Mono::Exception&e) {
             SILOG(mono,warning,"Making new object: Cannot locate class "<<namespace_name<<"::"<<class_name<<"."<<e);
         }
-        
+        MonoContext::getSingleton().pop();
     } catch (Mono::Exception&e) {
         SILOG(mono,warning,"Making new object: Cannot locate assembly "<<i->second<<"."<<e);
         //no assembly could be loaded
@@ -114,36 +117,48 @@ bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
     return false;
 }
 bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
+    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().setVWObject(mParent,mDomain);
     std::string header;
     receivedHeader.SerializeToString(&header);
     try {
         Mono::Object retval=mObject.send("processRPC",mDomain.String(name),mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)args.data(),(int)args.size()));
         if (!retval.null()) {
             returnValue=retval.unboxByteArray();
+            MonoContext::getSingleton().pop();
             return true;
         }
+        MonoContext::getSingleton().pop();
         return false;
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"RPC Exception "<<e);
+        MonoContext::getSingleton().pop();
         return false;        
     }
+    MonoContext::getSingleton().pop();
     return true;
 }
 void MonoVWObjectScript::tick(){
+    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().setVWObject(mParent,mDomain);
     try {
         Mono::Object retval=mObject.send("tick",mDomain.Time(Time::now()));
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"Tick Exception "<<e);
     }
+    MonoContext::getSingleton().pop();
 }
 void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHeader , MemoryReference body){
     std::string header;
     receivedHeader.SerializeToString(&header);
+    MonoContext::getSingleton().push();
+    MonoContext::getSingleton().setVWObject(mParent,mDomain);
     try {
         Mono::Object retval=mObject.send("processMessage",mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)body.data(),(unsigned int)body.size()));
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"Message Exception "<<e);
     }
+    MonoContext::getSingleton().pop();
 }
 
 

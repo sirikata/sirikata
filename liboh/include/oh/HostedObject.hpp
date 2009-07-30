@@ -63,11 +63,10 @@ class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
         PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream);
     };
     struct PrivateCallbacks;
-
 protected:
 //------- Members
     QueryTracker mTracker;
-
+    
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap mSpaceData;
 
@@ -158,7 +157,8 @@ public:
     const UUID &getUUID() {
         return mInternalObjectReference;
     }
-
+    QueryTracker*getTracker(){return &mTracker;}
+    const QueryTracker*getTracker()const {return &mTracker;}
     void processRoutableMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
     void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);

@@ -652,7 +652,7 @@ Sirikata::String Object::unboxString() const {
     return result;
 }
 
-Sirikata::MemoryBuffer Object::unboxByteArray() const {
+void Object::unboxInPlaceByteArray(Sirikata::MemoryBuffer&result) const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
@@ -661,11 +661,19 @@ Sirikata::MemoryBuffer Object::unboxByteArray() const {
     MonoArray* ary = (MonoArray*)obj;
     int result_length = mono_array_length(ary);
 
-    Sirikata::MemoryBuffer result((size_t)result_length);
+    result.resize((size_t)result_length);
+    if (result_length) {
+        memcpy( &result[0], mono_array_addr(ary,char,0), (size_t)result_length );
+    }
+}
 
-    memcpy( &result[0], mono_array_addr(ary,char,0), result_length );
 
-    return result;
+
+
+Sirikata::MemoryBuffer Object::unboxByteArray() const {
+    Sirikata::MemoryBuffer retval;
+    unboxInPlaceByteArray(retval);
+    return retval;
 }
 
 Sirikata::Vector3f Object::unboxVector3f() const {
@@ -751,7 +759,7 @@ Sirikata::Time Object::unboxTime() const {
 
     // FIXME stopgap solution to value type mono_runtime_invoke memory leak
     // problem - call a static method on a utility class instead
-    static Class RuntimeUtility = Domain::root().getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "Utility");
+    static Class RuntimeUtility = Domain::root().getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "HostedObject");
     return Time( RuntimeUtility.send("TimeTicks", *this).unboxInt64() );
     //return Time( getProperty("Ticks").unboxInt64() );
 }

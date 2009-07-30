@@ -1183,6 +1183,7 @@ SET(LIBOH_PLUGIN_MONO_SOURCES
  ${LIBOH_PLUGIN_MONO_DIR}/MonoDelegate.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoDomain.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoException.cpp
+ ${LIBOH_PLUGIN_MONO_DIR}/MonoHostedObjectExports.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoIDictionary.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoIList.cpp
  ${LIBOH_PLUGIN_MONO_DIR}/MonoMethodLookupCache.cpp

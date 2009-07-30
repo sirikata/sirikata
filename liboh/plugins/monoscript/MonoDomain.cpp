@@ -290,7 +290,7 @@ Array Domain::Array(const Class& klass, int sz) {
     return Array::Array( (MonoObject*)mono_array_new(mDomain->domain(), klass.klass(), sz) );
 }
 
-Array Domain::ByteArray(const char* data, unsigned int length) {
+Array Domain::ByteArray(const void* data, unsigned int length) {
     Class ByteClass(mono_get_byte_class());
     ::Mono::Array byte_array = Domain::root().Array(ByteClass, length);
     MonoArray* byte_mono_array = (MonoArray*)byte_array.object();

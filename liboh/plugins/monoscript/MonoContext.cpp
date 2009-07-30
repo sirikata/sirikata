@@ -1,13 +1,18 @@
 #include "oh/Platform.hpp"
 #include "util/UUID.hpp"
-#include "MonoContext.hpp"
+#include "oh/SpaceConnection.hpp"
+#include "oh/HostedObject.hpp"
 #include "MonoDomain.hpp"
 #include "MonoObject.hpp"
+#include "MonoContext.hpp"
 AUTO_SINGLETON_INSTANCE(Sirikata::MonoContext);
 
 namespace Sirikata {
-
-
+MonoContextData::MonoContextData():CurrentDomain(Mono::Domain::root()){
+}
+MonoContext&MonoContext::getSingleton(){
+    return AutoSingleton<MonoContext>::getSingleton();
+}
 void MonoContext::initializeThread() {
     assert( mThreadContext.get() == NULL );
 
@@ -60,38 +65,32 @@ void MonoContext::pop() {
 }
 
 
-UUID MonoContext::getVWObject() const {
-    return current().Object;
+std::tr1::shared_ptr<HostedObject> MonoContext::getVWObject() const {
+    return current().Object.lock();
+}
+Mono::Domain& MonoContext::getDomain() const {
+    return *const_cast<Mono::Domain*>(&current().CurrentDomain);
 }
 
-void MonoContext::setVWObject(const UUID& vwobj) {
-    current().Object = vwobj;
+void MonoContext::setVWObject(HostedObject* vwobj, const Mono::Domain &current_domain) {
+    if (vwobj) {
+        current().Object = vwobj->getSharedPtr();
+    }else {
+        current().Object=std::tr1::shared_ptr<HostedObject>();
+    }
+    current().CurrentDomain = current_domain;
 }
 
 
 Sirikata::UUID MonoContext::getUUID() const {
-    UUID vwobj = getVWObject();
-    //FIXME
-    return vwobj;
+    std::tr1::shared_ptr<HostedObject> tmp=getVWObject();
+    if (tmp) 
+        return tmp->getUUID();
+    return UUID::null();
 }
 
 
 
-static MonoObject* Mono_Context_CurrentUUID() {
-    UUID uuid = MonoContext::getSingleton().getUUID();
-    Mono::Object obj = Mono::Domain::root().UUID(uuid);
-    return obj.object();
-}
 
-static MonoObject* Mono_Context_CurrentObject() {
-    Mono::Object obj =  Mono::Domain::root().UUID(MonoContext::getSingleton().getVWObject());
-    return obj.object();
-}
-
-
-void MonoContextInit() {
-    mono_add_internal_call ("Sirikata.Runtime.Context::GetCurrentUUID", (void*)Mono_Context_CurrentUUID);
-    mono_add_internal_call ("Sirikata.Runtime.Context::GetCurrentObject", (void*)Mono_Context_CurrentObject);
-}
 
 } // namespace Mono

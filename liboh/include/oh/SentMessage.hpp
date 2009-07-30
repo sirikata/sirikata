@@ -74,16 +74,14 @@ private:
     QueryCallback mResponseCallback; ///< Callback, or null if not yet set.
     QueryTracker *const mTracker;
 
-protected:
+public:
     ~SentMessage();
-
     /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
     SentMessage(QueryTracker *sender);
 
     /// Constructor takes in a queryId. Caller is expected to keep track of a map.
     SentMessage(int64 thisId, QueryTracker *sender);
 
-public:
     /// header accessor, like that of RoutableMessage. (const ver)
     const RoutableMessageHeader &header() const {
         return mHeader;
