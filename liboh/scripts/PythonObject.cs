@@ -167,11 +167,13 @@ public class PythonObject {
             }
             ScriptSource initsource=_engine.CreateScriptSourceFromString("from "+python_module+" import "+python_class+";retval="+python_class+"("+arglist+");",SourceCodeKind.Statements);
             initsource.Execute(_scope);
-            return ;
             _pythonObject=_scope.GetVariable("retval");
             _processMessageSource=_engine.CreateScriptSourceFromString("retval.processMessage(header,body)",SourceCodeKind.Expression);
             _processRPCSource=_engine.CreateScriptSourceFromString("retval.processRPC(header,name,args)",SourceCodeKind.Expression);
             _processTickSource=_engine.CreateScriptSourceFromString("retval.tick(curTime)",SourceCodeKind.Expression);
+        }
+        public static object CreatePythonObject(string[]args) {
+            return new PythonObject(args)._pythonObject;
         }
         public virtual void processMessage(byte[] header, byte[] body) {
             _scope.SetVariable("header",header);
@@ -184,7 +186,8 @@ public class PythonObject {
             _scope.SetVariable("name",name);
             _scope.SetVariable("args",args);
             _scope.SetVariable("retval",_pythonObject);
-            return _processMessageSource.Execute<Array>(_scope);
+            Console.WriteLine("Processing RPC "+name);
+            return _processRPCSource.Execute<Array>(_scope);
         }
         public virtual void tick(System.DateTime time) {
             _scope.SetVariable("curTime",time);

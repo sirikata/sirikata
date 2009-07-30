@@ -41,6 +41,7 @@
 #include "MonoVWObjectScriptManager.hpp"
 #include "MonoArray.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
+#include "MonoException.hpp"
 static int core_plugin_refcount = 0;
 Mono::MonoSystem * mono_system;
 
@@ -77,7 +78,14 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("PythonObject");
-        cls.instance(d.Array(d.String(String()).type(),0));
+        //Mono::Object pyobj=cls.send("CreatePythonObject",d.Array(d.String(String()).type(),0));
+        Mono::Object monoobj=cls.instance(d.Array(d.String(String()).type(),0));
+        try {
+            monoobj.listMethods();
+            monoobj.send("processRPC",d.ByteArray("",0),d.String("rpctest"),d.ByteArray("",0));
+        }catch (Mono::Exception&e) {
+            SILOG(mono,error,"Error processing rpc"<<e);
+        }
         printf ("Mono Initialized %d %d \n",(int) retval, (int) testretval);
 /*
         SimulationFactory::getSingleton().registerConstructor("mono",

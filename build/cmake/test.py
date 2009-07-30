@@ -14,3 +14,9 @@ class exampleclass:
         self.val+=otherval
         print self.val
         return self.val;
+    def processRPC(self,header,name,arg):
+        print "Got an RPC named "+name
+    def processMessage(self,header,body):
+        print "Got a message"
+    def tick(self,tim):
+        print "Current time is "+tim.Ticks();
