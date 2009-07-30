@@ -88,7 +88,7 @@ public:
     ~Proximity();
 
     // FIXME these could be more complicated, but we're going for simplicity for now
-    void addQuery(UUID obj, const TimedMotionVector3f& pos, SolidAngle sa);
+    void addQuery(UUID obj, SolidAngle sa);
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output

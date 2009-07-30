@@ -62,6 +62,10 @@ public:
 
     bool operator<(const SolidAngle& rhs) const;
     bool operator==(const SolidAngle& rhs) const;
+    bool operator<=(const SolidAngle& rhs) const;
+    bool operator>(const SolidAngle& rhs) const;
+    bool operator>=(const SolidAngle& rhs) const;
+    bool operator!=(const SolidAngle& rhs) const;
 
     float asFloat() const;
 protected:

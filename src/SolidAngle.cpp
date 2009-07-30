@@ -127,6 +127,22 @@ bool SolidAngle::operator==(const SolidAngle& rhs) const {
     return (mSolidAngle == rhs.mSolidAngle);
 }
 
+bool SolidAngle::operator<=(const SolidAngle& rhs) const {
+    return (mSolidAngle <= rhs.mSolidAngle);
+}
+
+bool SolidAngle::operator>(const SolidAngle& rhs) const {
+    return (mSolidAngle > rhs.mSolidAngle);
+}
+
+bool SolidAngle::operator>=(const SolidAngle& rhs) const {
+    return (mSolidAngle >= rhs.mSolidAngle);
+}
+
+bool SolidAngle::operator!=(const SolidAngle& rhs) const {
+    return (mSolidAngle != rhs.mSolidAngle);
+}
+
 void SolidAngle::clamp() {
     if (mSolidAngle < MinVal) mSolidAngle = MinVal;
     if (mSolidAngle > MaxVal) mSolidAngle = MaxVal;

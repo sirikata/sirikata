@@ -59,9 +59,9 @@ Proximity::~Proximity() {
     delete mHandler;
 }
 
-void Proximity::addQuery(UUID obj, const TimedMotionVector3f& loc, SolidAngle sa) {
+void Proximity::addQuery(UUID obj, SolidAngle sa) {
     assert( mQueries.find(obj) == mQueries.end() );
-    Query* q = mHandler->registerQuery(loc, sa);
+    Query* q = mHandler->registerQuery(mLocCache->location(obj), mLocCache->bounds(obj), sa);
     mQueries[obj] = q;
 }
 

@@ -50,7 +50,7 @@ Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, Lo
         Object* obj = obj_factory->object(obj_id, this->id());
         mObjects[obj_id] = obj;
         // Register proximity query
-        mProximity->addQuery(obj_id, loc_service->location(obj_id), obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
+        mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
       }
     }
     mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime);    //run initialization for forwarder
