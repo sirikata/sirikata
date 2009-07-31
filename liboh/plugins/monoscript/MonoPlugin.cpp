@@ -69,7 +69,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
-        ObjectScriptManagerFactory::getSingleton().registerConstructor("monoscripting",
+        ObjectScriptManagerFactory::getSingleton().registerConstructor("monoscript",
                                                                        std::tr1::bind(&Sirikata::MonoVWObjectScriptManager::createObjectScriptManager,mono_system,_1),
                                                                        true);
         MonoContext::getSingleton().initializeThread();
@@ -110,7 +110,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monosystem",true);
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monoscript",true);
             delete mono_system;
         }
     }

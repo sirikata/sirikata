@@ -336,7 +336,7 @@ int main ( int argc,const char**argv ) {
     args["Namespace"]="Sirikata.Runtime";
     args["PythonModule"]="test";
     args["PythonClass"]="exampleclass";
-    scriptedObject->initializeScript("mono", args);
+    scriptedObject->initializeScript("monoscript", args);
     scriptedObject->initializeConnect(
             Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
                      Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
