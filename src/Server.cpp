@@ -40,17 +40,17 @@ Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, Lo
     for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
     {
       UUID obj_id = *it;
-      Vector3f start_pos = loc_service->currentPosition(obj_id);
+      Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time(0)).position();
 
       if (lookup(start_pos) == mID)
       {
+          // Instantiate object
+          Object* obj = obj_factory->object(obj_id, this->id());
+          mObjects[obj_id] = obj;
           // Add object as local object to LocationService
           mLocationService->addLocalObject(obj_id);
-        // Instantiate object
-        Object* obj = obj_factory->object(obj_id, this->id());
-        mObjects[obj_id] = obj;
-        // Register proximity query
-        mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
+          // Register proximity query
+          mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
       }
     }
     mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime, mProximity);    //run initialization for forwarder

@@ -137,13 +137,11 @@ void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const Bound
 
 
 void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    startTracking(uuid);
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationConnected(uuid, loc, bounds);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
-    stopTracking(uuid);
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationDisconnected(uuid);
 }

@@ -136,8 +136,10 @@ void OracleLocationService::addLocalObject(const UUID& uuid) {
 
 void OracleLocationService::removeLocalObject(const UUID& uuid) {
     // This is an oracle, so we don't need to track these.
-    mLocalObjects.erase(uuid);
-    notifyLocalObjectRemoved(uuid);
+    if (mLocalObjects.find(uuid) != mLocalObjects.end()) {
+        mLocalObjects.erase(uuid);
+        notifyLocalObjectRemoved(uuid);
+    }
 
     mReplicaObjects.insert(uuid);
     notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
