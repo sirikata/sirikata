@@ -66,6 +66,11 @@ ObjectHost::~ObjectHost() {
         // silently wait for everyone to finish adding themselves.
     }
     queue->dequeueAll(); // filter through everything that might have an ObjectHost message in it.
+	{
+		HostedObjectMap objs;
+		mHostedObjects.swap(objs);
+		objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
+	}
 }
 
 class ObjectHost::MessageProcessor : public Task::WorkItem {
