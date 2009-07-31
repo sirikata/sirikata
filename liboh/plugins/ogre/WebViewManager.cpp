@@ -566,7 +566,13 @@ Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventP
 		}
 	}
 
-	onMouseMove(evt);
+        if (success) {
+            if (e->mType == Sirikata::Input::DRAG_DRAG) {
+                unsigned int wid,hei;
+                e->getDevice()->getInputManager()->getWindowSize(wid,hei);
+                success = this->injectMouseMove(((e->mX+1)*wid)/2, ((1-e->mY)*hei)/2);
+            }
+        }
 
 	if (success) {
 		if (e->mType == Sirikata::Input::DRAG_END) {
