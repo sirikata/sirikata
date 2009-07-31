@@ -34,6 +34,7 @@ using Microsoft.Scripting;
 
 using IronPython.Hosting;
 using IronPython.Runtime;
+using IronPython.Modules;
 using Microsoft.Scripting.Hosting.Shell;
 namespace Sirikata.Runtime {
 public class PythonObject {
@@ -92,6 +93,7 @@ public class PythonObject {
             }
             _runtime.LoadAssembly(System.Reflection.Assembly.GetExecutingAssembly());
             _runtime.LoadAssembly(provider.GetType().Assembly);
+            _runtime.LoadAssembly(PythonStringIO.StringIO().GetType().Assembly);
             _scope= _engine.CreateScope();
             RunCommandLine(args);
         }
@@ -128,6 +130,10 @@ public class PythonObject {
         private static void InsertSearchPaths(IDictionary<string, object> options, ICollection<string> paths) {
             if (options != null && paths != null && paths.Count > 0) {
                 List<string> existingPaths = new List<string>(LanguageOptions.GetSearchPathsOption(options) ?? (IEnumerable<string>)ArrayUtils.EmptyStrings);
+                existingPaths.Add("../../liboh/scripts/python");
+                existingPaths.Add("../../../liboh/scripts/ironpython");
+                existingPaths.Add("scripts/ironpython");
+                existingPaths.Add("ironpython");
                 existingPaths.InsertRange(0, paths);
                 options["SearchPaths"] = existingPaths;
             }
@@ -165,7 +171,7 @@ public class PythonObject {
                     }
                 }
             }
-            ScriptSource initsource=_engine.CreateScriptSourceFromString("from "+python_module+" import "+python_class,SourceCodeKind.Statements);
+            ScriptSource initsource=_engine.CreateScriptSourceFromString("import sys;sys.path+=[\"../../liboh/scripts/ironpython\",\"../../../liboh/scripts/ironpython\",\"scripts/ironpython\",\"ironpython\",\"../../liboh/scripts/ironpython/site-packages\",\"../../../liboh/scripts/ironpython/site-packages\",\"scripts/ironpython/site_packages\",\"ironpython/site_packages\"];print sys.path;from "+python_module+" import "+python_class,SourceCodeKind.Statements);
             
             initsource.Execute(_scope);
             initsource=_engine.CreateScriptSourceFromString(python_class+"("+arglist+")",SourceCodeKind.Expression);

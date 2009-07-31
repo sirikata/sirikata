@@ -77,6 +77,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         Mono::Domain d=mono_system->createDomain();
         bool retval=loadDependencyAssembly(mono_system,"Microsoft.Scripting");
         retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
+        retval=loadDependencyAssembly(mono_system,"IronPython.Modules")&&retval;
  
         bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime");
         /*

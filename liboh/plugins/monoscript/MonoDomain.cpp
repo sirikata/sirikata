@@ -209,56 +209,56 @@ Object Domain::Boolean(bool b) {
 //#####################################################################
 // Function Byte
 //#####################################################################
-Object Domain::Byte(guint8 i) {
+Object Domain::Byte(Sirikata::uint8 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_byte_class(), &i) );
 }
 
 //#####################################################################
 // Function UInt16
 //#####################################################################
-Object Domain::UInt16(guint16 i) {
+Object Domain::UInt16(Sirikata::uint16 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_uint16_class(), &i) );
 }
 
 //#####################################################################
 // Function UInt32
 //#####################################################################
-Object Domain::UInt32(guint32 i) {
+Object Domain::UInt32(Sirikata::uint32 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_uint32_class(), &i) );
 }
 
 //#####################################################################
 // Function UInt64
 //#####################################################################
-Object Domain::UInt64(guint64 i) {
+Object Domain::UInt64(Sirikata::uint64 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_uint64_class(), &i) );
 }
 
 //#####################################################################
 // Function SByte
 //#####################################################################
-Object Domain::SByte(gint8 i) {
+Object Domain::SByte(Sirikata::int8 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_sbyte_class(), &i) );
 }
 
 //#####################################################################
 // Function Int16
 //#####################################################################
-Object Domain::Int16(gint16 i) {
+Object Domain::Int16(Sirikata::int16 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_int16_class(), &i) );
 }
 
 //#####################################################################
 // Function Int32
 //#####################################################################
-Object Domain::Int32(gint32 i) {
+Object Domain::Int32(Sirikata::int32 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_int32_class(), &i) );
 }
 
 //#####################################################################
 // Function Int64
 //#####################################################################
-Object Domain::Int64(gint64 i) {
+Object Domain::Int64(Sirikata::int64 i) {
     return Object( mono_value_box(mDomain->domain(), mono_get_int64_class(), &i) );
 }
 

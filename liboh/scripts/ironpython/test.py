@@ -1,7 +1,4 @@
 print "helloish"
-import sys
-print sys.path
-print 5*6
 def fact(i):
     if (i==0):
         return 1;
@@ -29,3 +26,18 @@ print dir(HostedObject)
 x="hello worlds"
 
 #
+from Sirikata_pb2 import *
+hdr=ReadOnlyMessage()
+body=MessageBody()
+print "helloishdone"
+hdr.id=1
+hdr.dest="1234567890123456"
+print "helloishbaked"
+#srlhdr=hdr.SerializeToString()
+#print "helloishbakedflat"
+
+#hdr1=ReadOnlyMessage()
+#hdr1.MergeFromString(srlhdr)
+#print hdr1.dest
+#print hdr1.id
+#print 5*6

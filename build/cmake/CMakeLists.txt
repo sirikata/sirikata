@@ -763,7 +763,7 @@ ENDIF()
 SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
 IF(MONO_FOUND)
-  FILE(GLOB SirikataScriptSources ${ScriptsRoot}/*.cs )
+  FILE(GLOB SirikataScriptSources ${ScriptsRoot}/csharp/*.cs )
   SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   SET(SirikataScriptRuntime_LIBRARY ${SirikataScriptRuntime_LIBRARY_DIR}/Sirikata.Runtime.dll)
   ADD_CUSTOM_TARGET(SirikataScriptRuntime ALL

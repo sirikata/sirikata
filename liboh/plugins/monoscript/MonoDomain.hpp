@@ -103,42 +103,42 @@ public:
     /** Create a Mono Byte with the given value that belongs to this Domain.
      *  \param i the value of the byte
      */
-    Object Byte(guint8 i);
+    Object Byte(Sirikata::uint8 i);
 
     /** Create a Mono UInt16 with the given value that belongs to this Domain.
      *  \param i the value of the UInt16
      */
-    Object UInt16(guint16 i);
+    Object UInt16(Sirikata::uint16 i);
 
     /** Create a Mono UInt32 with the given value that belongs to this Domain.
      *  \param i the value of the UInt32
      */
-    Object UInt32(guint32 i);
+    Object UInt32(Sirikata::uint32 i);
 
     /** Create a Mono UInt64 with the given value that belongs to this Domain.
      *  \param i the value of the UInt64
      */
-    Object UInt64(guint64 i);
+    Object UInt64(Sirikata::uint64 i);
 
     /** Create a Mono SByte with the given value that belongs to this Domain.
      *  \param i the value of the SByte
      */
-    Object SByte(gint8 i);
+    Object SByte(Sirikata::int8 i);
 
     /** Create a Mono Int16 with the given value that belongs to this Domain.
      *  \param i the value of the Int16
      */
-    Object Int16(gint16 i);
+    Object Int16(Sirikata::int16 i);
 
     /** Create a Mono Int32 with the given value that belongs to this Domain.
      *  \param i the value of the Int32
      */
-    Object Int32(gint32 i);
+    Object Int32(Sirikata::int32 i);
 
     /** Create a Mono Int64 with the given value that belongs to this Domain.
      *  \param i the value of the Int64
      */
-    Object Int64(gint64 i);
+    Object Int64(Sirikata::int64 i);
 
     /** Create a Mono Single (single precision floating point value) with the given value that belongs to this Domain.
      *  \param f the value of the Single
