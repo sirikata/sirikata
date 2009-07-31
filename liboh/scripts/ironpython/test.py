@@ -29,15 +29,15 @@ x="hello worlds"
 from Sirikata_pb2 import *
 hdr=ReadOnlyMessage()
 body=MessageBody()
-print "helloishdone"
+#print "helloishdone"
 hdr.id=1
-hdr.dest="1234567890123456"
-print "helloishbaked"
-#srlhdr=hdr.SerializeToString()
+hdr.destination_object="1234567890123456"
+#print "helloishbaked"
+srlhdr=hdr.SerializeToString()
 #print "helloishbakedflat"
 
-#hdr1=ReadOnlyMessage()
-#hdr1.MergeFromString(srlhdr)
-#print hdr1.dest
-#print hdr1.id
-#print 5*6
+hdr1=ReadOnlyMessage()
+hdr1.MergeFromString(srlhdr)
+print hdr1.destination_object
+print hdr1.id
+print 5*6
