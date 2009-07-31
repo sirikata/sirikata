@@ -35,6 +35,7 @@
 #include <util/Extrapolation.hpp>
 #include <oh/PositionListener.hpp>
 #include <oh/ProxyManager.hpp>
+#include <util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
 
@@ -84,6 +85,24 @@ void ProxyObject::destroyed() {
     unsetParent(TemporalValue<Location>::Time::now());
 }
 
+QueryTracker *ProxyObject::getQueryTracker() const {
+    return mManager->getQueryTracker(getObjectReference());
+}
+
+void ProxyObject::addressMessage(RoutableMessageHeader &hdr) const {
+    hdr.set_destination(getObjectReference());
+}
+bool ProxyObject::sendMessage(MemoryReference message) const{
+    QueryTracker *qt = getQueryTracker();
+    if (qt) {
+        RoutableMessageHeader hdr;
+        addressMessage(hdr);
+        qt->sendMessage(hdr, message);
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,

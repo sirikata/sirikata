@@ -92,7 +92,7 @@ public:
     void processMessage(const RoutableMessageHeader&, MemoryReference message_body);
 
     /// Sends a message through the MessageService passed to forwardMessagesTo()
-    void sendMessage(SentMessage *msg, MemoryReference body);
+    void sendMessage(const RoutableMessageHeader &hdr, MemoryReference body);
 
     /// Gets the timer IOService, if any.
     Network::IOService *getIOService() {

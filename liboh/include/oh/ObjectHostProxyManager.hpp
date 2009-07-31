@@ -76,6 +76,7 @@ public:
     void createObjectProximity(const ProxyObjectPtr &newObj, const UUID &seeker, uint32 queryId);
     void destroyObjectProximity(const ProxyObjectPtr &newObj, const UUID &seeker, uint32 queryId);
     void destroyProximityQuery(const UUID &seeker, uint32 queryId);
+    QueryTracker *getQueryTracker(const SpaceObjectReference &id) const;
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };

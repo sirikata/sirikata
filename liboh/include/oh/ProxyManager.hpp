@@ -34,6 +34,7 @@
 #include "ProxyObject.hpp"
 namespace Sirikata {
 
+class QueryTracker;
 /** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_OH_EXPORT ProxyManager : 
 //        public MessageService,
@@ -45,6 +46,9 @@ public:
     virtual void initialize()=0;
     ///Called before providers detatched
     virtual void destroy()=0;
+
+    ///Gets an object that can send messages to this SpaceObjectReference.
+    virtual QueryTracker *getQueryTracker(const SpaceObjectReference &id) const=0;
 
     ///Adds to internal ProxyObject map and calls creation listeners.
     virtual void createObject(const ProxyObjectPtr &newObj)=0;

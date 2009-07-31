@@ -114,6 +114,9 @@ void ObjectHostProxyManager::destroyProximityQuery(
     }
 }
 
+QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference &id) const {
+    return 0;
+}
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {
     if (id.space() == mSpaceID) {

@@ -70,9 +70,9 @@ bool QueryTracker::remove(SentMessage *ret) {
     return false;
 }
 
-void QueryTracker::sendMessage(SentMessage *msg, MemoryReference bodyStr) {
+void QueryTracker::sendMessage(const RoutableMessageHeader &msgHeader, MemoryReference bodyStr) {
     if (mForwardService) {
-        mForwardService->processMessage(msg->header(), bodyStr);
+        mForwardService->processMessage(msgHeader, bodyStr);
     }
 }
 

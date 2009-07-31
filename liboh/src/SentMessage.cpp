@@ -108,7 +108,7 @@ SentMessage::~SentMessage() {
 
 void SentMessage::send(MemoryReference bodystr) {
     mHeader.set_id(mId);
-    mTracker->sendMessage(this, bodystr);
+    mTracker->sendMessage(header(), bodystr);
 }
 
 void SentMessage::unsetTimeout() {

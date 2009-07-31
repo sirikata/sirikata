@@ -38,6 +38,7 @@
 #include "ProxyObject.hpp"
 #include <util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
+#include "QueryTracker.hpp"
 
 namespace Sirikata {
 
@@ -94,6 +95,23 @@ public:
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 
+    /// Gets a class that can send messages to this Object.
+    QueryTracker *getQueryTracker() const;
+
+    /// Address a header with this object as a destination.
+    void addressMessage(RoutableMessageHeader &hdr) const;
+    /// Send a message to port 0 which does not require a response.
+    bool sendMessage(MemoryReference message) const;
+    /// Create a SentMessage, which you can use to wait for a response.
+    template<class Message> inline Message *createQuery() const {
+        QueryTracker *qt = getQueryTracker();
+        if (qt) {
+            Message *ret = new Message();
+            addressMessage(ret->header());
+            return ret;
+        }
+        return 0;
+    }
 
     ///Returns the unique identification for this object and the space to which it is connected that gives it said name
     inline const SpaceObjectReference&getObjectReference() const{

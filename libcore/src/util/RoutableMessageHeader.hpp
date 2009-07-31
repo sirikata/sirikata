@@ -353,6 +353,11 @@ public:
         mHasDestinationSpace=true;
     }
 
+    inline void set_destination(const SpaceObjectReference &spaceobj) {
+        set_destination_space(spaceobj.space());
+        set_destination_object(spaceobj.object());
+    }
+
     void swap_source_and_destination() {
         std::swap(mHasSourceObject,mHasDestinationObject);
         std::swap(mSourceObject,mDestinationObject);
