@@ -60,7 +60,7 @@ namespace Graphics {
 	typedef std::tr1::function<void (WebView*, const Awesomium::JSArguments&)> JSDelegate;
 
 	/**
-	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated 
+	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
 	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener
@@ -135,7 +135,7 @@ namespace Graphics {
 		* @param	ignoreBounds	Whether or not this WebView should ignore bounds/transparency when injecting mouse movement.
 		*
 		* @note
-		*	The occlusivity of each WebView will still be respected, mouse movement will not be injected 
+		*	The occlusivity of each WebView will still be respected, mouse movement will not be injected
 		*	if another WebView is occluding this WebView.
 		*/
 		void setIgnoreBounds(bool ignoreBounds = true);
@@ -143,7 +143,7 @@ namespace Graphics {
 		/**
 		* Using alpha-masking/transparency doesn't just affect the visuals of a WebView; by default, WebViews 'ignore'
 		* mouse movement/clicks over 'transparent' areas of a WebView (Areas with opacity less than 5%). You may
-		* disable this behavior or redefine the 'transparent' threshold of opacity to something else other 
+		* disable this behavior or redefine the 'transparent' threshold of opacity to something else other
 		* than 5%.
 		*
 		* @param	ignoreTrans		Whether or not this WebView should ignore 'transparent' areas when mouse-picking.
@@ -173,7 +173,7 @@ namespace Graphics {
 		/**
 		* Adjusts the number of times per second this WebView may update.
 		*
-		* @param	maxUPS		The maximum number of times per second this WebView can update. Set this to '0' to 
+		* @param	maxUPS		The maximum number of times per second this WebView can update. Set this to '0' to
 		*						use no update limiting (default).
 		*/
 		void setMaxUPS(unsigned int maxUPS = 0);
@@ -188,12 +188,12 @@ namespace Graphics {
 		/**
 		* Changes the overall opacity of this WebView to a certain percentage.
 		*
-		* @param	opacity		The opacity percentage as a float. 
+		* @param	opacity		The opacity percentage as a float.
 		*						Fully Opaque = 1.0, Fully Transparent = 0.0.
 		*/
 		void setOpacity(float opacity);
 
-		/** 
+		/**
 		* Sets the default position of this WebView to a new position and then moves
 		* the WebView to that position. (not applicable to WebViews created as materials)
 		*
@@ -304,7 +304,7 @@ namespace Graphics {
 		void getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre::Real& v2);
 
 		/**
-		* Injects the mouse's current coordinates (in this WebView's own local coordinate space, see WebView::getRelativeX and 
+		* Injects the mouse's current coordinates (in this WebView's own local coordinate space, see WebView::getRelativeX and
 		* WebView::getRelativeY) into this WebView.
 		*
 		* @param	xPos	The X-coordinate of the mouse, relative to this WebView's origin.
@@ -337,7 +337,7 @@ namespace Graphics {
 		*/
 		void injectMouseUp(int xPos, int yPos);
 
-		void injectKeyEvent(bool press, int modifiers, int scancode);
+            void injectKeyEvent(bool press, int modifiers, int vk_code, int raw_scancode);
 
 		void injectTextEvent(std::string utf8);
 
@@ -401,7 +401,7 @@ namespace Graphics {
 		WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
 
-		WebView(const std::string& name, unsigned short width, unsigned short height, 
+		WebView(const std::string& name, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering);
 
 		~WebView();

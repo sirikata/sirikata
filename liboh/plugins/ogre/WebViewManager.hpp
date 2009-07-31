@@ -35,6 +35,7 @@
 
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
+#include "input/InputEvents.hpp"
 #include <task/EventManager.hpp>
 
 #ifdef HAVE_AWESOMIUM
@@ -47,7 +48,6 @@ namespace Awesomium {
 #endif
 
 namespace Sirikata {
-namespace Input { class SDLInputManager; }
 namespace Graphics {
 
 class WebView;
@@ -222,7 +222,7 @@ public:
 	*/
 	bool injectMouseUp(int buttonID);
 
-	bool injectKeyEvent(bool press, int modifiers, int scancode);
+    bool injectKeyEvent(Input::KeyEvent type, Input::Modifier mod, Input::KeyButton button);
 
 	bool injectTextEvent(std::string utf8);
 
