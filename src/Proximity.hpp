@@ -80,7 +80,7 @@ private:
 class LocationService;
 class ObjectFactory;
 
-class Proximity : Prox::QueryEventListener<ProxSimulationTraits> {
+class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener {
 public:
     typedef Prox::Query<ProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
@@ -102,6 +102,17 @@ public:
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
+
+    // LocationServiceListener Interface
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void localObjectRemoved(const UUID& uuid);
+    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void replicaObjectRemoved(const UUID& uuid);
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+
 private:
     typedef std::set<UUID> ObjectSet;
     typedef std::map<ServerID, Query*> ServerQueryMap;

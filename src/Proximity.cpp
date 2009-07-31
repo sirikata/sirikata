@@ -58,6 +58,8 @@ Proximity::Proximity(LocationService* locservice)
     mGlobalLocCache = new CBRLocationServiceCache(locservice, true);
     mObjectQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
     mObjectQueryHandler->initialize(mGlobalLocCache);
+
+    locservice->addListener(this);
 }
 
 Proximity::~Proximity() {
@@ -143,6 +145,37 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 void Proximity::queryHasEvents(Query* query) {
     // Currently we don't use this directly, we just always iterate over all queries and check them.
     // FIXME we could store this information and only check the ones we get callbacks for here
+}
+
+
+// Note: LocationServiceListener interface is only used in order to get updates on objects which have
+// registered queries, allowing us to update those queries as appropriate.  All updating of objects
+// in the prox data structure happens via the LocationServiceCache
+void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+}
+void Proximity::localObjectRemoved(const UUID& uuid) {
+}
+void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    ObjectQueryMap::iterator it = mObjectQueries.find(uuid);
+    if (it == mObjectQueries.end()) return;
+
+    Query* query = it->second;
+    query->position(newval);
+}
+void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+    ObjectQueryMap::iterator it = mObjectQueries.find(uuid);
+    if (it == mObjectQueries.end()) return;
+
+    Query* query = it->second;
+    query->bounds(newval);
+}
+void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+}
+void Proximity::replicaObjectRemoved(const UUID& uuid) {
+}
+void Proximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+}
+void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
 }
 
 } // namespace CBR
