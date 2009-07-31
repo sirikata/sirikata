@@ -67,8 +67,17 @@ private:
 
     LocationMap mLocations;
     Time mCurrentTime;
+
+    typedef std::set<UUID> UUIDSet;
+    UUIDSet mLocalObjects;
+    UUIDSet mReplicaObjects;
+    // Indicates whether we've done the initial notification of replica objects. This is
+    // necessary since we set up the replica objects in our constructor, but we need the
+    // resulting notifications to be sent to listeners which won't be subscribed until
+    // later.
+    bool mInitialNotification;
 }; // class LocationService
 
 } // namespace CBR
 
-#endif //_CBR_LOCATION_SERVICE_HPP_
+#endif //_CBR_ORACLE_LOCATION_SERVICE_HPP_

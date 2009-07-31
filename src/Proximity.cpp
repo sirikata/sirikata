@@ -40,49 +40,91 @@
 
 namespace CBR {
 
-Proximity::Proximity(ObjectFactory* objfactory, LocationService* locservice)
+Proximity::Proximity(LocationService* locservice)
  : mLastTime(0),
-   mObjectFactory(objfactory),
-   mLocCache(NULL),
-   mHandler(NULL)
+   mServerQueries(),
+   mLocalLocCache(NULL),
+   mServerQueryHandler(NULL),
+   mObjectQueries(),
+   mGlobalLocCache(NULL),
+   mObjectQueryHandler(NULL)
 {
-    mLocCache = new CBRLocationServiceCache(locservice, false);
-    Prox::BruteForceQueryHandler<ProxSimulationTraits>* bhandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
-    mHandler = bhandler;
-    mHandler->initialize(mLocCache);
+    // Server Queries
+    mLocalLocCache = new CBRLocationServiceCache(locservice, false);
+    mServerQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
+    mServerQueryHandler->initialize(mLocalLocCache);
+
+    // Object Queries
+    mGlobalLocCache = new CBRLocationServiceCache(locservice, true);
+    mObjectQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
+    mObjectQueryHandler->initialize(mGlobalLocCache);
 }
 
 Proximity::~Proximity() {
-    while(!mQueries.empty())
-        removeQuery( mQueries.begin()->first );
+    // Objects
+    while(!mObjectQueries.empty())
+        removeQuery( mObjectQueries.begin()->first );
 
-    delete mHandler;
+    delete mObjectQueryHandler;
+    delete mGlobalLocCache;
+
+    // Servers
+    while(!mServerQueries.empty())
+        removeQuery( mServerQueries.begin()->first );
+
+    delete mServerQueryHandler;
+    delete mLocalLocCache;
 }
 
+
+void Proximity::addQuery(ServerID sid, SolidAngle sa) {
+    assert( mServerQueries.find(sid) == mServerQueries.end() );
+    Query* q = NULL;
+     // FIXME Need to get location and bounds from somewhere.
+     // mServerQueryHandler->registerQuery(location, bounds, sa);
+    mServerQueries[sid] = q;
+}
+
+void Proximity::removeQuery(ServerID sid) {
+    ServerQueryMap::iterator it = mServerQueries.find(sid);
+    if (it == mServerQueries.end()) return;
+
+    Query* q = it->second;
+    mServerQueries.erase(it);
+    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+}
+
+
 void Proximity::addQuery(UUID obj, SolidAngle sa) {
-    assert( mQueries.find(obj) == mQueries.end() );
-    Query* q = mHandler->registerQuery(mLocCache->location(obj), mLocCache->bounds(obj), sa);
-    mQueries[obj] = q;
+    assert( mObjectQueries.find(obj) == mObjectQueries.end() );
+    Query* q = mObjectQueryHandler->registerQuery(mLocalLocCache->location(obj), mLocalLocCache->bounds(obj), sa);
+    mObjectQueries[obj] = q;
 }
 
 void Proximity::removeQuery(UUID obj) {
-    QueryMap::iterator it = mQueries.find(obj);
-    if (it == mQueries.end()) return;
+    ObjectQueryMap::iterator it = mObjectQueries.find(obj);
+    if (it == mObjectQueries.end()) return;
 
     Query* q = it->second;
-    mQueries.erase(it);
+    mObjectQueries.erase(it);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
+/*
     if ( ((uint32)(t-Time(0)).seconds()) - ((uint32)(mLastTime-Time(0)).seconds()) > 0)
-        printf("Objects: %d, Queries: %d\n", mHandler->numObjects(), mHandler->numQueries());
-    mHandler->tick(t);
+        printf("Objects: %d, Queries: %d -- Objects: %d, Queries: %d\n", mServerQueryHandler->numObjects(), mServerQueryHandler->numQueries(), mObjectQueryHandler->numObjects(), mObjectQueryHandler->numQueries());
+*/
+    mServerQueryHandler->tick(t);
+    mObjectQueryHandler->tick(t);
     mLastTime = t;
 
-    typedef std::deque<QueryEvent> QueryEventList;
+    // FIXME
+    // Output query events for servers
 
-    for(QueryMap::iterator query_it = mQueries.begin(); query_it != mQueries.end(); query_it++) {
+    // Output QueryEvents for objects
+    typedef std::deque<QueryEvent> QueryEventList;
+    for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         Query* query = query_it->second;
 
@@ -91,7 +133,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added)
-                events.push(ProximityEventInfo(query_id, evt_it->id(), mLocCache->location(evt_it->id()), ProximityEventInfo::Entered));
+                events.push(ProximityEventInfo(query_id, evt_it->id(), mGlobalLocCache->location(evt_it->id()), ProximityEventInfo::Entered));
             else
                 events.push(ProximityEventInfo(query_id, evt_it->id(), ProximityEventInfo::Exited));
         }

@@ -36,7 +36,10 @@
 namespace CBR {
 
 OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
- : mCurrentTime(0)
+ : mCurrentTime(0),
+   mLocalObjects(),
+   mReplicaObjects(),
+   mInitialNotification(false)
 {
     assert(objfactory);
 
@@ -62,12 +65,31 @@ OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
 }
 
 void OracleLocationService::tick(const Time& t) {
+    // Add an non-local objects as replicas.  We do this here instead of in the constructor
+    // since we need to notify listeners, who would not have been subscribed yet. This is how
+    // the real system would do it since it wouldn't find out about replicas until it talked to
+    // other servers.
+    if (!mInitialNotification) {
+        for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
+            UUID obj_id = it->first;
+            if (mLocalObjects.find(obj_id) == mLocalObjects.end()) {
+                mReplicaObjects.insert(obj_id);
+                notifyReplicaObjectAdded(obj_id, location(obj_id), bounds(obj_id));
+            }
+        }
+        mInitialNotification = true;
+    }
+
     // FIXME we could maintain a heap of event times instead of scanning through this list every time
     for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
+        UUID objid = it->first;
         LocationInfo& locinfo = it->second;
         if(locinfo.has_next && locinfo.next.time() <= t) {
             locinfo.location = locinfo.next;
-            notifyLocalLocationUpdated(it->first, locinfo.location);
+            if (mLocalObjects.find(objid) != mLocalObjects.end())
+                notifyLocalLocationUpdated(objid, locinfo.location);
+            else if (mReplicaObjects.find(objid) != mReplicaObjects.end())
+                notifyReplicaLocationUpdated(objid, locinfo.location);
             const TimedMotionVector3f* next = locinfo.path->nextUpdate(t);
             if (next == NULL)
                 locinfo.has_next = false;
@@ -103,12 +125,22 @@ BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
 
 void OracleLocationService::addLocalObject(const UUID& uuid) {
     // This is an oracle, so we don't need to track these.
+    if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
+        mReplicaObjects.erase(uuid);
+        notifyReplicaObjectRemoved(uuid);
+    }
+
+    mLocalObjects.insert(uuid);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 void OracleLocationService::removeLocalObject(const UUID& uuid) {
     // This is an oracle, so we don't need to track these.
+    mLocalObjects.erase(uuid);
     notifyLocalObjectRemoved(uuid);
+
+    mReplicaObjects.insert(uuid);
+    notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 

@@ -164,7 +164,7 @@ void *main_loop(void *) {
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     gTrace->setServerIDMap(server_id_map);
-    Proximity* prox = new Proximity(obj_factory, loc_service);
+    Proximity* prox = new Proximity(loc_service);
 
 
 

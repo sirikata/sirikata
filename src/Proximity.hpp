@@ -35,6 +35,7 @@
 
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
+#include "ServerNetwork.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
 
@@ -84,10 +85,15 @@ public:
     typedef Prox::Query<ProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
 
-    Proximity(ObjectFactory* objfactory, LocationService* locservice);
+    Proximity(LocationService* locservice);
     ~Proximity();
 
-    // FIXME these could be more complicated, but we're going for simplicity for now
+    // Server queries
+    // FIXME we need location + bounds to set up a server query
+    void addQuery(ServerID sid, SolidAngle sa);
+    void removeQuery(ServerID sid);
+
+    // Objects
     void addQuery(UUID obj, SolidAngle sa);
     void removeQuery(UUID obj);
 
@@ -98,13 +104,22 @@ public:
     void queryHasEvents(Query* query);
 private:
     typedef std::set<UUID> ObjectSet;
-    typedef std::map<UUID, Query*> QueryMap;
+    typedef std::map<ServerID, Query*> ServerQueryMap;
+    typedef std::map<UUID, Query*> ObjectQueryMap;
 
     Time mLastTime;
-    ObjectFactory* mObjectFactory;
-    QueryMap mQueries;
-    CBRLocationServiceCache* mLocCache;
-    Prox::QueryHandler<ProxSimulationTraits>* mHandler;
+
+    // These track local objects and answer queries from other
+    // servers.
+    ServerQueryMap mServerQueries;
+    CBRLocationServiceCache* mLocalLocCache;
+    Prox::QueryHandler<ProxSimulationTraits>* mServerQueryHandler;
+
+    // These track all objects being reported to this server and
+    // answer queries for objects connected to this server.
+    ObjectQueryMap mObjectQueries;
+    CBRLocationServiceCache* mGlobalLocCache;
+    Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
 }; //class Proximity
 
 } // namespace CBR
