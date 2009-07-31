@@ -26,7 +26,7 @@ print dir(HostedObject)
 x="hello worlds"
 
 #
-from Sirikata_pb2 import *
+from protocol.Sirikata_pb2 import *
 hdr=ReadOnlyMessage()
 body=MessageBody()
 #print "helloishdone"
