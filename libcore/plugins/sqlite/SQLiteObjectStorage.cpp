@@ -63,10 +63,10 @@ template <typename StorageSet,typename ReadSet> void mergeKeysFromStorageSet(Sto
     int sslen = ss.reads_size();    
     int i;
     for (i=0;i<sslen;++i) {
-        ss.add_reads();
         mergeStorageKey(ss.mutable_reads(i),other.reads(i));
     }
     for (;i<len;++i) {
+        ss.add_reads();
         mergeStorageKey(ss.mutable_reads(i),other.reads(i));
     }
 }
@@ -134,7 +134,7 @@ void SQLiteObjectStorage::applyInternal(const RoutableMessageHeader&rmh,Protocol
 }
 
 void SQLiteObjectStorage::applyInternal(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*mt, void (*destroyReadWriteSet)(Protocol::ReadWriteSet*)){
-    assert(mTransactional == true);
+    assert(mTransactional == false);
 
     mDiskWorkQueue->enqueue(new ApplyReadWriteMessage(this,mt,rmh,destroyReadWriteSet));
 }
@@ -411,8 +411,11 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
 
         if (newStep) {
             retval.reads(rs_it).clear_data();
-            databaseError=KeyMissing;
+            retval.reads(rs_it).set_return_status(Protocol::StorageElement::KEY_MISSING);
         }
+		if(rs.reads(rs_it).has_index()) {
+			retval.reads(rs_it).set_index(rs.reads(rs_it).index());
+		}
     }
     if (rs.has_options()&&(rs.options()&Protocol::ReadWriteSet::RETURN_READ_NAMES)!=0) {
         // make sure read set is clear before each attempt
@@ -591,7 +594,7 @@ bool SQLiteObjectStorage::forwardMessagesTo(MessageService*ms) {
 }
 void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
     mParent->mInterestedParties.push_back(toAdd);
-    // FIXME: delete this???
+    delete this;
 }
 
 void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){

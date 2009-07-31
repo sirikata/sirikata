@@ -84,7 +84,8 @@ public:
     void operator() () {
         AutoPtr delete_me(this);
 
-        if (header.destination_space() == SpaceID::null()) {
+        if (!header.has_destination_space() || header.destination_space() == SpaceID::null()) {
+			header.set_source_space(SpaceID::null());
             ReturnStatus status = RoutableMessageHeader::SUCCESS;
             if (header.destination_object() == ObjectReference::spaceServiceID()) {
                 MessageService *destService = parent->getService(header.destination_port());
@@ -138,6 +139,7 @@ public:
                 dest = tlsc->getHostedObject(header.destination_object());
             }
             if (dest) {
+				header.set_source_space(header.destination_space());
                 dest->processRoutableMessage(header, MemoryReference(body));
             } else {
                 HostedObjectPtr src;
@@ -156,7 +158,6 @@ public:
 };
 
 void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryReference message_body) {
-    assert(header.has_destination_space());
     assert(header.has_destination_object());
     assert(header.has_source_object());
     assert(!header.has_source_space() || header.source_space() == header.destination_space());

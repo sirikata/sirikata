@@ -332,8 +332,17 @@ struct HostedObject::PrivateCallbacks {
             if (index >= 0 && index < sentMessage->body().reads_size()) {
                 if (response.reads(i).has_data()) {
                     sentMessage->body().reads(index).set_data(response.reads(i).data());
+					SILOG(cppoh,debug,"        "<<index<<" HAS DATA! "<<i);
                 } else {
-                    sentMessage->body().reads(index).set_return_status(response.reads(i).return_status());
+					if (response.reads(i).has_return_status()) {
+						sentMessage->body().reads(index).set_return_status(
+							response.reads(i).return_status());
+						SILOG(cppoh,debug,"        "<<index<<" HAS ERROR! "<<i);
+					} else {
+						sentMessage->body().reads(index).set_return_status(
+							StorageElement::KEY_MISSING);
+						SILOG(cppoh,debug,"        "<<index<<" is missing!! "<<i);
+					}
                 }
             }
         }

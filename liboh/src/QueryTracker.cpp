@@ -44,6 +44,8 @@ QueryTracker::~QueryTracker() {
     mForwardService = NULL; // can't resend a message.
     SentMessageMap sentMessageCopy;
     mSentMessages.swap(sentMessageCopy);
+	// FIXME: Need to have an "error" callback of some sort, but ideally before getting to the destructor
+	/*
     for (SentMessageMap::iterator iter = sentMessageCopy.begin(); iter != sentMessageCopy.end(); ++iter) {
         SentMessage *messageInfo = iter->second;
         RoutableMessageHeader msg;
@@ -54,6 +56,7 @@ QueryTracker::~QueryTracker() {
         msg.set_reply_id(messageInfo->getId());
         messageInfo->processMessage(msg, MemoryReference(NULL,0));
     }
+	*/
 }
 
 void QueryTracker::insert(SentMessage *ret) {
