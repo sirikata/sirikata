@@ -97,9 +97,7 @@ public:
         return header().destination_port();
     }
     /// Space of both this and the other object.
-    const SpaceID &getSpace() const {
-        return header().destination_space();
-    }
+    const SpaceID &getSpace() const;
     /** ObjectReference of the other object: recipient of this message, and
         sender of the response(s) */
     const ObjectReference &getRecipient() const {

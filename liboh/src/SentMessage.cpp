@@ -60,9 +60,13 @@ class SentMessage::TimerHandler {
             return; // don't care if the timer was cancelled.
         }
         RoutableMessageHeader msg;
-        msg.set_source_object(mSentMessage->getRecipient());
-        msg.set_source_space(mSentMessage->getSpace());
-        msg.set_source_port(mSentMessage->getPort());
+        if (mSentMessage->header().has_destination_object()) {
+            msg.set_source_object(mSentMessage->header().destination_object());
+        }
+        if (mSentMessage->header().has_destination_space()) {
+            msg.set_source_space(mSentMessage->header().destination_space());
+        }
+        msg.set_source_port(mSentMessage->header().destination_port());
         msg.set_return_status(RoutableMessageHeader::TIMEOUT_FAILURE);
         msg.set_reply_id(mSentMessage->getId());
         mSentMessage->processMessage(msg, MemoryReference(NULL,0));
@@ -105,6 +109,16 @@ SentMessage::~SentMessage() {
     unsetTimeout();
     mTracker->remove(this);
 }
+
+static SpaceID nul = SpaceID::null();
+const SpaceID &SentMessage::getSpace() const {
+    if (header().has_destination_space()) {
+        return header().destination_space();
+    } else {
+        return nul;
+    }
+}
+
 
 void SentMessage::send(MemoryReference bodystr) {
     mHeader.set_id(mId);
