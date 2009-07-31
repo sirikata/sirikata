@@ -63,8 +63,8 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
             inputs->motion = new StaticMotionPath(start, startpos);
         else
             inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
-        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * randFloat() * 20 );
-        inputs->queryAngle = SolidAngle(SolidAngle::Max / 1000.f); // FIXME how to set this? variability by objects?
+        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * 20 );
+        inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
