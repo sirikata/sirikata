@@ -79,7 +79,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         retval=loadDependencyAssembly(mono_system,"IronPython")&&retval;
         retval=loadDependencyAssembly(mono_system,"IronPython.Modules")&&retval;
  
-        bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime");
+        bool testretval=loadCustomAssembly(mono_system,"Sirikata.Runtime")&&
+            loadCustomAssembly(mono_system,"Sirikata.Protocol");
         /*
         Mono::Assembly ass=d.getAssembly("Sirikata.Runtime");
         Mono::Class cls =ass.getClass("PythonObject");
