@@ -41,7 +41,7 @@ namespace Network {
 class IOService;
 }
 
-class QueryTracker : public MessageService {
+class SIRIKATA_OH_EXPORT QueryTracker : public MessageService {
 public:
     /// Each sent query has an int64 id. This maps that id to a SentMessage structure.
     typedef std::tr1::unordered_map<int64, SentMessage*> SentMessageMap;

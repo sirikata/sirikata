@@ -46,7 +46,7 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
     response sent back. A timeout can be specified, in case the other object
     does not respond to our messages.
 */
-class SentMessage {
+class SIRIKATA_OH_EXPORT SentMessage {
 public:
     /** QueryCallback will be called when the other client responds to our
         sent query.
