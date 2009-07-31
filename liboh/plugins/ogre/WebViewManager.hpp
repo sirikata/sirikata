@@ -60,6 +60,8 @@ enum MouseButtonID
 	LeftMouseButton = 0,
 	RightMouseButton = 1,
 	MiddleMouseButton = 2,
+        ScrollUpButton = 3,
+        ScrollDownButton = 4,
         UnknownMouseButton = 0xFFFF
 };
 

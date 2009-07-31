@@ -529,6 +529,19 @@ Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::Event
 	int awebutton = InputButtonToAwesomiumButton(e->mButton);
 	bool success = (awebutton != UnknownMouseButton);
 
+        // A special case is needed for scroll wheel events that show up as clicks
+        if (awebutton == ScrollUpButton || awebutton == ScrollDownButton) {
+            int32 factor = (awebutton == ScrollUpButton ? 1 : -1);
+            int32 amount = 30; // XXX FIXME magic factor, should be a setting somewhere
+            WebViewCoord relCoord(0, factor*amount);
+
+            success = injectMouseWheel(relCoord);
+            if (success)
+		return Sirikata::Task::EventResponse::cancel();
+            else
+		return Sirikata::Task::EventResponse::nop();
+        }
+
 	if (success) {
 		success = this->injectMouseDown(awebutton);
 		success = success && this->injectMouseUp(awebutton);
@@ -616,6 +629,11 @@ static int InputButtonToAwesomiumButton(int32 input_button) {
         return MiddleMouseButton;
       case 3:
         return RightMouseButton;
+// XXX FIXME these may only work for linux, depends on SDL input
+      case 4:
+        return ScrollUpButton;
+      case 5:
+        return ScrollDownButton;
       default:
         return UnknownMouseButton;
     }
