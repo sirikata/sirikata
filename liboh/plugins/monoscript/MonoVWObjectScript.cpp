@@ -122,7 +122,7 @@ bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader,
     std::string header;
     receivedHeader.SerializeToString(&header);
     try {
-        Mono::Object retval=mObject.send("processRPC",mDomain.String(name),mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.ByteArray((const char*)args.data(),(int)args.size()));
+        Mono::Object retval=mObject.send("processRPC",mDomain.ByteArray(header.data(),(unsigned int)header.size()),mDomain.String(name),mDomain.ByteArray((const char*)args.data(),(int)args.size()));
         if (!retval.null()) {
             returnValue=retval.unboxByteArray();
             MonoContext::getSingleton().pop();
