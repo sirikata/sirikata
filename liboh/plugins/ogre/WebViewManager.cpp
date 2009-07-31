@@ -46,12 +46,34 @@ template<> Sirikata::Graphics::WebViewManager* Ogre::Singleton<Sirikata::Graphic
 namespace Sirikata {
 namespace Graphics {
 
+using namespace Sirikata::Input;
+
 #define TIP_SHOW_DELAY 0.7
 #define TIP_ENTRY_DELAY 2.0
 
 std::string getCurrentWorkingDirectory()
 {
 	return "";
+}
+
+static int InputButtonToAwesomiumButton(int32 input_button) {
+    switch(input_button) {
+      case 1:
+        return LeftMouseButton;
+      case 2:
+        return MiddleMouseButton;
+      case 3:
+        return RightMouseButton;
+      default:
+        return UnknownMouseButton;
+    }
+}
+
+template<typename EventPtrType>
+static WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y) {
+    unsigned int wid,hei;
+    evt->getDevice()->getInputManager()->getWindowSize(wid,hei);
+    return WebViewCoord(((x+1)*wid)/2, ((1-y)*hei)/2);
 }
 
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
@@ -224,54 +246,54 @@ WebView* WebViewManager::getFocusedWebView()
 	return focusedWebView;
 }
 
-bool WebViewManager::injectMouseMove(int xPos, int yPos)
+bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
 {
 	bool eventHandled = false;
 
 	if((focusedWebView && isDraggingFocusedWebView) || (focusedWebView && mouseButtonRDown))
 	{
 		if(focusedWebView->movable)
-			focusedWebView->move(xPos-mouseXPos, yPos-mouseYPos);
+			focusedWebView->move(coord.x-mouseXPos, coord.y-mouseYPos);
 
 		eventHandled = true;
 	}
 	else
 	{
-		WebView* top = getTopWebView(xPos, yPos);
+		WebView* top = getTopWebView(coord.x, coord.y);
 
 		if(top)
 		{
-			top->injectMouseMove(top->getRelativeX(xPos), top->getRelativeY(yPos));
+			top->injectMouseMove(top->getRelativeX(coord.x), top->getRelativeY(coord.y));
 			eventHandled = true;
 
 			WebViewMap::iterator iter;
 			for(iter = activeWebViews.begin(); iter != activeWebViews.end(); ++iter)
 				if(iter->second->ignoringBounds)
-					if(!(iter->second->isPointOverMe(xPos, yPos) && iter->second->overlay->panel->getZOrder() < top->overlay->panel->getZOrder()))
-						iter->second->injectMouseMove(iter->second->getRelativeX(xPos), iter->second->getRelativeY(yPos));
+					if(!(iter->second->isPointOverMe(coord.x, coord.y) && iter->second->overlay->panel->getZOrder() < top->overlay->panel->getZOrder()))
+						iter->second->injectMouseMove(iter->second->getRelativeX(coord.x), iter->second->getRelativeY(coord.y));
 		}
 
 		if(tooltipParent)
 		{
-			if(!tooltipParent->isPointOverMe(xPos, yPos))
+			if(!tooltipParent->isPointOverMe(coord.x, coord.y))
 				handleTooltip(0, L"");
 		}
 
 		if(tooltipWebView->getVisibility())
-			tooltipWebView->setPosition(OverlayPosition(xPos, yPos + 15));
+			tooltipWebView->setPosition(OverlayPosition(coord.x, coord.y + 15));
 	}
 
-	mouseXPos = xPos;
-	mouseYPos = yPos;
+	mouseXPos = coord.x;
+	mouseYPos = coord.y;
 
 	return eventHandled;
 }
 
-bool WebViewManager::injectMouseWheel(int relScrollX, int relScrollY)
+bool WebViewManager::injectMouseWheel(const WebViewCoord& relScroll)
 {
 	if(focusedWebView)
 	{
-		focusedWebView->injectMouseWheel(relScrollX, relScrollY);
+		focusedWebView->injectMouseWheel(relScroll.x, relScroll.y);
 		return true;
 	}
 
@@ -490,39 +512,27 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::MouseEvent* e = dynamic_cast<Sirikata::Input::MouseEvent*>(evt.get());
+    MouseEventPtr e = std::tr1::dynamic_pointer_cast<MouseEvent>(evt);
 	if (!e) {
 		return Sirikata::Task::EventResponse::nop();
 	}
 
-	unsigned int wid,hei;
-	e->getDevice()->getInputManager()->getWindowSize(wid,hei);
-	this->injectMouseMove(((e->mX+1)*wid)/2, ((1-e->mY)*hei)/2);
+        this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
 
 	return Sirikata::Task::EventResponse::nop();
 }
 
 Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::MouseDownEvent* e = dynamic_cast<Sirikata::Input::MouseDownEvent*>(evt.get());
+    MouseDownEventPtr e = std::tr1::dynamic_pointer_cast<MouseDownEvent>(evt);
 	if (!e) {
 		return Sirikata::Task::EventResponse::nop();
 	}
 
 	onMouseMove(evt);
 
-	int awebutton;
-	bool success = true;
-	switch(e->mButton) {
-	case 1:
-		awebutton = LeftMouseButton; break;
-	case 2:
-		awebutton = MiddleMouseButton; break;
-	case 3:
-		awebutton = RightMouseButton; break;
-	default:
-		success = false;
-	}
+	int awebutton = InputButtonToAwesomiumButton(e->mButton);
+	bool success = (awebutton != UnknownMouseButton);
 
 	if (success) {
 		success = this->injectMouseDown(awebutton);
@@ -538,58 +548,41 @@ Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::Event
 
 Sirikata::Task::EventResponse WebViewManager::onMouseDrag(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::MouseDragEvent* e = dynamic_cast<Sirikata::Input::MouseDragEvent*>(evt.get());
-	if (!e) {
-		return Sirikata::Task::EventResponse::nop();
-	}
+    MouseDragEventPtr e = std::tr1::dynamic_pointer_cast<MouseDragEvent>(evt);
+    if (!e) {
+        return Sirikata::Task::EventResponse::nop();
+    }
 
-	int awebutton = -1;
-	bool success = true;
-	switch(e->mButton) {
-	case 1:
-		awebutton = LeftMouseButton; break;
-	case 2:
-		awebutton = MiddleMouseButton; break;
-	case 3:
-		awebutton = RightMouseButton; break;
-	default:
-		success = false;
-	}
+    int awebutton = InputButtonToAwesomiumButton(e->mButton);
+    if (awebutton == UnknownMouseButton)
+        return Sirikata::Task::EventResponse::nop();
 
-	if (success) {
-		if (e->mType == Sirikata::Input::DRAG_START) {
-			unsigned int wid,hei;
-			e->getDevice()->getInputManager()->getWindowSize(wid,hei);
-			this->injectMouseMove(((e->mXStart+1)*wid)/2, ((1-e->mYStart)*hei)/2);
+    bool success = true;
+    switch(e->mType) {
+      case Sirikata::Input::DRAG_START:
+        this->injectMouseMove(InputCoordToWebViewCoord(e, e->mXStart, e->mYStart));
+        success = this->injectMouseDown(awebutton);
+        break;
+      case Sirikata::Input::DRAG_DRAG:
+        success = this->injectMouseMove(InputCoordToWebViewCoord(e, e->mX, e->mY));
+        break;
+      case Sirikata::Input::DRAG_END:
+        success = this->injectMouseUp(awebutton);
+        break;
+      default:
+        SILOG(ogre,error,"Unknown drag event type.");
+        break;
+    }
 
-			success = this->injectMouseDown(awebutton);
-		}
-	}
-
-        if (success) {
-            if (e->mType == Sirikata::Input::DRAG_DRAG) {
-                unsigned int wid,hei;
-                e->getDevice()->getInputManager()->getWindowSize(wid,hei);
-                success = this->injectMouseMove(((e->mX+1)*wid)/2, ((1-e->mY)*hei)/2);
-            }
-        }
-
-	if (success) {
-		if (e->mType == Sirikata::Input::DRAG_END) {
-			success = this->injectMouseUp(awebutton);
-		}
-	}
-
-	if (success) {
-		return Sirikata::Task::EventResponse::cancel();
-	} else {
-		return Sirikata::Task::EventResponse::nop();
-	}
+    if (success)
+        return Sirikata::Task::EventResponse::cancel();
+    else
+        return Sirikata::Task::EventResponse::nop();
 }
 
 Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::ButtonEvent* e = dynamic_cast<Sirikata::Input::ButtonEvent*>(evt.get());
+    ButtonEventPtr e = std::tr1::dynamic_pointer_cast<ButtonEvent>(evt);
 	if (!e) {
 		return Sirikata::Task::EventResponse::nop();
 	}
@@ -607,7 +600,7 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 
 Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::EventPtr evt)
 {
-	Sirikata::Input::TextInputEvent* e = dynamic_cast<Sirikata::Input::TextInputEvent*>(evt.get());
+    TextInputEventPtr e = std::tr1::dynamic_pointer_cast<TextInputEvent>(evt);
 	if (!e) {
 		return Sirikata::Task::EventResponse::nop();
 	}

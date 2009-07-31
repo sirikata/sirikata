@@ -58,8 +58,19 @@ class WebView;
 enum MouseButtonID
 {
 	LeftMouseButton = 0,
-	RightMouseButton,
-	MiddleMouseButton
+	RightMouseButton = 1,
+	MiddleMouseButton = 2,
+        UnknownMouseButton = 0xFFFF
+};
+
+struct WebViewCoord {
+    int x;
+    int y;
+
+    WebViewCoord(int _x, int _y)
+     : x(_x), y(_y)
+    {
+    }
 };
 
 /**
@@ -167,30 +178,29 @@ public:
 	*/
 	WebView* getFocusedWebView();
 
-	/**
-	* Injects the mouse's current position into WebViewManager. Used to generally keep track of where the mouse
-	* is for things like moving WebViews around, telling the internal pages of each WebView where the mouse is and
-	* where the user has clicked, etc. (not applicable to WebViewMaterials)
-	*
-	* @param	xPos	The current X-coordinate of the mouse.
-	* @param	yPos	The current Y-coordinate of the mouse.
-	*
-	* @return	Returns True if the injected coordinate is over a WebView, False otherwise.
-	*/
-	bool injectMouseMove(int xPos, int yPos);
+    /**
+     * Injects the mouse's current position into WebViewManager. Used to generally keep track of where the mouse
+     * is for things like moving WebViews around, telling the internal pages of each WebView where the mouse is and
+     * where the user has clicked, etc. (not applicable to WebViewMaterials)
+     *
+     * @param	coord	The coordinates of the mouse.
+     *
+     * @return	Returns True if the injected coordinate is over a WebView, False otherwise.
+     */
+    bool injectMouseMove(const WebViewCoord& coord);
 
-	/**
-	* Injects mouse wheel events into WebViewManager. Used to scroll the focused WebView. (not applicable to WebViewMaterials)
-	*
-	* @param	relScroll	The relative Scroll-Value of the mouse.
-	*
-	* @note
-	*	To inject this using OIS: on a OIS::MouseListener::MouseMoved event, simply
-	*	inject "arg.state.Z.rel" of the "MouseEvent".
-	*
-	* @return	Returns True if the mouse wheel was scrolled while a WebView was focused, False otherwise.
-	*/
-	bool injectMouseWheel(int relScrollX, int relScrollY);
+    /**
+     * Injects mouse wheel events into WebViewManager. Used to scroll the focused WebView. (not applicable to WebViewMaterials)
+     *
+     * @param	relScroll	The relative Scroll-Value of the mouse.
+     *
+     * @note
+     *	To inject this using OIS: on a OIS::MouseListener::MouseMoved event, simply
+     *	inject "arg.state.Z.rel" of the "MouseEvent".
+     *
+     * @return	Returns True if the mouse wheel was scrolled while a WebView was focused, False otherwise.
+     */
+    bool injectMouseWheel(const WebViewCoord& relScroll);
 
 	/**
 	* Injects mouse down events into WebViewManager. Used to know when the user has pressed a mouse button
