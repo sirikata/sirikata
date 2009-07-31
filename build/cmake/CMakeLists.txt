@@ -795,18 +795,20 @@ IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources} ${TOP_LEVEL}/externals/pbj/PBJ.cs)
   SET(SirikataProtoScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   SET(SirikataProtoScriptRuntime_LIBRARY ${SirikataProtoScriptRuntime_LIBRARY_DIR}/Sirikata.Protocol.dll)
-  ADD_CUSTOM_TARGET(SirikataScriptProtocol ALL
+  IF(EXISTS "${PROTOCOLBUFFERS_BIN_DIRS}/Google.ProtocolBuffers.dll")
+    ADD_CUSTOM_TARGET(SirikataScriptProtocol ALL
                   DEPENDS ${SirikataProtoScriptSources} ${SirikataProtoScriptRuntime_LIBRARY} ${AdditionalProtoDepends}
                   COMMENT "Checking Sirikata.Protocol.dll")
-  ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtoScriptRuntime_LIBRARY}
+    ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtoScriptRuntime_LIBRARY}
                    COMMAND ${GMCS_EXECUTABLE} -debug
                                      -target:library
                                      -out:${SirikataProtoScriptRuntime_LIBRARY}
                                      -warn:2
-                                     -r:${PROTOCOLBUFFERS_LIBRARY_DIRS}/Google.ProtocolBuffers.dll
+                                     -r:${PROTOCOLBUFFERS_BIN_DIRS}/Google.ProtocolBuffers.dll
                                      ${SirikataProtoScriptSources}
                    DEPENDS ${SirikataProtoScriptSources}
                    COMMENT "Building Sirikata.Protocol.dll")
+  ENDIF()
   SET(SirikataProtoScriptRuntimeBuildOutputs ${SirikataProtoScriptRuntime_LIBRARY} ${SirikataProtoScriptRuntime_LIBRARY}.mdb)
   SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${SirikataProtoScriptRuntimeBuildOutputs}")
 
