@@ -69,7 +69,8 @@ static int InputModifiersToAwesomiumModifiers(Modifier mod, bool numpad);
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
-	  mouseButtonRDown(false), zOrderCounter(5),
+	  isDragging(false), isResizing(false),
+          zOrderCounter(5),
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
 #ifdef HAVE_AWESOMIUM
@@ -240,13 +241,22 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
 {
 	bool eventHandled = false;
 
-	if((focusedWebView && isDraggingFocusedWebView) || (focusedWebView && mouseButtonRDown))
+	if((focusedWebView && isDraggingFocusedWebView) || (focusedWebView && isDragging))
 	{
 		if(focusedWebView->movable)
 			focusedWebView->move(coord.x-mouseXPos, coord.y-mouseYPos);
 
 		eventHandled = true;
 	}
+        else if (focusedWebView && isResizing) {
+            unsigned short w,h;
+            focusedWebView->getExtents(w,h);
+            int32 new_w = w + (coord.x - mouseXPos), new_h = h + (coord.y - mouseYPos);
+            if (new_w < 100) new_w = 100;
+            if (new_h < 100) new_h = 100;
+            focusedWebView->resize(new_w, new_h);
+            eventHandled = true;
+        }
 	else
 	{
 		WebView* top = getTopWebView(coord.x, coord.y);
@@ -304,8 +314,12 @@ bool WebViewManager::injectMouseDown(int buttonID)
 	}
 	else if(buttonID == RightMouseButton)
 	{
-		mouseButtonRDown = true;
+		isDragging = true;
 		focusWebView(mouseXPos, mouseYPos);
+	}
+	else if(buttonID == MiddleMouseButton) {
+            isResizing = true;
+            focusWebView(mouseXPos, mouseYPos);
 	}
 
 	if(focusedWebView)
@@ -326,7 +340,10 @@ bool WebViewManager::injectMouseUp(int buttonID)
 	}
 	else if(buttonID == RightMouseButton)
 	{
-		mouseButtonRDown = false;
+		isDragging = false;
+	}
+	else if(buttonID == MiddleMouseButton) {
+            isResizing = false;
 	}
 
 	if(focusedWebView)

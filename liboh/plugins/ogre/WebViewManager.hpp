@@ -244,7 +244,8 @@ protected:
 	WebView* focusedWebView, *tooltipWebView, *tooltipParent;
 	Ogre::Viewport* defaultViewport;
 	int mouseXPos, mouseYPos;
-	bool mouseButtonRDown;
+    bool isDragging;
+    bool isResizing;
 	unsigned short zOrderCounter;
 	Ogre::Timer tooltipTimer;
 	double lastTooltip, tooltipShowTime;
