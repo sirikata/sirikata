@@ -863,6 +863,8 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
     ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
+        ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
+        ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
 )
 
 #precompiled header
@@ -902,11 +904,8 @@ IF(NOT WIN32)
  ${LIBCORE_SOURCE_DIR}/util/Standard.hh
  ${LIBCORE_SOURCE_DIR}/util/TotallyOrdered.hpp
  ${LIBCORE_SOURCE_DIR}/util/Transform.hpp
- ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
  ${LIBCORE_SOURCE_DIR}/util/BoundingInfo.hpp
- ${LIBCORE_SOURCE_DIR}/util/UUID.cpp
  ${LIBCORE_SOURCE_DIR}/util/UUID.hpp
- ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
  ${LIBCORE_SOURCE_DIR}/util/ThreadId.hpp
  ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp
  ${LIBCORE_SOURCE_DIR}/util/Vector4.hpp
@@ -945,8 +944,6 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHost.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceIDMap.cpp
                   ${LIBOH_SOURCE_DIR}/HostedObject.cpp
-                  ${LIBOH_SOURCE_DIR}/QueryTracker.cpp
-                  ${LIBOH_SOURCE_DIR}/SentMessage.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/TopLevelSpaceConnection.cpp
                   ${LIBOH_SOURCE_DIR}/SpaceConnection.cpp

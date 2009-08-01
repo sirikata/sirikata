@@ -38,7 +38,7 @@
 #include "ProxyObject.hpp"
 #include <util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
-#include "QueryTracker.hpp"
+#include <util/QueryTracker.hpp>
 
 namespace Sirikata {
 

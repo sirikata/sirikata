@@ -32,12 +32,8 @@
 /*  Created on: Jul 18, 2009 */
 
 #include <util/Platform.hpp>
-#include <oh/Platform.hpp>
-#include <ObjectHost_Sirikata.pbj.hpp>
-#include <oh/ProxyObject.hpp>
-#include <oh/ProxyManager.hpp>
 #include "util/RoutableMessageHeader.hpp"
-#include "oh/SentMessage.hpp"
+#include "SentMessage.hpp"
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/bind.hpp>
@@ -141,14 +137,5 @@ void SentMessage::setTimeout(int timeout) {
         }
     }
 }
-
-ProxyObjectPtr SentMessage::getRecipientProxy(const ProxyManager*pm) const {
-    if (pm) {
-        ProxyObjectPtr proxyPtr (pm->getProxyObject(SpaceObjectReference(getSpace(), getRecipient())));
-        return proxyPtr;
-    }
-    return ProxyObjectPtr();
-}
-
 
 }

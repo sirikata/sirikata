@@ -34,19 +34,15 @@
 #ifndef _SIRIKATA_SentMessage_HPP_
 #define _SIRIKATA_SentMessage_HPP_
 
-#include "oh/QueryTracker.hpp"
+#include "QueryTracker.hpp"
 
 namespace Sirikata {
-
-class ProxyObject;
-class ProxyManager;
-typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 /** A message/query that is sent to another object to have at least one
     response sent back. A timeout can be specified, in case the other object
     does not respond to our messages.
 */
-class SIRIKATA_OH_EXPORT SentMessage {
+class SIRIKATA_EXPORT SentMessage {
 public:
     /** QueryCallback will be called when the other client responds to our
         sent query.
@@ -111,9 +107,6 @@ public:
     MessagePort getThisPort() const {
         return header().source_port();
     }
-
-    /// The ProxyObject, if one exists, of the other object. May return null.
-    ProxyObjectPtr getRecipientProxy(const ProxyManager*pm) const;
 
     /// The query ID allocated--should be the same as header().id()
     int64 getId() const {

@@ -41,7 +41,7 @@
 #include "oh/SpaceConnection.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
-#include "oh/SentMessage.hpp"
+#include "util/SentMessage.hpp"
 #include "oh/ObjectHost.hpp"
 #include "oh/ProxyMeshObject.hpp"
 #include "oh/ProxyLightObject.hpp"
@@ -433,9 +433,11 @@ struct HostedObject::PrivateCallbacks {
         Protocol::ObjLoc loc;
         loc.ParseFromString(responseMessage.body().message_arguments(0));
 
-        ProxyManager *pm = thus->getObjectHost()->getProxyManager(sentMessage->getSpace());
+        const SpaceID &space = sentMessage->getSpace();
+        ProxyManager *pm = thus->getObjectHost()->getProxyManager(space);
         if (pm) {
-            ProxyObjectPtr obj(sentMessage->getRecipientProxy(pm));
+            ProxyObjectPtr obj(pm->getProxyObject(
+                SpaceObjectReference(space, sentMessage->getRecipient())));
             if (obj) {
                 thus->receivedPositionUpdate(obj,loc,false);
             }

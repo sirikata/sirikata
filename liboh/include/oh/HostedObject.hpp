@@ -36,7 +36,7 @@
 #include <util/RoutableMessageHeader.hpp>
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/ProxyObject.hpp"
-#include "oh/QueryTracker.hpp"
+#include "util/QueryTracker.hpp"
 
 namespace Sirikata {
 class ObjectHost;

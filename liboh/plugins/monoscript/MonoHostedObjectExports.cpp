@@ -8,7 +8,7 @@
 #include "MonoDelegate.hpp"
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
-#include "oh/SentMessage.hpp"
+#include "util/SentMessage.hpp"
 using namespace Sirikata;
 using namespace Mono;
 static MonoObject* Mono_Context_CurrentUUID() {

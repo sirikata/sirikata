@@ -32,11 +32,9 @@
 /*  Created on: Jul 25, 2009 */
 
 #include <util/Platform.hpp>
-#include <oh/Platform.hpp>
-#include <ObjectHost_Sirikata.pbj.hpp>
 #include "util/RoutableMessageHeader.hpp"
-#include "oh/QueryTracker.hpp"
-#include "oh/SentMessage.hpp"
+#include "QueryTracker.hpp"
+#include "SentMessage.hpp"
 
 namespace Sirikata {
 
