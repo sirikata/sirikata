@@ -44,6 +44,7 @@ namespace Sirikata {
 int main(int argc,const char**argv) {
     using namespace Sirikata;
         Sirikata::PluginManager plugins;
+        plugins.load( DynamicLibrary::filename("tcpsst") );
         plugins.load( DynamicLibrary::filename("prox") );
 
     OptionSet::getOptions("")->parse(argc,argv);

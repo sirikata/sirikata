@@ -38,8 +38,10 @@
 #include "prox/QueryEventListener.hpp"
 #include "prox/QueryChangeListener.hpp"
 #include "ProxBridge.hpp"
-#include "network/TCPStreamListener.hpp"
-#include "network/TCPStream.hpp"
+#include "network/StreamListener.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamListenerFactory.hpp"
+#include "network/StreamFactory.hpp"
 #include "options/Options.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "util/RoutableMessage.hpp"
@@ -87,7 +89,7 @@ bool ProxBridge::endForwardingMessagesTo(MessageService*ms){
     return false;
 }
 
-ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mListener(new Network::TCPStreamListener(io)),mQueryHandler(handler),mCallback(cb) {
+ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mListener(Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(&io)),mQueryHandler(handler),mCallback(cb) {
     std::memset(mMessageServices,0,sMaxMessageServices*sizeof(MessageService*));
     OptionValue*port;
     OptionValue*updateDuration;

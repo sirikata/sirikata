@@ -37,7 +37,8 @@
 #include "proximity/ProximityConnection.hpp"
 #include "proximity/SingleStreamProximityConnection.hpp"
 #include "proximity/ProximitySystem.hpp"
-#include "network/TCPStream.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamFactory.hpp"
 
 namespace Sirikata { namespace Proximity {
 namespace {
@@ -92,7 +93,7 @@ ProximityConnection* SingleStreamProximityConnection::create(Network::IOService*
     return new SingleStreamProximityConnection(Network::Address(host->as<String>(),port->as<String>()),*io);    
                            
 }
-SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&io):mParent(NULL),mConnectionStream(new Network::TCPStream(io)) {
+SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&io):mParent(NULL),mConnectionStream(Network::StreamFactory::getSingleton().getDefaultConstructor()(&io)) {
         mConnectionStream->connect(addy,
                                    &Network::Stream::ignoreSubstreamCallback,
                                    std::tr1::bind(&connectionCallback,this,_1,_2),

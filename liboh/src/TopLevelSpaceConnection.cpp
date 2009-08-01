@@ -31,7 +31,8 @@
  */
 #include <oh/Platform.hpp>
 #include <util/SpaceID.hpp>
-#include <network/TCPStream.hpp>
+#include <network/Stream.hpp>
+#include <network/StreamFactory.hpp>
 #include "oh/SpaceConnection.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
 #include "oh/SpaceIDMap.hpp"
@@ -52,7 +53,7 @@ void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thu
 
 TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io):mRegisteredAddress(Network::Address::null()) {
     mParent=NULL;
-    mTopLevelStream=new Network::TCPStream(*io);
+    mTopLevelStream=Network::StreamFactory::getSingleton().getDefaultConstructor()(io);
     ObjectHostProxyManager::initialize();
 }
 void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&thus, ObjectHost * oh,  const SpaceID & id) {

@@ -30,8 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "network/TCPStream.hpp"
-#include "network/TCPStreamListener.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamListener.hpp"
+#include "network/StreamFactory.hpp"
+#include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "util/ObjectReference.hpp"
 #include "Test_Subscription.pbj.hpp"
@@ -111,9 +113,11 @@ public:
         mBroad = new Subscription::Broadcast(mBroadIO);
         mSub = new Subscription::SubscriptionClient(mSubIO);
         std::tr1::shared_ptr<Subscription::Server> tempServer(new Subscription::Server(mBroadIO,
-                                                                                       new TCPStreamListener(*mBroadIO),
+                                                                                       Network::StreamListenerFactory::getSingleton()
+                                                                                         .getDefaultConstructor()(mBroadIO),
                                                                                        mBroadcastAddress,
-                                                                                       new TCPStreamListener(*mSubIO),
+                                                                                       Network::StreamListenerFactory::getSingleton()
+                                                                                         .getDefaultConstructor()(mSubIO),
                                                                                        mSubscriptionAddress,
                                                                                        Duration::seconds(3.0),
                                                                                        1024*1024));

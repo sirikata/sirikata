@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
-#include "TCPDefinitions.hpp"
-#include "Stream.hpp"
+#include "network/TCPDefinitions.hpp"
+#include "network/Stream.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"

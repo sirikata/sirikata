@@ -33,7 +33,8 @@
 #include "subscription/Platform.hpp"
 #include "subscription/SubscriptionClient.hpp"
 #include "network/IOServiceFactory.hpp"
-#include "network/TCPStream.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamFactory.hpp"
 #include "Subscription_Subscription.pbj.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Subscription {
@@ -311,7 +312,7 @@ std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
             }
         }
         if (!retval) {//make a new connection
-            std::tr1::shared_ptr<Network::Stream> topLevelStream (new Network::TCPStream(*mService));
+            std::tr1::shared_ptr<Network::Stream> topLevelStream (Network::StreamFactory::getSingleton().getDefaultConstructor()(mService));
 
             topLevelStream->connect(address,
                                     &Network::Stream::ignoreSubstreamCallback,

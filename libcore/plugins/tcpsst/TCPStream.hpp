@@ -31,7 +31,7 @@
  */
 #ifndef SIRIKATA_TCPStream_HPP__
 #define SIRIKATA_TCPStream_HPP__
-#include "Stream.hpp"
+#include "network/Stream.hpp"
 #include "util/AtomicTypes.hpp"
 namespace Sirikata { namespace Network {
 class MultiplexedSocket;
@@ -170,7 +170,9 @@ public:
     virtual void connect(
         const Address& addy);
 
-
+    static TCPStream* construct(Network::IOService*io) {
+        return new TCPStream(*io);
+    }
     ///Creates a new substream on this connection
     virtual Stream* clone(const SubstreamCallback&cb);
     ///Creates a new substream on this connection. This is for when the callbacks do not require the Stream*

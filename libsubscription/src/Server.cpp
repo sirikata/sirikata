@@ -31,8 +31,10 @@
  */
 #include <subscription/Platform.hpp>
 
-#include "network/TCPStream.hpp"
-#include "network/TCPStreamListener.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamListener.hpp"
+#include "network/StreamFactory.hpp"
+#include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "util/UUID.hpp"
 #include "Subscription_Subscription.pbj.hpp"

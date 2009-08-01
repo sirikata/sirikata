@@ -1,7 +1,7 @@
-/*  Sirikata Proximity
- *  main.cpp
+/*  Sirikata Network Services - Stream factory
+ *  StreamFactory.cpp
  *
- *  Copyright (c) 2008, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,38 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "util/Standard.hh"
+#include "StreamFactory.hpp"
 
-#include <proximity/Platform.hpp>
-#include <options/Options.hpp>
-#include <util/PluginManager.hpp>
-#include <network/IOServiceFactory.hpp>
-namespace Sirikata{ namespace Protocol {
-class IMessage;
-class IRetObj;
-class IDelObj;
-class IDelProxQuery;
-class INewObj;
-class IObjLoc;
-class IProxCall;
-class INewProxQuery;
+AUTO_SINGLETON_INSTANCE(Sirikata::Network::StreamFactory);
+namespace Sirikata { namespace Network {
+StreamFactory::StreamFactory(){}
+StreamFactory::~StreamFactory(){}
+StreamFactory&StreamFactory::getSingleton(){
+    return AutoSingleton<StreamFactory>::getSingleton();
+}
+void StreamFactory::destroy(){
+    AutoSingleton<StreamFactory>::destroy();
+}
 
 } }
-#include <proximity/ProximitySystem.hpp>
-#include <proximity/ProximitySystemFactory.hpp>
-namespace Sirikata {
-//InitializeOptions main_options("verbose",
 
-}
-
-int main(int argc,const char**argv) {
-    using namespace Sirikata;
-    OptionSet::getOptions("")->parse(argc,argv);
-    PluginManager plugins;
-    plugins.load( DynamicLibrary::filename("tcpsst") );
-    plugins.load( DynamicLibrary::filename("prox") );
-    
-    Network::IOService*io=Network::IOServiceFactory::makeIOService();
-    Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
-    Network::IOServiceFactory::runService(io);
-    return 0;
-}

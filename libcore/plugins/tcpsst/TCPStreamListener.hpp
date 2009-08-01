@@ -32,7 +32,7 @@
 
 #ifndef SIRIKATA_TCPStreamListener_HPP__
 #define SIRIKATA_TCPStreamListener_HPP__
-#include "StreamListener.hpp"
+#include "network/StreamListener.hpp"
 namespace Sirikata { namespace Network {
 class IOService;
 class TCPListener;
@@ -54,6 +54,10 @@ public:
     virtual Address listenAddress()const;
     ///stops listening
     virtual void close();
+    static TCPStreamListener* construct(Network::IOService*io) {
+        return new TCPStreamListener(*io);
+    }
+
     virtual ~TCPStreamListener();
     IOService * mIOService;
     TCPListener *mTCPAcceptor;

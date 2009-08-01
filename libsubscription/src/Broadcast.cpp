@@ -33,7 +33,8 @@
 #include <subscription/Platform.hpp>
 #include "subscription/Broadcast.hpp"
 #include <boost/thread.hpp>
-#include "network/TCPStream.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamFactory.hpp"
 #include "Subscription_Subscription.pbj.hpp"
 namespace Sirikata { namespace Subscription {
 
@@ -98,7 +99,7 @@ std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroad
         std::tr1::shared_ptr<Network::Stream> topLevelStream;
         if ((topLevelStream=weak_topLevelStream->lock())) {
         }else{
-            std::tr1::shared_ptr<Network::Stream> tlstemp(new Network::TCPStream(*mIOService));
+            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getDefaultConstructor()(mIOService));
             (topLevelStream=tlstemp)->connect(addy,
                                               &Network::Stream::ignoreSubstreamCallback,
                                               &Network::Stream::ignoreConnectionStatus,
@@ -140,7 +141,7 @@ Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address
         std::tr1::shared_ptr<Network::Stream> topLevelStream;
         if ((topLevelStream=weak_topLevelStream->lock())) {
         }else{
-            std::tr1::shared_ptr<Network::Stream> tlstemp(new Network::TCPStream(*mIOService));
+            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getDefaultConstructor()(mIOService));
             (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionStatus,&Network::Stream::ignoreBytesReceived);
             *weak_topLevelStream=tlstemp;
         }

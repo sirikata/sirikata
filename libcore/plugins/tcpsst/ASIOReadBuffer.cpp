@@ -31,8 +31,7 @@
  */
 
 #include "util/Standard.hh"
-#include "TCPDefinitions.hpp"
-#include "Stream.hpp"
+#include "network/TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"

@@ -30,9 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "network/TCPStream.hpp"
-#include "network/TCPStreamListener.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamListener.hpp"
+#include "network/StreamFactory.hpp"
+#include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "util/AtomicTypes.hpp"
+#include "util/PluginManager.hpp"
+#include "util/DynamicLibrary.hpp"
 #include <cxxtest/TestSuite.h>
 #include <boost/thread.hpp>
 #include <time.h>
@@ -82,7 +87,7 @@ public:
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back((TCPStream*)newStream);
+            mStreams.push_back(newStream);
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -96,7 +101,7 @@ public:
     void listenerNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {
             static int newid=0;
-            mStreams.push_back((TCPStream*)newStream);
+            mStreams.push_back(newStream);
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
@@ -106,18 +111,19 @@ public:
         }
     }
     void ioThread(){
-        TCPStreamListener s(*mIO);
+        StreamListener *s=StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO);
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
 
-		s.listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
+		s->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
         IOServiceFactory::runService(mIO);
+        delete s;
     }
     std::string mPort;
     IOService *mIO;
     boost::thread *mThread;
-    std::vector<TCPStream*> mStreams;
+    std::vector<Stream*> mStreams;
     std::vector<std::string> mMessagesToSend;
     Sirikata::AtomicValue<int> mCount;
     Sirikata::AtomicValue<int> mDisconCount;
@@ -215,6 +221,8 @@ public:
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
     SstTest():mIO(IOServiceFactory::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+        Sirikata::PluginManager plugins;
+        plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
         mPort="9142";
         mThread= new boost::thread(std::tr1::bind(&SstTest::ioThread,this));
         bool doUnorderedTest=true;
@@ -329,7 +337,7 @@ public:
     }
     
     ~SstTest() {
-        for(std::vector<TCPStream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+        for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
             delete *i;
         }
         mStreams.resize(0);
@@ -436,18 +444,18 @@ public:
     void testConnectSend (void )
     {
         Stream*z=NULL;
-        TCPStream*tcpz;
+        Stream*tcpz;
         bool doSubstreams=true;
         {
-            TCPStream r(*mIO);
+            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mIO);
             while (!mReadyToConnect);
-            simpleConnect(&r,Address("127.0.0.1",mPort));
-            runRoutine(&r);
+            simpleConnect(r,Address("127.0.0.1",mPort));
+            runRoutine(r);
             if (doSubstreams) {
 
                 {
-                    Stream*zz=r.factory();        
-                    zz = r.clone(&SstTest::noopSubstream);
+                    Stream*zz=r->factory();        
+                    zz = r->clone(&SstTest::noopSubstream);
                     if (zz) {
                         runRoutine(zz);
                         zz->close();
@@ -456,9 +464,9 @@ public:
                 }
                 using std::tr1::placeholders::_1;
                 using std::tr1::placeholders::_2;
-                z=r.clone(std::tr1::bind(&SstTest::testSubstream,this,_1,_2));
+                z=r->clone(std::tr1::bind(&SstTest::testSubstream,this,_1,_2));
                 if (z) {
-                    tcpz=(TCPStream*)z;
+                    tcpz=z;
                     runRoutine(z);
                 }else {
                     ++mDisconCount;
@@ -485,7 +493,8 @@ public:
                  ++datamapiter) {
                 validateVector(datamapiter->first,datamapiter->second,mMessagesToSend);
             }
-            r.close();
+            r->close();
+            delete r;
         }
         if( doSubstreams){
             z->close();

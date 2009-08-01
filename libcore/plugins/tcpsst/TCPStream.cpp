@@ -33,7 +33,7 @@
 #include "util/Standard.hh"
 #include "util/AtomicTypes.hpp"
 
-#include "TCPDefinitions.hpp"
+#include "network/TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"

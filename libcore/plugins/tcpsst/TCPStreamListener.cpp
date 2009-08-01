@@ -31,7 +31,7 @@
  */
 
 #include "util/Standard.hh"
-#include "TCPDefinitions.hpp"
+#include "network/TCPDefinitions.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOStreamBuilder.hpp"

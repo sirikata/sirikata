@@ -34,7 +34,8 @@
 #include <space/Space.hpp>
 #include <util/ObjectReference.hpp>
 #include <network/Stream.hpp>
-#include <network/TCPStreamListener.hpp>
+#include <network/StreamListener.hpp>
+#include <network/StreamListenerFactory.hpp>
 #include <network/IOServiceFactory.hpp>
 #include <space/ObjectConnections.hpp>
 #include <Space_Sirikata.pbj.hpp>
@@ -79,7 +80,7 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     String port="5943";
     String spaceServicesString;
     spaceServices.SerializeToString(&spaceServicesString);
-    mObjectConnections=new ObjectConnections(new Network::TCPStreamListener(*mIO),
+    mObjectConnections=new ObjectConnections(Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO),
                                              Network::Address("localhost",port)
                                              //spaceServicesString
                                              );

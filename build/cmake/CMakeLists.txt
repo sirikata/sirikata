@@ -849,15 +849,10 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
-	${LIBCORE_SOURCE_DIR}/network/ASIOConnectAndHandshake.cpp
-	${LIBCORE_SOURCE_DIR}/network/ASIOReadBuffer.cpp
-	${LIBCORE_SOURCE_DIR}/network/ASIOSocketWrapper.cpp
-	${LIBCORE_SOURCE_DIR}/network/ASIOStreamBuilder.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
-	${LIBCORE_SOURCE_DIR}/network/MultiplexedSocket.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp
-	${LIBCORE_SOURCE_DIR}/network/TCPStream.cpp
-	${LIBCORE_SOURCE_DIR}/network/TCPStreamListener.cpp
+	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
+	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
@@ -992,6 +987,18 @@ SET(LIBCORE_PLUGIN_SQLITE_SOURCES
         ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLiteObjectStorage.cpp)
 
 
+SET(LIBCORE_PLUGIN_TCPSST_DIR ${LIBCORE_PLUGIN_DIR}/tcpsst)
+SET(LIBCORE_PLUGIN_TCPSST_SOURCES
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/TcpsstPlugin.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/TCPStream.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/TCPStreamListener.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/MultiplexedSocket.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOConnectAndHandshake.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOReadBuffer.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOSocketWrapper.cpp
+        ${LIBCORE_PLUGIN_TCPSST_DIR}/ASIOStreamBuilder.cpp)
+
+
 SET(LIBOH_PLUGIN_OGREGRAPHICS_DIR ${LIBOH_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBOH_PLUGIN_OGREGRAPHICS_DIR})
 SET(INPUT ${GFX}/input)
@@ -1054,6 +1061,7 @@ ${GFX}/WebViewManager.cpp
 #test source files
 SET(CXXTESTSources
   ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
+  ${LIBCORE_DIR}/test/SstTest.hpp
   ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
   ${LIBCORE_DIR}/test/SubscriptionTest.hpp
  )
@@ -1184,6 +1192,12 @@ ADD_PLUGIN_TARGET(sqlite
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
 ENDIF()
+
+ADD_PLUGIN_TARGET(tcpsst
+                    SOURCES ${LIBCORE_PLUGIN_TCPSST_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+
 
 IF(OGRE_FOUND)
 ADD_PLUGIN_TARGET(ogregraphics
