@@ -366,7 +366,7 @@ IF(APPLE)
 ENDIF()
 
 #libraries
-
+SET(MONO_MINIMUM_VERSION 2.0)
 #dependency: mono
 IF(NOT MONO_ROOT)
   IF(WIN32)
