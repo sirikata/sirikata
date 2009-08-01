@@ -122,6 +122,12 @@ class OgreSystem: public TimeSteppedSimulation {
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mExternalCubeMap;
     CubeMap *mInternalCubeMap;
+    Entity* internalRayTrace(const Vector3d &position,
+                     const Vector3f &direction,
+                     bool aabbOnly,
+                     int&resultCount,
+                     double &returnResult,
+                     int which=0) const;
 public:
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
@@ -173,6 +179,12 @@ public:
     }
     Entity* rayTrace(const Vector3d &position,
                      const Vector3f &direction,
+                     int&resultCount,
+                     double &returnResult,
+                     int which=0) const;
+    Entity* rayTraceAABB(const Vector3d &position,
+                     const Vector3f &direction,
+                     int&resultCount,
                      double &returnResult,
                      int which=0) const;
     virtual Duration desiredTickRate()const;

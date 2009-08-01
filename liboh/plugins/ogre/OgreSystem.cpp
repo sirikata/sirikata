@@ -49,7 +49,7 @@
 #include "input/SDLInputManager.hpp"
 #include "input/InputDevice.hpp"
 #include "input/InputEvents.hpp"
-
+#include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceManager.hpp"
 #include "resourceManager/GraphicsResourceManager.hpp"
@@ -664,42 +664,97 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
 void OgreSystem::destroyProxy(ProxyObjectPtr p){
 
 }
+struct RayTraceResult {
+    Ogre::Real mDistance;
+    Ogre::MovableObject *mMovableObject;
+    RayTraceResult() { mDistance=3.0e38f;mMovableObject=NULL;}
+    RayTraceResult(Ogre::Real distance,
+                   Ogre::MovableObject *moveableObject) {
+        mDistance=distance;
+        mMovableObject=moveableObject;
+    }
+    bool operator<(const RayTraceResult&other)const {
+        if (mDistance==other.mDistance) {
+            return mMovableObject<other.mMovableObject;
+        }
+        return mDistance<other.mDistance;
+    }
+    bool operator==(const RayTraceResult&other)const {
+        return mDistance==other.mDistance&&mMovableObject==other.mMovableObject;
+    }
+};
 
-Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction, double &returnresult, int which) const {
+Entity* OgreSystem::rayTrace(const Vector3d &position,
+                 const Vector3f &direction,
+                     int&resultCount,
+                 double &returnResult,
+                 int which) const{
+    return internalRayTrace(position,direction,false,resultCount,returnResult,which);
+}
+Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
+                     const Vector3f &direction,
+                     int&resultCount,
+                     double &returnResult,
+                     int which) const{
+    return internalRayTrace(position,direction,true,resultCount,returnResult,which);
+}
+
+Entity *OgreSystem::internalRayTrace(const Vector3d &position, const Vector3f &direction, bool aabbOnly,int&resultCount,double &returnresult, int which) const {
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
     mRayQuery->setRay(traceFrom);
-    mRayQuery->setSortByDistance(true);
+    mRayQuery->setSortByDistance(aabbOnly);
     const Ogre::RaySceneQueryResult& resultList = mRayQuery->execute();
 
     Entity *toReturn = NULL;
     returnresult = 0;
     int count = 0;
+    std::vector<RayTraceResult> fineGrainedResults;
     for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
-        Entity *foundEntity = Entity::fromMovableObject(result.movable);
-        if (foundEntity != mPrimaryCamera && result.distance > 0) {
-            ++count;
+        Ogre::Entity *foundEntity = dynamic_cast<Ogre::Entity*>(result.movable);
+        Entity *ourEntity = Entity::fromMovableObject(result.movable);
+        if (foundEntity && ourEntity && ourEntity != mPrimaryCamera ) {
+            RayTraceResult rtr(result.distance,result.movable);
+            bool passed=aabbOnly&&result.distance > 0;
+            if (aabbOnly==false) {
+                rtr.mDistance=3.0e38f;
+                Ogre::Mesh *mesh = foundEntity->getMesh().get();
+                uint16 numSubMeshes = mesh->getNumSubMeshes();
+                for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
+                    OgreMesh ogreMesh(foundEntity, mesh->getSubMesh(ndx));
+                    std::pair<bool, Ogre::Real> curHit = ogreMesh.intersect(traceFrom);
+                    if (curHit.first && curHit.second < rtr.mDistance && curHit.second > 0 ) {
+                        rtr.mMovableObject = result.movable;
+                        rtr.mDistance=curHit.second;
+                        passed=true;
+                    }
+                }
+            }
+            if (passed) {
+                fineGrainedResults.push_back(rtr);
+                ++count;
+            }
         }
+    }
+    if (!aabbOnly) {
+        std::sort(fineGrainedResults.begin(),fineGrainedResults.end());
     }
     if (count > 0) {
         which %= count;
         if (which < 0) {
             which += count;
         }
-        for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
-             iter != resultList.end(); ++iter) {
-            const Ogre::RaySceneQueryResultEntry &result = (*iter);
-            Entity *foundEntity = Entity::fromMovableObject(result.movable);
-            if (foundEntity != mPrimaryCamera && result.distance > 0) {
-                if (which == 0) {
-                    toReturn = foundEntity;
-                    returnresult = result.distance;
-                    break;
-                }
-                --which;
+        for (std::vector<RayTraceResult>::const_iterator iter  = fineGrainedResults.begin()+which,iterEnd=fineGrainedResults.end();
+             iter != iterEnd; ++iter) {
+            const RayTraceResult &result = (*iter);
+            Entity *foundEntity = Entity::fromMovableObject(result.mMovableObject);
+            if (foundEntity) {
+                toReturn = foundEntity;
+                returnresult = result.mDistance;
+                break;
             }
         }
     }
@@ -707,6 +762,7 @@ Entity *OgreSystem::rayTrace(const Vector3d &position, const Vector3f &direction
     if (mRayQuery) {
         mSceneManager->destroyQuery(mRayQuery);
     }
+    resultCount=count;
     return toReturn;
 }
 
