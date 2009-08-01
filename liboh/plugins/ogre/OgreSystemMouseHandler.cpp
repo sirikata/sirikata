@@ -76,6 +76,34 @@ using namespace Task;
 #define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
+bool compareEntity (const Entity* one, const Entity* two) {
+    Task::AbsTime now = Task::AbsTime::now();
+    ProxyObject *pp = one->getProxyPtr().get();
+    Location loc1 = pp->globalLocation(now);
+    ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
+    ProxyLightObject* light1 = dynamic_cast<ProxyLightObject*>(pp);
+    ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
+    pp = two->getProxyPtr().get();
+    Location loc2 = pp->globalLocation(now);
+    ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
+    ProxyLightObject* light2 = dynamic_cast<ProxyLightObject*>(pp);
+    ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
+    if (camera1 && !camera2) return true;
+    if (camera2 && !camera1) return false;
+    if (camera1 && camera2) {
+        return loc1.getPosition().x < loc2.getPosition().x;
+    }
+    if (light1 && mesh2) return true;
+    if (mesh1 && light2) return false;
+    if (light1 && light2) {
+        return loc1.getPosition().x < loc2.getPosition().x;
+    }
+    if (mesh1 && mesh2) {
+        return mesh1->getPhysical().name < mesh2->getPhysical().name;
+    }
+    return one<two;
+}
+
 // Defined in DragActions.cpp.
 
 class OgreSystem::MouseHandler {
@@ -645,9 +673,14 @@ private:
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
         OgreSystem::SceneEntitiesMap::const_iterator iter;
+        vector<Entity*> entlist;
+        entlist.clear();
         for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
-            dumpObject(output, iter->second);
+            entlist.push_back(iter->second);
         }
+        std::sort(entlist.begin(), entlist.end(), compareEntity);
+        for (unsigned int i=0; i<entlist.size(); i++)
+            dumpObject(output, entlist[i]);
         fclose(output);
     }
 
