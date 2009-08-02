@@ -88,6 +88,8 @@ class OgreSystem::MouseHandler {
     SelectedObjectSet mSelectedObjects;
     SpaceObjectReference mLastShiftSelected;
     int mLastHitCount;
+    float mLastHitX;
+    float mLastHitY;
     // map from mouse button to drag for that mouse button.
     /* as far as multiple cursors are concerned,
        each cursor should have its own MouseHandler instance */
@@ -172,7 +174,20 @@ public:
         mSelectedObjects.clear();
     }
 private:
+    bool recentMouseInRange(float x, float y, float *lastX, float *lastY) {
+        float delx = x-*lastX;
+        float dely = y-*lastY;
 
+        if (delx<0) delx=-delx;
+        if (dely<0) dely=-dely;
+        if (delx>.03125||dely>.03125) {
+            *lastX=x;
+            *lastY=y;
+            
+            return false;
+        }
+        return true;
+    }
     int mWhichRayObject;
     void selectObjectAction(Vector2f p, int direction) {
         CameraEntity *camera = mParent->mPrimaryCamera;
@@ -186,7 +201,7 @@ private:
             if (!mouseOver) {
                 return;
             }
-            if (mouseOver->id() == mLastShiftSelected && numObjectsUnderCursor==mLastHitCount) {
+            if (mouseOver->id() == mLastShiftSelected && numObjectsUnderCursor==mLastHitCount ) {
                 SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
                 if (selectIter != mSelectedObjects.end()) {
                     ProxyObjectPtr obj(selectIter->lock());
@@ -236,7 +251,7 @@ private:
             mWhichRayObject+=direction;
             int numObjectsUnderCursor=0;
             Entity *mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, &numObjectsUnderCursor, mWhichRayObject);
-            if (numObjectsUnderCursor!=mLastHitCount){
+            if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount){
                 mouseOver = hoverEntity(camera, Task::AbsTime::now(), p.x, p.y, &mLastHitCount, mWhichRayObject=0);
             }
             if (mouseOver) {
@@ -914,6 +929,9 @@ private:
 public:
     MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
         mLastHitCount=0;
+        mLastHitX=0;
+        mLastHitY=0;
+
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
                               std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
 
