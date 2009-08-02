@@ -40,7 +40,7 @@ class TCPListener;
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
  */
-class SIRIKATA_EXPORT TCPStreamListener:public StreamListener{
+class TCPStreamListener:public StreamListener{
 
 public:
     TCPStreamListener(IOService&);

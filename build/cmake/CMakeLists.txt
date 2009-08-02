@@ -852,6 +852,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/TCPDefinitions.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp
+	${LIBCORE_SOURCE_DIR}/network/StreamListener.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp

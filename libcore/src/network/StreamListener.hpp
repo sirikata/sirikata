@@ -39,7 +39,7 @@ namespace Sirikata { namespace Network {
  */
 class SIRIKATA_EXPORT StreamListener {
 protected:
-    StreamListener(){}
+    StreamListener();
 public:
     ///subclasses will expose these methods with similar arguments + protocol specific args
     virtual bool listen(
@@ -51,7 +51,7 @@ public:
     virtual Address listenAddress()const=0;
     ///stops listening
     virtual void close()=0;
-    virtual ~StreamListener(){};
+    virtual ~StreamListener();
 };
 } }
 #endif

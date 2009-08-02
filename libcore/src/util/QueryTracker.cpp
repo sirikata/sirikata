@@ -31,7 +31,7 @@
  */
 /*  Created on: Jul 25, 2009 */
 
-#include <util/Platform.hpp>
+#include <util/Standard.hh>
 #include "util/RoutableMessageHeader.hpp"
 #include "QueryTracker.hpp"
 #include "SentMessage.hpp"
