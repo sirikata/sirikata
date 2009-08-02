@@ -806,6 +806,7 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad)
 
 static int InputModifiersToAwesomiumModifiers(Modifier modifiers, bool numpad) {
     int awemods = 0;
+#ifdef HAVE_AWESOMIUM
     if (modifiers &Input::MOD_SHIFT)
         awemods |= Awesomium::SHIFT_MOD;
     if (modifiers &Input::MOD_CTRL)
@@ -816,6 +817,7 @@ static int InputModifiersToAwesomiumModifiers(Modifier modifiers, bool numpad) {
         awemods |= Awesomium::META_MOD;
     if (numpad)
         awemods |= Awesomium::KEYPAD_KEY;
+#endif
     return awemods;
 }
 
