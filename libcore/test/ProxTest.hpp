@@ -30,8 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "network/TCPStream.hpp"
-#include "network/TCPStreamListener.hpp"
+#include "network/Stream.hpp"
+#include "network/StreamListener.hpp"
+#include "network/StreamFactory.hpp"
+#include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "util/ObjectReference.hpp"
 #include "Test_Sirikata.pbj.hpp"
@@ -77,11 +79,13 @@ class ProxTest : public CxxTest::TestSuite         , MessageService
     AtomicValue<int>mDeliver[NUM_OBJECTS];
 public:
     ProxTest():mIO(IOServiceFactory::makeIOService()),mSend(0),mAbortTest(false),mReadyToConnect(false){
+        Sirikata::PluginManager plugins;
+        plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
         for (int i=0;i<NUM_OBJECTS;++i) {
             mObjectId[i]=UUID::random();
             mDeliver[i]=0;
         }
-        Sirikata::PluginManager plugins;
+        
         plugins.load(DynamicLibrary::filename("prox"));
 
         mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));

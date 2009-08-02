@@ -38,19 +38,28 @@
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
-typedef boost::asio::ip::tcp::socket TCPSocket;
+
 typedef boost::asio::io_service InternalIOService;
+typedef boost::asio::ip::tcp::socket InternalTCPSocket;
+typedef  boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
 class IOServiceFactory;
+
 class SIRIKATA_EXPORT IOService:public InternalIOService {
     friend class IOServiceFactory;
     IOService();
     ~IOService();
 public:
 };
-class TCPListener :public boost::asio::ip::tcp::acceptor {
+class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
+  public:
+    TCPSocket(IOService&io);
+};
+
+class SIRIKATA_EXPORT TCPListener :public InternalTCPAcceptor {
 public:
-    template <class Endpoint> TCPListener(IOService&io,Endpoint ep):
-        boost::asio::ip::tcp::acceptor(io,ep){}
+    TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&);
+    void async_accept(TCPSocket&socket,
+                      const std::tr1::function<void(const boost::system::error_code& ) > &cb);
 };
 class MultiplexedSocket;
 #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)

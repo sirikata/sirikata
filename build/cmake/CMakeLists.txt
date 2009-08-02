@@ -850,6 +850,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
+	${LIBCORE_SOURCE_DIR}/network/TCPDefinitions.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamFactory.cpp
 	${LIBCORE_SOURCE_DIR}/network/StreamListenerFactory.cpp
@@ -1058,10 +1059,31 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
-  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
-  ${LIBCORE_DIR}/test/SstTest.hpp
-  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
-  ${LIBCORE_DIR}/test/SubscriptionTest.hpp
+${LIBCORE_DIR}/test/AnyTest.hpp
+${LIBCORE_DIR}/test/AtomicTest.hpp
+#${LIBCORE_DIR}/test/CacheLayerTest.hpp
+${LIBCORE_DIR}/test/DownloadTest.hpp
+${LIBCORE_DIR}/test/EventTest.hpp
+${LIBCORE_DIR}/test/ExtrapolationTest.hpp
+${LIBCORE_DIR}/test/FactoryTest.hpp
+${LIBCORE_DIR}/test/ListenerTest.hpp
+${LIBCORE_DIR}/test/Matrix3Test.hpp
+${LIBCORE_DIR}/test/MinitransactionHandlerTest.hpp
+${LIBCORE_DIR}/test/NameLookupTest.hpp
+${LIBCORE_DIR}/test/ObjectStorageTest.hpp
+${LIBCORE_DIR}/test/OptionTest.hpp
+#${LIBCORE_DIR}/test/ProxTest.hpp
+${LIBCORE_DIR}/test/QuaternionTest.hpp
+${LIBCORE_DIR}/test/ReadWriteHandlerTest.hpp
+${LIBCORE_DIR}/test/RoutableMessageTest.hpp
+${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
+${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
+${LIBCORE_DIR}/test/SstTest.hpp
+${LIBCORE_DIR}/test/SubscriptionTest.hpp
+#${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
+${LIBCORE_DIR}/test/TR1Test.hpp
+#${LIBCORE_DIR}/test/UploadTest.hpp
+${LIBCORE_DIR}/test/Vector3Test.hpp
  )
 #  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
