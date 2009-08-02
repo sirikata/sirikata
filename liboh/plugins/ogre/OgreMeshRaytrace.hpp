@@ -48,7 +48,7 @@ class OgreMesh {
         }
     };
 public:
-  std::pair<bool, Ogre::Real> intersect(const Ogre::Ray &ray);
+  std::pair<bool, std::pair< double, Vector3f> > intersect(const Ogre::Ray &ray);
   OgreMesh(Ogre::Entity *entity, Ogre::SubMesh *submesh);
 protected:
   void syncFromOgreMesh(Ogre::Entity *entity,  Ogre::SubMesh *mSubMesh);

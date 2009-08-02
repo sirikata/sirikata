@@ -35,7 +35,7 @@
 #include <util/Platform.hpp>
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/TimeSteppedSimulation.hpp>
+#include <oh/TimeSteppedQueryableSimulation.hpp>
 #include <oh/ProxyObject.hpp>
 #include <OgrePrerequisites.h>
 #include <OgreResourceManager.h>
@@ -77,7 +77,7 @@ class CameraEntity;
 class CubeMap;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedSimulation {
+class OgreSystem: public TimeSteppedQueryableSimulation {
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
@@ -127,6 +127,7 @@ class OgreSystem: public TimeSteppedSimulation {
                      bool aabbOnly,
                      int&resultCount,
                      double &returnResult,
+                     Vector3f &returnNormal,
                      int which=0) const;
 public:
     OptionValue *mParallaxSteps;
@@ -157,7 +158,7 @@ public:
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
-    static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
+    static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options){
         OgreSystem*os= new OgreSystem;
         if (os->initialize(proxyManager,options))
@@ -177,10 +178,17 @@ public:
     Entity* getEntity(const ProxyObjectPtr &proxy) const {
         return getEntity(proxy->getObjectReference());
     }
+    bool queryRay(const Vector3d&position,
+                  const Vector3f&direction,
+                  double &returnDistance,
+                  Vector3f &returnNormal,
+                  SpaceObjectReference &returnName)const;
+    
     Entity* rayTrace(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,
                      double &returnResult,
+                     Vector3f&returnNormal,
                      int which=0) const;
     Entity* rayTraceAABB(const Vector3d &position,
                      const Vector3f &direction,

@@ -562,4 +562,14 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     }
 }
 
+bool BulletSystem::queryRay(const Vector3d&position,
+                            const Vector3f&direction,
+                            double &returnDistance,
+                            Vector3f &returnNormal,
+                            SpaceObjectReference &returnName)const{
+    NOT_IMPLEMENTED(bulletphysics);
+    return false;
+}
+
+
 }//namespace sirikata

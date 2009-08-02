@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  SimulationFactory.hpp
+/*  Sirikata Utilities -- Sirikata Listener Pattern
+ *  TimeSteppedSimulation.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,25 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SIMULATION_FACTORY_
-#define _SIRIKATA_SIMULATION_FACTORY_
-#include <oh/Platform.hpp>
-#include <util/ListenerProvider.hpp>
-#include "TimeSteppedQueryableSimulation.hpp"
-namespace Sirikata{
+#ifndef _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
+#define _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
+#include "TimeSteppedSimulation.hpp"
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_OH_EXPORT SimulationFactory
-    : public AutoSingleton<SimulationFactory>,
-      public Factory2<TimeSteppedQueryableSimulation*,
-                      Provider<ProxyCreationListener*>*,//the ProxyManager
-                      const String&> //options string for the graphics system
-{
+namespace Sirikata {
+class SpaceObjectReference;
+
+
+class TimeSteppedQueryableSimulation: public TimeSteppedSimulation{
 public:
-    static SimulationFactory&getSingleton();
-    static void destroy();
+    /**
+     * Query the scene to look for the first active simulation object that intersects the ray
+     * @param position the starting point for the ray query
+     * @param direction the normalized direction which the ray continues at
+     * @param returnDistance is the length down the ray which hits the object
+     * @param returnNormal is the normal of the surface which the ray pierces
+     * @param returnName is the space object reference of the object that is pierced
+     * @returns whether the ray hit anything
+     * @note if the ray misses all objects the boolean returns false and all values are unchanged
+     */
+    virtual bool queryRay(const Vector3d&position,
+                          const Vector3f&direction,
+                          double &returnDistance,
+                          Vector3f &returnNormal,
+                          SpaceObjectReference &returnName)const=0;
+    virtual Duration desiredTickRate()const=0;
+    ///returns true if simulation should continue (false quits app)
+    virtual bool tick()=0;
 };
 
-
 }
+
 #endif

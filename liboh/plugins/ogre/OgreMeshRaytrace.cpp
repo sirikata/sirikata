@@ -96,16 +96,21 @@ void OgreMesh::syncFromOgreMesh(Ogre::Entity *entity,Ogre::SubMesh*subMesh)
   }
 }
 
-std::pair<bool, Real> OgreMesh::intersect(const Ogre::Ray &ray)
+std::pair<bool, std::pair< double, Vector3f> > OgreMesh::intersect(const Ogre::Ray &ray)
 {
-  std::pair<bool, Real> rtn(false, std::numeric_limits<Real>::max());
+  std::pair<bool, std::pair< double, Vector3f> > rtn(false,std::pair<double,Vector3f>(std::numeric_limits<Real>::max(),Vector3f(0,0,0)));
   std::vector<Triangle>::iterator itr,itere=mTriangles.end();
 
   for (itr = mTriangles.begin(); itr != itere; itr++) {
     std::pair<bool, Real> hit = Ogre::Math::intersects(ray,
       itr->mV1, itr->mV2,itr->mV3, true, false);
-    if (hit.first && hit.second < rtn.second) {
-      rtn = hit;
+    if (hit.first && hit.second < rtn.second.first) {
+      rtn.first = hit.first;
+      rtn.second.first = hit.second;
+      Ogre::Vector3 nml=(itr->mV1-itr->mV2).crossProduct(itr->mV3-itr->mV2);
+      rtn.second.second.x=nml.x;
+      rtn.second.second.y=nml.y;
+      rtn.second.second.z=nml.z;
     }
   }
 

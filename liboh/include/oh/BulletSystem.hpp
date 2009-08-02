@@ -354,7 +354,7 @@ public:
     }
 };
 
-class BulletSystem: public TimeSteppedSimulation {
+class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
     Vector3d gravity;
@@ -383,7 +383,7 @@ public:
                            float density, float friction, float bounce,
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
-    static TimeSteppedSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
+    static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
         BulletSystem*os= new BulletSystem;
         if (os->initialize(proxyManager,options))
@@ -392,6 +392,21 @@ public:
         return NULL;
     }
     void test();
+    /**
+     * Query the scene to look for the first active simulation object that intersects the ray
+     * @param position the starting point for the ray query
+     * @param direction the normalized direction which the ray continues at
+     * @param returnDistance is the length down the ray which hits the object
+     * @param returnNormal is the normal of the surface which the ray pierces
+     * @param returnName is the space object reference of the object that is pierced
+     * @returns whether the ray hit anything
+     * @note if the ray misses all objects the boolean returns false and all values are unchanged
+     */
+    virtual bool queryRay(const Vector3d&position,
+                          const Vector3f&direction,
+                          double &returnDistance,
+                          Vector3f &returnNormal,
+                          SpaceObjectReference &returnName)const;
     virtual void createProxy(ProxyObjectPtr p);
     virtual void destroyProxy(ProxyObjectPtr p);
     virtual Duration desiredTickRate()const {

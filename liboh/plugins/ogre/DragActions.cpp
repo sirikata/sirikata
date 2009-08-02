@@ -415,6 +415,7 @@ public:
         camera = info.camera;
         mParent = info.sys;
         double distance;
+        Vector3f normal;
         Task::AbsTime now = Task::AbsTime::now();
         Location cameraLoc = camera->getProxy().globalLocation(now);
         toMove = Vector3f(
@@ -425,7 +426,7 @@ public:
 			float WORLD_SCALE = mParent->getInputManager()->mWorldScale->as<float>();
             mPanDistance = WORLD_SCALE;
 		} else if (!mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT) &&
-				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, hitCount, distance)) {
+				   info.sys->rayTrace(cameraLoc.getPosition(), toMove, hitCount, distance, normal)) {
             mPanDistance = distance;
         } else if (!info.objects.empty()) {
             Vector3d totalPosition(averageSelectedPosition(now, info.objects.begin(), info.objects.end()));
@@ -468,12 +469,13 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
 
     double distance;
+    Vector3f normal;
     float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
     int hitCount=0;
     if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
         !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), hitCount, distance) &&
+    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), hitCount, distance, normal) &&
                (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {
@@ -557,7 +559,7 @@ public:
             pixelToDirection(camera, cameraLoc.getOrientation(),
                              dev->getAxis(PointerDevice::CURSORX).getCentered(),
                              dev->getAxis(PointerDevice::CURSORY).getCentered()));
-        if (mParent->rayTrace(cameraLoc.getPosition(), toMove, distance)) {
+        if (mParent->rayTrace(cameraLoc.getPosition(), toMove, normal distance)) {
             rotateCamera(camera, amount.x, amount.y);
             panCamera(camera, amount * distance);
         } else */
