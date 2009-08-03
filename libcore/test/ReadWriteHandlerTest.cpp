@@ -72,7 +72,7 @@ public:
     TeardownReadWriteHandlerFunction teardown;
 };
 
-static void check_fill_read_write_handler_result(Protocol::Response *response, bool* done, Protocol::Response**returned_response) {
+static void check_fill_read_write_handler_result(Protocol::Response *response, volatile bool* done, Protocol::Response**returned_response) {
     if (response->has_return_status())
         TS_ASSERT_EQUALS(response->return_status(), Protocol::Response::SUCCESS );
     *returned_response=response;
@@ -89,7 +89,7 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
     for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
         copyStorageElement(trans->mutable_writes(i),keyvalues()[i]);
     }
-    bool done = false;
+    volatile bool done = false;
     Response*final_reads=NULL;
     rwh->apply(trans, std::tr1::bind(check_fill_read_write_handler_result, _1, &done,&final_reads));
     while(!done)
@@ -99,7 +99,7 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
 }
 
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
-static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *response, bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
+static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *response, volatile bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
     using namespace Sirikata::Persistence::Protocol;
     TS_ASSERT(response->has_return_status());
     TS_ASSERT_EQUALS( response->return_status(), expected_error );
@@ -127,7 +127,7 @@ static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *
  *  \param expected a StorageSet with the values that should be returned in the ReadSet
  */
 static void test_read_write(ReadWriteHandler* rwh, Protocol::ReadWriteSet* trans, Protocol::Response::ReturnStatus expected_error, const Protocol::StorageSet &expected, int testnum) {
-    bool done = false;
+    volatile bool done = false;
 
     rwh->apply(trans, std::tr1::bind(check_read_write_results, rwh, _1, &done, expected_error, expected, testnum));
 

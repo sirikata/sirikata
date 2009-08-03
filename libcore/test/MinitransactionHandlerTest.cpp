@@ -66,7 +66,7 @@ public:
     TeardownMinitransactionHandlerFunction teardown;
 };
 
-static void check_fill_minitransaction_handler_result(Protocol::Response *response, bool* done, Protocol::Response**returned_response) {
+static void check_fill_minitransaction_handler_result(Protocol::Response *response, volatile bool* done, Protocol::Response**returned_response) {
     if (response->has_return_status())
         TS_ASSERT_EQUALS(response->return_status(), Protocol::Response::SUCCESS );
     *returned_response=response;
@@ -83,7 +83,7 @@ static void fill_minitransaction_handler(MinitransactionHandler* mth) {
     for(int i = 0; i < OBJECT_STORAGE_GENERATED_PAIRS; i++) {
         copyStorageElement(trans->mutable_writes(i),keyvalues()[i]);
     }
-    bool done = false;
+    volatile bool done = false;
     Response*final_reads=NULL;
     mth->transact(trans, std::tr1::bind(check_fill_minitransaction_handler_result, _1, &done,&final_reads));
     while(!done)
@@ -93,7 +93,7 @@ static void fill_minitransaction_handler(MinitransactionHandler* mth) {
 }
 
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
-static void check_minitransaction_results(MinitransactionHandler* mth, Protocol::Response *response, bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
+static void check_minitransaction_results(MinitransactionHandler* mth, Protocol::Response *response, volatile bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
 
     TS_ASSERT(response->has_return_status());
     if (expected_error != Protocol::Response::SUCCESS) {
@@ -130,7 +130,7 @@ static void check_minitransaction_results(MinitransactionHandler* mth, Protocol:
  *                  only used if expected_error is None
  */
 static void test_minitransaction(MinitransactionHandler* mth, Protocol::Minitransaction* trans, Protocol::Response::ReturnStatus expected_error, const Protocol::StorageSet &expected, int testnum) {
-    bool done = false;
+    volatile bool done = false;
 
     mth->transact(trans, std::tr1::bind(check_minitransaction_results, mth, _1, &done, expected_error, expected, testnum));
 
