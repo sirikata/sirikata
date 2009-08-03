@@ -37,6 +37,7 @@
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
+#include "btBulletCollisionCommon.h"
 #include <oh/BulletSystem.hpp>
 
 using namespace std;
@@ -388,15 +389,7 @@ bool BulletSystem::tick() {
                 }
             }
             dynamicsWorld->stepSimulation(delta,10);
-            
-            /// test queryRay
-            /*
-            double dist;
-            Vector3f norm;
-            SpaceObjectReference sor;
-            queryRay(Vector3d(48.81, 4618.08, 23.31), Vector3f(0,-1,0), 100.0, dist, norm, sor);
-            cout << "dbm debug: queryRay returns distance: " << dist << " normal: " << norm << " object: " << sor << endl;
-            */
+
             for (unsigned int i=0; i<objects.size(); i++) {
                 if (objects[i]->mActive) {
                     po = objects[i]->getBulletState();
@@ -409,6 +402,19 @@ bool BulletSystem::tick() {
                 }
             }
 
+            /// test queryRay
+            /*
+            ProxyMeshObjectPtr bugObj;
+            for (unsigned int i=0; i<objects.size(); i++)
+                if (objects[i]->mName == "queryRay") bugObj = objects[i]->mMeshptr;
+            double dist;
+            Vector3f norm;
+            SpaceObjectReference sor;
+            //queryRay(Vector3d(48.81, 4618.08, 23.31), Vector3f(0,-1,0), 100.0, dist, norm, sor);  /// BORNHOLM SCENE
+            queryRay(Vector3d(0, 10, 0), Vector3f(0,-1,0), 20.0, bugObj, dist, norm, sor);
+            cout << "dbm debug: queryRay returns distance: " << dist << " normal: " << norm << " object: " << sor << endl;
+            */
+            
             /// collision messages
             for (map<set<bulletObj*>, int>::iterator i=dispatcher->collisionPairs.begin();
                     i != dispatcher->collisionPairs.end(); ++i) {
@@ -582,32 +588,60 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     }
 }
 
+struct  raycastCallback : public btCollisionWorld::RayResultCallback {
+    btCollisionObject* mSkip;
+    btVector3   m_hitNormalWorld;
+
+    raycastCallback(btCollisionObject* skip) :
+            mSkip(skip) {
+    }
+
+    virtual btScalar    addSingleResult(btCollisionWorld::LocalRayResult& rayResult,bool normalInWorldSpace) {
+        //caller already does the filter on the m_closestHitFraction
+        if (rayResult.m_collisionObject==mSkip) {
+            return 1.0;
+        }
+        m_closestHitFraction = rayResult.m_hitFraction;
+        m_collisionObject = rayResult.m_collisionObject;
+        if (normalInWorldSpace) {
+            m_hitNormalWorld = rayResult.m_hitNormalLocal;
+        }
+        else {
+            ///need to transform normal into worldspace
+            m_hitNormalWorld = m_collisionObject->getWorldTransform().getBasis()*rayResult.m_hitNormalLocal;
+        }
+        //m_hitPointWorld.setInterpolate3(m_rayFromWorld,m_rayToWorld,rayResult.m_hitFraction);
+        return rayResult.m_hitFraction;
+    }
+};
+
 bool BulletSystem::queryRay(const Vector3d& position,
-              const Vector3f& direction,
-              const double maxDistance,
-              double &returnDistance,
-              Vector3f &returnNormal,
-              SpaceObjectReference &returnName) {
-    
+                            const Vector3f& direction,
+                            const double maxDistance,
+                            ProxyMeshObjectPtr ignore,
+                            double &returnDistance,
+                            Vector3f &returnNormal,
+                            SpaceObjectReference &returnName) {
+
     btVector3 start(position.x, position.y, position.z);
     Vector3d temp = position + Vector3d(direction)*maxDistance;
     btVector3 end(temp.x, temp.y, temp.z);
-    btCollisionWorld::ClosestRayResultCallback cb(start, end);
+    btCollisionObject* btIgnore=0;
+    if (ignore)
+        btIgnore = mesh2bullet(ignore)->mBulletBodyPtr;         /// right now this is a slow walk in the park
+    raycastCallback cb(btIgnore);
     dynamicsWorld->rayTest (start, end, cb);
     if (cb.hasHit ()) {
-        Vector3d hit;
-        hit.x = cb.m_hitPointWorld.getX();
-        hit.y = cb.m_hitPointWorld.getY();
-        hit.z = cb.m_hitPointWorld.getZ();
         btVector3 norm = cb.m_hitNormalWorld.normalize();
         returnNormal.x = norm.getX();
         returnNormal.y = norm.getY();
         returnNormal.z = norm.getZ();
-        temp = hit-position;
         bulletObj* obj=bt2siri[cb.m_collisionObject];
-        returnDistance = sqrt(temp.x*temp.x+temp.y*temp.y+temp.z*temp.z);
-        returnName = obj->mMeshptr->getObjectReference();
-        //cout << "     dbm debug collision obj: " << returnName << "|" << obj->mName << endl;
+        returnDistance = maxDistance * cb.m_closestHitFraction;
+        if (obj) {
+            /// if not found, it's probably the ground body
+            returnName = obj->mMeshptr->getObjectReference();
+        }
         return true;
     }
     else {

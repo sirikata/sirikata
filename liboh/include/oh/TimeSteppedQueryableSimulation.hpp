@@ -33,12 +33,15 @@
 #ifndef _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
 #define _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
 #include "TimeSteppedSimulation.hpp"
+#include <oh/ProxyObject.hpp>
+#include <oh/ProxyMeshObject.hpp>
 
 namespace Sirikata {
+typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 class SpaceObjectReference;
 
 
-class TimeSteppedQueryableSimulation: public TimeSteppedSimulation{
+class TimeSteppedQueryableSimulation: public TimeSteppedSimulation {
 public:
     /**
      * Query the scene to look for the first active simulation object that intersects the ray
@@ -53,6 +56,7 @@ public:
     virtual bool queryRay(const Vector3d& position,
                           const Vector3f& direction,
                           const double maxDistance,
+                          ProxyMeshObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName)=0;

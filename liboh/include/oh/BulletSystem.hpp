@@ -394,6 +394,16 @@ public:
         delete os;
         return NULL;
     }
+    bulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
+        bulletObj* bo=0;
+        for(unsigned int i=0; i<objects.size(); i++) {
+            if (objects[i]->mMeshptr==meshptr) {
+                bo=objects[i];
+                break;
+            }
+        }
+        return bo;
+    };
     void test();
     /**
      * Query the scene to look for the first active simulation object that intersects the ray
@@ -409,6 +419,7 @@ public:
     virtual bool queryRay(const Vector3d& position,
                           const Vector3f& direction,
                           const double maxDistance,
+                          ProxyMeshObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName);

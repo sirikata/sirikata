@@ -706,6 +706,7 @@ Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
                           const double maxDistance,
+                          ProxyMeshObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {
