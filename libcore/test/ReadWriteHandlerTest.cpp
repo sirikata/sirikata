@@ -104,14 +104,27 @@ static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *
     TS_ASSERT(response->has_return_status());
     TS_ASSERT_EQUALS( response->return_status(), expected_error );
     TS_ASSERT_EQUALS( response->reads_size(), expected.reads_size() );
+    if (response->return_status()!= expected_error||response->reads_size()!=expected.reads_size()) {
+        int THIS_TEST_FAILED=-1;
+        TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED);
+
+    }
     int len=response->reads_size();
     if (len==expected.reads_size()) {
         for (int i=0;i<len;++i) {
-            TS_ASSERT_EQUALS(response->reads(i).data(),expected.reads(i).data());
-            if (response->reads(i).data()!=expected.reads(i).data()) {
+            TS_ASSERT_EQUALS(response->reads(i).has_data(),expected.reads(i).has_data());
+            if (response->reads(i).has_data()) {
+                TS_ASSERT_EQUALS(response->reads(i).data(),expected.reads(i).data());
+                if (response->reads(i).data()!=expected.reads(i).data()) {
+                    int THIS_TEST_FAILED=-1;
+                    TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED);
+                }
+            }
+            if (response->reads(i).has_data()!=expected.reads(i).has_data()) {
                 int THIS_TEST_FAILED=-1;
                 TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED);
             }
+            
         }
     }
     rwh->destroyResponse(response);
@@ -226,7 +239,7 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     trans_5->mutable_reads(0).set_field_name("dne");
     copyStorageKey(trans_5->mutable_reads(1), keyvalues()[1] );
 
-    copyStorageKey(trans_5->mutable_writes(0), keyvalues()[1] );
+    copyStorageKey(trans_5->mutable_writes(0), keyvalues()[2] );
     copyStorageValue(trans_5->mutable_writes(0), keyvalues()[2] );
 
     StorageSet expected_5;
@@ -234,15 +247,14 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     expected_5.add_reads();
     copyStorageValue(expected_5.mutable_reads(1),keyvalues()[1]);
 
-    test_read_write(fixture.handler, trans_5, Response::KEY_MISSING, expected_5,5);
-
-    // 1 read to make sure last set's write did not occur, 1 write to delete keyvalue[0]
+    test_read_write(fixture.handler, trans_5, Response::SUCCESS, expected_5,5);
+    // 1 read to make sure last set's write did occur, 1 write to delete keyvalue[0]
     ReadWriteSet* trans_6 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,1);
-    copyStorageKey(trans_6->mutable_reads(0), keyvalues()[1] );
+    copyStorageKey(trans_6->mutable_reads(0), keyvalues()[2] );
     copyStorageKey(trans_6->mutable_writes(0), keyvalues()[0] );//erase 0
     StorageSet expected_6;
     expected_6.add_reads();
-    copyStorageElement(expected_6.mutable_reads(0),keyvalues()[1] );
+    copyStorageElement(expected_6.mutable_reads(0),keyvalues()[2] );
 
     test_read_write(fixture.handler, trans_6, Response::SUCCESS, expected_6,6);
 
@@ -251,7 +263,7 @@ void test_read_write_handler_order(SetupReadWriteHandlerFunction _setup, CreateR
     StorageSet expected_7;
     expected_7.add_reads();
 
-    test_read_write(fixture.handler, trans_7, Response::KEY_MISSING, expected_7,7);
+    test_read_write(fixture.handler, trans_7, Response::SUCCESS, expected_7,7);
 
     ReadWriteSet* trans_8 = fixture.handler->createReadWriteSet((ReadWriteSet*)NULL,1,0);
     copyStorageKey(trans_8->mutable_reads(0), keyvalues()[1] );
