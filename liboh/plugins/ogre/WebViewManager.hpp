@@ -241,7 +241,12 @@ protected:
 	Awesomium::WebCore* webCore;
 	typedef std::map<std::string,WebView*> WebViewMap;
     WebViewMap activeWebViews;
-	WebView* focusedWebView, *tooltipWebView, *tooltipParent;
+    WebView* focusedWebView;
+    WebView* tooltipWebView;
+    WebView* tooltipParent;
+    WebView* chromeWebView;
+    WebView* focusedNonChromeWebView;
+
 	Ogre::Viewport* defaultViewport;
 	int mouseXPos, mouseYPos;
     bool isDragging;
@@ -256,6 +261,16 @@ protected:
 	void onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
+
+    enum NavigationAction {
+        NavigateBack,
+        NavigateForward,
+        NavigateRefresh,
+        NavigateHome
+    };
+
+    void onChromeNav(WebView* webview, const Awesomium::JSArguments& args, NavigationAction action);
+
 public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);

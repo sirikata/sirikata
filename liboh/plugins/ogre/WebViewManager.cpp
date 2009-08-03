@@ -66,8 +66,25 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad);
 static int InputModifiersToAwesomiumModifiers(Modifier mod, bool numpad);
 
 
+static const char* webview_chrome_html =
+    "<html>\n"
+    "<body>\n"
+    "<script type=\"text/javascript\">\n"
+    "</script>\n"
+    "<table width=\"100%\"><tr>\n"
+    "<td onclick=\"Client.navback()\">Back</td>\n"
+    "<td onclick=\"Client.navforward()\">Forward</td>\n"
+    "<td onclick=\"Client.navrefresh()\">Refresh</td>\n"
+    "<td onclick=\"Client.navhome()\">Home</td>\n"
+    "</tr></table>\n"
+    "</body>\n"
+    "</html>\n"
+    ;
+
+
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
+          chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
 	  isDragging(false), isResizing(false),
           zOrderCounter(5),
@@ -84,6 +101,13 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
 	//tooltipWebView->bind("resizeTooltip", JSDelegate(this, &WebViewManager::onResizeTooltip));
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
+
+        chromeWebView = createWebView("__chrome", 250, 45, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView->loadHTML(std::string(webview_chrome_html));
+        chromeWebView->bind("navback", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateBack));
+        chromeWebView->bind("navforward", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateForward));
+        chromeWebView->bind("navrefresh", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateRefresh));
+        chromeWebView->bind("navhome", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateHome));
 #endif
 }
 
@@ -134,7 +158,8 @@ void WebViewManager::Update()
 			activeWebViews.erase(iter++);
 			if(focusedWebView == webViewToDelete)
 			{
-				focusedWebView = 0;
+				focusedWebView = NULL;
+				focusedNonChromeWebView = NULL;
 				isDraggingFocusedWebView = false;
 			}
 
@@ -382,8 +407,10 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 	deFocusAllWebViews();
 	WebView* webViewToFocus = selection? selection : getTopWebView(x, y);
 
-	if(!webViewToFocus)
-		return false;
+	if(!webViewToFocus) {
+            focusedNonChromeWebView = NULL;
+            return false;
+        }
 
 	std::vector<WebView*> sortedWebViews;
 	WebViewMap::iterator iter;
@@ -416,6 +443,10 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 #ifdef HAVE_AWESOMIUM
 	focusedWebView->webView->focus();
 #endif
+
+        if (focusedWebView != chromeWebView)
+            focusedNonChromeWebView = focusedWebView;
+
 	isDraggingFocusedWebView = false;
 
 	return true;
@@ -458,7 +489,7 @@ void WebViewManager::deFocusAllWebViews()
 	focusedWebView = 0;
 	*/
 
-	focusedWebView = 0;
+	focusedWebView = NULL;
 	isDraggingFocusedWebView = false;
 }
 
@@ -521,6 +552,31 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 	isDraggingFocusedWebView = true;
 }
 
+
+void WebViewManager::onChromeNav(WebView* webview, const Awesomium::JSArguments& args, NavigationAction action) {
+    if (focusedNonChromeWebView == NULL)
+        return;
+
+#ifdef HAVE_AWESOMIUM
+    switch(action) {
+      case NavigateBack:
+        focusedNonChromeWebView->webView->goToHistoryOffset(-1);
+        break;
+      case NavigateForward:
+        focusedNonChromeWebView->webView->goToHistoryOffset(1);
+        break;
+      case NavigateRefresh:
+        focusedNonChromeWebView->webView->refresh();
+        break;
+      case NavigateHome:
+        focusedNonChromeWebView->loadURL("http://www.google.com");
+        break;
+      default:
+        SILOG(ogre,error,"Unknown navigation action from onChromeNav.");
+        break;
+    }
+#endif //HAVE_AWESOMIUM
+}
 
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)
 {
