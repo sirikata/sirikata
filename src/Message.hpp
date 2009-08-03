@@ -52,6 +52,8 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_OSEG_MIGRATE  8
 #define MESSAGE_TYPE_OSEG_LOOKUP   9
 #define MESSAGE_TYPE_NOISE         10
+#define MESSAGE_TYPE_SERVER_PROX_QUERY   11
+#define MESSAGE_TYPE_SERVER_PROX_RESULT  12
 
 
 
@@ -378,6 +380,70 @@ private:
 
   float mLoadReading;
 
+};
+
+
+
+class ServerProximityQueryMessage : public Message {
+public:
+    enum QueryAction {
+        AddOrUpdate = 1,
+        Remove = 2
+    };
+
+    ServerProximityQueryMessage(const OriginID& origin, QueryAction action);
+    ServerProximityQueryMessage(const OriginID& origin, QueryAction action, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle);
+    ~ServerProximityQueryMessage();
+
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    QueryAction action() const;
+    TimedMotionVector3f queryLocation() const { assert(action() == AddOrUpdate); return mQueryLocation; }
+    BoundingSphere3f queryBounds() const { assert(action() == AddOrUpdate); return mBounds; }
+    SolidAngle queryAngle() const { assert(action() == AddOrUpdate); return mMinAngle; }
+private:
+    friend class Message;
+    ServerProximityQueryMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+
+    QueryAction mAction;
+    TimedMotionVector3f mQueryLocation;
+    BoundingSphere3f mBounds;
+    SolidAngle mMinAngle;
+};
+
+
+class ServerProximityResultMessage : public Message {
+public:
+    struct ObjectUpdate {
+        UUID object;
+        TimedMotionVector3f location;
+        BoundingSphere3f bounds;
+    };
+
+    ServerProximityResultMessage(const OriginID& origin);
+    ~ServerProximityResultMessage();
+
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    void addObjectUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void addObjectRemoval(const UUID& objid);
+
+    std::vector<ObjectUpdate> objectUpdates() const {
+        return mObjectUpdates;
+    }
+
+    std::vector<UUID> objectRemovals() const {
+        return mObjectRemovals;
+    }
+
+private:
+    friend class Message;
+    ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+
+    std::vector<ObjectUpdate> mObjectUpdates;
+    std::vector<UUID> mObjectRemovals;
 };
 
 } // namespace CBR

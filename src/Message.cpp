@@ -116,6 +116,12 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_NOISE:
         msg = new NoiseMessage(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_SERVER_PROX_QUERY:
+        msg = new ServerProximityQueryMessage(wire,offset,_id);
+        break;
+      case MESSAGE_TYPE_SERVER_PROX_RESULT:
+        msg = new ServerProximityResultMessage(wire,offset,_id);
+        break;
       default:
         assert(false);
         break;
@@ -885,6 +891,161 @@ MessageType OSegLookupMessage::type() const
 }
 
 
+
+
+
+ServerProximityQueryMessage::ServerProximityQueryMessage(const OriginID& origin, QueryAction action)
+ : Message(origin, true),
+   mAction(action)
+{
+    assert(mAction == Remove);
+}
+
+ServerProximityQueryMessage::ServerProximityQueryMessage(const OriginID& origin, QueryAction action, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle)
+ : Message(origin, true),
+   mAction(action),
+   mQueryLocation(loc),
+   mBounds(bounds),
+   mMinAngle(angle)
+{
+    assert(mAction == AddOrUpdate);
+}
+
+ServerProximityQueryMessage::ServerProximityQueryMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+ : Message(_id)
+{
+
+    uint8 raw_act;
+    memcpy(&raw_act, &wire[offset], sizeof(raw_act));
+    offset += sizeof(raw_act);
+    mAction = (QueryAction)raw_act;
+
+    if (mAction == AddOrUpdate) {
+        memcpy(&mQueryLocation, &wire[offset], sizeof(mQueryLocation));
+        offset += sizeof(mQueryLocation);
+
+        memcpy(&mBounds, &wire[offset], sizeof(mBounds));
+        offset += sizeof(mBounds);
+
+        memcpy(&mMinAngle, &wire[offset], sizeof(mMinAngle));
+        offset += sizeof(mMinAngle);
+    }
+}
+
+ServerProximityQueryMessage::~ServerProximityQueryMessage() {
+}
+
+MessageType ServerProximityQueryMessage::type() const {
+  return MESSAGE_TYPE_SERVER_PROX_QUERY;
+}
+
+uint32 ServerProximityQueryMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+
+
+    wire.resize( wire.size() + sizeof(uint8) );
+
+    uint8 raw_act = (uint8)mAction;
+    memcpy(&wire[offset], &raw_act, sizeof(raw_act));
+    offset += sizeof(raw_act);
+
+    if (mAction == AddOrUpdate) {
+        wire.resize( wire.size() + sizeof(mQueryLocation) + sizeof(mBounds) + sizeof(mMinAngle) );
+
+        memcpy(&wire[offset], &mQueryLocation, sizeof(mQueryLocation));
+        offset += sizeof(mQueryLocation);
+
+        memcpy(&wire[offset], &mBounds, sizeof(mBounds));
+        offset += sizeof(mBounds);
+
+        memcpy(&wire[offset], &mMinAngle, sizeof(mMinAngle));
+        offset += sizeof(mMinAngle);
+    }
+
+    return offset;
+}
+
+
+
+
+ServerProximityResultMessage::ServerProximityResultMessage(const OriginID& origin)
+ : Message(origin, true)
+{
+}
+
+ServerProximityResultMessage::ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+ : Message(_id)
+{
+
+    uint16 nupdates = 0;
+    memcpy(&nupdates, &wire[offset], sizeof(nupdates));
+    offset += sizeof(nupdates);
+    for(uint16 idx = 0; idx < nupdates; idx++) {
+        ObjectUpdate update;
+        memcpy(&update, &wire[offset], sizeof(update));
+        offset += sizeof(update);
+        mObjectUpdates.push_back(update);
+    }
+
+    uint16 nremovals = 0;
+    memcpy(&nremovals, &wire[offset], sizeof(nremovals));
+    offset += sizeof(nremovals);
+    for(uint16 idx = 0; idx < nremovals; idx++) {
+        UUID objrem;
+        memcpy(&objrem, &wire[offset], sizeof(objrem));
+        offset += sizeof(objrem);
+        mObjectRemovals.push_back(objrem);
+    }
+}
+
+ServerProximityResultMessage::~ServerProximityResultMessage() {
+}
+
+MessageType ServerProximityResultMessage::type() const {
+  return MESSAGE_TYPE_SERVER_PROX_RESULT;
+}
+
+uint32 ServerProximityResultMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+
+    uint16 nupdates = mObjectUpdates.size();
+    uint16 nremovals = mObjectRemovals.size();
+
+    wire.resize( wire.size() +
+        sizeof(nupdates) + nupdates * sizeof(ObjectUpdate) +
+        sizeof(nremovals) + nremovals * sizeof(UUID)
+    );
+
+
+    memcpy(&wire[offset], &nupdates, sizeof(nupdates));
+    offset += sizeof(nupdates);
+    for(uint16 idx = 0; idx < nupdates; idx++) {
+        memcpy(&wire[offset], &mObjectUpdates[idx], sizeof(mObjectUpdates[idx]));
+        offset += sizeof(mObjectUpdates[idx]);
+    }
+
+
+    memcpy(&wire[offset], &nremovals, sizeof(nremovals));
+    offset += sizeof(nremovals);
+    for(uint16 idx = 0; idx < nremovals; idx++) {
+        memcpy(&wire[offset], &mObjectRemovals[idx], sizeof(mObjectRemovals[idx]));
+        offset += sizeof(mObjectRemovals[idx]);
+    }
+
+    return offset;
+}
+
+void ServerProximityResultMessage::addObjectUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    ObjectUpdate update;
+    update.object = objid;
+    update.location = loc;
+    update.bounds = bounds;
+    mObjectUpdates.push_back(update);
+}
+
+void ServerProximityResultMessage::addObjectRemoval(const UUID& objid) {
+    mObjectRemovals.push_back(objid);
+}
 
 
 } // namespace CBR
