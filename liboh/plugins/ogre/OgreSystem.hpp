@@ -180,9 +180,10 @@ public:
     }
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
+                  const double maxDistance,
                   double &returnDistance,
                   Vector3f &returnNormal,
-                  SpaceObjectReference &returnName)const;
+                  SpaceObjectReference &returnName);
     
     Entity* rayTrace(const Vector3d &position,
                      const Vector3f &direction,

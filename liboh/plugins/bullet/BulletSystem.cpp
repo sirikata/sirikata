@@ -388,6 +388,15 @@ bool BulletSystem::tick() {
                 }
             }
             dynamicsWorld->stepSimulation(delta,10);
+            
+            /// test queryRay
+            /*
+            double dist;
+            Vector3f norm;
+            SpaceObjectReference sor;
+            queryRay(Vector3d(48.81, 4618.08, 23.31), Vector3f(0,-1,0), 100.0, dist, norm, sor);
+            cout << "dbm debug: queryRay returns distance: " << dist << " normal: " << norm << " object: " << sor << endl;
+            */
             for (unsigned int i=0; i<objects.size(); i++) {
                 if (objects[i]->mActive) {
                     po = objects[i]->getBulletState();
@@ -573,13 +582,37 @@ void BulletSystem::destroyProxy(ProxyObjectPtr p) {
     }
 }
 
-bool BulletSystem::queryRay(const Vector3d&position,
-                            const Vector3f&direction,
-                            double &returnDistance,
-                            Vector3f &returnNormal,
-                            SpaceObjectReference &returnName)const{
-    NOT_IMPLEMENTED(bulletphysics);
-    return false;
+bool BulletSystem::queryRay(const Vector3d& position,
+              const Vector3f& direction,
+              const double maxDistance,
+              double &returnDistance,
+              Vector3f &returnNormal,
+              SpaceObjectReference &returnName) {
+    
+    btVector3 start(position.x, position.y, position.z);
+    Vector3d temp = position + Vector3d(direction)*maxDistance;
+    btVector3 end(temp.x, temp.y, temp.z);
+    btCollisionWorld::ClosestRayResultCallback cb(start, end);
+    dynamicsWorld->rayTest (start, end, cb);
+    if (cb.hasHit ()) {
+        Vector3d hit;
+        hit.x = cb.m_hitPointWorld.getX();
+        hit.y = cb.m_hitPointWorld.getY();
+        hit.z = cb.m_hitPointWorld.getZ();
+        btVector3 norm = cb.m_hitNormalWorld.normalize();
+        returnNormal.x = norm.getX();
+        returnNormal.y = norm.getY();
+        returnNormal.z = norm.getZ();
+        temp = hit-position;
+        bulletObj* obj=bt2siri[cb.m_collisionObject];
+        returnDistance = sqrt(temp.x*temp.x+temp.y*temp.y+temp.z*temp.z);
+        returnName = obj->mMeshptr->getObjectReference();
+        //cout << "     dbm debug collision obj: " << returnName << "|" << obj->mName << endl;
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 

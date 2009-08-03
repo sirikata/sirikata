@@ -50,11 +50,12 @@ public:
      * @returns whether the ray hit anything
      * @note if the ray misses all objects the boolean returns false and all values are unchanged
      */
-    virtual bool queryRay(const Vector3d&position,
-                          const Vector3f&direction,
+    virtual bool queryRay(const Vector3d& position,
+                          const Vector3f& direction,
+                          const double maxDistance,
                           double &returnDistance,
                           Vector3f &returnNormal,
-                          SpaceObjectReference &returnName)const=0;
+                          SpaceObjectReference &returnName)=0;
     virtual Duration desiredTickRate()const=0;
     ///returns true if simulation should continue (false quits app)
     virtual bool tick()=0;

@@ -705,9 +705,10 @@ Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
 }
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
+                          const double maxDistance,
                           double &returnDistance,
                           Vector3f &returnNormal,
-                          SpaceObjectReference &returnName)const{
+                          SpaceObjectReference &returnName) {
     int resultCount=0;
     
     Entity * retval=internalRayTrace(position,direction,false,resultCount,returnDistance,returnNormal,0);

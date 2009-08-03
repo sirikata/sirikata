@@ -399,17 +399,19 @@ public:
      * Query the scene to look for the first active simulation object that intersects the ray
      * @param position the starting point for the ray query
      * @param direction the normalized direction which the ray continues at
+     * @param maxDistance the maximum distance to test for collision
      * @param returnDistance is the length down the ray which hits the object
      * @param returnNormal is the normal of the surface which the ray pierces
      * @param returnName is the space object reference of the object that is pierced
      * @returns whether the ray hit anything
      * @note if the ray misses all objects the boolean returns false and all values are unchanged
      */
-    virtual bool queryRay(const Vector3d&position,
-                          const Vector3f&direction,
+    virtual bool queryRay(const Vector3d& position,
+                          const Vector3f& direction,
+                          const double maxDistance,
                           double &returnDistance,
                           Vector3f &returnNormal,
-                          SpaceObjectReference &returnName)const;
+                          SpaceObjectReference &returnName);
     virtual void createProxy(ProxyObjectPtr p);
     virtual void destroyProxy(ProxyObjectPtr p);
     virtual Duration desiredTickRate()const {
