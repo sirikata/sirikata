@@ -36,6 +36,7 @@
 #include <ObjectHost_Persistence.pbj.hpp>
 #include "util/RoutableMessage.hpp"
 #include "util/KnownServices.hpp"
+#include "persistence/PersistenceSentMessage.hpp"
 #include "network/Stream.hpp"
 #include "util/SpaceObjectReference.hpp"
 #include "oh/SpaceConnection.hpp"
@@ -88,6 +89,39 @@ HostedObject::~HostedObject() {
 }
 
 struct HostedObject::PrivateCallbacks {
+
+    static void initializeDatabaseCallback(
+        HostedObject *realThis,
+        const SpaceID &spaceID,
+        Persistence::SentReadWriteSet *msg,
+        const RoutableMessageHeader &lastHeader,
+        Persistence::Protocol::Response::ReturnStatus errorCode)
+    {
+        if (lastHeader.has_return_status() || errorCode) {
+            SILOG(cppoh,error,"Database error recieving Loc and scripting info: "<<lastHeader.return_status()<<": "<<errorCode);
+            delete msg;
+            return; // unable to get starting position.
+        }
+        ObjLoc loc;
+        loc.ParseFromString(msg->body().reads(0).data());
+        Location location;
+        location.setPosition(loc.position());
+        location.setOrientation(loc.orientation());
+        if (loc.has_velocity()) {
+            location.setVelocity(loc.velocity());
+        }
+        if (loc.has_rotational_axis()) {
+            location.setAxisOfRotation(loc.rotational_axis());
+        }
+        if (loc.has_angular_speed()) {
+            location.setAngularSpeed(loc.angular_speed());
+        }
+        // Temporary Hack because we do not have access to the CDN here.
+        BoundingSphere3f sphere(Vector3f::nil(),1);
+        SILOG(cppoh,debug,"Sending NewObj!");
+        realThis->sendNewObj(location, sphere, spaceID);
+        delete msg;
+    }
 
     static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
         HostedObjectPtr realThis (thus.lock());
@@ -286,6 +320,7 @@ struct HostedObject::PrivateCallbacks {
 
         request->body().add_reads().set_field_name("MeshURI");
         request->body().add_reads().set_field_name("MeshScale");
+        request->body().add_reads().set_field_name("Name");
         request->body().add_reads().set_field_name("PhysicalParameters");
         request->body().add_reads().set_field_name("LightInfo");
         request->body().add_reads().set_field_name("_Passwd");
@@ -525,15 +560,11 @@ const ProxyObjectPtr &HostedObject::getProxy(const SpaceID &space) const {
 using Sirikata::Protocol::NewObj;
 using Sirikata::Protocol::IObjLoc;
 
-void HostedObject::initializeConnect(
+void HostedObject::sendNewObj(
     const Location&startingLocation,
-    const String&mesh, const BoundingSphere3f&meshBounds,
-    const LightInfo *lightInfo,
-    const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint)
+    const BoundingSphere3f &meshBounds,
+    const SpaceID&spaceID)
 {
-    mObjectHost->registerHostedObject(getSharedPtr());
-
-    connectToSpace(spaceID, spaceConnectionHint);
 
     RoutableMessageHeader messageHeader;
     messageHeader.set_destination_object(ObjectReference::spaceServiceID());
@@ -555,6 +586,18 @@ void HostedObject::initializeConnect(
 
     std::string serializedBody;
     messageBody.SerializeToString(&serializedBody);
+    send(messageHeader, MemoryReference(serializedBody));
+}
+
+void HostedObject::initializeConnect(
+    const Location&startingLocation,
+    const String&mesh, const BoundingSphere3f&meshBounds,
+    const LightInfo *lightInfo,
+    const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint)
+{
+    mObjectHost->registerHostedObject(getSharedPtr());
+    connectToSpace(spaceID, spaceConnectionHint);
+    sendNewObj(startingLocation, meshBounds, spaceID);
 
     if (!mesh.empty()) {
         Protocol::StringProperty meshprop;
@@ -573,7 +616,6 @@ void HostedObject::initializeConnect(
     } else {
         setProperty("IsCamera");
     }
-    send(messageHeader, MemoryReference(serializedBody));
 }
 void HostedObject::initializePythonScript() {
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getDefaultConstructor()("");
@@ -591,8 +633,27 @@ void HostedObject::initializePythonScript() {
         }
     }
 }
-void HostedObject::initializeRestoreFromDatabase() {
-    initializeConnect(Location(), String(), BoundingSphere3f(), NULL, SpaceID::null(), HostedObjectPtr());
+
+void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint) {
+    mObjectHost->registerHostedObject(getSharedPtr());
+    connectToSpace(spaceID, spaceConnectionHint);
+
+    Persistence::SentReadWriteSet *msg;
+    msg = new Persistence::SentReadWriteSet(&mTracker);
+    msg->setCallback(std::tr1::bind(
+                         &PrivateCallbacks::initializeDatabaseCallback,
+                         this, spaceID,
+                         _1, _2, _3));
+    Persistence::Protocol::IStorageElement el
+       = msg->body().add_reads();
+    el.set_object_uuid(getUUID());
+    el.set_field_name("Loc");
+    el = msg->body().add_reads();
+    el.set_object_uuid(getUUID());
+    el.set_field_name("ScriptInfo");
+    msg->header().set_destination_object(ObjectReference::spaceServiceID());
+    msg->header().set_destination_port(Services::PERSISTENCE);
+    msg->serializeSend();
 }
 void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
     assert(!mObjectScript); // Don't want to kill a live script!
@@ -973,8 +1034,14 @@ void HostedObject::receivedPropertyUpdate(
               case Protocol::PhysicalParameters::STATIC:
                 params.mode = 1;
                 break;
-              case Protocol::PhysicalParameters::DYNAMIC:
+              case Protocol::PhysicalParameters::DYNAMICBOX:
                 params.mode = 2;
+                break;
+              case Protocol::PhysicalParameters::DYNAMICSPHERE:
+                params.mode = 3;
+                break;
+              case Protocol::PhysicalParameters::DYNAMICCYLINDER:
+                params.mode = 4;
                 break;
               default:
                 params.mode = 0;
@@ -982,36 +1049,35 @@ void HostedObject::receivedPropertyUpdate(
             params.density = parsedProperty.density();
             params.friction = parsedProperty.friction();
             params.bounce = parsedProperty.bounce();
+            params.colMsg = parsedProperty.collide_msg();
+            params.colMask = parsedProperty.collide_mask();
+            params.hull = parsedProperty.hull();
             proxymesh->setPhysical(params);
         }
     }
-// Parent not supported yet -- may be merged into ObjLoc.
-/*
-  if (propertyName == "Parent") {
-  Protocol::ParentProperty parsedProperty;
-  parsedProperty.ParseFromString(arguments);
-  if (parsedProperty.has_value()) {
-  proxy->setParent(ObjectReference(parsedProperty.value()));
-  }
-  }
-*/
-// Generic properties not supported yet.
-/*
-  if (propertyName == "GroupName") {
-  Protocol::StringProperty parsedProperty;
-  parsedProperty.ParseFromString(arguments);
-  if (parsedProperty.has_value()) {
-  groupName = parsedProperty.value();
-  }
-  }
-*/
-}
-
-
-void HostedObject::setScale(Vector3f vec) {
-    Protocol::Vector3fProperty prop;
-    prop.set_value(vec);
-    prop.SerializeToString(propertyPtr("MeshScale"));
+    if (propertyName == "Parent") {
+        Protocol::ParentProperty parsedProperty;
+        parsedProperty.ParseFromString(arguments);
+        if (parsedProperty.has_value()) {
+            ProxyObjectPtr obj =proxy->getProxyManager()->getProxyObject(
+                SpaceObjectReference(
+                    proxy->getObjectReference().space(),
+                    ObjectReference(parsedProperty.value())));
+            if (obj && obj != proxy) {
+                proxy->setParent(obj, Time::now());
+            }
+        }
+    }
+    if (propertyName == "Name") {
+        Protocol::StringProperty parsedProperty;
+        ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
+        parsedProperty.ParseFromString(arguments);
+        if (proxymesh && parsedProperty.has_value()) {
+            physicalParameters params = proxymesh->getPhysical();
+            params.name = parsedProperty.value();
+            proxymesh->setPhysical(params);
+        }
+    }
 }
 
 }

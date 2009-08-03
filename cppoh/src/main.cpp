@@ -50,7 +50,8 @@
 #include <util/KnownServices.hpp>
 #include <persistence/ObjectStorage.hpp>
 #include <persistence/ReadWriteHandlerFactory.hpp>
-#include <ObjectHost_Sirikata.pbj.hpp>
+#include <ObjectHostBinary_Persistence.pbj.hpp>
+#include <ObjectHostBinary_Sirikata.pbj.hpp>
 #include <time.h>
 namespace Sirikata {
 
@@ -67,6 +68,75 @@ InitializeGlobalOptions main_options("",
     dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
     NULL
 );
+
+class UUIDLister : public MessageService {
+    ObjectHost *mObjectHost;
+    SpaceID mSpace;
+    MessagePort mPort;
+    volatile bool mSuccess;
+
+public:
+    UUIDLister(ObjectHost*oh, const SpaceID &space)
+        : mObjectHost(oh), mSpace(space), mPort(Services::REGISTRATION) {
+        mObjectHost->registerService(mPort, this);
+    }
+    ~UUIDLister() {
+        mObjectHost->unregisterService(mPort);
+    }
+    bool forwardMessagesTo(MessageService *other) {
+        return false;
+    }
+    bool endForwardingMessagesTo(MessageService *other) {
+        return false;
+    }
+    void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
+        Persistence::Protocol::Response resp;
+        resp.ParseFromArray(body.data(), body.length());
+        if (hdr.has_return_status() || resp.has_return_status()) {
+            SILOG(cppoh,info,"Failed to connect to database: "<<hdr.has_return_status()<<", "<<resp.has_return_status());
+            mSuccess = true;
+            return;
+        }
+        Protocol::UUIDListProperty uuidList;
+        if (resp.reads(0).has_return_status()) {
+            SILOG(cppoh,info,"Failed to find ObjectList in database.");
+            mSuccess = true;
+            return;
+        }
+        uuidList.ParseFromString(resp.reads(0).data());
+        for (int i = 0; i < uuidList.value_size(); i++) {
+            SILOG(cppoh,info,"Loading object "<<ObjectReference(uuidList.value(i)));
+            HostedObject::construct<HostedObject>(mObjectHost, uuidList.value(i))
+                ->initializeRestoreFromDatabase(mSpace, HostedObjectPtr());
+        }
+        mSuccess = true;
+    }
+    void go() {
+        mSuccess = false;
+        Persistence::Protocol::ReadWriteSet rws;
+        Persistence::Protocol::IStorageElement el = rws.add_reads();
+        el.set_field_name("ObjectList");
+//        el.set_object_uuid(UUID::null());
+//        el.set_field_id(0);
+        RoutableMessageHeader hdr;
+        hdr.set_source_object(ObjectReference::spaceServiceID());
+        hdr.set_source_port(mPort);
+        hdr.set_destination_port(Services::PERSISTENCE);
+        hdr.set_destination_object(ObjectReference::spaceServiceID());
+        std::string body;
+        rws.SerializeToString(&body);
+        mObjectHost->processMessage(hdr, MemoryReference(body));
+    }
+    void goWait(Network::IOService *ioServ, Task::WorkQueue *queue) {
+        mSuccess = false;
+        go();
+        while (!mSuccess) {
+            // needs to happen in one thread for now...
+            Network::IOServiceFactory::pollService(ioServ);
+            queue->dequeuePoll();
+        }
+    }
+};
 
 }
 
@@ -123,67 +193,19 @@ int main ( int argc,const char**argv ) {
     ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ);
     oh->registerService(Services::PERSISTENCE, database);
 
-    {//to deallocate HostedObjects before armageddon
-    HostedObjectPtr firstObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
-    firstObject->initializeConnect(
-            Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
-                     Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
-            "meru://daniel@/cube.mesh",
-            BoundingSphere3f(Vector3f::nil(),1),
-            NULL,
-            mainSpace);
-    firstObject->setScale(Vector3f(3,3,3));
-
-    HostedObjectPtr secondObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
-    secondObject->initializeConnect(
-        Location(Vector3d(0,0,25), Quaternion::identity(),
-                 Vector3f(0.1,0,0), Vector3f(0,0,1), 0.),
-        "",
-        BoundingSphere3f(Vector3f::nil(),0),
-        NULL,
-        mainSpace);
-
-    HostedObjectPtr thirdObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
     {
-        LightInfo li;
-        li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
-        li.setLightAmbientColor(Color(.24,.25,.18));
-        li.setLightSpecularColor(Color(0,0,0));
-        li.setLightShadowColor(Color(0,0,0));
-        li.setLightPower(1.0);
-        li.setLightRange(75);
-        li.setLightFalloff(1,0,0.03);
-        li.setLightSpotlightCone(30,40,1);
-        li.setCastsShadow(true);
-        thirdObject->initializeConnect(
-            Location(Vector3d(10,0,10), Quaternion::identity(),
-                     Vector3f::nil(), Vector3f(0,0,1), 0.),
-            "",
-            BoundingSphere3f(Vector3f::nil(),0),
-            &li,
-            mainSpace);
+        UUIDLister lister(oh, mainSpace);
+        lister.goWait(ioServ, workQueue);
     }
 
-    HostedObjectPtr scriptedObject (HostedObject::construct<HostedObject>(oh, UUID::random()));
-    {
-    std::map<String,String> args;
-    args["Assembly"]="Sirikata.Runtime";
-    args["Class"]="PythonObject";
-    args["Namespace"]="Sirikata.Runtime";
-    args["PythonModule"]="test";
-    args["PythonClass"]="exampleclass";
-    scriptedObject->initializeScript("monoscript", args);
-    scriptedObject->initializeConnect(
-            Location(Vector3d(0, ((double)(time(NULL)%10)) - 5 , 0), Quaternion::identity(),
-                     Vector3f(0.2,0,0), Vector3f(0,0,1), 0.),
-            "meru://daniel@/cube.mesh",
-            BoundingSphere3f(Vector3f::nil(),1),
-            NULL,
-            mainSpace);
-    scriptedObject->setScale(Vector3f(3,3,3));
-    }
-    }
     ProxyManager *provider = oh->getProxyManager(mainSpace);
+    if (!provider) {
+        SILOG(cppoh,error,String("Unable to load database in ") + String(dbFile->as<String>()));
+        std::cout << "Press enter to continue" << std::endl;
+        std::cerr << "Press enter to continue" << std::endl;
+        fgetc(stdin);
+        return 1;
+    }
 
     TransferManager *tm;
     try {

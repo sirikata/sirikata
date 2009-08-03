@@ -227,39 +227,48 @@ message StringProperty {
 }
 
 message PhysicalParameters {
-    enum Mode {
-        NONPHYSICAL=0;
-        STATIC=1;
-        DYNAMIC=2;
-    }
-    optional Mode mode=10;
-    optional float density=11;
-    optional float friction=12;
-    optional float bounce=13;
+	enum Mode {
+		NONPHYSICAL = 0;
+		STATIC = 1;
+		DYNAMICBOX = 2;
+		DYNAMICSPHERE = 3;
+		DYNAMICCYLINDER = 4;
+//		DYNAMICMESH = 123456789;
+	}
+	optional Mode mode = 2 ;
+	optional float density = 3 ;
+	optional float friction = 4 ;
+	optional float bounce = 5 ;
+    optional vector3f hull = 6 ;
+    optional uint32 collide_msg = 16 ;
+    optional uint32 collide_mask = 17 ;
 }
 
 message LightInfoProperty {
-    optional vector3f diffuse_color=13;
-    optional vector3f specular_color=14;
-    optional float power=15;
-    optional vector3f ambient_color=16;
-    optional vector3f shadow_color=17;
-    optional double light_range=18;
-    optional float constant_falloff=19;
-    optional float linear_falloff=20;
-    optional float quadratic_falloff=21;
-    optional float cone_inner_radians=22;
-    optional float cone_outer_radians=23;
-    optional float cone_falloff=24;
+    optional vector3f diffuse_color=3;
+    optional vector3f specular_color=4;
+    optional float power=5;
+    optional vector3f ambient_color=6;
+    optional vector3f shadow_color=7;
+    optional double light_range=8;
+    optional float constant_falloff=9;
+    optional float linear_falloff=10;
+    optional float quadratic_falloff=11;
+    optional float cone_inner_radians=12;
+    optional float cone_outer_radians=13;
+    optional float cone_falloff=14;
     enum LightTypes {
         POINT=0;
         SPOTLIGHT=1;
         DIRECTIONAL=2;
     }
-    optional LightTypes type=25;
-    optional bool casts_shadow=26;
+    optional LightTypes type=15;
+    optional bool casts_shadow=16;
 }
 
 message ParentProperty {
     optional uuid value=10;
+}
+message UUIDListProperty {
+    repeated uuid value=10;
 }

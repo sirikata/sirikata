@@ -86,7 +86,8 @@ void QueryTracker::processMessage(const RoutableMessageHeader &msgHeader, Memory
     int64 id = msgHeader.reply_id();
     SentMessageMap::iterator iter = mSentMessages.find(id);
     if (iter != mSentMessages.end()) {
-        if (iter->second->getSpace() == msgHeader.source_space() &&
+        if ((!iter->second->header().has_destination_space() ||
+             iter->second->header().destination_space() == msgHeader.destination_space()) &&
             iter->second->getRecipient() == msgHeader.source_object())
         {
             iter->second->processMessage(msgHeader, body);

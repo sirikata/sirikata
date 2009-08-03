@@ -173,8 +173,11 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::proc
 
         for(int tries = 0; tries < retries+1 && error != None; tries++)
             error = mParent->applyWriteSet(db, *rws, retries);
-        mResponse->set_return_status(convertError(error));
-        return mResponse->return_status();
+        if (error != None) {
+            mResponse->set_return_status(convertError(error));
+            return mResponse->return_status();
+        }
+        return convertError(None);
     }
 }
 
@@ -217,8 +220,11 @@ Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::pr
 
         tries--;
     }
-    mResponse->set_return_status(convertError(error));
-    return mResponse->return_status();
+    if (error != None) {
+        mResponse->set_return_status(convertError(error));
+        return mResponse->return_status();
+    }
+    return convertError(None);
 }
 
 void SQLiteObjectStorage::ApplyTransactionWorker::operator() () {
@@ -335,8 +341,8 @@ template<class StorageKey> String SQLiteObjectStorage::getTableName(const Storag
 }
 
 template <class StorageKey> String SQLiteObjectStorage::getKeyName(const StorageKey& key) {
-    std::stringstream ss(key.field_name());
-    ss<<'_'<<key.field_id();
+    std::stringstream ss;
+    ss<<key.field_name()<<'_'<<key.field_id();
     return ss.str();
 }
 
@@ -379,6 +385,7 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
         sqlite3_stmt* value_query_stmt;
         bool newStep=true;
         bool locked=false;
+        std::cout << value_query<< " with "<<key_name<<std::endl;
         rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
         if (rc==SQLITE_OK) {
