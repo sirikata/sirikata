@@ -72,7 +72,9 @@ public:
         TS_ASSERT_DELTA(a.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(b.normal().length(),1,1e-08);
         TS_ASSERT_DELTA(c.normal().length(),1,1e-08);
-        TS_ASSERT_DELTA(nearlyzero.normal().length(),0,1e-08);
+        Vector3f reallyzero=Vector3f(0,0,0);
+        reallyzero=reallyzero.cross(nearlyzero);
+        TS_ASSERT_DELTA(reallyzero.normal().length(),0,1e-08);
     }
     void testLengthDouble ( void )
     {
