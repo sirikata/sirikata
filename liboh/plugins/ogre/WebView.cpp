@@ -809,16 +809,21 @@ void WebView::resize(int width, int height)
 #ifdef HAVE_AWESOMIUM
 	webView->resize(viewWidth, viewHeight);
 #endif
-	if(newTexWidth == texWidth && newTexHeight == texHeight)
-		return;
 
-	texWidth = newTexWidth;
-	texHeight = newTexHeight;
+    uint16 oldTexWidth = texWidth;
+    uint16 oldTexHeight = texHeight;
+
+    texWidth = newTexWidth;
+    texHeight = newTexHeight;
+
     if (compensateNPOT) {
         Ogre::Real u1,v1,u2,v2;
         getDerivedUV(u1, v1,  u2,v2);
         overlay->panel->setUV(u1, v1, u2, v2);
     }
+
+    if (texWidth == oldTexWidth && texHeight == oldTexHeight)
+        return;
 
 	matPass->removeAllTextureUnitStates();
 	maskTexUnit = 0;
