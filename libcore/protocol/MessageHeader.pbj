@@ -33,7 +33,7 @@
 package Sirikata.Protocol;
 
 //This is the standard message container. All items sent over the wire should be preceeded type MessageHeader. Reserved areas may be used in future headers
-message MessageHeader {
+message Header {
     reserve 1 to 6;
     reserve 1536 to 2560;
     reserve 229376 to 294912;

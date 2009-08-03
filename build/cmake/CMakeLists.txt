@@ -754,7 +754,7 @@ OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE
 ${SirikataProtocolDirectory}/Prox_protobuf.cc)
 
 # For scripting
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources}
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS MessageHeader ${ProtocolBuffersSources}
 INPUTDIR ${ProtocolBuffersRoot} IMPORTS ${ProtocolBuffersRoot}
 OUTPUTDIR ${SirikataProtocolDirectory})
 SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})

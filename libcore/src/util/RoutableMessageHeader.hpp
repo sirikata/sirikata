@@ -34,6 +34,9 @@
 #include "SpaceObjectReference.hpp"
 #include "Protocol_MessageHeader.pbj.hpp"
 namespace Sirikata {
+namespace Protocol {
+typedef Header MessageHeader;
+}
 
 class RoutableMessageHeader {
 
