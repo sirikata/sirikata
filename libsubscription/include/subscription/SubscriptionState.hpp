@@ -81,6 +81,8 @@ private:
     bool mEverReceivedMessage;
     bool mPolling;
     Network::Chunk mLastSentMessage;
+	void setLastSentMessage(Network::Chunk&chunk);
+	void clearLastSentMessage();
     ///this is the heap of subscribers who opted out of the last message
     std::vector<SubscriberTimePair>mUnsentSubscribersHeap;
     ///this is the heap of subscribers that received the last message

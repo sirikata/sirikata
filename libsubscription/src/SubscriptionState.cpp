@@ -48,6 +48,17 @@ SubscriptionState::SubscriptionState(Network::Stream*broadcaster):mName(UUID::nu
     mEverReceivedMessage=false;
     mPolling=false;
 }
+void SubscriptionState::clearLastSentMessage() {
+	mEverReceivedMessage=true;
+	mLastSentMessage.resize(0);
+}
+
+void SubscriptionState::setLastSentMessage(Network::Chunk&chunk) {
+	mEverReceivedMessage=true;
+	mLastSentMessage.swap(chunk);
+}
+
+
 Time SubscriptionState::pushSubscriber(Subscriber*subscriber,std::vector<SubscriberTimePair>*heap) {
     Time retval=subscriber->computeNextUpdateFromNow();
     heap->push_back(SubscriberTimePair(retval,subscriber));

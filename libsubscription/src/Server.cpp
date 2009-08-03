@@ -167,6 +167,7 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
         *stream=std::tr1::shared_ptr<Stream>();
     }
 }
+
 void Server::subscriberConnectionCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,Network::Stream::ConnectionStatus status,const std::string&reason){
     if (status!=Stream::Connected) {
         std::tr1::shared_ptr<Stream> strongStream(*stream);
@@ -224,14 +225,16 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
                 SILOG(subscription,error,"UUID "<<whichuuid->second.toString()<<" Already in map");
             }
         }else {
-            state->mLastSentMessage=chunk;
+			Network::Chunk chk(chunk);
+            state->setLastSentMessage(chk);
         }
     }else {
         state->broadcast(this,MemoryReference(chunk));
         if (chunk.size()<=mMaxCachedMessageSize) {
-            state->mLastSentMessage=chunk;
+			Network::Chunk chk(chunk);
+            state->setLastSentMessage(chk);
         }else {
-            state->mLastSentMessage.clear();
+            state->clearLastSentMessage();
         }
     }
 }
