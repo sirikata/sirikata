@@ -567,7 +567,13 @@ void WebViewManager::onChromeNav(WebView* webview, const Awesomium::JSArguments&
         focusedNonChromeWebView->webView->goToHistoryOffset(1);
         break;
       case NavigateRefresh:
+// Until we recompile Awesomium on Mac and Windows:
+#if 0
         focusedNonChromeWebView->webView->refresh();
+#else
+        SILOG(ogre,error,"FIXME: refresh() is disabled...");
+        focusedNonChromeWebView->webView->goToHistoryOffset(0);
+#endif
         break;
       case NavigateHome:
         focusedNonChromeWebView->loadURL("http://www.google.com");
