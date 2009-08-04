@@ -62,7 +62,7 @@ class SIRIKATA_OH_EXPORT HostedObject : public SelfWeakPtr<HostedObject> {
 protected:
 //------- Members
     QueryTracker mTracker;
-    
+
     typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
@@ -72,7 +72,6 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
-    ObjectScript *mScript;
 
 //------- Constructors/Destructors
 private:

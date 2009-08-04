@@ -62,7 +62,7 @@ typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 class HostedObject::PerSpaceData {
 public:
     SpaceConnection mSpaceConnection;
-    ProxyObjectPtr mProxyObject; /// 
+    ProxyObjectPtr mProxyObject; ///
     PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream)
         :mSpaceConnection(topLevel,stream) {
     }
@@ -78,7 +78,6 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     mSendService.ho = this;
     mReceiveService.ho = this;
     mTracker.forwardMessagesTo(&mSendService);
-    mScript = NULL;
 }
 
 HostedObject::~HostedObject() {
@@ -720,7 +719,7 @@ void HostedObject::initializePythonScript() {
         args["Namespace"]="Sirikata.Runtime";
         args["PythonModule"]="test";
         args["PythonClass"]="exampleclass";
-        
+
         mObjectScript=mgr->createObjectScript(this,args);
         if (mObjectScript) {
             mObjectScript->tick();
@@ -980,7 +979,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, objectId));
             } else if (hasProperty("LightInfo") && !hasProperty("MeshURI")) {
                 printstr<<"RetObj. I am now a Light known as "<<objectId.object();
-                proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId)); 
+                proxyObj = ProxyObjectPtr(new ProxyLightObject(proxyMgr, objectId));
             } else {
                 printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
                 proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
