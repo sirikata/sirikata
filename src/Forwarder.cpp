@@ -404,6 +404,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           {
               dispatchMessage(msg);
           }
+
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
