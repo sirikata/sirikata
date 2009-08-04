@@ -66,9 +66,10 @@
 #include "LoadMonitor.hpp"
 
 //#include "LocObjectSegmentation.hpp"
-#include "UniformObjectSegmentation.hpp"
-#include "DhtObjectSegmentation.hpp"
-
+//#include "UniformObjectSegmentation.hpp"
+//#include "DhtObjectSegmentation.hpp"
+#include "CraqObjectSegmentation.hpp"
+#include "craq_oseg/asyncCraq.hpp"
 //#include "OSegHasher.hpp"
 
 
@@ -447,8 +448,11 @@ void *main_loop(void *) {
         timer.start();
         gNetwork->start();
 
-        while( true ) {
+        while( true )
+        {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
+            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
+            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
             if (elapsed > duration)
                 break;
 

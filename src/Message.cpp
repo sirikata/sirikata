@@ -103,7 +103,10 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_LOAD_STATUS:
         msg = new LoadStatusMessage(wire, offset, _id);
         break;
-      case MESSAGE_TYPE_OSEG_MIGRATE:
+      case MESSAGE_TYPE_OSEG_MIGRATE_MOVE:
+        msg = new OSegMigrateMessage(wire,offset,_id);
+        break;
+      case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
         msg = new OSegMigrateMessage(wire,offset,_id);
         break;
       case MESSAGE_TYPE_NOISE:
@@ -386,132 +389,238 @@ uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 //*****************OSEG messages
+OSegMigrateMessageMove::OSegMigrateMessageMove(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
+  : Message(origin, true),
+    contents.mServID_from( sID_from),
+  contents.mServID_to   (sID_to),
+  contents.mMessageDestination (sMessageDest),
+  contents.mMessageFrom (sMessageFrom),
+  contents.mObjID       (obj_id)
+{
+  
+}
+
+OSegMigrateMessageMove::OSegMigrateMessageMove(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  parsePBJMessage(contents,wire,offset);
+}
+
+
+MessageType OSegMigrateMessageMove::type() const
+{
+  return MESSAGE_TYPE_OSEG_MIGRATE_MOVE;
+}
+
+
+uint32 OSegMigrateMessageMove::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    return serializePBJMessage(contents, wire, offset);
+}
+
+ServerID OSegMigrateMessageMove::getServFrom()
+{
+  return contents.mServID_from;
+}
+ServerID OSegMigrateMessageMove::getServTo()
+{
+  return contents.mServID_to;
+}
+UUID OSegMigrateMessageMove::getObjID()
+{
+  return contents.mObjID;
+}
+
+ServerID  OSegMigrateMessageMove::getMessageDestination()
+{
+  return contents.mMessageDestination;
+}
+
+ServerID OSegMigrateMessageMove::getMessageFrom()
+{
+  return contents.mMessageFrom;
+}
+
+
+//and now ack message
+OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
+  : Message(origin, true),
+    contents.mServID_from( sID_from),
+  contents.mServID_to   (sID_to),
+  contents.mMessageDestination (sMessageDest),
+  contents.mMessageFrom (sMessageFrom),
+  contents.mObjID       (obj_id)
+{
+  
+}
+
+OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  parsePBJMessage(contents,wire,offset);
+}
+
+
+MessageType OSegMigrateMessageAcknowledge::type() const
+{
+  return MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE;
+}
+
+
+uint32 OSegMigrateMessageAcknowledge::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    return serializePBJMessage(contents, wire, offset);
+}
+
+ServerID OSegMigrateMessageAcknowledge::getServFrom()
+{
+  return contents.mServID_from;
+}
+ServerID OSegMigrateMessageAcknowledge::getServTo()
+{
+  return contents.mServID_to;
+}
+UUID OSegMigrateMessageAcknowledge::getObjID()
+{
+  return contents.mObjID;
+}
+
+ServerID  OSegMigrateMessageAcknowledge::getMessageDestination()
+{
+  return contents.mMessageDestination;
+}
+
+ServerID OSegMigrateMessageAcknowledge::getMessageFrom()
+{
+  return contents.mMessageFrom;
+}
+
+
+
 
 ////migrate message
 //constructor
-OSegMigrateMessage::OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
- : Message(origin, true),
-   mServID_from (sID_from),
-   mServID_to   (sID_to),
-   mMessageDestination (sMessageDest),
-   mMessageFrom (sMessageFrom),
-   mObjID       (obj_id),
-   mAction      (action)
-{
+// OSegMigrateMessage::OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
+//  : Message(origin, true),
+//    mServID_from (sID_from),
+//    mServID_to   (sID_to),
+//    mMessageDestination (sMessageDest),
+//    mMessageFrom (sMessageFrom),
+//    mObjID       (obj_id),
+//    mAction      (action)
+// {
 
-}
+// }
+// //constructor
+// OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+//  : Message(_id)
+// {
 
+//   ServerID     sID_from, sID_to, sMessageDest, sMessageFrom;
+//   UUID                                               obj_id;
+//   OSegMigrateAction                                  action;
 
-//constructor
-OSegMigrateMessage::OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
-{
+//   //copying mServID_from
+//   memcpy(&sID_from, &wire[offset], sizeof(ServerID));
+//   offset += sizeof(ServerID);
+//   mServID_from = sID_from;
 
-  ServerID     sID_from, sID_to, sMessageDest, sMessageFrom;
-  UUID                                               obj_id;
-  OSegMigrateAction                                  action;
+//   //copying mServID_to
+//   memcpy(&sID_to, &wire[offset], sizeof(ServerID));
+//   offset += sizeof(ServerID);
+//   mServID_to = sID_to;
 
-  //copying mServID_from
-  memcpy(&sID_from, &wire[offset], sizeof(ServerID));
-  offset += sizeof(ServerID);
-  mServID_from = sID_from;
+//   //copying mMessageDestination
+//   memcpy(&sMessageDest,&wire[offset],sizeof(ServerID));
+//   offset += sizeof(ServerID);
+//   mMessageDestination = sMessageDest;
 
-  //copying mServID_to
-  memcpy(&sID_to, &wire[offset], sizeof(ServerID));
-  offset += sizeof(ServerID);
-  mServID_to = sID_to;
+//   //copying mMessageFrom
+//   memcpy(&sMessageFrom,&wire[offset],sizeof(ServerID));
+//   offset += sizeof(ServerID);
+//   mMessageFrom = sMessageFrom;
 
-  //copying mMessageDestination
-  memcpy(&sMessageDest,&wire[offset],sizeof(ServerID));
-  offset += sizeof(ServerID);
-  mMessageDestination = sMessageDest;
+//   //copying mObjID
+//   memcpy(&obj_id, &wire[offset], sizeof(UUID));
+//   offset += sizeof(UUID);
+//   mObjID = obj_id;
 
-  //copying mMessageFrom
-  memcpy(&sMessageFrom,&wire[offset],sizeof(ServerID));
-  offset += sizeof(ServerID);
-  mMessageFrom = sMessageFrom;
+//   //copying mAction
+//   memcpy(&action, &wire[offset], sizeof(OSegMigrateAction));
+//   offset += sizeof(OSegMigrateAction);
+//   mAction = action;
 
-  //copying mObjID
-  memcpy(&obj_id, &wire[offset], sizeof(UUID));
-  offset += sizeof(UUID);
-  mObjID = obj_id;
+// }
 
-  //copying mAction
-  memcpy(&action, &wire[offset], sizeof(OSegMigrateAction));
-  offset += sizeof(OSegMigrateAction);
-  mAction = action;
+// //destructor
+// OSegMigrateMessage::~OSegMigrateMessage()
+// {
+//   //need to complete later
+// }
 
-}
+// MessageType OSegMigrateMessage::type() const
+// {
+//   return MESSAGE_TYPE_OSEG_MIGRATE;
+// }
 
-//destructor
-OSegMigrateMessage::~OSegMigrateMessage()
-{
-  //need to complete later
-}
+// /*
+//   Serializer.  Should work.
+// */
+// uint32 OSegMigrateMessage::serialize(Network::Chunk& wire, uint32 offset)
+// {
 
-MessageType OSegMigrateMessage::type() const
-{
-  return MESSAGE_TYPE_OSEG_MIGRATE;
-}
+//   offset = serializeHeader(wire,offset);
 
-/*
-  Serializer.  Should work.
-*/
-uint32 OSegMigrateMessage::serialize(Network::Chunk& wire, uint32 offset)
-{
+//   wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegMigrateAction));
+//   //          wire            sID_from           sID_to              mMessageDest       mMessageFrom      obj_id           action
 
-  offset = serializeHeader(wire,offset);
+//   memcpy(&wire[offset], &mServID_from, sizeof(ServerID)); //copying sID_from
+//   offset += sizeof(ServerID);
 
-  wire.resize(wire.size() + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(ServerID) + sizeof(UUID) + sizeof(OSegMigrateAction));
-  //          wire            sID_from           sID_to              mMessageDest       mMessageFrom      obj_id           action
+//   memcpy(&wire[offset], &mServID_to, sizeof(ServerID)); //copying sID_to
+//   offset += sizeof(ServerID);
 
-  memcpy(&wire[offset], &mServID_from, sizeof(ServerID)); //copying sID_from
-  offset += sizeof(ServerID);
+//   memcpy(&wire[offset], &mMessageDestination, sizeof(ServerID)); //copying mMessageDestination
+//   offset += sizeof(ServerID);
 
-  memcpy(&wire[offset], &mServID_to, sizeof(ServerID)); //copying sID_to
-  offset += sizeof(ServerID);
+//   memcpy(&wire[offset], &mMessageFrom, sizeof(ServerID)); //copying mMessageFrom
+//   offset += sizeof(ServerID);
 
-  memcpy(&wire[offset], &mMessageDestination, sizeof(ServerID)); //copying mMessageDestination
-  offset += sizeof(ServerID);
+//   memcpy(&wire[offset], &mObjID, sizeof(UUID));  //copying obj_id
+//   offset += sizeof(UUID);
 
-  memcpy(&wire[offset], &mMessageFrom, sizeof(ServerID)); //copying mMessageFrom
-  offset += sizeof(ServerID);
+//   memcpy(&wire[offset], &mAction, sizeof(OSegMigrateAction)); //copying action
+//   offset += sizeof(OSegMigrateAction);
 
-  memcpy(&wire[offset], &mObjID, sizeof(UUID));  //copying obj_id
-  offset += sizeof(UUID);
+//   return offset;
+// }
 
-  memcpy(&wire[offset], &mAction, sizeof(OSegMigrateAction)); //copying action
-  offset += sizeof(OSegMigrateAction);
+// //Sequence of osegmessage accessors
+// ServerID OSegMigrateMessage::getServFrom()
+// {
+//   return mServID_from;
+// }
+// ServerID OSegMigrateMessage::getServTo()
+// {
+//   return mServID_to;
+// }
+// UUID OSegMigrateMessage::getObjID()
+// {
+//   return mObjID;
+// }
+// OSegMigrateMessage::OSegMigrateAction OSegMigrateMessage::getAction()
+// {
+//   return mAction;
+// }
+// ServerID  OSegMigrateMessage::getMessageDestination()
+// {
+//   return mMessageDestination;
+// }
 
-  return offset;
-}
-
-//Sequence of osegmessage accessors
-ServerID OSegMigrateMessage::getServFrom()
-{
-  return mServID_from;
-}
-ServerID OSegMigrateMessage::getServTo()
-{
-  return mServID_to;
-}
-UUID OSegMigrateMessage::getObjID()
-{
-  return mObjID;
-}
-OSegMigrateMessage::OSegMigrateAction OSegMigrateMessage::getAction()
-{
-  return mAction;
-}
-ServerID  OSegMigrateMessage::getMessageDestination()
-{
-  return mMessageDestination;
-}
-
-ServerID OSegMigrateMessage::getMessageFrom()
-{
-  return mMessageFrom;
-}
+// ServerID OSegMigrateMessage::getMessageFrom()
+// {
+//   return mMessageFrom;
+// }
 
 
 /////OSEG lookup

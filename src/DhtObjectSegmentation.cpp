@@ -23,7 +23,7 @@ namespace CBR
   /*
     Basic constructor
   */
-  DhtObjectSegmentation::DhtObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID*> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, char* dht_host, int dht_port)
+  DhtObjectSegmentation::DhtObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, char* dht_host, int dht_port)
     : mCSeg (cseg),
       mCurrentTime(0),
       bambooDht(dht_host, dht_port)
@@ -35,15 +35,38 @@ namespace CBR
     Bamboo::Bamboo_val serv_id_as_dht_val;
     convert_serv_id_to_dht_val(mID, serv_id_as_dht_val);
     Bamboo::Bamboo_key obj_id_as_dht_key;
-    
+    printf("\n\nbftm debug message:  about to populate dht oseg.\n\n");
+
+
     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
     {
-      convert_obj_id_to_dht_key((*vectorOfObjectsInitializedOnThisServer[s]),obj_id_as_dht_key);
-
+      convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
+      
       //   pushes this server id onto the dht associated with the object_id (as key)  (even if it doesn't already exist on the
       bambooDht.put(obj_id_as_dht_key, serv_id_as_dht_val);
+
+      printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
     }
+
+    std::cout<<"\nPerforming quick get test to ensure that this works:   \n";
+    bamboo_get_result*  get_result;
+    convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[0],obj_id_as_dht_key);
+    get_result = bambooDht.get(obj_id_as_dht_key);
+
+    int numResponses = get_result->values.values_len; //number of servers that the object id is tied to.
+      
+    if(numResponses == 0)
+    {
+      std::cout<<"\n\n*************************\nMY GETTING FAILED MISERABLY\n\n";
+    }
+    else
+    {
+      std::cout<<"\n\n*************************\nGETTING SUCCESS\n\n";
+    }
+    
+
+    
   }
     
   /*
@@ -57,11 +80,14 @@ namespace CBR
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
-  ServerID DhtObjectSegmentation::lookup(const UUID& obj_id) const
+  //  ServerID DhtObjectSegmentation::lookup(const UUID& obj_id) const
+  void DhtObjectSegmentation::lookup(const UUID& obj_id) const
   {
     UUID tmper = obj_id;
     std::map<UUID,ServerID>::const_iterator iter = mInTransit.find(tmper);
 
+    //just a temp way to see if this is the rate-limiting call.
+    
     if (iter == mInTransit.end())
     {
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
@@ -77,13 +103,20 @@ namespace CBR
       
       if(numResponses == 0)
       {
-        return -1;  //means that we couldn't locate the object in the dht.
+        std::cout<<"\n\n********************************\nLOOKUP FAILED\n\n";
+        return;
+        //        return -1;  //means that we couldn't locate the object in the dht.
       }
-            
-      return convert_dht_val_to_server_id(get_result->values.values_val[numResponses -1].value.bamboo_value_val );
+
+
+      //      std::cout<<"\n\n********************************\nLOOKUP SUCCEEDED\n\n";
+
+      return;
+      //      return convert_dht_val_to_server_id(get_result->values.values_val[numResponses -1].value.bamboo_value_val );
     }
 
-    return OBJECT_IN_TRANSIT;
+    return;
+    //    return OBJECT_IN_TRANSIT;
   }
 
   /*
@@ -126,6 +159,7 @@ namespace CBR
 
     Bamboo::Bamboo_key obj_id_as_dht_key;
     convert_obj_id_to_dht_key(obj_id, obj_id_as_dht_key);
+    //    convert_obj_id_to_dht_key(&obj_id, obj_id_as_dht_key);
 
     
     Bamboo::Bamboo_val serv_id_as_dht_val;
@@ -158,13 +192,13 @@ namespace CBR
   */
   void DhtObjectSegmentation::migrateObject(const UUID& obj_id, const ServerID new_server_id)
   {
+    printf("\n\n bftm got a migrateObject call in DhtObjecSegmentation.cpp \n\n");
 
     //log the message.
     mTrace->objectBeginMigrate(mCurrentTime,obj_id,this->getHostServerID(),new_server_id); //log it.
       
     //if we do, then say that the object is in transit.
     mInTransit[obj_id] = new_server_id;
-
   }
 
 
@@ -211,6 +245,7 @@ namespace CBR
           //      1) Checks to make sure that object does not already exist in dht
           Bamboo::Bamboo_key obj_id_as_dht_key;
           convert_obj_id_to_dht_key(obj_id, obj_id_as_dht_key);
+          //convert_obj_id_to_dht_key(&obj_id, obj_id_as_dht_key);
 
         
           Bamboo::Bamboo_val serv_id_as_dht_val;
@@ -239,6 +274,7 @@ namespace CBR
           //      1) Gets all records of object from dht.
           Bamboo::Bamboo_key obj_id_as_dht_key;
           convert_obj_id_to_dht_key(obj_id, obj_id_as_dht_key);
+          //          convert_obj_id_to_dht_key(&obj_id, obj_id_as_dht_key);
 
         
           bamboo_get_result*  get_result;
@@ -269,6 +305,8 @@ namespace CBR
           //remove object id from in transit.
           //place it in mFinishedMove
 
+          printf("\n\n bftm debug: in DhtObjectSegmentation.cpp.  Got an acknowledge. \n\n");
+          
           std::map<UUID,ServerID>::iterator inTransIt;
         
           inTransIt = mInTransit.find(obj_id);
@@ -323,9 +361,15 @@ namespace CBR
   /*
 
   */
+  //  void DhtObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, Bamboo::Bamboo_key& returner) const
   void DhtObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, Bamboo::Bamboo_key& returner) const
   {
-    strncpy(returner,obj_id.toString().c_str(),sizeof(returner));
+
+    //    std::cout<<"This is the size of the ";
+    //    strncpy(returner,obj_id.toString().c_str(),obj_id.toString().size() + 1);
+
+    //    strncpy(returner,obj_id->toString().c_str(),sizeof(returner));
+    strncpy(returner,obj_id.rawHexData().c_str(),obj_id.rawHexData().size() + 1);
   }
 
   /*

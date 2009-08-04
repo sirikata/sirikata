@@ -38,7 +38,10 @@ namespace CBR
     //UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID);
       virtual ~UniformObjectSegmentation();
 
-      virtual ServerID lookup(const UUID& obj_id) const;
+    //      virtual ServerID lookup(const UUID& obj_id) const;
+    virtual void lookup(const UUID& obj_id) const;
+
+    
       virtual void osegMigrateMessage(OSegMigrateMessage*);
 
       virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);

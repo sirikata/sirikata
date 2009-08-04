@@ -42,7 +42,7 @@ namespace CBR
   /*
     The lookup should look through
   */
-  ServerID ChordObjectSegmentation::lookup(const UUID& obj_id) const
+  void ChordObjectSegmentation::lookup(const UUID& obj_id) const
   {
     //    std::map<UUID,ServerID>::iterator iter = mInTransit.find(obj_id);
     UUID tmper = obj_id;
@@ -60,14 +60,18 @@ namespace CBR
       if (iterObjectToServerID == mObjectToServerMap.end())
       {
         //        printf("\n\t\t***In the master list couldn't find object either.\n");
-        return -1;
+
+        return;
+        //return -1;
       }
 
-      return iterObjectToServerID->second;
+      return;
+      //return iterObjectToServerID->second;
     }
 
 
-    return OBJECT_IN_TRANSIT;
+    return;
+    //    return OBJECT_IN_TRANSIT;
   }
 
   /*

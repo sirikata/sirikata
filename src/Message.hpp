@@ -51,17 +51,17 @@ namespace CBR {
 
 typedef uint8 MessageType;
 
-#define MESSAGE_TYPE_OBJECT        1
-#define MESSAGE_TYPE_MIGRATE       4
-#define MESSAGE_TYPE_COUNT         5
-#define MESSAGE_TYPE_CSEG_CHANGE   6
-#define MESSAGE_TYPE_LOAD_STATUS   7
-#define MESSAGE_TYPE_OSEG_MIGRATE  8
-#define MESSAGE_TYPE_OSEG_LOOKUP   9
-#define MESSAGE_TYPE_NOISE         10
-#define MESSAGE_TYPE_SERVER_PROX_QUERY   11
-#define MESSAGE_TYPE_SERVER_PROX_RESULT  12
-#define MESSAGE_TYPE_BULK_LOCATION       13
+#define MESSAGE_TYPE_OBJECT                     1
+#define MESSAGE_TYPE_MIGRATE                    4
+#define MESSAGE_TYPE_COUNT                      5
+#define MESSAGE_TYPE_CSEG_CHANGE                6
+#define MESSAGE_TYPE_LOAD_STATUS                7
+#define MESSAGE_TYPE_OSEG_MIGRATE_MOVE          8
+#define MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE   9
+#define MESSAGE_TYPE_NOISE                     10
+#define MESSAGE_TYPE_SERVER_PROX_QUERY         11
+#define MESSAGE_TYPE_SERVER_PROX_RESULT        12
+#define MESSAGE_TYPE_BULK_LOCATION             13
 
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
@@ -242,61 +242,110 @@ private:
 
   //oseg message
 
+class OSegMigrateMessageMove : public Message
+{
+public:
+  OSegMigrateMessageMove(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id);
 
-  class OSegMigrateMessage : public Message
-  {
-  public:
-    enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
-
-    OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
-    ~OSegMigrateMessage();
-
+  
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    CBR::Protocol::OSeg::MigrateMessageMove contents;
 
     ServerID            getServFrom();
     ServerID            getServTo();
     UUID                getObjID();
-    OSegMigrateAction   getAction();
     ServerID            getMessageDestination();
     ServerID            getMessageFrom();
-
-
-  private:
+  
+  
+private:
     friend class Message;
-    OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    OSegMigrateMessageMove(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
 
-    ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
-    UUID mObjID;
-    OSegMigrateAction mAction;
+  
+class OSegMigrateMessageAcknowledge : public Message
+{
+public:
+  OSegMigrateMessageAcknowledge(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id);
 
-  };
-
-
-  class OSegLookupMessage : public Message
-  {
-  public:
-    enum OSegLookupAction {I_HAVE_IT, WHERE_IS_IT};
-
-    OSegLookupMessage(const ServerID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
-    ~OSegLookupMessage();
-
+  
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    ServerID getSeeker();
-    ServerID getKeeper();
-    UUID     getObjID();
-    OSegLookupAction getAction();
+    CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
 
-  private:
+    ServerID            getServFrom();
+    ServerID            getServTo();
+    UUID                getObjID();
+    ServerID            getMessageDestination();
+    ServerID            getMessageFrom();
+  
+  
+private:
     friend class Message;
-    OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-    ServerID mSeeker,mKeeper; //seeker represents the server that is looking for the object.  keeper represents the server that has the object.
-    UUID mObjID; //the id of the object that we are looking for.
-    OSegLookupAction mAction; //are we posting that we're looking for something or that we have something?
+    OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
 
-  };
+
+  
+
+//   class OSegMigrateMessage : public Message
+//   {
+//   public:
+//     enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
+
+//     OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
+//     ~OSegMigrateMessage();
+
+//     virtual MessageType type() const;
+//     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+//     ServerID            getServFrom();
+//     ServerID            getServTo();
+//     UUID                getObjID();
+//     OSegMigrateAction   getAction();
+//     ServerID            getMessageDestination();
+//     ServerID            getMessageFrom();
+
+
+//   private:
+//     friend class Message;
+//     OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+
+//     ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
+//     UUID mObjID;
+//     OSegMigrateAction mAction;
+
+//   };
+
+
+//   class OSegLookupMessage : public Message
+//   {
+//   public:
+//     enum OSegLookupAction {I_HAVE_IT, WHERE_IS_IT};
+
+//     OSegLookupMessage(const ServerID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
+//     ~OSegLookupMessage();
+
+//     virtual MessageType type() const;
+//     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+//     ServerID getSeeker();
+//     ServerID getKeeper();
+//     UUID     getObjID();
+//     OSegLookupAction getAction();
+
+//   private:
+//     friend class Message;
+//     OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+//     ServerID mSeeker,mKeeper; //seeker represents the server that is looking for the object.  keeper represents the server that has the object.
+//     UUID mObjID; //the id of the object that we are looking for.
+//     OSegLookupAction mAction; //are we posting that we're looking for something or that we have something?
+
+//   };
 
 
 

@@ -280,6 +280,16 @@ void Server::tick(const Time& t)
   networkTick(t);
   // Check for object migrations
   checkObjectMigrations();
+
+//   printf("\n\nbftm debug: inside of server.cpp.  Got into tick \n\n");
+  
+//   // Give objects a chance to process
+//   for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
+//   {
+//     Object* obj = it->second;
+//     obj->tick(t);
+//   }
+
 }
 
 void Server::proximityTick(const Time& t)
@@ -335,6 +345,8 @@ void Server::checkObjectMigrations()
     //     to reinstantiate the object there
     // * delete object on this side
 
+  printf("\n\nbftm debug: got inside of checkObjectMigrations in Server.cpp.\n\n");
+  
     std::vector<UUID> migrated_objects;
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
     {
@@ -344,6 +356,7 @@ void Server::checkObjectMigrations()
         Vector3f obj_pos = mLocationService->currentPosition(obj_id);
 	ServerID new_server_id = lookup(obj_pos);
 
+        
         if (new_server_id != mID)
         {
             // FIXME While we're working on the transition to a separate object host
@@ -390,6 +403,9 @@ void Server::checkObjectMigrations()
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
+
+          printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
+
           
             mForwarder->route( migrate_msg , new_server_id);
 
@@ -415,11 +431,16 @@ ServerID Server::lookup(const Vector3f& pos)
   return sid;
 }
 
+/*
 ServerID Server::lookup(const UUID& obj_id)
 {
   Vector3f pos = mLocationService->currentPosition(obj_id);
   ServerID sid = mCSeg->lookup(pos);
   return sid;
 }
+*/
+
+
+
 
 } // namespace CBR

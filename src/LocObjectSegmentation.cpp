@@ -44,20 +44,28 @@ namespace CBR
   /*
     Lookup server id based on check with location service and mcseg.
   */
-  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
+  //  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
+  void LocObjectSegmentation::lookup(const UUID& obj_id) const
   {
       if (mLocationService->contains(obj_id)) {
           Vector3f pos = mLocationService->currentPosition(obj_id);
           ServerID sid = mCSeg->lookup(pos);
-          return sid;
+          mObjectToServerMap[obj_id] = sid;
+          
+          //          return sid;
       }
       else {
           // XXX FIXME relying on the location service just isn't really an option any more
           // since it doesn't have global knowledge.  For now we just have to route randomly and
           // hope for convergence. EEK!
           ServerID sid = (ServerID)((rand() % mCSeg->numServers()) + 1);
-          return sid;
+          mObjectToServerMap[obj_id] = sid;
+          //          return sid;
       }
+               //    Vector3f pos = mLocationService->currentPosition(obj_id);
+               //    ServerID sid = mCSeg->lookup(pos);
+    //    return sid;
+               //    return;
   }
 
 

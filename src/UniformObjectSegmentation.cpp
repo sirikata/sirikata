@@ -42,7 +42,9 @@ namespace CBR
   /*
     The lookup should look through
   */
-  ServerID UniformObjectSegmentation::lookup(const UUID& obj_id) const
+
+  //  ServerID UniformObjectSegmentation::lookup(const UUID& obj_id) const
+  void UniformObjectSegmentation::lookup(const UUID& obj_id) const
   {
     //    std::map<UUID,ServerID>::iterator iter = mInTransit.find(obj_id);
     UUID tmper = obj_id;
@@ -60,11 +62,14 @@ namespace CBR
       if (iterObjectToServerID == mObjectToServerMap.end())
       {
         //        printf("\n\t\t***In the master list couldn't find object either.\n");
-        return -1;
+
+        //return -1;
+        return;
       }
 
       //      std::cout<<"\t\t****In the master list, could find object.  Located on server:  "<<iterObjectToServerID->second<<std::endl;
-      return iterObjectToServerID->second;
+      //      return iterObjectToServerID->second;
+      return;
 
     }
 
@@ -72,9 +77,10 @@ namespace CBR
     //printf("\n**Debug in UniformObjectSegmentation.cpp's lookup: obj in transit.\n");
     //    std::cout<<"\n**Debug in UniformObjectSegmentation.cpp's lookup: object "<<obj_id.toString()<<" in transit.\n";
 
-    return OBJECT_IN_TRANSIT;
-    //    return mObjectToServerMap[obj_id];
-    //    return iter->second;
+
+    return;
+    //    return OBJECT_IN_TRANSIT;
+
   }
 
   /*

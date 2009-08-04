@@ -27,7 +27,8 @@
 
 #define BAMBOO_SECRET          "meru_secret"
 
-#define BAMBOO_KEY_SIZE        20
+#define BAMBOO_KEY_SIZE        36
+#define BAMBOO_VAL_SIZE        20
 
 
 
@@ -37,7 +38,7 @@ class Bamboo
 public:
 
   typedef char Bamboo_key [BAMBOO_KEY_SIZE];
-  typedef char Bamboo_val [BAMBOO_KEY_SIZE];
+  typedef char Bamboo_val [BAMBOO_VAL_SIZE];
 
   
   Bamboo(char* host, int port);

@@ -34,7 +34,9 @@ namespace CBR
     LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
     virtual ~LocObjectSegmentation();
 
-    virtual ServerID lookup(const UUID& obj_id) const;
+    //    virtual ServerID lookup(const UUID& obj_id) const;
+    virtual void lookup(const UUID& obj_id) const;
+    
     virtual void osegMigrateMessage(OSegMigrateMessage*);
     virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);

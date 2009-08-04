@@ -36,6 +36,7 @@ namespace CBR
 
     void     convert_serv_id_to_dht_val   (const ServerID sID, Bamboo::Bamboo_val& returner) const;
     void     convert_obj_id_to_dht_key    (const UUID& obj_id,    Bamboo::Bamboo_key& returner) const;
+    //    void     convert_obj_id_to_dht_key    (const UUID* obj_id,    Bamboo::Bamboo_key& returner) const;
 
       
     ServerID convert_dht_val_to_server_id (Bamboo::Bamboo_val bVal) const;
@@ -45,11 +46,12 @@ namespace CBR
   public:
     //    DhtObjectSegmentation(CoordinateSegmentation* cseg, std::vector<UUID*> vectorOfObjectsInitializedOnThisServer,ServerID servID,  Trace* tracer, char* dht_host, int dht_port);
 
-    DhtObjectSegmentation(CoordinateSegmentation* cseg, std::vector<UUID*> vectorOfObjectsInitializedOnThisServer,ServerID servID,  Trace* tracer, char* dht_host, int dht_port);
+    DhtObjectSegmentation(CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer,ServerID servID,  Trace* tracer, char* dht_host, int dht_port);
 
     virtual ~DhtObjectSegmentation();
     
-    virtual ServerID lookup(const UUID& obj_id) const;
+    //    virtual ServerID lookup(const UUID& obj_id) const;
+    virtual void lookup(const UUID& obj_id) const;
     virtual void osegMigrateMessage(OSegMigrateMessage*);
     virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
