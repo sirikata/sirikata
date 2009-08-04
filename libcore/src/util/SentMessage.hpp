@@ -72,11 +72,16 @@ private:
 public:
     /// Destructor: Caution: NOT VIRTUAL!!! Make sure to downcast if necessary!!
     ~SentMessage();
+
     /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
     SentMessage(QueryTracker *sender);
+    /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
+    SentMessage(QueryTracker *sender, const QueryCallback& cb);
 
     /// Constructor takes in a queryId. Caller is expected to keep track of a map.
     SentMessage(int64 thisId, QueryTracker *sender);
+    /// Constructor takes in a queryId. Caller is expected to keep track of a map.
+    SentMessage(int64 thisId, QueryTracker *sender, const QueryCallback& cb);
 
     /// header accessor, like that of RoutableMessage. (const ver)
     const RoutableMessageHeader &header() const {

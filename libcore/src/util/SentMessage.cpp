@@ -94,8 +94,22 @@ SentMessage::SentMessage(int64 newId, QueryTracker *tracker)
     tracker->insert(this);
 }
 
+SentMessage::SentMessage(int64 newId, QueryTracker *tracker, const QueryCallback& cb)
+ : mTimerHandle(NULL), mId(newId), mResponseCallback(cb), mTracker(tracker)
+{
+    header().set_id(mId);
+    tracker->insert(this);
+}
+
 SentMessage::SentMessage(QueryTracker *tracker)
-    : mTimerHandle(NULL), mId(tracker->allocateId()), mTracker(tracker)
+ : mTimerHandle(NULL), mId(tracker->allocateId()), mTracker(tracker)
+{
+    header().set_id(mId);
+    tracker->insert(this);
+}
+
+SentMessage::SentMessage(QueryTracker *tracker, const QueryCallback& cb)
+ : mTimerHandle(NULL), mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker)
 {
     header().set_id(mId);
     tracker->insert(this);
