@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "MotionVector.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
@@ -54,11 +55,40 @@ public:
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 }; // class LocationServiceListener
 
+
+/** LocationUpdatePolicy controls when updates are sent to subscribers.
+ *  It is informed of subscriptions, object location updates, and gets
+ *  regular tick calls.  Based on this information it decides when to
+ *  send updates to individual subscribers.
+ */
+class LocationUpdatePolicy : public LocationServiceListener{
+public:
+    virtual ~LocationUpdatePolicy() {}
+
+    virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(ServerID remote) = 0;
+
+    virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
+    virtual void localObjectRemoved(const UUID& uuid) = 0;
+    virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
+
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
+    virtual void replicaObjectRemoved(const UUID& uuid) = 0;
+    virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
+    virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
+
+    virtual void tick(const Time& t) = 0;
+}; // class LocationUpdatePolicy
+
+
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class LocationService {
+class LocationService : public MessageRecipient {
 public:
+    LocationService(LocationUpdatePolicy* update_policy);
     virtual ~LocationService();
 
     virtual void tick(const Time& t) = 0;
@@ -76,6 +106,15 @@ public:
     virtual void addListener(LocationServiceListener* listener);
     virtual void removeListener(LocationServiceListener* listener);
 
+    /** Subscriptions for other servers. */
+    virtual void subscribe(ServerID remote, const UUID& uuid);
+    virtual void unsubscribe(ServerID remote, const UUID& uuid);
+    /** Unsubscripe the given server from all its location subscriptions. */
+    virtual void unsubscribe(ServerID remote);
+
+    /** MessageRecipient Interface. */
+    virtual void receiveMessage(Message* msg) = 0;
+
 protected:
     void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
     void notifyLocalObjectRemoved(const UUID& uuid) const;
@@ -90,6 +129,8 @@ protected:
 
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;
+
+    LocationUpdatePolicy* mUpdatePolicy;
 }; // class LocationService
 
 } // namespace CBR

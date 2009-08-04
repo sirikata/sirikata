@@ -131,6 +131,8 @@ private:
 
     Time mLastTime;
 
+    LocationService* mLocService;
+
     // These track local objects and answer queries from other
     // servers.
     ServerQueryMap mServerQueries;

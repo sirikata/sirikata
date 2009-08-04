@@ -45,7 +45,7 @@ class ObjectFactory;
  */
 class OracleLocationService : public LocationService {
 public:
-    OracleLocationService(ObjectFactory* objfactory);
+    OracleLocationService(LocationUpdatePolicy* update_policy, ObjectFactory* objfactory);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual void tick(const Time& t);
@@ -55,6 +55,9 @@ public:
 
     virtual void addLocalObject(const UUID& uuid);
     virtual void removeLocalObject(const UUID& uuid);
+
+    virtual void receiveMessage(Message* msg);
+
 private:
     struct LocationInfo {
         TimedMotionVector3f location;

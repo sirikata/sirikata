@@ -37,7 +37,14 @@ namespace CBR {
 LocationServiceListener::~LocationServiceListener() {
 }
 
+LocationService::LocationService(LocationUpdatePolicy* update_policy)
+ : mUpdatePolicy(update_policy)
+{
+    addListener(mUpdatePolicy);
+}
+
 LocationService::~LocationService() {
+    delete mUpdatePolicy;
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {
@@ -49,6 +56,18 @@ void LocationService::removeListener(LocationServiceListener* listener) {
     ListenerList::iterator it = mListeners.find(listener);
     assert(it != mListeners.end());
     mListeners.erase(it);
+}
+
+void LocationService::subscribe(ServerID remote, const UUID& uuid) {
+    mUpdatePolicy->subscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(ServerID remote, const UUID& uuid) {
+    mUpdatePolicy->unsubscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(ServerID remote) {
+    mUpdatePolicy->unsubscribe(remote);
 }
 
 void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {

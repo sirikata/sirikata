@@ -35,8 +35,9 @@
 
 namespace CBR {
 
-OracleLocationService::OracleLocationService(ObjectFactory* objfactory)
- : mCurrentTime(0),
+OracleLocationService::OracleLocationService(LocationUpdatePolicy* update_policy, ObjectFactory* objfactory)
+ : LocationService(update_policy),
+   mCurrentTime(0),
    mLocalObjects(),
    mReplicaObjects(),
    mInitialNotification(false)
@@ -100,6 +101,7 @@ void OracleLocationService::tick(const Time& t) {
     // FIXME we should update bounds as well
 
     mCurrentTime = t;
+    mUpdatePolicy->tick(t);
 }
 
 TimedMotionVector3f OracleLocationService::location(const UUID& uuid) {
@@ -143,6 +145,9 @@ void OracleLocationService::removeLocalObject(const UUID& uuid) {
 
     mReplicaObjects.insert(uuid);
     notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+}
+
+void OracleLocationService::receiveMessage(Message* msg) {
 }
 
 

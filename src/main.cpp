@@ -37,7 +37,10 @@
 
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
+
 #include "LocationService.hpp"
+#include "AlwaysLocationUpdatePolicy.hpp"
+
 #include "Proximity.hpp"
 #include "Server.hpp"
 
@@ -157,7 +160,10 @@ void *main_loop(void *) {
     Forwarder* forwarder = new Forwarder(server_id);
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    LocationService* loc_service = new OracleLocationService(obj_factory);
+
+    LocationUpdatePolicy* loc_update_policy = new AlwaysLocationUpdatePolicy();
+
+    LocationService* loc_service = new OracleLocationService(loc_update_policy, obj_factory);
 
 
     String filehandle = GetOption("serverips")->as<String>();

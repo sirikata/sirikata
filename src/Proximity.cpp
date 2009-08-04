@@ -43,6 +43,7 @@ namespace CBR {
 Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher)
  : mID(sid),
    mLastTime(0),
+   mLocService(locservice),
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
@@ -62,7 +63,7 @@ Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* r
     mObjectQueryHandler = new Prox::BruteForceQueryHandler<ProxSimulationTraits>();
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
-    locservice->addListener(this);
+    mLocService->addListener(this);
 
     mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
     mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
@@ -148,6 +149,9 @@ void Proximity::removeQuery(ServerID sid) {
     Query* q = it->second;
     mServerQueries.erase(it);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+
+    // Remove all location update subscriptions for this server
+    mLocService->unsubscribe(sid);
 }
 
 
@@ -192,10 +196,14 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
         oid.id = mID;
         ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(oid);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added)
+            if (evt_it->type() == QueryEvent::Added) {
+                mLocService->subscribe(sid, evt_it->id());
                 result_msg->addObjectUpdate(evt_it->id(), mLocalLocCache->location(evt_it->id()), mLocalLocCache->bounds(evt_it->id()));
-            else
+            }
+            else {
+                mLocService->unsubscribe(sid, evt_it->id());
                 result_msg->addObjectRemoval( evt_it->id() );
+            }
         }
         mRouter->route(result_msg, sid);
     }
