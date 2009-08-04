@@ -971,6 +971,7 @@ SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(SUBSCRIPTION_SOURCES ${SUBSCRIPTION_SOURCE_DIR}/main.cpp )
 SET(CPPOH_SOURCES ${CPPOH_SOURCE_DIR}/main.cpp
+${CPPOH_SOURCE_DIR}/Config.cpp
 ${CPPOH_SOURCE_DIR}/CDNConfig.cpp
   ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc
  )
