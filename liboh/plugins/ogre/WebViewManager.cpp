@@ -90,6 +90,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
           zOrderCounter(5),
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
 {
+    tooltipWebView = 0;
 #ifdef HAVE_AWESOMIUM
 	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
 	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
@@ -304,7 +305,7 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
 				handleTooltip(0, L"");
 		}
 
-		if(tooltipWebView->getVisibility())
+		if(tooltipWebView && tooltipWebView->getVisibility())
 			tooltipWebView->setPosition(OverlayPosition(coord.x, coord.y + 15));
 	}
 
