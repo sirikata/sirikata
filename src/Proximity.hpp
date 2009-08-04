@@ -36,6 +36,7 @@
 #include "ProxSimulationTraits.hpp"
 #include "CBRLocationServiceCache.hpp"
 #include "ServerNetwork.hpp"
+#include "CoordinateSegmentation.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
 
@@ -80,17 +81,20 @@ private:
 class LocationService;
 class ObjectFactory;
 
-class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener {
+class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient {
 public:
     typedef Prox::Query<ProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
 
-    Proximity(LocationService* locservice);
+    Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher);
     ~Proximity();
 
+    // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
+    // needs to send messages.
+    void initialize(CoordinateSegmentation* cseg);
+
     // Server queries
-    // FIXME we need location + bounds to set up a server query
-    void addQuery(ServerID sid, SolidAngle sa);
+    void addQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa);
     void removeQuery(ServerID sid);
 
     // Objects
@@ -113,10 +117,17 @@ public:
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 
+    // CoordinateSegmentation::Listener Interface
+    virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg);
+
+    // MessageRecipient Interface
+    virtual void receiveMessage(Message* msg);
 private:
     typedef std::set<UUID> ObjectSet;
     typedef std::map<ServerID, Query*> ServerQueryMap;
     typedef std::map<UUID, Query*> ObjectQueryMap;
+
+    ServerID mID;
 
     Time mLastTime;
 
@@ -131,6 +142,9 @@ private:
     ObjectQueryMap mObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
     Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
+
+    MessageRouter* mRouter;
+    MessageDispatcher* mDispatcher;
 }; //class Proximity
 
 } // namespace CBR

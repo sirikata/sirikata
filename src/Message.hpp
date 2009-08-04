@@ -398,7 +398,7 @@ public:
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    QueryAction action() const;
+    QueryAction action() const { return mAction; }
     TimedMotionVector3f queryLocation() const { assert(action() == AddOrUpdate); return mQueryLocation; }
     BoundingSphere3f queryBounds() const { assert(action() == AddOrUpdate); return mBounds; }
     SolidAngle queryAngle() const { assert(action() == AddOrUpdate); return mMinAngle; }

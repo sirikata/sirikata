@@ -4,7 +4,6 @@
 
 #include "Utility.hpp"
 #include "Time.hpp"
-#include "Proximity.hpp"
 #include "LocationService.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"

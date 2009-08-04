@@ -506,6 +506,18 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
           mOSeg->processLookupMessage(oseg_lookup_msg);  //responsible for deleting the message if it has a record of it.
         }
         break;
+      case MESSAGE_TYPE_SERVER_PROX_QUERY:
+          {
+              delivered = true;
+              dispatchMessage(msg);
+          }
+          break;
+      case MESSAGE_TYPE_SERVER_PROX_RESULT:
+          {
+              delivered = true;
+              dispatchMessage(msg);
+          }
+          break;
       default:
         assert(false);
         break;

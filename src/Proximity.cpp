@@ -40,14 +40,17 @@
 
 namespace CBR {
 
-Proximity::Proximity(LocationService* locservice)
- : mLastTime(0),
+Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher)
+ : mID(sid),
+   mLastTime(0),
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
    mObjectQueries(),
    mGlobalLocCache(NULL),
-   mObjectQueryHandler(NULL)
+   mObjectQueryHandler(NULL),
+   mRouter(router),
+   mDispatcher(dispatcher)
 {
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(locservice, false);
@@ -60,9 +63,15 @@ Proximity::Proximity(LocationService* locservice)
     mObjectQueryHandler->initialize(mGlobalLocCache);
 
     locservice->addListener(this);
+
+    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
+    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
 }
 
 Proximity::~Proximity() {
+    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
+    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+
     // Objects
     while(!mObjectQueries.empty())
         removeQuery( mObjectQueries.begin()->first );
@@ -79,11 +88,56 @@ Proximity::~Proximity() {
 }
 
 
-void Proximity::addQuery(ServerID sid, SolidAngle sa) {
+void Proximity::initialize(CoordinateSegmentation* cseg) {
+    cseg->addListener(this);
+
+    OriginID oid;
+    oid.id = mID;
+    TimedMotionVector3f loc;
+
+    BoundingBoxList bboxes = cseg->serverRegion(mID);
+    BoundingBox3f bbox = bboxes[0];
+    for(uint32 i = 1; i< bboxes.size(); i++)
+        bbox.mergeIn(bboxes[i]);
+
+    BoundingSphere3f bounds = bbox.toBoundingSphere();
+    SolidAngle minAngle(SolidAngle::Max / 1000); // FIXME
+    // FIXME this assumes that ServerIDs are simple sequence of IDs
+    for(ServerID sid = 1; sid <= cseg->numServers(); sid++) {
+        if (sid == mID) continue;
+        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(oid, ServerProximityQueryMessage::AddOrUpdate, loc, bounds, minAngle);
+        mRouter->route(msg, sid);
+    }
+}
+
+void Proximity::receiveMessage(Message* msg) {
+    ServerProximityQueryMessage* prox_query_msg = dynamic_cast<ServerProximityQueryMessage*>(msg);
+    if (prox_query_msg != NULL) {
+
+        // FIXME we need to have a way to get the source server from the message without using this magic,
+        // probably by saving the header and delivering it along with the message
+        ServerID source_server = (ServerID)(GetUniqueIDOriginID(msg->id()).id);
+
+        if (prox_query_msg->action() == ServerProximityQueryMessage::AddOrUpdate) {
+            addQuery(source_server, prox_query_msg->queryLocation(), prox_query_msg->queryBounds(), prox_query_msg->queryAngle());
+        }
+        else if (prox_query_msg->action() == ServerProximityQueryMessage::Remove) {
+            removeQuery(source_server);
+        }
+        else {
+            assert(false);
+        }
+    }
+
+    ServerProximityResultMessage* prox_result_msg = dynamic_cast<ServerProximityResultMessage*>(msg);
+    if (prox_result_msg != NULL) {
+        //printf("result_msg\n");
+    }
+}
+
+void Proximity::addQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     assert( mServerQueries.find(sid) == mServerQueries.end() );
-    Query* q = NULL;
-     // FIXME Need to get location and bounds from somewhere.
-     // mServerQueryHandler->registerQuery(location, bounds, sa);
+    Query* q = mServerQueryHandler->registerQuery(loc, bounds, sa);
     mServerQueries[sid] = q;
 }
 
@@ -121,11 +175,32 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
     mObjectQueryHandler->tick(t);
     mLastTime = t;
 
-    // FIXME
+    typedef std::deque<QueryEvent> QueryEventList;
+
     // Output query events for servers
 
+    for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
+        ServerID sid = query_it->first;
+        Query* query = query_it->second;
+
+        QueryEventList evts;
+        query->popEvents(evts);
+
+        if (evts.empty()) continue;
+
+        OriginID oid;
+        oid.id = mID;
+        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(oid);
+        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
+            if (evt_it->type() == QueryEvent::Added)
+                result_msg->addObjectUpdate(evt_it->id(), mLocalLocCache->location(evt_it->id()), mLocalLocCache->bounds(evt_it->id()));
+            else
+                result_msg->addObjectRemoval( evt_it->id() );
+        }
+        mRouter->route(result_msg, sid);
+    }
+
     // Output QueryEvents for objects
-    typedef std::deque<QueryEvent> QueryEventList;
     for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         UUID query_id = query_it->first;
         Query* query = query_it->second;
@@ -176,6 +251,9 @@ void Proximity::replicaObjectRemoved(const UUID& uuid) {
 void Proximity::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
 }
 void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+}
+
+void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
 }
 
 } // namespace CBR

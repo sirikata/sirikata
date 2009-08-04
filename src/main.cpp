@@ -164,7 +164,6 @@ void *main_loop(void *) {
     std::ifstream ipConfigFileHandle(filehandle.c_str());
     ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
     gTrace->setServerIDMap(server_id_map);
-    Proximity* prox = new Proximity(loc_service);
 
 
 
@@ -384,9 +383,13 @@ void *main_loop(void *) {
 
     //end create oseg
 
+      Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);
+
 
     //    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
       Server* server = new Server(server_id, forwarder, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
+
+      prox->initialize(cseg);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
