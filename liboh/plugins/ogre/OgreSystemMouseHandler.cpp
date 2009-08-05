@@ -661,6 +661,7 @@ private:
     }
 
     void saveSceneAction() {
+        std::set<std::string> saveSceneNames;
         std::cout << "saving new scene as scene_new.csv: " << std::endl;
         FILE *output = fopen("scene_new.csv", "wt");
         if (!output) {
@@ -680,7 +681,7 @@ private:
         }
         std::sort(entlist.begin(), entlist.end(), compareEntity);
         for (unsigned int i=0; i<entlist.size(); i++)
-            dumpObject(output, entlist[i]);
+            dumpObject(output, entlist[i], saveSceneNames);
         fclose(output);
     }
 
@@ -703,17 +704,30 @@ private:
         }
         return true;
     }
-
-    string physicalName(ProxyMeshObject *obj) {
+    
+    string physicalName(ProxyMeshObject *obj, std::set<std::string> &saveSceneNames) {
         std::string name = obj->getPhysical().name;
         if (name.empty()) {
-            std::ostringstream os;
-            os << "obj" << (ObjectReference::Hasher()(obj->getObjectReference().object())%1677217);
-            name = os.str();
+            name = obj->getMesh().filename();
+            name.resize(name.size()-5);
+            //name += ".0";
         }
+//        if (name.find(".") < name.size()) {             /// remove any enumeration
+//            name.resize(name.find("."));
+//        }
+        int basesize = name.size();
+        int count = 1;
+        while (saveSceneNames.count(name)) {
+            name.resize(basesize);
+            std::ostringstream os;
+            os << name << "." << count;
+            name = os.str();
+            count++;
+        }
+        saveSceneNames.insert(name);
         return name;
     }
-    void dumpObject(FILE* fp, Entity* e) {
+    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames) {
         Task::AbsTime now = Task::AbsTime::now();
         ProxyObject *pp = e->getProxyPtr().get();
         Location loc = pp->globalLocation(now);
@@ -737,7 +751,7 @@ private:
         if (parentObj) {
             ProxyMeshObject *parentMesh = dynamic_cast<ProxyMeshObject*>(parentObj.get());
             if (parentMesh) {
-                parent = physicalName(parentMesh);
+                parent = physicalName(parentMesh, saveSceneNames);
             }
         }
         if (light) {
@@ -790,7 +804,7 @@ private:
             default:
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
-            std::string name = physicalName(mesh);
+            std::string name = physicalName(mesh, saveSceneNames);
             fprintf(fp, "mesh,%s,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),name.c_str(),parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
