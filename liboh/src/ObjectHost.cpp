@@ -66,11 +66,11 @@ ObjectHost::~ObjectHost() {
         // silently wait for everyone to finish adding themselves.
     }
     queue->dequeueAll(); // filter through everything that might have an ObjectHost message in it.
-	{
-		HostedObjectMap objs;
-		mHostedObjects.swap(objs);
-		objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
-	}
+    {
+        HostedObjectMap objs;
+        mHostedObjects.swap(objs);
+        objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
+    }
 }
 
 class ObjectHost::MessageProcessor : public Task::WorkItem {
@@ -90,7 +90,7 @@ public:
         AutoPtr delete_me(this);
 
         if (!header.has_destination_space() || header.destination_space() == SpaceID::null()) {
-			header.set_source_space(SpaceID::null());
+            header.set_source_space(SpaceID::null());
             ReturnStatus status = RoutableMessageHeader::SUCCESS;
             if (header.destination_object() == ObjectReference::spaceServiceID()) {
                 MessageService *destService = parent->getService(header.destination_port());
@@ -144,7 +144,7 @@ public:
                 dest = tlsc->getHostedObject(header.destination_object());
             }
             if (dest) {
-				header.set_source_space(header.destination_space());
+                header.set_source_space(header.destination_space());
                 dest->processRoutableMessage(header, MemoryReference(body));
             } else {
                 HostedObjectPtr src;

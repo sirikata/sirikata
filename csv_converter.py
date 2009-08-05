@@ -120,7 +120,7 @@ class CsvToSql:
         key_name = self.getKeyName(key, which)
         table_insert = "INSERT INTO \"" + table_name + "\""
         table_insert += " VALUES (?, ?)"
-        curs.execute(table_insert, (key_name, value))
+        curs.execute(table_insert, (key_name, buffer(value)))
 
     def go(self, openfile, **csvargs):
         cursor = self.conn.cursor()
@@ -140,6 +140,7 @@ class CsvToSql:
                 raise
         nulluuid = uuid.UUID(int=0).get_hex()
         self.addTable(cursor, nulluuid)
+        print uuidlist
         self.set(cursor, nulluuid, 'ObjectList', uuidlist.SerializeToString())
         self.conn.commit()
         cursor.close()
@@ -194,7 +195,9 @@ class CsvToSql:
                 if row.get('hull_x',''):
                     self.protovec(physical.hull, row, 'hull')
                 self.set(cursor, uuid, 'PhysicalParameters', physical.SerializeToString())
-            self.set(cursor, uuid, 'MeshURI', row['meshURI'])
+            meshuri = Sirikata.StringProperty()
+            meshuri.value = row['meshURI']
+            self.set(cursor, uuid, 'MeshURI', meshuri.SerializeToString())
             print "** Adding a Mesh ",uuid,"named",row.get('name',''),"with",row['meshURI']
         elif row['objtype']=='light':
             print "** Adding a Light ",uuid

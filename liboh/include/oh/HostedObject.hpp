@@ -100,7 +100,7 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     void initializeScript(const String&script, const std::map<String,String> &args);
     /// Attempt to restore this item from database including script [not implemented]
-    void initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint);
+    void initializeRestoreFromDatabase(const SpaceID&spaceID, const HostedObjectPtr&spaceConnectionHint=HostedObjectPtr());
     /** Gets the ObjectHost (usually one per host).
         See getProxy(space)->getProxyManger() for the per-space object.
     */

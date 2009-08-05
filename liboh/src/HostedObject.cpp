@@ -34,6 +34,7 @@
 #include <oh/Platform.hpp>
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>
+#include <task/WorkQueue.hpp>
 #include "util/RoutableMessage.hpp"
 #include "util/KnownServices.hpp"
 #include "persistence/PersistenceSentMessage.hpp"
@@ -102,25 +103,43 @@ struct HostedObject::PrivateCallbacks {
             delete msg;
             return; // unable to get starting position.
         }
-        ObjLoc loc;
-        loc.ParseFromString(msg->body().reads(0).data());
-        Location location;
-        location.setPosition(loc.position());
-        location.setOrientation(loc.orientation());
-        if (loc.has_velocity()) {
-            location.setVelocity(loc.velocity());
-        }
-        if (loc.has_rotational_axis()) {
-            location.setAxisOfRotation(loc.rotational_axis());
-        }
-        if (loc.has_angular_speed()) {
-            location.setAngularSpeed(loc.angular_speed());
+        Location location(Vector3d::nil(),Quaternion::identity(),Vector3f::nil(),Vector3f(1,0,0),0);
+        for (int i = 0; i < msg->body().reads_size(); i++) {
+            String name = msg->body().reads(i).field_name();
+            if (!name.empty() && name[0] != '_') {
+                if (!msg->body().reads(i).has_return_status()) {
+                    realThis->setProperty(name, msg->body().reads(i).data());
+                }
+            }
+            if (name == "Loc") {
+                ObjLoc loc;
+                loc.ParseFromString(msg->body().reads(i).data());
+                SILOG(cppoh,debug,"got loc, position = "<<loc.position());
+                if (loc.has_position()) {
+                    location.setPosition(loc.position());
+                }
+                if (loc.has_orientation()) {
+                    location.setOrientation(loc.orientation());
+                }
+                if (loc.has_velocity()) {
+                    location.setVelocity(loc.velocity());
+                }
+                if (loc.has_rotational_axis()) {
+                    location.setAxisOfRotation(loc.rotational_axis());
+                }
+                if (loc.has_angular_speed()) {
+                    location.setAngularSpeed(loc.angular_speed());
+                }
+            }
+            if (name == "_ScriptInfo") {
+            }
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),1);
         SILOG(cppoh,debug,"Sending NewObj!");
         realThis->sendNewObj(location, sphere, spaceID);
         delete msg;
+        realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
 
     static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
@@ -175,6 +194,7 @@ struct HostedObject::PrivateCallbacks {
         } else {
             realThis->sendReply(origHeader, bodyData);
         }
+        realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
     static void handlePersistenceMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
         using namespace Persistence::Protocol;
@@ -255,6 +275,7 @@ struct HostedObject::PrivateCallbacks {
         } else {
             delete persistenceMsg;
         }
+        realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
     static void handleRPCMessage(HostedObject *realThis, const RoutableMessageHeader &header, MemoryReference bodyData) {
         /// Parse message_names and message_arguments.
@@ -367,17 +388,17 @@ struct HostedObject::PrivateCallbacks {
             if (index >= 0 && index < sentMessage->body().reads_size()) {
                 if (response.reads(i).has_data()) {
                     sentMessage->body().reads(index).set_data(response.reads(i).data());
-					SILOG(cppoh,debug,"        "<<index<<" HAS DATA! "<<i);
+                    SILOG(cppoh,debug,"        "<<index<<" HAS DATA! "<<i);
                 } else {
-					if (response.reads(i).has_return_status()) {
-						sentMessage->body().reads(index).set_return_status(
-							response.reads(i).return_status());
-						SILOG(cppoh,debug,"        "<<index<<" HAS ERROR! "<<i);
-					} else {
-						sentMessage->body().reads(index).set_return_status(
-							StorageElement::KEY_MISSING);
-						SILOG(cppoh,debug,"        "<<index<<" is missing!! "<<i);
-					}
+                    if (response.reads(i).has_return_status()) {
+                        sentMessage->body().reads(index).set_return_status(
+                            response.reads(i).return_status());
+                        SILOG(cppoh,debug,"        "<<index<<" HAS ERROR! "<<i);
+                    } else {
+                        sentMessage->body().reads(index).set_return_status(
+                            StorageElement::KEY_MISSING);
+                        SILOG(cppoh,debug,"        "<<index<<" is missing!! "<<i);
+                    }
                 }
             }
         }
@@ -586,7 +607,7 @@ void HostedObject::sendNewObj(
 
     std::string serializedBody;
     messageBody.SerializeToString(&serializedBody);
-    send(messageHeader, MemoryReference(serializedBody));
+    sendViaSpace(messageHeader, MemoryReference(serializedBody));
 }
 
 void HostedObject::initializeConnect(
@@ -598,6 +619,7 @@ void HostedObject::initializeConnect(
     mObjectHost->registerHostedObject(getSharedPtr());
     connectToSpace(spaceID, spaceConnectionHint);
     sendNewObj(startingLocation, meshBounds, spaceID);
+    mObjectHost->getWorkQueue()->dequeueAll(); // don't need to wait until next frame.
 
     if (!mesh.empty()) {
         Protocol::StringProperty meshprop;
@@ -644,16 +666,22 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
                          &PrivateCallbacks::initializeDatabaseCallback,
                          this, spaceID,
                          _1, _2, _3));
-    Persistence::Protocol::IStorageElement el
-       = msg->body().add_reads();
-    el.set_object_uuid(getUUID());
-    el.set_field_name("Loc");
-    el = msg->body().add_reads();
-    el.set_object_uuid(getUUID());
-    el.set_field_name("ScriptInfo");
+    msg->body().add_reads().set_field_name("MeshURI");
+    msg->body().add_reads().set_field_name("MeshScale");
+    msg->body().add_reads().set_field_name("Name");
+    msg->body().add_reads().set_field_name("PhysicalParameters");
+    msg->body().add_reads().set_field_name("LightInfo");
+    msg->body().add_reads().set_field_name("IsCamera");
+    msg->body().add_reads().set_field_name("Parent");
+    msg->body().add_reads().set_field_name("Loc");
+    msg->body().add_reads().set_field_name("_ScriptInfo");
+    for (int i = 0; i < msg->body().reads_size(); i++) {
+        msg->body().reads(i).set_object_uuid(getUUID()); // database assumes uuid 0 if omitted
+    }
     msg->header().set_destination_object(ObjectReference::spaceServiceID());
     msg->header().set_destination_port(Services::PERSISTENCE);
     msg->serializeSend();
+    mObjectHost->getWorkQueue()->dequeueAll(); // don't need to wait until next frame.
 }
 void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
     assert(!mObjectScript); // Don't want to kill a live script!
@@ -830,6 +858,8 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         } else {
             SILOG(objecthost, error, "LocRequest message not for any known object.");
         }
+        // loc requests need to be fast, unlikely to land in infinite recursion.
+        mObjectHost->getWorkQueue()->dequeueAll();
         return;
     }
     else if (name == "SetLoc") {

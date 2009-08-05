@@ -141,6 +141,9 @@ public:
     Network::IOService *getSpaceIO() const {
         return mSpaceConnectionIO;
     }
+    Task::WorkQueue *getWorkQueue() const {
+        return mMessageQueue;
+    }
     /// Looks up a TopLevelSpaceConnection corresponding to a certain space.
     ProxyManager *getProxyManager(const SpaceID&space) const;
 }; // class ObjectHost

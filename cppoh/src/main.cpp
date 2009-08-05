@@ -106,8 +106,8 @@ public:
         uuidList.ParseFromString(resp.reads(0).data());
         for (int i = 0; i < uuidList.value_size(); i++) {
             SILOG(cppoh,info,"Loading object "<<ObjectReference(uuidList.value(i)));
-            HostedObject::construct<HostedObject>(mObjectHost, uuidList.value(i))
-                ->initializeRestoreFromDatabase(mSpace, HostedObjectPtr());
+            HostedObjectPtr obj = HostedObject::construct<HostedObject>(mObjectHost, uuidList.value(i));
+            obj->initializeRestoreFromDatabase(mSpace, HostedObjectPtr());
         }
         mSuccess = true;
     }
@@ -132,8 +132,8 @@ public:
         go();
         while (!mSuccess) {
             // needs to happen in one thread for now...
-            Network::IOServiceFactory::pollService(ioServ);
             queue->dequeuePoll();
+            //Network::IOServiceFactory::pollService(ioServ); // kills ioservice if there's nothing to be processed...
         }
     }
 };
