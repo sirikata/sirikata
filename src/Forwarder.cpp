@@ -521,7 +521,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       case MESSAGE_TYPE_BULK_LOCATION:
           {
               delivered = true;
-              // XXX FIXME
+              dispatchMessage(msg);
           }
           break;
       default:

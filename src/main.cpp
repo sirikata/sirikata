@@ -160,7 +160,7 @@ void *main_loop(void *) {
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
 
-    LocationService* loc_service = new OracleLocationService(server_id, forwarder, obj_factory);
+    LocationService* loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
 
 
     String filehandle = GetOption("serverips")->as<String>();

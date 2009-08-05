@@ -98,7 +98,7 @@ protected:
  */
 class LocationService : public MessageRecipient {
 public:
-    LocationService(ServerID sid, MessageRouter* router);
+    LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
     virtual ~LocationService();
 
     virtual void tick(const Time& t) = 0;
@@ -141,6 +141,7 @@ protected:
     ListenerList mListeners;
 
     LocationUpdatePolicy* mUpdatePolicy;
+    MessageDispatcher* mDispatcher;
 }; // class LocationService
 
 } // namespace CBR

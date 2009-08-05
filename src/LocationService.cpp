@@ -49,13 +49,16 @@ LocationUpdatePolicy::LocationUpdatePolicy(ServerID sid, LocationService* locser
 LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
-LocationService::LocationService(ServerID sid, MessageRouter* router)
+LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher)
+ : mDispatcher(dispatcher)
 {
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(sid, this, router);
+    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
 }
 
 LocationService::~LocationService() {
     delete mUpdatePolicy;
+    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {

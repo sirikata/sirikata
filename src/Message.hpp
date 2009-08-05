@@ -465,10 +465,13 @@ public:
 
     void addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
 
+    const UUID& dest() const {
+        return mDestObject;
+    }
+
     std::vector<Update> updates() const {
         return mUpdates;
     }
-
 private:
     friend class Message;
     BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
