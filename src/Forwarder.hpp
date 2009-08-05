@@ -25,6 +25,7 @@ class ObjectSegmentation;
   class Trace;
   class LoadMonitor;
 class Proximity;
+class ObjectConnection;
 
 class Forwarder : public MessageDispatcher, public MessageRouter
   {
@@ -42,7 +43,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
       LoadMonitor* mLoadMonitor;
-      ObjectMap* mObjects; //will be used in object() lookup call and possibly in migrate
       Proximity* mProximity;
       ServerID m_serv_ID;//Keeps copy of server id on forwarder.  necessary for sending messages to objects.
 
@@ -53,12 +53,15 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       Time mLastSampleTime;
       Duration mSampleRate;
 
+      typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
+      ObjectConnectionMap mObjectConnections;
+
     //Private Functions
       void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
 
       // Delivery interface.  This should be used to deliver received messages to the correct location -
       // the server or object it is addressed to.
-      bool deliver(Message* msg);
+      void deliver(Message* msg);
 
       // Forward the given message to its proper server.  Use this when a message arrives and the object
       // no longer lives on this server.
@@ -67,9 +70,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       ServerID lookup(const Vector3f&); //returns the server id that is responsible for the 3d point Vector3f
       ServerID lookup(const UUID&); //
 
-
-      // Get the object pointer for the given ID, or NULL if it isn't available on this server.
-      Object* object(const UUID& dest) const;
 
       void tickOSeg(const Time&t);
       void getOSegMessages();
@@ -82,7 +82,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
     public:
       Forwarder(ServerID id);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox);
+      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Time* currTime, Proximity* prox);
 
       void tick(const Time&t);
 
@@ -96,6 +96,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
 
 
+      void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
+      ObjectConnection* removeObjectConnection(const UUID& dest_obj);
+      ObjectConnection* getObjectConnection(const UUID& dest_obj);
   };//end class Forwarder
 
 } //end namespace CBR

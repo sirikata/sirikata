@@ -2,7 +2,6 @@
 #include "Network.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
-#include "Object.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -17,6 +16,8 @@
 #include "ObjectSegmentation.hpp"
 
 #include "Proximity.hpp"
+
+#include "ObjectConnection.hpp"
 
 #include "Random.hpp"
 
@@ -36,7 +37,6 @@ Forwarder::Forwarder(ServerID id)
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
    mLoadMonitor(NULL),
-   mObjects(NULL),
    mProximity(NULL),
    m_serv_ID(id),
    mCurrentTime(NULL),
@@ -55,7 +55,7 @@ Forwarder::Forwarder(ServerID id)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox)
+void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Time* currTime, Proximity* prox)
   {
       mTrace = trace;
       mCSeg = cseg;
@@ -64,7 +64,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       mObjectMessageQueue = omq;
       mServerMessageQueue =smq;
       mLoadMonitor = lm;
-    mObjects     = objMap;
     mCurrentTime = currTime;
     mProximity = prox;
   }
@@ -352,7 +351,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
       if (!forwarded_self_msg)
         mTrace->serverDatagramReceived((*mCurrentTime), (*mCurrentTime), source_server, result->id(), offset);
 
-      bool delivered = deliver(result);
+      deliver(result);
 
       //if (delivered)
       //  mTrace->serverDatagramReceived((*mCurrentTime), (*mCurrentTime), source_server, result->id(), offset);
@@ -363,81 +362,55 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
 
   // Delivery interface.  This should be used to deliver received messages to the correct location -
   // the server or object it is addressed to.
-  bool Forwarder::deliver(Message* msg)
+  void Forwarder::deliver(Message* msg)
   {
-      bool delivered = false;
     switch(msg->type()) {
       case MESSAGE_TYPE_PROXIMITY:
           {
               ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
               assert(prox_msg != NULL);
 
-              Object* dest_obj = object(prox_msg->destObject());
-              if (dest_obj == NULL)
-                  forward(prox_msg, prox_msg->destObject());
+              UUID dest = prox_msg->destObject();
+              ObjectConnection* conn = getObjectConnection(dest);
+              if (conn != NULL)
+                  conn->deliver(msg, *mCurrentTime);
               else
-              {
-                  delivered = true;
-                mTrace->prox((*mCurrentTime), prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
-                  dest_obj->proximityMessage(prox_msg);
-              }
+                  forward(msg, dest);
           }
           break;
-      case MESSAGE_TYPE_LOCATION:
-          {
-              LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
-              assert(loc_msg != NULL);
-
-              Object* dest_obj = object(loc_msg->destObject());
-              if (dest_obj == NULL)
-                  forward(loc_msg, loc_msg->destObject());
-              else
-              {
-                  delivered = true;
-                mTrace->loc((*mCurrentTime), loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
-                dest_obj->locationMessage(loc_msg);
-              }
-          }
-          break;
+      case MESSAGE_TYPE_LOCATION:  // fall-through
       case MESSAGE_TYPE_SUBSCRIPTION:
           {
-              SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
-              assert(subs_msg != NULL);
+              ObjectToObjectMessage* obj_msg = dynamic_cast<ObjectToObjectMessage*>(msg);
+              assert(obj_msg != NULL);
 
-              Object* dest_obj = object(subs_msg->destObject());
-              if (dest_obj == NULL)
-                  forward(subs_msg, subs_msg->destObject());
+              UUID dest = obj_msg->destObject();
+              ObjectConnection* conn = getObjectConnection(dest);
+              if (conn != NULL)
+                  conn->deliver(msg, *mCurrentTime);
               else
-              {
-                  delivered = true;
-                mTrace->subscription((*mCurrentTime), subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
-                dest_obj->subscriptionMessage(subs_msg);
-              }
+                  forward(msg, dest);
           }
         break;
       case MESSAGE_TYPE_NOISE:
           {
               NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
               assert(noise_msg != NULL);
-              delivered = true;
               delete noise_msg;
           }
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_LOAD_STATUS:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
@@ -454,7 +427,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
           }
           else
           {
-                  delivered = true;
             //otherwise, deliver to local oseg.
 
             //bftm debug
@@ -465,7 +437,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         break;
       case MESSAGE_TYPE_OSEG_LOOKUP:
         {
-            delivered = true;
           OSegLookupMessage* oseg_lookup_msg = dynamic_cast<OSegLookupMessage*> (msg);
           assert(oseg_lookup_msg != NULL);
 
@@ -474,19 +445,16 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_SERVER_PROX_RESULT:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_BULK_LOCATION:
           {
-              delivered = true;
               dispatchMessage(msg);
           }
           break;
@@ -494,7 +462,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         assert(false);
         break;
     }
-    return delivered;
   }
 
 
@@ -552,16 +519,19 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
     return sid;
   }
 
+void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
+    mObjectConnections[dest_obj] = conn;
+}
 
-  //looks for object with provided uuid and either returns pointer to object or null if object doesn't exist.
-  Object* Forwarder::object(const UUID& dest) const
-  {
-    ObjectMap::const_iterator it = mObjects->find(dest);
-    if (it == mObjects->end())
-        return NULL;
-    return it->second;
-  }
+ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
+    ObjectConnection* conn = mObjectConnections[dest_obj];
+    mObjectConnections.erase(dest_obj);
+    return conn;
+}
 
-
+ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
+    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
+    return (it == mObjectConnections.end()) ? NULL : it->second;
+}
 
 } //end namespace

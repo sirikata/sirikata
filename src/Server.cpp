@@ -15,6 +15,8 @@
 
 #include "ObjectSegmentation.hpp"
 
+#include "ObjectConnection.hpp"
+
 #include "Random.hpp"
 
 #include <iostream>
@@ -37,7 +39,7 @@ Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, 
   {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
-    mForwarder->initialize(trace,cseg,oseg,loc_service,omq,smq,lm,&mObjects,&mCurrentTime, mProximity);    //run initialization for forwarder
+    mForwarder->initialize(trace,cseg,oseg,loc_service,omq,smq,lm,&mCurrentTime, mProximity);    //run initialization for forwarder
 
   }
 
@@ -48,6 +50,7 @@ Server::~Server()
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
         mLocationService->removeLocalObject(obj_id);
+        // FIXME there's probably quite a bit more cleanup to do here
     }
     mObjects.clear();
 }
@@ -70,6 +73,9 @@ void Server::connect(Object* obj, bool wait_for_migrate) {
         mLocationService->addLocalObject(obj_id);
         // Register proximity query
         mProximity->addQuery(obj_id, obj->queryAngle()); // FIXME how to set proximity radius?
+        // Create "connection" and let forwarder deliver to it
+        ObjectConnection* conn = new ObjectConnection(obj, mTrace);
+        mForwarder->addObjectConnection(obj_id, conn);
     }
     else {
         mObjectsAwaitingMigration[obj->uuid()] = obj;
@@ -83,6 +89,7 @@ void Server::receiveMessage(Message* msg) {
 
         ObjectMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
         if (obj_map_it == mObjectsAwaitingMigration.end()) {
+            printf("Warning: Got migration message, but this server doesn't have a connection for that object.\n");
         }
 
         Object* obj = obj_map_it->second;
@@ -113,6 +120,10 @@ void Server::receiveMessage(Message* msg) {
 
         // Finally, subscribe the object for proximity queries
         mProximity->addQuery(obj_id, obj->queryAngle());
+
+        // Create "connection" and let forwarder deliver to it
+        ObjectConnection* conn = new ObjectConnection(obj, mTrace);
+        mForwarder->addObjectConnection(obj_id, conn);
 
         delete migrate_msg;
     }
@@ -207,6 +218,11 @@ void Server::checkObjectMigrations()
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
+
+            // Stop Forwarder from delivering via this Object's
+            // connection, destroy said connection
+            ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+            delete migrated_conn;
 
 	    migrated_objects.push_back(obj_id);
         }
