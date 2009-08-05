@@ -15,7 +15,6 @@
 namespace CBR
 {
   class Object;
-  class ObjectFactory;
   class ServerIDMap;
 class LocationService;
 class ObjectSegmentation;
@@ -40,7 +39,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       CoordinateSegmentation* mCSeg;
       ObjectSegmentation* mOSeg;
       LocationService* mLocationService;
-      ObjectFactory* mObjectFactory;
       ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
       LoadMonitor* mLoadMonitor;
@@ -84,7 +82,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
     public:
       Forwarder(ServerID id);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox);
+      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox);
 
       void tick(const Time&t);
 

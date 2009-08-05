@@ -34,12 +34,13 @@
 #include "Message.hpp"
 #include "ObjectMessageQueue.hpp"
 #include "Random.hpp"
+#include "ObjectFactory.hpp"
 
 namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
-Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle)
+Object::Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle)
  : mID(id),
    mGlobalIntroductions(false),
    mMotion(motion),
@@ -47,11 +48,12 @@ Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* ob
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mOriginID(origin_id),
    mObjectMessageQueue(obj_msg_q),
-   mQueryAngle(queryAngle)
+   mQueryAngle(queryAngle),
+   mParent(parent)
 {
 }
 
-Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects)
+Object::Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects)
  : mID(id),
    mGlobalIntroductions(true),
    mMotion(motion),
@@ -59,11 +61,15 @@ Object::Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* ob
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mOriginID(origin_id),
    mObjectMessageQueue(obj_msg_q),
-   mQueryAngle(queryAngle)
+   mQueryAngle(queryAngle),
+   mParent(parent)
 {
     mSubscribers = objects;
 }
 
+Object::~Object() {
+    mParent->notifyDestroyed(mID);
+}
 
 void Object::addSubscriber(const UUID& sub) {
     if (mSubscribers.find(sub) == mSubscribers.end())

@@ -47,5 +47,8 @@ const TimedMotionVector3f* StaticMotionPath::nextUpdate(const Time& curtime) con
     return NULL;
 }
 
+const TimedMotionVector3f StaticMotionPath::at(const Time& t) const {
+    return mMotion;
+}
 
 } // namespace CBR

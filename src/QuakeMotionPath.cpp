@@ -46,13 +46,13 @@
 
 namespace CBR {
 
-std::map<const char*, uint32> QuakeMotionPath::mObjectsInFile; 
+std::map<const char*, uint32> QuakeMotionPath::mObjectsInFile;
 
 std::map<const char*, uint32> QuakeMotionPath::mObjectsCreatedFromFile;
 
 /* Creates a new motion path from the given trace file. If no objects have been created
    using the trace so far, it uses the trajectory of ID 1 in the trace file as the motion
-   path. Otherwise, it uses the trajectory of the next available ID in the trace file 
+   path. Otherwise, it uses the trajectory of the next available ID in the trace file
    modulo the total number of objects contained in the trace file.
 */
 QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDownFactor,
@@ -68,19 +68,19 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 
     if (mObjectsCreatedFromFile.find(quakeDataTraceFile) == mObjectsCreatedFromFile.end() ) {
         int count_objects = countObjectsInFile(quakeDataTraceFile);
-      
+
         mObjectsInFile[quakeDataTraceFile] = count_objects;
-      
+
         mID = 1;
     }
     else {
-        mID = (mObjectsCreatedFromFile[quakeDataTraceFile] % 
+        mID = (mObjectsCreatedFromFile[quakeDataTraceFile] %
 	       mObjectsInFile[quakeDataTraceFile]) + 1;
     }
 
     if ( (str1=findLineMatchingID(inputFile)) != "" ) {
         while ( (str2=findLineMatchingID(inputFile)) != "" ) {
-	    
+
   	    TimedMotionVector3f motionVector = parseTraceLines(str1, str2, scaleDownFactor);
 	    mUpdates.push_back(motionVector);
 
@@ -104,7 +104,7 @@ QuakeMotionPath::QuakeMotionPath( const char* quakeDataTraceFile, float scaleDow
 	    maxRatio = (maxZ - minZ) / (region.max().z - region.min().z);
 
 	if (maxRatio > 1.f) {
-	    for (uint32_t i = 0; i < mUpdates.size(); i++) {	      
+	    for (uint32_t i = 0; i < mUpdates.size(); i++) {
 	      mUpdates[i] = TimedMotionVector3f(mUpdates[i].time(),
                                                 MotionVector3f(
                                                 region.clamp(mUpdates[i].value().position()/maxRatio),
@@ -143,6 +143,12 @@ const TimedMotionVector3f* QuakeMotionPath::nextUpdate(const Time& curtime) cons
         }
     }
     return NULL;
+}
+
+const TimedMotionVector3f QuakeMotionPath::at(const Time& t) const {
+    for(uint32 i = 1; i < mUpdates.size(); i++)
+        if (mUpdates[i].time() > t) return mUpdates[i-1];
+    return mUpdates[ mUpdates.size()-1 ];
 }
 
 TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String secondLine, float scaleDownFactor) {
@@ -229,7 +235,7 @@ uint32 QuakeMotionPath::countObjectsInFile(const char* inputFileName) {
 
 	if ( id_map.find(id) == id_map.end() ) {
 	    id_map[id]=1;
-	}	        
+	}
     }
 
     inputFile.close();

@@ -81,5 +81,11 @@ const TimedMotionVector3f* RandomMotionPath::nextUpdate(const Time& curtime) con
     return NULL;
 }
 
+const TimedMotionVector3f RandomMotionPath::at(const Time& t) const {
+    for(uint32 i = 1; i < mUpdates.size(); i++)
+        if (mUpdates[i].time() > t) return mUpdates[i-1];
+    return mUpdates[ mUpdates.size()-1 ];
+}
+
 
 } // namespace CBR

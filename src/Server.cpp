@@ -2,7 +2,6 @@
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "Object.hpp"
-#include "ObjectFactory.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -26,7 +25,7 @@
 namespace CBR
 {
 
-Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
+Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
     : mID(id),
       mLocationService(loc_service),
       mCSeg(cseg),
@@ -36,29 +35,16 @@ Server::Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, Lo
       mOSeg(oseg),
       mForwarder(forwarder)
   {
-    // setup object which are initially residing on this server
-    for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
-    {
-      UUID obj_id = *it;
-      Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time(0)).position();
+      mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
-      if (lookup(start_pos) == mID)
-      {
-          // Instantiate object
-          Object* obj = obj_factory->object(obj_id, this->id());
-          mObjects[obj_id] = obj;
-          // Add object as local object to LocationService
-          mLocationService->addLocalObject(obj_id);
-          // Register proximity query
-          mProximity->addQuery(obj_id, obj_factory->queryAngle(obj_id)); // FIXME how to set proximity radius?
-      }
-    }
-    mForwarder->initialize(trace,cseg,oseg,loc_service,obj_factory,omq,smq,lm,&mObjects,&mCurrentTime, mProximity);    //run initialization for forwarder
+    mForwarder->initialize(trace,cseg,oseg,loc_service,omq,smq,lm,&mObjects,&mCurrentTime, mProximity);    //run initialization for forwarder
 
   }
 
 Server::~Server()
 {
+    mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
+
     for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
         mLocationService->removeLocalObject(obj_id);
@@ -75,6 +61,62 @@ void Server::networkTick(const Time&t)
   mForwarder->tick(t);
 }
 
+
+void Server::connect(Object* obj, bool wait_for_migrate) {
+    if (!wait_for_migrate) {
+        UUID obj_id = obj->uuid();
+        mObjects[obj_id] = obj;
+        // Add object as local object to LocationService
+        mLocationService->addLocalObject(obj_id);
+        // Register proximity query
+        mProximity->addQuery(obj_id, obj->queryAngle()); // FIXME how to set proximity radius?
+    }
+    else {
+        mObjectsAwaitingMigration[obj->uuid()] = obj;
+    }
+}
+
+void Server::receiveMessage(Message* msg) {
+    MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
+    if (migrate_msg != NULL) {
+        const UUID obj_id = migrate_msg->object();
+
+        ObjectMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
+        if (obj_map_it == mObjectsAwaitingMigration.end()) {
+        }
+
+        Object* obj = obj_map_it->second;
+
+        obj->migrateMessage(migrate_msg);
+
+        // Move from list waiting for migration message to active objects
+        mObjectsAwaitingMigration.erase(obj_map_it);
+        mObjects[obj_id] = obj;
+
+        ServerID idOSegAckTo = migrate_msg->messageFrom();
+
+        // Update LOC to indicate we have this object locally
+        mLocationService->addLocalObject(obj_id);
+
+        //update our oseg to show that we know that we have this object now.
+        mOSeg->addObject(obj_id, mID);
+
+        //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
+        Message* oseg_ack_msg;
+        //              mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo,oseg_ack_msg);
+        oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo);
+
+        if (oseg_ack_msg != NULL)
+        {
+            mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
+        }
+
+        // Finally, subscribe the object for proximity queries
+        mProximity->addQuery(obj_id, obj->queryAngle());
+
+        delete migrate_msg;
+    }
+}
 
 void Server::tick(const Time& t)
 {
@@ -171,7 +213,10 @@ void Server::checkObjectMigrations()
     }
 
     for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
-      mObjects.erase(*it);
+        ObjectMap::iterator obj_map_it = mObjects.find(*it);
+        Object* obj = obj_map_it->second;
+        delete obj;
+        mObjects.erase(obj_map_it);
     }
 }
 

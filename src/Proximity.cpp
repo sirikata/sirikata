@@ -31,7 +31,6 @@
  */
 
 #include "Proximity.hpp"
-#include "ObjectFactory.hpp"
 
 #include <algorithm>
 

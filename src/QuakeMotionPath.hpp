@@ -47,6 +47,7 @@ public:
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
+    virtual const TimedMotionVector3f at(const Time& t) const;
 private:
     TimedMotionVector3f parseTraceLines(String firstLine, String secondLine, float scaleDownFactor);
 

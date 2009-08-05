@@ -17,7 +17,6 @@ namespace CBR
 
   class Proximity;
   class Object;
-  class ObjectFactory;
   class ServerIDMap;
   class CoordinateSegmentation;
   class Message;
@@ -36,10 +35,10 @@ namespace CBR
    *  object -> server mapping.  This is a singleton for each simulated
    *  server.  Other servers are referenced by their ServerID.
    */
-  class Server
+class Server : public MessageRecipient
   {
   public:
-      Server(ServerID id, Forwarder* forwarder, ObjectFactory* obj_factory, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
+      Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
     ~Server();
 
     const ServerID& id() const;
@@ -48,6 +47,13 @@ namespace CBR
 
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
+
+      /** Sets up a connection for the given object. Can handle migrations by waiting
+       *  to truly connect the object until the migration data has arrived.
+       */
+      void connect(Object* obj, bool wait_for_migrate = true);
+
+      virtual void receiveMessage(Message* msg);
   private:
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
@@ -68,7 +74,7 @@ namespace CBR
     Forwarder* mForwarder;
 
     ObjectMap mObjects;
-
+      ObjectMap mObjectsAwaitingMigration;
 
 }; // class Server
 

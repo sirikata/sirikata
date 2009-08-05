@@ -79,7 +79,6 @@ private:
 }; // class ProximityEvent
 
 class LocationService;
-class ObjectFactory;
 
 class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient {
 public:

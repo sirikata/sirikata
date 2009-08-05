@@ -3,7 +3,6 @@
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include "Object.hpp"
-#include "ObjectFactory.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -34,7 +33,6 @@ Forwarder::Forwarder(ServerID id)
    mCSeg(NULL),
    mOSeg(NULL),
    mLocationService(NULL),
-   mObjectFactory(NULL),
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
    mLoadMonitor(NULL),
@@ -57,13 +55,12 @@ Forwarder::Forwarder(ServerID id)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectFactory* objectFactory, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox)
+void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectMap* objMap, Time* currTime, Proximity* prox)
   {
       mTrace = trace;
       mCSeg = cseg;
       mOSeg = oseg;
       mLocationService = locService;
-      mObjectFactory = objectFactory;
       mObjectMessageQueue = omq;
       mServerMessageQueue =smq;
       mLoadMonitor = lm;
@@ -428,39 +425,8 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg,ObjectSegm
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
-                  delivered = true;
-              MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
-              assert(migrate_msg != NULL);
-
-	      const UUID obj_id = migrate_msg->object();
-
-	      Object* obj = mObjectFactory->object(obj_id, this->serv_id());
-	      obj->migrateMessage(migrate_msg);
-
-              (*mObjects)[obj_id] = obj;
-
-              ServerID idOSegAckTo = migrate_msg->messageFrom();
-
-              delete migrate_msg;
-
-              // Update LOC to indicate we have this object locally
-              mLocationService->addLocalObject(obj_id);
-
-              //update our oseg to show that we know that we have this object now.
-              mOSeg->addObject(obj_id,this->serv_id());
-
-              //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-              Message* oseg_ack_msg;
-              //              mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo,oseg_ack_msg);
-              oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo);
-
-              if (oseg_ack_msg != NULL)
-              {
-                route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
-              }
-
-              // Finally, subscribe the object for proximity queries
-              mProximity->addQuery(obj_id, obj->queryAngle());
+              delivered = true;
+              dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:

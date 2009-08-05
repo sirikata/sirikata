@@ -41,6 +41,7 @@
 
 namespace CBR {
 
+class ObjectFactory;
 class ObjectMessageQueue;
 
 typedef std::set<UUID> ObjectSet;
@@ -55,9 +56,11 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
+    Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const OriginID& origin_id, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
+    Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
+
+    ~Object();
 
     const UUID& uuid() const {
         return mID;
@@ -93,6 +96,7 @@ private:
     ObjectMessageQueue* mObjectMessageQueue;
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;
+    ObjectFactory* mParent;
 }; // class Object
 
 } // namespace CBR

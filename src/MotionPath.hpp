@@ -52,6 +52,8 @@ public:
      *  NULL if there is not another update.
      */
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const = 0;
+    /** Get the value at the specified time. */
+    virtual const TimedMotionVector3f at(const Time& t) const = 0;
 }; // class MotionPath
 
 } // namespace CBR

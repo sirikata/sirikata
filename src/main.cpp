@@ -389,10 +389,11 @@ void *main_loop(void *) {
       Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);
 
 
-    //    Server* server = new Server(server_id, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
-      Server* server = new Server(server_id, forwarder, obj_factory, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
+    //    Server* server = new Server(server_id, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
+      Server* server = new Server(server_id, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
 
       prox->initialize(cseg);
+      obj_factory->initialize(server_id, server, cseg);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -444,6 +445,7 @@ void *main_loop(void *) {
                 last_sample_time = last_sample_time + stats_sample_rate;
             }
 
+            obj_factory->tick(tbegin + elapsed);
             gNetwork->service(tbegin + elapsed);
             cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);

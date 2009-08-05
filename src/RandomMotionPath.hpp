@@ -50,6 +50,7 @@ public:
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
+    virtual const TimedMotionVector3f at(const Time& t) const;
 private:
     std::vector<TimedMotionVector3f> mUpdates;
 }; // class RandomMotionPath

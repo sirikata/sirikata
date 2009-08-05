@@ -39,6 +39,8 @@ namespace CBR {
 class ObjectMessageQueue;
 class MotionPath;
 class Object;
+class CoordinateSegmentation;
+class Server;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.
  *  First, it generates MotionPaths for every object that will exist in the
@@ -54,12 +56,15 @@ class ObjectFactory {
     };
     typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
     typedef std::map<UUID, Object*> ObjectMap;
+
 public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
     ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
+
+    void initialize(ServerID sid, Server* server, CoordinateSegmentation* cseg);
 
     iterator begin();
     const_iterator begin() const;
@@ -69,16 +74,26 @@ public:
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
     SolidAngle queryAngle(const UUID& id);
-    Object* object(const UUID& id, const ServerID& server);
-    void destroyObject(const UUID& id);
+    Object* object(const UUID& id);
 
     void setObjectMessageQueue(ObjectMessageQueue* sq);
 
+    void tick(const Time& t);
+
 private:
+    bool isActive(const UUID& id);
+
+    friend class Object;
+    void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
+
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
     ObjectMap mObjects;
     ObjectMessageQueue* mObjectMessageQueue;
+    ServerID mServerID;
+    Server* mServer;
+    CoordinateSegmentation* mCSeg;
+    bool mFirstTick; // Temporary solution since on the first connection we can't wait for migration data
 }; // class ObjectFactory
 
 } // namespace CBR

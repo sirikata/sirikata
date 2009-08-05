@@ -39,12 +39,18 @@
 #include "StaticMotionPath.hpp"
 #include "ObjectMessageQueue.hpp"
 
+#include "Server.hpp"
+
 #include "Options.hpp"
 
 namespace CBR {
 
 ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)
- : mObjectMessageQueue(NULL)
+ : mObjectMessageQueue(NULL),
+   mServerID(0),
+   mServer(NULL),
+   mCSeg(NULL),
+   mFirstTick(true)
 {
     Time start(0);
     Time end = start + duration;
@@ -84,6 +90,12 @@ ObjectFactory::~ObjectFactory() {
     }
 }
 
+void ObjectFactory::initialize(ServerID sid, Server* server, CoordinateSegmentation* cseg) {
+    mServerID = sid;
+    mServer = server;
+    mCSeg = cseg;
+}
+
 ObjectFactory::iterator ObjectFactory::begin() {
     return mObjectIDs.begin();
 }
@@ -118,7 +130,7 @@ SolidAngle ObjectFactory::queryAngle(const UUID& id) {
     return mInputs[id]->queryAngle;
 }
 
-Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
+Object* ObjectFactory::object(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
 
     ObjectMap::iterator it = mObjects.find(id);
@@ -127,24 +139,15 @@ Object* ObjectFactory::object(const UUID& id, const ServerID& server_id) {
     assert( mObjectMessageQueue != NULL);
 
     OriginID origin;
-    origin.id = (uint32)(server_id);
+    origin.id = (uint32)(mServerID);
 
     Object* new_obj = NULL;
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), queryAngle(id), mObjectIDs);
+        new_obj = new Object(origin, this, id, mObjectMessageQueue, motion(id), queryAngle(id), mObjectIDs);
     else
-        new_obj = new Object(origin, id, mObjectMessageQueue, motion(id), queryAngle(id));
+        new_obj = new Object(origin, this, id, mObjectMessageQueue, motion(id), queryAngle(id));
     mObjects[id] = new_obj;
     return new_obj;
-}
-
-void ObjectFactory::destroyObject(const UUID& id) {
-    assert( mObjectIDs.find(id) != mObjectIDs.end() );
-    assert( mObjects.find(id) != mObjects.end() );
-
-    Object* obj = mObjects[id];
-    delete obj;
-    mObjects.erase(id);
 }
 
 void ObjectFactory::setObjectMessageQueue(ObjectMessageQueue* omq) {
@@ -153,6 +156,39 @@ void ObjectFactory::setObjectMessageQueue(ObjectMessageQueue* omq) {
         UUID id = *it;
         mObjectMessageQueue->registerClient(id, 1);
     }
+}
+
+bool ObjectFactory::isActive(const UUID& id) {
+    ObjectMap::iterator it = mObjects.find(id);
+    return (it != mObjects.end());
+}
+
+static bool isInServerRegion(const BoundingBoxList& bboxlist, Vector3f pos) {
+    for(uint32 i = 0; i < bboxlist.size(); i++)
+        if (bboxlist[i].contains(pos)) return true;
+    return false;
+}
+
+void ObjectFactory::tick(const Time& t) {
+    BoundingBoxList serverRegion = mCSeg->serverRegion(mServerID);
+    for(iterator it = begin(); it != end(); it++) {
+        if (isActive(*it)) continue; // already active, no need to check
+        Vector3f curPos = motion(*it)->at(t).extrapolate(t).position();
+        if (isInServerRegion(serverRegion, curPos)) {
+            // The object has moved into the region, so start its connection process
+            Object* obj = object(*it);
+            mServer->connect(obj, !mFirstTick);
+        }
+    }
+
+    mFirstTick = false;
+}
+
+void ObjectFactory::notifyDestroyed(const UUID& id) {
+    assert( mObjectIDs.find(id) != mObjectIDs.end() );
+    assert( mObjects.find(id) != mObjects.end() );
+
+    mObjects.erase(id);
 }
 
 } // namespace CBR
