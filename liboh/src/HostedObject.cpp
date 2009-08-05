@@ -771,6 +771,15 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         }
         return;
     }
+    else if (name == "SetLoc") {
+        ObjLoc setloc;
+        printstr<<"Someone wants to set my position: ";
+        setloc.ParseFromArray(args.data(), args.length());
+        if (thisObj) {
+            printstr<<setloc.position();
+            receivedPositionUpdate(thisObj, setloc, false);
+        }
+    }
     else if (name == "DelObj") {
         SpaceDataMap::iterator perSpaceIter = mSpaceData->find(msg.source_space());
         if (perSpaceIter == mSpaceData->end()) {

@@ -25,19 +25,67 @@ class exampleclass:
         self.val+=otherval
         print self.val
         return self.val;
-    def processRPC(self,serialheader,name,serialarg):
+    def reallyProcessRPC(self,serialheader,name,serialarg):
         print "Got an RPC named",name
         header = pbHead.Header()
         header.ParseFromString(fromByteArray(serialheader))
         if name == "RetObj":
+            retobj = pbSiri.RetObj()
+            print repr(fromByteArray(serialarg))
+            try:
+                retobj.ParseFromString(fromByteArray(serialarg))
+            except:
+                pass
+            self.objid = retobj.object_reference
             print "sendprox1"
             self.spaceid = header.source_space
+
             print uuid.UUID(bytes=self.spaceid)
             self.sendNewProx()
+            self.setPosition(angular_speed=1,axis=(0,1,0))
         elif name == "ProxCall":
             proxcall = pbSiri.ProxCall()
             proxcall.ParseFromString(fromByteArray(serialarg))
             print "THIS IS PHYTHON AnD I SEE A OBJECT CALLED",uuid.UUID(bytes=proxcall.proximate_object)
+    def processRPC(self,header,name,arg):
+        try:
+            self.reallyProcessRPC(header,name,arg)
+        except:
+            print "Error processing RPC",name
+            traceback.print_exc()
+    def setPosition(self,position=None,orientation=None,velocity=None,angular_speed=None,axis=None,force=False):
+        objloc = pbSiri.ObjLoc()
+        if position is not None:
+            for i in range(3):
+                objloc.position.append(position[i])
+        if velocity is not None:
+            for i in range(3):
+                objloc.velocity.append(velocity[i])
+        if orientation is not None:
+            total = 0
+            for i in range(4):
+                total += orientation[i]*orientation[i]
+            total = total**.5
+            for i in range(3):
+                objloc.orientation.append(orientation[i]/total)
+        if angular_speed is not None:
+            objloc.angular_speed = angular_speed
+        if axis is not None:
+            total = 0
+            for i in range(3):
+                total += axis[i]*axis[i]
+            total = total**.5
+            for i in range(2):
+                objloc.rotational_axis.append(axis[i]/total)
+        if force:
+            objloc.update_flags = pbSiri.ObjLoc.FORCE
+        body = pbSiri.MessageBody()
+        body.message_names.append("SetLoc")
+        body.message_arguments.append(objloc.SerializeToString())
+        header = pbHead.Header()
+        header.destination_space = self.spaceid
+        header.destination_object = self.objid
+        HostedObject.SendMessage(toByteArray(header.SerializeToString()+body.SerializeToString()))
     def sendNewProx(self):
         print "sendprox2"
         try:
@@ -60,7 +108,7 @@ class exampleclass:
         except:
             print "ERORR"
             traceback.print_exc()
-            
+
     def processMessage(self,header,body):
         print "Got a message"
     def tick(self,tim):
