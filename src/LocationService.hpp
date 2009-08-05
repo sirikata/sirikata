@@ -39,6 +39,10 @@
 
 namespace CBR {
 
+class LocationServiceListener;
+class LocationUpdatePolicy;
+class LocationService;
+
 /** Interface for objects that need to listen for location updates. */
 class LocationServiceListener {
 public:
@@ -63,7 +67,8 @@ public:
  */
 class LocationUpdatePolicy : public LocationServiceListener{
 public:
-    virtual ~LocationUpdatePolicy() {}
+    LocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router);
+    virtual ~LocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
@@ -80,6 +85,11 @@ public:
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 
     virtual void tick(const Time& t) = 0;
+
+protected:
+    ServerID mID;
+    LocationService* mLocService; // The owner of this UpdatePolicy
+    MessageRouter* mRouter;
 }; // class LocationUpdatePolicy
 
 
@@ -88,7 +98,7 @@ public:
  */
 class LocationService : public MessageRecipient {
 public:
-    LocationService(LocationUpdatePolicy* update_policy);
+    LocationService(ServerID sid, MessageRouter* router);
     virtual ~LocationService();
 
     virtual void tick(const Time& t) = 0;

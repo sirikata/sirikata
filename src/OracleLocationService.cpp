@@ -35,8 +35,8 @@
 
 namespace CBR {
 
-OracleLocationService::OracleLocationService(LocationUpdatePolicy* update_policy, ObjectFactory* objfactory)
- : LocationService(update_policy),
+OracleLocationService::OracleLocationService(ServerID sid, MessageRouter* router, ObjectFactory* objfactory)
+ : LocationService(sid, router),
    mCurrentTime(0),
    mLocalObjects(),
    mReplicaObjects(),

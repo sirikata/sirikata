@@ -45,7 +45,7 @@ class ObjectFactory;
  */
 class OracleLocationService : public LocationService {
 public:
-    OracleLocationService(LocationUpdatePolicy* update_policy, ObjectFactory* objfactory);
+    OracleLocationService(ServerID sid, MessageRouter* router, ObjectFactory* objfactory);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual void tick(const Time& t);

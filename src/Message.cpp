@@ -122,6 +122,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_SERVER_PROX_RESULT:
         msg = new ServerProximityResultMessage(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_BULK_LOCATION:
+        msg = new BulkLocationMessage(wire,offset,_id);
+        break;
       default:
         assert(false);
         break;
@@ -1045,6 +1048,73 @@ void ServerProximityResultMessage::addObjectUpdate(const UUID& objid, const Time
 
 void ServerProximityResultMessage::addObjectRemoval(const UUID& objid) {
     mObjectRemovals.push_back(objid);
+}
+
+
+
+
+BulkLocationMessage::BulkLocationMessage(const OriginID& origin, const UUID& dest)
+ : Message(origin, true),
+   mDestObject(dest)
+{
+}
+
+BulkLocationMessage::BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+ : Message(_id)
+{
+    uint8 raw_dest_object[UUID::static_size];
+    memcpy( &raw_dest_object, &wire[offset], UUID::static_size );
+    offset += UUID::static_size;
+    mDestObject = UUID(raw_dest_object, UUID::static_size);
+
+    uint16 nupdates = 0;
+    memcpy(&nupdates, &wire[offset], sizeof(nupdates));
+    offset += sizeof(nupdates);
+    for(uint16 idx = 0; idx < nupdates; idx++) {
+        Update update;
+        memcpy(&update, &wire[offset], sizeof(update));
+        offset += sizeof(update);
+        mUpdates.push_back(update);
+    }
+}
+
+BulkLocationMessage::~BulkLocationMessage() {
+}
+
+MessageType BulkLocationMessage::type() const {
+  return MESSAGE_TYPE_BULK_LOCATION;
+}
+
+uint32 BulkLocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+
+    wire.resize( wire.size() + UUID::static_size );
+    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
+    offset += UUID::static_size;
+
+
+    uint16 nupdates = mUpdates.size();
+
+    wire.resize( wire.size() +
+        sizeof(nupdates) + nupdates * sizeof(Update)
+    );
+
+    memcpy(&wire[offset], &nupdates, sizeof(nupdates));
+    offset += sizeof(nupdates);
+    for(uint16 idx = 0; idx < nupdates; idx++) {
+        memcpy(&wire[offset], &mUpdates[idx], sizeof(mUpdates[idx]));
+        offset += sizeof(mUpdates[idx]);
+    }
+
+    return offset;
+}
+
+void BulkLocationMessage::addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    Update update;
+    update.object = objid;
+    update.location = loc;
+    update.bounds = bounds;
+    mUpdates.push_back(update);
 }
 
 

@@ -31,16 +31,27 @@
  */
 
 #include "LocationService.hpp"
+#include "AlwaysLocationUpdatePolicy.hpp"
 
 namespace CBR {
 
 LocationServiceListener::~LocationServiceListener() {
 }
 
-LocationService::LocationService(LocationUpdatePolicy* update_policy)
- : mUpdatePolicy(update_policy)
+LocationUpdatePolicy::LocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router)
+ : mID(sid),
+   mLocService(locservice),
+   mRouter(router)
 {
-    addListener(mUpdatePolicy);
+    mLocService->addListener(this);
+}
+
+LocationUpdatePolicy::~LocationUpdatePolicy() {
+}
+
+LocationService::LocationService(ServerID sid, MessageRouter* router)
+{
+    mUpdatePolicy = new AlwaysLocationUpdatePolicy(sid, this, router);
 }
 
 LocationService::~LocationService() {

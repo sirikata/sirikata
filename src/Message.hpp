@@ -54,6 +54,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_NOISE         10
 #define MESSAGE_TYPE_SERVER_PROX_QUERY   11
 #define MESSAGE_TYPE_SERVER_PROX_RESULT  12
+#define MESSAGE_TYPE_BULK_LOCATION       13
 
 
 
@@ -444,6 +445,36 @@ private:
 
     std::vector<ObjectUpdate> mObjectUpdates;
     std::vector<UUID> mObjectRemovals;
+};
+
+
+/** Location updates from Prox/Loc to an object. */
+class BulkLocationMessage : public Message {
+public:
+    struct Update {
+        UUID object;
+        TimedMotionVector3f location;
+        BoundingSphere3f bounds;
+    };
+
+    BulkLocationMessage(const OriginID& origin, const UUID& dest);
+    ~BulkLocationMessage();
+
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    void addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+
+    std::vector<Update> updates() const {
+        return mUpdates;
+    }
+
+private:
+    friend class Message;
+    BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+
+    UUID mDestObject;
+    std::vector<Update> mUpdates;
 };
 
 } // namespace CBR

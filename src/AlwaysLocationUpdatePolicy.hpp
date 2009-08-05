@@ -41,6 +41,8 @@ namespace CBR {
  *  update message to all subscribers on any position update.
  */
 class AlwaysLocationUpdatePolicy : public LocationUpdatePolicy {
+public:
+    AlwaysLocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router);
     virtual ~AlwaysLocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid);
@@ -64,13 +66,7 @@ private:
     typedef std::set<ServerID> ServerIDSet;
 
     struct UpdateInfo {
-        UpdateInfo()
-         : hasLocation(false), hasBounds(false)
-        {}
-
-        bool hasLocation;
         TimedMotionVector3f location;
-        bool hasBounds;
         BoundingSphere3f bounds;
     };
 

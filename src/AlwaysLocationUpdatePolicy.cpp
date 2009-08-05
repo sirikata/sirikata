@@ -31,8 +31,14 @@
  */
 
 #include "AlwaysLocationUpdatePolicy.hpp"
+#include "Message.hpp"
 
 namespace CBR {
+
+AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router)
+ : LocationUpdatePolicy(sid, locservice, router)
+{
+}
 
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
     for(ServerSubscriptionMap::iterator sub_it = mServerSubscriptions.begin(); sub_it != mServerSubscriptions.end(); sub_it++)
@@ -111,8 +117,15 @@ void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, const Ti
     for(ServerIDSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
         ServerSubscriberInfo* sub_info = mServerSubscriptions[*subscriber_it];
         assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+
+        if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
+            UpdateInfo new_ui;
+            new_ui.location = mLocService->location(uuid);
+            new_ui.bounds = mLocService->bounds(uuid);
+            sub_info->outstandingUpdates[uuid] = new_ui;
+        }
+
         UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-        ui.hasLocation = true;
         ui.location = newval;
     }
 }
@@ -127,8 +140,15 @@ void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, const Boun
     for(ServerIDSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
         ServerSubscriberInfo* sub_info = mServerSubscriptions[*subscriber_it];
         assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+
+        if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
+            UpdateInfo new_ui;
+            new_ui.location = mLocService->location(uuid);
+            new_ui.bounds = mLocService->bounds(uuid);
+            sub_info->outstandingUpdates[uuid] = new_ui;
+        }
+
         UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-        ui.hasBounds = true;
         ui.bounds = newval;
     }
 }
@@ -156,6 +176,15 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
     for(ServerSubscriptionMap::iterator server_it = mServerSubscriptions.begin(); server_it != mServerSubscriptions.end(); server_it++) {
         ServerID sid = server_it->first;
         ServerSubscriberInfo* sub_info = server_it->second;
+
+        OriginID oid;
+        oid.id = mID;
+        BulkLocationMessage* msg = new BulkLocationMessage(oid, UUID::null());
+
+        for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++)
+            msg->addUpdate( up_it->first, up_it->second.location, up_it->second.bounds );
+
+        mRouter->route(msg, sid);
 
         sub_info->outstandingUpdates.clear();
 
