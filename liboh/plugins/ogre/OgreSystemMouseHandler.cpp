@@ -638,8 +638,8 @@ private:
             perror("Failed to open scene_new.csv");
             return;
         }
-        fprintf(output, "objtype,subtype,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
-        fprintf(output, "density,friction,bounce,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
+        fprintf(output, "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
+        fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
         OgreSystem::SceneEntitiesMap::const_iterator iter;
@@ -677,13 +677,6 @@ private:
         ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
-        /* Ogre's way doesn't jive
-        Ogre::Quaternion quat(loc.getOrientation().w,loc.getOrientation().x,loc.getOrientation().y,loc.getOrientation().z);
-        Ogre::Radian yaw = quat.getYaw();
-        Ogre::Radian pitch = quat.getPitch();
-        Ogre::Radian roll = quat.getRoll();
-        std::cout << "dbm: debug ogre yaw: " << yaw.valueDegrees() << " pitch: " << pitch.valueDegrees() << " roll: " << roll.valueDegrees() << std::endl;
-        */
         double x,y,z;
         std::string w("");
         /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
@@ -706,8 +699,8 @@ private:
             }
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,",typestr,
+            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor, linfo.mPower);
+            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,",typestr,
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
@@ -733,16 +726,16 @@ private:
             else {
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
-            fprintf(fp, "mesh,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),
+            fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%s\n",
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
-                    phys.friction, phys.bounce, uristr.c_str());
+                    phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,%f,%f,%f,%f,%f,%f,%s\n",
+            fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                                     x,y,z,w.c_str());
         }
