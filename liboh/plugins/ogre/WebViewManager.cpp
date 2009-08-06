@@ -66,22 +66,6 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad);
 static int InputModifiersToAwesomiumModifiers(Modifier mod, bool numpad);
 
 
-static const char* webview_chrome_html =
-    "<html>\n"
-    "<body>\n"
-    "<script type=\"text/javascript\">\n"
-    "</script>\n"
-    "<table width=\"100%\"><tr>\n"
-    "<td onclick=\"Client.navback()\">Back</td>\n"
-    "<td onclick=\"Client.navforward()\">Forward</td>\n"
-    "<td onclick=\"Client.navrefresh()\">Refresh</td>\n"
-    "<td onclick=\"Client.navhome()\">Home</td>\n"
-    "</tr></table>\n"
-    "</body>\n"
-    "</html>\n"
-    ;
-
-
 WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
@@ -103,8 +87,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
-        chromeWebView = createWebView("__chrome", 250, 45, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
-        chromeWebView->loadHTML(std::string(webview_chrome_html));
+        chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView->loadFile("navbar.html");
         chromeWebView->bind("navback", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateBack));
         chromeWebView->bind("navforward", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateForward));
         chromeWebView->bind("navrefresh", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateRefresh));

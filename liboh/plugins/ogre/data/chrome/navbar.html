@@ -1,0 +1,90 @@
+<html>
+  <head>
+    <style type="text/css">
+      body {
+      margin: 0px;
+      margin-top: 3px;
+      padding: 0px;
+      }
+
+      div {
+      float: left;
+      }
+
+      div.button {
+      height: 29px;
+      }
+
+      #back {
+      width: 29px;
+      }
+
+      #forward {
+      width: 28px;
+      }
+
+      #reload {
+      width: 31px;
+      }
+
+      div.addressbar {
+      float: right;
+      }
+
+      div.address {
+      padding-left: 6px;
+      width: 260px;
+      height: 30px;
+      }
+      input.address {
+      float: left;
+      width: 100%;
+      margin-top: 1px;
+      height: 27px;
+      border-width: 1px 0px 1px 1px;
+      border-color: #CCC;
+      border-style: solid;
+      }
+
+      #go {
+      float: left;
+      width: 30px;
+      }
+    </style>
+    <script language="javascript" type="text/javascript">
+      function setButtonImage(id, mode) {
+        var imgPath = "url(" + id + mode + ".png)";
+        document.getElementById(id).style.backgroundImage = imgPath;
+      }
+      function setButtonNormal(id) { setButtonImage(id, ""); }
+      function setButtonPressed(id) { setButtonImage(id, "_p"); }
+      function setButtonHover(id) { setButtonImage(id, "_h"); }
+      function setButtonDisabled(id) { setButtonImage(id, "_d"); }
+
+      function initButton(id) {
+        setButtonNormal(id);
+        var button = document.getElementById(id);
+        button.onmouseover = function() { setButtonHover(id); }
+        button.onmouseout = function() { setButtonNormal(id); }
+        button.onmousedown = function() { setButtonPressed(id); }
+        button.onmouseup = function() { setButtonNormal(id); }
+      }
+
+      function initButtons() {
+        initButton("back");
+        initButton("forward");
+        initButton("reload");
+        initButton("go");
+      }
+    </script>
+  </head>
+  <body onLoad="initButtons()">
+    <div class="button" id="back" onclick="Client.navback()"></div>
+    <div class="button" id="forward" onclick="Client.navforward()"></div>
+    <div class="button" id="reload" onclick="Client.navrefresh()"></div>
+    <div class"addressbar">
+      <div class="address"><input type="text" class="address"></input></div>
+      <div class="button" id="go" onclick="Client.navhome()"></div>
+    </div>
+  </body>
+</html>

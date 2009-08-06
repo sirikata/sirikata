@@ -63,6 +63,8 @@ using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
 using Meru::MaterialScriptManager;
 
+#include <boost/filesystem.hpp>
+
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebView.hpp"
 
@@ -72,9 +74,54 @@ volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //volatile char assert_malloc_is_gequal_1[OGRE_MEMORY_ALLOCATOR*2-1]={0};
 //volatile char assert_malloc_is_lequal_1[3-OGRE_MEMORY_ALLOCATOR*2]={0};
 
-
 namespace Sirikata {
 namespace Graphics {
+
+// FIXME we really need a better way to figure out where our data is
+static std::string getResourcesDir() {
+    using namespace boost::filesystem;
+
+    // FIXME there probably need to be more of these, including
+    // some absolute paths of expected installation locations.
+    // It should also be possible to add some from the options.
+    path search_offsets[] = {
+        boost::filesystem::complete(path(".")),
+        boost::filesystem::complete(path("..")),
+        boost::filesystem::complete(path("../..")),
+        boost::filesystem::complete(path("../../.."))
+    };
+    uint32 nsearch_offsets = 4;
+
+    // FIXME there probably need to be more of these
+    // The current two reflect what we'd expect for installed
+    // and what's in the source tree.
+    path search_paths[] = {
+        path("ogre/data"),
+        path("liboh/plugins/ogre/data")
+    };
+    uint32 nsearch_paths = 2;
+
+    static std::string search_dir = "plugins/ogre";
+
+    for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
+        for(uint32 spath = 0; spath < nsearch_paths; spath++) {
+            path full = search_offsets[offset] / search_paths[spath];
+            if (exists(full) && is_directory(full))
+                return full.string();
+        }
+    }
+
+    // If we can't find it anywhere else, just let it try to use the current directory
+    return boost::filesystem::complete(path(".")).string();
+}
+
+static std::string getAwesomiumResourcesDir() {
+    using namespace boost::filesystem;
+
+    return (path(getResourcesDir()) / "chrome").string();
+}
+
+
 Ogre::Root *OgreSystem::sRoot;
 Meru::CDNArchivePlugin *OgreSystem::mCDNArchivePlugin=NULL;
 Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
@@ -460,7 +507,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler();
-    new WebViewManager(0, ""); ///// FIXME: Initializing singleton class
+    new WebViewManager(0, getAwesomiumResourcesDir()); ///// FIXME: Initializing singleton class
 
 /*  // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
@@ -711,7 +758,7 @@ bool OgreSystem::queryRay(const Vector3d&position,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {
     int resultCount=0;
-    
+
     Entity * retval=internalRayTrace(position,direction,false,resultCount,returnDistance,returnNormal,0);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
