@@ -44,12 +44,20 @@ Forwarder::Forwarder(ServerID id)
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
 {
     //no need to initialize mSelfMessages and mOutgoingMessages.
+
+    // Messages destined for objects are subscribed to here so we can easily pick them
+    // out and decide whether they can be delivered directly or need forwarding
+    this->registerMessageRecipient(MESSAGE_TYPE_PROXIMITY, this);
+    this->registerMessageRecipient(MESSAGE_TYPE_LOCATION, this);
+    this->registerMessageRecipient(MESSAGE_TYPE_SUBSCRIPTION, this);
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-
+    this->unregisterMessageRecipient(MESSAGE_TYPE_PROXIMITY, this);
+    this->unregisterMessageRecipient(MESSAGE_TYPE_LOCATION, this);
+    this->unregisterMessageRecipient(MESSAGE_TYPE_SUBSCRIPTION, this);
   }
 
   /*
@@ -365,33 +373,13 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   void Forwarder::deliver(Message* msg)
   {
     switch(msg->type()) {
-      case MESSAGE_TYPE_PROXIMITY:
-          {
-              ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
-              assert(prox_msg != NULL);
-
-              UUID dest = prox_msg->destObject();
-              ObjectConnection* conn = getObjectConnection(dest);
-              if (conn != NULL)
-                  conn->deliver(msg, *mCurrentTime);
-              else
-                  forward(msg, dest);
-          }
-          break;
+      case MESSAGE_TYPE_PROXIMITY: // fall-through
       case MESSAGE_TYPE_LOCATION:  // fall-through
       case MESSAGE_TYPE_SUBSCRIPTION:
           {
-              ObjectToObjectMessage* obj_msg = dynamic_cast<ObjectToObjectMessage*>(msg);
-              assert(obj_msg != NULL);
-
-              UUID dest = obj_msg->destObject();
-              ObjectConnection* conn = getObjectConnection(dest);
-              if (conn != NULL)
-                  conn->deliver(msg, *mCurrentTime);
-              else
-                  forward(msg, dest);
+              dispatchMessage(msg);
           }
-        break;
+          break;
       case MESSAGE_TYPE_NOISE:
           {
               NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
@@ -496,6 +484,45 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     }
 
   }
+
+
+static UUID getObjectMessageDest(Message* msg) {
+    switch(msg->type()) {
+      case MESSAGE_TYPE_PROXIMITY:
+          {
+              ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
+              assert(prox_msg != NULL);
+
+              return prox_msg->destObject();
+          }
+          break;
+      case MESSAGE_TYPE_LOCATION:  // fall-through
+      case MESSAGE_TYPE_SUBSCRIPTION:
+          {
+              ObjectToObjectMessage* obj_msg = dynamic_cast<ObjectToObjectMessage*>(msg);
+              assert(obj_msg != NULL);
+
+              return obj_msg->destObject();
+          }
+        break;
+      default:
+        assert(false);
+    }
+}
+
+void Forwarder::receiveMessage(Message* msg) {
+    // Forwarder only subscribes as a recipient for object messages
+    // so it can easily check whether it can deliver directly
+    // or needs to forward them.
+
+    UUID dest = getObjectMessageDest(msg);
+    ObjectConnection* conn = getObjectConnection(dest);
+    if (conn != NULL)
+        conn->deliver(msg, *mCurrentTime);
+    else
+        forward(msg, dest);
+}
+
 
   ServerID Forwarder::lookup(const Vector3f& pos)
   {

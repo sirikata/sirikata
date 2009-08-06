@@ -27,7 +27,7 @@ class ObjectSegmentation;
 class Proximity;
 class ObjectConnection;
 
-class Forwarder : public MessageDispatcher, public MessageRouter
+class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
   {
     private:
     //Unique to forwarder
@@ -95,6 +95,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter
       void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
       void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
 
+      void receiveMessage(Message* msg);
 
       void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
       ObjectConnection* removeObjectConnection(const UUID& dest_obj);
