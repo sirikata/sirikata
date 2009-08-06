@@ -81,7 +81,6 @@ private:
             if (resp.reads(i).has_index()) {
                 index = resp.reads(i).index();
             }
-            SILOG(persistence,info,"Persistence sent message get index "<<index);
             if (index >= 0 && index < body().reads_size()) {
                 if (resp.reads(i).has_data()) {
                     if (!body().reads(index).has_data()) {
@@ -104,10 +103,10 @@ private:
             }
         }
         if (hasall) {
-            SILOG(persistence,info,"Finish sent message!");
+            SILOG(persistence,insane,"Got a whole persistence message!");
             mRealCallback(this, responseHeader, Protocol::Response::SUCCESS);
         } else {
-            SILOG(persistence,info,"... will keep waiting ...");
+            SILOG(persistence,debug,"Will keep waiting for rest of persistence message ...");
         }
     }
 public:

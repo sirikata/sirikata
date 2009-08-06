@@ -399,15 +399,12 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
 
         String value_query = "SELECT value FROM ";
         value_query += "\"" TABLE_NAME "\"";
-//        value_query += " WHERE key == ? AND object == ?";
-//        value_query += " WHERE object == x\'" + rs.reads(rs_it).object_uuid().rawHexData() + "\' AND key == \'" + key_name + "\'";
         value_query += " WHERE object == x\'" + object_hex + "\' AND key == ?";
         int rc;
         char* remain;
         sqlite3_stmt* value_query_stmt;
         bool newStep=true;
         bool locked=false;
-        std::cout << "["<<value_query<< "] with '"<<key_name<<"'"<<std::endl;
         rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
         if (rc==SQLITE_OK) {

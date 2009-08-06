@@ -99,7 +99,7 @@ struct HostedObject::PrivateCallbacks {
         Persistence::Protocol::Response::ReturnStatus errorCode)
     {
         if (lastHeader.has_return_status() || errorCode) {
-            SILOG(cppoh,error,"Database error recieving Loc and scripting info: "<<lastHeader.return_status()<<": "<<errorCode);
+            SILOG(cppoh,error,"Database error recieving Loc and scripting info: "<<(int)lastHeader.return_status()<<": "<<(int)errorCode);
             delete msg;
             return; // unable to get starting position.
         }
@@ -114,7 +114,8 @@ struct HostedObject::PrivateCallbacks {
             if (name == "Loc") {
                 ObjLoc loc;
                 loc.ParseFromString(msg->body().reads(i).data());
-                SILOG(cppoh,debug,"got loc, position = "<<loc.position());
+                SILOG(cppoh,debug,"Creating object "<<ObjectReference(realThis->getUUID())
+                      <<" at position "<<loc.position());
                 if (loc.has_position()) {
                     location.setPosition(loc.position());
                 }
@@ -136,7 +137,6 @@ struct HostedObject::PrivateCallbacks {
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),1);
-        SILOG(cppoh,debug,"Sending NewObj!");
         realThis->sendNewObj(location, sphere, spaceID);
         delete msg;
         realThis->mObjectHost->getWorkQueue()->dequeueAll();
