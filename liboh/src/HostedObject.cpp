@@ -209,7 +209,11 @@ struct HostedObject::PrivateCallbacks {
         SentPersistence *persistenceMsg = new SentPersistence(&realThis->mTracker);
         int outIndex = 0;
         ReadWriteSet &outMessage = persistenceMsg->body();
-        SILOG(cppoh,debug,"Got a Persistence message: reads size = "<<rws.reads_size());
+        if (rws.has_options()) {
+            outMessage.set_options(rws.options());
+        }
+        SILOG(cppoh,debug,"Got a Persistence message: reads size = "<<rws.reads_size()<<
+              " writes size = "<<rws.writes_size());
 
         for (int i = 0, rwsIndex=0 ; i < rws.reads_size(); i++, rwsIndex++) {
             if (rws.reads(i).has_index()) {
@@ -259,6 +263,49 @@ struct HostedObject::PrivateCallbacks {
                 el.set_return_status(StorageElement::KEY_MISSING);
             }
         }
+        outIndex = 0;
+        for (int i = 0, rwsIndex=0 ; i < rws.writes_size(); i++, rwsIndex++) {
+            if (rws.writes(i).has_index()) {
+                rwsIndex = rws.writes(i).index();
+            }
+            std::string name;
+            if (rws.writes(i).has_field_name()) {
+                name = rws.writes(i).field_name();
+            }
+            bool fail = false;
+            if (name.empty() || name[0] == '_') {
+                SILOG(cppoh,debug,"Invalid SetProp: "<<name);
+                fail = true;
+            } else {
+                if (rws.writes(i).has_data()) {
+                    realThis->setProperty(name, rws.writes(i).data());
+                    SpaceDataMap::iterator iter;
+                    for (iter = realThis->mSpaceData->begin();
+                         iter != realThis->mSpaceData->end();
+                         ++iter) {
+                        realThis->receivedPropertyUpdate(iter->second.mProxyObject, name, rws.writes(i).data());
+                    }
+                } else {
+                    if (name != "LightInfo" && name != "MeshURI" && name != "IsCamera") {
+                        // changing the type of this object has to wait until we reload from database.
+                        realThis->unsetProperty(name);
+                    }
+                }
+                SILOG(cppoh,debug,"Forward SetProp: "<<name<<" to Persistence");
+                IStorageElement el = outMessage.add_writes();
+                if (outIndex != rwsIndex) {
+                    el.set_index(rwsIndex);
+                }
+                outIndex = rwsIndex+1;
+                el.set_field_name(rws.writes(i).field_name());
+                if (rws.writes(i).has_data()) {
+                    el.set_data(rws.writes(i).data());
+                }
+                el.set_object_uuid(realThis->getUUID());
+            }
+            // what to do if a write fails?
+        }
+
         if (immedResponse.reads_size()) {
             SILOG(cppoh,debug,"ImmedResponse: "<<immedResponse.reads_size());
             std::string respStr;
@@ -266,8 +313,9 @@ struct HostedObject::PrivateCallbacks {
             RoutableMessageHeader respHeader (header);
             realThis->sendReply(respHeader, MemoryReference(respStr));
         }
-        if (outMessage.reads_size()) {
-            SILOG(cppoh,debug,"ForwardToPersistence: "<<outMessage.reads_size());
+        if (outMessage.reads_size() || outMessage.writes_size()) {
+            SILOG(cppoh,debug,"ForwardToPersistence: "<<outMessage.reads_size()<<
+                  " reads and "<<outMessage.writes_size()<<"writes");
             persistenceMsg->header().set_destination_space(SpaceID::null());
             persistenceMsg->header().set_destination_object(ObjectReference::spaceServiceID());
             persistenceMsg->header().set_destination_port(Services::PERSISTENCE);
