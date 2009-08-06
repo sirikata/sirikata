@@ -196,6 +196,7 @@ private:
 
     bool mTransactional;
     String mDBName;
+    SQLiteDBPtr mDB;
     int mRetries;
     int mBusyTimeout; // locked database timeout in milliseconds
 };

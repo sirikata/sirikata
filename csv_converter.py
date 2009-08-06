@@ -53,7 +53,7 @@ PHYSICAL_MODES = {
 #    'dynamicmesh': Sirikata.PhysicalParameters.DYNAMIC,
     'dynamicbox': Sirikata.PhysicalParameters.DYNAMICBOX,
     'dynamicsphere': Sirikata.PhysicalParameters.DYNAMICSPHERE,
-    'dynamiccyl': Sirikata.PhysicalParameters.DYNAMICCYLINDER,
+    'dynamiccylinder': Sirikata.PhysicalParameters.DYNAMICCYLINDER,
     '': Sirikata.PhysicalParameters.NONPHYSICAL
 }
 
@@ -67,24 +67,22 @@ LIGHT_TYPES = {
 ALLOWED_TYPES = {'mesh':1, 'camera':1, 'light':1}
 
 def randomUUID():
-    return uuid.uuid4().get_hex()
+    return uuid.uuid4()
 
 def veclen(fltarray):
     return (fltarray[0]*fltarray[0] +
             fltarray[1]*fltarray[1] +
             fltarray[2]*fltarray[2])
 
-def hex2bin(hexstr):
-    return uuid.UUID(hex=hexstr).get_bytes()
-
 class CsvToSql:
     def __init__(self, conn):
         self.conn = conn
         self.name_to_uuid = {}
         self.uuid_objects = {}
+        self.table_name = 'persistence'
 
-    def getTableName(self, hexuuid):
-        return hexuuid
+    def getTableName(self, uuid):
+        return uuid.get_bytes()
 
     def getKeyName(self, name, index=0):
         return "%s_%d" % (name, index)
@@ -103,11 +101,10 @@ class CsvToSql:
         self.uuid_objects[myid] = row
         return myid
 
-    def addTable(self, curs, uuid):
-        table_name = self.getTableName(uuid)
+    def addTable(self, curs):
         table_create = "CREATE TABLE IF NOT EXISTS ";
-        table_create += "\"" + table_name + "\"";
-        table_create += "(key TEXT UNIQUE, value TEXT)";
+        table_create += "\""+self.table_name+"\"";
+        table_create += "(object TEXT, key TEXT, value TEXT, PRIMARY KEY(object, key))"
         curs.execute(table_create)
 
     def protovec(self, listval, csvrow, fieldname):
@@ -116,14 +113,16 @@ class CsvToSql:
         listval.append(float(csvrow[fieldname+'_z']))
 
     def set(self, curs, uuid, key, value, which=0):
-        table_name = self.getTableName(uuid)
+        object_name = self.getTableName(uuid)
         key_name = self.getKeyName(key, which)
-        table_insert = "INSERT INTO \"" + table_name + "\""
-        table_insert += " VALUES (?, ?)"
-        curs.execute(table_insert, (key_name, buffer(value)))
+        table_insert = "INSERT INTO \"" + self.table_name + "\""
+        table_insert += " VALUES (?, ?, ?)"
+        curs.execute(table_insert, (buffer(object_name), key_name, buffer(value)))
 
     def go(self, openfile, **csvargs):
         cursor = self.conn.cursor()
+        self.addTable(cursor)
+
         uuidlist = Sirikata.UUIDListProperty()
 
         reader = csv.DictReader(openfile, **csvargs)
@@ -134,20 +133,16 @@ class CsvToSql:
 
                 u = self.addUUID(row)
                 self.processRow(u, row, cursor)
-                uuidlist.value.append(hex2bin(u))
+                uuidlist.value.append(u.get_bytes())
             except:
                 print row
                 raise
-        nulluuid = uuid.UUID(int=0).get_hex()
-        self.addTable(cursor, nulluuid)
-        print uuidlist
+        nulluuid = uuid.UUID(int=0)
         self.set(cursor, nulluuid, 'ObjectList', uuidlist.SerializeToString())
         self.conn.commit()
         cursor.close()
 
     def processRow(self, uuid, row, cursor):
-        self.addTable(cursor, uuid)
-
         location = Sirikata.ObjLoc()
         self.protovec(location.position, row, 'pos')
         if (row['orient_w']):
@@ -176,7 +171,7 @@ class CsvToSql:
 
         if row.get('parent',''):
             parentprop = Sirikata.ParentProperty()
-            parentprop.value = hex2bin(self.getUUID(row['parent']))
+            parentprop.value = self.getUUID(row['parent']).get_bytes()
             self.set(cursor, uuid, 'Parent', parentprop.SerializeToString())
         if row['objtype']=='mesh':
             scale = Sirikata.Vector3fProperty()
@@ -211,7 +206,11 @@ class CsvToSql:
                 ambientPower = float(row['ambient'])
                 diffuseColorLength = veclen(lightinfo.diffuse_color)
                 for i in range(3):
-                    lightinfo.ambient_color.append(lightinfo.diffuse_color[i]*(ambientPower/diffuseColorLength)/lightinfo.power)
+                    if diffuseColorLength:
+                        lightinfo.ambient_color.append(lightinfo.diffuse_color[i]*
+                                                       (ambientPower/diffuseColorLength)/lightinfo.power)
+                    else:
+                        lightinfo.ambient_color.append(0.0)
             if row.get('shadow_x',''):
                 self.protovec(lightinfo.shadow_color, row, 'shadow')
             elif row.get('shadowpower',''):
@@ -223,22 +222,31 @@ class CsvToSql:
                     else:
                         lightinfo.shadow_color.append(0.0)
             lightinfo.light_range = float(row['range'])
-            lightinfo.constant_falloff = float(row['constantfall'])
+            if 'constantfall' in row:
+                lightinfo.constant_falloff = float(row['constantfall'])
+            elif 'constfall' in row:
+                lightinfo.constant_falloff = float(row['constfall'])
             lightinfo.linear_falloff = float(row['linearfall'])
             lightinfo.quadratic_falloff = float(row['quadfall'])
             lightinfo.cone_inner_radians = float(row['cone_in'])
             lightinfo.cone_outer_radians = float(row['cone_out'])
             lightinfo.cone_falloff = float(row['cone_fall'])
             lightinfo.casts_shadow = bool(row['shadow'])
+            print lightinfo
             self.set(cursor, uuid, 'LightInfo', lightinfo.SerializeToString())
         elif row['objtype']=='camera':
             print "** Adding a Camera ",uuid
             self.set(cursor, uuid, 'IsCamera', '')
 
 if __name__=='__main__':
-    csvfile = 'scene.csv'
-    sqlfile = 'scene.db'
-
+    if len(sys.argv) > 1:
+        csvfile = sys.argv[1]
+    else:
+        csvfile = 'scene.csv'
+    if len(sys.argv) > 2:
+        sqlfile = sys.argv[2]
+    else:
+        sqlfile = 'scene.db'
     try:
         os.rename(sqlfile, sqlfile+'.bak')
     except OSError:

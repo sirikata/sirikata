@@ -40,6 +40,8 @@
 #include "SQLiteObjectStorage.hpp"
 #define OPTION_DATABASE   "db"
 
+#define TABLE_NAME "persistence"
+
 namespace Sirikata { namespace Persistence {
 
  
@@ -120,6 +122,27 @@ SQLiteObjectStorage::SQLiteObjectStorage(bool transactional, const String& pl)
     mDBName = databaseFile->as<String>();
     assert( !mDBName.empty() );
 
+    SQLiteDBPtr db = SQLite::getSingleton().open(mDBName);
+    sqlite3_busy_timeout(db->db(), mBusyTimeout);
+
+    // Create the table for this object if it doesn't exist yet
+    String table_create = "CREATE TABLE IF NOT EXISTS ";
+    table_create += "\"" TABLE_NAME "\"";
+    table_create += "(object TEXT, key TEXT, value TEXT, PRIMARY KEY(object, key))";
+
+    int rc;
+    char* remain;
+    sqlite3_stmt* table_create_stmt;
+
+    rc = sqlite3_prepare_v2(db->db(), table_create.c_str(), -1, &table_create_stmt, (const char**)&remain);
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
+
+    rc = sqlite3_step(table_create_stmt);
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
+    rc = sqlite3_finalize(table_create_stmt);
+    SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
+
+    mDB = db;
 }
 
 SQLiteObjectStorage::~SQLiteObjectStorage() {
@@ -159,9 +182,8 @@ SQLiteObjectStorage::ApplyReadWriteWorker::ApplyReadWriteWorker(SQLiteObjectStor
 }
 
 Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyReadWriteWorker::processReadWrite() {
-    SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
-    sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
     Error error = DatabaseLocked;
+    SQLiteDBPtr db = mParent->mDB;
     int retries =mParent->mRetries;
     for(int tries = 0; tries < retries+1 && error != None; tries++)
         error = mParent->applyReadSet(db, *rws, *mResponse);
@@ -189,8 +211,7 @@ SQLiteObjectStorage::ApplyTransactionWorker::ApplyTransactionWorker(SQLiteObject
 }
 Protocol::Response::ReturnStatus SQLiteObjectStorage::ApplyTransactionWorker::processTransaction() {
     Error error = None;
-    SQLiteDBPtr db = SQLite::getSingleton().open(mParent->mDBName);
-    sqlite3_busy_timeout(db->db(), mParent->mBusyTimeout);
+    SQLiteDBPtr db = mParent->mDB;
     int retries=mParent->mRetries;
     int tries = retries + 1;
     while( tries > 0 ) {
@@ -373,24 +394,24 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
         retval.add_reads();
     SQLiteObjectStorage::Error databaseError=None;
     for (int rs_it=0;rs_it<num_reads;++rs_it) {
-        String table_name = getTableName(rs.reads(rs_it));
+        String object_hex = getTableName(rs.reads(rs_it));
         String key_name = getKeyName(rs.reads(rs_it));
 
         String value_query = "SELECT value FROM ";
-        value_query += "\"" + table_name + "\"";
-        value_query += " WHERE key == ?";
-
+        value_query += "\"" TABLE_NAME "\"";
+//        value_query += " WHERE key == ? AND object == ?";
+//        value_query += " WHERE object == x\'" + rs.reads(rs_it).object_uuid().rawHexData() + "\' AND key == \'" + key_name + "\'";
+        value_query += " WHERE object == x\'" + object_hex + "\' AND key == ?";
         int rc;
         char* remain;
         sqlite3_stmt* value_query_stmt;
         bool newStep=true;
         bool locked=false;
-        std::cout << value_query<< " with "<<key_name<<std::endl;
+        std::cout << "["<<value_query<< "] with '"<<key_name<<"'"<<std::endl;
         rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
         if (rc==SQLITE_OK) {
-            
-            rc = sqlite3_bind_text(value_query_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
+            rc = sqlite3_bind_text(value_query_stmt, 1, key_name.data(), (int)key_name.size(), SQLITE_TRANSIENT);
             SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
             if (rc==SQLITE_OK) {
                 int step_rc = sqlite3_step(value_query_stmt);
@@ -420,9 +441,9 @@ template <class ReadSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyRe
             retval.reads(rs_it).clear_data();
             retval.reads(rs_it).set_return_status(Protocol::StorageElement::KEY_MISSING);
         }
-		if(rs.reads(rs_it).has_index()) {
-			retval.reads(rs_it).set_index(rs.reads(rs_it).index());
-		}
+        if(rs.reads(rs_it).has_index()) {
+            retval.reads(rs_it).set_index(rs.reads(rs_it).index());
+        }
     }
     if (rs.has_options()&&(rs.options()&Protocol::ReadWriteSet::RETURN_READ_NAMES)!=0) {
         // make sure read set is clear before each attempt
@@ -435,37 +456,24 @@ template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyW
     int num_writes=ws.writes_size();
     for (int ws_it=0;ws_it<num_writes;++ws_it) {
 
-        String table_name = getTableName(ws.writes(ws_it));
+        String object_hex = getTableName(ws.writes(ws_it));
         String key_name = getKeyName(ws.writes(ws_it));
-
-        // Create the table for this object if it doesn't exist yet
-        String table_create = "CREATE TABLE IF NOT EXISTS ";
-        table_create += "\"" + table_name + "\"";
-        table_create += "(key TEXT UNIQUE, value TEXT)";
 
         int rc;
         char* remain;
-        sqlite3_stmt* table_create_stmt;
 
-        rc = sqlite3_prepare_v2(db->db(), table_create.c_str(), -1, &table_create_stmt, (const char**)&remain);
-        SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing table create statement");
-
-        rc = sqlite3_step(table_create_stmt);
-        SQLite::check_sql_error(db->db(), rc, NULL, "Error executing table create statement");
-        rc = sqlite3_finalize(table_create_stmt);
-        SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing table create statement");
         // Insert or replace the value
 
         String value_insert = "INSERT OR REPLACE INTO ";
         if (!ws.writes(ws_it).has_data()) {
              value_insert = "DELETE FROM ";
         }
-        value_insert += "\"" + table_name + "\"";
+        value_insert += "\"" TABLE_NAME "\"";
         if (!ws.writes(ws_it).has_data()) {
-            value_insert+= " WHERE key = ?";
+            value_insert+= " WHERE object = x\'" + object_hex + "\' AND key = ?";
         }else {
         //if (ws.writes(ws_it).has_data()) {
-            value_insert += " (key, value) VALUES(?, ?)";
+            value_insert += " (object, key, value) VALUES(x\'" + object_hex + "\', ?, ?)";
             //}
         }
         sqlite3_stmt* value_insert_stmt;
@@ -473,11 +481,13 @@ template <class WriteSet> SQLiteObjectStorage::Error SQLiteObjectStorage::applyW
         rc = sqlite3_prepare_v2(db->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value insert statement");
 
-        rc = sqlite3_bind_text(value_insert_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
+        rc = sqlite3_bind_text(value_insert_stmt, 1, key_name.data(), (int)key_name.size(), SQLITE_TRANSIENT);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value insert statement");
-        if (ws.writes(ws_it).has_data()) {
-            rc = sqlite3_bind_blob(value_insert_stmt, 2, ws.writes(ws_it).data().data(), (int)ws.writes(ws_it).data().size(), SQLITE_TRANSIENT);
-            SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
+        if (rc==SQLITE_OK) {
+            if (ws.writes(ws_it).has_data()) {
+                rc = sqlite3_bind_blob(value_insert_stmt, 2, ws.writes(ws_it).data().data(), (int)ws.writes(ws_it).data().size(), SQLITE_TRANSIENT);
+                SQLite::check_sql_error(db->db(), rc, NULL, "Error binding value to value insert statement");
+            }
         }
 
         int step_rc = sqlite3_step(value_insert_stmt);
@@ -498,12 +508,12 @@ template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::chec
     int num_compares=cs.compares_size();
     for (int cs_it=0;cs_it<num_compares;++cs_it) {
 
-        String table_name = getTableName(cs.compares(cs_it));
+        String object_hex = getTableName(cs.compares(cs_it));
         String key_name = getKeyName(cs.compares(cs_it));
 
         String value_query = "SELECT value FROM ";
-        value_query += "\"" + table_name + "\"";
-        value_query += " WHERE key == ?";
+        value_query += "\"" TABLE_NAME "\"";
+        value_query += " WHERE object == x\'" + object_hex + "\' AND key == ?";
 
         int rc;
         char* remain;
@@ -512,7 +522,7 @@ template <class CompareSet> SQLiteObjectStorage::Error SQLiteObjectStorage::chec
         rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
 
-        rc = sqlite3_bind_text(value_query_stmt, 1, key_name.c_str(), (int)key_name.size(), SQLITE_TRANSIENT);
+        rc = sqlite3_bind_text(value_query_stmt, 1, key_name.data(), (int)key_name.size(), SQLITE_TRANSIENT);
         SQLite::check_sql_error(db->db(), rc, NULL, "Error binding key name to value query statement");
 
         int step_rc = sqlite3_step(value_query_stmt);
