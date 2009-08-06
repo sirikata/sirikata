@@ -36,7 +36,7 @@
 #include <util/Platform.hpp>
 #include <util/Time.hpp>
 #include <util/ListenerProvider.hpp>
-#include <oh/TimeSteppedSimulation.hpp>
+#include <oh/TimeSteppedQueryableSimulation.hpp>
 #include <oh/ProxyObject.hpp>
 #include <fstream>
 #include <vector>
