@@ -51,6 +51,7 @@
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
+#include <oh/BulletSystem.hpp>
 
 #include "WebViewManager.hpp"
 
@@ -719,11 +720,23 @@ private:
             }
             const physicalParameters &phys = mesh->getPhysical();
             std::string subtype;
-            if (phys.mode==0) subtype="graphiconly";
-            else if (phys.mode==1) subtype="staticmesh";
-            else if (phys.mode==2) subtype="dynamicbox";
-            else if (phys.mode==3) subtype="dynamicsphere";
-            else {
+            switch (phys.mode) {
+            case bulletObj::Disabled:
+                subtype="graphiconly";
+                break;
+            case bulletObj::Static:
+                subtype="staticmesh";
+                break;
+            case bulletObj::DynamicBox:
+                subtype="dynamicbox";
+                break;
+            case bulletObj::DynamicSphere:
+                subtype="dynamicsphere";
+                break;
+            case bulletObj::DynamicCylinder:
+                subtype="dynamiccylinder";
+                break;
+            default:
                 std::cout << "unknown physical mode! " << phys.mode << std::endl;
             }
             fprintf(fp, "mesh,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),phys.name.c_str(),

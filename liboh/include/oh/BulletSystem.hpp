@@ -279,7 +279,8 @@ class bulletObj : public MeshListener,Noncopyable {
     enum shapeID {
         ShapeMesh,
         ShapeBox,
-        ShapeSphere
+        ShapeSphere,
+        ShapeCylinder
     };
     BulletSystem* system;
     void setPhysical (const physicalParameters &pp);
@@ -317,7 +318,8 @@ public:
         Disabled,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
         DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere                 /// fully physical -- collision & dynamics
+        DynamicSphere,
+        DynamicCylinder
     };
     /// public methods
     bulletObj(BulletSystem* sys) :

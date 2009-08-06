@@ -109,6 +109,10 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
         mDynamic = true;
         mShape = ShapeBox;
         break;
+    case DynamicCylinder:
+        mDynamic = true;
+        mShape = ShapeCylinder;
+        break;
     case DynamicSphere:
         mDynamic = true;
         mShape = ShapeSphere;
@@ -187,6 +191,11 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
             mColShape = new btBoxShape(btVector3(mSizeX*.5, mSizeY*.5, mSizeZ*.5));
             mass = mSizeX * mSizeY * mSizeZ * mDensity;
+        }
+        else if (mShape == ShapeCylinder) {
+            DEBUG_OUTPUT(cout << "dbm: shape=cylinder " << endl);
+            mColShape = new btCylinderShape(btVector3(mSizeX*.5, mSizeY, mSizeZ*.5));
+            mass = mSizeX * mSizeY * mSizeZ * mDensity * 4.0/6.2831;
         }
     }
     else {
@@ -398,22 +407,22 @@ bool BulletSystem::tick() {
                 if (i->second==1) {             /// recently colliding; send msg & change mode
                     if (b1->colMsg & b0->colMask) {
                         cout << "   begin collision msg: " << b0->mName << " --> " << b1->mName
-                                << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
                     if (b0->colMsg & b1->colMask) {
                         cout << "   begin collision msg: " << b1->mName << " --> " << b0->mName
-                                << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
                     dispatcher->collisionPairs[i->first]=2;
                 }
                 else if (i->second==2) {        /// didn't get flagged again; collision now over
                     if (b1->colMsg & b0->colMask) {
                         cout << "     end collision msg: " << b0->mName << " --> " << b1->mName
-                                << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
                     if (b0->colMsg & b1->colMask) {
                         cout << "     end collision msg: " << b1->mName << " --> " << b0->mName
-                                << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
                     map<set<bulletObj*>, int>::iterator temp = i++;   /// (sigh) rage against the machine
                     dispatcher->collisionPairs.erase(temp);
