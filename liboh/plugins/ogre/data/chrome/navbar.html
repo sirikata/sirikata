@@ -76,6 +76,10 @@
         initButton("reload");
         initButton("go");
       }
+
+      function goAddress() {
+        Client.navgo( document.getElementById("addresstext").value );
+      }
     </script>
   </head>
   <body onLoad="initButtons()">
@@ -83,8 +87,8 @@
     <div class="button" id="forward" onclick="Client.navforward()"></div>
     <div class="button" id="reload" onclick="Client.navrefresh()"></div>
     <div class"addressbar">
-      <div class="address"><input type="text" class="address"></input></div>
-      <div class="button" id="go" onclick="Client.navhome()"></div>
+      <div class="address"><input type="text" class="address" id="addresstext"></input></div>
+      <div class="button" id="go" onclick="goAddress()"></div>
     </div>
   </body>
 </html>

@@ -93,6 +93,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
         chromeWebView->bind("navforward", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateForward));
         chromeWebView->bind("navrefresh", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateRefresh));
         chromeWebView->bind("navhome", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateHome));
+        chromeWebView->bind("navgo", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateGo));
 #endif
 }
 
@@ -561,6 +562,11 @@ void WebViewManager::onChromeNav(WebView* webview, const Awesomium::JSArguments&
         break;
       case NavigateHome:
         focusedNonChromeWebView->loadURL("http://www.google.com");
+        break;
+      case NavigateGo:
+        if (args.size() == 1 && args[0].isString()) {
+            focusedNonChromeWebView->loadURL(args[0].toString());
+        }
         break;
       default:
         SILOG(ogre,error,"Unknown navigation action from onChromeNav.");

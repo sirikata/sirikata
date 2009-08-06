@@ -266,7 +266,8 @@ protected:
         NavigateBack,
         NavigateForward,
         NavigateRefresh,
-        NavigateHome
+        NavigateHome,
+        NavigateGo
     };
 
     void onChromeNav(WebView* webview, const Awesomium::JSArguments& args, NavigationAction action);
