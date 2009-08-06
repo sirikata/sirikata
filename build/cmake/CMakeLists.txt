@@ -95,6 +95,23 @@ ENDMACRO(VERIFY_VERSION)
 
 #libraries
 
+# first we find/verify sirikata and installed-sirikata, which will
+# provide a lot of useful tools
+SET(SIRIKATA_CODE_ROOT)
+IF(EXISTS ${DEPENDENCIES_ROOT}/sirikata)
+  SET(SIRIKATA_CODE_ROOT ${DEPENDENCIES_ROOT}/sirikata)
+ENDIF()
+
+SET(SIRIKATA_INSTALL_ROOT)
+IF(EXISTS ${DEPENDENCIES_ROOT}/installed-sirikata)
+  SET(SIRIKATA_INSTALL_ROOT ${DEPENDENCIES_ROOT}/installed-sirikata)
+ENDIF()
+
+
+#dependency: sirikata
+FIND_PACKAGE(Sirikata REQUIRED)
+
+
 #dependency: boost > 1.35
 IF(NOT BOOST_ROOT)
   IF(WIN32)
@@ -121,14 +138,6 @@ FIND_PACKAGE(GLUT)
 IF(NOT GLUT_FOUND)
   MESSAGE(SEND_ERROR "Couldn't find GLUT.")
 ENDIF(NOT GLUT_FOUND)
-
-#dependency: sirikata core
-IF(EXISTS ${DEPENDENCIES_ROOT}/installed-sirikata)
-  SET(SirikataCore_ROOT ${DEPENDENCIES_ROOT}/installed-sirikata)
-ELSE()
-  SET(SirikataCore_ROOT ${DEPENDENCIES_ROOT})
-ENDIF()
-FIND_PACKAGE(SirikataCore REQUIRED)
 
 #dependency: raknet core
 IF(EXISTS ${DEPENDENCIES_ROOT}/installed-raknet)
@@ -171,8 +180,8 @@ SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
 INCLUDE_DIRECTORIES(BEFORE
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
-        ${SirikataCore_INCLUDE_DIRS}
-        ${SirikataCore_INCLUDE_DIRS}/sirikata #FIXME libcore doesn't have a proper library layout yet
+        ${Sirikata_INCLUDE_DIR}
+        ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Raknet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${SST_INCLUDE_DIRS}
