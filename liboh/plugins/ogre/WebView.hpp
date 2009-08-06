@@ -292,6 +292,14 @@ namespace Graphics {
 		bool getVisibility();
 
 		/**
+		* Returns whether or not this WebView is visible,
+		* ignoring fading.  In other words, this will return
+		* true if show() was called last, false if hide() was
+		* called last, even if the WebView is still fading out.
+		*/
+		bool getNonStrictVisibility();
+
+		/**
 		* Gets the derived UV's of this WebView's internal texture. On certain systems we must compensate for lack of
 		* NPOT-support on the videocard by using the next-highest POT texture. Normal WebViews compensate their UV's accordingly
 		* however WebViews created as materials will need to adjust their own by use of this function.

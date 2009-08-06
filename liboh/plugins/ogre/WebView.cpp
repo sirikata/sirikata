@@ -705,6 +705,17 @@ bool WebView::getVisibility()
 		return overlay->isVisible;
 }
 
+bool WebView::getNonStrictVisibility() {
+    if (isFading) {
+        // When fading, we are actually the *opposite* of what the overlay claims.
+        return !overlay->isVisible;
+    }
+    else {
+        // If we're not fading, then we can trust the overlay.
+        return overlay->isVisible;
+    }
+}
+
 void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre::Real& v2)
 {
 	u1 = v1 = 0;

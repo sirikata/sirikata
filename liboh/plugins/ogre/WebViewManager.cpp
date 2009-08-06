@@ -81,9 +81,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
 
 	tooltipWebView = createWebView("__tooltip", 250, 50, OverlayPosition(0, 0), false, 70, TIER_FRONT);
 	tooltipWebView->hide();
-	tooltipWebView->setTransparent(true);
+	tooltipWebView->setTransparent(false);
 	tooltipWebView->loadFile("tooltip.html");
-	//tooltipWebView->bind("resizeTooltip", JSDelegate(this, &WebViewManager::onResizeTooltip));
 	tooltipWebView->bind("resizeTooltip", std::tr1::bind(&WebViewManager::onResizeTooltip, this, _1, _2));
 	//tooltipWebView->setIgnoresMouse();
 
@@ -290,7 +289,7 @@ bool WebViewManager::injectMouseMove(const WebViewCoord& coord)
 				handleTooltip(0, L"");
 		}
 
-		if(tooltipWebView && tooltipWebView->getVisibility())
+		if(tooltipWebView && tooltipWebView->getNonStrictVisibility())
 			tooltipWebView->setPosition(OverlayPosition(coord.x, coord.y + 15));
 	}
 
@@ -495,11 +494,10 @@ void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
 void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args)
 {
 #ifdef HAVE_AWESOMIUM
-	if(args.size() != 2)
+    if(args.size() != 2 || !args[0].isInteger() || !args[1].isInteger())
 		return;
 
-	//tooltipWebView->resize(args[0].toInteger(), args[1].toInteger());
-	//tooltipView->resize(256, 64);
+	tooltipWebView->resize(args[0].toInteger(), args[1].toInteger());
 	tooltipWebView->setPosition(OverlayPosition(mouseXPos, mouseYPos + 15));
 	//popViewToFront(view);
 
@@ -522,6 +520,7 @@ void WebViewManager::handleTooltip(WebView* tooltipParent, const std::wstring& t
 		this->tooltipParent = tooltipParent;
 		tooltipShowTime = 0;
 		tooltipWebView->hide(true);
+                tooltipWebView->resize(512, 256); // Large enough that it should hold anything we put in there.
 		std::string tipStr(tipText.begin(), tipText.end());
 		tooltipWebView->evaluateJS("setTooltip('" + tipStr + "')");
 	}

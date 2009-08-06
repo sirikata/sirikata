@@ -1,0 +1,35 @@
+<html>
+  <head>
+    <style type="text/css">
+      body {
+      margin: 0px;
+      padding: 0px;
+      }
+
+      div {
+      float: left;
+      margin: 0px;
+      padding: 0px;
+      }
+
+      #tooltiptext {
+      background-color: #EEFFFF;
+      padding: 5px;
+      border-color: #000;
+      border-style: solid;
+      border-width: 1px;
+      }
+    </style>
+    <script language="javascript" type="text/javascript">
+      function setTooltip(tt) {
+        var textdiv = document.getElementById("tooltiptext")
+        var containerdiv = document.getElementById("tooltipcontainer")
+        textdiv.innerHTML = tt;
+        Client.resizeTooltip(containerdiv.scrollWidth, containerdiv.scrollHeight);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="tooltipcontainer"><div id="tooltiptext"></div></div>
+  </body>
+</html>
