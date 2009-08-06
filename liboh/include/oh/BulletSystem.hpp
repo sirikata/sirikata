@@ -309,6 +309,7 @@ class bulletObj : public MeshListener,Noncopyable {
     float mSizeY;
     float mSizeZ;
     string mName;
+    Vector3f mHull;
 public:
     /// public members -- yes, I use 'em.  No, I don't always thicken my code with gettr/settr's
     int colMask;
@@ -382,7 +383,7 @@ public:
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(bulletObj* obj, positionOrientation po,
-                           float density, float friction, float bounce,
+                           float density, float friction, float bounce, Vector3f hull,
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(bulletObj*);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,

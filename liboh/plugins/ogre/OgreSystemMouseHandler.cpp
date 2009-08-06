@@ -639,7 +639,8 @@ private:
             perror("Failed to open scene_new.csv");
             return;
         }
-        fprintf(output, "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,");
+        fprintf(output,
+        "objtype,subtype,name,pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
         fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
@@ -700,8 +701,8 @@ private:
             }
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor, linfo.mPower);
-            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,",typestr,
+            shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
+            fprintf(fp, "light,%s,,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,,,,",typestr,
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
@@ -743,9 +744,10 @@ private:
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
                     x,y,z,w.c_str());
 
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z, phys.density,
-                    phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
+            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
+                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z,
+                    phys.hull.x, phys.hull.y, phys.hull.z,
+                    phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
         else if (camera) {
             fprintf(fp, "camera,,,%f,%f,%f,%f,%f,%f,%s\n",

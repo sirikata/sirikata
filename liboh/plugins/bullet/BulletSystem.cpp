@@ -43,8 +43,8 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
-//#define DEBUG_OUTPUT(x) x
-#define DEBUG_OUTPUT(x)
+#define DEBUG_OUTPUT(x) x
+//#define DEBUG_OUTPUT(x)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -93,6 +93,7 @@ void bulletObj::meshChanged (const URI &newMesh) {
 void bulletObj::setPhysical (const physicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " mesh: " << mMeshname << endl);
     mName = pp.name;
+    mHull = pp.hull;
     colMask = pp.colMask;
     colMsg = pp.colMsg;
     switch (pp.mode) {
@@ -124,7 +125,7 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
         po.p = mMeshptr->getPosition();
         po.o = mMeshptr->getOrientation();
         Vector3f size = mMeshptr->getScale();
-        system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, size.x, size.y, size.z);
+        system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size.x, size.y, size.z);
     }
 }
 
@@ -184,18 +185,18 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
     if (mDynamic) {
         if (mShape == ShapeSphere) {
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
-            mColShape = new btSphereShape(btScalar(mSizeX));
+            mColShape = new btSphereShape(btScalar(mSizeX*mHull.x));
             mass = mSizeX*mSizeX*mSizeX * mDensity * 4.189;                         /// Thanks, Wolfram Alpha!
         }
         else if (mShape == ShapeBox) {
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
-            mColShape = new btBoxShape(btVector3(mSizeX*.5, mSizeY*.5, mSizeZ*.5));
+            mColShape = new btBoxShape(btVector3(mSizeX*mHull.x*.5, mSizeY*mHull.y*.5, mSizeZ*mHull.z*.5));
             mass = mSizeX * mSizeY * mSizeZ * mDensity;
         }
         else if (mShape == ShapeCylinder) {
             DEBUG_OUTPUT(cout << "dbm: shape=cylinder " << endl);
-            mColShape = new btCylinderShape(btVector3(mSizeX*.5, mSizeY, mSizeZ*.5));
-            mass = mSizeX * mSizeY * mSizeZ * mDensity * 4.0/6.2831;
+            mColShape = new btCylinderShape(btVector3(mSizeX*mHull.x, mSizeY*mHull.y, mSizeZ*mHull.z));
+            mass = mSizeX * mSizeY * mSizeZ * mDensity * 3.1416;
         }
     }
     else {
@@ -314,7 +315,7 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
 
 void BulletSystem::addPhysicalObject(bulletObj* obj,
                                      positionOrientation po,
-                                     float density, float friction, float bounce,
+                                     float density, float friction, float bounce, Vector3f hull,
                                      float mSizeX, float mSizeY, float mSizeZ) {
     /// a bit annoying -- we have to keep all these around in case our mesh isn't available
     /// note that presently these values are not updated during simulation (particularly po)
@@ -325,6 +326,7 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     obj->mSizeY = mSizeY;
     obj->mSizeZ = mSizeZ;
     obj->mInitialPo = po;
+    obj->mHull = hull;
     DEBUG_OUTPUT(cout << "dbm: adding active object: " << obj << " shape: " << (int)obj->mShape << endl);
     if (obj->mDynamic) {
         /// create the object now
