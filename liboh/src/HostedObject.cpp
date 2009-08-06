@@ -104,13 +104,16 @@ struct HostedObject::PrivateCallbacks {
             delete msg;
             return; // unable to get starting position.
         }
+        String scriptName;
+        std::map<String,String> scriptParams;
         Location location(Vector3d::nil(),Quaternion::identity(),Vector3f::nil(),Vector3f(1,0,0),0);
         for (int i = 0; i < msg->body().reads_size(); i++) {
             String name = msg->body().reads(i).field_name();
+            if (msg->body().reads(i).has_return_status() || !msg->body().reads(i).has_data()) {
+                continue;
+            }
             if (!name.empty() && name[0] != '_') {
-                if (!msg->body().reads(i).has_return_status()) {
-                    realThis->setProperty(name, msg->body().reads(i).data());
-                }
+                realThis->setProperty(name, msg->body().reads(i).data());
             }
             if (name == "Loc") {
                 ObjLoc loc;
@@ -133,13 +136,33 @@ struct HostedObject::PrivateCallbacks {
                     location.setAngularSpeed(loc.angular_speed());
                 }
             }
-            if (name == "_ScriptInfo") {
+            if (name == "_Script") {
+                Protocol::StringProperty scrProp;
+                scrProp.ParseFromString(msg->body().reads(i).data());
+                scriptName = scrProp.value();
+            }
+            if (name == "_ScriptParams") {
+                Protocol::StringMapProperty scrProp;
+                scrProp.ParseFromString(msg->body().reads(i).data());
+                int numkeys = scrProp.keys_size();
+                {
+                    int numvalues = scrProp.values_size();
+                    if (numvalues < numkeys) {
+                        numkeys = numvalues;
+                    }
+                }
+                for (int i = 0; i < numkeys; i++) {
+                    scriptParams[scrProp.keys(i)] = scrProp.values(i);
+                }
             }
         }
         // Temporary Hack because we do not have access to the CDN here.
         BoundingSphere3f sphere(Vector3f::nil(),1);
         realThis->sendNewObj(location, sphere, spaceID);
         delete msg;
+        if (!scriptName.empty()) {
+            realThis->initializeScript(scriptName, scriptParams);
+        }
         realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
 
@@ -723,7 +746,8 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg->body().add_reads().set_field_name("IsCamera");
     msg->body().add_reads().set_field_name("Parent");
     msg->body().add_reads().set_field_name("Loc");
-    msg->body().add_reads().set_field_name("_ScriptInfo");
+    msg->body().add_reads().set_field_name("_Script");
+    msg->body().add_reads().set_field_name("_ScriptParams");
     for (int i = 0; i < msg->body().reads_size(); i++) {
         msg->body().reads(i).set_object_uuid(getUUID()); // database assumes uuid 0 if omitted
     }

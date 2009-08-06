@@ -39,6 +39,7 @@ import math
 import random
 import time
 import uuid
+from urllib import unquote_plus
 
 sys.path.append('liboh/scripts/ironpython')
 sys.path.append('liboh/scripts/ironpython/site-packages')
@@ -168,6 +169,19 @@ class CsvToSql:
         if row.get('rot_speed',''):
             location.angular_speed = float(row['rot_speed'])
         self.set(cursor, uuid, 'Loc', location.SerializeToString())
+
+        if row.get('script',''):
+            scrprop = Sirikata.StringProperty()
+            scrprop.value = row['script']
+            self.set(cursor, uuid, '_Script', scrprop.SerializeToString())
+            print row['script']
+            scrprop = Sirikata.StringMapProperty()
+            for kv in row['scriptparams'].split('&'):
+                key, value = kv.split('=',1)
+                scrprop.keys.append(unquote_plus(key))
+                scrprop.values.append(unquote_plus(value))
+                print 'param',key,'=',value
+            self.set(cursor, uuid, '_ScriptParams', scrprop.SerializeToString())
 
         if row.get('parent',''):
             parentprop = Sirikata.ParentProperty()

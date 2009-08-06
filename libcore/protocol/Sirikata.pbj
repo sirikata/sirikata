@@ -226,6 +226,11 @@ message StringProperty {
     optional string value=10;
 }
 
+message StringMapProperty {
+    repeated string keys=2;
+    repeated string values=3;
+}
+
 message PhysicalParameters {
 	enum Mode {
 		NONPHYSICAL = 0;
