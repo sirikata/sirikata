@@ -57,6 +57,9 @@ update-dependencies: dependencies
 minimaldepends: update-dependencies
 	$(MAKE) -C dependencies minimaldepends $(*)
 
+minimalfulldepends: update-dependencies
+	$(MAKE) -C dependencies minimalrootdepends minimaldepends $(*)
+
 depends: update-dependencies
 	$(MAKE) -C dependencies depends $(*)
 
