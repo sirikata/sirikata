@@ -33,6 +33,7 @@
 #include <util/SpaceObjectReference.hpp>
 #include "oh/ObjectHostProxyManager.hpp"
 #include "oh/ObjectHost.hpp"
+#include "oh/HostedObject.hpp"
 namespace Sirikata {
 
 void ObjectHostProxyManager::initialize() {
@@ -48,74 +49,42 @@ void ObjectHostProxyManager::destroy() {
 ObjectHostProxyManager::~ObjectHostProxyManager() {
 	destroy();
 }
-void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
+
+void ObjectHostProxyManager::createViewedObject(const ProxyObjectPtr &newObj, QueryTracker*viewer) {
     std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
         ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
     if (result.second==true) {
         notify(&ProxyCreationListener::createProxy,newObj);
     }
-    ++result.first->second.refCount;
+    result.first->second.viewers.insert(viewer);
 }
-void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &newObj) {
-    ProxyMap::iterator iter = mProxyMap.find(newObj->getObjectReference().object());
+void ObjectHostProxyManager::destroyViewedObject(const SpaceObjectReference &newObj, QueryTracker*viewer) {
+    ProxyMap::iterator iter = mProxyMap.find(newObj.object());
     if (iter != mProxyMap.end()) {
-        if ((--iter->second.refCount)==0) {
-            newObj->destroy();
-            notify(&ProxyCreationListener::destroyProxy,newObj);
+        std::tr1::unordered_multiset<QueryTracker*>::iterator viewiter;
+        viewiter = iter->second.viewers.find(viewer);
+        iter->second.viewers.erase(viewiter);
+        viewiter = iter->second.viewers.find(viewer);
+        if (viewiter == iter->second.viewers.end()) {
+            iter->second.obj->destroy();
+            notify(&ProxyCreationListener::destroyProxy,iter->second.obj);
             mProxyMap.erase(iter);
         }
     }
 }
-
-void ObjectHostProxyManager::createObjectProximity(
-        const ProxyObjectPtr &newObj,
-        const UUID &seeker,
-        uint32 queryId)
-{
-    createObject(newObj);
-    QueryMap::iterator iter =
-        mQueryMap.insert(QueryMap::value_type(
-                             std::pair<UUID, uint32>(seeker, queryId),
-                             std::set<ProxyObjectPtr>())).first;
-    bool success = iter->second.insert(newObj).second;
-    assert(success == true);
+void ObjectHostProxyManager::createObject(const ProxyObjectPtr &newObj) {
+    createViewedObject(newObj, 0);
 }
-
-void ObjectHostProxyManager::destroyObjectProximity(
-        const ProxyObjectPtr &newObj,
-        const UUID &seeker,
-        uint32 queryId)
-{
-    destroyObject(newObj);
-    QueryMap::iterator iter =
-        mQueryMap.find(std::pair<UUID, uint32>(seeker, queryId));
-    if (iter != mQueryMap.end()) {
-        std::set<ProxyObjectPtr>::iterator proxyiter = iter->second.find(newObj);
-        assert (proxyiter != iter->second.end());
-        if (proxyiter != iter->second.end()) {
-            iter->second.erase(proxyiter);
-        }
-    }
-}
-
-void ObjectHostProxyManager::destroyProximityQuery(
-        const UUID &seeker,
-        uint32 queryId)
-{
-    QueryMap::iterator iter =
-        mQueryMap.find(std::pair<UUID, uint32>(seeker, queryId));
-    if (iter != mQueryMap.end()) {
-        std::set<ProxyObjectPtr> &set = iter->second;
-        std::set<ProxyObjectPtr>::const_iterator proxyiter;
-        for (proxyiter = set.begin(); proxyiter != set.end(); ++proxyiter) {
-            destroyObject(*proxyiter);
-        }
-        mQueryMap.erase(iter);
-    }
+void ObjectHostProxyManager::destroyObject(const ProxyObjectPtr &newObj) {
+    destroyViewedObject(newObj->getObjectReference(), 0);
 }
 
 QueryTracker *ObjectHostProxyManager::getQueryTracker(const SpaceObjectReference &id) const {
-    return 0;
+    ProxyMap::const_iterator iter = mProxyMap.find(id.object());  
+    if (iter == mProxyMap.end()){
+        return 0;
+    }
+    return *(iter->second.viewers.begin());
 }
 
 ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference &id) const {

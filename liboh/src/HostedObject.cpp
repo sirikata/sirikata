@@ -62,7 +62,11 @@ typedef SentMessageBody<RoutableMessageBody> RPCMessage;
 class HostedObject::PerSpaceData {
 public:
     SpaceConnection mSpaceConnection;
-    ProxyObjectPtr mProxyObject; ///
+    ProxyObjectPtr mProxyObject;
+
+    typedef std::map<uint32, std::set<ObjectReference> > ProxQueryMap;
+    ProxQueryMap mProxQueryMap; ///< indexed by ProxCall::query_id()
+
     PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream)
         :mSpaceConnection(topLevel,stream) {
     }
@@ -83,6 +87,21 @@ HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
 HostedObject::~HostedObject() {
     if (mObjectScript) {
         delete mObjectScript;
+    }
+    for (SpaceDataMap::const_iterator iter = mSpaceData->begin();
+         iter != mSpaceData->end();
+         ++iter) {
+        for (PerSpaceData::ProxQueryMap::const_iterator qiter = iter->second.mProxQueryMap.begin();
+             qiter != iter->second.mProxQueryMap.end();
+             ++qiter) {
+            for (std::set<ObjectReference>::const_iterator oriter = qiter->second.begin();
+                 oriter != qiter->second.end();
+                 ++oriter)
+            {
+                iter->second.mSpaceConnection.getTopLevelStream()->
+                    destroyViewedObject(SpaceObjectReference(iter->first, *oriter), getTracker());
+            }
+        }
     }
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
     mTracker.endForwardingMessagesTo(&mSendService);
@@ -436,13 +455,27 @@ struct HostedObject::PrivateCallbacks {
         Response response;
         response.ParseFromArray(bodyData.data(), bodyData.length());
         SentPersistence *sentMessage = (static_cast<SentPersistence*>(sentMessageBase));
-        std::auto_ptr<SentPersistence> sentMessageDestructor;
         HostedObjectPtr realThis(weakThis.lock());
         if (!realThis) {
-            sentMessageDestructor.reset(sentMessage);
+            delete sentMessage;
             return;
         }
-
+        SpaceDataMap::iterator iter = realThis->mSpaceData->find(sentMessage->getSpace());
+        if (iter == realThis->mSpaceData->end()) {
+            delete sentMessage;
+            return;
+        }
+        ObjectHostProxyManager *proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
+        PerSpaceData::ProxQueryMap::iterator qmiter = iter->second.mProxQueryMap.find(queryId);
+        if (qmiter == iter->second.mProxQueryMap.end()) {
+            delete sentMessage;
+            return;
+        }
+        std::set<ObjectReference>::iterator proxyiter = qmiter->second.find(sentMessage->getRecipient());
+        if (proxyiter == qmiter->second.end()) {
+            delete sentMessage;
+            return;
+        }
         SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
         bool persistence_error = false;
         if (hdr.return_status() != RoutableMessageHeader::SUCCESS) {
@@ -480,7 +513,7 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         if (persistence_error || haveAll) {
-            sentMessageDestructor.reset(sentMessage); // No more messages--clean up.
+            delete sentMessage; // No more messages--clean up.
         } else {
             return; // More messages will come.
         }
@@ -503,15 +536,7 @@ struct HostedObject::PrivateCallbacks {
                 isCamera = true;
             }
         }
-        ObjectHostProxyManager *proxyMgr = NULL;
-        SpaceDataMap::const_iterator iter = realThis->mSpaceData->find(proximateObjectId.space());
         ObjectReference myObjectReference;
-        if (iter != realThis->mSpaceData->end()) {
-            proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
-        }
-        if (!proxyMgr) {
-            return;
-        }
         if (isCamera) {
             SILOG(cppoh,info, "* I found a camera named " << proximateObjectId.object());
             proxyObj = ProxyObjectPtr(new ProxyCameraObject(proxyMgr, proximateObjectId));
@@ -523,7 +548,7 @@ struct HostedObject::PrivateCallbacks {
             proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
         }
         realThis->receivedPositionUpdate(proxyObj, objLoc, true);
-        proxyMgr->createObjectProximity(proxyObj, realThis->mInternalObjectReference, queryId);
+        proxyMgr->createViewedObject(proxyObj, realThis->getTracker());
         for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
             if (sentMessage->body().reads(i).has_return_status()) {
                 continue;
@@ -540,6 +565,7 @@ struct HostedObject::PrivateCallbacks {
             request->setCallback(std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
             request->serializeSend();
         }
+        delete sentMessage;
         return;
     }
 
@@ -1030,7 +1056,9 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             return;
         }
 
-        proxyMgr = getProxyManager(msg.source_space());
+        SpaceDataMap::iterator sditer = mSpaceData->find(msg.source_space());
+        assert (sditer != mSpaceData->end());
+        proxyMgr = sditer->second.mSpaceConnection.getTopLevelStream().get();
 
         Protocol::ProxCall proxCall;
         proxCall.ParseFromArray(args.data(), args.length());
@@ -1040,13 +1068,28 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
           case Protocol::ProxCall::EXITED_PROXIMITY:
             printstr<<"ProxCall EXITED "<<proximateObjectId.object();
             if (proxyObj) {
-                proxyMgr->destroyObjectProximity(proxyObj, mInternalObjectReference, proxCall.query_id());
+                PerSpaceData::ProxQueryMap::iterator iter = sditer->second.mProxQueryMap.find(proxCall.query_id());
+                if (iter != sditer->second.mProxQueryMap.end()) {
+                    std::set<ObjectReference>::iterator proxyiter = iter->second.find(proximateObjectId.object());
+                    assert (proxyiter != iter->second.end());
+                    if (proxyiter != iter->second.end()) {
+                        iter->second.erase(proxyiter);
+                    }
+                }
+                proxyMgr->destroyViewedObject(proxyObj->getObjectReference(), this->getTracker());
             } else {
                 printstr<<" (unknown obj)";
             }
             break;
           case Protocol::ProxCall::ENTERED_PROXIMITY:
             printstr<<"ProxCall ENTERED "<<proximateObjectId.object();
+            {
+                PerSpaceData::ProxQueryMap::iterator iter =
+                    sditer->second.mProxQueryMap.insert(
+                        PerSpaceData::ProxQueryMap::value_type(proxCall.query_id(), std::set<ObjectReference>())
+                        ).first;
+                iter->second.insert(proximateObjectId.object());
+            }
             if (!proxyObj) { // FIXME: We may get one of these for each prox query. Keep track of in-progress queries in ProxyManager.
                 printstr<<" (Requesting information...)";
 
@@ -1065,7 +1108,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 }
             } else {
                 printstr<<" (Already known)";
-                proxyMgr->createObjectProximity(proxyObj, mInternalObjectReference, proxCall.query_id());
+                proxyMgr->createViewedObject(proxyObj, this->getTracker());
             }
             break;
           case Protocol::ProxCall::STATELESS_PROXIMITY:
