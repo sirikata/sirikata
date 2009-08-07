@@ -19,6 +19,13 @@
 # The former specifies a location where the entire source tree, as checked out from git, can be found.  The latter
 # specifies the prefix into which Sirikata was installed.
 #
+# When SIRIKATA_CODE_ROOT is defined, the following variables will be set if the corresponding dependency
+# directory can be found for them in that directory:
+#
+#   Sirikata_CMAKE_MODULES     The directory containing Sirikata's custom CMake Modules
+#   Sirikata_BOOST_ROOT        The directory where the boost dependency is installed.
+#   Sirikata_PROTOBUFS_ROOT    The directory where the protocol buffers dependency is installed.
+#
 # Copyright (C) Siddhartha Chaudhuri, 2009
 #
 
@@ -151,11 +158,11 @@ IF(Sirikata_BIN_DIR AND Sirikata_INCLUDE_DIR AND Sirikata_LIB_DIR)
 
     SET(SirikataSpace_LIBRARIES)
     IF(SirikataSpace_DEBUG_LIBRARY AND SirikataSpace_RELEASE_LIBRARY)
-      SET(SirikataSpace_LIBRARIES debug {SirikataSpace_DEBUG_LIBRARY} optimized ${SirikataSpace_RELEASE_LIBRARY})
+      SET(SirikataSpace_LIBRARIES debug ${SirikataSpace_DEBUG_LIBRARY} optimized ${SirikataSpace_RELEASE_LIBRARY})
     ELSEIF(SirikataSpace_DEBUG_LIBRARY)
-      SET(SirikataSpace_LIBRARIES {SirikataSpace_DEBUG_LIBRARY})
+      SET(SirikataSpace_LIBRARIES ${SirikataSpace_DEBUG_LIBRARY})
     ELSEIF(SirikataSpace_RELEASE_LIBRARY)
-      SET(SirikataSpace_LIBRARIES {SirikataSpace_RELEASE_LIBRARY})
+      SET(SirikataSpace_LIBRARIES ${SirikataSpace_RELEASE_LIBRARY})
     ENDIF()
 
     IF(SirikataSpace_LIBRARIES)
@@ -168,6 +175,36 @@ ENDIF()
 IF(SirikataCore_FOUND AND Sirikata_INCLUDE_DIR)
   SET(Sirikata_FOUND TRUE)
 ENDIF()
+
+# Try to find dependency directories.  This is essentially independent of all the previous work.
+IF(SIRIKATA_CODE_ROOT)
+  # cmake modules
+  IF(EXISTS ${SIRIKATA_CODE_ROOT}/build/modules)
+    SET(Sirikata_CMAKE_MODULES ${SIRIKATA_CODE_ROOT}/build/modules)
+    GET_FILENAME_COMPONENT(Sirikata_CMAKE_MODULES ${Sirikata_CMAKE_MODULES} ABSOLUTE)
+  ENDIF()
+
+
+  # dependencies
+  IF(EXISTS ${SIRIKATA_CODE_ROOT}/dependencies)
+    SET(SIRIKATA_DEPENDENCIES_ROOT ${SIRIKATA_CODE_ROOT}/dependencies)
+  ENDIF()
+
+  IF(SIRIKATA_DEPENDENCIES_ROOT)
+    GET_FILENAME_COMPONENT(SIRIKATA_DEPENDENCIES_ROOT ${SIRIKATA_DEPENDENCIES_ROOT} ABSOLUTE)
+
+    # boost
+    IF(EXISTS ${SIRIKATA_DEPENDENCIES_ROOT}/installed-boost)
+      SET(Sirikata_BOOST_ROOT ${SIRIKATA_DEPENDENCIES_ROOT}/installed-boost)
+    ENDIF()
+
+    # protocol buffers
+    IF(EXISTS ${SIRIKATA_DEPENDENCIES_ROOT}/installed-protobufs)
+      SET(Sirikata_PROTOBUFS_ROOT ${SIRIKATA_DEPENDENCIES_ROOT}/installed-protobufs)
+    ENDIF()
+  ENDIF()
+ENDIF()
+
 
 # Reporting and final failures if components weren't found
 IF(Sirikata_FOUND)

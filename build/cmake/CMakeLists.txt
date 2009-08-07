@@ -112,19 +112,32 @@ ENDIF()
 FIND_PACKAGE(Sirikata REQUIRED)
 
 
+# add sirikata's cmake modules
+IF(Sirikata_CMAKE_MODULES)
+  SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${Sirikata_CMAKE_MODULES})
+ENDIF()
+
+#dependency: protocolbuffers
+IF(NOT PROTOCOLBUFFERS_ROOT)
+  IF(Sirikata_PROTOBUFS_ROOT)
+    SET(PROTOCOLBUFFERS_ROOT ${Sirikata_PROTOBUFS_ROOT})
+  ENDIF()
+ENDIF()
+FIND_PACKAGE(ProtocolBuffers)
+IF(NOT PROTOCOLBUFFERS_FOUND)
+  MESSAGE(FATAL_ERROR "Cannot find Protocol Buffers")
+ENDIF()
+
+
 #dependency: boost > 1.35
 IF(NOT BOOST_ROOT)
-  IF(WIN32)
-    SET(BOOST_ROOT ${PLATFORM_LIBS})
+  IF(Sirikata_BOOST_ROOT)
+    SET(BOOST_ROOT ${Sirikata_BOOST_ROOT})
   ENDIF()
-  IF(APPLE)
-    SET(BOOST_ROOT ${PLATFORM_LIBS})
-  ENDIF()
-  SET(BOOST_ROOT ${DEPENDENCIES_ROOT}/sirikata/dependencies/) # FIXME HACK
 ENDIF()
 SET(Boost_FIND_REQUIRED TRUE)
 IF(WIN32)
-  FIND_PACKAGE(Boost COMPONENTS thread date_time)
+  FIND_PACKAGE(Boost COMPONENTS system thread date_time program_options)
 ELSE()
   FIND_PACKAGE(Boost COMPONENTS system)
   STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
@@ -132,6 +145,7 @@ ELSE()
   STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
 ENDIF()
 VERIFY_VERSION(Boost 1 35 0)
+
 
 #dependency: glut
 FIND_PACKAGE(GLUT)

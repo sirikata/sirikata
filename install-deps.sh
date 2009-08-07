@@ -146,7 +146,7 @@ if [ ${opt_components_sirikata} == "true" ]; then
   make -j2
   make install
   # we need to manually copy over the protobuf libs because sirikata doesn't handle this properly yet
-  cp ${deps_dir}/sirikata/dependencies/lib/libproto* ${deps_dir}/installed-sirikata/lib/||  cp ${deps_dir}/sirikata/dependencies/installed-protobufs/lib/libproto* ${deps_dir}/installed-sirikata/lib/
+  cp ${deps_dir}/sirikata/dependencies/installed-protobufs/lib/libproto* ${deps_dir}/installed-sirikata/lib/
   cd ../../..
 
 fi # opt_components_sirikata
