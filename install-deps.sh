@@ -127,7 +127,7 @@ if [ ${opt_components_sirikata} == "true" ]; then
     fi
     git clone git://github.com/sirikata/sirikata.git sirikata
     cd sirikata
-    make fulldepends
+    make minimalfulldepends
   else
     cd sirikata
     git pull origin
