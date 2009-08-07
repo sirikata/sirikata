@@ -1360,6 +1360,7 @@ ENDIF()
 
 #installation information
 INSTALL(TARGETS
+          ${PBJ_BINARY}
           ${SIRIKATA_CORE_LIB}
           ${SIRIKATA_SPACE_LIB}
           ${SIRIKATA_PROXIMITY_LIB}
