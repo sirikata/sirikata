@@ -10,6 +10,8 @@
 #   PROTOCOLBUFFERS_LIBRARIES          The libraries needed to use protocol buffers (without the full path)
 #   PROTOCOLBUFFERS_COMPILER           The protocol buffers compiler
 #
+#   PROTOCOLBUFFERS_SUPPORTS_CSHARP    True if this compiler supports C#
+#
 # Copyright (C) Ewen Cheslack-Postava, 2009
 #
 
@@ -36,6 +38,14 @@ IF(PROTOCOLBUFFERS_INCLUDE_DIRS)
     ENDIF()
     # compiler inside binary directory
     FIND_FILE(PROTOCOLBUFFERS_COMPILER NAMES protoc protoc.bin protoc.exe PATHS ${PROTOCOLBUFFERS_BIN_DIRS} NO_DEFAULT_PATH)
+    # check if compiler supports csharp
+    IF(PROTOCOLBUFFERS_COMPILER)
+      # FIXME we should have a better way to determine this, e.g. by running the compiler
+      FIND_FILE(PROTOCOLBUFFERS_CSHARP_LIB NAMES Google.ProtocolBuffers.dll PATHS ${PROTOCOLBUFFERS_BIN_DIRS} NO_DEFAULT_PATH)
+      IF(PROTOCOLBUFFERS_CSHARP_LIB)
+        SET(PROTCOLBUFFERS_SUPPORTS_CSHARP TRUE)
+      ENDIF()
+    ENDIF()
 
     # library path
     SET(PROTOCOLBUFFERS_LIBRARY_DIRS ${PROTOCOLBUFFERS_ROOT_DIRS})

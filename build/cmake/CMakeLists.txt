@@ -171,7 +171,7 @@ MACRO(PARSE_ARGUMENTS prefix arg_names option_names)
 ENDMACRO(PARSE_ARGUMENTS)
 
 MACRO(ADD_PROTOCOLBUFFERS_TARGET)
-  PARSE_ARGUMENTS(PROTOCOLBUFFERS "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;INPUTDIR;OUTPUTCPPFILE" "" ${ARGN})
+  PARSE_ARGUMENTS(PROTOCOLBUFFERS "DEPENDS;IMPORTS;PLUGINNAME;OUTPUTDIR;INPUTDIR;OUTPUTCPPFILE" "GENERATE_CSHARP" ${ARGN})
   CAR(PROTOCOLBUFFERS_NAME ${PROTOCOLBUFFERS_DEFAULT_ARGS})
   CDR(PROTOCOLBUFFERS_FILES ${PROTOCOLBUFFERS_DEFAULT_ARGS})
   SET(PROTOCOLBUFFERS_PROTO_TARGET ${PROTOCOLBUFFERS_NAME})
@@ -195,7 +195,9 @@ MACRO(ADD_PROTOCOLBUFFERS_TARGET)
   ENDIF(PROTOCOLBUFFERS_OUTPUTDIR)
 
   IF(PROTOCOLBUFFERS_OUTPUTDIR)
-    SET(PROTOCOLBUFFERS_CS_OPTIONS ${PROTOCOLBUFFERS_CS_OPTIONS} --csharp_out=${ScriptsRoot}/csharp/protocol/)
+    IF(PROTOCOLBUFFERS_GENERATE_CSHARP)
+      SET(PROTOCOLBUFFERS_CS_OPTIONS ${PROTOCOLBUFFERS_CS_OPTIONS} --csharp_out=${ScriptsRoot}/csharp/protocol/)
+    ENDIF()
     SET(PROTOCOLBUFFERS_PY_OPTIONS ${PROTOCOLBUFFERS_PY_OPTIONS} --python_out=${ScriptsRoot}/ironpython/protocol/)
   ENDIF(PROTOCOLBUFFERS_OUTPUTDIR)
 
@@ -746,34 +748,42 @@ SET(ProtocolBuffersSources
 
 SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS MessageHeader INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Protocol" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc)
+# Based on dependencies, generate arguments for protocol buffers generation
+SET(PROTOCOLBUFFERS_GENS)
+IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
+  SET(PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
+ENDIF()
+
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS MessageHeader INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Protocol" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
 ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources}
 INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Prox" IMPORTS ${ProtocolBuffersRoot}
 OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE
-${SirikataProtocolDirectory}/Prox_protobuf.cc)
+${SirikataProtocolDirectory}/Prox_protobuf.cc
+${PROTOCOLBUFFERS_GENS})
 
 # For scripting
 ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS MessageHeader ${ProtocolBuffersSources}
 INPUTDIR ${ProtocolBuffersRoot} IMPORTS ${ProtocolBuffersRoot}
-OUTPUTDIR ${SirikataProtocolDirectory})
+OUTPUTDIR ${SirikataProtocolDirectory}
+${PROTOCOLBUFFERS_GENS})
 SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "ObjectHost" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc)
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "ObjectHostBinary" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc)
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "ObjectHost" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Space" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc)
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "ObjectHostBinary" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Space" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc)
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Test" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS Persistence INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "SQLite" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/SQLite_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS Persistence INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "SQLite" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/SQLite_protobuf.cc)
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Proximity" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Proximity_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS ${ProtocolBuffersSources} INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Proximity" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Proximity_protobuf.cc)
+ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS Subscription INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Subscription" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Subscription_protobuf.cc ${PROTOCOLBUFFERS_GENS})
 
-ADD_PROTOCOLBUFFERS_TARGET(PROTOCOLBUFFERS Subscription INPUTDIR ${ProtocolBuffersRoot} PLUGINNAME "Subscription" IMPORTS ${ProtocolBuffersRoot} OUTPUTDIR ${SirikataProtocolDirectory} OUTPUTCPPFILE ${SirikataProtocolDirectory}/Subscription_protobuf.cc)
 
 #binary files to be linked into sirikata
 SET(BINARY_TO_CPP_SOURCE_FILE ${TOP_LEVEL}/externals/binarytocpp/binarytocpp.cpp)
@@ -804,7 +814,7 @@ IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources} ${TOP_LEVEL}/externals/pbj/PBJ.cs)
   SET(SirikataProtoScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   SET(SirikataProtoScriptRuntime_LIBRARY ${SirikataProtoScriptRuntime_LIBRARY_DIR}/Sirikata.Protocol.dll)
-  IF(EXISTS "${PROTOCOLBUFFERS_BIN_DIRS}/Google.ProtocolBuffers.dll")
+  IF(PROTOCOLBUFFERS_SUPPORTS_CSHARP)
     ADD_CUSTOM_TARGET(SirikataScriptProtocol ALL
                   DEPENDS ${SirikataProtoScriptSources} ${SirikataProtoScriptRuntime_LIBRARY} ${AdditionalProtoDepends}
                   COMMENT "Checking Sirikata.Protocol.dll")
