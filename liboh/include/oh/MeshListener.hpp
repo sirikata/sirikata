@@ -38,7 +38,7 @@ namespace Sirikata {
 
 using Transfer::URI;
 
-struct physicalParameters {
+struct PhysicalParameters {
     enum PhysicalMode {
         Disabled = 0,               /// non-active, remove from physics
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
@@ -55,7 +55,7 @@ struct physicalParameters {
     int colMask;
     int colMsg;
     Vector3f hull;
-    physicalParameters() {
+    PhysicalParameters() {
         mode = Disabled;
         density = 0;
         friction = 0;
@@ -71,7 +71,7 @@ public:
     virtual ~MeshListener() {}
     virtual void meshChanged (const URI &newMesh) =0;
     virtual void setScale (const Vector3f &newScale) = 0;
-    virtual void setPhysical (const physicalParameters &pp) = 0;
+    virtual void setPhysical (const PhysicalParameters &pp) = 0;
 };
 }
 #endif

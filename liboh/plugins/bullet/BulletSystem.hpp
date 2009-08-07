@@ -274,7 +274,7 @@ struct positionOrientation {
 
 class BulletSystem;
 
-class bulletObj : public MeshListener,Noncopyable {
+class BulletObj : public MeshListener,Noncopyable {
     friend class BulletSystem;
     enum shapeID {
         ShapeMesh,
@@ -283,7 +283,7 @@ class bulletObj : public MeshListener,Noncopyable {
         ShapeCylinder
     };
     BulletSystem* system;
-    void setPhysical (const physicalParameters &pp);
+    void setPhysical (const PhysicalParameters &pp);
     void meshChanged (const URI &newMesh);
     void setScale (const Vector3f &newScale);
 
@@ -316,7 +316,7 @@ public:
     int colMsg;
 
     /// public methods
-    bulletObj(BulletSystem* sys) :
+    BulletObj(BulletSystem* sys) :
             mBtVertices(NULL),
             mIndexArray(NULL),
             mMotionState(NULL),
@@ -331,7 +331,7 @@ public:
             mName("") {
         system = sys;
     }
-    ~bulletObj();
+    ~BulletObj();
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
@@ -341,10 +341,10 @@ public:
 class customDispatch :public btCollisionDispatcher {
     /// the entire point of this subclass is to flag collisions in collisionPairs
 public:
-    map<btCollisionObject*, bulletObj*>* bt2siri;
-    map<set<bulletObj*>, int> collisionPairs;
+    map<btCollisionObject*, BulletObj*>* bt2siri;
+    map<set<BulletObj*>, int> collisionPairs;
     customDispatch (btCollisionConfiguration* collisionConfiguration,
-                    map<btCollisionObject*, bulletObj*>* bt2siri) :
+                    map<btCollisionObject*, BulletObj*>* bt2siri) :
             btCollisionDispatcher(collisionConfiguration) {
         this->bt2siri=bt2siri;
     }
@@ -370,15 +370,15 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
 
 public:
     BulletSystem();
-    map<btCollisionObject*, bulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to bulletObj's
+    map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
-    vector<bulletObj*>objects;
+    vector<BulletObj*>objects;
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
-    void addPhysicalObject(bulletObj* obj, positionOrientation po,
+    void addPhysicalObject(BulletObj* obj, positionOrientation po,
                            float density, float friction, float bounce, Vector3f hull,
                            float sizx, float sizy, float sizz);
-    void removePhysicalObject(bulletObj*);
+    void removePhysicalObject(BulletObj*);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
                                          const String&options) {
         BulletSystem*os= new BulletSystem;
@@ -387,8 +387,8 @@ public:
         delete os;
         return NULL;
     }
-    bulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
-        bulletObj* bo=0;
+    BulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
+        BulletObj* bo=0;
         for(unsigned int i=0; i<objects.size(); i++) {
             if (objects[i]->mMeshptr==meshptr) {
                 bo=objects[i];
@@ -421,7 +421,7 @@ public:
     virtual Duration desiredTickRate()const {
         return Duration::seconds(0.1);
     };
-    Task::EventResponse downloadFinished(Task::EventPtr evbase, bulletObj* bullobj);
+    Task::EventResponse downloadFinished(Task::EventPtr evbase, BulletObj* bullobj);
     ///returns if rendering should continue
     virtual bool tick();
     ~BulletSystem();

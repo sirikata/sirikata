@@ -38,7 +38,7 @@
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
-#include <oh/BulletSystem.hpp>
+#include "BulletSystem.hpp"
 
 using namespace std;
 using std::tr1::placeholders::_1;
@@ -86,41 +86,41 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 namespace Sirikata {
 
 
-void bulletObj::meshChanged (const URI &newMesh) {
+void BulletObj::meshChanged (const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << endl;)
     mMeshname = newMesh;
 }
 
-void bulletObj::setPhysical (const physicalParameters &pp) {
+void BulletObj::setPhysical (const PhysicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
     colMask = pp.colMask;
     colMsg = pp.colMsg;
     switch (pp.mode) {
-    case Disabled:
+    case PhysicalParameters::Disabled:
         DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: Disabled" << endl);
         mActive = false;
         mDynamic = false;
         break;
-    case Static:
+    case PhysicalParameters::Static:
         mDynamic = false;
         mShape = ShapeMesh;
         break;
-    case DynamicBox:
+    case PhysicalParameters::DynamicBox:
         mDynamic = true;
         mShape = ShapeBox;
         break;
-    case DynamicCylinder:
+    case PhysicalParameters::DynamicCylinder:
         mDynamic = true;
         mShape = ShapeCylinder;
         break;
-    case DynamicSphere:
+    case PhysicalParameters::DynamicSphere:
         mDynamic = true;
         mShape = ShapeSphere;
         break;
     }
-    if (!(pp.mode==Disabled)) {
+    if (!(pp.mode==PhysicalParameters::Disabled)) {
         DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: adding to bullet" << endl);
         positionOrientation po;
         po.p = mMeshptr->getPosition();
@@ -130,13 +130,13 @@ void bulletObj::setPhysical (const physicalParameters &pp) {
     }
 }
 
-positionOrientation bulletObj::getBulletState() {
+positionOrientation BulletObj::getBulletState() {
     btTransform trans;
     this->mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
     return positionOrientation(trans.getOrigin(),trans.getRotation());
 }
 
-void bulletObj::setBulletState(positionOrientation po) {
+void BulletObj::setBulletState(positionOrientation po) {
     btTransform trans;
     mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
     trans.setOrigin(btVector3(po.p.x, po.p.y, po.p.z));
@@ -151,7 +151,7 @@ void bulletObj::setBulletState(positionOrientation po) {
     mBulletBodyPtr->activate(true);      /// wake up, you lazy slob!
 }
 
-void bulletObj::setScale (const Vector3f &newScale) {
+void BulletObj::setScale (const Vector3f &newScale) {
     if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
@@ -180,7 +180,7 @@ void bulletObj::setScale (const Vector3f &newScale) {
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
-void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
+void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
     /// if meshbytes = 0, reuse vertices & indices (for rescaling)
     if (mColShape) delete mColShape;
     if (mDynamic) {
@@ -255,8 +255,8 @@ void bulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
         mass = 0.0;
     }
 }
-bulletObj::~bulletObj() {
-    DEBUG_OUTPUT(cout << "dbm: bulletObj destructor " << this << endl);
+BulletObj::~BulletObj() {
+    DEBUG_OUTPUT(cout << "dbm: BulletObj destructor " << this << endl);
     if (mBtVertices!=NULL)
         btAlignedFree(mBtVertices);
     if (mMotionState!=NULL) delete mMotionState;
@@ -265,7 +265,7 @@ bulletObj::~bulletObj() {
     if (mBulletBodyPtr!=NULL) delete mBulletBodyPtr;
 }
 
-void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
+void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     float mass;
     btTransform startTransform;
     btVector3 localInertia(0,0,0);
@@ -296,7 +296,7 @@ void bulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
     system->bt2siri[body]=this;
 }
 
-Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bulletObj* bullobj) {
+Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, BulletObj* bullobj) {
     Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast<Transfer::DownloadEvent> (evbase);
     DEBUG_OUTPUT (cout << "dbm: downloadFinished: status:" << (int)ev->getStatus()
                   << " success: " << (int)Transfer::TransferManager::SUCCESS
@@ -314,7 +314,7 @@ Task::EventResponse BulletSystem::downloadFinished(Task::EventPtr evbase, bullet
     return Task::EventResponse::del();
 }
 
-void BulletSystem::addPhysicalObject(bulletObj* obj,
+void BulletSystem::addPhysicalObject(BulletObj* obj,
                                      positionOrientation po,
                                      float density, float friction, float bounce, Vector3f hull,
                                      float mSizeX, float mSizeY, float mSizeZ) {
@@ -340,10 +340,10 @@ void BulletSystem::addPhysicalObject(bulletObj* obj,
     }
 }
 
-void BulletSystem::removePhysicalObject(bulletObj* obj) {
+void BulletSystem::removePhysicalObject(BulletObj* obj) {
     /// this is tricky, and not well tested
     /// memory issues:
-    /// there are a number of objects created during the instantiation of a bulletObj
+    /// there are a number of objects created during the instantiation of a BulletObj
     /// if they really need to be kept around, we should keep track of them & delete them
     DEBUG_OUTPUT(cout << "dbm: removing active object: " << obj << endl;)
     for (unsigned int i=0; i<objects.size(); i++) {
@@ -414,13 +414,13 @@ bool BulletSystem::tick() {
             queryRay(Vector3d(0, 10, 0), Vector3f(0,-1,0), 20.0, bugObj, dist, norm, sor);
             cout << "dbm debug: queryRay returns distance: " << dist << " normal: " << norm << " object: " << sor << endl;
             */
-            
+
             /// collision messages
-            for (map<set<bulletObj*>, int>::iterator i=dispatcher->collisionPairs.begin();
+            for (map<set<BulletObj*>, int>::iterator i=dispatcher->collisionPairs.begin();
                     i != dispatcher->collisionPairs.end(); ++i) {
-                set<bulletObj*>::const_iterator j=i->first.begin() ;
-                bulletObj* b0=*j++;
-                bulletObj* b1=*j;
+                set<BulletObj*>::const_iterator j=i->first.begin() ;
+                BulletObj* b0=*j++;
+                BulletObj* b1=*j;
                 if (i->second==1) {             /// recently colliding; send msg & change mode
                     if (b1->colMsg & b0->colMask) {
                         cout << "   begin collision msg: " << b0->mName << " --> " << b1->mName
@@ -441,7 +441,7 @@ bool BulletSystem::tick() {
                         cout << "     end collision msg: " << b1->mName << " --> " << b0->mName
                         << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
-                    map<set<bulletObj*>, int>::iterator temp = i++;   /// (sigh) rage against the machine
+                    map<set<BulletObj*>, int>::iterator temp = i++;   /// (sigh) rage against the machine
                     dispatcher->collisionPairs.erase(temp);
                     if (i==dispatcher->collisionPairs.end()) break;
                 }
@@ -483,11 +483,11 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
             }
             int contacts = contactPointResult.getPersistentManifold()->getNumContacts();
             if (contacts) {
-                bulletObj* siri0 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj0];
-                bulletObj* siri1 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj1];
+                BulletObj* siri0 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj0];
+                BulletObj* siri1 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj1];
                 if (siri0 && siri1) {
                     if (siri0->colMask & siri1->colMask) {
-                        set<bulletObj*> temp;
+                        set<BulletObj*> temp;
                         temp.insert(siri0);
                         temp.insert(siri1);
                         ((customDispatch*)(&dispatcher))->collisionPairs[temp] |= 1;
@@ -569,7 +569,7 @@ void BulletSystem::createProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) {
         DEBUG_OUTPUT(cout << "dbm: createProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
-        objects.push_back(new bulletObj(this));     /// clean up memory!!!
+        objects.push_back(new BulletObj(this));     /// clean up memory!!!
         objects.back()->mMeshptr = meshptr;
         meshptr->MeshProvider::addListener(objects.back());
     }
@@ -636,7 +636,7 @@ bool BulletSystem::queryRay(const Vector3d& position,
         returnNormal.x = norm.getX();
         returnNormal.y = norm.getY();
         returnNormal.z = norm.getZ();
-        bulletObj* obj=bt2siri[cb.m_collisionObject];
+        BulletObj* obj=bt2siri[cb.m_collisionObject];
         returnDistance = maxDistance * cb.m_closestHitFraction;
         if (obj) {
             /// if not found, it's probably the ground body

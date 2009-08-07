@@ -46,7 +46,7 @@ void ProxyMeshObject::setScale(const Vector3f&scale) {
     mScale = scale;
     MeshProvider::notify(&MeshListener::setScale,scale);
 }
-void ProxyMeshObject::setPhysical(const physicalParameters& pp) {
+void ProxyMeshObject::setPhysical(const PhysicalParameters& pp) {
     mPhysical=pp;
     MeshProvider::notify(&MeshListener::setPhysical,pp);
 }

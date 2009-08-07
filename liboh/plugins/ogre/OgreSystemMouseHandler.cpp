@@ -51,7 +51,6 @@
 #include <task/EventManager.hpp>
 #include <SDL_keysym.h>
 #include <set>
-#include <oh/BulletSystem.hpp>
 
 #include "WebViewManager.hpp"
 
@@ -59,6 +58,7 @@ namespace Sirikata {
 namespace Graphics {
 using namespace Input;
 using namespace Task;
+using namespace std;
 
 #define DEG2RAD 0.0174532925
 #ifdef _WIN32
@@ -783,26 +783,26 @@ private:
             if (uri.proto().empty()) {
                 uristr = "";
             }
-            const physicalParameters &phys = mesh->getPhysical();
+            const PhysicalParameters &phys = mesh->getPhysical();
             std::string subtype;
             switch (phys.mode) {
-            case bulletObj::Disabled:
+            case PhysicalParameters::Disabled:
                 subtype="graphiconly";
                 break;
-            case bulletObj::Static:
+            case PhysicalParameters::Static:
                 subtype="staticmesh";
                 break;
-            case bulletObj::DynamicBox:
+            case PhysicalParameters::DynamicBox:
                 subtype="dynamicbox";
                 break;
-            case bulletObj::DynamicSphere:
+            case PhysicalParameters::DynamicSphere:
                 subtype="dynamicsphere";
                 break;
-            case bulletObj::DynamicCylinder:
+            case PhysicalParameters::DynamicCylinder:
                 subtype="dynamiccylinder";
                 break;
             default:
-                std::cout << "unknown physical mode! " << phys.mode << std::endl;
+                std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
             }
             std::string name = physicalName(mesh, saveSceneNames);
             fprintf(fp, "mesh,%s,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),name.c_str(),parent.c_str(),

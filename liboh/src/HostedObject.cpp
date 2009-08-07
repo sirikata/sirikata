@@ -1170,25 +1170,25 @@ void HostedObject::receivedPropertyUpdate(
         ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
         if (proxymesh) {
             // FIXME: allow missing fields, and do not hardcode enum values.
-            physicalParameters params;
+            PhysicalParameters params;
             switch (parsedProperty.mode()) {
               case Protocol::PhysicalParameters::NONPHYSICAL:
-                params.mode = physicalParameters::Disabled;
+                params.mode = PhysicalParameters::Disabled;
                 break;
               case Protocol::PhysicalParameters::STATIC:
-                params.mode = physicalParameters::Static;
+                params.mode = PhysicalParameters::Static;
                 break;
               case Protocol::PhysicalParameters::DYNAMICBOX:
-                params.mode = physicalParameters::DynamicBox;
+                params.mode = PhysicalParameters::DynamicBox;
                 break;
               case Protocol::PhysicalParameters::DYNAMICSPHERE:
-                params.mode = physicalParameters::DynamicSphere;
+                params.mode = PhysicalParameters::DynamicSphere;
                 break;
               case Protocol::PhysicalParameters::DYNAMICCYLINDER:
-                params.mode = physicalParameters::DynamicCylinder;
+                params.mode = PhysicalParameters::DynamicCylinder;
                 break;
               default:
-                params.mode = physicalParameters::Disabled;
+                params.mode = PhysicalParameters::Disabled;
             }
             params.density = parsedProperty.density();
             params.friction = parsedProperty.friction();
@@ -1217,7 +1217,7 @@ void HostedObject::receivedPropertyUpdate(
         ProxyMeshObject *proxymesh = dynamic_cast<ProxyMeshObject*>(proxy.get());
         parsedProperty.ParseFromString(arguments);
         if (proxymesh && parsedProperty.has_value()) {
-            physicalParameters params = proxymesh->getPhysical();
+            PhysicalParameters params = proxymesh->getPhysical();
             params.name = parsedProperty.value();
             proxymesh->setPhysical(params);
         }
