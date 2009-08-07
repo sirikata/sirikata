@@ -136,11 +136,13 @@ if [ ${opt_components_sirikata} == "true" ]; then
   git submodule update
   cd build/cmake
   # debug
+  rm CMakeCache.txt
   cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Debug .
   make clean
   make -j2
   make install
   # release
+  rm CMakeCache.txt
   cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-sirikata -DCMAKE_BUILD_TYPE=Release .
   make clean
   make -j2
