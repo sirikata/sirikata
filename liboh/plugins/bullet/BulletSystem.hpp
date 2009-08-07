@@ -315,13 +315,6 @@ public:
     int colMask;
     int colMsg;
 
-    enum mode {
-        Disabled,               /// non-active, remove from physics
-        Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere,
-        DynamicCylinder
-    };
     /// public methods
     bulletObj(BulletSystem* sys) :
             mBtVertices(NULL),

@@ -35,7 +35,6 @@
 #include <ObjectHost_Sirikata.pbj.hpp>
 #include <ObjectHost_Persistence.pbj.hpp>
 #include <task/WorkQueue.hpp>
-#include <oh/BulletSystem.hpp>
 #include "util/RoutableMessage.hpp"
 #include "util/KnownServices.hpp"
 #include "persistence/PersistenceSentMessage.hpp"
@@ -1174,22 +1173,22 @@ void HostedObject::receivedPropertyUpdate(
             physicalParameters params;
             switch (parsedProperty.mode()) {
               case Protocol::PhysicalParameters::NONPHYSICAL:
-                params.mode = bulletObj::Disabled;
+                params.mode = physicalParameters::Disabled;
                 break;
               case Protocol::PhysicalParameters::STATIC:
-                params.mode = bulletObj::Static;
+                params.mode = physicalParameters::Static;
                 break;
               case Protocol::PhysicalParameters::DYNAMICBOX:
-                params.mode = bulletObj::DynamicBox;
+                params.mode = physicalParameters::DynamicBox;
                 break;
               case Protocol::PhysicalParameters::DYNAMICSPHERE:
-                params.mode = bulletObj::DynamicSphere;
+                params.mode = physicalParameters::DynamicSphere;
                 break;
               case Protocol::PhysicalParameters::DYNAMICCYLINDER:
-                params.mode = bulletObj::DynamicCylinder;
+                params.mode = physicalParameters::DynamicCylinder;
                 break;
               default:
-                params.mode = bulletObj::Disabled;
+                params.mode = physicalParameters::Disabled;
             }
             params.density = parsedProperty.density();
             params.friction = parsedProperty.friction();

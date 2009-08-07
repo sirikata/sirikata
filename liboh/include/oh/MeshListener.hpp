@@ -39,8 +39,16 @@ namespace Sirikata {
 using Transfer::URI;
 
 struct physicalParameters {
+    enum PhysicalMode {
+        Disabled = 0,               /// non-active, remove from physics
+        Static,                 /// collisions, no dynamic movement (bullet mass==0)
+        DynamicBox,                 /// fully physical -- collision & dynamics
+        DynamicSphere,
+        DynamicCylinder
+    };
+
     std::string name;
-    int mode;
+    PhysicalMode mode;
     float density;
     float friction;
     float bounce;
@@ -48,7 +56,7 @@ struct physicalParameters {
     int colMsg;
     Vector3f hull;
     physicalParameters() {
-        mode = 0;
+        mode = Disabled;
         density = 0;
         friction = 0;
         bounce = 0;
