@@ -617,7 +617,8 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
 )
 
 # For scripting
-ADD_PBJ_TARGET(MessageHeader ${ProtocolBuffersSources}
+SET(ScriptingProtocolBuffersSources ${ProtocolBuffersSources} MessageHeader)
+ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -710,7 +711,7 @@ ENDIF()
 IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
   SET(AdditionalProtoDepends)
-  FOREACH(FILE ${ProtocolBuffersSources})
+  FOREACH(FILE ${ScriptingProtocolBuffersSources})
      SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
      SET(SirikataProtoScriptSources ${SirikataProtoScriptSources}
   ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs ${ScriptsRoot}/csharp/protocol/${FILE}.cs )
