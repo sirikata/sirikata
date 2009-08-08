@@ -951,13 +951,14 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 loc.set_rotational_axis(globalLoc.getAxisOfRotation());
             if (all_fields || (fields & LocRequest::ANGULAR_SPEED))
                 loc.set_angular_speed(globalLoc.getAngularSpeed());
-            loc.SerializeToString(response);
+            if (response)
+                loc.SerializeToString(response);
         } else {
             SILOG(objecthost, error, "LocRequest message not for any known object.");
         }
         // loc requests need to be fast, unlikely to land in infinite recursion.
         mObjectHost->getWorkQueue()->dequeueAll();
-        return;
+        return;             /// comment out if we want scripts to see these requests
     }
     else if (name == "SetLoc") {
         ObjLoc setloc;
