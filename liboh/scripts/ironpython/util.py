@@ -5,9 +5,9 @@ import traceback
 from System import Array, Byte
 
 def fromByteArray(b):
-    return ''.join(chr(c) for c in b)
+    return tuple(b)
 def toByteArray(p):
-    return Array[Byte](tuple(Byte(ord(c)) for c in p))
+    return Array[Byte](tuple(Byte(c) for c in p))
 
 #Callback is of the format
 #def callback(persistenceReadInstance, lastMessageHeader, persistenceError)
@@ -49,7 +49,7 @@ class PersistenceRead:
             self.allcb(self, hdr, None)
             return False
         response = Persistence_pb2.Response()
-        print repr(str(fromByteArray(bodyser)))
+        #print repr(str(fromByteArray(bodyser)))
         response.ParseFromString(fromByteArray(bodyser))
         if response.HasField('return_status'):
             self.allcb(self, hdr, response.return_status)
