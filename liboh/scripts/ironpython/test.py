@@ -5,19 +5,11 @@ import protocol.Sirikata_pb2 as pbSiri
 import protocol.Persistence_pb2 as pbPer
 import protocol.MessageHeader_pb2 as pbHead
 
-from System import Array, Byte
+from Sirikata.Runtime import HostedObject
+print dir(HostedObject)
 
-def fromByteArray(b):
-    return ''.join(chr(c) for c in b)
-def toByteArray(p):
-    return Array[Byte](tuple(Byte(ord(c)) for c in p))
+import util
 
-print "helloish"
-def fact(i):
-    if (i==0):
-        return 1;
-    return i*fact(i-1);
-print fact(9)
 class exampleclass:
     def __init__(self):
         self.val=0
@@ -28,12 +20,12 @@ class exampleclass:
     def reallyProcessRPC(self,serialheader,name,serialarg):
         print "Got an RPC named",name
         header = pbHead.Header()
-        header.ParseFromString(fromByteArray(serialheader))
+        header.ParseFromString(util.fromByteArray(serialheader))
         if name == "RetObj":
             retobj = pbSiri.RetObj()
-            print repr(fromByteArray(serialarg))
+            print repr(util.fromByteArray(serialarg))
             try:
-                retobj.ParseFromString(fromByteArray(serialarg))
+                retobj.ParseFromString(util.fromByteArray(serialarg))
             except:
                 pass
             self.objid = retobj.object_reference
@@ -45,8 +37,28 @@ class exampleclass:
             self.setPosition(angular_speed=1,axis=(0,1,0))
         elif name == "ProxCall":
             proxcall = pbSiri.ProxCall()
-            proxcall.ParseFromString(fromByteArray(serialarg))
-            print "THIS IS PHYTHON AnD I SEE A OBJECT CALLED",uuid.UUID(bytes=proxcall.proximate_object)
+            proxcall.ParseFromString(util.fromByteArray(serialarg))
+            objRef = uuid.UUID(bytes=proxcall.proximate_object)
+            if proxcall.proximity_event == pbSiri.ProxCall.ENTERED_PROXIMITY:
+                myhdr = pbHead.Header()
+                myhdr.destination_space = self.spaceid
+                myhdr.destination_object = self.objid
+                dbQuery = util.PersistenceRead(self.sawAnotherObject)
+                field = dbQuery.reads.add()
+                field.field_name = 'Name'
+                dbQuery.send(HostedObject, myhdr)
+            if proxcall.proximity_event == pbSiri.ProxCall.EXITED_PROXIMITY:
+                pass
+    def sawAnotherObject(self,persistence,header,retstatus):
+        if header.HasField('return_status') or retstatus:
+            return
+        uuid = uuid.UUID(bytes=header.source_object)
+        myName = ""
+        for field in persistence:
+            if field.field_name == 'Name':
+                if field.HasField('data'):
+                    myName = field.data
+        print "Object",uuid,"has name",myName
     def processRPC(self,header,name,arg):
         try:
             self.reallyProcessRPC(header,name,arg)
@@ -85,7 +97,7 @@ class exampleclass:
         header = pbHead.Header()
         header.destination_space = self.spaceid
         header.destination_object = self.objid
-        HostedObject.SendMessage(toByteArray(header.SerializeToString()+body.SerializeToString()))
+        HostedObject.SendMessage(util.toByteArray(header.SerializeToString()+body.SerializeToString()))
     def sendNewProx(self):
         print "sendprox2"
         try:
@@ -104,7 +116,7 @@ class exampleclass:
             header.destination_port = 3 # libcore/src/util/KnownServices.hpp
             headerstr = header.SerializeToString()
             bodystr = body.SerializeToString()
-            HostedObject.SendMessage(toByteArray(headerstr+bodystr))
+            HostedObject.SendMessage(util.toByteArray(headerstr+bodystr))
         except:
             print "ERORR"
             traceback.print_exc()
@@ -115,24 +127,3 @@ class exampleclass:
         x=str(tim)
         print "Current time is "+x;
         #HostedObject.SendMessage(tuple(Byte(ord(c)) for c in x));# this seems to get into hosted object...but fails due to bad encoding
-from Sirikata.Runtime import HostedObject
-from System import Array, Byte
-
-print dir(HostedObject)
-x="hello worlds"
-if False:
-    #
-    hdr=ReadOnlyMessage()
-    body=MessageBody()
-#print "helloishdone"
-    hdr.id=1
-    hdr.destination_object="1234567890123456"
-#print "helloishbaked"
-    srlhdr=hdr.SerializeToString()
-#print "helloishbakedflat"
-
-    hdr1=ReadOnlyMessage()
-    hdr1.MergeFromString(srlhdr)
-    print hdr1.destination_object
-    print hdr1.id
-    print 5*6

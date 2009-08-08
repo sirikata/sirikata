@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 namespace Sirikata.Runtime {
 
 
-public delegate void FunctionReturnCallback(byte[] header,byte[] body);
+public delegate bool FunctionReturnCallback(byte[] header,byte[] body);
 
 public class HostedObject{
     

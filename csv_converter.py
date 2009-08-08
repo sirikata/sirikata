@@ -207,6 +207,10 @@ class CsvToSql:
             meshuri = Sirikata.StringProperty()
             meshuri.value = row['meshURI']
             self.set(cursor, uuid, 'MeshURI', meshuri.SerializeToString())
+            if (row.get('name','')):
+                meshuri = Sirikata.StringProperty()
+                meshuri.value = row['name']
+                self.set(cursor, uuid, 'Name', meshuri.SerializeToString())
             print "** Adding a Mesh ",uuid,"named",row.get('name',''),"with",row['meshURI']
         elif row['objtype']=='light':
             print "** Adding a Light ",uuid

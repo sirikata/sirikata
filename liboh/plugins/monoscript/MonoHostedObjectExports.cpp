@@ -34,22 +34,29 @@ static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObj
                                               const RoutableMessageHeader&responseHeader,
                                               MemoryReference responseBody) {
     std::tr1::shared_ptr<HostedObject>ho(weak_ho);
+    bool keepquery = false;
     if (ho) {
         MonoContext::getSingleton().push(MonoContextData());
         MonoContext::getSingleton().setVWObject(&*ho,domain);
         String header;
         responseHeader.SerializeToString(&header);
         try {
-            callback.invoke(MonoContext::getSingleton().getDomain().ByteArray(header.data(),
+            Object ret = callback.invoke(MonoContext::getSingleton().getDomain().ByteArray(header.data(),
                                                                               header.size()),
                             MonoContext::getSingleton().getDomain().ByteArray(responseBody.data(),
                                                                               responseBody.size()));
+            if (!ret.null()) {
+                keepquery = ret.unboxBoolean();
+            }
         }catch (Mono::Exception&e) {
             SILOG(mono,debug,"Callback raised exception: "<<e);
+            keepquery = false;
         }
         MonoContext::getSingleton().pop();
     }
-    delete sentMessage;
+    if (!keepquery) {
+        delete sentMessage;
+    }
 }
 static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoObject*callback, const Duration&duration){
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
