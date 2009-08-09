@@ -23,7 +23,7 @@ class exampleclass:
         header.ParseFromString(util.fromByteArray(serialheader))
         if name == "RetObj":
             retobj = pbSiri.RetObj()
-            print repr(util.fromByteArray(serialarg))
+            #print repr(util.fromByteArray(serialarg))
             try:
                 retobj.ParseFromString(util.fromByteArray(serialarg))
             except:
@@ -32,13 +32,13 @@ class exampleclass:
             print "sendprox1"
             self.spaceid = header.source_space
 
-            print uuid.UUID(bytes=self.spaceid)
+            print util.tupleToUUID(self.spaceid)
             self.sendNewProx()
             self.setPosition(angular_speed=1,axis=(0,1,0))
         elif name == "ProxCall":
             proxcall = pbSiri.ProxCall()
             proxcall.ParseFromString(util.fromByteArray(serialarg))
-            objRef = uuid.UUID(bytes=proxcall.proximate_object)
+            objRef = util.tupleToUUID(proxcall.proximate_object)
             if proxcall.proximity_event == pbSiri.ProxCall.ENTERED_PROXIMITY:
                 myhdr = pbHead.Header()
                 myhdr.destination_space = self.spaceid
@@ -52,7 +52,7 @@ class exampleclass:
     def sawAnotherObject(self,persistence,header,retstatus):
         if header.HasField('return_status') or retstatus:
             return
-        uuid = uuid.UUID(bytes=header.source_object)
+        uuid = util.tupleToUUID(header.source_object)
         myName = ""
         for field in persistence:
             if field.field_name == 'Name':
@@ -112,7 +112,7 @@ class exampleclass:
             header = pbHead.Header()
             print "sendprox5"
             header.destination_space = self.spaceid;
-            header.destination_object = uuid.UUID(int=0).get_bytes()
+            header.destination_object = util.tupleFromUUID(uuid.UUID(int=0))
             header.destination_port = 3 # libcore/src/util/KnownServices.hpp
             headerstr = header.SerializeToString()
             bodystr = body.SerializeToString()

@@ -8,6 +8,31 @@ def fromByteArray(b):
     return tuple(b)
 def toByteArray(p):
     return Array[Byte](tuple(Byte(c) for c in p))
+def tupleToBigEndian(t):
+    retval=0
+    for i in t:
+        retval*=256;
+        retval+=i
+    return retval
+def tupleToLittleEndian(t):
+    retval=0
+    mult=1
+    for i in t:
+        adder=mult
+        adder*=i;
+        retval+=adder
+        mult*=256;
+    return retval
+def bigEndianTuple16(i):
+    return ((i/(256**15))%256,(i/(256**14))%256,(i/(256**13))%256,(i/(256**12))%256,(i/(256**11))%256,(i/(256**10))%256,(i/(256**9))%256,(i/(256**8))%256,(i/(256**7))%256,(i/(256**6))%256,(i/(256**5))%256,(i/(256**4))%256,(i/(256**3))%256,(i/(256**2))%256,(i/(256**1))%256,i%256)
+def littleEndianTuple16(i):
+    return (i%256,(i/(256**1))%256,(i/(256**2))%256,(i/(256**3))%256,(i/(256**4))%256,(i/(256**5))%256,(i/(256**6))%256,(i/(256**7))%256,(i/(256**8))%256,(i/(256**9))%256,(i/(256**10))%256,(i/(256**11))%256,(i/(256**12))%256,(i/(256**13))%256,(i/(256**14))%256,(i/(256**15))%256)
+
+import uuid
+def tupleToUUID(t):
+    return uuid.UUID(int=tupleToBigEndian(t))
+def tupleFromUUID(u):
+    return bigEndianTuple16(int(u))
 
 #Callback is of the format
 #def callback(persistenceReadInstance, lastMessageHeader, persistenceError)
@@ -49,7 +74,6 @@ class PersistenceRead:
             self.allcb(self, hdr, None)
             return False
         response = Persistence_pb2.Response()
-        #print repr(str(fromByteArray(bodyser)))
         response.ParseFromString(fromByteArray(bodyser))
         if response.HasField('return_status'):
             self.allcb(self, hdr, response.return_status)
