@@ -259,7 +259,12 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(ProtocolBuffers)
 IF(NOT PROTOCOLBUFFERS_FOUND)
-  MESSAGE(FATAL_ERROR "Cannot find Protocol Buffers")
+  MESSAGE(FATAL_ERROR "Cannot find Protocol Buffers
+Did you install the dependencies?
+To install dependencies go to the top level and run:
+
+make depends
+")
 ENDIF()
 
 #dependency: ANTLR
@@ -437,7 +442,13 @@ FIND_PACKAGE(SDL)
 
 #optional dependency: prox
 FIND_PACKAGE(PROX)
+IF(NOT PROX_INCLUDE_DIRS)
+  MESSAGE(FATAL_ERROR "PROX submodule not found, go to top level and run:
 
+git submodule init
+git submodule update
+")
+ENDIF()
 #dependency: awesomium
 IF(NOT AWESOMIUM_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/awesomium_v1.01_sdk_msvc8)
