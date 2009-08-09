@@ -118,6 +118,7 @@ class CsvToSql:
         key_name = self.getKeyName(key, which)
         table_insert = "INSERT INTO \"" + self.table_name + "\""
         table_insert += " VALUES (?, ?, ?)"
+        value = "".join(chr(c) for c in value);
         curs.execute(table_insert, (buffer(object_name), key_name, buffer(value)))
 
     def go(self, openfile, **csvargs):
