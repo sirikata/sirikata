@@ -604,10 +604,16 @@ SET(ProtocolBuffersSources
 SET(SirikataProtocolDirectory ${LIBCORE_SOURCE_DIR})
 
 # Based on dependencies, generate arguments for protocol buffers generation
-SET(PROTOCOLBUFFERS_GENS)
+SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
+SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
 IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-  SET(PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
+  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP)
+  # FIXME there should probably be another check for IronPython
+  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON)
 ENDIF()
+
+
+SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(MessageHeader
   INPUTDIR ${ProtocolBuffersRoot}
@@ -615,6 +621,7 @@ ADD_PBJ_TARGET(MessageHeader
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/MessageHeader_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -624,6 +631,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/Prox_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -633,7 +641,8 @@ ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  ${PROTOCOLBUFFERS_GENS}
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${SCRIPTING_PROTOCOLBUFFERS_GENS}
 )
 SET(PROTOCOLBUFFERS_SCRIPTING_OUTPUTS ${PROTOCOLBUFFERS_ALL_OUTPUTS})
 
@@ -643,6 +652,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHost_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -652,6 +662,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/ObjectHostBinary_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -661,6 +672,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/Space_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -670,6 +682,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/Test_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -679,6 +692,7 @@ ADD_PBJ_TARGET(Persistence
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/SQLite_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -688,6 +702,7 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/Proximity_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
@@ -698,6 +713,7 @@ ADD_PBJ_TARGET(Subscription
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
   OUTPUTCPPFILE ${SirikataProtocolDirectory}/Subscription_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
 
