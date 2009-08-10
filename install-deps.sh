@@ -116,6 +116,12 @@ fi # opt_components_sst
 
 
 # sirikata
+if [[ "x${ARCH}" == "x" ]]; then
+  ARCH=`uname -m`
+fi
+
+sirikata_commit="17d6a29c7b750e0b8d64a84a2b1f597bf55de777"
+
 if [ ${opt_components_sirikata} == "true" ]; then
 
   if [ ${opt_update} != "true" ]; then
@@ -127,11 +133,13 @@ if [ ${opt_components_sirikata} == "true" ]; then
     fi
     git clone git://github.com/sirikata/sirikata.git sirikata
     cd sirikata
-    make minimalfulldepends
+    make ARCH=${ARCH} minimalfulldepends
   else
     cd sirikata
+    git checkout master
     git pull origin
   fi
+  git checkout ${sirikata_commit}
   git submodule init
   git submodule update
   cd build/cmake
