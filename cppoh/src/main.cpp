@@ -266,6 +266,7 @@ int main ( int argc,const char**argv ) {
         else {
             SILOG(cppoh,info,String("Successfully initialized ") + simName);
             sims.push_back(sim);
+			sim->forwardMessagesTo(oh);
         }
     }
     while ( continue_simulation ) {
@@ -274,6 +275,9 @@ int main ( int argc,const char**argv ) {
         }
         Network::IOServiceFactory::pollService(ioServ);
     }
+	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
+		(*it)->endForwardingMessagesTo(oh);
+	}
 
     delete oh;
 
