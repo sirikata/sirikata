@@ -65,7 +65,9 @@ class SentMessage::TimerHandler {
         msg.set_source_port(mSentMessage->header().destination_port());
         msg.set_return_status(RoutableMessageHeader::TIMEOUT_FAILURE);
         msg.set_reply_id(mSentMessage->getId());
-        mSentMessage->processMessage(msg, MemoryReference(NULL,0));
+        mSentMessage->mTimerHandle=NULL;
+        mSentMessage->mResponseCallback(mSentMessage, msg, MemoryReference(NULL,0));
+        //formerly called this, but that asked asio to unset an ignored callback mSentMessage->processMessage(msg, MemoryReference(NULL,0));
     }
 public:
     TimerHandler(Network::IOService *io, SentMessage *messageInfo, int num_seconds)

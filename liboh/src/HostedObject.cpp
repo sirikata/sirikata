@@ -997,7 +997,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                     query_id++;
                     Protocol::NewProxQuery proxQuery;
                     proxQuery.set_query_id(my_query_id);
-                    proxQuery.set_max_radius(100);
+                    proxQuery.set_max_radius(1.0e+30);
                     String proxQueryStr;
                     proxQuery.SerializeToString(&proxQueryStr);
                     RoutableMessageBody body;
