@@ -155,7 +155,7 @@ int main ( int argc,const char**argv ) {
     using namespace Sirikata;
 
     PluginManager plugins;
-    const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics", NULL};
+    const char* pluginNames[] = { "tcpsst", "sqlite", "ogregraphics", "bulletphysics", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
         plugins.load( DynamicLibrary::filename(*plugin_name) );
 

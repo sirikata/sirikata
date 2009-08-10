@@ -37,19 +37,25 @@
 namespace Sirikata {
 namespace Persistence {
 
-template <class MessageType> class PersistenceSentMessage : protected SentMessageBody<MessageType> {
+template <class MessageType> class PersistenceSentMessage : public SentMessageBody<MessageType> {
 protected:
     typedef PersistenceSentMessage<MessageType> ThisClass;
     typedef SentMessageBody<MessageType> SuperClass;
 
 public:
+    static ThisClass* cast_sent_message(SentMessage * parent) {
+        return static_cast<ThisClass*>(parent);        
+    }
+    static const ThisClass* cast_sent_message(const SentMessage * parent) {
+        return static_cast<const ThisClass*>(parent);
+    }
     typedef std::tr1::function<void(
         ThisClass *msg,
         const RoutableMessageHeader &lastHeader,
-        Protocol::Response::ReturnStatus errorCode)> QueryCallback;
+        Protocol::Response::ReturnStatus errorCode)> PersistenceCallback;
 
 private:
-    QueryCallback mRealCallback;
+    PersistenceCallback mRealCallback;
 
     static void receivedPersistenceMessageStatic(
         SentMessage* sentMessage,
@@ -109,6 +115,11 @@ private:
             SILOG(persistence,debug,"Will keep waiting for rest of persistence message ...");
         }
     }
+//do not call
+    void setCallback(const SentMessage::QueryCallback &cb) {
+        this->SentMessage::setCallback(cb);
+    }
+
 public:
     PersistenceSentMessage(QueryTracker *tracker) : SuperClass(tracker) {
         SentMessage::setCallback(&ThisClass::receivedPersistenceMessageStatic);
@@ -116,7 +127,7 @@ public:
     ~PersistenceSentMessage() {}
     
     /// sets the callback handler. Must be called at least once.
-    void setCallback(const QueryCallback &cb) {
+    void setPersistenceCallback(const PersistenceCallback &cb) {
         mRealCallback = cb;
     }
 

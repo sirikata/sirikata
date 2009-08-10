@@ -189,6 +189,7 @@ struct HostedObject::PrivateCallbacks {
         RoutableMessageHeader header;
         MemoryReference bodyData = header.ParseFromArray(&(msgChunk[0]),msgChunk.size());
         header.set_source_space(sid);
+        header.set_destination_space(sid);
         {
             ProxyObjectPtr destinationObject = realThis->getProxy(header.source_space());
             if (destinationObject) {
@@ -207,7 +208,6 @@ struct HostedObject::PrivateCallbacks {
         realThis->processRoutableMessage(header, bodyData);
     }
 
-    typedef SentMessageBody<Persistence::Protocol::ReadWriteSet> SentPersistence;
     static void handlePersistenceResponse(
         HostedObject *realThis,
         const RoutableMessageHeader &origHeader,
@@ -215,7 +215,7 @@ struct HostedObject::PrivateCallbacks {
         const RoutableMessageHeader &header,
         MemoryReference bodyData)
     {
-        std::auto_ptr<SentPersistence> sentDestruct(static_cast<SentPersistence*>(sent));
+        std::auto_ptr<SentMessageBody<Persistence::Protocol::ReadWriteSet> > sentDestruct(static_cast<SentMessageBody<Persistence::Protocol::ReadWriteSet> *>(sent));
         SILOG(cppoh,debug,"Got some persistence back: stat = "<<(int)header.return_status());
         if (header.has_return_status()) {
             Persistence::Protocol::Response resp;
@@ -246,7 +246,7 @@ struct HostedObject::PrivateCallbacks {
         Response immedResponse;
         int immedIndex = 0;
 
-        SentPersistence *persistenceMsg = new SentPersistence(&realThis->mTracker);
+        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker);
         int outIndex = 0;
         ReadWriteSet &outMessage = persistenceMsg->body();
         if (rws.has_options()) {
@@ -422,7 +422,7 @@ struct HostedObject::PrivateCallbacks {
         ObjLoc objLoc;
         objLoc.ParseFromString(responseMessage.body().message_arguments(0));
 
-        SentPersistence *request = new SentPersistence(&realThis->mTracker);
+        Persistence::SentReadWriteSet *request = new Persistence::SentReadWriteSet(&realThis->mTracker);
 
         request->header().set_destination_space(sentMessage->getSpace());
         request->header().set_destination_object(sentMessage->getRecipient());
@@ -436,7 +436,7 @@ struct HostedObject::PrivateCallbacks {
         request->body().add_reads().set_field_name("_Passwd");
         request->body().add_reads().set_field_name("IsCamera");
         request->body().add_reads().set_field_name("Parent");
-        request->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
+        request->setPersistenceCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectProperties,
                                             weakThis, _1, _2, _3,
                                             queryId, objLoc));
         request->setTimeout(5.0);
@@ -446,65 +446,38 @@ struct HostedObject::PrivateCallbacks {
         const HostedObjectWPtr &weakThis,
         SentMessage* sentMessageBase,
         const RoutableMessageHeader &hdr,
-        MemoryReference bodyData,
+        Persistence::Protocol::Response::ReturnStatus returnStatus,
         int32 queryId,
         const ObjLoc &objLoc)
     {
         using namespace Persistence::Protocol;
-        Response response;
-        response.ParseFromArray(bodyData.data(), bodyData.length());
-        SentPersistence *sentMessage = (static_cast<SentPersistence*>(sentMessageBase));
+        std::auto_ptr<Persistence::SentReadWriteSet> sentMessage(Persistence::SentReadWriteSet::cast_sent_message(sentMessageBase));
         HostedObjectPtr realThis(weakThis.lock());
         if (!realThis) {
-            delete sentMessage;
             return;
         }
         SpaceDataMap::iterator iter = realThis->mSpaceData->find(sentMessage->getSpace());
         if (iter == realThis->mSpaceData->end()) {
-            delete sentMessage;
             return;
         }
         ObjectHostProxyManager *proxyMgr = iter->second.mSpaceConnection.getTopLevelStream().get();
         PerSpaceData::ProxQueryMap::iterator qmiter = iter->second.mProxQueryMap.find(queryId);
         if (qmiter == iter->second.mProxQueryMap.end()) {
-            delete sentMessage;
             return;
         }
         std::set<ObjectReference>::iterator proxyiter = qmiter->second.find(sentMessage->getRecipient());
         if (proxyiter == qmiter->second.end()) {
-            delete sentMessage;
             return;
         }
         SpaceObjectReference proximateObjectId(sentMessage->getSpace(), sentMessage->getRecipient());
         bool persistence_error = false;
-        if (hdr.return_status() != RoutableMessageHeader::SUCCESS) {
+        if (hdr.return_status() != RoutableMessageHeader::SUCCESS ||returnStatus) {
             SILOG(cppoh,info,"FAILURE receiving prox object properties "<<
                   proximateObjectId.object()<<": Error = "<<(int)hdr.return_status());
             persistence_error = true;
         }
-        SILOG(cppoh,debug,"Received prox object properties "<<proximateObjectId.object()<<": reads size = "<<response.reads_size());
+        SILOG(cppoh,debug,"Received prox object properties "<<proximateObjectId.object()<<": reads size = ?");
         int index = 0;
-        for (int i = 0, index = 0; i < response.reads_size(); i++, index++) {
-            if (response.reads(i).has_index()) {
-                index = response.reads(i).index();
-            }
-            if (index >= 0 && index < sentMessage->body().reads_size()) {
-                if (response.reads(i).has_data()) {
-                    sentMessage->body().reads(index).set_data(response.reads(i).data());
-                    SILOG(cppoh,debug,"        "<<index<<" HAS DATA! "<<i);
-                } else {
-                    if (response.reads(i).has_return_status()) {
-                        sentMessage->body().reads(index).set_return_status(
-                            response.reads(i).return_status());
-                        SILOG(cppoh,debug,"        "<<index<<" HAS ERROR! "<<i);
-                    } else {
-                        sentMessage->body().reads(index).set_return_status(
-                            StorageElement::KEY_MISSING);
-                        SILOG(cppoh,debug,"        "<<index<<" is missing!! "<<i);
-                    }
-                }
-            }
-        }
         bool haveAll = true;
         for (int i = 0; i < sentMessage->body().reads_size(); i++) {
             if (!sentMessage->body().reads(i).has_data() && !sentMessage->body().reads(i).has_return_status()) {
@@ -512,9 +485,10 @@ struct HostedObject::PrivateCallbacks {
             }
         }
         if (persistence_error || haveAll) {
-            delete sentMessage; // No more messages--clean up.
+
         } else {
-            return; // More messages will come.
+            assert(false&&"Received incomplete persistence callback for the same read/write set: should only ever get one");
+            return; // More messages would have come before the new design.
         }
         bool hasMesh=false;
         bool hasLight=false;
@@ -564,7 +538,6 @@ struct HostedObject::PrivateCallbacks {
             request->setCallback(std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
             request->serializeSend();
         }
-        delete sentMessage;
         return;
     }
 
@@ -758,7 +731,7 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
 
     Persistence::SentReadWriteSet *msg;
     msg = new Persistence::SentReadWriteSet(&mTracker);
-    msg->setCallback(std::tr1::bind(
+    msg->setPersistenceCallback(std::tr1::bind(
                          &PrivateCallbacks::initializeDatabaseCallback,
                          this, spaceID,
                          _1, _2, _3));
