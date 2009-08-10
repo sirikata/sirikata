@@ -572,45 +572,51 @@ private:
             ent->setSelected(true);
         }
     }
-
+	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
+		ProxyObjectPtr parentProxy;
+		while ((parentProxy=camProxy->getParentProxy())) {
+			camProxy=parentProxy;
+		}
+		return camProxy;
+	}
     void moveAction(Vector3f dir, float amount) {
         Task::AbsTime now(Task::AbsTime::now());
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *cam = mParent->mPrimaryCamera;
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Location loc = cam->getProxy().extrapolateLocation(now);
+        Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
         loc.setVelocity((orient * dir) * amount * WORLD_SCALE);
         loc.setAngularSpeed(0);
 
-        cam->getProxy().setLocation(now, loc);
+        cam->setLocation(now, loc);
     }
 
     void rotateAction(Vector3f about, float amount) {
         Task::AbsTime now(Task::AbsTime::now());
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *cam = mParent->mPrimaryCamera;
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Location loc = cam->getProxy().extrapolateLocation(now);
+        Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
         loc.setAxisOfRotation(about);
         loc.setAngularSpeed(amount);
         loc.setVelocity(Vector3f(0,0,0));
 
-        cam->getProxy().setLocation(now, loc);
+        cam->setLocation(now, loc);
     }
 
     void stableRotateAction(float dir, float amount) {
         Task::AbsTime now(Task::AbsTime::now());
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *cam = mParent->mPrimaryCamera;
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        Location loc = cam->getProxy().extrapolateLocation(now);
+        Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
         double p, r, y;
@@ -624,7 +630,7 @@ private:
         loc.setAngularSpeed(dir*amount);
         loc.setVelocity(Vector3f(0,0,0));
 
-        cam->getProxy().setLocation(now, loc);
+        cam->setLocation(now, loc);
     }
 
     void setDragModeAction(const String& modename) {
