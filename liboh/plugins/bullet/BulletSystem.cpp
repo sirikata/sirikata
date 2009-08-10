@@ -614,6 +614,31 @@ struct  raycastCallback : public btCollisionWorld::RayResultCallback {
         return rayResult.m_hitFraction;
     }
 };
+bool BulletSystem::forwardMessagesTo(MessageService*ms) {
+	messageServices.push_back(ms);
+	return true;
+}
+bool BulletSystem::endForwardingMessagesTo(MessageService*ms) {	
+	bool retval=false;
+	do {
+		std::vector<MessageService*>::iterator where=std::find(messageServices.begin(),messageServices.end(),ms);
+		if (where!=messageServices.end()){
+			messageServices.erase(where);
+			retval=true;
+		} else break;
+	}while (true);
+	return retval;
+}
+
+void BulletSystem::processMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
+
+}
+
+void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
+	for (vector<MessageService*>::iterator i=messageServices.begin(),ie=messageServices.end();i!=ie;++i) {
+		(*i)->processMessage(mh,message_body);
+	}
+}
 
 bool BulletSystem::queryRay(const Vector3d& position,
                             const Vector3f& direction,

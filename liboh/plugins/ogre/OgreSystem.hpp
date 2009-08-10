@@ -130,6 +130,16 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
                      Vector3f &returnNormal,
                      int which=0) const;
 public:
+    bool forwardMessagesTo(MessageService*){return false;}
+    bool endForwardingMessagesTo(MessageService*){return false;}
+    /**
+     * Process a message that may be meant for this system
+     */
+    void processMessage(const RoutableMessageHeader&,
+						MemoryReference message_body){
+		NOT_IMPLEMENTED(ogregraphics);
+	}
+	
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
