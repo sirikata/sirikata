@@ -133,7 +133,7 @@ if [ ${opt_components_sirikata} == "true" ]; then
     fi
     git clone git://github.com/sirikata/sirikata.git sirikata
     cd sirikata
-    make ARCH=${ARCH} minimalfulldepends
+    make ARCH=${ARCH} minimaldepends
   else
     cd sirikata
     git checkout master
