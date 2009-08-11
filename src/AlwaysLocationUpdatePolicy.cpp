@@ -181,9 +181,16 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
         oid.id = mID;
         BulkLocationMessage* msg = new BulkLocationMessage(oid);
 
-        for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++)
-            msg->addUpdate( up_it->first, up_it->second.location, up_it->second.bounds );
+        for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
+            CBR::Protocol::Loc::ILocationUpdate update = msg->contents.add_update();
+            update.set_object(up_it->first);
+            CBR::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
+            location.set_t(PBJ::Time::microseconds(up_it->second.location.updateTime().raw())); // FIXME we should just use the same time class as sirikata
+            location.set_position(up_it->second.location.position());
+            location.set_velocity(up_it->second.location.velocity());
+            update.set_bounds(up_it->second.bounds);
 
+        }
         mRouter->route(msg, sid);
 
         sub_info->outstandingUpdates.clear();

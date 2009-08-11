@@ -31,7 +31,6 @@
  */
 
 #include "Message.hpp"
-#include "CBR_Loc.pbj.hpp"
 
 namespace CBR {
 
@@ -980,26 +979,9 @@ ServerProximityResultMessage::ServerProximityResultMessage(const OriginID& origi
 ServerProximityResultMessage::ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-
-    uint16 nupdates = 0;
-    memcpy(&nupdates, &wire[offset], sizeof(nupdates));
-    offset += sizeof(nupdates);
-    for(uint16 idx = 0; idx < nupdates; idx++) {
-        ObjectUpdate update;
-        memcpy(&update, &wire[offset], sizeof(update));
-        offset += sizeof(update);
-        mObjectUpdates.push_back(update);
-    }
-
-    uint16 nremovals = 0;
-    memcpy(&nremovals, &wire[offset], sizeof(nremovals));
-    offset += sizeof(nremovals);
-    for(uint16 idx = 0; idx < nremovals; idx++) {
-        UUID objrem;
-        memcpy(&objrem, &wire[offset], sizeof(objrem));
-        offset += sizeof(objrem);
-        mObjectRemovals.push_back(objrem);
-    }
+    bool parse_success = contents.ParseFromArray((void*)&wire[offset], wire.size() - offset);
+    assert(parse_success);
+    offset = wire.size();
 }
 
 ServerProximityResultMessage::~ServerProximityResultMessage() {
@@ -1012,43 +994,14 @@ MessageType ServerProximityResultMessage::type() const {
 uint32 ServerProximityResultMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
 
-    uint16 nupdates = mObjectUpdates.size();
-    uint16 nremovals = mObjectRemovals.size();
-
-    wire.resize( wire.size() +
-        sizeof(nupdates) + nupdates * sizeof(ObjectUpdate) +
-        sizeof(nremovals) + nremovals * sizeof(UUID)
-    );
-
-
-    memcpy(&wire[offset], &nupdates, sizeof(nupdates));
-    offset += sizeof(nupdates);
-    for(uint16 idx = 0; idx < nupdates; idx++) {
-        memcpy(&wire[offset], &mObjectUpdates[idx], sizeof(mObjectUpdates[idx]));
-        offset += sizeof(mObjectUpdates[idx]);
-    }
-
-
-    memcpy(&wire[offset], &nremovals, sizeof(nremovals));
-    offset += sizeof(nremovals);
-    for(uint16 idx = 0; idx < nremovals; idx++) {
-        memcpy(&wire[offset], &mObjectRemovals[idx], sizeof(mObjectRemovals[idx]));
-        offset += sizeof(mObjectRemovals[idx]);
-    }
+    std::string payload;
+    bool serialized_success = contents.SerializeToString(&payload);
+    assert(serialized_success);
+    wire.resize( wire.size() + payload.size() );
+    memcpy(&wire[offset], &payload[0], payload.size());
+    offset += payload.size();
 
     return offset;
-}
-
-void ServerProximityResultMessage::addObjectUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    ObjectUpdate update;
-    update.object = objid;
-    update.location = loc;
-    update.bounds = bounds;
-    mObjectUpdates.push_back(update);
-}
-
-void ServerProximityResultMessage::addObjectRemoval(const UUID& objid) {
-    mObjectRemovals.push_back(objid);
 }
 
 
@@ -1062,21 +1015,9 @@ BulkLocationMessage::BulkLocationMessage(const OriginID& origin)
 BulkLocationMessage::BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    CBR::Protocol::Loc::BulkLocationUpdate updates;
-    bool parse_success = updates.ParseFromArray((void*)&wire[offset], wire.size() - offset);
+    bool parse_success = contents.ParseFromArray((void*)&wire[offset], wire.size() - offset);
     assert(parse_success);
     offset = wire.size();
-
-    for(uint32 idx = 0; idx < updates.update_size(); idx++) {
-        CBR::Protocol::Loc::ILocationUpdate wire_update = updates.update(idx);
-        Update update;
-        update.object = wire_update.object();
-        Time t( (wire_update.t() - PBJ::Time::null()).toMicroseconds() ); // FIXME we should just be able to get raw time
-        MotionVector3f motion(wire_update.position(), wire_update.velocity());
-        update.location = TimedMotionVector3f(t, motion);
-        update.bounds = wire_update.bounds();
-        mUpdates.push_back(update);
-    }
 }
 
 BulkLocationMessage::~BulkLocationMessage() {
@@ -1089,33 +1030,14 @@ MessageType BulkLocationMessage::type() const {
 uint32 BulkLocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
 
-    CBR::Protocol::Loc::BulkLocationUpdate updates;
-    for(uint32 idx = 0; idx < mUpdates.size(); idx++) {
-        updates.add_update();
-        CBR::Protocol::Loc::ILocationUpdate update = updates.mutable_update(idx);
-        update.set_object(mUpdates[idx].object);
-        update.set_t(PBJ::Time::microseconds(mUpdates[idx].location.updateTime().raw())); // FIXME we should just use the same time class as sirikata
-        update.set_position(mUpdates[idx].location.position());
-        update.set_velocity(mUpdates[idx].location.velocity());
-        update.set_bounds(mUpdates[idx].bounds);
-    }
-
     std::string payload;
-    bool serialized_success = updates.SerializeToString(&payload);
+    bool serialized_success = contents.SerializeToString(&payload);
     assert(serialized_success);
     wire.resize( wire.size() + payload.size() );
     memcpy(&wire[offset], &payload[0], payload.size());
     offset += payload.size();
 
     return offset;
-}
-
-void BulkLocationMessage::addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    Update update;
-    update.object = objid;
-    update.location = loc;
-    update.bounds = bounds;
-    mUpdates.push_back(update);
 }
 
 

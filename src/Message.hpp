@@ -38,6 +38,9 @@
 #include "MotionVector.hpp"
 #include "ServerNetwork.hpp"
 
+#include "CBR_Loc.pbj.hpp"
+#include "CBR_Prox.pbj.hpp"
+
 namespace CBR {
 
 typedef uint8 MessageType;
@@ -416,63 +419,32 @@ private:
 
 class ServerProximityResultMessage : public Message {
 public:
-    struct ObjectUpdate {
-        UUID object;
-        TimedMotionVector3f location;
-        BoundingSphere3f bounds;
-    };
-
     ServerProximityResultMessage(const OriginID& origin);
     ~ServerProximityResultMessage();
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    void addObjectUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
-    void addObjectRemoval(const UUID& objid);
-
-    std::vector<ObjectUpdate> objectUpdates() const {
-        return mObjectUpdates;
-    }
-
-    std::vector<UUID> objectRemovals() const {
-        return mObjectRemovals;
-    }
-
+    CBR::Protocol::Prox::ProximityResults contents;
 private:
     friend class Message;
     ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    std::vector<ObjectUpdate> mObjectUpdates;
-    std::vector<UUID> mObjectRemovals;
 };
 
 
 /** Location updates from Prox/Loc to an object. */
 class BulkLocationMessage : public Message {
 public:
-    struct Update {
-        UUID object;
-        TimedMotionVector3f location;
-        BoundingSphere3f bounds;
-    };
-
     BulkLocationMessage(const OriginID& origin);
     ~BulkLocationMessage();
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    void addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
-
-    std::vector<Update> updates() const {
-        return mUpdates;
-    }
+    CBR::Protocol::Loc::BulkLocationUpdate contents;
 private:
     friend class Message;
     BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    std::vector<Update> mUpdates;
 };
 
 } // namespace CBR

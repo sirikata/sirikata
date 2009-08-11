@@ -197,11 +197,22 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added) {
                 mLocService->subscribe(sid, evt_it->id());
-                result_msg->addObjectUpdate(evt_it->id(), mLocalLocCache->location(evt_it->id()), mLocalLocCache->bounds(evt_it->id()));
+
+                CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
+                addition.set_object( evt_it->id() );
+
+                TimedMotionVector3f loc = mLocalLocCache->location(evt_it->id());
+                CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                msg_loc.set_t(PBJ::Time::microseconds(loc.updateTime().raw())); // FIXME we should just use the same time class as sirikata
+                msg_loc.set_position(loc.position());
+                msg_loc.set_velocity(loc.velocity());
+
+                addition.set_bounds( mLocalLocCache->bounds(evt_it->id()) );
             }
             else {
                 mLocService->unsubscribe(sid, evt_it->id());
-                result_msg->addObjectRemoval( evt_it->id() );
+                CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
+                removal.set_object( evt_it->id() );
             }
         }
         mRouter->route(result_msg, sid);

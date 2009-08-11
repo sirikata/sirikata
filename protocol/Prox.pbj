@@ -1,5 +1,5 @@
 /*  CBR
- *  Loc.pbj
+ *  Prox.pbj
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package CBR.Protocol.Loc;
+package CBR.Protocol.Prox;
 
 message TimedMotionVector {
     required time t = 1;
@@ -38,12 +38,17 @@ message TimedMotionVector {
     required vector3f velocity = 3;
 }
 
-message LocationUpdate {
+message ObjectAddition {
     required uuid object = 1;
     required TimedMotionVector location = 2;
     required boundingsphere3f bounds = 3;
 }
 
-message BulkLocationUpdate {
-    repeated LocationUpdate update = 1;
+message ObjectRemoval {
+    required uuid object = 1;
+}
+
+message ProximityResults {
+    repeated ObjectAddition addition = 1;
+    repeated ObjectRemoval removal = 2;
 }
