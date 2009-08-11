@@ -105,7 +105,7 @@ MACRO(ADD_PBJ_TARGET)
       SET(PBJ_OUTPUTS ${PBJ_PY_FILE})
       SET(PBJ_ALL_OUTPUTS ${PBJ_ALL_OUTPUTS} ${PBJ_OUTPUTS})
       SET(PBJ_PY_OPTIONS ${PBJ_PY_OPTIONS} --python_out=${ScriptsRoot}/ironpython/protocol/)
-      ADD_CUSTOM_COMMAND(OUTPUT {PBJ_PY_FILE}
+      ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_PY_FILE}
                          COMMAND ${PROTOCOLBUFFERS_COMPILER} -I${PBJ_OUTPUTDIR} ${PBJ_PY_OPTIONS}
                                  ${PBJ_PROTO_FILE}
                          DEPENDS ${PBJ_PROTO_FILE} ${PBJ_DEPENDS}
