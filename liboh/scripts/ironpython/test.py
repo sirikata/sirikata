@@ -55,7 +55,8 @@ class exampleclass:
             return
         uuid = util.tupleToUUID(header.source_object)
         myName = ""
-        for field in persistence:
+        for field in persistence.reads:
+            print field
             if field.field_name == 'Name':
                 if field.HasField('data'):
                     myName = field.data
