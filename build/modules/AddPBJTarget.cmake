@@ -46,7 +46,7 @@ MACRO(ADD_PBJ_TARGET)
     SET(PBJ_GenFile ${CMAKE_CURRENT_BINARY_DIR}/protobuf_${PBJ_PLUGINNAME}.txt)
     IF(PBJ_CPP_HEADER)
         FILE(WRITE ${PBJ_GenFile}
-             ${CPP_HEADER})
+             ${PBJ_CPP_HEADER})
     ENDIF()
   ENDIF()
   SET(PBJ_PLUGINNAME_UNDERSCORE)
