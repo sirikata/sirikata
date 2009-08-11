@@ -133,7 +133,7 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
 positionOrientation BulletObj::getBulletState() {
     btTransform trans;
     this->mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
-    return positionOrientation(trans.getOrigin(),trans.getRotation());
+    return positionOrientation(system, trans.getOrigin(),trans.getRotation());
 }
 
 void BulletObj::setBulletState(positionOrientation po) {
@@ -416,23 +416,27 @@ bool BulletSystem::tick() {
             */
 
             /// collision messages
-            for (map<set<BulletObj*>, int>::iterator i=dispatcher->collisionPairs.begin();
-                    i != dispatcher->collisionPairs.end(); ++i) {
-                set<BulletObj*>::const_iterator j=i->first.begin() ;
-                BulletObj* b0=*j++;
-                BulletObj* b1=*j;
-                if (i->second==1) {             /// recently colliding; send msg & change mode
-                    if (b1->colMsg & b0->colMask) {
-                        cout << "   begin collision msg: " << b0->mName << " --> " << b1->mName
-                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
-                    }
-                    if (b0->colMsg & b1->colMask) {
-                        cout << "   begin collision msg: " << b1->mName << " --> " << b0->mName
-                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
-                    }
-                    dispatcher->collisionPairs[i->first]=2;
-                }
-                else if (i->second==2) {        /// didn't get flagged again; collision now over
+            for (customDispatch::CollisionPairMap::iterator i=dispatcher->collisionPairs.begin();
+                 i != dispatcher->collisionPairs.end(); /*increment in if*/) {
+                BulletObj* b0=i->first.getLower();
+                BulletObj* b1=i->first.getHigher();
+                
+                
+                if (i->second.collidedThisFrame()) {             /// recently colliding; send msg & change mode
+                    if (!i->second.collidedLastFrame()) {
+                        if (b1->colMsg & b0->colMask) {
+                            cout << "   begin collision msg: " << b0->mName << " --> " << b1->mName
+                                 << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        }
+                        if (b0->colMsg & b1->colMask) {
+                            cout << "   begin collision msg: " << b1->mName << " --> " << b0->mName
+                                 << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        }     
+                    }                    
+                    i->second.resetCollisionFlag();
+                    ++i;
+                }else {        /// didn't get flagged again; collision now over
+                    assert(i->second.collidedLastFrame());
                     if (b1->colMsg & b0->colMask) {
                         cout << "     end collision msg: " << b0->mName << " --> " << b1->mName
                         << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
@@ -441,12 +445,7 @@ bool BulletSystem::tick() {
                         cout << "     end collision msg: " << b1->mName << " --> " << b0->mName
                         << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
                     }
-                    map<set<BulletObj*>, int>::iterator temp = i++;   /// (sigh) rage against the machine
-                    dispatcher->collisionPairs.erase(temp);
-                    if (i==dispatcher->collisionPairs.end()) break;
-                }
-                else if (i->second==3) {        /// re-flagged, so still colliding. clear flag
-                    dispatcher->collisionPairs[i->first]=2;
+                    dispatcher->collisionPairs.erase(i++);
                 }
             }
         }
@@ -454,6 +453,30 @@ bool BulletSystem::tick() {
     DEBUG_OUTPUT(cout << endl;)
     return true;
 }
+
+void customDispatch::ActiveCollisionState::collide(BulletObj* first, BulletObj* second, btPersistentManifold *currentCollisionManifold) {
+    bool flipped= !(first<second);
+    //so we can save the normals
+    mCollisionFlag|=COLLIDED_THIS_FRAME;
+    int size=currentCollisionManifold->getNumContacts();
+    mPointCollisions.resize(size);
+    for (int i=0;i<size;++i) {
+        Vector3d posA=positionFromBullet(first->getBulletSystem(),currentCollisionManifold->getContactPoint(i).getPositionWorldOnA());
+        Vector3d posB=positionFromBullet(first->getBulletSystem(),currentCollisionManifold->getContactPoint(i).getPositionWorldOnB());
+        Vector3f nrmB=normalFromBullet(currentCollisionManifold->getContactPoint(i).m_normalWorldOnB);
+        if (flipped) {
+            mPointCollisions[i].mWorldOnLower=posB;
+            mPointCollisions[i].mWorldOnHigher=posA;
+            mPointCollisions[i].mNormalWorldOnHigher=-nrmB;
+        }else {
+            mPointCollisions[i].mWorldOnLower=posA;
+            mPointCollisions[i].mWorldOnHigher=posB;
+            mPointCollisions[i].mNormalWorldOnHigher=nrmB;
+        }
+        mPointCollisions[i].mAppliedImpulse=currentCollisionManifold->getContactPoint(i).getAppliedImpulse();
+    }
+}
+
 
 void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& dispatcher,
                         const btDispatcherInfo& dispatchInfo) {
@@ -481,16 +504,14 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
                 if (dispatchInfo.m_timeOfImpact > toi)
                     dispatchInfo.m_timeOfImpact = toi;
             }
-            int contacts = contactPointResult.getPersistentManifold()->getNumContacts();
+            btPersistentManifold*persistentManifold=contactPointResult.getPersistentManifold();
+            int contacts = persistentManifold->getNumContacts();
             if (contacts) {
                 BulletObj* siri0 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj0];
                 BulletObj* siri1 = ((customDispatch*)(&dispatcher))->bt2siri[0][colObj1];
                 if (siri0 && siri1) {
                     if (siri0->colMask & siri1->colMask) {
-                        set<BulletObj*> temp;
-                        temp.insert(siri0);
-                        temp.insert(siri1);
-                        ((customDispatch*)(&dispatcher))->collisionPairs[temp] |= 1;
+                        ((customDispatch*)(&dispatcher))->collisionPairs[customDispatch::OrderedCollisionPair(siri0,siri1)].collide(siri0,siri1,persistentManifold);
                     }
                 }
             }

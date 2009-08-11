@@ -257,22 +257,27 @@ public:
 
 typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
 
+class BulletSystem;
 struct positionOrientation {
     Vector3d p;
     Quaternion o;
     positionOrientation() {
-    };
+    }
     positionOrientation(const Vector3d &p, const Quaternion &o) {
         this->p = p;
         this->o = o;
-    };
-    positionOrientation(const btVector3 &p, const btQuaternion &o) {
+    }
+    positionOrientation(const BulletSystem*sys, const btVector3 &p, const btQuaternion &o) {
         this->p = Vector3d(p.getX(), p.getY(), p.getZ());
         this->o = Quaternion(o.getX(), o.getY(), o.getZ(), o.getW(), Quaternion::XYZW());
-    };
+    }
 };
-
-class BulletSystem;
+Vector3d positionFromBullet(const BulletSystem*sys,const btVector3&bt) {
+    return Vector3d(bt.x(),bt.y(),bt.z());
+}
+Vector3f normalFromBullet(const btVector3&bt) {
+    return Vector3f(bt.x(),bt.y(),bt.z());
+}
 
 class BulletObj : public MeshListener,Noncopyable {
     friend class BulletSystem;
@@ -336,15 +341,86 @@ public:
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
     void buildBulletShape(const unsigned char* meshdata, int meshbytes, float& mass);
+    BulletSystem * getBulletSystem() {
+        return system;
+    }
 };
 
 class customDispatch :public btCollisionDispatcher {
-    /// the entire point of this subclass is to flag collisions in collisionPairs
 public:
-    map<btCollisionObject*, BulletObj*>* bt2siri;
-    map<set<BulletObj*>, int> collisionPairs;
+    /// the entire point of this subclass is to flag collisions in collisionPairs
+    class OrderedCollisionPair {
+        BulletObj *mLower;
+        BulletObj *mHigher;
+    public:
+        BulletObj* getLower() const{
+            return mLower;
+        }
+        BulletObj* getHigher() const{
+            return mHigher;
+        }
+        bool operator < (const OrderedCollisionPair&other)const {
+            if (other.mLower==mLower) return mHigher<other.mHigher;
+            return mLower<other.mLower;
+        }
+        bool operator == (const OrderedCollisionPair&other)const {
+            return (other.mLower==mLower&&mHigher==other.mHigher);
+        }
+        OrderedCollisionPair(BulletObj *a, BulletObj *b) {
+            if (a<b) {
+                mLower=a;
+                mHigher=b;
+            }else {
+                mLower=b;
+                mHigher=a;
+            }
+        }
+        class Hasher {public:
+                size_t operator()(const OrderedCollisionPair&p) const{
+                return std::tr1::hash<void*>()(p.getLower())^std::tr1::hash<void*>()(p.getHigher());
+                }
+        };
+    };
+    class ActiveCollisionState {
+    public:
+        struct PointCollision {
+            Vector3d mWorldOnLower;
+            Vector3d mWorldOnHigher;
+            Vector3f mNormalWorldOnHigher;
+            float mAppliedImpulse;
+        };
+    private:
+        int mCollisionFlag;
+        std::vector<PointCollision> mPointCollisions;
+    public:
+        enum CollisionFlag{
+            NEVER_COLLIDED=0,
+            COLLIDED_THIS_FRAME=1,
+            COLLIDED_LAST_FRAME=2,
+            COLLIDED_THIS_AND_LAST_FRAME=3
+        };
+        ActiveCollisionState() {
+            mCollisionFlag=NEVER_COLLIDED;
+        }
+        bool collidedThisFrame() const{
+            return mCollisionFlag&COLLIDED_THIS_FRAME;
+        }
+        bool collidedLastFrame() const{
+            return mCollisionFlag&COLLIDED_LAST_FRAME;
+        }
+        void resetCollisionFlag() {
+            if (mCollisionFlag&COLLIDED_THIS_FRAME)
+                mCollisionFlag|=COLLIDED_LAST_FRAME;
+            mCollisionFlag&=(~COLLIDED_THIS_FRAME);
+        }
+        void collide(BulletObj* first, BulletObj *second, btPersistentManifold *currentCollisionManifold);
+    };
+public:
+    std::tr1::unordered_map<btCollisionObject*, BulletObj*>* bt2siri;
+    typedef std::tr1::unordered_map<OrderedCollisionPair, ActiveCollisionState, OrderedCollisionPair::Hasher> CollisionPairMap;
+    CollisionPairMap collisionPairs;
     customDispatch (btCollisionConfiguration* collisionConfiguration,
-                    map<btCollisionObject*, BulletObj*>* bt2siri) :
+                    std::tr1::unordered_map<btCollisionObject*, BulletObj*>* bt2siri) :
             btCollisionDispatcher(collisionConfiguration) {
         this->bt2siri=bt2siri;
     }
@@ -368,9 +444,10 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     btCollisionShape* groundShape;
     btRigidBody* groundBody;
 
+
 public:
     BulletSystem();
-    map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
+    std::tr1::unordered_map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<BulletObj*>objects;
 	vector<MessageService*>messageServices;
