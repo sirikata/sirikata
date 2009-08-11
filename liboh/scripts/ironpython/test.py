@@ -50,6 +50,7 @@ class exampleclass:
             if proxcall.proximity_event == pbSiri.ProxCall.EXITED_PROXIMITY:
                 pass
     def sawAnotherObject(self,persistence,header,retstatus):
+        print "PY: sawAnotherObject called"
         if header.HasField('return_status') or retstatus:
             return
         uuid = util.tupleToUUID(header.source_object)
