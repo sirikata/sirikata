@@ -117,7 +117,7 @@ class ClusterBuild:
     def clean(self):
         cd_code_cmd = self.cd_to_code()
         cd_build_cmd = self.cd_to_build()
-        clean_cmd = "make clean"
+        clean_cmd = "make clean && rm CMakeCache.txt"
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, clean_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
