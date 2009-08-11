@@ -42,7 +42,7 @@ class exampleclass:
             if proxcall.proximity_event == pbSiri.ProxCall.ENTERED_PROXIMITY:
                 myhdr = pbHead.Header()
                 myhdr.destination_space = self.spaceid
-                myhdr.destination_object = self.objid
+                myhdr.destination_object = proxcall.proximate_object
                 dbQuery = util.PersistenceRead(self.sawAnotherObject)
                 field = dbQuery.reads.add()
                 field.field_name = 'Name'
@@ -56,7 +56,6 @@ class exampleclass:
         uuid = util.tupleToUUID(header.source_object)
         myName = ""
         for field in persistence.reads:
-            print field
             if field.field_name == 'Name':
                 if field.HasField('data'):
                     myName = field.data
@@ -108,7 +107,7 @@ class exampleclass:
             prox = pbSiri.NewProxQuery()
             prox.query_id = 123
             print "sendprox4"
-            prox.max_radius = 1000.0
+            prox.max_radius = 1.0e+30
             body.message_names.append("NewProxQuery")
             body.message_arguments.append(prox.SerializeToString())
             header = pbHead.Header()
