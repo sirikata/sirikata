@@ -28,20 +28,20 @@ class exampleclass:
                 retobj.ParseFromString(util.fromByteArray(serialarg))
             except:
                 pass
-            self.objid = retobj.object_reference
+            self.objid = util.tupleToUUID(retobj.object_reference)
             print "sendprox1"
-            self.spaceid = header.source_space
+            self.spaceid = util.tupleToUUID(header.source_space)
 
-            print util.tupleToUUID(self.spaceid)
+            print self.spaceid
             self.sendNewProx()
-            self.setPosition(angular_speed=1,axis=(0,1,0))
+            self.setPosition(angular_speed=0,axis=(0,1,0))
         elif name == "ProxCall":
             proxcall = pbSiri.ProxCall()
             proxcall.ParseFromString(util.fromByteArray(serialarg))
             objRef = util.tupleToUUID(proxcall.proximate_object)
             if proxcall.proximity_event == pbSiri.ProxCall.ENTERED_PROXIMITY:
                 myhdr = pbHead.Header()
-                myhdr.destination_space = self.spaceid
+                myhdr.destination_space = util.tupleFromUUID(self.spaceid)
                 myhdr.destination_object = proxcall.proximate_object
                 dbQuery = util.PersistenceRead(self.sawAnotherObject)
                 field = dbQuery.reads.add()
@@ -58,8 +58,22 @@ class exampleclass:
         for field in persistence.reads:
             if field.field_name == 'Name':
                 if field.HasField('data'):
-                    myName = field.data
+                    nameStruct=pbSiri.StringProperty()
+                    nameStruct.ParseFromString(field.data)
+                    myName = nameStruct.value
         print "Object",uuid,"has name",myName
+        if myName=="bowlingpin":
+            rws=pbPer.ReadWriteSet()
+            se=rws.writes.add()
+            se.field_name="Parent"
+            parentProperty=pbSiri.ParentProperty()
+            parentProperty.value=util.tupleFromUUID(uuid);
+            se.data=parentProperty.SerializeToString()
+            header = pbHead.Header()
+            header.destination_space=util.tupleFromUUID(self.spaceid);
+            header.destination_object=util.tupleFromUUID(self.objid);
+            header.destination_port=5#FIXME this should be PERSISTENCE_SERVICE_PORT
+            HostedObject.SendMessage(header.SerializeToString()+rws.SerializeToString());
     def processRPC(self,header,name,arg):
         try:
             self.reallyProcessRPC(header,name,arg)
@@ -96,8 +110,8 @@ class exampleclass:
         body.message_names.append("SetLoc")
         body.message_arguments.append(objloc.SerializeToString())
         header = pbHead.Header()
-        header.destination_space = self.spaceid
-        header.destination_object = self.objid
+        header.destination_space = util.tupleFromUUID(self.spaceid)
+        header.destination_object = util.tupleFromUUID(self.objid)
         HostedObject.SendMessage(util.toByteArray(header.SerializeToString()+body.SerializeToString()))
     def sendNewProx(self):
         print "sendprox2"
@@ -112,7 +126,7 @@ class exampleclass:
             body.message_arguments.append(prox.SerializeToString())
             header = pbHead.Header()
             print "sendprox5"
-            header.destination_space = self.spaceid;
+            header.destination_space = util.tupleFromUUID(self.spaceid);
             header.destination_object = util.tupleFromUUID(uuid.UUID(int=0))
             header.destination_port = 3 # libcore/src/util/KnownServices.hpp
             headerstr = header.SerializeToString()
