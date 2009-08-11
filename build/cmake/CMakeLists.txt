@@ -270,6 +270,7 @@ QT4_WRAP_CPP(CBR_MOC_SOURCES ${CBR_MOC_HEADERS})
 SET(CBR_PROTOCOLS
   ObjectMessage.pbj
   ServerMessage.pbj
+  Loc.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
 # protocol targets

@@ -89,7 +89,7 @@ public:
      : TemporalValue<MotionVectorType>(when, l)
     {}
 
-    const Time& updateTime() const {
+    Time updateTime() const {
         return Base::time();
     }
 

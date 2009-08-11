@@ -150,11 +150,9 @@ void OracleLocationService::removeLocalObject(const UUID& uuid) {
 void OracleLocationService::receiveMessage(Message* msg) {
     BulkLocationMessage* bulk_loc = dynamic_cast<BulkLocationMessage*>(msg);
     if (bulk_loc != NULL) {
-        if (bulk_loc->dest() == UUID::null()) {
-            // We don't actually use these updates here because we are an Oracle --
-            // we already know all the positions. Normally these would generate
-            // replica events.
-        }
+        // We don't actually use these updates here because we are an Oracle --
+        // we already know all the positions. Normally these would generate
+        // replica events.
         delete msg;
     }
 }

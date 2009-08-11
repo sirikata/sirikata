@@ -179,7 +179,7 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
 
         OriginID oid;
         oid.id = mID;
-        BulkLocationMessage* msg = new BulkLocationMessage(oid, UUID::null());
+        BulkLocationMessage* msg = new BulkLocationMessage(oid);
 
         for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++)
             msg->addUpdate( up_it->first, up_it->second.location, up_it->second.bounds );

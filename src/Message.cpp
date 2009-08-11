@@ -31,6 +31,7 @@
  */
 
 #include "Message.hpp"
+#include "CBR_Loc.pbj.hpp"
 
 namespace CBR {
 
@@ -1053,27 +1054,27 @@ void ServerProximityResultMessage::addObjectRemoval(const UUID& objid) {
 
 
 
-BulkLocationMessage::BulkLocationMessage(const OriginID& origin, const UUID& dest)
- : Message(origin, true),
-   mDestObject(dest)
+BulkLocationMessage::BulkLocationMessage(const OriginID& origin)
+ : Message(origin, true)
 {
 }
 
 BulkLocationMessage::BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    uint8 raw_dest_object[UUID::static_size];
-    memcpy( &raw_dest_object, &wire[offset], UUID::static_size );
-    offset += UUID::static_size;
-    mDestObject = UUID(raw_dest_object, UUID::static_size);
+    CBR::Protocol::Loc::BulkLocationUpdate updates;
+    bool parse_success = updates.ParseFromArray((void*)&wire[offset], wire.size() - offset);
+    assert(parse_success);
+    offset = wire.size();
 
-    uint16 nupdates = 0;
-    memcpy(&nupdates, &wire[offset], sizeof(nupdates));
-    offset += sizeof(nupdates);
-    for(uint16 idx = 0; idx < nupdates; idx++) {
+    for(uint32 idx = 0; idx < updates.update_size(); idx++) {
+        CBR::Protocol::Loc::ILocationUpdate wire_update = updates.update(idx);
         Update update;
-        memcpy(&update, &wire[offset], sizeof(update));
-        offset += sizeof(update);
+        update.object = wire_update.object();
+        Time t( (wire_update.t() - PBJ::Time::null()).toMicroseconds() ); // FIXME we should just be able to get raw time
+        MotionVector3f motion(wire_update.position(), wire_update.velocity());
+        update.location = TimedMotionVector3f(t, motion);
+        update.bounds = wire_update.bounds();
         mUpdates.push_back(update);
     }
 }
@@ -1088,23 +1089,23 @@ MessageType BulkLocationMessage::type() const {
 uint32 BulkLocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
 
-    wire.resize( wire.size() + UUID::static_size );
-    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
-
-
-    uint16 nupdates = mUpdates.size();
-
-    wire.resize( wire.size() +
-        sizeof(nupdates) + nupdates * sizeof(Update)
-    );
-
-    memcpy(&wire[offset], &nupdates, sizeof(nupdates));
-    offset += sizeof(nupdates);
-    for(uint16 idx = 0; idx < nupdates; idx++) {
-        memcpy(&wire[offset], &mUpdates[idx], sizeof(mUpdates[idx]));
-        offset += sizeof(mUpdates[idx]);
+    CBR::Protocol::Loc::BulkLocationUpdate updates;
+    for(uint32 idx = 0; idx < mUpdates.size(); idx++) {
+        updates.add_update();
+        CBR::Protocol::Loc::ILocationUpdate update = updates.mutable_update(idx);
+        update.set_object(mUpdates[idx].object);
+        update.set_t(PBJ::Time::microseconds(mUpdates[idx].location.updateTime().raw())); // FIXME we should just use the same time class as sirikata
+        update.set_position(mUpdates[idx].location.position());
+        update.set_velocity(mUpdates[idx].location.velocity());
+        update.set_bounds(mUpdates[idx].bounds);
     }
+
+    std::string payload;
+    bool serialized_success = updates.SerializeToString(&payload);
+    assert(serialized_success);
+    wire.resize( wire.size() + payload.size() );
+    memcpy(&wire[offset], &payload[0], payload.size());
+    offset += payload.size();
 
     return offset;
 }

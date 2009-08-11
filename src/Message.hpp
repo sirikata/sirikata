@@ -457,17 +457,13 @@ public:
         BoundingSphere3f bounds;
     };
 
-    BulkLocationMessage(const OriginID& origin, const UUID& dest);
+    BulkLocationMessage(const OriginID& origin);
     ~BulkLocationMessage();
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
     void addUpdate(const UUID& objid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
-
-    const UUID& dest() const {
-        return mDestObject;
-    }
 
     std::vector<Update> updates() const {
         return mUpdates;
@@ -476,7 +472,6 @@ private:
     friend class Message;
     BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 
-    UUID mDestObject;
     std::vector<Update> mUpdates;
 };
 
