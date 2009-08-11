@@ -25,6 +25,7 @@
 #   Sirikata_CMAKE_MODULES     The directory containing Sirikata's custom CMake Modules
 #   Sirikata_BOOST_ROOT        The directory where the boost dependency is installed.
 #   Sirikata_PROTOBUFS_ROOT    The directory where the protocol buffers dependency is installed.
+#   Sirikata_PBJ_ROOT          The directory where the PBJ code is checked out
 #
 # Copyright (C) Siddhartha Chaudhuri, 2009
 #
@@ -190,6 +191,11 @@ IF(SIRIKATA_CODE_ROOT)
     SET(SIRIKATA_DEPENDENCIES_ROOT ${SIRIKATA_CODE_ROOT}/dependencies)
   ENDIF()
 
+  # externals
+  IF(EXISTS ${SIRIKATA_CODE_ROOT}/externals)
+    SET(SIRIKATA_EXTERNALS_ROOT ${SIRIKATA_CODE_ROOT}/externals)
+  ENDIF()
+
   IF(SIRIKATA_DEPENDENCIES_ROOT)
     GET_FILENAME_COMPONENT(SIRIKATA_DEPENDENCIES_ROOT ${SIRIKATA_DEPENDENCIES_ROOT} ABSOLUTE)
 
@@ -201,6 +207,11 @@ IF(SIRIKATA_CODE_ROOT)
     # protocol buffers
     IF(EXISTS ${SIRIKATA_DEPENDENCIES_ROOT}/installed-protobufs)
       SET(Sirikata_PROTOBUFS_ROOT ${SIRIKATA_DEPENDENCIES_ROOT}/installed-protobufs)
+    ENDIF()
+
+    # pbj
+    IF(EXISTS ${SIRIKATA_EXTERNALS_ROOT}/pbj)
+      SET(Sirikata_PBJ_ROOT ${SIRIKATA_EXTERNALS_ROOT}/pbj)
     ENDIF()
   ENDIF()
 ENDIF()

@@ -187,19 +187,28 @@ ENDIF()
 FIND_PACKAGE(Prox REQUIRED)
 
 
+# get some useful macros from sirikata
+SET(PBJ_RUNABLE ${Sirikata_PBJ}) # FIXME this should be an option
+INCLUDE(AddPBJTarget)
+
 #source file location
 SET(CBR_SOURCE_DIR ${TOP_LEVEL}/src)
+#protocol file location
+SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
 
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE
+        ${CBR_PROTOCOL_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
+        ${Sirikata_PBJ_ROOT}
         ${Raknet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
+        ${PROTOCOLBUFFERS_INCLUDE_DIRS}
         )
 
 #source files
@@ -256,11 +265,36 @@ SET(CBR_MOC_HEADERS
 
 QT4_WRAP_CPP(CBR_MOC_SOURCES ${CBR_MOC_HEADERS})
 
+# protocol files
+# FIXME we should jsut change ADD_PBJ_TARGET to take full paths
+SET(CBR_PROTOCOLS
+  ObjectMessage.pbj
+  ServerMessage.pbj
+)
+SET(PBJ_CPP_HEADER "\n")
+# protocol targets
+ADD_PBJ_TARGET(
+  ${CBR_PROTOCOLS}
+  PLUGINNAME "CBR"
+  INPUTDIR ${CBR_PROTOCOL_DIR}
+  IMPORTS ${CBR_PROTOCOL_DIR}
+  OUTPUTDIR ${CBR_PROTOCOL_DIR}
+  OUTPUTCPPFILE ${CBR_PROTOCOL_DIR}/CBR_protobuf.cc
+  CPP_HEADER ${PBJ_CPP_HEADER}
+  GENERATE_CPP
+)
+# generated pbj implementation source files
+SET(CBR_PROTOCOL_SOURCES
+  ${CBR_PROTOCOL_DIR}/CBR_protobuf.cc
+)
+
 #link flags
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+LINK_DIRECTORIES(
+        ${Boost_LIBRARY_DIRS}
+)
 
 #binaries
-ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES})
+ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
@@ -270,4 +304,5 @@ TARGET_LINK_LIBRARIES(cbr
         ${Raknet_LIBRARIES}
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
         )
