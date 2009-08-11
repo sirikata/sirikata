@@ -337,6 +337,8 @@ public:
         system = sys;
     }
     ~BulletObj();
+	const ObjectReference& getObjectReference()const;
+	const SpaceID& getSpaceID()const;
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
@@ -391,8 +393,8 @@ public:
         };
     private:
         int mCollisionFlag;
-        std::vector<PointCollision> mPointCollisions;
     public:
+        std::vector<PointCollision> mPointCollisions;
         enum CollisionFlag{
             NEVER_COLLIDED=0,
             COLLIDED_THIS_FRAME=1,

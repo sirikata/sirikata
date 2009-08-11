@@ -1,5 +1,5 @@
-/*  Sirikata libspace -- Known Service Ports
- *  KnownServices.hpp
+/*  Sirikata Serialization Protocol
+ *  Physics.pbj
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,20 +29,21 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_KNOWN_SERVICES_HPP_
-#define SIRIKATA_KNOWN_SERVICES_HPP_
-namespace Sirikata {
-namespace Services{
-enum Ports{
-    RPC=0, // Default MessageBody RPC service
-    REGISTRATION=1,
-    LOC=2,
-    GEOM=3, // Proximity service: Also known as PROX
-    ROUTER=4,
-    PERSISTENCE=5,
-	PHYSICS=6,
-    OBJECT_CONNECTIONS=16383
-};
+
+package Sirikata.Physics.Protocol;
+
+
+message CollisionBegin {
+    optional time timestamp=2;
+    repeated vector3d this_position=3;
+    repeated vector3d other_position=4;
+    repeated normal this_normal=5;
+    repeated float impulse=6;
+    optional uuid other_object_reference=7;
 }
+
+message CollisionEnd {
+    optional time timestamp=2;
+    optional uuid other_object_reference=6;    
 }
-#endif
+

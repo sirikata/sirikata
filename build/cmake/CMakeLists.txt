@@ -636,7 +636,8 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
 )
 
 # For scripting
-SET(ScriptingProtocolBuffersSources ${ProtocolBuffersSources} MessageHeader)
+SET(ScriptingProtocolBuffersSources ${ProtocolBuffersSources} MessageHeader Physics)
+
 ADD_PBJ_TARGET(${ScriptingProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
   IMPORTS ${ProtocolBuffersRoot}
@@ -655,6 +656,17 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
+
+ADD_PBJ_TARGET(Sirikata Physics
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "Bullet"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Bullet_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${PROTOCOLBUFFERS_GENS}
+)
+
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -1198,6 +1210,7 @@ ENDIF(PROX_FOUND)
 
 SET(LIBOH_PLUGIN_BULLETPHYSICS_DIR ${LIBOH_PLUGIN_DIR}/bullet)
 SET(LIBOH_PLUGIN_BULLETPHYSICS_SOURCES
+ ${SirikataProtocolDirectory}/Bullet_protobuf.cc
  ${LIBOH_PLUGIN_BULLETPHYSICS_DIR}/BulletSystem.cpp
     )
 IF(bullet_FOUND)
