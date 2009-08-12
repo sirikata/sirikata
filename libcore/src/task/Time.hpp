@@ -56,7 +56,7 @@ class SIRIKATA_EXPORT DeltaTime {
 	int64 mDeltaTime;
     	/// Construct from a floating point number of seconds.
 	DeltaTime(double s):mDeltaTime((int64)(s*1000000.)){
-    
+
 	}
     DeltaTime(int64 us):mDeltaTime(us) {
     }
@@ -84,6 +84,11 @@ public:
         return DeltaTime(ns/1000);
     }
 
+    /** Return a zero length duration. */
+    static DeltaTime zero() {
+        return DeltaTime::nanoseconds(0);
+    }
+
 	/// Simple helper function -- returns "AbsTime::now() + (*this)".
 	class AbsTime fromNow() const;
 
@@ -94,6 +99,10 @@ public:
 	/// Arethmetic operator-- add two DeltaTime values.
 	inline DeltaTime operator+ (const DeltaTime &other) const {
 		return DeltaTime(mDeltaTime + other.mDeltaTime);
+	}
+	/// Arethmetic operator-- add two DeltaTime values.
+	inline DeltaTime operator+= (const DeltaTime &other) {
+		return DeltaTime(mDeltaTime += other.mDeltaTime);
 	}
 	/// Arethmetic operator-- negate a DeltaTime.
 	inline DeltaTime operator- () const {

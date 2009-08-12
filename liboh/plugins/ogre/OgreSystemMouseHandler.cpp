@@ -53,6 +53,7 @@
 #include <set>
 
 #include "WebViewManager.hpp"
+#include "CameraPath.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -128,6 +129,12 @@ class OgreSystem::MouseHandler {
         typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
         std::map<int, ClickAction> mClickAction;
     */
+
+    CameraPath mCameraPath;
+    bool mRunningCameraPath;
+    uint32 mCameraPathIndex;
+    Task::DeltaTime mCameraPathTime;
+    Time mLastCameraTime;
 
     typedef std::map<String, InputResponse*> InputResponseMap;
     InputResponseMap mInputResponses;
@@ -213,7 +220,7 @@ private:
         if (delx>.03125||dely>.03125) {
             *lastX=x;
             *lastY=y;
-            
+
             return false;
         }
         return true;
@@ -710,7 +717,7 @@ private:
         }
         return true;
     }
-    
+
     string physicalName(ProxyMeshObject *obj, std::set<std::string> &saveSceneNames) {
         std::string name = obj->getPhysical().name;
         if (name.empty()) {
@@ -957,6 +964,95 @@ private:
         return EventResponse::nop();
     }
 
+
+    /// Camera Path Utilities
+    void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
+        Task::AbsTime now(Task::AbsTime::now());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        if (!cam) return;
+        Location loc = cam->extrapolateLocation(now);
+
+        loc.setPosition( pos );
+        loc.setOrientation( orient );
+        loc.setVelocity(Vector3f(0,0,0));
+        loc.setAngularSpeed(0);
+
+        cam->setLocation(now, loc);
+    }
+
+    void cameraPathSetToKeyFrame(uint32 idx) {
+        if (idx < 0 || idx >= mCameraPath.numPoints()) return;
+
+        CameraPoint keypoint = mCameraPath[idx];
+        cameraPathSetCamera(mCameraPath[idx].position, mCameraPath[idx].orientation);
+        mCameraPathTime = mCameraPath[idx].time;
+    }
+
+#define CAMERA_PATH_FILE "camera_path.txt"
+
+    void cameraPathLoad() {
+        mCameraPath.load(CAMERA_PATH_FILE);
+    }
+
+    void cameraPathSave() {
+        mCameraPath.save(CAMERA_PATH_FILE);
+    }
+
+    void cameraPathNext() {
+        mCameraPathIndex = mCameraPath.clampKeyIndex(mCameraPathIndex+1);
+        cameraPathSetToKeyFrame(mCameraPathIndex);
+    }
+
+    void cameraPathPrevious() {
+        mCameraPathIndex = mCameraPath.clampKeyIndex(mCameraPathIndex-1);
+        cameraPathSetToKeyFrame(mCameraPathIndex);
+    }
+
+    void cameraPathInsert() {
+        Task::AbsTime now(Task::AbsTime::now());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        if (!cam) return;
+        Location loc = cam->extrapolateLocation(now);
+
+        mCameraPathIndex = mCameraPath.insert(mCameraPathIndex, loc.getPosition(), loc.getOrientation(), Task::DeltaTime::seconds(1.0));
+        mCameraPathTime = mCameraPath.keyFrameTime(mCameraPathIndex);
+    }
+
+    void cameraPathDelete() {
+        mCameraPathIndex = mCameraPath.remove(mCameraPathIndex);
+        mCameraPathTime = mCameraPath.keyFrameTime(mCameraPathIndex);
+    }
+
+    void cameraPathRun() {
+        mRunningCameraPath = !mRunningCameraPath;
+        if (mRunningCameraPath)
+            mCameraPathTime = Task::DeltaTime::zero();
+    }
+
+    void cameraPathChangeSpeed(float factor) {
+        mCameraPath.changeTimeDelta(mCameraPathIndex, Task::DeltaTime::seconds(factor));
+    }
+
+    void cameraPathTick(const Time& t) {
+        Task::DeltaTime dt = t - mLastCameraTime;
+        mLastCameraTime = t;
+
+        if (mRunningCameraPath) {
+            mCameraPathTime += dt;
+
+            Vector3d pos;
+            Quaternion orient;
+            bool success = mCameraPath.evaluate(mCameraPathTime, &pos, &orient);
+
+            if (!success) {
+                mRunningCameraPath = false;
+                return;
+            }
+
+            cameraPathSetCamera(pos, orient);
+        }
+    }
+
     ///////////////// DEVICE FUNCTIONS ////////////////
 
     EventResponse deviceListener(EventPtr evbase) {
@@ -1007,10 +1103,20 @@ private:
     }
 
 public:
-    MouseHandler(OgreSystem *parent) : mParent(parent), mCurrentGroup(SpaceObjectReference::null()), mWhichRayObject(0) {
+    MouseHandler(OgreSystem *parent)
+     : mParent(parent),
+       mCurrentGroup(SpaceObjectReference::null()),
+       mLastCameraTime(Task::AbsTime::now()),
+       mWhichRayObject(0)
+    {
         mLastHitCount=0;
         mLastHitX=0;
         mLastHitY=0;
+
+        cameraPathLoad();
+        mRunningCameraPath = false;
+        mCameraPathIndex = 0;
+        mCameraPathTime = mCameraPath.keyFrameTime(0);
 
         mEvents.push_back(mParent->mInputManager->registerDeviceListener(
                               std::tr1::bind(&MouseHandler::deviceListener, this, _1)));
@@ -1075,6 +1181,16 @@ public:
         mInputResponses["setDragModeRotateCamera"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "rotateCamera"));
         mInputResponses["setDragModePanCamera"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::setDragModeAction, this, "panCamera"));
 
+        mInputResponses["cameraPathLoad"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathLoad, this));
+        mInputResponses["cameraPathSave"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathSave, this));
+        mInputResponses["cameraPathNextKeyFrame"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathNext, this));
+        mInputResponses["cameraPathPreviousKeyFrame"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathPrevious, this));
+        mInputResponses["cameraPathInsertKeyFrame"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathInsert, this));
+        mInputResponses["cameraPathDeleteKeyFrame"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathDelete, this));
+        mInputResponses["cameraPathRun"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathRun, this));
+        mInputResponses["cameraPathSpeedUp"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathChangeSpeed, this, -0.1f));
+        mInputResponses["cameraPathSlowDown"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathChangeSpeed, this, 0.1f));
+
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_SHIFT), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_SHIFT), mInputResponses["moveBackward"]);
@@ -1112,6 +1228,17 @@ public:
         // Selection
         mInputBinding.add(InputBindingEvent::MouseClick(1), mInputResponses["selectObject"]);
         mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
+
+        // Camera Path
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathLoad"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSave"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathNextKeyFrame"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathPreviousKeyFrame"]);
+        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_P), mInputResponses["cameraPathInsertKeyFrame"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathDeleteKeyFrame"]);
+        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["cameraPathRun"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSpeedUp"]);
+        //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSlowDown"]);
     }
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
@@ -1129,6 +1256,10 @@ public:
     }
     void addToSelection(const ProxyObjectPtr &obj) {
         mSelectedObjects.insert(obj);
+    }
+
+    void tick(const Time& t) {
+        cameraPathTick(t);
     }
 };
 
@@ -1149,6 +1280,11 @@ void OgreSystem::selectObject(Entity *obj, bool replace) {
         mMouseHandler->addToSelection(obj->getProxyPtr());
         obj->setSelected(true);
     }
+}
+
+void OgreSystem::tickInputHandler(const Time& t) const {
+    if (mMouseHandler != NULL)
+        mMouseHandler->tick(t);
 }
 
 }

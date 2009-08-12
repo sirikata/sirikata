@@ -85,6 +85,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
     void destroyMouseHandler();
+    void tickInputHandler(const Time& t) const;
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
@@ -139,7 +140,7 @@ public:
 						MemoryReference message_body){
 		NOT_IMPLEMENTED(ogregraphics);
 	}
-	
+
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
@@ -195,7 +196,7 @@ public:
                   double &returnDistance,
                   Vector3f &returnNormal,
                   SpaceObjectReference &returnName);
-    
+
     Entity* rayTrace(const Vector3d &position,
                      const Vector3f &direction,
                      int&resultCount,

@@ -993,6 +993,7 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/MeshEntity.cpp
   ${GFX}/CameraEntity.cpp
   ${GFX}/OgrePlugin.cpp
+  ${GFX}/CameraPath.cpp
 ${GFX}/meruCompat/Event.cpp
 ${GFX}/meruCompat/EventSource.cpp
 ${GFX}/meruCompat/MeruDefs.cpp

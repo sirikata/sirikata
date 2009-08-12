@@ -963,6 +963,8 @@ bool OgreSystem::tick(){
     Time curFrameTime(Time::now());
     Time finishTime(curFrameTime + desiredTickRate()); // arbitrary
 
+    tickInputHandler(curFrameTime);
+
     bool continueRendering=true;
     Duration frameTime=curFrameTime-mLastFrameTime;
     if (mRenderTarget==sRenderTarget)
