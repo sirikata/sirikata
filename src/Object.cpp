@@ -103,7 +103,7 @@ void Object::checkPositionUpdate(const Time& t) {
                     *it,
                     mLocation
                 );
-            bool success = mObjectMessageQueue->send(loc_msg);
+            bool success = mObjectMessageQueue->send(loc_msg, loc_msg->sourceObject(), loc_msg->destObject());
             // XXX FIXME do something on failure
             delete loc_msg;
         }
@@ -122,23 +122,39 @@ void Object::proximityMessage(ProximityMessage* prox_msg) {
         return;
     }
 
-    SubscriptionMessage* subs_msg = NULL;
-    if (prox_msg->event() == ProximityMessage::Entered)
-        subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Subscribe);
-    else
-        subs_msg = new SubscriptionMessage(mOriginID, uuid(), prox_msg->neighbor(), SubscriptionMessage::Unsubscribe);
+    for(uint32 idx = 0; idx < prox_msg->contents.addition_size(); idx++) {
+        CBR::Protocol::Prox::IObjectAddition addition = prox_msg->contents.addition(idx);
 
-    mObjectMessageQueue->send(subs_msg);
-    delete subs_msg;
+        SubscriptionMessage* subs_msg = new SubscriptionMessage(mOriginID);
+        subs_msg->object_header.set_source_object(uuid());
+        subs_msg->object_header.set_source_port(0);
+        subs_msg->object_header.set_dest_object(addition.object());
+        subs_msg->object_header.set_dest_port(0);
+        subs_msg->contents.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
 
-    delete prox_msg;
+        mObjectMessageQueue->send(subs_msg, subs_msg->object_header.source_object(), subs_msg->object_header.dest_object());
+        delete subs_msg;
+    }
+    for(uint32 idx = 0; idx < prox_msg->contents.removal_size(); idx++) {
+        CBR::Protocol::Prox::IObjectRemoval removal = prox_msg->contents.removal(idx);
+
+        SubscriptionMessage* subs_msg = new SubscriptionMessage(mOriginID);
+        subs_msg->object_header.set_source_object(uuid());
+        subs_msg->object_header.set_source_port(0);
+        subs_msg->object_header.set_dest_object(removal.object());
+        subs_msg->object_header.set_dest_port(0);
+        subs_msg->contents.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
+
+        mObjectMessageQueue->send(subs_msg, subs_msg->object_header.source_object(), subs_msg->object_header.dest_object());
+        delete subs_msg;
+    }
 }
 
 void Object::subscriptionMessage(SubscriptionMessage* subs_msg) {
-    if (subs_msg->action() == SubscriptionMessage::Subscribe)
-        addSubscriber(subs_msg->sourceObject());
+    if (subs_msg->contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe)
+        addSubscriber(subs_msg->object_header.source_object());
     else
-        removeSubscriber(subs_msg->sourceObject());
+        removeSubscriber(subs_msg->object_header.source_object());
 
     delete subs_msg;
 }

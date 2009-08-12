@@ -167,14 +167,29 @@ void Server::proximityTick(const Time& t)
   while(!proximity_events.empty())
   {
     ProximityEventInfo& evt = proximity_events.front();
-    ProximityMessage* msg =
-      new ProximityMessage(
-                           origin,
-                           evt.query(),
-                           evt.object(),
-                           (evt.type() == ProximityEventInfo::Entered) ? ProximityMessage::Entered : ProximityMessage::Exited,
-                           evt.location()
-                           );
+    ProximityMessage* msg = new ProximityMessage(origin);
+
+    msg->object_header.set_source_object(UUID::null());
+    msg->object_header.set_source_port(0);
+    msg->object_header.set_dest_object(evt.query());
+    msg->object_header.set_dest_port(0);
+
+    if (evt.type() == ProximityEventInfo::Entered) {
+        CBR::Protocol::Prox::IObjectAddition addition = msg->contents.add_addition();
+        addition.set_object( evt.object() );
+
+        CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+        TimedMotionVector3f loc = mLocationService->location(evt.object());
+        motion.set_t(PBJ::Time::microseconds(loc.updateTime().raw()));
+        motion.set_position(loc.position());
+        motion.set_velocity(loc.velocity());
+
+        addition.set_bounds( mLocationService->bounds(evt.object()) );
+    }
+    else {
+        CBR::Protocol::Prox::IObjectRemoval removal = msg->contents.add_removal();
+        removal.set_object( evt.object() );
+    }
 
     mForwarder->route(msg, evt.query());
 

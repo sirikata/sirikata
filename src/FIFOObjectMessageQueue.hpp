@@ -13,7 +13,7 @@ public:
 
     FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
     virtual ~FIFOObjectMessageQueue(){}
-    virtual bool send(ObjectToObjectMessage* msg);
+    virtual bool send(Message* msg, const UUID& source, const UUID& dest);
     virtual void service(const Time& t);
 
     virtual void registerClient(UUID oid,float weight=1);

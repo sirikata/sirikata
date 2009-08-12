@@ -193,97 +193,42 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
 
 // Specific message types
 
-ProximityMessage::ProximityMessage(const OriginID& origin, const UUID& dst_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc)
- : Message(origin, true),
-   mDestObject(dst_object),
-   mNeighbor(nbr),
-   mEvent(evt),
-   mLocation(loc)
+ProximityMessage::ProximityMessage(const OriginID& origin)
+ : Message(origin, true)
 {
 }
 
 ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    uint8 raw_dest_object[UUID::static_size];
-    uint8 raw_neighbor[UUID::static_size];
-    uint8 raw_evt_type;
+    bool parse_success = object_header.ParseFromArray((void*)&wire[offset], wire.size() - offset);
+    assert(parse_success);
+    offset = wire.size();
 
-    memcpy( &raw_dest_object, &wire[offset], UUID::static_size );
-    offset += UUID::static_size;
-    mDestObject = UUID(raw_dest_object, UUID::static_size);
-
-    memcpy( &raw_neighbor, &wire[offset], UUID::static_size );
-    offset += UUID::static_size;
-    mNeighbor = UUID(raw_neighbor, UUID::static_size);
-
-    memcpy( &raw_evt_type, &wire[offset], 1 );
-    offset += 1;
-    mEvent = (EventType)raw_evt_type;
-
-    Time t(0);
-    Vector3f pos;
-    Vector3f vel;
-
-    memcpy( &t, &wire[offset], sizeof(Time) );
-    offset += sizeof(Time);
-
-    memcpy( &pos, &wire[offset], sizeof(Vector3f) );
-    offset += sizeof(Vector3f);
-
-    memcpy( &vel, &wire[offset], sizeof(Vector3f) );
-    offset += sizeof(Vector3f);
-
-    mLocation = TimedMotionVector3f( t, MotionVector3f(pos, vel) );
+    parse_success = contents.ParseFromString(object_header.payload());
+    assert(parse_success);
 }
 
 MessageType ProximityMessage::type() const {
     return MESSAGE_TYPE_PROXIMITY;
 }
 
-const UUID& ProximityMessage::destObject() const {
-    return mDestObject;
-}
-
-const UUID& ProximityMessage::neighbor() const {
-    return mNeighbor;
-}
-
-const TimedMotionVector3f& ProximityMessage::location() const {
-    return mLocation;
-}
-
-const ProximityMessage::EventType ProximityMessage::event() const {
-    return mEvent;
-}
-
 uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
 
-    uint32 prox_part_size = 2 * UUID::static_size + 1;
-    wire.resize( wire.size() + prox_part_size );
-    uint32 loc_part_size = sizeof(Time) + 2 * sizeof(Vector3f);
-    wire.resize( wire.size() + loc_part_size );
+    std::string object_payload;
+    bool serialized_success = contents.SerializeToString(&object_payload);
+    assert(serialized_success);
 
-    memcpy( &wire[offset], mDestObject.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
+    object_header.set_payload(object_payload);
 
-    memcpy( &wire[offset], mNeighbor.getArray().data(), UUID::static_size );
-    offset += UUID::static_size;
+    std::string payload;
+    serialized_success = object_header.SerializeToString(&payload);
+    assert(serialized_success);
 
-    uint8 evt_type = (uint8)mEvent;
-    memcpy( &wire[offset], &evt_type, 1 );
-    offset += 1;
-
-    Time t = mLocation.time();
-    memcpy( &wire[offset], &t, sizeof(Time) );
-    offset += sizeof(Time);
-
-    memcpy( &wire[offset], &mLocation.value().position(), sizeof(Vector3f) );
-    offset += sizeof(Vector3f);
-
-    memcpy( &wire[offset], &mLocation.value().velocity(), sizeof(Vector3f) );
-    offset += sizeof(Vector3f);
+    wire.resize( wire.size() + payload.size() );
+    memcpy(&wire[offset], &payload[0], payload.size());
+    offset += payload.size();
 
     return offset;
 }
@@ -392,42 +337,48 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-SubscriptionMessage::SubscriptionMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const Action& act)
- : ObjectToObjectMessage(origin, src_object, dest_object),
-   mAction(act)
+
+SubscriptionMessage::SubscriptionMessage(const OriginID& origin)
+ : Message(origin, true)
 {
 }
 
 SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : ObjectToObjectMessage(wire, offset, _id)
+ : Message(_id)
 {
-    uint8 raw_act;
-    memcpy( &raw_act, &wire[offset], sizeof(uint8) );
-    mAction = (Action)raw_act;
-    offset += sizeof(uint8);
+    bool parse_success = object_header.ParseFromArray((void*)&wire[offset], wire.size() - offset);
+    assert(parse_success);
+    offset = wire.size();
+
+    parse_success = contents.ParseFromString(object_header.payload());
+    assert(parse_success);
 }
 
 MessageType SubscriptionMessage::type() const {
     return MESSAGE_TYPE_SUBSCRIPTION;
 }
 
-const SubscriptionMessage::Action& SubscriptionMessage::action() const {
-    return mAction;
-}
-
 uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-    offset = serializeSourceDest(wire, offset);
 
-    uint32 sub_part_size = sizeof(uint8);
-    wire.resize( wire.size() + sub_part_size );
+    std::string object_payload;
+    bool serialized_success = contents.SerializeToString(&object_payload);
+    assert(serialized_success);
 
-    uint8 act = (uint8)mAction;
-    memcpy( &wire[offset], &act, sizeof(uint8) );
-    offset += sizeof(uint8);
+    object_header.set_payload(object_payload);
+
+    std::string payload;
+    serialized_success = object_header.SerializeToString(&payload);
+    assert(serialized_success);
+
+    wire.resize( wire.size() + payload.size() );
+    memcpy(&wire[offset], &payload[0], payload.size());
+    offset += payload.size();
 
     return offset;
 }
+
+
 
 
 NoiseMessage::NoiseMessage(const OriginID& origin, uint32 noise_sz)

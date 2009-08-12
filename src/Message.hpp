@@ -38,8 +38,11 @@
 #include "MotionVector.hpp"
 #include "ServerNetwork.hpp"
 
+#include "CBR_ServerMessage.pbj.hpp"
+#include "CBR_ObjectMessage.pbj.hpp"
 #include "CBR_Loc.pbj.hpp"
 #include "CBR_Prox.pbj.hpp"
+#include "CBR_Subscription.pbj.hpp"
 
 namespace CBR {
 
@@ -143,29 +146,16 @@ public:
 
 class ProximityMessage : public Message {
 public:
-    enum EventType {
-        Entered = 1,
-        Exited = 2
-    };
-
-    ProximityMessage(const OriginID& origin, const UUID& dest_object, const UUID& nbr, EventType evt, const TimedMotionVector3f& loc);
+    ProximityMessage(const OriginID& origin);
 
     virtual MessageType type() const;
-
-    const UUID& destObject() const;
-    const UUID& neighbor() const;
-    const EventType event() const;
-    const TimedMotionVector3f& location() const;
-
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    CBR::Protocol::Object::ObjectMessage object_header;
+    CBR::Protocol::Prox::ProximityResults contents;
 private:
     friend class Message;
     ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    UUID mDestObject;
-    UUID mNeighbor;
-    EventType mEvent;
-    TimedMotionVector3f mLocation;
 }; // class ProximityMessage
 
 
@@ -204,25 +194,18 @@ private:
 }; // class LocationMessage
 
 
-class SubscriptionMessage : public ObjectToObjectMessage {
+class SubscriptionMessage : public Message {
 public:
-    enum Action {
-        Subscribe = 1,
-        Unsubscribe = 2
-    };
-
-    SubscriptionMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const Action& act);
+    SubscriptionMessage(const OriginID& origin);
 
     virtual MessageType type() const;
-
-    const Action& action() const;
-
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    CBR::Protocol::Object::ObjectMessage object_header;
+    CBR::Protocol::Subscription::SubscriptionMessage contents;
 private:
     friend class Message;
     SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    Action mAction;
 }; // class SubscriptionMessage
 
 class NoiseMessage : public Message {

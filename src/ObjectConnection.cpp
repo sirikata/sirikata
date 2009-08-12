@@ -49,7 +49,32 @@ void ObjectConnection::deliver(Message* msg, const Time& t) {
           {
               ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
               assert(prox_msg != NULL);
-              mTrace->prox(t, prox_msg->destObject(), prox_msg->neighbor(), (prox_msg->event() == ProximityMessage::Entered) ? true : false, prox_msg->location() );
+
+              for(uint32 idx = 0; idx < prox_msg->contents.addition_size(); idx++) {
+                  CBR::Protocol::Prox::IObjectAddition addition = prox_msg->contents.addition(idx);
+                  Time loc_t( (addition.location().t()-PBJ::Time::null()).toMicroseconds() );
+                  MotionVector3f loc_motion(addition.location().position(), addition.location().velocity());
+                  TimedMotionVector3f loc(loc_t, loc_motion);
+                  mTrace->prox(
+                      t,
+                      prox_msg->object_header.dest_object(),
+                      addition.object(),
+                      true,
+                      loc
+                  );
+              }
+
+              for(uint32 idx = 0; idx < prox_msg->contents.removal_size(); idx++) {
+                  CBR::Protocol::Prox::IObjectRemoval removal = prox_msg->contents.removal(idx);
+                  mTrace->prox(
+                      t,
+                      prox_msg->object_header.dest_object(),
+                      removal.object(),
+                      false,
+                      TimedMotionVector3f()
+                  );
+              }
+
               mObject->proximityMessage(prox_msg);
           }
           break;
@@ -65,7 +90,12 @@ void ObjectConnection::deliver(Message* msg, const Time& t) {
           {
               SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
               assert(subs_msg != NULL);
-              mTrace->subscription(t, subs_msg->destObject(), subs_msg->sourceObject(), (subs_msg->action() == SubscriptionMessage::Subscribe) ? true : false);
+              mTrace->subscription(
+                  t,
+                  subs_msg->object_header.dest_object(),
+                  subs_msg->object_header.source_object(),
+                  (subs_msg->contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
+              );
               mObject->subscriptionMessage(subs_msg);
           }
           break;

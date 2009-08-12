@@ -493,16 +493,22 @@ static UUID getObjectMessageDest(Message* msg) {
               ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
               assert(prox_msg != NULL);
 
-              return prox_msg->destObject();
+              return prox_msg->object_header.dest_object();
           }
           break;
-      case MESSAGE_TYPE_LOCATION:  // fall-through
-      case MESSAGE_TYPE_SUBSCRIPTION:
+      case MESSAGE_TYPE_LOCATION:
           {
               ObjectToObjectMessage* obj_msg = dynamic_cast<ObjectToObjectMessage*>(msg);
               assert(obj_msg != NULL);
 
               return obj_msg->destObject();
+          }
+      case MESSAGE_TYPE_SUBSCRIPTION:
+          {
+              SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
+              assert(subs_msg != NULL);
+
+              return subs_msg->object_header.dest_object();
           }
         break;
       default:

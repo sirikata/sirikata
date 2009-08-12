@@ -20,7 +20,7 @@ public:
     {}
 
     virtual ~ObjectMessageQueue(){}
-    virtual bool send(ObjectToObjectMessage* msg) = 0;
+    virtual bool send(Message* msg, const UUID& source, const UUID& dest) = 0;
     virtual void service(const Time& t)=0;
 
     virtual void registerClient(UUID oid,float weight=1) = 0;

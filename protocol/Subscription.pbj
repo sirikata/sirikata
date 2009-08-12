@@ -1,5 +1,5 @@
 /*  CBR
- *  Prox.pbj
+ *  Subscription.pbj
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,27 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package CBR.Protocol.Prox;
+package CBR.Protocol.Subscription;
 
-// Server messages
+message SubscriptionMessage {
+    enum Action {
+        Subscribe = 1;
+        Unsubscribe = 2;
+    }
 
-message TimedMotionVector {
-    required time t = 1;
-    required vector3f position = 2;
-    required vector3f velocity = 3;
-}
-
-message ObjectAddition {
-    required uuid object = 1;
-    required TimedMotionVector location = 2;
-    required boundingsphere3f bounds = 3;
-}
-
-message ObjectRemoval {
-    required uuid object = 1;
-}
-
-message ProximityResults {
-    repeated ObjectAddition addition = 1;
-    repeated ObjectRemoval removal = 2;
+    required Action action = 1;
 }

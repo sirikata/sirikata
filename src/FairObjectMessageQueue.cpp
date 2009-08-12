@@ -16,9 +16,9 @@ template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(Ser
 {
 }
 
-template <class Queue> bool FairObjectMessageQueue<Queue>::send(ObjectToObjectMessage* msg) {
-    UUID src_uuid = msg->sourceObject();
-    UUID dest_uuid = msg->destObject();
+template <class Queue> bool FairObjectMessageQueue<Queue>::send(Message* msg, const UUID& source, const UUID& dest) {
+    UUID src_uuid = source;
+    UUID dest_uuid = dest;
     ServerID dest_server_id = lookup(dest_uuid);
     UniqueMessageID msg_id = msg->id();
 
