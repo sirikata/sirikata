@@ -96,7 +96,7 @@ public:
     }
 
     static DeltaTime seconds(double s) {
-        return DeltaTime((int64)(s/1000000.));
+        return DeltaTime((int64)(s*1000000.));
     }
     static DeltaTime milliseconds(double ms) {
         return DeltaTime((int64)(ms*1000.));
