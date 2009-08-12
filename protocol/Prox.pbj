@@ -32,13 +32,29 @@
 
 package CBR.Protocol.Prox;
 
-// Server messages
 
 message TimedMotionVector {
     required time t = 1;
     required vector3f position = 2;
     required vector3f velocity = 3;
 }
+
+// Queries
+
+message ServerQuery {
+    enum Action {
+        AddOrUpdate = 1;
+        Remove = 2;
+    }
+
+    required Action action = 1;
+    optional TimedMotionVector location = 2;
+    optional boundingsphere3f bounds = 3;
+    optional float min_angle = 4;
+}
+
+
+// Query Results
 
 message ObjectAddition {
     required uuid object = 1;

@@ -159,38 +159,18 @@ private:
 }; // class ProximityMessage
 
 
-// Base class for object to object messages.  Mostly saves a bit of serialization code
-class ObjectToObjectMessage : public Message {
+class LocationMessage : public Message {
 public:
-    ObjectToObjectMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object);
-
-    const UUID& sourceObject() const;
-    const UUID& destObject() const;
-
-protected:
-    uint32 serializeSourceDest(Network::Chunk& wire, uint32 offset);
-    ObjectToObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-private:
-    UUID mSourceObject;
-    UUID mDestObject;
-}; // class ObjectToObjectMessage
-
-
-class LocationMessage : public ObjectToObjectMessage {
-public:
-    LocationMessage(const OriginID& origin, const UUID& src_object, const UUID& dest_object, const TimedMotionVector3f& loc);
+    LocationMessage(const OriginID& origin);
 
     virtual MessageType type() const;
-
-    const TimedMotionVector3f& location() const;
-
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    CBR::Protocol::Object::ObjectMessage object_header;
+    CBR::Protocol::Loc::TimedMotionVector contents;
 private:
     friend class Message;
     LocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    TimedMotionVector3f mLocation;
 }; // class LocationMessage
 
 
@@ -373,30 +353,16 @@ private:
 
 class ServerProximityQueryMessage : public Message {
 public:
-    enum QueryAction {
-        AddOrUpdate = 1,
-        Remove = 2
-    };
-
-    ServerProximityQueryMessage(const OriginID& origin, QueryAction action);
-    ServerProximityQueryMessage(const OriginID& origin, QueryAction action, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle);
+    ServerProximityQueryMessage(const OriginID& origin);
     ~ServerProximityQueryMessage();
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    QueryAction action() const { return mAction; }
-    TimedMotionVector3f queryLocation() const { assert(action() == AddOrUpdate); return mQueryLocation; }
-    BoundingSphere3f queryBounds() const { assert(action() == AddOrUpdate); return mBounds; }
-    SolidAngle queryAngle() const { assert(action() == AddOrUpdate); return mMinAngle; }
+    CBR::Protocol::Prox::ServerQuery contents;
 private:
     friend class Message;
     ServerProximityQueryMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    QueryAction mAction;
-    TimedMotionVector3f mQueryLocation;
-    BoundingSphere3f mBounds;
-    SolidAngle mMinAngle;
 };
 
 

@@ -96,14 +96,17 @@ void Object::checkPositionUpdate(const Time& t) {
     if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
         mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
-            LocationMessage* loc_msg =
-                new LocationMessage(
-                    mOriginID,
-                    mID,
-                    *it,
-                    mLocation
-                );
-            bool success = mObjectMessageQueue->send(loc_msg, loc_msg->sourceObject(), loc_msg->destObject());
+            LocationMessage* loc_msg = new LocationMessage(mOriginID);
+            loc_msg->object_header.set_source_object(uuid());
+            loc_msg->object_header.set_source_port(0);
+            loc_msg->object_header.set_dest_object(*it);
+            loc_msg->object_header.set_dest_port(0);
+
+            loc_msg->contents.set_t(PBJ::Time::microseconds(mLocation.updateTime().raw()));
+            loc_msg->contents.set_position(mLocation.position());
+            loc_msg->contents.set_velocity(mLocation.velocity());
+
+            bool success = mObjectMessageQueue->send(loc_msg, loc_msg->object_header.source_object(), loc_msg->object_header.dest_object());
             // XXX FIXME do something on failure
             delete loc_msg;
         }

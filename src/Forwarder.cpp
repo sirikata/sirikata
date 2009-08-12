@@ -498,10 +498,10 @@ static UUID getObjectMessageDest(Message* msg) {
           break;
       case MESSAGE_TYPE_LOCATION:
           {
-              ObjectToObjectMessage* obj_msg = dynamic_cast<ObjectToObjectMessage*>(msg);
-              assert(obj_msg != NULL);
+              LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
+              assert(loc_msg != NULL);
 
-              return obj_msg->destObject();
+              return loc_msg->object_header.dest_object();
           }
       case MESSAGE_TYPE_SUBSCRIPTION:
           {

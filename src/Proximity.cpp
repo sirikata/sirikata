@@ -105,7 +105,14 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
     // FIXME this assumes that ServerIDs are simple sequence of IDs
     for(ServerID sid = 1; sid <= cseg->numServers(); sid++) {
         if (sid == mID) continue;
-        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(oid, ServerProximityQueryMessage::AddOrUpdate, loc, bounds, minAngle);
+        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(oid);
+        msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
+        CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
+        msg_loc.set_t(PBJ::Time::microseconds(loc.updateTime().raw()));
+        msg_loc.set_position(loc.position());
+        msg_loc.set_position(loc.velocity());
+        msg->contents.set_bounds(bounds);
+        msg->contents.set_min_angle(minAngle.asFloat());
         mRouter->route(msg, sid);
     }
 }
@@ -118,10 +125,20 @@ void Proximity::receiveMessage(Message* msg) {
         // probably by saving the header and delivering it along with the message
         ServerID source_server = (ServerID)(GetUniqueIDOriginID(msg->id()).id);
 
-        if (prox_query_msg->action() == ServerProximityQueryMessage::AddOrUpdate) {
-            addQuery(source_server, prox_query_msg->queryLocation(), prox_query_msg->queryBounds(), prox_query_msg->queryAngle());
+        if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::AddOrUpdate) {
+            assert(
+                prox_query_msg->contents.has_location() &&
+                prox_query_msg->contents.has_bounds() &&
+                prox_query_msg->contents.has_min_angle()
+            );
+
+            CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg->contents.location();
+            Time qloc_t( (msg_loc.t()-PBJ::Time::null()).toMicroseconds() );
+            MotionVector3f qloc_motion(msg_loc.position(), msg_loc.velocity());
+            TimedMotionVector3f qloc(qloc_t, qloc_motion);
+            addQuery(source_server, qloc, prox_query_msg->contents.bounds(), SolidAngle(prox_query_msg->contents.min_angle()));
         }
-        else if (prox_query_msg->action() == ServerProximityQueryMessage::Remove) {
+        else if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
         }
         else {

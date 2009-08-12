@@ -82,7 +82,17 @@ void ObjectConnection::deliver(Message* msg, const Time& t) {
           {
               LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
               assert(loc_msg != NULL);
-              mTrace->loc(t, loc_msg->destObject(), loc_msg->sourceObject(), loc_msg->location());
+
+              Time loc_t( (loc_msg->contents.t()-PBJ::Time::null()).toMicroseconds() );
+              MotionVector3f loc_motion(loc_msg->contents.position(), loc_msg->contents.velocity());
+              TimedMotionVector3f loc(loc_t, loc_motion);
+
+              mTrace->loc(
+                  t,
+                  loc_msg->object_header.dest_object(),
+                  loc_msg->object_header.source_object(),
+                  loc
+              );
               mObject->locationMessage(loc_msg);
           }
           break;
