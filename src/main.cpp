@@ -406,11 +406,9 @@ void *main_loop(void *) {
 
     {
         Duration waiting_time=Duration::seconds(GetOption("wait-additional")->as<float>());
-        printf("waiting x %f\n", waiting_time.toSeconds());
         if (GetOption("wait-until")->as<String>().length()) {
             waiting_time+=(Timer::getSpecifiedDate(GetOption("wait-until")->as<String>())-Timer::now());
         }
-        printf("waiting y %f\n", waiting_time.toSeconds());
         float32 waitin=waiting_time.toMilliseconds();
         printf ("waiting for %f seconds\n",waitin/1000.);
         if (waitin>0)
