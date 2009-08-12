@@ -52,7 +52,7 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
    mCSeg(NULL),
    mFirstTick(true)
 {
-    Time start(0);
+    Time start(Time::null());
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
@@ -68,7 +68,7 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
         if (GetOption(OBJECT_STATIC)->as<bool>() == true)
             inputs->motion = new StaticMotionPath(start, startpos);
         else
-            inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((uint32)1000), region); // FIXME
+            inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((int64)1000), region); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * 20 );
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
 

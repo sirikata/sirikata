@@ -4,7 +4,7 @@ struct Event {
     static Event* read(std::istream& is, const ServerID& trace_server_id);
 
     Event()
-     : time(0)
+     : time(Time::null())
     {}
     virtual ~Event() {}
 
@@ -67,7 +67,7 @@ struct ServerDatagramQueuedEvent : public ServerDatagramEvent {
 
 struct ServerDatagramSentEvent : public ServerDatagramEvent {
     ServerDatagramSentEvent()
-     : ServerDatagramEvent(), _start_time(0), _end_time(0)
+     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
     {}
 
     virtual Time begin_time() const {
@@ -85,7 +85,7 @@ struct ServerDatagramSentEvent : public ServerDatagramEvent {
 
 struct ServerDatagramReceivedEvent : public ServerDatagramEvent {
     ServerDatagramReceivedEvent()
-     : ServerDatagramEvent(), _start_time(0), _end_time(0)
+     : ServerDatagramEvent(), _start_time(Time::null()), _end_time(Time::null())
     {}
 
     virtual Time begin_time() const {

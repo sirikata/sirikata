@@ -37,7 +37,7 @@ namespace CBR {
 
 OracleLocationService::OracleLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, ObjectFactory* objfactory)
  : LocationService(sid, router, dispatcher),
-   mCurrentTime(0),
+   mCurrentTime(Time::null()),
    mLocalObjects(),
    mReplicaObjects(),
    mInitialNotification(false)

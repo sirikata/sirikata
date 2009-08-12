@@ -6,7 +6,6 @@
 #include "Message.hpp"
 #include "Object.hpp"
 #include "Statistics.hpp"
-#include "Time.hpp"
 
 //object segmenter h file
 
@@ -16,7 +15,7 @@ namespace CBR
 
   const ServerID OBJECT_IN_TRANSIT = -999;
 
-  
+
   class ObjectSegmentation
   {
 
@@ -28,11 +27,11 @@ namespace CBR
 
     Trace* mTrace;
 
-    
+
   public:
     virtual ServerID lookup(const UUID& obj_id) const = 0;
     virtual void osegMigrateMessage(OSegMigrateMessage*) = 0;
-    
+
     //    virtual void tick(const Time& t, std::deque<OutgoingMessage> &messageQueueToPushTo) = 0;
     virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers ) = 0;
     virtual void tick(const Time& t, std::map<UUID,ServerID>& updated) = 0;

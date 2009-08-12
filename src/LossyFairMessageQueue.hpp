@@ -33,7 +33,6 @@
 #ifndef _LOSSY_FAIR_MESSAGE_QUEUE_HPP_
 #define _LOSSY_FAIR_MESSAGE_QUEUE_HPP_
 
-#include "Time.hpp"
 #include "Message.hpp"
 #include "LossyFairSendQueue.hpp"
 
@@ -90,7 +89,7 @@ public:
     void getQueues(std::vector<MessageQueue*>& queue) {
         for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
 	  ServerQueueInfo* queue_info = &it->second;
-	  
+
 	  queue.push_back(queue_info->messageQueue);
 	}
     }
@@ -131,7 +130,7 @@ public:
             queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
         }
         return queue_info->messageQueue->push(msg);
-    }    
+    }
 
     // returns a list of messages which should be delivered immediately
     std::vector<Message*> tick(const Time& t) {
@@ -169,7 +168,7 @@ public:
                 // Find the non-empty queue with the earliest finish time
                 ServerQueueInfo* min_queue_info = NULL;
                 for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-  		    ServerQueueInfo* queue_info = &it->second;  		  
+  		    ServerQueueInfo* queue_info = &it->second;
                     if (queue_info->messageQueue->empty()&&!serviceEmptyQueue) continue;
                     if (min_queue_info == NULL || queue_info->nextFinishTime < min_queue_info->nextFinishTime)
                         min_queue_info = queue_info;
@@ -188,7 +187,7 @@ public:
                         }
                     }else {
                         if (mLeftoverBytes<mMessageBeingSent->size())
-                            break;                        
+                            break;
                     }
                     uint32 message_size = mMessageBeingSent->size();
                     assert(message_size<=mLeftoverBytes);

@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
         int ip[4];
         if (3==fscanf(ntp,"server %*s stratum %d, offset %f, delay %f\n",&stratum,&offset,&delay)) {
             //printf ("Match offset %f\n",offset);
-            Timer::setSystemClockOffset(Duration::seconds((float32)offset));
+            Timer::setSystemClockOffset(Duration::seconds((float64)offset));
         }
         fclose(ntp);
         close(ntppipes[0]);
@@ -200,12 +200,12 @@ void *main_loop(void *) {
 
     if ( GetOption(ANALYSIS_LOC)->as<bool>() ) {
         LocationErrorAnalysis lea(STATS_TRACE_FILE, nservers);
-        printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((uint32)10), obj_factory));
+        printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10), obj_factory));
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
         LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,loc_service,cseg);
-        lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((uint32)30));
+        lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {
@@ -264,7 +264,7 @@ void *main_loop(void *) {
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
         BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
-        Time start_time(0);
+        Time start_time = Time::null();
         Time end_time = start_time + duration;
         printf("Send rates\n");
         for(ServerID sender = 1; sender <= nservers; sender++) {
@@ -406,10 +406,12 @@ void *main_loop(void *) {
 
     {
         Duration waiting_time=Duration::seconds(GetOption("wait-additional")->as<float>());
+        printf("waiting x %f\n", waiting_time.toSeconds());
         if (GetOption("wait-until")->as<String>().length()) {
             waiting_time+=(Timer::getSpecifiedDate(GetOption("wait-until")->as<String>())-Timer::now());
         }
-        float32 waitin=waiting_time.milliseconds();
+        printf("waiting y %f\n", waiting_time.toSeconds());
+        float32 waitin=waiting_time.toMilliseconds();
         printf ("waiting for %f seconds\n",waitin/1000.);
         if (waitin>0)
             usleep(waitin*1000.);
@@ -417,11 +419,11 @@ void *main_loop(void *) {
 
     ///////////Go go go!! start of simulation/////////////////////
 
-    Time tbegin = Time(0);
+    Time tbegin = Time::null();
     Time tend = tbegin + duration;
 
     Duration stats_sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
-    Time last_sample_time = Time(0);
+    Time last_sample_time = Time::null();
 
     if (sim) {
 
@@ -467,7 +469,7 @@ void *main_loop(void *) {
     if (!sync_file.empty()) {
         std::ofstream sos(sync_file.c_str(), std::ios::out);
         if (sos)
-            sos << Timer::getSystemClockOffset().milliseconds() << std::endl;
+            sos << Timer::getSystemClockOffset().toMilliseconds() << std::endl;
     }
 
 

@@ -41,7 +41,7 @@ namespace CBR {
 
 Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher)
  : mID(sid),
-   mLastTime(0),
+   mLastTime(Time::null()),
    mLocService(locservice),
    mServerQueries(),
    mLocalLocCache(NULL),
@@ -108,7 +108,7 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
         ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(oid);
         msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
-        msg_loc.set_t(PBJ::Time::microseconds(loc.updateTime().raw()));
+        msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
@@ -133,9 +133,7 @@ void Proximity::receiveMessage(Message* msg) {
             );
 
             CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg->contents.location();
-            Time qloc_t( (msg_loc.t()-PBJ::Time::null()).toMicroseconds() );
-            MotionVector3f qloc_motion(msg_loc.position(), msg_loc.velocity());
-            TimedMotionVector3f qloc(qloc_t, qloc_motion);
+            TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             addQuery(source_server, qloc, prox_query_msg->contents.bounds(), SolidAngle(prox_query_msg->contents.min_angle()));
         }
         else if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
@@ -220,7 +218,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
                 TimedMotionVector3f loc = mLocalLocCache->location(evt_it->id());
                 CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
-                msg_loc.set_t(PBJ::Time::microseconds(loc.updateTime().raw())); // FIXME we should just use the same time class as sirikata
+                msg_loc.set_t(loc.updateTime());
                 msg_loc.set_position(loc.position());
                 msg_loc.set_velocity(loc.velocity());
 

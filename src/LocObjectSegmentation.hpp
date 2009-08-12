@@ -8,7 +8,6 @@
 
 #include "ObjectSegmentation.hpp"
 #include "Message.hpp"
-#include "Time.hpp"
 #include "Network.hpp"
 #include "LocationService.hpp"
 #include "CoordinateSegmentation.hpp"
@@ -28,8 +27,8 @@ namespace CBR
     CoordinateSegmentation* mCSeg; //will be used in lookup call
     LocationService* mLocationService; //will be used in lookup call
     std::map<UUID,ServerID> mObjectToServerMap;  //initialized with this
-    
-    
+
+
   public:
     //    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
     LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
@@ -47,7 +46,7 @@ namespace CBR
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID);
     virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
-    
+
   };
 }
 #endif

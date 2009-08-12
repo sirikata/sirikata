@@ -35,7 +35,6 @@
 #include <algorithm>
 #include <boost/tokenizer.hpp>
 #include "Options.hpp"
-#include "Time.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
 
@@ -53,7 +52,7 @@ LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, con
   : mServerID(server_id),
     mMessageDispatcher(msg_source),
     mMessageRouter(msg_router),
-    mCurrentTime(0),
+    mCurrentTime(Time::null()),
     mTrace(trace)
 {
     mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);

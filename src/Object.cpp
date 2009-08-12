@@ -102,7 +102,7 @@ void Object::checkPositionUpdate(const Time& t) {
             loc_msg->object_header.set_dest_object(*it);
             loc_msg->object_header.set_dest_port(0);
 
-            loc_msg->contents.set_t(PBJ::Time::microseconds(mLocation.updateTime().raw()));
+            loc_msg->contents.set_t(mLocation.updateTime());
             loc_msg->contents.set_position(mLocation.position());
             loc_msg->contents.set_velocity(mLocation.velocity());
 

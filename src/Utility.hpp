@@ -82,8 +82,8 @@ typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
 typedef Sirikata::InitializeClassOptions InitializeOptions;
 
-class Time;
-class Duration;
+typedef Sirikata::Task::AbsTime Time;
+typedef Sirikata::Task::DeltaTime Duration;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */
 
@@ -91,7 +91,7 @@ template <typename Value>
 class TemporalValue : public Sirikata::TemporalValueBase<Value, Time> {
 public:
     TemporalValue()
-     : Sirikata::TemporalValueBase<Value, Time>( Time(0), Value() )
+     : Sirikata::TemporalValueBase<Value, Time>( Time(Time::null()), Value() )
     {}
     TemporalValue(const Time& when, const Value& l)
      : Sirikata::TemporalValueBase<Value, Time>(when, l)

@@ -31,7 +31,6 @@
  */
 
 #include "Utility.hpp"
-#include "Duration.hpp"
 #include "SolidAngle.hpp"
 #include "Server.hpp"
 

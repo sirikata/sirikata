@@ -198,7 +198,7 @@ TimedMotionVector3f QuakeMotionPath::parseTraceLines(String firstLine, String se
 
     Vector3f vel = (next_pos - cur_pos) * 1.f / (t2 - t1);
 
-    return TimedMotionVector3f(Time( (t1 - start_time)*1000.0f), MotionVector3f(cur_pos, vel) );
+    return TimedMotionVector3f(Time::null() + Duration::microseconds((int64)(t1 - start_time)*1000), MotionVector3f(cur_pos, vel) );
 }
 
 uint32 QuakeMotionPath::getIDFromTraceLine(String line) {

@@ -32,7 +32,7 @@ Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, 
       mLocationService(loc_service),
       mCSeg(cseg),
       mProximity(prox),
-      mCurrentTime(0),
+      mCurrentTime(Time::null()),
       mTrace(trace),
       mOSeg(oseg),
       mForwarder(forwarder)
@@ -180,7 +180,7 @@ void Server::proximityTick(const Time& t)
 
         CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
         TimedMotionVector3f loc = mLocationService->location(evt.object());
-        motion.set_t(PBJ::Time::microseconds(loc.updateTime().raw()));
+        motion.set_t(loc.updateTime());
         motion.set_position(loc.position());
         motion.set_velocity(loc.velocity());
 

@@ -33,8 +33,7 @@
 #ifndef _CBR_TIMER_HPP_
 #define _CBR_TIMER_HPP_
 
-#include "Time.hpp"
-#include "Duration.hpp"
+#include "Utility.hpp"
 #include <boost/date_time.hpp>
 
 namespace CBR {

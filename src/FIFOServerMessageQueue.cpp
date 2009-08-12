@@ -16,9 +16,9 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 send_bytes_p
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
    mRemainderRecvBytes(0),
-   mLastTime(0),
-   mLastSendEndTime(0),
-   mLastReceiveEndTime(0)
+   mLastTime(Time::null()),
+   mLastSendEndTime(Time::null()),
+   mLastReceiveEndTime(Time::null())
 {
 }
 
@@ -61,8 +61,8 @@ bool FIFOServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 }
 
 void FIFOServerMessageQueue::service(const Time& t){
-    uint64 send_bytes = (t - mLastTime).seconds() * mSendRate + mRemainderSendBytes;
-    uint64 recv_bytes = (t - mLastTime).seconds() * mRecvRate + mRemainderRecvBytes;
+    uint64 send_bytes = (t - mLastTime).toSeconds() * mSendRate + mRemainderSendBytes;
+    uint64 recv_bytes = (t - mLastTime).toSeconds() * mRecvRate + mRemainderRecvBytes;
 
     // Send
 

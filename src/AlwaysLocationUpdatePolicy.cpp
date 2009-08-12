@@ -185,7 +185,7 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
             CBR::Protocol::Loc::ILocationUpdate update = msg->contents.add_update();
             update.set_object(up_it->first);
             CBR::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
-            location.set_t(PBJ::Time::microseconds(up_it->second.location.updateTime().raw())); // FIXME we should just use the same time class as sirikata
+            location.set_t(up_it->second.location.updateTime());
             location.set_position(up_it->second.location.position());
             location.set_velocity(up_it->second.location.velocity());
             update.set_bounds(up_it->second.bounds);

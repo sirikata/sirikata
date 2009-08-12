@@ -34,8 +34,6 @@
 #define _CBR_MOTION_VECTOR_HPP_
 
 #include "Utility.hpp"
-#include "Time.hpp"
-#include "Duration.hpp"
 
 namespace CBR {
 
@@ -64,7 +62,7 @@ public:
     }
 
     MotionVector extrapolate(const Duration& dt) const {
-        return MotionVector(mStart + mDirection * dt.seconds(), mDirection);
+        return MotionVector(mStart + mDirection * dt.toSeconds(), mDirection);
     }
 
 private:
@@ -98,7 +96,7 @@ public:
     }
 
     PositionType position(const Duration& dt) const {
-        return Base::value().position() + Base::value().velocity() * dt.seconds();
+        return Base::value().position() + Base::value().velocity() * dt.toSeconds();
     }
 
     PositionType position(const Time& t) const {

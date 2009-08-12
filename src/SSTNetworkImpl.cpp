@@ -18,13 +18,13 @@ SSTStatsListener::SSTStatsListener(Trace* trace, const QTime& start, const Addre
 void SSTStatsListener::packetSent(qint32 size) {
     qint32 msecs = mStartTime.elapsed();
 
-    mTrace->packetSent( Time(0) + Duration::milliseconds((uint32)msecs), mRemote, size);
+    mTrace->packetSent( Time::null() + Duration::milliseconds((int64)msecs), mRemote, size);
 }
 
 void SSTStatsListener::packetReceived(qint32 size) {
     qint32 msecs = mStartTime.elapsed();
 
-    mTrace->packetReceived( Time(0) + Duration::milliseconds((uint32)msecs), mRemote, size);
+    mTrace->packetReceived( Time::null() + Duration::milliseconds((int64)msecs), mRemote, size);
 }
 
 static int argc = 1;
@@ -32,7 +32,7 @@ static const char* argv[] = { "blah", NULL };
 
 CBRSST::CBRSST(Trace* trace)
  : mTrace(trace),
-   mLastSampleTime(0),
+   mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
 {
     mApp = new QApplication((int&)argc, (char**)argv);

@@ -34,7 +34,6 @@
 #define _CBR_OBJECT_HPP_
 
 #include "Utility.hpp"
-#include "Time.hpp"
 #include "MotionPath.hpp"
 #include "Message.hpp"
 #include "SolidAngle.hpp"

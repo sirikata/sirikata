@@ -33,7 +33,6 @@
 #ifndef _FAIR_MESSAGE_QUEUE_HPP_
 #define _FAIR_MESSAGE_QUEUE_HPP_
 
-#include "Time.hpp"
 #include "Queue.hpp"
 
 namespace CBR {
@@ -62,7 +61,10 @@ public:
         }
     public:
         ServerQueueInfo(Key serverName, TQueue* queue, float w)
-          : messageQueue(queue), weight(w), nextFinishTime(0),mKey(serverName) {}
+         : messageQueue(queue),
+           weight(w),
+           nextFinishTime(Time::null()),
+           mKey(serverName) {}
 
         TQueue* messageQueue;
         float weight;
@@ -81,10 +83,10 @@ public:
     typedef TQueue MessageQueue;
 
     FairQueue(const Predicate pred = Predicate())
-        :mCurrentVirtualTime(0),
-         mServerQueues(),
-         mPredicate(pred),
-         mFrontQueue(NULL)
+     :mCurrentVirtualTime(Time::null()),
+      mServerQueues(),
+      mPredicate(pred),
+      mFrontQueue(NULL)
     {
     }
 
@@ -175,7 +177,7 @@ public:
     //          given the number of bytes allocated
     Message* front(uint64* bytes, Key*keyAtFront) {
         Message* result = NULL;
-        Time vftime(0);
+        Time vftime(Time::null());
         mFrontQueue = NULL;
 
         nextMessage(bytes, &result, &vftime, &mFrontQueue);
@@ -194,7 +196,7 @@ public:
     //          given the number of bytes allotted
     Message* pop(uint64* bytes) {
         Message* result = NULL;
-        Time vftime(0);
+        Time vftime(Time::null());
 
         // If we haven't marked any queue as holding the front item, do so now
         if (mFrontQueue == NULL)
@@ -306,7 +308,7 @@ protected:
     Time finishTime(uint32 size, float weight, const Time& last_finish_time) const {
         float queue_frac = weight;
         Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
-        if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
+        if (transmitTime == Duration::zero()) transmitTime = Duration::microseconds(1); // just make sure we take *some* time
 
         return last_finish_time + transmitTime;
     }
@@ -315,7 +317,7 @@ protected:
     Time finishTime(uint32 size, float weight) const {
         float queue_frac = weight;
         Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
-        if (transmitTime == Duration(0)) transmitTime = Duration(1); // just make sure we take *some* time
+        if (transmitTime == Duration::zero()) transmitTime = Duration::microseconds(1); // just make sure we take *some* time
 
         return mCurrentVirtualTime + transmitTime;
     }

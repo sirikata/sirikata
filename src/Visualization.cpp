@@ -172,7 +172,7 @@ void LocationVisualization::mainLoop() {
     }
     glEnd();
     glutSwapBuffers();				/* Complete any pending operations */
-    usleep((int)(mSamplingRate.milliseconds()*1000));
+    usleep((int)(mSamplingRate.toMilliseconds()*1000));
 }
 void main_loop() {
   static LocationVisualization*sVis=gVis;
@@ -180,7 +180,7 @@ void main_loop() {
 
 }
 LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*factory, LocationService*loc_serv, CoordinateSegmentation*cseg):
-    LocationErrorAnalysis(opt_name,nservers),mCurTime(0){
+ LocationErrorAnalysis(opt_name,nservers),mCurTime(Time::null()){
     mFactory=factory;
     mLoc=loc_serv;
     mSeg=cseg;

@@ -34,7 +34,6 @@
 #define _CBR_PROX_SIMULATION_TRAITS_HPP_
 
 #include "Utility.hpp"
-#include "Time.hpp"
 #include "MotionVector.hpp"
 
 namespace CBR {

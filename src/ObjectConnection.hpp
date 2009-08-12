@@ -33,12 +33,13 @@
 #ifndef _CBR_OBJECT_CONNECTION_HPP_
 #define _CBR_OBJECT_CONNECTION_HPP_
 
+#include "Utility.hpp"
+
 namespace CBR {
 
 class Object;
 class Message;
 class Trace;
-class Time;
 
 /** Represents a connection a space has to an object.
  *  Only valid while a valid network connection to the object

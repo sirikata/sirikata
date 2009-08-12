@@ -10,7 +10,7 @@ namespace CBR{
 template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
    mClientQueues(),
-   mLastTime(0),
+   mLastTime(Time::null()),
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
@@ -34,7 +34,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::send(Message* msg, co
 template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t){
     aggregateLocationMessages();
 
-    uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
+    uint64 bytes = mRate * (t - mLastTime).toSeconds() + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
     UUID objectName;

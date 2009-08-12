@@ -8,7 +8,6 @@
 #include "CoordinateSegmentation.hpp"
 #include <map>
 #include <vector>
-#include "Time.hpp"
 /*
   Querries cseg for numbers of servers.
 
@@ -33,7 +32,7 @@ namespace CBR
       Time mCurrentTime;
 
 
-    
+
     public:
     UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
     //UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID);
@@ -41,7 +40,7 @@ namespace CBR
 
       virtual ServerID lookup(const UUID& obj_id) const;
       virtual void osegMigrateMessage(OSegMigrateMessage*);
-    
+
       virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     //      virtual void migrateMessage(MigrateMessage*);
       virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
@@ -50,7 +49,7 @@ namespace CBR
 
       virtual Message* generateAcknowledgeMessage(Object* obj, ServerID sID_to);
       virtual ServerID getHostServerID();
-    
+
   }; //end class
 
 }//namespace CBR

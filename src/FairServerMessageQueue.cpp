@@ -16,13 +16,13 @@ FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_p
  : ServerMessageQueue(net, sid, sidmap, trace),
    mServerQueues( CanSendPredicate(this) ),
    mReceiveQueues(),
-   mLastTime(0),
+   mLastTime(Time::null()),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
    mRemainderReceiveBytes(0),
-   mLastSendEndTime(0),
-   mLastReceiveEndTime(0)
+   mLastSendEndTime(Time::null()),
+   mLastReceiveEndTime(Time::null())
 {
 }
 
@@ -71,8 +71,8 @@ bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
 }
 
 void FairServerMessageQueue::service(const Time&t){
-    uint64 send_bytes = (t - mLastTime).seconds() * mRate + mRemainderSendBytes;
-    uint64 recv_bytes = (t - mLastTime).seconds() * mRecvRate + mRemainderReceiveBytes;
+    uint64 send_bytes = (t - mLastTime).toSeconds() * mRate + mRemainderSendBytes;
+    uint64 recv_bytes = (t - mLastTime).toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Send
 

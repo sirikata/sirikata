@@ -1,6 +1,5 @@
 #include "LocObjectSegmentation.hpp"
 #include "Message.hpp"
-#include "Time.hpp"
 #include "Network.hpp"
 #include <map>
 #include <vector>
@@ -8,12 +7,11 @@
 #include "CoordinateSegmentation.hpp"
 #include "Statistics.hpp"
 #include "Utility.hpp"
-#include "Time.hpp"
 
 namespace CBR
 {
-  
-  
+
+
   /*
     Constructor
   */
@@ -24,7 +22,7 @@ namespace CBR
       mLocationService(loc_service),
       mObjectToServerMap(objectToServerMap)
   {
-    
+
   }
 
   /*
@@ -40,9 +38,9 @@ namespace CBR
   {
     return NULL;
   }
-  
 
-  
+
+
   /*
     Lookup server id based on check with location service and mcseg.
   */
@@ -61,7 +59,7 @@ namespace CBR
   {
     return;
   }
-  
+
 
   /*
     Doesn't do anything for now.
@@ -70,7 +68,7 @@ namespace CBR
   {
     delete msg;
   }
-  
+
   /*
     Behavior:
     If receives a move message, moves object in mObjectToServerMap to another server.  (If object didn't exist before trying to move it, we create it, and put it on assigned server.)
@@ -88,14 +86,14 @@ namespace CBR
     obj_id    = msg->getObjID();
     oaction   = msg->getAction();
 
-    
 
-    
+
+
     switch (oaction)
     {
       case OSegMigrateMessage::CREATE:      //msg says something has been added
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-        {          
+        {
           //means that object exists.  we will move it.
           mObjectToServerMap[obj_id] = serv_to;
         }
@@ -104,12 +102,12 @@ namespace CBR
           //means that object doesn't exist.  we will create it.
           mObjectToServerMap[obj_id] = serv_to;
         }
-        
+
         break;
       case OSegMigrateMessage::KILL:    //msg says object has been deleted
 
         mObjectToServerMap.erase(obj_id);
-                  
+
         break;
       case OSegMigrateMessage::MOVE:     //means that an object moved from one server to another.
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
@@ -126,8 +124,8 @@ namespace CBR
       case OSegMigrateMessage::ACKNOWLEDGE:
         //do nothing for now.
         break;
-        
-    } 
+
+    }
   }
 
   /*
@@ -174,4 +172,3 @@ namespace CBR
   }
 
 }
-

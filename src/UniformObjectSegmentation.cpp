@@ -4,7 +4,6 @@
 #include <map>
 #include <vector>
 #include "Statistics.hpp"
-#include "Time.hpp"
 
 /*
   Querries cseg for numbers of servers.
@@ -19,12 +18,12 @@ namespace CBR
   */
   //      UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID, const Time& timing );
 
-  
+
   UniformObjectSegmentation::UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID, Trace* tracer)
     //  UniformObjectSegmentation::UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID)
     : mCSeg (cseg),
       mObjectToServerMap (objectToServerMap),
-      mCurrentTime(0)
+      mCurrentTime(Time::null())
   {
     mID = sID;
     //don't need to initialize held
@@ -41,7 +40,7 @@ namespace CBR
 
 
   /*
-    The lookup should look through 
+    The lookup should look through
   */
   ServerID UniformObjectSegmentation::lookup(const UUID& obj_id) const
   {
@@ -69,10 +68,10 @@ namespace CBR
 
     }
 
-    
+
     //printf("\n**Debug in UniformObjectSegmentation.cpp's lookup: obj in transit.\n");
     //    std::cout<<"\n**Debug in UniformObjectSegmentation.cpp's lookup: object "<<obj_id.toString()<<" in transit.\n";
-    
+
     return OBJECT_IN_TRANSIT;
     //    return mObjectToServerMap[obj_id];
     //    return iter->second;
@@ -99,21 +98,21 @@ namespace CBR
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
     //returner =  oseg_change_msg;
     return  oseg_change_msg;
-    
+
   }
 
 
-  
+
 
   /*
     Means that the server that this oseg is on now is in charge of the object with obj_id.
-    Add 
+    Add
    */
   void UniformObjectSegmentation::addObject(const UUID& obj_id, const ServerID ourID)
   {
 
     if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-    {          
+    {
       //means that object exists.  we will move it to our id.
       mObjectToServerMap[obj_id] = ourID;
     }
@@ -136,7 +135,7 @@ namespace CBR
 
       //log the message.
       mTrace->objectBeginMigrate(mCurrentTime,obj_id,this->getHostServerID(),new_server_id); //log it.
-      
+
       //if we do, then say that the object is in transit.
       mInTransit[obj_id] = new_server_id;
     }
@@ -159,12 +158,12 @@ namespace CBR
     serv_to   = msg->getServTo();
     obj_id    = msg->getObjID();
     oaction   = msg->getAction();
-    
+
     switch (oaction)
     {
       case OSegMigrateMessage::CREATE:      //msg says something has been added
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-        {          
+        {
           //means that object exists.  we will move it.
           mObjectToServerMap[obj_id] = serv_to;
         }
@@ -198,7 +197,7 @@ namespace CBR
         //place it in mFinishedMove
 
         std::map<UUID,ServerID>::iterator inTransIt;
-        
+
         inTransIt = mInTransit.find(obj_id);
         if (inTransIt != mInTransit.end())
         {
@@ -211,10 +210,10 @@ namespace CBR
           mTrace->objectAcknowledgeMigrate(mCurrentTime, obj_id,serv_from,this->getHostServerID());
 
         }
-        
+
         break;
-        
-    } 
+
+    }
   }
 
   /*
@@ -228,6 +227,6 @@ namespace CBR
     mFinishedMove.clear();
   }
 
-  
+
 
 }//namespace CBR

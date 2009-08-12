@@ -8,7 +8,6 @@
 #include "CoordinateSegmentation.hpp"
 #include <map>
 #include <vector>
-#include "Time.hpp"
 /*
   Querries cseg for numbers of servers.
 
@@ -27,7 +26,7 @@ namespace CBR
       std::map<UUID,ServerID> mFinishedMoveOrLookup; //These are the objects that just finished moving or we just found the server id for.
 
 
-    
+
       std::vector<Message*> osegMessagesToSend;  //these are either lookups or migrate messages.
       std::vector<ServerID> destServersToSend; //these are the servers that they are destined for.
 
@@ -35,7 +34,7 @@ namespace CBR
 
       void lookupMessage_lookup(OSegLookupMessage* msg);
       void lookupMessage_objectFound(OSegLookupMessage* msg);
-    
+
     public:
       ChordObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
     //UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID);
@@ -43,7 +42,7 @@ namespace CBR
 
       virtual ServerID lookup(const UUID& obj_id) const;
       virtual void osegMigrateMessage(OSegMigrateMessage*);
-    
+
       virtual void tick(const Time& t, std::map<UUID,ServerID> updated);
     //      virtual void migrateMessage(MigrateMessage*);
       virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
@@ -52,10 +51,10 @@ namespace CBR
       virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
 
       virtual void processLookupMessage(OSegLookupMessage* msg);
-    
+
       virtual Message* generateAcknowledgeMessage(Object* obj, ServerID sID_to);
       virtual ServerID getHostServerID();
-    
+
   }; //end class
 
 }//namespace CBR

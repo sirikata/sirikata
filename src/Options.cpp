@@ -31,7 +31,6 @@
  */
 
 #include "Options.hpp"
-#include "Duration.hpp"
 
 namespace CBR {
 

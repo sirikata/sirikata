@@ -385,7 +385,7 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
     const TimedMotionVector3f* next_observer_motion = observer_path->nextUpdate(observer_motion.time());
 #endif
 
-    Time cur_time(0);
+    Time cur_time(Time::null());
     Mode mode = SEARCHING_PROX;
     double error_sum = 0.0;
     uint32 sample_count = 0;
@@ -656,7 +656,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
     uint64 total_bytes = 0;
     uint32 last_bytes = 0;
     Duration last_duration;
-    Time last_time(0);
+    Time last_time(Time::null());
     double max_bandwidth = 0;
     for(EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end); event_it.current() != NULL; event_it.next() ) {
         EventType* p_evt = event_it.current();
@@ -664,7 +664,7 @@ void computeRate(const ServerID& sender, const ServerID& receiver, const EventIt
         total_bytes += p_evt->size;
 
         if (p_evt->time != last_time) {
-            double bandwidth = (double)last_bytes / last_duration.seconds();
+            double bandwidth = (double)last_bytes / last_duration.toSeconds();
             if (bandwidth > max_bandwidth)
                 max_bandwidth = bandwidth;
 
@@ -718,7 +718,7 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
             if (evt == NULL) break;
             if (evt->end_time() > window_end) {
                 if (evt->begin_time() + window < window_end) {
-                    double packet_frac = (window_end - evt->begin_time()).seconds() / (evt->end_time() - evt->begin_time()).seconds();
+                    double packet_frac = (window_end - evt->begin_time()).toSeconds() / (evt->end_time() - evt->begin_time()).toSeconds();
                     last_packet_partial_size = evt->size * packet_frac;
                 }
                 break;
@@ -741,14 +741,14 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
 
             if (pevt->end_time() + window >= window_end) {
                 // note the order of the numerator is important to avoid underflow
-                double packet_frac = (pevt->end_time() + window - window_end).seconds() / (pevt->end_time() - pevt->begin_time()).seconds();
+                double packet_frac = (pevt->end_time() + window - window_end).toSeconds() / (pevt->end_time() - pevt->begin_time()).toSeconds();
                 first_packet_partial_size = pevt->size * packet_frac;
                 break;
             }
         }
 
         // finally compute the current bandwidth
-        double bandwidth = (first_packet_partial_size + bytes + last_packet_partial_size) / window.seconds();
+        double bandwidth = (first_packet_partial_size + bytes + last_packet_partial_size) / window.toSeconds();
         if (bandwidth > max_bandwidth)
             max_bandwidth = bandwidth;
 
@@ -757,7 +757,7 @@ void computeWindowedRate(const ServerID& sender, const ServerID& receiver, const
             detail_out << receiver << " " << sender << " ";
         else
             detail_out << sender << " " << receiver << " ";
-        detail_out << (window_center-Time(0)).milliseconds() << " " << bandwidth << std::endl;
+        detail_out << (window_center-Time::null()).toMilliseconds() << " " << bandwidth << std::endl;
     }
 
     // optionally swap order for sake of graphing code, generally will be used when collecting stats for "receiver" side
@@ -834,7 +834,7 @@ void dumpQueueInfo(const ServerID& sender, const ServerID& receiver, const Event
     EventIterator<EventType, EventIteratorType> event_it(sender, receiver, filter_begin, filter_end);
 
     while((q_evt = event_it.current()) != NULL) {
-        detail_out << sender << " " << receiver << " " << (q_evt->time-Time(0)).milliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << " " << q_evt->receive_size << " " << q_evt->receive_queued << " " << q_evt->receive_weight << std::endl;
+        detail_out << sender << " " << receiver << " " << (q_evt->time-Time::null()).toMilliseconds() << " " << q_evt->send_size << " " << q_evt->send_queued << " " << q_evt->send_weight << " " << q_evt->receive_size << " " << q_evt->receive_queued << " " << q_evt->receive_weight << std::endl;
         event_it.next();
     }
     //summary_out << std::endl;
@@ -893,7 +893,7 @@ void windowedQueueInfo(const ServerID& sender, const ServerID& receiver, const E
             detail_out << receiver << " " << sender << " ";
         else
             detail_out << sender << " " << receiver << " ";
-        detail_out << (window_center-Time(0)).milliseconds() << " " << window_queued_avg << " " << window_weight_avg << std::endl;
+        detail_out << (window_center-Time::null()).toMilliseconds() << " " << window_queued_avg << " " << window_weight_avg << std::endl;
     }
 
     // FIXME we should probably output *something* for summary_out
@@ -972,7 +972,12 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
 }
 
 
-LatencyAnalysis::PacketData::PacketData():_send_start_time(0),_send_end_time(0),_receive_start_time(0),_receive_end_time(0){
+LatencyAnalysis::PacketData::PacketData()
+ :_send_start_time(Time::null()),
+  _send_end_time(Time::null()),
+  _receive_start_time(Time::null()),
+  _receive_end_time(Time::null())
+{
     mSize=0;
     mId=0;
 }
@@ -981,7 +986,7 @@ void LatencyAnalysis::PacketData::addPacketSentEvent(ServerDatagramQueuedEvent*s
     mId=sde->id;
     source=sde->source;
     dest=sde->dest;
-    if (_send_start_time==Time(0)||_send_start_time>=sde->begin_time()) {
+    if (_send_start_time==Time::null()||_send_start_time>=sde->begin_time()) {
         _send_start_time=sde->time;
         _send_end_time=sde->time;
     }
@@ -991,7 +996,7 @@ void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedE
     mId=sde->id;
     source=sde->source;
     dest=sde->dest;
-    if (_receive_end_time==Time(0)||_receive_end_time<=sde->end_time()) {
+    if (_receive_end_time==Time::null()||_receive_end_time<=sde->end_time()) {
         _receive_start_time=sde->begin_time();
         _receive_end_time=sde->end_time();
     }
@@ -1055,10 +1060,10 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
     ServerLatencyInfo* server_latencies = new ServerLatencyInfo[nservers];
     memset(server_latencies, 0, nservers * sizeof(ServerLatencyInfo));
 
-    Time epoch((uint64)0);
+    Time epoch(Time::null());
     for(uint32 source_id = 1; source_id <= nservers; source_id++) {
         for(uint32 dest_id = 1; dest_id <= nservers; dest_id++) {
-            Duration latency(0);
+            Duration latency;
             size_t numSamples=0;
             size_t numUnfinished=0;
             SourceDestinationPair key(source_id,dest_id);
@@ -1071,7 +1076,7 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
                         ++numSamples;
                         latency+=delta;
                     }else if (delta<Duration::seconds(0.0f)){
-                        printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.seconds(),0.,(dat._send_end_time-dat._send_start_time).seconds(),(dat._receive_start_time-dat._send_start_time).seconds(),(dat._receive_end_time-dat._send_start_time).seconds(),dat.mSize, (dat._send_start_time-Time(0)).seconds(),(dat._send_end_time-Time(0)).seconds(),(dat._receive_start_time-Time(0)).seconds(),(dat._receive_end_time-Time(0)).seconds());
+                        printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.toSeconds(),0.,(dat._send_end_time-dat._send_start_time).toSeconds(),(dat._receive_start_time-dat._send_start_time).toSeconds(),(dat._receive_end_time-dat._send_start_time).toSeconds(),dat.mSize, (dat._send_start_time-Time::null()).toSeconds(),(dat._send_end_time-Time::null()).toSeconds(),(dat._receive_start_time-Time::null()).toSeconds(),(dat._receive_end_time-Time::null()).toSeconds());
                     }
                 }else{
                     ++numUnfinished;

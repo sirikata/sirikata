@@ -218,7 +218,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/Duration.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FIFOObjectMessageQueue.cpp
@@ -251,7 +250,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/SolidAngle.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
-  ${CBR_SOURCE_DIR}/Time.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp

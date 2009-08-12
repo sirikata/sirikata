@@ -40,7 +40,7 @@ Forwarder::Forwarder(ServerID id)
    mProximity(NULL),
    m_serv_ID(id),
    mCurrentTime(NULL),
-   mLastSampleTime(0),
+   mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
 {
     //no need to initialize mSelfMessages and mOutgoingMessages.

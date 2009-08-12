@@ -34,7 +34,6 @@
 #define _CBR_STATISTICS_HPP_
 
 #include "Utility.hpp"
-#include "Time.hpp"
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"

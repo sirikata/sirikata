@@ -4,7 +4,6 @@
 #include <map>
 #include <vector>
 #include "Statistics.hpp"
-#include "Time.hpp"
 
 /*
   Querries cseg for numbers of servers.
@@ -19,12 +18,12 @@ namespace CBR
   */
   //      UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID, const Time& timing );
 
-  
+
   ChordObjectSegmentation::ChordObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID, Trace* tracer)
     //  UniformObjectSegmentation::UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID sID)
     : mCSeg (cseg),
       mObjectToServerMap (objectToServerMap),
-      mCurrentTime(0)
+      mCurrentTime(Time::null())
   {
     mID = sID;
     //don't need to initialize held
@@ -41,7 +40,7 @@ namespace CBR
 
 
   /*
-    The lookup should look through 
+    The lookup should look through
   */
   ServerID ChordObjectSegmentation::lookup(const UUID& obj_id) const
   {
@@ -67,7 +66,7 @@ namespace CBR
       return iterObjectToServerID->second;
     }
 
-    
+
     return OBJECT_IN_TRANSIT;
   }
 
@@ -92,21 +91,21 @@ namespace CBR
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
     //returner =  oseg_change_msg;
     return  oseg_change_msg;
-    
+
   }
 
 
-  
+
 
   /*
     Means that the server that this oseg is on now is in charge of the object with obj_id.
-    Add 
+    Add
    */
   void ChordObjectSegmentation::addObject(const UUID& obj_id, const ServerID ourID)
   {
 
     if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-    {          
+    {
       //means that object exists.  we will move it to our id.
       mObjectToServerMap[obj_id] = ourID;
     }
@@ -129,7 +128,7 @@ namespace CBR
 
       //log the message.
       mTrace->objectBeginMigrate(mCurrentTime,obj_id,this->getHostServerID(),new_server_id); //log it.
-      
+
       //if we do, then say that the object is in transit.
       mInTransitOrLookup[obj_id] = new_server_id;
     }
@@ -152,12 +151,12 @@ namespace CBR
     serv_to   = msg->getServTo();
     obj_id    = msg->getObjID();
     oaction   = msg->getAction();
-    
+
     switch (oaction)
     {
       case OSegMigrateMessage::CREATE:      //msg says something has been added
         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-        {          
+        {
           //means that object exists.  we will move it.
           mObjectToServerMap[obj_id] = serv_to;
         }
@@ -191,7 +190,7 @@ namespace CBR
         //place it in mFinishedMove
 
         std::map<UUID,ServerID>::iterator inTransIt;
-        
+
         inTransIt = mInTransitOrLookup.find(obj_id);
         if (inTransIt != mInTransitOrLookup.end())
         {
@@ -204,10 +203,10 @@ namespace CBR
           mTrace->objectAcknowledgeMigrate(mCurrentTime, obj_id,serv_from,this->getHostServerID());
 
         }
-        
+
         break;
-        
-    } 
+
+    }
   }
 
   /*
@@ -241,7 +240,7 @@ namespace CBR
 
     If it is an I_HAVE_IT message, we process the message with the lookupMessage_objectFound method.
 
-    If it is a lookup message, we process the message with the 
+    If it is a lookup message, we process the message with the
 
   */
 
@@ -255,10 +254,10 @@ namespace CBR
     {
       lookupMessage_lookup(msg);
     }
-    
+
   }
 
-  
+
   /*
     Processes "WHERE_IS_IT" type oseglookup messages.
     It checks if it is responsible for the object being querried.
@@ -274,38 +273,38 @@ namespace CBR
   {
 
 
-    
-    
+
+
   }
-  
+
   /*
     Processes "I_HAVE_IT" messages.
 
     Adds to the mFinishedMoveOrLookup map the object id and server map.
     And, we remove the uuid from the mInTransitOrLookup map.
-    
+
     Delete the message as well because it is no longer useful.
    */
   void ChordObjectSegmentation::lookupMessage_objectFound(OSegLookupMessage* msg)
   {
     ServerID whoHasIt =  msg->getKeeper();
-    UUID whichObject  =  msg->getObjID();    
+    UUID whichObject  =  msg->getObjID();
 
     std::map<UUID,ServerID>::iterator inTransIt;
-    
+
     mFinishedMoveOrLookup[whichObject] = whoHasIt; //add to finished map so that in the next tick, we'll respond with the location of this object.
 
-            
+
     inTransIt = mInTransitOrLookup.find(whichObject);
     if (inTransIt != mInTransitOrLookup.end())
     {
       //means that we now remove the obj_id from mInTransit
       mInTransitOrLookup.erase(inTransIt);
     }
-    
+
     delete msg;
   }
 
 
-  
+
 }//namespace CBR

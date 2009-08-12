@@ -11,7 +11,7 @@ namespace CBR {
 FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, loc, cseg, trace),
    mQueue(GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>() * 32), // FIXME * numObjects?
-   mLastTime(0),
+   mLastTime(Time::null()),
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
@@ -33,7 +33,7 @@ bool FIFOObjectMessageQueue::send(Message* msg, const UUID& source, const UUID& 
 }
 
 void FIFOObjectMessageQueue::service(const Time& t){
-    uint64 bytes = mRate * (t - mLastTime).seconds() + mRemainderBytes;
+    uint64 bytes = mRate * (t - mLastTime).toSeconds() + mRemainderBytes;
 
     while( bytes > 0) {
         ServerMessagePair* next_msg = mQueue.front(&bytes);

@@ -52,7 +52,7 @@ LoadMonitor::LoadMonitor(ServerID svrID, MessageDispatcher* msg_source, MessageR
    mMessageRouter(msg_router),
    mServerMsgQueue(serverMsgQueue),
    mCoordinateSegmentation(cseg),
-   mCurrentTime(0),
+   mCurrentTime(Time::null()),
    mCurrentLoadReading(0),
    mAveragedLoadReading(0)
 {
@@ -139,7 +139,7 @@ void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
 
 void LoadMonitor::tick(const Time& t) {
   if (GetOption("monitor-load")->as<bool>() &&
-      t - mCurrentTime > Duration(5000000))
+      t - mCurrentTime > Duration::seconds(5))
   {
     addLoadReading();
 

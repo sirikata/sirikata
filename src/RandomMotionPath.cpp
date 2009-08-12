@@ -62,7 +62,7 @@ RandomMotionPath::RandomMotionPath(const Time& start, const Time& end, const Vec
         Vector3f nextpos = last_motion.extrapolate(curtime + update_period).position();
         Vector3f nextpos_clamped = region.clamp(nextpos);
         Vector3f to_dest = nextpos_clamped - curpos;
-        dir = to_dest * (1.f / update_period.seconds());
+        dir = to_dest * (1.f / update_period.toSeconds());
 
         last_motion = TimedMotionVector3f(curtime, MotionVector3f(curpos, dir));
 

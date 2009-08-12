@@ -33,7 +33,6 @@
 #ifndef _FIFO_QUEUE_HPP_
 #define _FIFO_QUEUE_HPP_
 
-#include "Time.hpp"
 #include "Queue.hpp"
 
 namespace CBR {

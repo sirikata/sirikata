@@ -52,9 +52,7 @@ void ObjectConnection::deliver(Message* msg, const Time& t) {
 
               for(uint32 idx = 0; idx < prox_msg->contents.addition_size(); idx++) {
                   CBR::Protocol::Prox::IObjectAddition addition = prox_msg->contents.addition(idx);
-                  Time loc_t( (addition.location().t()-PBJ::Time::null()).toMicroseconds() );
-                  MotionVector3f loc_motion(addition.location().position(), addition.location().velocity());
-                  TimedMotionVector3f loc(loc_t, loc_motion);
+                  TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
                   mTrace->prox(
                       t,
                       prox_msg->object_header.dest_object(),
@@ -83,9 +81,7 @@ void ObjectConnection::deliver(Message* msg, const Time& t) {
               LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
               assert(loc_msg != NULL);
 
-              Time loc_t( (loc_msg->contents.t()-PBJ::Time::null()).toMicroseconds() );
-              MotionVector3f loc_motion(loc_msg->contents.position(), loc_msg->contents.velocity());
-              TimedMotionVector3f loc(loc_t, loc_motion);
+              TimedMotionVector3f loc(loc_msg->contents.t(), MotionVector3f(loc_msg->contents.position(), loc_msg->contents.velocity()));
 
               mTrace->loc(
                   t,
