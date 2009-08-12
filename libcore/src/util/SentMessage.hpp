@@ -137,7 +137,7 @@ public:
           will cause a timeout to occur if we did not get a synchronous response.
         @note  You must call setTimeout each time you send().
     */
-    void setTimeout(int timeout);
+    void setTimeout(const Duration &timeout);
 
     /** Calls the callback handler for this message. Does not validate the
         sender of msg. If you need to check this, use QueryTracker::processMessage().

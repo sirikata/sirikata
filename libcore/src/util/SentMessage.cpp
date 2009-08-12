@@ -70,8 +70,8 @@ class SentMessage::TimerHandler {
         //formerly called this, but that asked asio to unset an ignored callback mSentMessage->processMessage(msg, MemoryReference(NULL,0));
     }
 public:
-    TimerHandler(Network::IOService *io, SentMessage *messageInfo, int num_seconds)
-            : mTimer(*static_cast<boost::asio::io_service*>(io), boost::posix_time::seconds(num_seconds)) {
+    TimerHandler(Network::IOService *io, SentMessage *messageInfo, const Duration& num_seconds)
+        : mTimer(*static_cast<boost::asio::io_service*>(io), boost::posix_time::microseconds(num_seconds.toMicroseconds())) {
 
         mSentMessage = messageInfo;
         mTimer.async_wait(
@@ -144,7 +144,7 @@ void SentMessage::unsetTimeout() {
     }
 }
 
-void SentMessage::setTimeout(int timeout) {
+void SentMessage::setTimeout(const Duration& timeout) {
     unsetTimeout();
     if (mTracker) {
         Network::IOService *io = mTracker->getIOService();
