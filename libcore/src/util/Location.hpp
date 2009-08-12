@@ -66,10 +66,10 @@ class Location: public Transform {
     }
 public:
     Location(){}
-    Location(const Vector3<float64>&position, 
-             const Quaternion&orientation, 
-             const Vector3<float32> &velocity, 
-             const Vector3<float32> angularVelocityAxis, 
+    Location(const Vector3<float64>&position,
+             const Quaternion&orientation,
+             const Vector3<float32> &velocity,
+             const Vector3<float32> angularVelocityAxis,
              float32 angularVelocityRadians):Transform(position,orientation),mVelocity(velocity),mAxisOfRotation(angularVelocityAxis), mAngularSpeed(angularVelocityRadians) {}
     bool operator ==(const Location&other)const {
         bool eq=getPosition()==other.getPosition();
@@ -85,7 +85,7 @@ public:
     }
     void setVelocity(const Vector3<float32> velocity) {
         mVelocity=velocity;
-    } 
+    }
     const Transform &getTransform() const {
         return *this;
     }
@@ -130,10 +130,10 @@ public:
         return copy;
     }
     template<class TimeDuration> Location extrapolate(const TimeDuration&dt)const {
-        return Location(getPosition()+Vector3<float64>(getVelocity())*(float64)dt,
-                        getAngularSpeed() 
+        return Location(getPosition()+Vector3<float64>(getVelocity())*dt.toSeconds(),
+                        getAngularSpeed()
                          ? getOrientation()*Quaternion(getAxisOfRotation(),
-                                                       getAngularSpeed()*(float64)dt)
+                             getAngularSpeed()*dt.toSeconds())
                          : getOrientation(),
                         getVelocity(),
                         getAxisOfRotation(),
