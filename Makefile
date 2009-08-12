@@ -52,6 +52,8 @@ dependencies:
 	[ -d dependencies ]
 
 update-dependencies: dependencies
+	git submodule init || true
+	git submodule update || true
 	cd dependencies && svn update
 
 minimaldepends: update-dependencies
