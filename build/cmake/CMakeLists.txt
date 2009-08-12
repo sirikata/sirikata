@@ -746,12 +746,17 @@ IF(OGRE_ZIP_PATH)
 ENDIF()
 #source files
 
+SET(AdditionalProtoDepends)
+FOREACH(FILE ${ScriptingProtocolBuffersSources})
+   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
+ENDFOREACH()
+ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
+              DEPENDS ${AdditionalProtoDepends}
+              COMMENT "Checking ${AdditionalProtoDepends}")
 
 IF(MONO_FOUND)
   SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
-  SET(AdditionalProtoDepends)
   FOREACH(FILE ${ScriptingProtocolBuffersSources})
-     SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${ScriptsRoot}/ironpython/protocol/${FILE}_pb2.py)
      SET(SirikataProtoScriptSources ${SirikataProtoScriptSources}
   ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs ${ScriptsRoot}/csharp/protocol/${FILE}.cs )
   ENDFOREACH()  
@@ -761,7 +766,7 @@ IF(MONO_FOUND)
   SET(SirikataProtoScriptRuntime_LIBRARY ${SirikataProtoScriptRuntime_LIBRARY_DIR}/Sirikata.Protocol.dll)
   IF(PROTOCOLBUFFERS_SUPPORTS_CSHARP)
     ADD_CUSTOM_TARGET(SirikataScriptProtocol ALL
-                  DEPENDS ${SirikataProtoScriptSources} ${SirikataProtoScriptRuntime_LIBRARY} ${AdditionalProtoDepends}
+                  DEPENDS ${SirikataProtoScriptSources} ${SirikataProtoScriptRuntime_LIBRARY}
                   COMMENT "Checking Sirikata.Protocol.dll")
     ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtoScriptRuntime_LIBRARY}
                    COMMAND ${GMCS_EXECUTABLE} -debug
