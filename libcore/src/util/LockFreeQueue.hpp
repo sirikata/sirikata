@@ -45,6 +45,12 @@ private:
     struct Node {
         volatile Node * mNext;
         T mContent;
+        void *operator new(size_t num_bytes) {
+            return Sirikata::aligned_malloc<Node>(num_bytes,16);
+        }
+        void operator delete(void *data) {
+            Sirikata::aligned_free(data);
+        }
         Node() :mNext(NULL), mContent() {
         }
     };
@@ -69,8 +75,9 @@ private:
             volatile Node* node=0;
             do {
                 node = mHead->mNext;
-                if (node == 0)
+                if (node == 0) {
                     return new Node();//FIXME should probably be aligned to size(Node) bytes
+                }
             } while (!compare_and_swap(&mHead->mNext, node, node->mNext));
             Node * return_node=(Node*)node;//FIXME volatile cast only allowed if mContent is primitive type of pointer size or less
             return_node->mNext = NULL;

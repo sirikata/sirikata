@@ -1246,6 +1246,13 @@ public:
              ++iter) {
             mParent->mInputManager->unsubscribe(*iter);
         }
+        for (InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
+            delete iter->second;
+        }
+        for (std::map<int, ActiveDrag*>::iterator iter=mActiveDrag.begin(),iterend=mActiveDrag.end();iter!=iterend;++iter) {
+            if(iter->second!=NULL)
+                delete iter->second;
+        }
     }
     void setParentGroupAndClear(const SpaceObjectReference &id) {
         clearSelection();

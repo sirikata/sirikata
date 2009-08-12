@@ -153,7 +153,9 @@ CacheLayer *createNetworkCache(const OptionMap &options) {
     insertServices(options["services"], services);
     return new NetworkCacheLayer(NULL, downServ);
 }
-
+void destroyTransferManager(TransferManager*tm) {
+    delete tm;
+}
 TransferManager *initializeTransferManager (const OptionMap& options, GenEventManager *eventMgr) {
     OptionMap &cache = options["cache"];
     CacheLayer *lastCacheLayer = NULL;

@@ -257,7 +257,7 @@ void MaterialScript::prepareImpl(){
     if (ogredatastream==NULL)
         ds=stream;
     mStreamToBeLoadedInForeground=ds;
-    unsigned char search[1024];
+    unsigned char search[1024]={0};
     size_t len;
     memset(search,0,6);
     bool hasGLSL=false;

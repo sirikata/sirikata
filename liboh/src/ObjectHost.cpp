@@ -49,20 +49,30 @@
 namespace Sirikata {
 
 struct ObjectHost::AtomicInt : public AtomicValue<int> {
-    AtomicInt(int val) : AtomicValue<int>(val) {}
+    ObjectHost::AtomicInt*mNext;
+    AtomicInt(int val, std::auto_ptr<AtomicInt>&genq) : AtomicValue<int>(val) {mNext=genq.release();}
+    ~AtomicInt() {
+        if (mNext)
+            delete mNext;
+    }
 };
-
 ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ) {
     mSpaceIDMap = spaceMap;
     mMessageQueue = messageQueue;
     mSpaceConnectionIO=ioServ;
-    mEnqueuers = new AtomicInt(0);
+    static std::auto_ptr<AtomicInt> gEnqueuers;
+    mEnqueuers = new AtomicInt(0,gEnqueuers);
+    std::auto_ptr<AtomicInt> tmp(mEnqueuers);
+    gEnqueuers=tmp;
 }
 
 ObjectHost::~ObjectHost() {
     Task::WorkQueue *queue = mMessageQueue;
     mMessageQueue = NULL;
-    while (*mEnqueuers) {
+    int value=0;
+    (*mEnqueuers)-=(1<<29);
+    while ((value=mEnqueuers->read())!=-(1<<29)) {
+        SILOG(objecthost,debug,"%d enqueuers"<<value);
         // silently wait for everyone to finish adding themselves.
     }
     queue->dequeueAll(); // filter through everything that might have an ObjectHost message in it.
@@ -166,10 +176,11 @@ void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryRefere
     assert(header.has_destination_object());
     assert(header.has_source_object());
     assert(!header.has_source_space() || header.source_space() == header.destination_space());
-    ++mEnqueuers;
-    Task::WorkQueue *queue = mMessageQueue;
-    if (queue) {
-        queue->enqueue(new MessageProcessor(this, header, message_body));
+    if (++mEnqueuers>0) {
+        Task::WorkQueue *queue = mMessageQueue;
+        if (queue) {
+            queue->enqueue(new MessageProcessor(this, header, message_body));
+        }
     }
     --mEnqueuers;
 }

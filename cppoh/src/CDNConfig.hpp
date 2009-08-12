@@ -15,6 +15,7 @@ template <class T> class EventManager;
 
 void initializeProtocols();
 Transfer::TransferManager *initializeTransferManager (const OptionMap& options, Task::EventManager<Task::Event> *eventMgr);
+void destroyTransferManager (Transfer::TransferManager *tm);
 
 }
 

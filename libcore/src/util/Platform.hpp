@@ -272,6 +272,27 @@ class RoutableMessageBody;
 #include "Logging.hpp"
 #include "Location.hpp"
 namespace Sirikata {
+template<class T>T*aligned_malloc(size_t num_bytes, const unsigned char alignment) {
+    unsigned char *data=(unsigned char*)malloc(num_bytes+alignment);
+    if (data!=NULL) {
+        size_t remainder=((size_t)data)%alignment;
+        size_t offset=alignment-remainder;
+        data+=offset;
+        data[-1]=offset;
+        return (T*)(data);
+    }
+    return (T*)NULL;
+}
+template<class T>T*aligned_new(const unsigned char alignment) {
+    return aligned_malloc<T>(sizeof(T),alignment);
+}
+template<class T> void aligned_free(T* data) {
+    if (data!=NULL) {
+        unsigned char *bloc=(unsigned char*)data;
+        unsigned char offset=bloc[-1];
+        free(bloc-offset);
+    }
+}
 namespace Task {
 class AbsTime;
 class DeltaTime;

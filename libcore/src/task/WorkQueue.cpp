@@ -152,6 +152,14 @@ unsigned int WorkQueueImpl<QueueType>::dequeueAll() {
 
 template <class QueueType>
 WorkQueueImpl<QueueType>::~WorkQueueImpl() {
+	typename Queue::NodeIterator queueIter (mQueue);
+	WorkItem** workPtr;
+	while ((workPtr = queueIter.next()) != NULL) {
+		if (*workPtr) {
+            std::auto_ptr<WorkItem>deleteMe(*workPtr);
+		}
+	}
+    //get rid of all extra queue items on the queue
 }
 
 template <class QueueType>
@@ -208,6 +216,17 @@ unsigned int UnsafeWorkQueueImpl<QueueType>::dequeueAll() {
 
 template <class QueueType>
 UnsafeWorkQueueImpl<QueueType>::~UnsafeWorkQueueImpl() {
+	// std::queue has no swap function.
+	QueueType &queue = mQueue[mWhichQueue];
+	mWhichQueue = !mWhichQueue;
+
+	while (!queue.empty()) {
+		WorkItem *element = queue.front();
+		if (element) {
+            std::auto_ptr<WorkItem>deleteMe(element);
+		}
+		queue.pop();
+	}
 }
 
 template <class QueueType>

@@ -278,12 +278,12 @@ int main ( int argc,const char**argv ) {
 	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
 		(*it)->endForwardingMessagesTo(oh);
 	}
-
     delete oh;
 
     // delete after OH in case objects want to do last-minute state flushes
     delete database;
 
+    destroyTransferManager(tm);
     delete eventManager;
     delete workQueue;
 
