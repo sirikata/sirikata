@@ -65,6 +65,12 @@ public:
     inline double operator/ (const DeltaTime&other)const {
         return (double)(mDeltaTime/other.mDeltaTime)+(double)(mDeltaTime%other.mDeltaTime)/(double)other.mDeltaTime;
     }
+    inline DeltaTime operator/(float rhs) const {
+        return DeltaTime((int64)((double)mDeltaTime / (double)rhs));
+    }
+    inline DeltaTime operator/(double rhs) const {
+        return DeltaTime((int64)((double)mDeltaTime / (double)rhs));
+    }
     operator double()const {
         return (double)mDeltaTime/1000000.;
     }
@@ -108,7 +114,7 @@ public:
 	inline DeltaTime operator- () const {
 		return DeltaTime(-mDeltaTime);
 	}
-    double toSeconds () {
+    double toSeconds () const {
         return mDeltaTime/1000000.;
     }
 	/// Convert to an integer in milliseconds.
@@ -128,9 +134,21 @@ public:
 	inline bool operator== (const DeltaTime &other) const {
 		return (mDeltaTime == other.mDeltaTime);
 	}
+        inline bool operator!= (const DeltaTime& other) const {
+            return (mDeltaTime != other.mDeltaTime);
+        }
 	/// Ordering comparison
 	inline bool operator< (const DeltaTime &other) const {
 		return (mDeltaTime < other.mDeltaTime);
+	}
+	inline bool operator<= (const DeltaTime &other) const {
+		return (mDeltaTime <= other.mDeltaTime);
+	}
+	inline bool operator> (const DeltaTime &other) const {
+		return (mDeltaTime > other.mDeltaTime);
+	}
+	inline bool operator>= (const DeltaTime &other) const {
+		return (mDeltaTime >= other.mDeltaTime);
 	}
 };
 
@@ -160,10 +178,17 @@ class SIRIKATA_EXPORT AbsTime {
 	static void updateFrameTime();
 */
 public:
+        uint64 raw() const {
+            return mTime;
+        }
+
 	/// Equality comparison (same as (*this - other) == 0)
 	inline bool operator== (const AbsTime &other) const {
 		return (mTime == other.mTime);
 	}
+        inline bool operator!= (const AbsTime& other) const {
+            return (mTime != other.mTime);
+        }
 
 	/// Ordering comparison (same as (*this - other) < 0)
 	inline bool operator< (const AbsTime &other) const {
@@ -233,11 +258,7 @@ public:
 	 */
 	static AbsTime null() { return AbsTime(0); }
 
-/*
-	static inline AbsTime frameTime() {
-		return sLastFrameTime;
-	}
-*/
+
 };
 
 SIRIKATA_EXPORT std::ostream& operator<<(std::ostream& os, const Duration& rhs);
