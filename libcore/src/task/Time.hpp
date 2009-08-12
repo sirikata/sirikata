@@ -62,15 +62,37 @@ class SIRIKATA_EXPORT DeltaTime {
     }
 public:
     DeltaTime():mDeltaTime(0){}
+
     inline double operator/ (const DeltaTime&other)const {
         return (double)(mDeltaTime/other.mDeltaTime)+(double)(mDeltaTime%other.mDeltaTime)/(double)other.mDeltaTime;
     }
-    inline DeltaTime operator/(float rhs) const {
-        return DeltaTime((int64)((double)mDeltaTime / (double)rhs));
+
+    inline DeltaTime operator/(float32 rhs) const {
+        return DeltaTime((int64)((float64)mDeltaTime / (float64)rhs));
     }
-    inline DeltaTime operator/(double rhs) const {
-        return DeltaTime((int64)((double)mDeltaTime / (double)rhs));
+    inline void operator/=(float32 rhs) {
+        mDeltaTime = (int64)((float64)mDeltaTime / (float64)rhs);
     }
+    inline DeltaTime operator/(float64 rhs) const {
+        return DeltaTime((int64)((float64)mDeltaTime / (float64)rhs));
+    }
+    inline void operator/=(float64 rhs) {
+        mDeltaTime = (int64)((float64)mDeltaTime / (float64)rhs);
+    }
+
+    inline DeltaTime operator*(float32 rhs) const {
+        return DeltaTime((int64)((float64)mDeltaTime * (float64)rhs));
+    }
+    inline void operator*=(float32 rhs) {
+        mDeltaTime = (int64)((float64)mDeltaTime * (float64)rhs);
+    }
+    inline DeltaTime operator*(float64 rhs) const {
+        return DeltaTime((int64)((float64)mDeltaTime * (float64)rhs));
+    }
+    inline void operator*=(float64 rhs) {
+        mDeltaTime = (int64)((float64)mDeltaTime * (float64)rhs);
+    }
+
     operator double()const {
         return (double)mDeltaTime/1000000.;
     }
@@ -109,6 +131,10 @@ public:
 	/// Arethmetic operator-- add two DeltaTime values.
 	inline DeltaTime operator+= (const DeltaTime &other) {
 		return DeltaTime(mDeltaTime += other.mDeltaTime);
+	}
+	/// Arethmetic operator-- subtract two DeltaTime values.
+	inline DeltaTime operator-= (const DeltaTime &other) {
+		return DeltaTime(mDeltaTime -= other.mDeltaTime);
 	}
 	/// Arethmetic operator-- negate a DeltaTime.
 	inline DeltaTime operator- () const {
