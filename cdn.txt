@@ -20,6 +20,7 @@ cache=(
 
 namelookup=(
     meru:/// = (
+      0 = http://www.sirikata.com/content/names
        2 = file:///./Staging/names.txt
       1 = http://graphics.stanford.edu/~danielrh/dns/names/global
     )
@@ -36,6 +37,7 @@ namelookup=(
 
 download=(
     mhash:/// = (
+       0 = http://www.sirikata.com/content/assets
        1 = http://graphics.stanford.edu/~danielrh/uploadsystem/files/global
        2 = file:///./Staging
     )

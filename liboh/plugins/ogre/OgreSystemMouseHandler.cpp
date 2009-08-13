@@ -1194,8 +1194,8 @@ public:
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_SHIFT), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_SHIFT), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D, Input::MOD_SHIFT), mInputResponses["moveLeft"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_SHIFT), mInputResponses["moveRight"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D, Input::MOD_SHIFT), mInputResponses["moveRight"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_SHIFT), mInputResponses["moveLeft"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["rotateXPos"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["rotateXNeg"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
