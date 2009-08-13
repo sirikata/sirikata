@@ -177,10 +177,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
             for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
                 if (sid == m_serv_ID) continue;
                 while(true) {
-                    OriginID origin;
-                    origin.id = m_serv_ID;
-
-                    NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+                    NoiseMessage* noise_msg = new NoiseMessage(m_serv_ID, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
 
                     uint32 offset = 0;
                     Network::Chunk msg_serialized;
@@ -203,10 +200,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
                 ServerID sid = randInt<uint32>(1, nservers);
                 if (sid == m_serv_ID) continue;
 
-                OriginID origin;
-                origin.id = m_serv_ID;
-
-                NoiseMessage* noise_msg = new NoiseMessage(origin, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+                NoiseMessage* noise_msg = new NoiseMessage(m_serv_ID, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
 
                 uint32 offset = 0;
                 Network::Chunk msg_serialized;

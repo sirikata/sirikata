@@ -156,8 +156,7 @@ void LBCoordinateSegmentation::receiveMessage(Message* msg) {
 
 void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
-  OriginID id = GetUniqueIDOriginID(ccMsg->id());
-  ServerID originID = id.id;
+  ServerID originID = GetUniqueIDServerID(ccMsg->id());
 
   int numberOfRegions = ccMsg->numberOfRegions();
   SplitRegionf* regions = ccMsg->splitRegions();
@@ -229,9 +228,6 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
     mTrace->segmentationChanged(mCurrentTime, newBox2, new_server);
     printf("Server %d Splitting and migrating to new_server %d\n", mServerID, new_server);
 
-    OriginID origin;
-    origin.id = mServerID;
-
     uint32 total_servers = numServers();
     std::vector<Listener::SegmentationInfo> segInfoVector;
     printf("total_servers before loop=%d\n", total_servers);
@@ -256,7 +252,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
       if (i != mServerID) {
 	printf("Sending server_split to %d\n", i);
 
-        CSegChangeMessage* msg = new CSegChangeMessage(origin, 2);
+        CSegChangeMessage* msg = new CSegChangeMessage(mServerID, 2);
 	SplitRegionf* regions = msg->splitRegions();
 
 	regions[0].mNewServerID = mServerID;

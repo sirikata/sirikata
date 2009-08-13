@@ -91,10 +91,8 @@ namespace CBR
   Message* UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
   {
     const UUID& obj_id = obj->uuid();
-    OriginID origin;
-    origin.id= (uint32)(this->getHostServerID());
 
-    Message* oseg_change_msg = new OSegMigrateMessage(origin,  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegMigrateMessage::ACKNOWLEDGE);
+    Message* oseg_change_msg = new OSegMigrateMessage(this->getHostServerID(),  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegMigrateMessage::ACKNOWLEDGE);
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
     //returner =  oseg_change_msg;
     return  oseg_change_msg;

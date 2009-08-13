@@ -55,9 +55,9 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
+    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
+    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
 
     ~Object();
 
@@ -91,7 +91,7 @@ private:
     MotionPath* mMotion;
     TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
-    OriginID mOriginID;
+    ServerID mOriginID;
     ObjectMessageQueue* mObjectMessageQueue;
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;

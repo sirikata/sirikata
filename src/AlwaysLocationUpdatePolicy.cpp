@@ -177,9 +177,7 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
         ServerID sid = server_it->first;
         ServerSubscriberInfo* sub_info = server_it->second;
 
-        OriginID oid;
-        oid.id = mID;
-        BulkLocationMessage* msg = new BulkLocationMessage(oid);
+        BulkLocationMessage* msg = new BulkLocationMessage(mID);
 
         for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
             CBR::Protocol::Loc::ILocationUpdate update = msg->contents.add_update();

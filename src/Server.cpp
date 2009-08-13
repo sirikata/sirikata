@@ -161,13 +161,10 @@ void Server::proximityTick(const Time& t)
   std::queue<ProximityEventInfo> proximity_events;
   mProximity->evaluate(t, proximity_events);
 
-  OriginID origin;
-  origin.id = (uint32)id();
-
   while(!proximity_events.empty())
   {
     ProximityEventInfo& evt = proximity_events.front();
-    ProximityMessage* msg = new ProximityMessage(origin);
+    ProximityMessage* msg = new ProximityMessage(id());
 
     msg->object_header.set_source_object(UUID::null());
     msg->object_header.set_source_port(0);
@@ -255,10 +252,8 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj)
 {
   const UUID& obj_id = obj->uuid();
 
-  OriginID origin;
-  origin.id = (uint32)id();
-
-  MigrateMessage* migrate_msg = new MigrateMessage(origin,
+  MigrateMessage* migrate_msg = new MigrateMessage(
+      id(),
       obj_id,
       obj->queryAngle(),
       obj->subscriberSet().size(),

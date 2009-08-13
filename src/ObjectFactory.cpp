@@ -138,14 +138,11 @@ Object* ObjectFactory::object(const UUID& id) {
 
     assert( mObjectMessageQueue != NULL);
 
-    OriginID origin;
-    origin.id = (uint32)(mServerID);
-
     Object* new_obj = NULL;
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(origin, this, id, mObjectMessageQueue, motion(id), queryAngle(id), mObjectIDs);
+        new_obj = new Object(mServerID, this, id, mObjectMessageQueue, motion(id), queryAngle(id), mObjectIDs);
     else
-        new_obj = new Object(origin, this, id, mObjectMessageQueue, motion(id), queryAngle(id));
+        new_obj = new Object(mServerID, this, id, mObjectMessageQueue, motion(id), queryAngle(id));
     mObjects[id] = new_obj;
     return new_obj;
 }

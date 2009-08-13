@@ -110,14 +110,12 @@ float LoadMonitor::getAveragedLoadReading() {
 void LoadMonitor::sendLoadReadings() {
   //send mCurrentLoadReading to other servers
   uint32 total_servers = mCoordinateSegmentation->numServers();
-  OriginID origin;
-  origin.id = mServerID;
 
   for (uint32 i=1 ; i <= total_servers; i++) {
     if (i != mServerID && handlesAdjacentRegion(i) ) {
       printf("%d handles adjacent region with %d\n", i, mServerID);
 
-      LoadStatusMessage* msg = new LoadStatusMessage(origin, mAveragedLoadReading);
+      LoadStatusMessage* msg = new LoadStatusMessage(mServerID, mAveragedLoadReading);
       mMessageRouter->route(msg, i);
     }
   }
@@ -131,10 +129,9 @@ void LoadMonitor::receiveMessage(Message* msg) {
 }
 
 void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
-  OriginID id = GetUniqueIDOriginID(load_status_msg->id());
-  ServerID originID = id.id;
+  ServerID id = GetUniqueIDServerID(load_status_msg->id());
 
-  mRemoteLoadReadings[originID] = load_status_msg->loadReading();
+  mRemoteLoadReadings[id] = load_status_msg->loadReading();
 }
 
 void LoadMonitor::tick(const Time& t) {

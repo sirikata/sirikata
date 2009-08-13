@@ -38,20 +38,18 @@ namespace CBR {
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 
-static uint64 GenerateUniqueID(const OriginID& origin, uint64 id_src) {
+static uint64 GenerateUniqueID(const ServerID& origin, uint64 id_src) {
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
-    uint64 server_int = (uint64)origin.id;
+    uint64 server_int = (uint64)origin;
     uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
     assert( (server_shifted & ~message_id_server_bits) == 0 );
     return (server_shifted & message_id_server_bits) | (id_src & ~message_id_server_bits);
 }
 
-OriginID GetUniqueIDOriginID(uint64 uid) {
+ServerID GetUniqueIDServerID(uint64 uid) {
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = ( uid & message_id_server_bits ) >> MESSAGE_ID_SERVER_SHIFT;
-    OriginID id;
-    id.id = server_int;
-    return id;
+    return (ServerID) server_int;
 }
 
 uint64 GetUniqueIDMessageID(uint64 uid) {
@@ -62,7 +60,7 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 uint64 Message::sIDSource = 0;
 
-Message::Message(const OriginID& origin, bool x)
+Message::Message(const ServerID& origin, bool x)
  : mID( GenerateUniqueID(origin, sIDSource++) )
 {
 }
@@ -214,7 +212,7 @@ void parsePBJMessage(PBJMessageType& contents, const Network::Chunk& wire, uint3
 
 
 
-ProximityMessage::ProximityMessage(const OriginID& origin)
+ProximityMessage::ProximityMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }
@@ -257,7 +255,7 @@ uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-LocationMessage::LocationMessage(const OriginID& origin)
+LocationMessage::LocationMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }
@@ -300,7 +298,7 @@ uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-SubscriptionMessage::SubscriptionMessage(const OriginID& origin)
+SubscriptionMessage::SubscriptionMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }
@@ -343,7 +341,7 @@ uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-NoiseMessage::NoiseMessage(const OriginID& origin, uint32 noise_sz)
+NoiseMessage::NoiseMessage(const ServerID& origin, uint32 noise_sz)
  : Message(origin, true),
    mNoiseSize(noise_sz)
 {
@@ -379,7 +377,7 @@ uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-MigrateMessage::MigrateMessage(const OriginID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from)
+MigrateMessage::MigrateMessage(const ServerID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from)
  : Message(origin, true),
    mObject(obj),
    mQueryAngle(queryAngle),
@@ -485,7 +483,7 @@ ServerID MigrateMessage::messageFrom()
 
 
 
-CSegChangeMessage::CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions)
+CSegChangeMessage::CSegChangeMessage(const ServerID& origin, uint8_t number_of_regions)
  : Message(origin, true),
    mNumberOfRegions(number_of_regions)
 {
@@ -541,7 +539,7 @@ SplitRegionf* CSegChangeMessage::splitRegions() const {
     return mSplitRegions;
 }
 
-LoadStatusMessage::LoadStatusMessage(const OriginID& origin, float load_reading)
+LoadStatusMessage::LoadStatusMessage(const ServerID& origin, float load_reading)
  : Message(origin, true),
    mLoadReading(load_reading)
 {
@@ -585,7 +583,7 @@ const float LoadStatusMessage::loadReading() const {
 
 ////migrate message
 //constructor
-OSegMigrateMessage::OSegMigrateMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
+OSegMigrateMessage::OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateMessage::OSegMigrateAction action)
  : Message(origin, true),
    mServID_from (sID_from),
    mServID_to   (sID_to),
@@ -713,7 +711,7 @@ ServerID OSegMigrateMessage::getMessageFrom()
 /////OSEG lookup
 
 //primary constructor
-OSegLookupMessage::OSegLookupMessage(const OriginID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action)
+OSegLookupMessage::OSegLookupMessage(const ServerID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action)
    : Message(origin, true),
      mSeeker(sID_seeker),
      mKeeper(sID_keeper),
@@ -810,7 +808,7 @@ MessageType OSegLookupMessage::type() const
 
 
 
-ServerProximityQueryMessage::ServerProximityQueryMessage(const OriginID& origin)
+ServerProximityQueryMessage::ServerProximityQueryMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }
@@ -836,7 +834,7 @@ uint32 ServerProximityQueryMessage::serialize(Network::Chunk& wire, uint32 offse
 
 
 
-ServerProximityResultMessage::ServerProximityResultMessage(const OriginID& origin)
+ServerProximityResultMessage::ServerProximityResultMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }
@@ -862,7 +860,7 @@ uint32 ServerProximityResultMessage::serialize(Network::Chunk& wire, uint32 offs
 
 
 
-BulkLocationMessage::BulkLocationMessage(const OriginID& origin)
+BulkLocationMessage::BulkLocationMessage(const ServerID& origin)
  : Message(origin, true)
 {
 }

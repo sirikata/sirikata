@@ -40,7 +40,7 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
-Object::Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle)
+Object::Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle)
  : mID(id),
    mGlobalIntroductions(false),
    mMotion(motion),
@@ -53,7 +53,7 @@ Object::Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id,
 {
 }
 
-Object::Object(const OriginID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects)
+Object::Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects)
  : mID(id),
    mGlobalIntroductions(true),
    mMotion(motion),

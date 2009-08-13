@@ -91,8 +91,6 @@ Proximity::~Proximity() {
 void Proximity::initialize(CoordinateSegmentation* cseg) {
     cseg->addListener(this);
 
-    OriginID oid;
-    oid.id = mID;
     TimedMotionVector3f loc;
 
     BoundingBoxList bboxes = cseg->serverRegion(mID);
@@ -105,7 +103,7 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
     // FIXME this assumes that ServerIDs are simple sequence of IDs
     for(ServerID sid = 1; sid <= cseg->numServers(); sid++) {
         if (sid == mID) continue;
-        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(oid);
+        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mID);
         msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
         msg_loc.set_t(loc.updateTime());
@@ -123,7 +121,7 @@ void Proximity::receiveMessage(Message* msg) {
 
         // FIXME we need to have a way to get the source server from the message without using this magic,
         // probably by saving the header and delivering it along with the message
-        ServerID source_server = (ServerID)(GetUniqueIDOriginID(msg->id()).id);
+        ServerID source_server = GetUniqueIDServerID(msg->id());
 
         if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::AddOrUpdate) {
             assert(
@@ -206,9 +204,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
         if (evts.empty()) continue;
 
-        OriginID oid;
-        oid.id = mID;
-        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(oid);
+        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mID);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added) {
                 mLocService->subscribe(sid, evt_it->id());

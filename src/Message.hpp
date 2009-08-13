@@ -63,12 +63,6 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_BULK_LOCATION       13
 
 
-
-
-struct OriginID {
-    uint32 id;
-};
-
 template <typename scalar>
 class SplitRegion {
 public:
@@ -82,7 +76,7 @@ public:
 typedef SplitRegion<float> SplitRegionf;
 
 typedef uint64 UniqueMessageID;
-OriginID GetUniqueIDOriginID(UniqueMessageID uid);
+ServerID GetUniqueIDServerID(UniqueMessageID uid);
 uint64 GetUniqueIDMessageID(UniqueMessageID uid);
 
 /** Base class for messages that go over the network.  Must provide
@@ -98,7 +92,7 @@ public:
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
 protected:
-    Message(const OriginID& origin, bool x); // note the bool is here to make the signature different than the next constructor
+    Message(const ServerID& origin, bool x); // note the bool is here to make the signature different than the next constructor
     Message(uint64 id);
 
     // takes care of serializing the header information properly, will overwrite
@@ -146,7 +140,7 @@ public:
 
 class ProximityMessage : public Message {
 public:
-    ProximityMessage(const OriginID& origin);
+    ProximityMessage(const ServerID& origin);
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
@@ -161,7 +155,7 @@ private:
 
 class LocationMessage : public Message {
 public:
-    LocationMessage(const OriginID& origin);
+    LocationMessage(const ServerID& origin);
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
@@ -176,7 +170,7 @@ private:
 
 class SubscriptionMessage : public Message {
 public:
-    SubscriptionMessage(const OriginID& origin);
+    SubscriptionMessage(const ServerID& origin);
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
@@ -190,7 +184,7 @@ private:
 
 class NoiseMessage : public Message {
 public:
-    NoiseMessage(const OriginID& origin, uint32 noise_sz);
+    NoiseMessage(const ServerID& origin, uint32 noise_sz);
 
     virtual MessageType type() const;
 
@@ -204,7 +198,7 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const OriginID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from);
+    MigrateMessage(const ServerID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from);
 
     ~MigrateMessage();
 
@@ -239,7 +233,7 @@ private:
 
 class CSegChangeMessage : public Message {
 public:
-  CSegChangeMessage(const OriginID& origin, uint8_t number_of_regions);
+  CSegChangeMessage(const ServerID& origin, uint8_t number_of_regions);
 
   ~CSegChangeMessage();
 
@@ -271,7 +265,7 @@ private:
   public:
     enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
 
-    OSegMigrateMessage(const OriginID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
+    OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
     ~OSegMigrateMessage();
 
     virtual MessageType type() const;
@@ -301,7 +295,7 @@ private:
   public:
     enum OSegLookupAction {I_HAVE_IT, WHERE_IS_IT};
 
-    OSegLookupMessage(const OriginID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
+    OSegLookupMessage(const ServerID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
     ~OSegLookupMessage();
 
     virtual MessageType type() const;
@@ -330,7 +324,7 @@ private:
 class LoadStatusMessage : public Message {
 
 public:
-  LoadStatusMessage(const OriginID& origin, float loadReading);
+  LoadStatusMessage(const ServerID& origin, float loadReading);
 
   ~LoadStatusMessage();
 
@@ -353,7 +347,7 @@ private:
 
 class ServerProximityQueryMessage : public Message {
 public:
-    ServerProximityQueryMessage(const OriginID& origin);
+    ServerProximityQueryMessage(const ServerID& origin);
     ~ServerProximityQueryMessage();
 
     virtual MessageType type() const;
@@ -368,7 +362,7 @@ private:
 
 class ServerProximityResultMessage : public Message {
 public:
-    ServerProximityResultMessage(const OriginID& origin);
+    ServerProximityResultMessage(const ServerID& origin);
     ~ServerProximityResultMessage();
 
     virtual MessageType type() const;
@@ -384,7 +378,7 @@ private:
 /** Location updates from Prox/Loc to an object. */
 class BulkLocationMessage : public Message {
 public:
-    BulkLocationMessage(const OriginID& origin);
+    BulkLocationMessage(const ServerID& origin);
     ~BulkLocationMessage();
 
     virtual MessageType type() const;
