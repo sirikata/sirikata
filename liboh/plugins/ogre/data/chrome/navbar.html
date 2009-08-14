@@ -33,7 +33,7 @@
 
       div.address {
       padding-left: 6px;
-      width: 260px;
+      width: 230px;
       height: 30px;
       }
       input.address {
@@ -49,6 +49,12 @@
       #go {
       float: left;
       width: 30px;
+      }
+
+      #newtab {
+      height: 18px;
+      width: 28px;
+      margin-top: 6px;
       }
     </style>
     <script language="javascript" type="text/javascript">
@@ -75,20 +81,26 @@
         initButton("forward");
         initButton("reload");
         initButton("go");
+        initButton("newtab");
       }
 
       function goAddress() {
-        Client.navgo( document.getElementById("addresstext").value );
+        Client.event("navgo", document.getElementById("addresstext").value );
       }
+      function goBack() { Client.event("navback"); }
+      function goForward() { Client.event("navforward"); }
+      function goRefresh() { Client.event("navrefresh"); }
+      function goNewTab() { Client.event("navnewtab"); }
     </script>
   </head>
   <body onLoad="initButtons()">
-    <div class="button" id="back" onclick="Client.navback()"></div>
-    <div class="button" id="forward" onclick="Client.navforward()"></div>
-    <div class="button" id="reload" onclick="Client.navrefresh()"></div>
+    <div class="button" id="back" onclick="goBack()"></div>
+    <div class="button" id="forward" onclick="goForward()"></div>
+    <div class="button" id="reload" onclick="goRefresh()"></div>
     <div class"addressbar">
       <div class="address"><input type="text" class="address" id="addresstext"></input></div>
       <div class="button" id="go" onclick="goAddress()"></div>
     </div>
+    <div class="button" id="newtab", onclick="goNewTab()"></div>
   </body>
 </html>

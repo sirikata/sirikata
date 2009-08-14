@@ -66,6 +66,34 @@ InputBindingEvent InputBindingEvent::Axis(AxisIndex index) {
     return result;
 }
 
+InputBindingEvent InputBindingEvent::Web(const String& wvname, const String& name, uint32 argcount) {
+    InputBindingEvent result;
+    result.mTag = WebEventTag;
+    result.mDescriptor.web.wvname = new String(wvname);
+    result.mDescriptor.web.name = new String(name);
+    result.mDescriptor.web.argcount = argcount;
+    return result;
+}
+
+
+InputBindingEvent::InputBindingEvent()
+ : mTag(Bogus)
+{
+}
+
+InputBindingEvent::InputBindingEvent(const InputBindingEvent& other) {
+    *this = other;
+}
+
+InputBindingEvent::~InputBindingEvent() {
+    if (isWeb()) {
+        delete mDescriptor.web.wvname;
+        mDescriptor.web.wvname = NULL;
+        delete mDescriptor.web.name;
+        mDescriptor.web.name = NULL;
+    }
+}
+
 
 bool InputBindingEvent::isKey() const {
     return mTag == KeyEventTag;
@@ -109,6 +137,39 @@ bool InputBindingEvent::isAxis() const {
 AxisIndex InputBindingEvent::axisIndex() const {
     assert(isAxis());
     return mDescriptor.axis.index;
+}
+
+bool InputBindingEvent::isWeb() const {
+    return mTag == WebEventTag;
+}
+
+const String& InputBindingEvent::webViewName() const {
+    assert(isWeb());
+    return *mDescriptor.web.wvname;
+}
+
+const String& InputBindingEvent::webName() const {
+    assert(isWeb());
+    return *mDescriptor.web.name;
+}
+
+uint32 InputBindingEvent::webArgCount() const {
+    assert(isWeb());
+    return mDescriptor.web.argcount;
+}
+
+
+InputBindingEvent& InputBindingEvent::operator=(const InputBindingEvent& rhs) {
+    mTag = rhs.mTag;
+    mDescriptor = rhs.mDescriptor;
+
+    // We need to make a copy of the strings
+    if (isWeb()) {
+        mDescriptor.web.wvname = new String(*rhs.mDescriptor.web.wvname);
+        mDescriptor.web.name = new String(*rhs.mDescriptor.web.name);
+    }
+
+    return *this;
 }
 
 } // namespace Graphics

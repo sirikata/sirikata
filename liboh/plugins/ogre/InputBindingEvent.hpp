@@ -46,6 +46,11 @@ public:
     static InputBindingEvent MouseClick(Input::MouseButton button);
     static InputBindingEvent MouseDrag(Input::MouseButton button);
     static InputBindingEvent Axis(Input::AxisIndex axis);
+    static InputBindingEvent Web(const String& wvname, const String& name, uint32 argcount = 0);
+
+    InputBindingEvent();
+    InputBindingEvent(const InputBindingEvent& rhs);
+    ~InputBindingEvent();
 
     bool isKey() const;
     Input::KeyButton keyButton() const;
@@ -60,6 +65,12 @@ public:
     bool isAxis() const;
     Input::AxisIndex axisIndex() const;
 
+    bool isWeb() const;
+    const String& webViewName() const;
+    const String& webName() const;
+    uint32 webArgCount() const;
+
+    InputBindingEvent& operator=(const InputBindingEvent& rhs);
 private:
     Input::EventTypeTag mTag;
 
@@ -77,6 +88,11 @@ private:
         struct {
             Input::AxisIndex index;
         } axis;
+        struct {
+            String* wvname;
+            String* name;
+            uint32 argcount;
+        } web;
     } mDescriptor;
 };
 

@@ -66,13 +66,15 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad);
 static int InputModifiersToAwesomiumModifiers(Modifier mod, bool numpad);
 
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory)
+
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string &baseDirectory)
 	: webCore(0), focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
 	  isDragging(false), isResizing(false),
           zOrderCounter(5),
-	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0)
+	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0),
+          mInputManager(inputMgr)
 {
     tooltipWebView = 0;
 #ifdef HAVE_AWESOMIUM
@@ -88,11 +90,6 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, const std::strin
 
         chromeWebView = createWebView("__chrome", 400, 36, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("navbar.html");
-        chromeWebView->bind("navback", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateBack));
-        chromeWebView->bind("navforward", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateForward));
-        chromeWebView->bind("navrefresh", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateRefresh));
-        chromeWebView->bind("navhome", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateHome));
-        chromeWebView->bind("navgo", std::tr1::bind(&WebViewManager::onChromeNav, this, _1, _2, NavigateGo));
 #endif
 }
 
@@ -189,8 +186,11 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-	return activeWebViews[webViewName] = new WebView(webViewName, width, height, webViewPosition, asyncRender, maxAsyncRenderRate, (Ogre::uchar)zOrder, tier,
-		viewport? viewport : defaultViewport);
+        WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, asyncRender, maxAsyncRenderRate, (Ogre::uchar)zOrder, tier,
+            viewport? viewport : defaultViewport);
+	activeWebViews[webViewName] = newWebView;
+        newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
+        return newWebView;
 }
 
 WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
@@ -201,7 +201,10 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-	return activeWebViews[webViewName] = new WebView(webViewName, width, height, asyncRender, maxAsyncRenderRate, texFiltering);
+        WebView* newWebView = new WebView(webViewName, width, height, asyncRender, maxAsyncRenderRate, texFiltering);
+        activeWebViews[webViewName] = newWebView;
+        newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
+        return newWebView;
 }
 
 WebView* WebViewManager::getWebView(const std::string &webViewName)
@@ -538,12 +541,22 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 }
 
 
-void WebViewManager::onChromeNav(WebView* webview, const Awesomium::JSArguments& args, NavigationAction action) {
+void WebViewManager::navigate(NavigationAction action) {
     if (focusedNonChromeWebView == NULL)
         return;
 
 #ifdef HAVE_AWESOMIUM
     switch(action) {
+      case NavigateNewTab:
+          {
+              static uint32 unique_id = 0;
+              // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
+              char buffer[256];
+              sprintf(buffer, "spawned_%d", unique_id++);
+              String unique_name(buffer);
+              createWebView(unique_name, 250, 250, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+          }
+        break;
       case NavigateBack:
         focusedNonChromeWebView->webView->goToHistoryOffset(-1);
         break;
@@ -562,16 +575,51 @@ void WebViewManager::onChromeNav(WebView* webview, const Awesomium::JSArguments&
       case NavigateHome:
         focusedNonChromeWebView->loadURL("http://www.google.com");
         break;
-      case NavigateGo:
-        if (args.size() == 1 && args[0].isString()) {
-            focusedNonChromeWebView->loadURL(args[0].toString());
-        }
-        break;
       default:
-        SILOG(ogre,error,"Unknown navigation action from onChromeNav.");
+        SILOG(ogre,error,"Unknown navigation action from navigate(action).");
         break;
     }
 #endif //HAVE_AWESOMIUM
+}
+
+void WebViewManager::navigate(NavigationAction action, const String& arg) {
+    if (focusedNonChromeWebView == NULL)
+        return;
+
+#ifdef HAVE_AWESOMIUM
+    switch(action) {
+      case NavigateGo:
+        focusedNonChromeWebView->loadURL(arg);
+        break;
+      default:
+        SILOG(ogre,error,"Unknown navigation action from navigate(action, arg).");
+        break;
+    }
+#endif //HAVE_AWESOMIUM
+}
+
+void WebViewManager::onRaiseWebViewEvent(WebView* webview, const Awesomium::JSArguments& args) {
+#ifdef HAVE_AWESOMIUM
+    if (args.size() < 1) {
+        SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
+        return;
+    }
+
+    if (!args[0].isString()) {
+        SILOG(ogre,error,"event() must be called with a string as the first argument.  It should take the form event(name, other, args, follow)");
+        return;
+    }
+
+    if (!mInputManager) return;
+
+    // We've passed all the checks, just convert everything and we're good to go
+    String name = args[0].toString();
+
+    Awesomium::JSArguments event_args;
+    event_args.insert(event_args.begin(), args.begin() + 1, args.end());
+
+    mInputManager->fire(Task::EventPtr( new WebViewEvent(webview, name, event_args) ));
+#endif
 }
 
 Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventPtr evt)

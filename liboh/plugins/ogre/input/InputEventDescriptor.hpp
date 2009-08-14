@@ -40,6 +40,7 @@ namespace Sirikata {
 namespace Input {
 
 enum EventTypeTag {
+    Bogus = 0,
     KeyEventTag = 1,
     MouseHoverEventTag = 2,
     MouseClickEventTag = 3,
@@ -47,7 +48,8 @@ enum EventTypeTag {
     AxisEventTag = 5,
     TextEventTag = 6,
     WindowEventTag = 7,
-    DragAndDropEventTag = 8
+    DragAndDropEventTag = 8,
+    WebEventTag = 9
 };
 
 class EventDescriptor {
@@ -60,6 +62,11 @@ public:
     static EventDescriptor Text();
     static EventDescriptor Window(WindowEventType type);
     static EventDescriptor DragAndDrop();
+    static EventDescriptor Web(const String& wvname, const String& name, uint32 nargs);
+
+    EventDescriptor();
+    EventDescriptor(const EventDescriptor& other);
+    ~EventDescriptor();
 
     bool isKey() const;
     KeyButton keyButton() const;
@@ -76,8 +83,13 @@ public:
     bool isAxis() const;
     AxisIndex axisIndex() const;
 
-    bool operator<(const EventDescriptor& rhs) const;
+    bool isWeb() const;
+    const String& webViewName() const;
+    const String& webName() const;
+    uint32 webArgCount() const;
 
+    bool operator<(const EventDescriptor& rhs) const;
+    EventDescriptor& operator=(const EventDescriptor& rhs);
 private:
     EventTypeTag mTag;
 
@@ -100,6 +112,11 @@ private:
         struct {
             WindowEventType type;
         } window;
+        struct {
+            String* wvname;
+            String* name;
+            uint32 argcount;
+        } web;
     } mDescriptor;
 };
 

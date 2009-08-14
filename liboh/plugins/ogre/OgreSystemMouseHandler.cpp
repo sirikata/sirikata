@@ -964,6 +964,19 @@ private:
         return EventResponse::nop();
     }
 
+    EventResponse webviewHandler(EventPtr ev) {
+        WebViewEventPtr webview_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(ev));
+        if (!webview_ev)
+            return EventResponse::nop();
+
+        // For everything else we let the browser go first, but in this case it should have
+        // had its chance, so we just let it go
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
+
+        return EventResponse::nop();
+    }
+
 
     /// Camera Path Utilities
     void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
@@ -1051,6 +1064,15 @@ private:
 
             cameraPathSetCamera(pos, orient);
         }
+    }
+
+    /// WebView Actions
+    void webViewNavigateAction(WebViewManager::NavigationAction action) {
+        WebViewManager::getSingleton().navigate(action);
+    }
+
+    void webViewNavigateStringAction(WebViewManager::NavigationAction action, const String& arg) {
+        WebViewManager::getSingleton().navigate(action, arg);
     }
 
     ///////////////// DEVICE FUNCTIONS ////////////////
@@ -1142,6 +1164,10 @@ public:
                 TextInputEvent::getEventId(),
                 std::tr1::bind(&MouseHandler::textInputHandler, this, _1)));
 
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                WebViewEvent::Id,
+                std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
+
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
         mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
         mInputResponses["moveLeft"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
@@ -1191,6 +1217,14 @@ public:
         mInputResponses["cameraPathSpeedUp"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathChangeSpeed, this, -0.1f));
         mInputResponses["cameraPathSlowDown"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::cameraPathChangeSpeed, this, 0.1f));
 
+        mInputResponses["webNewTab"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateNewTab));
+        mInputResponses["webBack"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateBack));
+        mInputResponses["webForward"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateForward));
+        mInputResponses["webRefresh"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateRefresh));
+        mInputResponses["webHome"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateAction, this, WebViewManager::NavigateHome));
+        mInputResponses["webGo"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateGo, _1));
+
+
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_SHIFT), mInputResponses["moveForward"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_SHIFT), mInputResponses["moveBackward"]);
@@ -1239,7 +1273,16 @@ public:
         //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["cameraPathRun"]);
         //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSpeedUp"]);
         //mInputBinding.add(InputBindingEvent::Key(), mInputResponses["cameraPathSlowDown"]);
+
+        // WebView Chrome
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navback"), mInputResponses["webBack"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navforward"), mInputResponses["webForward"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navrefresh"), mInputResponses["webRefresh"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navhome"), mInputResponses["webHome"]);
+        mInputBinding.add(InputBindingEvent::Web("__chrome", "navgo", 1), mInputResponses["webGo"]);
     }
+
     ~MouseHandler() {
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
              iter != mEvents.end();

@@ -36,6 +36,7 @@
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
 #include "input/InputEvents.hpp"
+#include "input/InputManager.hpp"
 #include <task/EventManager.hpp>
 
 #ifdef HAVE_AWESOMIUM
@@ -75,6 +76,7 @@ struct WebViewCoord {
     }
 };
 
+
 /**
 * Supreme dictator and Singleton: WebViewManager
 *
@@ -94,7 +96,7 @@ public:
 	*
 	* @throws	Ogre::Exception::ERR_INTERNAL_ERROR		Throws this when LLMozLib fails initialization
 	*/
-	WebViewManager(Ogre::Viewport* defaultViewport, const std::string &baseDirectory = "WebViewLocal");
+    WebViewManager(Ogre::Viewport* defaultViewport, Input::InputManager* inputMgr = NULL, const std::string &baseDirectory = "WebViewLocal");
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).
@@ -235,6 +237,18 @@ public:
 
 	void setDefaultViewport(Ogre::Viewport* newViewport);
 
+
+    enum NavigationAction {
+        NavigateNewTab,
+        NavigateBack,
+        NavigateForward,
+        NavigateRefresh,
+        NavigateHome,
+        NavigateGo
+    };
+    void navigate(NavigationAction action);
+    void navigate(NavigationAction action, const String& arg);
+
 protected:
 	friend class WebView; // Our very close friend <3
 
@@ -262,16 +276,21 @@ protected:
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
 
-    enum NavigationAction {
-        NavigateBack,
-        NavigateForward,
-        NavigateRefresh,
-        NavigateHome,
-        NavigateGo
-    };
+    Input::InputManager* mInputManager;
 
-    void onChromeNav(WebView* webview, const Awesomium::JSArguments& args, NavigationAction action);
-
+    /** Callback which generates WebView events due to a script in a WebView.  This is the portal
+     *  from Javascript into the InputEvent system.
+     *
+     *  We expose an event() function on the Awesomium Client object.  A script may then call it
+     *  to raise an event.  The call
+     *    Client.event(name, some, other, args)
+     *  will generate a WebView event with the parameters
+     *    WebViewEvent.webView = (the WebView that generated the callback)
+     *    WebViewEvent.name = name
+     *    WebViewEvent.args = [some, other, args]
+     *  Note that if the first argument is not a string, then no event will be generated.
+     */
+    void onRaiseWebViewEvent(WebView* webview, const Awesomium::JSArguments& args);
 public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMouseDrag(Sirikata::Task::EventPtr evt);

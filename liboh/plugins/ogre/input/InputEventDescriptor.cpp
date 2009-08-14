@@ -91,6 +91,32 @@ EventDescriptor EventDescriptor::DragAndDrop() {
     return result;
 }
 
+EventDescriptor EventDescriptor::Web(const String& wvname, const String& name, uint32 argcount) {
+    EventDescriptor result;
+    result.mTag = WebEventTag;
+    result.mDescriptor.web.wvname = new String(wvname);
+    result.mDescriptor.web.name = new String(name);
+    result.mDescriptor.web.argcount = argcount;
+    return result;
+}
+
+EventDescriptor::EventDescriptor()
+ : mTag(Bogus)
+{
+}
+
+EventDescriptor::EventDescriptor(const EventDescriptor& other) {
+    *this = other;
+}
+
+EventDescriptor::~EventDescriptor() {
+    if (isWeb()) {
+        delete mDescriptor.web.wvname;
+        mDescriptor.web.wvname = NULL;
+        delete mDescriptor.web.name;
+        mDescriptor.web.name = NULL;
+    }
+}
 
 bool EventDescriptor::isKey() const {
     return mTag == KeyEventTag;
@@ -146,6 +172,25 @@ AxisIndex EventDescriptor::axisIndex() const {
     return mDescriptor.axis.index;
 }
 
+bool EventDescriptor::isWeb() const {
+    return mTag == WebEventTag;
+}
+
+const String& EventDescriptor::webViewName() const {
+    assert(isWeb());
+    return *mDescriptor.web.wvname;
+}
+
+const String& EventDescriptor::webName() const {
+    assert(isWeb());
+    return *mDescriptor.web.name;
+}
+
+uint32 EventDescriptor::webArgCount() const {
+    assert(isWeb());
+    return mDescriptor.web.argcount;
+}
+
 
 bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
     // Evaluate easy comparisons first
@@ -188,7 +233,31 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
     if (mTag == DragAndDropEventTag)
         return false;
 
+    if (mTag == WebEventTag) {
+        return mDescriptor.web.wvname->compare(*rhs.mDescriptor.web.wvname) < 0 ||
+            (mDescriptor.web.wvname->compare(*rhs.mDescriptor.web.wvname) == 0 &&
+                (mDescriptor.web.name->compare(*rhs.mDescriptor.web.name) < 0 ||
+                    (mDescriptor.web.name->compare(*rhs.mDescriptor.web.name) == 0 &&
+                        mDescriptor.web.argcount < rhs.mDescriptor.web.argcount
+                    )
+                )
+            );
+    }
+
     assert(false); // we should have checked all types of tags by now
+}
+
+EventDescriptor& EventDescriptor::operator=(const EventDescriptor& rhs) {
+    mTag = rhs.mTag;
+    mDescriptor = rhs.mDescriptor;
+
+    // We need to make a copy of the strings
+    if (isWeb()) {
+        mDescriptor.web.wvname = new String(*rhs.mDescriptor.web.wvname);
+        mDescriptor.web.name = new String(*rhs.mDescriptor.web.name);
+    }
+
+    return *this;
 }
 
 } // namespace Input

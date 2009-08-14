@@ -65,6 +65,7 @@ public:
     virtual void invoke(Input::MouseDragEventPtr& evt);
     virtual void invoke(Input::WindowEventPtr& evt);
     virtual void invoke(Input::DragAndDropEventPtr& evt);
+    virtual void invoke(Input::WebViewEventPtr& evt);
 
     /** Invokes the input response for any type of InputEvent.  This should
      *  generally be avoided if you know the type of event, but if you don't
@@ -134,6 +135,19 @@ public:
     AxisInputResponse(ResponseCallback cb);
 
     virtual void invoke(Input::AxisEventPtr& evt);
+
+    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
+private:
+    ResponseCallback mCallback;
+};
+
+class StringInputResponse : public InputResponse {
+public:
+    typedef std::tr1::function<void(String)> ResponseCallback;
+
+    StringInputResponse(ResponseCallback cb);
+
+    virtual void invoke(Input::WebViewEventPtr&);
 
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:

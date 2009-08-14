@@ -31,6 +31,7 @@
  */
 
 #include "InputResponse.hpp"
+#include "WebView.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -96,6 +97,10 @@ void InputResponse::invoke(DragAndDropEventPtr& evt) {
     defaultAction();
 }
 
+void InputResponse::invoke(WebViewEventPtr& evt) {
+    defaultAction();
+}
+
 void InputResponse::invoke(InputEventPtr& ev) {
     ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(ev));
     if (button_pressed_ev) {
@@ -156,6 +161,12 @@ void InputResponse::invoke(InputEventPtr& ev) {
         invoke(dd_ev);
         return;
     }
+
+    WebViewEventPtr wv_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(ev));
+    if (wv_ev) {
+        invoke(wv_ev);
+        return;
+    }
 }
 
 void InputResponse::defaultAction() {
@@ -177,6 +188,9 @@ InputResponse::InputEventDescriptorList SimpleInputResponse::getInputEvents(cons
 
     if (descriptor.isKey()) {
         result.push_back(Input::EventDescriptor::Key(descriptor.keyButton(), Input::KEY_PRESSED, descriptor.keyModifiers()));
+    }
+    else if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), descriptor.webArgCount()));
     }
 
     return result;
@@ -259,6 +273,32 @@ InputResponse::InputEventDescriptorList AxisInputResponse::getInputEvents(const 
 
     if (descriptor.isAxis()) {
         result.push_back(Input::EventDescriptor::Axis(descriptor.axisIndex()));
+    }
+
+    return result;
+}
+
+
+StringInputResponse::StringInputResponse(ResponseCallback cb)
+ : mCallback(cb)
+{
+}
+
+void StringInputResponse::invoke(WebViewEventPtr& wvevt) {
+#ifdef HAVE_AWESOMIUM
+    const Awesomium::JSArguments& args = *(wvevt->args);
+    assert(args.size() > 0);
+    assert(args[0].isString());
+
+    mCallback(args[0].toString());
+#endif
+}
+
+InputResponse::InputEventDescriptorList StringInputResponse::getInputEvents(const InputBindingEvent& descriptor) const {
+    InputEventDescriptorList result;
+
+    if (descriptor.isWeb()) {
+        result.push_back(Input::EventDescriptor::Web(descriptor.webViewName(), descriptor.webName(), descriptor.webArgCount()));
     }
 
     return result;

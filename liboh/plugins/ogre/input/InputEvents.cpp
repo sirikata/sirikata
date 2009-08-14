@@ -32,6 +32,7 @@
 
 #include <util/Standard.hh>
 #include "InputEvents.hpp"
+#include "../WebView.hpp" // FIXME this is gross
 
 namespace Sirikata {
 namespace Input {
@@ -85,6 +86,38 @@ EventDescriptor WindowEvent::getDescriptor() const {
 }
 
 IdPair::Primary DragAndDropEvent::Id("DragAndDrop");
+
+
+
+IdPair::Primary WebViewEvent::Id("WebView");
+
+WebViewEvent::WebViewEvent(WebView* wv, const String& _name, const Awesomium::JSArguments& _args)
+ : InputEvent(InputDeviceWPtr(), IdPair(Id, _name)),
+   webview(wv),
+   name(_name),
+   args(
+#ifdef HAVE_AWESOMIUM
+       new Awesomium::JSArguments(_args)
+#else
+       NULL
+#endif
+   )
+{
+}
+
+WebViewEvent::~WebViewEvent() {
+#ifdef HAVE_AWESOMIUM
+    delete args;
+#endif
+}
+
+EventDescriptor WebViewEvent::getDescriptor() const {
+#ifdef HAVE_AWESOMIUM
+    return EventDescriptor::Web(webview->getName(), name, args->size());
+#else
+    return EventDescriptor::Web(webview->getName(), name, -1);
+#endif
+}
 
 }
 }
