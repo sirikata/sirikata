@@ -165,15 +165,12 @@ void Object::subscriptionMessage(const UUID& subscriber, bool subscribing) {
         removeSubscriber(subscriber);
 }
 
-void Object::migrateMessage(MigrateMessage* migrate_msg) {
-    mID = migrate_msg->object();
-    mQueryAngle = migrate_msg->queryAngle();
+void Object::migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs) {
+    mID = oid;
+    mQueryAngle = sa;
 
-    for (int i = 0; i < migrate_msg->subscriberCount(); i++) {
-      addSubscriber(migrate_msg->subscriberList()[i]);
-
-      //printf("recvd migrateMsg->msubscribers[i] = %s\n",
-      //     migrate_msg->subscriberList()[i].readableHexData().c_str()  );
+    for (uint32 i = 0; i < subs.size(); i++) {
+      addSubscriber(subs[i]);
     }
 }
 

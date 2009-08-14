@@ -43,6 +43,7 @@
 #include "CBR_Loc.pbj.hpp"
 #include "CBR_Prox.pbj.hpp"
 #include "CBR_Subscription.pbj.hpp"
+#include "CBR_Migration.pbj.hpp"
 
 namespace CBR {
 
@@ -181,37 +182,15 @@ private:
 
 class MigrateMessage : public Message {
 public:
-    MigrateMessage(const ServerID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from);
-
-    ~MigrateMessage();
+    MigrateMessage(const ServerID& origin);
 
     virtual MessageType type() const;
-
-    const UUID& object() const;
-
-    const SolidAngle queryAngle() const;
-
-    const int subscriberCount() const;
-
-    UUID* subscriberList() const;
-
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    ServerID messageFrom();
-
+    CBR::Protocol::Migration::MigrationMessage contents;
 private:
     friend class Message;
     MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-
-    UUID mObject;
-
-    SolidAngle mQueryAngle;
-
-    uint16_t mCountSubscribers;
-    UUID* mSubscribers;
-    ServerID mFrom;
-
 }; // class MigrateMessage
 
 class CSegChangeMessage : public Message {

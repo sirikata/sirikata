@@ -78,7 +78,7 @@ public:
     void locationMessage(const UUID& src, const TimedMotionVector3f& loc);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg, const CBR::Protocol::Prox::ProximityResults& prox);
     void subscriptionMessage(const UUID& subscriber, bool subscribing);
-    void migrateMessage(MigrateMessage* migrate_msg);
+    void migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
 
 private:
     void addSubscriber(const UUID& sub);

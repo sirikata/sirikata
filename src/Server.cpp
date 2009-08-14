@@ -85,7 +85,11 @@ void Server::connect(Object* obj, bool wait_for_migrate) {
 void Server::receiveMessage(Message* msg) {
     MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
     if (migrate_msg != NULL) {
-        const UUID obj_id = migrate_msg->object();
+        const UUID obj_id = migrate_msg->contents.object();
+        SolidAngle obj_query_angle( migrate_msg->contents.query_angle() );
+        std::vector<UUID> obj_subs;
+        for(uint32 i = 0; i < migrate_msg->contents.subscriber_size(); i++)
+            obj_subs.push_back(migrate_msg->contents.subscriber(i));
 
         ObjectMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
         if (obj_map_it == mObjectsAwaitingMigration.end()) {
@@ -94,13 +98,13 @@ void Server::receiveMessage(Message* msg) {
 
         Object* obj = obj_map_it->second;
 
-        obj->migrateMessage(migrate_msg);
+        obj->migrateMessage(obj_id, obj_query_angle, obj_subs);
 
         // Move from list waiting for migration message to active objects
         mObjectsAwaitingMigration.erase(obj_map_it);
         mObjects[obj_id] = obj;
 
-        ServerID idOSegAckTo = migrate_msg->messageFrom();
+        ServerID idOSegAckTo = (ServerID)migrate_msg->contents.source_server();
 
         // Update LOC to indicate we have this object locally
         mLocationService->addLocalObject(obj_id);
@@ -255,21 +259,12 @@ MigrateMessage* Server::wrapObjectStateForMigration(Object* obj)
 {
   const UUID& obj_id = obj->uuid();
 
-  MigrateMessage* migrate_msg = new MigrateMessage(
-      id(),
-      obj_id,
-      obj->queryAngle(),
-      obj->subscriberSet().size(),
-      this->id());
-  ObjectSet::iterator it;
-  int i=0;
-  UUID* migrate_msg_subscribers = migrate_msg->subscriberList();
-  for (it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++) {
-    migrate_msg_subscribers[i] = *it;
-    //printf("sent migrateMsg->msubscribers[i] = %s\n",
-    //       migrate_msg_subscribers[i].readableHexData().c_str()  );
-    i++;
-  }
+  MigrateMessage* migrate_msg = new MigrateMessage(id());
+  migrate_msg->contents.set_object(obj_id);
+  migrate_msg->contents.set_query_angle(obj->queryAngle().asFloat());
+  for (ObjectSet::iterator it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++)
+      migrate_msg->contents.add_subscriber(*it);
+  migrate_msg->contents.set_source_server(this->id());
 
   return migrate_msg;
 }

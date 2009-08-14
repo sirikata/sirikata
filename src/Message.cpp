@@ -281,109 +281,25 @@ uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-MigrateMessage::MigrateMessage(const ServerID& origin, const UUID& obj, SolidAngle queryAngle, uint16_t subscriberCount, ServerID from)
- : Message(origin, true),
-   mObject(obj),
-   mQueryAngle(queryAngle),
-   mCountSubscribers(subscriberCount),
-   mFrom(from)
+MigrateMessage::MigrateMessage(const ServerID& origin)
+ : Message(origin, true)
 {
-
-  mSubscribers = new UUID[mCountSubscribers];
-
 }
 
 MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    uint8 raw_object[UUID::static_size];
-    memcpy( &raw_object, &wire[offset], UUID::static_size );
-    offset += UUID::static_size;
-    mObject = UUID(raw_object, UUID::static_size);
-
-    float64 sa;
-    memcpy(&sa, &wire[offset], sizeof(sa));
-    offset += sizeof(float64);
-    mQueryAngle = SolidAngle(sa);
-
-    uint16_t countSubscribers;
-    memcpy(&countSubscribers, &wire[offset], sizeof(countSubscribers));
-    offset += sizeof(uint16_t);
-    mCountSubscribers = countSubscribers;
-
-    mSubscribers = new UUID[mCountSubscribers];
-
-    for (int i=0; i < mCountSubscribers; i++) {
-      memcpy( &raw_object, &wire[offset], UUID::static_size );
-      offset += UUID::static_size;
-      mSubscribers[i] = UUID(raw_object, UUID::static_size);
-    }
-
-    ServerID from;
-    memcpy(&from,&wire[offset],sizeof(ServerID));
-    offset += sizeof(ServerID);
-    mFrom = from;
-}
-
-MigrateMessage::~MigrateMessage() {
-    if (mCountSubscribers > 0)
-        delete[] mSubscribers;
+    parsePBJMessage(contents, wire, offset);
 }
 
 MessageType MigrateMessage::type() const {
     return MESSAGE_TYPE_MIGRATE;
 }
 
-const UUID& MigrateMessage::object() const {
-    return mObject;
-}
-
 uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-
-    uint32 uuid_size = UUID::static_size;
-    wire.resize( wire.size() + uuid_size + sizeof(float64) +
-		 sizeof(mCountSubscribers) + uuid_size*mCountSubscribers + sizeof(ServerID));
-
-
-    memcpy( &wire[offset], mObject.getArray().data(), uuid_size );
-    offset += uuid_size;
-
-    float64 sa_as_float = mQueryAngle.asFloat();
-    memcpy( &wire[offset], &sa_as_float, sizeof(sa_as_float) );
-    offset += sizeof(sa_as_float);
-
-    memcpy( &wire[offset], &mCountSubscribers, sizeof(mCountSubscribers) );
-    offset += sizeof(mCountSubscribers);
-
-    for (int i=0; i < mCountSubscribers; i++) {
-      memcpy( &wire[offset], mSubscribers[i].getArray().data(), uuid_size);
-      offset += uuid_size;
-    }
-
-    memcpy(&wire[offset],&mFrom,sizeof(ServerID));
-    offset += sizeof(ServerID);
-
-    return offset;
+    return serializePBJMessage(contents, wire, offset);
 }
-
-const SolidAngle MigrateMessage::queryAngle() const {
-    return mQueryAngle;
-}
-
-const int MigrateMessage::subscriberCount() const {
-    return mCountSubscribers;
-}
-
-UUID* MigrateMessage::subscriberList() const {
-  return mSubscribers;
-}
-
-ServerID MigrateMessage::messageFrom()
-{
-  return mFrom;
-}
-
 
 
 

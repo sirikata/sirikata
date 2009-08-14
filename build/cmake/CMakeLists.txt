@@ -271,6 +271,7 @@ SET(CBR_PROTOCOLS
   Loc.pbj
   Prox.pbj
   Subscription.pbj
+  Migration.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
 # protocol targets
