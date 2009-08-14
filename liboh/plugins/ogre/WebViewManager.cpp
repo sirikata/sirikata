@@ -542,21 +542,25 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 
 
 void WebViewManager::navigate(NavigationAction action) {
+    // New tab is a special case: it doesn't require a previously focused web view
+    // and doesn't strictly require awesomium
+    if (action == NavigateNewTab)
+    {
+        static uint32 unique_id = 0;
+        // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
+        char buffer[256];
+        sprintf(buffer, "spawned_%d", unique_id++);
+        String unique_name(buffer);
+        WebView* newwebview = createWebView(unique_name, 250, 250, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
+        focusedNonChromeWebView = newwebview;
+        return;
+    }
+
     if (focusedNonChromeWebView == NULL)
         return;
 
 #ifdef HAVE_AWESOMIUM
     switch(action) {
-      case NavigateNewTab:
-          {
-              static uint32 unique_id = 0;
-              // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
-              char buffer[256];
-              sprintf(buffer, "spawned_%d", unique_id++);
-              String unique_name(buffer);
-              createWebView(unique_name, 250, 250, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
-          }
-        break;
       case NavigateBack:
         focusedNonChromeWebView->webView->goToHistoryOffset(-1);
         break;
