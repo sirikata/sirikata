@@ -10,6 +10,8 @@ print dir(HostedObject)
 
 import util
 
+DEBUG_OUTPUT=False
+
 class exampleclass:
     def __init__(self):
         self.val=0
@@ -50,7 +52,7 @@ class exampleclass:
             if proxcall.proximity_event == pbSiri.ProxCall.EXITED_PROXIMITY:
                 pass
     def sawAnotherObject(self,persistence,header,retstatus):
-        print "PY: sawAnotherObject called"
+        if DEBUG_OUTPUT: print "PY: sawAnotherObject called"
         if header.HasField('return_status') or retstatus:
             return
         uuid = util.tupleToUUID(header.source_object)
@@ -61,8 +63,8 @@ class exampleclass:
                     nameStruct=pbSiri.StringProperty()
                     nameStruct.ParseFromString(field.data)
                     myName = nameStruct.value
-        print "Object",uuid,"has name",myName
-        if myName=="bowlingpin":
+        if DEBUG_OUTPUT: print "PY: Object",uuid,"has name",myName
+        if myName=="Avatar_01":
             rws=pbPer.ReadWriteSet()
             se=rws.writes.add()
             se.field_name="Parent"

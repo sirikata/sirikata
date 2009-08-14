@@ -33,6 +33,7 @@
 #define _SIRIKATA_POSITION_LISTENER_HPP_
 
 namespace Sirikata {
+namespace Protocol{class ObjLoc;}
 
 class ProxyObject;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
@@ -53,6 +54,12 @@ public:
         TemporalValue<Location>::Time timeStamp,
         const Location &absLocation) = 0;
 
+};
+
+class SIRIKATA_OH_EXPORT LocationAuthority {
+public:
+    virtual ~LocationAuthority() {}
+    virtual void requestLocation (Time timestamp, const Protocol::ObjLoc& reqLoc) = 0;
 };
 }
 #endif

@@ -657,6 +657,16 @@ ADD_PBJ_TARGET(${ProtocolBuffersSources}
   ${PROTOCOLBUFFERS_GENS}
 )
 
+ADD_PBJ_TARGET(${ProtocolBuffersSources}
+  INPUTDIR ${ProtocolBuffersRoot}
+  PLUGINNAME "Ogre"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  OUTPUTCPPFILE ${SirikataProtocolDirectory}/Ogre_protobuf.cc
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  ${PROTOCOLBUFFERS_GENS}
+)
+
 ADD_PBJ_TARGET(Sirikata Physics
   INPUTDIR ${ProtocolBuffersRoot}
   PLUGINNAME "Bullet"
@@ -666,7 +676,6 @@ ADD_PBJ_TARGET(Sirikata Physics
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   ${PROTOCOLBUFFERS_GENS}
 )
-
 
 ADD_PBJ_TARGET(${ProtocolBuffersSources}
   INPUTDIR ${ProtocolBuffersRoot}
@@ -974,6 +983,7 @@ SET(LIBOH_PLUGIN_OGREGRAPHICS_DIR ${LIBOH_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBOH_PLUGIN_OGREGRAPHICS_DIR})
 SET(INPUT ${GFX}/input)
 SET(LIBOH_PLUGIN_OGREGRAPHICS_SOURCES
+  ${SirikataProtocolDirectory}/Ogre_protobuf.cc
   ${SirikataOgreCoreZipCpp}
   ${GFX}/OgreSystem.cpp
   ${GFX}/OgreMeshRaytrace.cpp

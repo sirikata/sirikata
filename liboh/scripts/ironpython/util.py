@@ -68,17 +68,14 @@ class PersistenceRead:
             print "Error processing PersistenceRead callback"
             traceback.print_exc()
     def docallback(self, headerser, bodyser):
-        print "PY util.py docallback"
         hdr = MessageHeader_pb2.Header()
         hdr.ParseFromString(fromByteArray(headerser))
         if hdr.HasField('return_status'):
-            print "PY util.py return_status yes"
             self.allcb(self, hdr, None)
             return False
         response = Persistence_pb2.Response()
         response.ParseFromString(fromByteArray(bodyser))
         if response.HasField('return_status'):
-            print "PY util.py return_status yes2"
             self.allcb(self, hdr, response.return_status)
             return False
 
@@ -90,10 +87,8 @@ class PersistenceRead:
                 i += 1
             if i >= 0 and i < len(self.reads):
                 if r.HasField('data'):
-                    print "PY util.py data"
                     self.reads[i].data = r.data
                 if r.HasField('return_status'):
-                    print "PY util.py no data"
                     self.reads[i].return_status = r.return_status
 ##                if self.indivcb:
 ##                    self.indivcb(self, self.reads[i])

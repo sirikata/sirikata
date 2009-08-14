@@ -54,6 +54,7 @@
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
+#include "Ogre_Sirikata.pbj.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -592,15 +593,14 @@ private:
 
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
+        
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
-
-        loc.setVelocity((orient * dir) * amount * WORLD_SCALE);
-        loc.setAngularSpeed(0);
-
-        cam->setLocation(now, loc);
+        Protocol::ObjLoc rloc;
+        rloc.set_velocity((orient * dir) * amount * WORLD_SCALE * .5);
+        rloc.set_angular_speed(0);        
+        cam->requestLocation(now, rloc);
     }
-
     void rotateAction(Vector3f about, float amount) {
         Task::AbsTime now(Task::AbsTime::now());
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -610,11 +610,10 @@ private:
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
 
-        loc.setAxisOfRotation(about);
-        loc.setAngularSpeed(amount);
-        loc.setVelocity(Vector3f(0,0,0));
-
-        cam->setLocation(now, loc);
+        Protocol::ObjLoc rloc;
+        rloc.set_rotational_axis(about);
+        rloc.set_angular_speed(amount);
+        cam->requestLocation(now, rloc);
     }
 
     void stableRotateAction(float dir, float amount) {
@@ -632,12 +631,11 @@ private:
         raxis.x = 0;
         raxis.y = std::cos(p*DEG2RAD);
         raxis.z = -std::sin(p*DEG2RAD);
-
-        loc.setAxisOfRotation(raxis);
-        loc.setAngularSpeed(dir*amount);
-        loc.setVelocity(Vector3f(0,0,0));
-
-        cam->setLocation(now, loc);
+        
+        Protocol::ObjLoc rloc;
+        rloc.set_rotational_axis(raxis);
+        rloc.set_angular_speed(dir*amount);
+        cam->requestLocation(now, rloc);
     }
 
     void setDragModeAction(const String& modename) {
