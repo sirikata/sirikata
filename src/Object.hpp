@@ -34,8 +34,8 @@
 #define _CBR_OBJECT_HPP_
 
 #include "Utility.hpp"
-#include "MotionPath.hpp"
 #include "Message.hpp"
+#include "MotionPath.hpp"
 #include "SolidAngle.hpp"
 
 namespace CBR {
@@ -75,9 +75,9 @@ public:
 
     void tick(const Time& t);
 
-    void locationMessage(LocationMessage* loc_msg);
-    void proximityMessage(ProximityMessage* prox_msg);
-    void subscriptionMessage(SubscriptionMessage* subs_msg);
+    void locationMessage(const UUID& src, const TimedMotionVector3f& loc);
+    void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg, const CBR::Protocol::Prox::ProximityResults& prox);
+    void subscriptionMessage(const UUID& subscriber, bool subscribing);
     void migrateMessage(MigrateMessage* migrate_msg);
 
 private:

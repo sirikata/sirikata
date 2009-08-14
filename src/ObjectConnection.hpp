@@ -34,11 +34,11 @@
 #define _CBR_OBJECT_CONNECTION_HPP_
 
 #include "Utility.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 
 class Object;
-class Message;
 class Trace;
 
 /** Represents a connection a space has to an object.
@@ -51,7 +51,7 @@ public:
 
     // XXX FIXME passing the time in isn't nice, but we need it for
     // tracing purposes.
-    void deliver(Message* msg, const Time& t);
+    void deliver(const CBR::Protocol::Object::ObjectMessage& msg, const Time& t);
 
 private:
     Object* mObject;

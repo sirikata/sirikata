@@ -96,70 +96,73 @@ void Object::checkPositionUpdate(const Time& t) {
     if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
         mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
-            LocationMessage* loc_msg = new LocationMessage(mOriginID);
-            loc_msg->object_header.set_source_object(uuid());
-            loc_msg->object_header.set_source_port(0);
-            loc_msg->object_header.set_dest_object(*it);
-            loc_msg->object_header.set_dest_port(0);
+            CBR::Protocol::Loc::TimedMotionVector loc;
+            loc.set_t(mLocation.updateTime());
+            loc.set_position(mLocation.position());
+            loc.set_velocity(mLocation.velocity());
 
-            loc_msg->contents.set_t(mLocation.updateTime());
-            loc_msg->contents.set_position(mLocation.position());
-            loc_msg->contents.set_velocity(mLocation.velocity());
+            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+            obj_msg->set_source_object(uuid());
+            obj_msg->set_source_port(OBJECT_PORT_LOCATION);
+            obj_msg->set_dest_object(*it);
+            obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
+            obj_msg->set_unique(GenerateUniqueID(mOriginID));
+            obj_msg->set_payload( serializePBJMessage(loc) );
 
-            bool success = mObjectMessageQueue->send(loc_msg, loc_msg->object_header.source_object(), loc_msg->object_header.dest_object());
+            bool success = mObjectMessageQueue->send(obj_msg);
             // XXX FIXME do something on failure
-            delete loc_msg;
         }
     }
 }
 
-void Object::locationMessage(LocationMessage* loc_msg) {
+void Object::locationMessage(const UUID& src, const TimedMotionVector3f& loc) {
     // FIXME do something with the data
-
-    delete loc_msg;
 }
 
-void Object::proximityMessage(ProximityMessage* prox_msg) {
+void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg, const CBR::Protocol::Prox::ProximityResults& prox_results) {
     if (mGlobalIntroductions) { // we already know about everybody, so we don't need to handle this
-        delete prox_msg;
         return;
     }
 
-    for(uint32 idx = 0; idx < prox_msg->contents.addition_size(); idx++) {
-        CBR::Protocol::Prox::IObjectAddition addition = prox_msg->contents.addition(idx);
+    for(uint32 idx = 0; idx < prox_results.addition_size(); idx++) {
+        CBR::Protocol::Prox::IObjectAddition addition = prox_results.addition(idx);
 
-        SubscriptionMessage* subs_msg = new SubscriptionMessage(mOriginID);
-        subs_msg->object_header.set_source_object(uuid());
-        subs_msg->object_header.set_source_port(0);
-        subs_msg->object_header.set_dest_object(addition.object());
-        subs_msg->object_header.set_dest_port(0);
-        subs_msg->contents.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
+        CBR::Protocol::Subscription::SubscriptionMessage subs;
+        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
 
-        mObjectMessageQueue->send(subs_msg, subs_msg->object_header.source_object(), subs_msg->object_header.dest_object());
-        delete subs_msg;
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        obj_msg->set_source_object(uuid());
+        obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
+        obj_msg->set_dest_object(addition.object());
+        obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
+        obj_msg->set_unique(GenerateUniqueID(mOriginID));
+        obj_msg->set_payload( serializePBJMessage(subs) );
+
+        mObjectMessageQueue->send(obj_msg);
     }
-    for(uint32 idx = 0; idx < prox_msg->contents.removal_size(); idx++) {
-        CBR::Protocol::Prox::IObjectRemoval removal = prox_msg->contents.removal(idx);
+    for(uint32 idx = 0; idx < prox_results.removal_size(); idx++) {
+        CBR::Protocol::Prox::IObjectRemoval removal = prox_results.removal(idx);
 
-        SubscriptionMessage* subs_msg = new SubscriptionMessage(mOriginID);
-        subs_msg->object_header.set_source_object(uuid());
-        subs_msg->object_header.set_source_port(0);
-        subs_msg->object_header.set_dest_object(removal.object());
-        subs_msg->object_header.set_dest_port(0);
-        subs_msg->contents.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
+        CBR::Protocol::Subscription::SubscriptionMessage subs;
+        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
 
-        mObjectMessageQueue->send(subs_msg, subs_msg->object_header.source_object(), subs_msg->object_header.dest_object());
-        delete subs_msg;
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        obj_msg->set_source_object(uuid());
+        obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
+        obj_msg->set_dest_object(removal.object());
+        obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
+        obj_msg->set_unique(GenerateUniqueID(mOriginID));
+        obj_msg->set_payload( serializePBJMessage(subs) );
+
+        mObjectMessageQueue->send(obj_msg);
     }
 }
 
-void Object::subscriptionMessage(SubscriptionMessage* subs_msg) {
-    if (subs_msg->contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe)
-        addSubscriber(subs_msg->object_header.source_object());
+void Object::subscriptionMessage(const UUID& subscriber, bool subscribing) {
+    if (subscribing)
+        addSubscriber(subscriber);
     else
-        removeSubscriber(subs_msg->object_header.source_object());
-
-    delete subs_msg;
+        removeSubscriber(subscriber);
 }
 
 void Object::migrateMessage(MigrateMessage* migrate_msg) {

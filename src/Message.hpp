@@ -48,9 +48,7 @@ namespace CBR {
 
 typedef uint8 MessageType;
 
-#define MESSAGE_TYPE_PROXIMITY     1
-#define MESSAGE_TYPE_LOCATION      2
-#define MESSAGE_TYPE_SUBSCRIPTION  3
+#define MESSAGE_TYPE_OBJECT        1
 #define MESSAGE_TYPE_MIGRATE       4
 #define MESSAGE_TYPE_COUNT         5
 #define MESSAGE_TYPE_CSEG_CHANGE   6
@@ -62,6 +60,13 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_SERVER_PROX_RESULT  12
 #define MESSAGE_TYPE_BULK_LOCATION       13
 
+// List of well known server ports, which should replace message types
+#define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
+
+// List of well known object ports, which should replace message types
+#define OBJECT_PORT_PROXIMITY     1
+#define OBJECT_PORT_LOCATION      2
+#define OBJECT_PORT_SUBSCRIPTION  3
 
 template <typename scalar>
 class SplitRegion {
@@ -76,6 +81,7 @@ public:
 typedef SplitRegion<float> SplitRegionf;
 
 typedef uint64 UniqueMessageID;
+uint64 GenerateUniqueID(const ServerID& origin);
 ServerID GetUniqueIDServerID(UniqueMessageID uid);
 uint64 GetUniqueIDMessageID(UniqueMessageID uid);
 
@@ -99,7 +105,6 @@ protected:
     // contents of chunk.  returns the offset after serializing the header
     uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
 private:
-    static uint64 sIDSource;
     UniqueMessageID mID;
 }; // class Message
 
@@ -133,54 +138,32 @@ public:
     virtual ~MessageRouter() {}
 
     virtual void route(Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
-    virtual void route(Message* msg, const UUID& dest_obj, bool is_forward = false) = 0;
+    virtual void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward) = 0;
 };
+
+
+
 
 // Specific message types
 
-class ProximityMessage : public Message {
+class ObjectMessage : public Message {
 public:
-    ProximityMessage(const ServerID& origin);
+    ObjectMessage(const ServerID& origin,
+        const UUID& src, const uint32 src_port,
+        const UUID& dest, const uint32 dest_port,
+        const Network::Chunk& payload);
+
+    ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src);
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    CBR::Protocol::Object::ObjectMessage object_header;
-    CBR::Protocol::Prox::ProximityResults contents;
+    CBR::Protocol::Object::ObjectMessage contents;
 private:
     friend class Message;
-    ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-}; // class ProximityMessage
+    ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+}; // class ObjectMessage
 
-
-class LocationMessage : public Message {
-public:
-    LocationMessage(const ServerID& origin);
-
-    virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
-    CBR::Protocol::Object::ObjectMessage object_header;
-    CBR::Protocol::Loc::TimedMotionVector contents;
-private:
-    friend class Message;
-    LocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-}; // class LocationMessage
-
-
-class SubscriptionMessage : public Message {
-public:
-    SubscriptionMessage(const ServerID& origin);
-
-    virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
-    CBR::Protocol::Object::ObjectMessage object_header;
-    CBR::Protocol::Subscription::SubscriptionMessage contents;
-private:
-    friend class Message;
-    SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-}; // class SubscriptionMessage
 
 class NoiseMessage : public Message {
 public:
@@ -389,6 +372,21 @@ private:
     friend class Message;
     BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 };
+
+
+
+
+// Object message types
+
+template<typename PBJMessageType>
+std::string serializePBJMessage(const PBJMessageType& contents) {
+    std::string payload;
+    bool serialized_success = contents.SerializeToString(&payload);
+    assert(serialized_success);
+
+    return payload;
+}
+
 
 } // namespace CBR
 

@@ -38,7 +38,10 @@ namespace CBR {
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
 
-static uint64 GenerateUniqueID(const ServerID& origin, uint64 id_src) {
+uint64 sIDSource = 0;
+
+uint64 GenerateUniqueID(const ServerID& origin) {
+    uint64 id_src = sIDSource++;
     uint64 message_id_server_bits=MESSAGE_ID_SERVER_BITS;
     uint64 server_int = (uint64)origin;
     uint64 server_shifted = server_int << MESSAGE_ID_SERVER_SHIFT;
@@ -58,10 +61,8 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 }
 
 
-uint64 Message::sIDSource = 0;
-
 Message::Message(const ServerID& origin, bool x)
- : mID( GenerateUniqueID(origin, sIDSource++) )
+ : mID( GenerateUniqueID(origin) )
 {
 }
 
@@ -90,14 +91,8 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
     Message* msg = NULL;
 
     switch(raw_type) {
-      case MESSAGE_TYPE_PROXIMITY:
-        msg = new ProximityMessage(wire, offset, _id);
-        break;
-      case MESSAGE_TYPE_LOCATION:
-        msg = new LocationMessage(wire, offset, _id);
-        break;
-      case MESSAGE_TYPE_SUBSCRIPTION:
-        msg = new SubscriptionMessage(wire, offset, _id);
+      case MESSAGE_TYPE_OBJECT:
+        msg = new ObjectMessage(wire, offset, _id);
         break;
       case MESSAGE_TYPE_MIGRATE:
         msg = new MigrateMessage(wire, offset, _id);
@@ -212,131 +207,40 @@ void parsePBJMessage(PBJMessageType& contents, const Network::Chunk& wire, uint3
 
 
 
-ProximityMessage::ProximityMessage(const ServerID& origin)
+ObjectMessage::ObjectMessage(const ServerID& origin,
+    const UUID& src, const uint32 src_port,
+    const UUID& dest, const uint32 dest_port,
+    const Network::Chunk& payload)
  : Message(origin, true)
 {
+    contents.set_source_object(src);
+    contents.set_source_port(src_port);
+    contents.set_dest_object(dest);
+    contents.set_dest_port(dest_port);
+    contents.set_payload(&payload[0], payload.size());
 }
 
-ProximityMessage::ProximityMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+ObjectMessage::ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src)
+ : Message(origin, true),
+   contents(src)
+{
+}
+
+ObjectMessage::ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    bool parse_success = object_header.ParseFromArray((void*)&wire[offset], wire.size() - offset);
-    assert(parse_success);
-    offset = wire.size();
-
-    parse_success = contents.ParseFromString(object_header.payload());
-    assert(parse_success);
+    parsePBJMessage(contents, wire, offset);
 }
 
-MessageType ProximityMessage::type() const {
-    return MESSAGE_TYPE_PROXIMITY;
+MessageType ObjectMessage::type() const {
+    return MESSAGE_TYPE_OBJECT;
 }
 
-uint32 ProximityMessage::serialize(Network::Chunk& wire, uint32 offset) {
+uint32 ObjectMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-
-    std::string object_payload;
-    bool serialized_success = contents.SerializeToString(&object_payload);
-    assert(serialized_success);
-
-    object_header.set_payload(object_payload);
-
-    std::string payload;
-    serialized_success = object_header.SerializeToString(&payload);
-    assert(serialized_success);
-
-    wire.resize( wire.size() + payload.size() );
-    memcpy(&wire[offset], &payload[0], payload.size());
-    offset += payload.size();
-
-    return offset;
+    return serializePBJMessage(contents, wire, offset);
 }
 
-
-
-
-LocationMessage::LocationMessage(const ServerID& origin)
- : Message(origin, true)
-{
-}
-
-LocationMessage::LocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
-{
-    bool parse_success = object_header.ParseFromArray((void*)&wire[offset], wire.size() - offset);
-    assert(parse_success);
-    offset = wire.size();
-
-    parse_success = contents.ParseFromString(object_header.payload());
-    assert(parse_success);
-}
-
-MessageType LocationMessage::type() const {
-    return MESSAGE_TYPE_LOCATION;
-}
-
-uint32 LocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-
-    std::string object_payload;
-    bool serialized_success = contents.SerializeToString(&object_payload);
-    assert(serialized_success);
-
-    object_header.set_payload(object_payload);
-
-    std::string payload;
-    serialized_success = object_header.SerializeToString(&payload);
-    assert(serialized_success);
-
-    wire.resize( wire.size() + payload.size() );
-    memcpy(&wire[offset], &payload[0], payload.size());
-    offset += payload.size();
-
-    return offset;
-}
-
-
-
-
-SubscriptionMessage::SubscriptionMessage(const ServerID& origin)
- : Message(origin, true)
-{
-}
-
-SubscriptionMessage::SubscriptionMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
-{
-    bool parse_success = object_header.ParseFromArray((void*)&wire[offset], wire.size() - offset);
-    assert(parse_success);
-    offset = wire.size();
-
-    parse_success = contents.ParseFromString(object_header.payload());
-    assert(parse_success);
-}
-
-MessageType SubscriptionMessage::type() const {
-    return MESSAGE_TYPE_SUBSCRIPTION;
-}
-
-uint32 SubscriptionMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-
-    std::string object_payload;
-    bool serialized_success = contents.SerializeToString(&object_payload);
-    assert(serialized_success);
-
-    object_header.set_payload(object_payload);
-
-    std::string payload;
-    serialized_success = object_header.SerializeToString(&payload);
-    assert(serialized_success);
-
-    wire.resize( wire.size() + payload.size() );
-    memcpy(&wire[offset], &payload[0], payload.size());
-    offset += payload.size();
-
-    return offset;
-}
 
 
 

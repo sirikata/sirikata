@@ -54,7 +54,7 @@ public:
     void removeClient(UUID);
 
 
-    virtual bool send(Message* msg, const UUID& source, const UUID& dest);
+    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
     virtual void service(const Time&t);
 
 protected:

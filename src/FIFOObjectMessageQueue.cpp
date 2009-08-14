@@ -17,14 +17,15 @@ FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, LocationS
 {
 }
 
-bool FIFOObjectMessageQueue::send(Message* msg, const UUID& source, const UUID& dest) {
-    UUID src_uuid = source;
-    UUID dest_uuid = dest;
+bool FIFOObjectMessageQueue::send(CBR::Protocol::Object::ObjectMessage* msg) {
+    UUID src_uuid = msg->source_object();
+    UUID dest_uuid = msg->dest_object();
     ServerID dest_server_id = lookup(dest_uuid);
-    UniqueMessageID msg_id = msg->id();
+    UniqueMessageID msg_id = msg->unique();
 
+    ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
     Network::Chunk msg_serialized;
-    msg->serialize(msg_serialized, 0);
+    obj_msg->serialize(msg_serialized, 0);
 
     ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
     bool success = mQueue.push(src_uuid,smp)==QueueEnum::PushSucceeded;

@@ -8,7 +8,6 @@
 
 namespace CBR{
 class ServerMessageQueue;
-class ObjectToObjectMessage;
 
 class ObjectMessageQueue {
 public:
@@ -20,7 +19,7 @@ public:
     {}
 
     virtual ~ObjectMessageQueue(){}
-    virtual bool send(Message* msg, const UUID& source, const UUID& dest) = 0;
+    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg) = 0;
     virtual void service(const Time& t)=0;
 
     virtual void registerClient(UUID oid,float weight=1) = 0;

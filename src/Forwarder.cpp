@@ -47,17 +47,13 @@ Forwarder::Forwarder(ServerID id)
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
-    this->registerMessageRecipient(MESSAGE_TYPE_PROXIMITY, this);
-    this->registerMessageRecipient(MESSAGE_TYPE_LOCATION, this);
-    this->registerMessageRecipient(MESSAGE_TYPE_SUBSCRIPTION, this);
+    this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-    this->unregisterMessageRecipient(MESSAGE_TYPE_PROXIMITY, this);
-    this->unregisterMessageRecipient(MESSAGE_TYPE_LOCATION, this);
-    this->unregisterMessageRecipient(MESSAGE_TYPE_SUBSCRIPTION, this);
+    this->unregisterMessageRecipient(MESSAGE_TYPE_OBJECT, this);
   }
 
   /*
@@ -113,7 +109,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     //objects from
     std::map<UUID,ServerID> updatedObjectLocations;
     std::map<UUID,ServerID>::iterator iter;
-    std::map<UUID, std::vector<Message*> >::iterator iterObjectsInTransit;
+    std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
     mOSeg -> tick(t,updatedObjectLocations);
 
@@ -128,8 +124,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          route((iterObjectsInTransit->second)[s],iter->second,false);
-          //          void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
+          route((iterObjectsInTransit->second)[s],iter->second,true);
         }
 
         //remove the messages from the objects in transit
@@ -231,49 +226,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
 
 
-
-  // Routing interface for servers.  This is used to route messages that originate from
-  // a server provided service, and thus don't have a source object.  Messages may be destined
-  // for either servers or objects.  The second form will simply automatically do the destination
-  // server lookup.
-  // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  /*  void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
-  {
-    assert(msg != NULL);
-
-    uint32 offset = 0;
-    Network::Chunk msg_serialized;
-    offset = msg->serialize(msg_serialized, offset);
-
-    if (dest_server==serv_id())
-    {
-      if (!is_forward)
-      {
-        mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
-        mTrace->serverDatagramSent((*mCurrentTime), (*mCurrentTime), 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
-      }
-
-      mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
-    }
-    else
-    {
-      mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
-      mOutgoingMessages.push_back( OutgoingMessage(msg_serialized, dest_server) );
-    }
-    delete msg;
-  }
-
-
-  void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
-  {
-    ServerID dest_server_id = lookup(dest_obj);
-    route(msg, dest_server_id, is_forward);
-  }
-
-  */
-
-
-
   // Routing interface for servers.  This is used to route messages that originate from
   // a server provided service, and thus don't have a source object.  Messages may be destined
   // for either servers or objects.  The second form will simply automatically do the destination
@@ -308,36 +260,41 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
   }
 
-  void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
-  {
-    //    ServerID dest_server_id = lookup(dest_obj);
+void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward)
+{
+    UUID dest_obj = msg->dest_object();
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
+    route(msg, dest_server_id, is_forward);
+}
 
-    if (dest_server_id == OBJECT_IN_TRANSIT)
+void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward) {
+    if (dest_serv == OBJECT_IN_TRANSIT)
     {
+        UUID dest_obj = msg->dest_object();
       //add message to objects in transit.
-      //      if (mObjectsInTransit[dest_obj] == null)
       if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
       {
         //no messages have been queued for mObjectsInTransit
         //add this as the beginning of a vector of message pointers.
-        std::vector<Message*> tmp;
-        tmp.push_back(msg);
-        mObjectsInTransit[dest_obj] = tmp;
+          ObjectMessageList tmp;
+          tmp.push_back(msg);
+          mObjectsInTransit[dest_obj] = tmp;
 
       }
       else
       {
-
         //add message to queue of objects in transit.
         mObjectsInTransit[dest_obj].push_back(msg);
       }
     }
     else
     {
-      route(msg, dest_server_id, is_forward);
+        // Wrap it up in one of our ObjectMessages and ship it.
+        ObjectMessage* obj_msg = new ObjectMessage(m_serv_ID, *msg);
+        route(obj_msg, dest_serv, is_forward);
+        delete msg;
     }
-  }
+}
 
 
 
@@ -345,7 +302,8 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
   {
     Message* result;
-    unsigned int offset=0;
+    uint32 offset=0;
+
     do
     {
       offset = Message::deserialize(chunk,offset,&result);
@@ -367,9 +325,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   void Forwarder::deliver(Message* msg)
   {
     switch(msg->type()) {
-      case MESSAGE_TYPE_PROXIMITY: // fall-through
-      case MESSAGE_TYPE_LOCATION:  // fall-through
-      case MESSAGE_TYPE_SUBSCRIPTION:
+      case MESSAGE_TYPE_OBJECT:
           {
               dispatchMessage(msg);
           }
@@ -446,81 +402,25 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     }
   }
 
-
-  void Forwarder::forward(Message* msg, const UUID& dest_obj)
-  {
-
-    ServerID dest_server_id = mOSeg->lookup(dest_obj);
-
-    if (dest_server_id == OBJECT_IN_TRANSIT)
-    {
-
-
-      //add message to objects in transit.
-      //      if (mObjectsInTransit[dest_obj] == null)
-      if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
-      {
-        //no messages have been queued for mObjectsInTransit
-        //add this as the beginning of a vector of message pointers.
-        std::vector<Message*> tmp;
-        tmp.push_back(msg);
-        mObjectsInTransit[dest_obj] = tmp;
-      }
-      else
-      {
-        //add message to queue of objects in transit.
-        mObjectsInTransit[dest_obj].push_back(msg);
-      }
-    }
-    else
-    {
-      route(msg, dest_server_id, true);
-    }
-
-  }
-
-
-static UUID getObjectMessageDest(Message* msg) {
-    switch(msg->type()) {
-      case MESSAGE_TYPE_PROXIMITY:
-          {
-              ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
-              assert(prox_msg != NULL);
-
-              return prox_msg->object_header.dest_object();
-          }
-          break;
-      case MESSAGE_TYPE_LOCATION:
-          {
-              LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
-              assert(loc_msg != NULL);
-
-              return loc_msg->object_header.dest_object();
-          }
-      case MESSAGE_TYPE_SUBSCRIPTION:
-          {
-              SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
-              assert(subs_msg != NULL);
-
-              return subs_msg->object_header.dest_object();
-          }
-        break;
-      default:
-        assert(false);
-    }
-}
-
 void Forwarder::receiveMessage(Message* msg) {
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
     // or needs to forward them.
+    assert(msg->type() == MESSAGE_TYPE_OBJECT);
+    ObjectMessage* obj_msg = dynamic_cast<ObjectMessage*>(msg);
+    assert(obj_msg != NULL);
 
-    UUID dest = getObjectMessageDest(msg);
+    UUID dest = obj_msg->contents.dest_object();
     ObjectConnection* conn = getObjectConnection(dest);
-    if (conn != NULL)
-        conn->deliver(msg, *mCurrentTime);
-    else
-        forward(msg, dest);
+    if (conn != NULL) {
+        conn->deliver(obj_msg->contents, *mCurrentTime);
+    }
+    else {
+        CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
+        route(obj_msg_cpy, true);
+    }
+
+    delete msg;
 }
 
 

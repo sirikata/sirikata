@@ -43,66 +43,77 @@ ObjectConnection::ObjectConnection(Object* obj, Trace* trace)
 {
 }
 
-void ObjectConnection::deliver(Message* msg, const Time& t) {
-    switch(msg->type()) {
-      case MESSAGE_TYPE_PROXIMITY:
-          {
-              ProximityMessage* prox_msg = dynamic_cast<ProximityMessage*>(msg);
-              assert(prox_msg != NULL);
+void ObjectConnection::deliver(const CBR::Protocol::Object::ObjectMessage& msg, const Time& t) {
+    assert( msg.dest_object() == mObject->uuid() );
 
-              for(uint32 idx = 0; idx < prox_msg->contents.addition_size(); idx++) {
-                  CBR::Protocol::Prox::IObjectAddition addition = prox_msg->contents.addition(idx);
+    switch( msg.dest_port() ) {
+      case OBJECT_PORT_PROXIMITY:
+          {
+              assert(msg.source_object() == UUID::null()); // Should originate at space server
+              CBR::Protocol::Prox::ProximityResults contents;
+              bool parse_success = contents.ParseFromString(msg.payload());
+              assert(parse_success);
+
+              for(uint32 idx = 0; idx < contents.addition_size(); idx++) {
+                  CBR::Protocol::Prox::IObjectAddition addition = contents.addition(idx);
                   TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
                   mTrace->prox(
                       t,
-                      prox_msg->object_header.dest_object(),
+                      msg.dest_object(),
                       addition.object(),
                       true,
                       loc
                   );
               }
 
-              for(uint32 idx = 0; idx < prox_msg->contents.removal_size(); idx++) {
-                  CBR::Protocol::Prox::IObjectRemoval removal = prox_msg->contents.removal(idx);
+              for(uint32 idx = 0; idx < contents.removal_size(); idx++) {
+                  CBR::Protocol::Prox::IObjectRemoval removal = contents.removal(idx);
                   mTrace->prox(
                       t,
-                      prox_msg->object_header.dest_object(),
+                      msg.dest_object(),
                       removal.object(),
                       false,
                       TimedMotionVector3f()
                   );
               }
 
-              mObject->proximityMessage(prox_msg);
+              mObject->proximityMessage(msg, contents);
           }
           break;
-      case MESSAGE_TYPE_LOCATION:
+      case OBJECT_PORT_LOCATION:
           {
-              LocationMessage* loc_msg = dynamic_cast<LocationMessage*>(msg);
-              assert(loc_msg != NULL);
+              CBR::Protocol::Loc::TimedMotionVector contents;
+              bool parse_success = contents.ParseFromString(msg.payload());
+              assert(parse_success);
 
-              TimedMotionVector3f loc(loc_msg->contents.t(), MotionVector3f(loc_msg->contents.position(), loc_msg->contents.velocity()));
+              TimedMotionVector3f loc(contents.t(), MotionVector3f(contents.position(), contents.velocity()));
 
               mTrace->loc(
                   t,
-                  loc_msg->object_header.dest_object(),
-                  loc_msg->object_header.source_object(),
+                  msg.dest_object(),
+                  msg.source_object(),
                   loc
               );
-              mObject->locationMessage(loc_msg);
+              mObject->locationMessage(msg.source_object(), loc);
           }
           break;
-      case MESSAGE_TYPE_SUBSCRIPTION:
+      case OBJECT_PORT_SUBSCRIPTION:
           {
-              SubscriptionMessage* subs_msg = dynamic_cast<SubscriptionMessage*>(msg);
-              assert(subs_msg != NULL);
+              CBR::Protocol::Subscription::SubscriptionMessage contents;
+              bool parse_success = contents.ParseFromString(msg.payload());
+              assert(parse_success);
+
               mTrace->subscription(
                   t,
-                  subs_msg->object_header.dest_object(),
-                  subs_msg->object_header.source_object(),
-                  (subs_msg->contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
+                  msg.dest_object(),
+                  msg.source_object(),
+                  (contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
               );
-              mObject->subscriptionMessage(subs_msg);
+
+              mObject->subscriptionMessage(
+                  msg.source_object(),
+                  (contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false
+              );
           }
           break;
       default:

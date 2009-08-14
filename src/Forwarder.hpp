@@ -47,7 +47,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
       Time* mCurrentTime;
 
-      std::map<UUID,std::vector<Message*> > mObjectsInTransit;
+      typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
+      std::map<UUID,ObjectMessageList> mObjectsInTransit;
 
       Time mLastSampleTime;
       Duration mSampleRate;
@@ -61,10 +62,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // Delivery interface.  This should be used to deliver received messages to the correct location -
       // the server or object it is addressed to.
       void deliver(Message* msg);
-
-      // Forward the given message to its proper server.  Use this when a message arrives and the object
-      // no longer lives on this server.
-      void forward(Message* msg, const UUID& dest);
 
       ServerID lookup(const Vector3f&); //returns the server id that is responsible for the 3d point Vector3f
       ServerID lookup(const UUID&); //
@@ -92,7 +89,11 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
       void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
-      void route(Message* msg, const UUID& dest_obj, bool is_forward = false);
+      void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false);
+  private:
+      // This version is provided if you already know which server the message should be sent to
+      void route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward);
+  public:
 
       void receiveMessage(Message* msg);
 

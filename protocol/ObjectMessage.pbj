@@ -37,5 +37,6 @@ message ObjectMessage {
     required uint16 source_port = 2;
     required uuid dest_object = 3;
     required uint16 dest_port = 4;
-    optional bytes payload = 5;
+    required uint64 unique = 5;
+    optional bytes payload = 6;
 }
