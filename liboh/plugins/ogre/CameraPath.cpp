@@ -32,6 +32,7 @@
 
 
 #include "CameraPath.hpp"
+#include <boost/filesystem.hpp>
 #include <math.h>
 
 namespace Sirikata {
@@ -118,41 +119,58 @@ int32 CameraPath::remove(int32 idx) {
 
 void CameraPath::load(const String& filename) {
     mPathPoints.clear();
-/*
-    if (!File.Exists(filename))
-        return;
 
-    StreamReader sr = new StreamReader(File.OpenRead(filename));
-    while(true) {
-        string line = sr.ReadLine();
-        if (line == null) break;
-        string[] elements = line.Split(' ');
-        if (elements.Length != 8)
-            continue;
-        Vector3d pos = new Vector3d(System.Single.Parse(elements[0]), System.Single.Parse(elements[1]), System.Single.Parse(elements[2]));
-        Quaternion orient = new Quaternion(System.Single.Parse(elements[3]), System.Single.Parse(elements[4]), System.Single.Parse(elements[5]), System.Single.Parse(elements[6]));
-        float dt = System.Single.Parse(elements[7]);
-        mPathPoints.Add( new CameraPoint( pos, orient, dt ) );
+    if (!boost::filesystem::exists(filename)) {
+        SILOG(ogre,error,"Error loading camera path -- file doesn't exist");
+        return;
     }
-    sr.Close();
-*/
+
+    FILE* pathfile = fopen(filename.c_str(), "r");
+    if (!pathfile) {
+        SILOG(ogre,error,"Error loading camera path -- couldn't open file");
+        return;
+    }
+
+    while(true) {
+        float32 posx, posy, posz;
+        float32 orientx, orienty, orientz, orientw;
+        float32 dt;
+        int nitems = fscanf(pathfile, "(%f %f %f) (%f %f %f %f) (%f)",
+            &posx, &posy, &posz,
+            &orientx, &orienty, &orientz, &orientw,
+            &dt
+        );
+        if (nitems != 8) break;
+        CameraPoint cp(
+            Vector3d(posx, posy, posz),
+            Quaternion(orientx, orienty, orientz, orientw, Quaternion::XYZW()),
+            DeltaTime::seconds(dt)
+        );
+        mPathPoints.push_back(cp);
+    }
+
+    fclose(pathfile);
+
     mDirty = true;
 }
 
 
 void CameraPath::save(const String& filename) {
-/*
-    FileStream fs = null;
-    if (!File.Exists(filename))
-        fs = File.Create(filename);
-    else
-        fs = File.OpenWrite(filename);
+    FILE* pathfile = fopen(filename.c_str(), "w");
+    if (!pathfile) {
+        SILOG(ogre,error,"Error saving camera path -- couldn't open file");
+        return;
+    }
 
-    StreamWriter sw = new StreamWriter(fs);
-    foreach(CameraPoint cp in mPathPoints)
-        sw.WriteLine("{0} {1} {2} {3} {4} {5} {6} {7}", cp.position.x, cp.position.y, cp.position.z, cp.orientation.w, cp.orientation.x, cp.orientation.y, cp.orientation.z, cp.dt);
-    sw.Close();
-*/
+    for(uint32 i = 0; i < mPathPoints.size(); i++) {
+        fprintf(pathfile, "(%f %f %f) (%f %f %f %f) (%f)\n",
+            mPathPoints[i].position.x, mPathPoints[i].position.y, mPathPoints[i].position.z,
+            mPathPoints[i].orientation.x, mPathPoints[i].orientation.y, mPathPoints[i].orientation.z, mPathPoints[i].orientation.w,
+            mPathPoints[i].dt.toSeconds()
+        );
+    }
+
+    fclose(pathfile);
 }
 
 void CameraPath::normalizePath() {
