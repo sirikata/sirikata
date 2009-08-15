@@ -35,8 +35,8 @@
 #include <util/Extrapolation.hpp>
 #include <oh/PositionListener.hpp>
 #include <oh/ProxyManager.hpp>
-#include "Bullet_Sirikata.pbj.hpp"
-#include "Bullet_Physics.pbj.hpp"
+#include "ObjectHost_Sirikata.pbj.hpp"
+
 #include "util/RoutableMessageBody.hpp"
 #include "util/RoutableMessageHeader.hpp"
 #include "util/KnownServices.hpp"
