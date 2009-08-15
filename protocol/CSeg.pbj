@@ -1,5 +1,5 @@
 /*  CBR
- *  Migration.pbj
+ *  CSeg.pbj
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,11 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package CBR.Protocol.Migration;
+package CBR.Protocol.CSeg;
 
-message MigrationMessage {
-    required uuid object = 1;
-    required float query_angle = 2;
-    repeated uuid subscriber = 3; // FIXME we shouldn't need this
-    required uint32 source_server = 4; // FIXME should come from server to server header
+message SplitRegion {
+    required uint32 id = 1;
+    required boundingbox3d3f bounds = 2;
+}
+
+message ChangeMessage {
+    repeated SplitRegion region = 1;
+}
+
+message LoadMessage {
+    required float load = 1;
 }

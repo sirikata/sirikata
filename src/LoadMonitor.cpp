@@ -115,7 +115,8 @@ void LoadMonitor::sendLoadReadings() {
     if (i != mServerID && handlesAdjacentRegion(i) ) {
       printf("%d handles adjacent region with %d\n", i, mServerID);
 
-      LoadStatusMessage* msg = new LoadStatusMessage(mServerID, mAveragedLoadReading);
+      LoadStatusMessage* msg = new LoadStatusMessage(mServerID);
+      msg->contents.set_load(mAveragedLoadReading);
       mMessageRouter->route(msg, i);
     }
   }
@@ -131,7 +132,7 @@ void LoadMonitor::receiveMessage(Message* msg) {
 void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
   ServerID id = GetUniqueIDServerID(load_status_msg->id());
 
-  mRemoteLoadReadings[id] = load_status_msg->loadReading();
+  mRemoteLoadReadings[id] = load_status_msg->contents.load();
 }
 
 void LoadMonitor::tick(const Time& t) {

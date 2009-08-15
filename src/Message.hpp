@@ -44,6 +44,7 @@
 #include "CBR_Prox.pbj.hpp"
 #include "CBR_Subscription.pbj.hpp"
 #include "CBR_Migration.pbj.hpp"
+#include "CBR_CSeg.pbj.hpp"
 
 namespace CBR {
 
@@ -195,26 +196,28 @@ private:
 
 class CSegChangeMessage : public Message {
 public:
-  CSegChangeMessage(const ServerID& origin, uint8_t number_of_regions);
+    CSegChangeMessage(const ServerID& origin);
 
-  ~CSegChangeMessage();
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-  virtual MessageType type() const;
-
-  const uint8_t numberOfRegions() const;
-
-  SplitRegionf* splitRegions() const;
-
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
+    CBR::Protocol::CSeg::ChangeMessage contents;
 private:
-  friend class Message;
-  CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    friend class Message;
+    CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
 
+class LoadStatusMessage : public Message {
+public:
+    LoadStatusMessage(const ServerID& origin);
 
-  uint8_t mNumberOfRegions;
-  SplitRegionf* mSplitRegions;
+    virtual MessageType type() const;
+    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
+    CBR::Protocol::CSeg::LoadMessage contents;
+private:
+    friend class Message;
+    LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 };
 
 
@@ -280,30 +283,6 @@ private:
 
 
   //end oseg message
-
-
-
-class LoadStatusMessage : public Message {
-
-public:
-  LoadStatusMessage(const ServerID& origin, float loadReading);
-
-  ~LoadStatusMessage();
-
-  virtual MessageType type() const;
-
-  const float loadReading() const;
-
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
-private:
-  friend class Message;
-  LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-
-  float mLoadReading;
-
-};
 
 
 

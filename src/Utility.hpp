@@ -72,7 +72,9 @@ typedef Sirikata::Vector4<int32> Vector4i32;
 typedef Sirikata::Quaternion Quaternion;
 
 typedef Sirikata::BoundingBox<float32> BoundingBox3f;
+typedef Sirikata::BoundingBox<float64> BoundingBox3d;
 typedef Sirikata::BoundingSphere<float32> BoundingSphere3f;
+typedef Sirikata::BoundingSphere<float64> BoundingSphere3d;
 
 typedef Sirikata::UUID UUID;
 

@@ -303,31 +303,15 @@ uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 
-CSegChangeMessage::CSegChangeMessage(const ServerID& origin, uint8_t number_of_regions)
- : Message(origin, true),
-   mNumberOfRegions(number_of_regions)
+CSegChangeMessage::CSegChangeMessage(const ServerID& origin)
+ : Message(origin, true)
 {
-  mSplitRegions = new SplitRegion<float>[number_of_regions];
 }
 
 CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    uint8_t number_of_regions;
-    memcpy(&number_of_regions, &wire[offset], sizeof(number_of_regions));
-    offset += sizeof(number_of_regions);
-    mNumberOfRegions = number_of_regions;
-
-    mSplitRegions = new SplitRegionf[number_of_regions];
-
-    for (int i=0; i < mNumberOfRegions; i++) {
-      memcpy( &mSplitRegions[i], &wire[offset], sizeof(SplitRegion<float>) );
-      offset += sizeof(SplitRegionf);
-    }
-}
-
-CSegChangeMessage::~CSegChangeMessage() {
-    delete mSplitRegions;
+    parsePBJMessage(contents, wire, offset);
 }
 
 MessageType CSegChangeMessage::type() const {
@@ -336,46 +320,20 @@ MessageType CSegChangeMessage::type() const {
 
 uint32 CSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-
-    wire.resize( wire.size() +  sizeof(mNumberOfRegions)
-		 + mNumberOfRegions*sizeof(SplitRegionf) );
-
-    memcpy( &wire[offset], &mNumberOfRegions, sizeof(mNumberOfRegions) );
-    offset += sizeof(mNumberOfRegions);
-
-    for (int i=0; i < mNumberOfRegions; i++) {
-      memcpy(&wire[offset], &mSplitRegions[i], sizeof(SplitRegionf));
-      offset += sizeof(SplitRegionf);
-    }
-
-    return offset;
+    return serializePBJMessage(contents, wire, offset);
 }
 
-const uint8_t CSegChangeMessage::numberOfRegions() const {
-    return mNumberOfRegions;
-}
 
-SplitRegionf* CSegChangeMessage::splitRegions() const {
-    return mSplitRegions;
-}
 
-LoadStatusMessage::LoadStatusMessage(const ServerID& origin, float load_reading)
- : Message(origin, true),
-   mLoadReading(load_reading)
+LoadStatusMessage::LoadStatusMessage(const ServerID& origin)
+ : Message(origin, true)
 {
-
 }
 
 LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    float load_reading;
-    memcpy(&load_reading, &wire[offset], sizeof(load_reading));
-    offset += sizeof(load_reading);
-    mLoadReading = load_reading;
-}
-
-LoadStatusMessage::~LoadStatusMessage() {
+    parsePBJMessage(contents, wire, offset);
 }
 
 MessageType LoadStatusMessage::type() const {
@@ -384,17 +342,7 @@ MessageType LoadStatusMessage::type() const {
 
 uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-
-    wire.resize( wire.size() +  sizeof(mLoadReading) );
-
-    memcpy( &wire[offset], &mLoadReading, sizeof(mLoadReading) );
-    offset += sizeof(mLoadReading);
-
-    return offset;
-}
-
-const float LoadStatusMessage::loadReading() const {
-    return mLoadReading;
+    return serializePBJMessage(contents, wire, offset);
 }
 
 

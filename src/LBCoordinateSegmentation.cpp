@@ -158,8 +158,7 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
   ServerID originID = GetUniqueIDServerID(ccMsg->id());
 
-  int numberOfRegions = ccMsg->numberOfRegions();
-  SplitRegionf* regions = ccMsg->splitRegions();
+  int numberOfRegions = ccMsg->contents.region_size();
 
   //printf("%d received server_split_msg from %d for new server %d\n", mServerID, originID,
   // ccMsg->newServerID());
@@ -173,13 +172,11 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
   BoundingBox3f origBox = segRegion->mBoundingBox;
   for (int i=0; i<numberOfRegions; i++) {
-    segRegion->mChildren[i].mServer = regions[i].mNewServerID;
-    segRegion->mChildren[i].mChildrenCount = 0;
-
-    Vector3f vmin(regions[i].minX, regions[i].minY, regions[i].minZ);
-    Vector3f vmax(regions[i].maxX, regions[i].maxY, regions[i].maxZ);
-
-    segRegion->mChildren[i].mBoundingBox = BoundingBox3f(vmin, vmax);
+      segRegion->mChildren[i].mServer = (ServerID)ccMsg->contents.region(i).id();
+      segRegion->mChildren[i].mChildrenCount = 0;
+      BoundingBox3d tmpbb = ccMsg->contents.region(i).bounds();
+      segRegion->mChildren[i].mBoundingBox =
+          BoundingBox3f(Vector3f(tmpbb.min()), Vector3f(tmpbb.max()));
   }
 
   int total_servers = numServers();
@@ -252,24 +249,19 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
       if (i != mServerID) {
 	printf("Sending server_split to %d\n", i);
 
-        CSegChangeMessage* msg = new CSegChangeMessage(mServerID, 2);
-	SplitRegionf* regions = msg->splitRegions();
+        CSegChangeMessage* msg = new CSegChangeMessage(mServerID);
 
-	regions[0].mNewServerID = mServerID;
-	regions[0].minX = newBox1.min().x;
-	regions[0].minY = newBox1.min().y;
-	regions[0].minZ = newBox1.min().z;
-	regions[0].maxX = newBox1.max().x;
-	regions[0].maxY = newBox1.max().y;
-	regions[0].maxZ = newBox1.max().z;
+        CBR::Protocol::CSeg::ISplitRegion region0 = msg->contents.add_region();
+        region0.set_id((uint32)mServerID);
+        region0.set_bounds(
+            BoundingBox3d(Vector3d(newBox1.min()), Vector3d(newBox1.max()))
+        );
 
-	regions[1].mNewServerID = new_server;
-	regions[1].minX = newBox2.min().x;
-	regions[1].minY = newBox2.min().y;
-	regions[1].minZ = newBox2.min().z;
-	regions[1].maxX = newBox2.max().x;
-	regions[1].maxY = newBox2.max().y;
-	regions[1].maxZ = newBox2.max().z;
+        CBR::Protocol::CSeg::ISplitRegion region1 = msg->contents.add_region();
+        region1.set_id((uint32)new_server);
+        region1.set_bounds(
+            BoundingBox3d(Vector3d(newBox2.min()), Vector3d(newBox2.max()))
+        );
 
         mMessageRouter->route(msg, i);
       }
