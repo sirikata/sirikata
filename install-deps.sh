@@ -218,13 +218,13 @@ if [ ${opt_components_prox} == "true" ]; then
   cd build
 
   # Debug
-  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Debug .
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=${deps_dir}/sirikata/dependencies/installed-boost .
   make clean
   make -j2
   make install
 
   # Release
-  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Release .
+  cmake -DCMAKE_INSTALL_PREFIX=${deps_dir}/installed-prox -DCMAKE_BUILD_TYPE=Release -DBOOST_ROOT=${deps_dir}/sirikata/dependencies/installed-boost .
   make clean
   make -j2
   make install
