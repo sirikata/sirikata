@@ -161,6 +161,14 @@ ELSE()
 ENDIF()
 FIND_PACKAGE(Raknet REQUIRED)
 
+#dependency: raknet core
+IF(EXISTS ${DEPENDENCIES_ROOT}/installed-enet)
+  SET(Enet_ROOT ${DEPENDENCIES_ROOT}/installed-enet)
+ELSE()
+  SET(Enet_ROOT ${DEPENDENCIES_ROOT})
+ENDIF()
+FIND_PACKAGE(Enet REQUIRED)
+
 #dependency: qt
 IF(EXISTS ${DEPENDENCIES_ROOT}/qt/qt)
   SET(Qt4_ROOT ${DEPENDENCIES_ROOT}/qt/qt)
@@ -205,6 +213,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
         ${Raknet_INCLUDE_DIRS}
+        ${Enet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
@@ -305,6 +314,7 @@ TARGET_LINK_LIBRARIES(cbr
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
         ${Raknet_LIBRARIES}
+        ${Enet_LIBRARIES}
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
