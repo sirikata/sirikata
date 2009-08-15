@@ -21,6 +21,9 @@ class ClusterBuild:
     def cd_to_sst_build(self):
         return ClusterRunConcatCommands( [self.cd_to_code(), "cd dependencies/sst"] )
 
+    def cd_to_enet_build(self):
+        return ClusterRunConcatCommands( [self.cd_to_code(), "cd dependencies/enet"] )
+
     def destroy(self):
         destroy_cmd = "rm -rf " + self.config.code_dir
         retcodes = ClusterRun(self.config, destroy_cmd)
@@ -92,6 +95,24 @@ class ClusterBuild:
     def patch_build_sst(self, patch_file):
         ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/dependencies/sst/"+patch_file])
         cd_cmd = self.cd_to_sst_build()
+        reset_cmd = "git reset --hard HEAD"
+        patch_cmd = "patch -p1 < " + patch_file
+        build_cmd = "make; make install"
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_cmd, reset_cmd, patch_cmd, build_cmd]))
+        # doing this implies we need to rebuild cbr
+        if (ClusterRunFailed(retcodes)):
+            return ClusterRunSummaryCode(retcodes)
+
+        clean_ret = self.clean()
+        if (clean_ret != 0):
+            return clean_ret
+
+        return self.build()
+
+
+    def patch_build_enet(self, patch_file):
+        ClusterSCP(self.config, [patch_file, "remote:"+self.config.code_dir+"/dependencies/enet/"+patch_file])
+        cd_cmd = self.cd_to_enet_build()
         reset_cmd = "git reset --hard HEAD"
         patch_cmd = "patch -p1 < " + patch_file
         build_cmd = "make; make install"
@@ -193,13 +214,13 @@ if __name__ == "__main__":
             retval = cluster_build.update()
         elif cmd == 'dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata', 'prox']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'enet', 'sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.dependencies(deps)
         elif cmd == 'update_dependencies':
             deps = []
-            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'sirikata', 'prox']:
+            while cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['raknet', 'sst', 'enet', 'sirikata', 'prox']:
                 deps.append(sys.argv[cur_arg_idx])
                 cur_arg_idx += 1
             retval = cluster_build.update_dependencies(deps)
@@ -207,6 +228,10 @@ if __name__ == "__main__":
             patch_file = sys.argv[cur_arg_idx]
             cur_arg_idx += 1
             retval = cluster_build.patch_build_sst(patch_file)
+        elif cmd == 'patch_build_enet':
+            patch_file = sys.argv[cur_arg_idx]
+            cur_arg_idx += 1
+            retval = cluster_build.patch_build_enet(patch_file)
         elif cmd == 'build':
             retval = cluster_build.build()
         elif cmd == 'patch':

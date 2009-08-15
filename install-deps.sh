@@ -4,6 +4,7 @@ opt_update="false"
 opt_components_all="true"
 opt_components_raknet="false"
 opt_components_sst="false"
+opt_components_enet="false"
 opt_components_sirikata="false"
 opt_components_prox="false"
 
@@ -19,6 +20,9 @@ do
   elif [ "$1" == "sst" ]; then
     opt_components_all="false"
     opt_components_sst="true"
+  elif [ "$1" == "enet" ]; then
+    opt_components_all="false"
+    opt_components_enet="true"
   elif [ "$1" == "sirikata" ]; then
     opt_components_all="false"
     opt_components_sirikata="true"
@@ -35,6 +39,7 @@ done
 if [ ${opt_components_all} == "true" ]; then
   opt_components_raknet="true"
   opt_components_sst="true"
+  opt_components_enet="true"
   opt_components_sirikata="true"
   opt_components_prox="true"
 
@@ -112,6 +117,36 @@ if [ ${opt_components_sst} == "true" ]; then
   cd ..
 
 fi # opt_components_sst
+
+
+# enet
+if [ ${opt_components_enet} == "true" ]; then
+
+  if [ ${opt_update} != "true" ]; then
+    if [ -e enet ]; then
+      rm -rf enet
+    fi
+    if [ -e installed-enet ]; then
+      rm -rf installed-enet
+    fi
+    #svn co svn://svn.pdos.csail.mit.edu/uia/trunk/uia/enet
+    git clone git://github.com/danielrh/enet.git
+    cd enet
+    git branch stanford origin/stanford
+    git checkout stanford
+  else
+    cd enet
+    git reset --hard HEAD
+    git pull origin stanford:stanford
+  fi
+
+  aclocal && automake -a -c --foreign && autoconf
+  ./configure --prefix=${deps_dir}/installed-enet
+  make
+  make install
+  cd ..
+
+fi # opt_components_enet
 
 
 
