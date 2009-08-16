@@ -129,8 +129,7 @@ WebView::~WebView()
 	TextureManager::getSingletonPtr()->remove(viewName + "Texture");
 	if(usingMask) TextureManager::getSingletonPtr()->remove(viewName + "MaskTexture");
 
-	if(proxyObject.use_count())
-		proxyObject->WebViewProvider::removeListener(this);
+	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
 }
 
 void WebView::destroyed() {
@@ -139,15 +138,16 @@ void WebView::destroyed() {
 
 void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
 {
-	if(this->proxyObject.use_count())
+	if(this->proxyObject)
 		proxyObject->WebViewProvider::removeListener(this);
+		proxyObject->ProxyObjectProvider::removeListener(this);
 
 	this->proxyObject = proxyObject;
 
-	if(this->proxyObject.use_count())
+	if(this->proxyObject) {
 		proxyObject->WebViewProvider::addListener(this);
-
-	proxyObject->ProxyObjectProvider::addListener(this);
+		proxyObject->ProxyObjectProvider::addListener(this);
+	}
 }
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)

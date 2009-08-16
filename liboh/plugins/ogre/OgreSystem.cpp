@@ -664,6 +664,11 @@ OgreSystem::~OgreSystem() {
     delete mInputManager;
 }
 
+static void KillWebView(ProxyObjectPtr p) {
+    std::cout << "Killing WebView!"<<std::endl;
+    p->getProxyManager()->destroyObject(p);
+}
+
 void OgreSystem::createProxy(ProxyObjectPtr p){
     bool created = false;
     {
@@ -701,8 +706,9 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     {
         std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
         if (webviewpxy) {
-			WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 128, 256, OverlayPosition());
-			view->setProxyObject(webviewpxy);
+            WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 128, 256, OverlayPosition());
+            view->setProxyObject(webviewpxy);
+            view->bind("close", std::tr1::bind(&KillWebView, p));
         }
 
     }
