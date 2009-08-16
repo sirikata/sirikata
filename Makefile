@@ -35,7 +35,7 @@ dependencies:
 		*arwin*) \
 			svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies \
 			;; \
-		*CYGWIN*|*win32*) \
+		*MINGW*|*CYGWIN*|*win32*) \
 			if [ x = x"$(VCVER)" ]; then \
 				echo To force a specific version of visual studio, set VCVER to 8 or 9 ; \
 				[ -e c:/Program\ Files/Microsoft\ Visual\ Studio\ 9*/VC/bin ] && \
