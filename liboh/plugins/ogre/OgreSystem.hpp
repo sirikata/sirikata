@@ -121,8 +121,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
     Ogre::RaySceneQuery* mRayQuery;
-    CubeMap *mExternalCubeMap;
-    CubeMap *mInternalCubeMap;
+    CubeMap *mCubeMap;
     Entity* internalRayTrace(const Vector3d &position,
                      const Vector3f &direction,
                      bool aabbOnly,

@@ -41,7 +41,6 @@ class CubeMap {//:public Ogre::FrameListener{
     OgreSystem*mParent;
     float mAlpha;
     bool mFrontbufferCloser;
-
     Ogre::TexturePtr mBackbuffer[6];
     Ogre::MaterialPtr mMaterials[6];
     struct PerCubeMapState {

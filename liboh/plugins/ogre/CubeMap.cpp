@@ -90,6 +90,7 @@ void CubeMap::swapBuffers() {
     }
 }
 CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int size, const std::vector<Vector3f>&cameraDelta, const std::vector<float>&cameraNearPlanes){
+    bool valid=true;
     mFaceCounter=mMapCounter=0;
     mFrontbufferCloser=true;
     mAlpha=0;
@@ -105,16 +106,28 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
             Ogre::TextureManager::getSingleton().remove(tmp);
         }
         mState.push_back(PerCubeMapState());
-        mState.back().mCubeMapTexture=Ogre::TextureManager::getSingleton()
-            .createManual(cubeMapTexture[i],
-                          Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-                          Ogre::TEX_TYPE_CUBE_MAP,
-                          size,
-                          size,
-                          1,
-                          0,
-                          Ogre::PF_A8R8G8B8,
-                          Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP);
+        try {
+            mState.back().mCubeMapTexture=Ogre::TextureManager::getSingleton()
+                .createManual(cubeMapTexture[i],
+                              Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                              Ogre::TEX_TYPE_CUBE_MAP,
+                              size,
+                              size,
+                              1,
+                              0,
+                              Ogre::PF_A8R8G8B8,
+                              Ogre::TU_RENDERTARGET|Ogre::TU_AUTOMIPMAP);
+        }catch (...) {
+            if (valid) {
+                for (size_t j=0;j<i;++j) {
+                    mParent->getSceneManager()->destroyCamera(mState[j].mCamera);
+                    Ogre::TextureManager::getSingleton().remove(mState[j].mCubeMapTexture->getName());
+                }
+            }
+            valid=false;
+            SILOG(ogre,warning,"Cannot allocate cube maps sized "<<size<<'x'<<size<<" with automimap");
+            throw std::bad_alloc();//cannot handle so many cubemaps
+        }
         mState.back().mCameraDelta=cameraDelta[i];
         mState.back().mCamera=mParent->getSceneManager()->createCamera(UUID::random().toString()+"CubeMapCamera");
         mState.back().mLastRenderedPosition=Ogre::Vector3(0,0,0);
@@ -126,19 +139,37 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
         mState.back().mCamera->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
 
     }
-    for (size_t j=0;j<=cubeMapTexture.size();++j) {
-        for (int i=0;i<6;++i){
-            (j==0?mBackbuffer:mState[j-1].mFrontbuffer)[i] = Ogre::TextureManager::getSingleton()
-                .createManual(UUID::random().toString(),
-                              Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-                              Ogre::TEX_TYPE_2D,
-                              size,
-                              size,
-                              1,
-                              0,
-                              Ogre::PF_A8R8G8B8,
-                              Ogre::TU_RENDERTARGET);
+    std::vector<String> made_so_far;
+    if (valid) try {
+        for (size_t j=0;j<=cubeMapTexture.size();++j) {
+            for (int i=0;i<6;++i){
+                String cur=UUID::random().toString();
+                (j==0?mBackbuffer:mState[j-1].mFrontbuffer)[i] = Ogre::TextureManager::getSingleton()
+                    .createManual(cur,
+                                  Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+                                  Ogre::TEX_TYPE_2D,
+                                  size,
+                                  size,
+                                  1,
+                                  0,
+                                  Ogre::PF_A8R8G8B8,
+                                  Ogre::TU_RENDERTARGET);
+                made_so_far.push_back(cur);
+            }
         }
+    }catch (...) {
+        if (valid) {
+            for (size_t i=0;i < made_so_far.size();++i) {
+                    Ogre::TextureManager::getSingleton().remove(made_so_far[i]); 
+            }
+            for (size_t j=0;j<mState.size();++j) {
+                mParent->getSceneManager()->destroyCamera(mState[j].mCamera);
+                Ogre::TextureManager::getSingleton().remove(mState[j].mCubeMapTexture->getName());
+            }
+        }
+        valid=false;
+            SILOG(ogre,warning,"Cannot allocate "<<made_so_far.size()+1<<"th renderable texture sized "<<size<<'x'<<size);
+            throw std::bad_alloc();//cannot handle so many cubemaps
     }
     mCubeMapScene=Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager");
     for (int i=0;i<6;++i) {
@@ -327,6 +358,9 @@ void CubeMap::preRenderTargetUpdate(Ogre::Camera*cam, int renderTargetIndex,cons
     faceCameraIndex(mState[mMapCounter].mCamera,renderTargetIndex);
 }
 CubeMap::~CubeMap() {
+    for (size_t j=0;j<mState.size();++j) {
+        mParent->getSceneManager()->destroyCamera(mState[j].mCamera);
+    }
     for (unsigned int i=0;i<6;++i)
     {
         Ogre::RenderTarget *renderTarget = mBackbuffer[i]->getBuffer(0)->getRenderTarget();

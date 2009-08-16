@@ -131,8 +131,7 @@ uint32 OgreSystem::sNumOgreSystems=0;
 OgreSystem::OgreSystem():mLastFrameTime(Time::now()),mFloatingPointOffset(0,0,0),mPrimaryCamera(NULL)
 {
     increfcount();
-    mInternalCubeMap=NULL;
-    mExternalCubeMap=NULL;
+    mCubeMap=NULL;
     mInputManager=NULL;
     mRenderTarget=NULL;
     mSceneManager=NULL;
@@ -316,7 +315,11 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
         cubeMapNames.push_back("InteriorCubeMap");
         cubeMapOffsets.push_back(Vector3f(0,0,0));
         cubeMapNearPlanes.push_back(0.1);
-        mExternalCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets, cubeMapNearPlanes);
+        try {
+            mCubeMap=new CubeMap(this,cubeMapNames,512,cubeMapOffsets, cubeMapNearPlanes);
+        }catch (std::bad_alloc&) {
+            mCubeMap=NULL;
+        }
 
     }
     return retval;
@@ -325,10 +328,8 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     if (entity != mAttachedCameras.end()) {
         if (mPrimaryCamera == *entity) {
             mPrimaryCamera = NULL;//move to second in chain??
-            delete mExternalCubeMap;
-            delete mInternalCubeMap;
-            mExternalCubeMap=NULL;
-            mInternalCubeMap=NULL;
+            delete mCubeMap;
+            mCubeMap=NULL;
         }
         mAttachedCameras.erase(entity);
     }
@@ -999,11 +1000,8 @@ void OgreSystem::postFrame(Time current, Duration frameTime) {
     Ogre::FrameEvent evt;
     evt.timeSinceLastEvent=frameTime.toMicroseconds()*1000000.;
     evt.timeSinceLastFrame=frameTime.toMicroseconds()*1000000.;
-    if (mExternalCubeMap) {
-        mExternalCubeMap->frameEnded(evt);
-    }
-    if (mInternalCubeMap) {
-        mInternalCubeMap->frameEnded(evt);
+    if (mCubeMap) {
+        mCubeMap->frameEnded(evt);
     }
 
 }
