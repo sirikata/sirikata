@@ -35,6 +35,7 @@
 
 #include "Ogre.h"
 #include "WebViewManager.hpp"
+#include "oh/ProxyObjectListener.hpp"
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
@@ -63,9 +64,11 @@ namespace Graphics {
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
-	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener
+	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener, public Sirikata::ProxyObjectListener
 	{
 	public:
+
+		void destroyed(); // From ProxyObjectListener
 
 		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 

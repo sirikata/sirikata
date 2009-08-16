@@ -133,6 +133,10 @@ WebView::~WebView()
 		proxyObject->WebViewProvider::removeListener(this);
 }
 
+void WebView::destroyed() {
+	WebViewManager::getSingleton().destroyWebView(this);
+}
+
 void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
 {
 	if(this->proxyObject.use_count())
@@ -142,6 +146,8 @@ void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& pro
 
 	if(this->proxyObject.use_count())
 		proxyObject->WebViewProvider::addListener(this);
+
+	proxyObject->ProxyObjectProvider::addListener(this);
 }
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
