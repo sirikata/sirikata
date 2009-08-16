@@ -302,6 +302,11 @@ void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
         body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
         body->setActivationState(DISABLE_DEACTIVATION);
     }
+    else {
+        if (mName.substr(0,6) == "Avatar") {
+            body->setAngularFactor(0);
+        }
+    }
     system->dynamicsWorld->addRigidBody(body);
     mBulletBodyPtr=body;
     mActive=true;
@@ -322,6 +327,7 @@ void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const P
             cout << "ERROR -- please don't specify an angular speed without an axis" << endl;
             assert(false);
         }
+        axis = mMeshptr->getOrientation() * axis;
         axis *= reqLoc.angular_speed();
         btVector3 btangvel(axis.x, axis.y, axis.z);
         mBulletBodyPtr->setAngularVelocity(btangvel);
