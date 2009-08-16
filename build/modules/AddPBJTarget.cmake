@@ -139,14 +139,10 @@ MACRO(ADD_PBJ_TARGET)
   IF(PBJ_OUTPUTCPPFILE)
     FILE(TO_NATIVE_PATH ${PBJ_GenFile} PBJ_src)
     FILE(TO_NATIVE_PATH ${PBJ_OUTPUTCPPFILE} PBJ_dst)
-    IF(WIN32)
-      SET(PBJ_COPYCOMMAND cmd /c type "${PBJ_src}" ">" "${PBJ_dst}")
-    ELSE()
-      SET(PBJ_COPYCOMMAND cp "${PBJ_src}" "${PBJ_dst}")
-    ENDIF()
+
 
     ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_OUTPUTCPPFILE}
-                       COMMAND ${PBJ_COPYCOMMAND}
+                       COMMAND ${CMAKE_COMMAND} -E copy ${PBJ_src} ${PBJ_dst}
                        DEPENDS ${PBJ_CPP_FILES}
                        COMMENT "Creating protocol buffers cpp file")
   ENDIF()
