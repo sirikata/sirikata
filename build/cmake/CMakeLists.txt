@@ -143,28 +143,28 @@ MACRO(ADD_CXXTEST_CPP_TARGET)
   #IF(CXXTEST_OUTPUTDIR)
   #  SET(CXXTEST_OPTIONS ${CXXTEST_OPTIONS} -o ${CXXTEST_OUTPUTDIR})
   #ENDIF(CXXTEST_OUTPUTDIR)
-  FIND_PACKAGE(Perl)
-  IF(PERL_EXECUTABLE)
-    SET(CXXTEST_COMPILER ${PERL_EXECUTABLE})
-    SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.pl)
+  FIND_PACKAGE(PythonInterp)
+  IF(PYTHON_EXECUTABLE)
+    SET(CXXTEST_COMPILER ${PYTHON_EXECUTABLE})
+    SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)
   ELSE()
-    FIND_PACKAGE(PythonInterp)
-    IF(PYTHON_EXECUTABLE)
-      SET(CXXTEST_COMPILER ${PYTHON_EXECUTABLE})
-      SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.py)
+    FIND_PACKAGE(Perl)
+    IF(PERL_EXECUTABLE)
+      SET(CXXTEST_COMPILER ${PERL_EXECUTABLE})
+      SET(CXXTEST_GEN ${CXXTEST_LIBRARYDIR}/cxxtestgen.pl)
     ELSE()
       MESSAGE(STATUS "!!! Cannot locate python or perl -- tests will not be compiled.")
     ENDIF()
   ENDIF()
-  SET(CXXTEST_CPP_FILE ${CXXTEST_OUTPUTDIR}/test.cc)
+  SET(CXXTEST_CPP_FILE ${CMAKE_CURRENT_BINARY_DIR}/test.cc)
   FOREACH(FILE ${CXXTEST_FILES})
-    SET(CXXTEST_H_FILE ${FILE})
+    SET(CXXTEST_H_FILE ${TOP_LEVEL}/${FILE})
     SET(CXXTEST_TEST_FILES ${CXXTEST_TEST_FILES} ${CXXTEST_H_FILE})
   ENDFOREACH()
   IF (CXXTEST_COMPILER)
     SET(FINAL_CXXTEST_COMMAND ${CXXTEST_COMPILER} ${CXXTEST_GEN} ${CXXTEST_OPTIONS} -o ${CXXTEST_CPP_FILE} ${CXXTEST_TEST_FILES})
     ADD_CUSTOM_COMMAND(OUTPUT ${CXXTEST_CPP_FILE}
-                       COMMAND ${FINAL_CXXTEST_COMMAND}
+                       COMMAND ${CXXTEST_COMPILER} ${CXXTEST_GEN} ${CXXTEST_OPTIONS} -o ${CXXTEST_CPP_FILE} ${CXXTEST_TEST_FILES}
                        DEPENDS ${CXXTEST_TEST_FILES} ${CXXTEST_DEPENDS}
                        COMMENT "Building ${CXXTEST_TEST_FILES} -> ${CXXTEST_CPP_FILE}")
   ELSE()
@@ -1043,36 +1043,39 @@ ${GFX}/WebViewManager.cpp
 
 #test source files
 SET(CXXTESTSources
-${LIBCORE_DIR}/test/AnyTest.hpp
-${LIBCORE_DIR}/test/AtomicTest.hpp
-#${LIBCORE_DIR}/test/CacheLayerTest.hpp
-${LIBCORE_DIR}/test/DownloadTest.hpp
-${LIBCORE_DIR}/test/EventTest.hpp
-${LIBCORE_DIR}/test/ExtrapolationTest.hpp
-${LIBCORE_DIR}/test/FactoryTest.hpp
-${LIBCORE_DIR}/test/ListenerTest.hpp
-${LIBCORE_DIR}/test/Matrix3Test.hpp
-${LIBCORE_DIR}/test/MinitransactionHandlerTest.hpp
-${LIBCORE_DIR}/test/NameLookupTest.hpp
-${LIBCORE_DIR}/test/ObjectStorageTest.hpp
-${LIBCORE_DIR}/test/OptionTest.hpp
-#${LIBCORE_DIR}/test/ProxTest.hpp
-${LIBCORE_DIR}/test/QuaternionTest.hpp
-${LIBCORE_DIR}/test/ReadWriteHandlerTest.hpp
-${LIBCORE_DIR}/test/RoutableMessageTest.hpp
-${LIBCORE_DIR}/test/SQLiteMinitransactionTest.hpp
-${LIBCORE_DIR}/test/SQLiteReadWriteTest.hpp
-${LIBCORE_DIR}/test/SstTest.hpp
-${LIBCORE_DIR}/test/SubscriptionTest.hpp
-#${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
-${LIBCORE_DIR}/test/TR1Test.hpp
-#${LIBCORE_DIR}/test/UploadTest.hpp
-${LIBCORE_DIR}/test/Vector3Test.hpp
+libcore/test/AnyTest.hpp
+libcore/test/AtomicTest.hpp
+#libcore/test/CacheLayerTest.hpp
+libcore/test/DownloadTest.hpp
+libcore/test/EventTest.hpp
+libcore/test/ExtrapolationTest.hpp
+libcore/test/FactoryTest.hpp
+libcore/test/ListenerTest.hpp
+libcore/test/Matrix3Test.hpp
+libcore/test/MinitransactionHandlerTest.hpp
+libcore/test/NameLookupTest.hpp
+libcore/test/ObjectStorageTest.hpp
+libcore/test/OptionTest.hpp
+#libcore/test/ProxTest.hpp
+libcore/test/QuaternionTest.hpp
+libcore/test/ReadWriteHandlerTest.hpp
+libcore/test/RoutableMessageTest.hpp
+libcore/test/SQLiteMinitransactionTest.hpp
+libcore/test/SQLiteReadWriteTest.hpp
+libcore/test/SstTest.hpp
+libcore/test/SubscriptionTest.hpp
+#libcore/test/ThreadSafeQueueTest.hpp
+libcore/test/TR1Test.hpp
+#libcore/test/UploadTest.hpp
+libcore/test/Vector3Test.hpp
  )
-#  ${LIBCORE_DIR}/test/ThreadSafeQueueTest.hpp
+#  libcore/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
-	LIBRARYDIR ${CXXTESTRoot}
-	OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
+	LIBRARYDIR ${CXXTESTRoot})
+
+
+
+
 
 SET(TEST_SOURCES ${CXXTEST_CPP_FILE}
                  ${SirikataProtocolDirectory}/Test_protobuf.cc 
