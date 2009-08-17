@@ -64,7 +64,7 @@ class exampleclass:
                     nameStruct.ParseFromString(field.data)
                     myName = nameStruct.value
         if DEBUG_OUTPUT: print "PY: Object",uuid,"has name",myName
-        if myName=="Avatar_01":
+        if myName[:6]=="Avatar":
             rws=pbPer.ReadWriteSet()
             se=rws.writes.add()
             se.field_name="Parent"

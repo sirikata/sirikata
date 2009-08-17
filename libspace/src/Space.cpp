@@ -81,7 +81,7 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     String spaceServicesString;
     spaceServices.SerializeToString(&spaceServicesString);
     mObjectConnections=new ObjectConnections(Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO),
-                                             Network::Address("localhost",port)
+                                             Network::Address("0.0.0.0",port)
                                              //spaceServicesString
                                              );
     mObjectConnections->forwardMessagesTo(this);

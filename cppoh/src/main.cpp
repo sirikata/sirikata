@@ -61,11 +61,13 @@ using Transfer::TransferManager;
 OptionValue *cdnConfigFile;
 OptionValue *floatExcept;
 OptionValue *dbFile;
+OptionValue *host;
 InitializeGlobalOptions main_options("",
 //    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
     cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
     floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
     dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
+    host=new OptionValue("host","localhost",OptionValueType<String>(),"space address"),
     NULL
 );
 
@@ -185,7 +187,7 @@ int main ( int argc,const char**argv ) {
 
     SpaceID mainSpace(UUID("12345678-1111-1111-1111-DEFA01759ACE",UUID::HumanReadable()));
     SpaceIDMap *spaceMap = new SpaceIDMap;
-    spaceMap->insert(mainSpace, Network::Address("127.0.0.1","5943"));
+    spaceMap->insert(mainSpace, Network::Address(host->as<String>(),"5943"));
 
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+dbFile->as<String>());

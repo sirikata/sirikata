@@ -49,7 +49,7 @@ using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
 #define DEBUG_OUTPUT2(x) x
-#define DEBUG_OUTPUT(x)
+#define DEBUG_OUTPUT(x) x
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
@@ -102,7 +102,7 @@ void BulletObj::meshChanged (const URI &newMesh) {
 }
 
 void BulletObj::setPhysical (const PhysicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " mesh: " << mMeshname << endl);
+    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
     colMask = pp.colMask;
@@ -134,6 +134,14 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
         mDynamic = true;
         mShape = ShapeCharacter;
         break;
+    }
+    if (mMeshptr) {
+        if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
+            DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: disabling dynamic&non-local" << endl);
+            mActive = false;
+            mMeshptr->setLocationAuthority(0);
+            return;
+        }
     }
     if (!(pp.mode==PhysicalParameters::Disabled)) {
         DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: adding to bullet" << endl);
@@ -417,7 +425,7 @@ bool BulletSystem::tick() {
         delta = now-lasttime;
         if (delta.toSeconds() > 0.05) delta = delta.seconds(0.05);           /// avoid big time intervals, they are trubble
         lasttime = now;
-        if ((now-mStartTime) > Duration::seconds(10.0)) {
+        if ((now-mStartTime) > Duration::seconds(20.0)) {
             for (unsigned int i=0; i<objects.size(); i++) {
                 if (objects[i]->mActive) {
                     if (objects[i]->mMeshptr->getPosition() != objects[i]->getBulletState().p ||
@@ -695,7 +703,7 @@ BulletSystem::~BulletSystem() {
 
 void BulletSystem::createProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr && meshptr->isLocal()) {
+    if (meshptr) {
         DEBUG_OUTPUT(cout << "dbm: createProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
         objects.push_back(new BulletObj(this));     /// clean up memory!!!
         objects.back()->mMeshptr = meshptr;
