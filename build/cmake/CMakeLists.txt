@@ -141,6 +141,7 @@ IF(WIN32)
 ELSE()
   FIND_PACKAGE(Boost COMPONENTS system)
   STRING(REPLACE "boost_system" "boost_thread" Boost_THREAD_LIBRARY ${Boost_SYSTEM_LIBRARY})
+  STRING(REPLACE "boost_system" "boost_regex" Boost_REGEX_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_date_time" Boost_DATE_TIME_LIBRARY ${Boost_SYSTEM_LIBRARY})
   STRING(REPLACE "boost_system" "boost_program_options" Boost_PROGRAM_OPTIONS_LIBRARY ${Boost_SYSTEM_LIBRARY})
 ENDIF()
@@ -220,8 +221,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
-  ${CBR_SOURCE_DIR}/DhtObjectSegmentation.cpp
-  ${CBR_SOURCE_DIR}/Duration.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
+  ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FIFOObjectMessageQueue.cpp
@@ -310,6 +311,7 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
         ${Enet_LIBRARIES}

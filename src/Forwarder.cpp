@@ -105,7 +105,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   void Forwarder::tickOSeg(const Time&t)
   {
     //    getOSegMessages();
-
+    std::cout<<"\n\nI got into tickOSeg in forwarder.cpp\n\n";
 
     //bftm tmp, nothing
     //    mOSeg -> tick(t,mOutgoingMessages);
@@ -120,6 +120,22 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
 
     //deliver acknowledge messages.
+
+
+    
+    if (messagesToSend.size() !=0)
+    {
+      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of messages that I have to send:  "<<messagesToSend.size()<<"\n\n";
+    }
+
+    if (updatedObjectLocations.size() !=0)
+    {
+      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
+    }
+
+    std::cout<<"\n\nThis is the size of the objects in transit:   "<<mObjectsInTransit.size()<<"\n\n";
+
+    
     for (unsigned int s=0; s < messagesToSend.size(); ++s)
     {
       if (messagesToSend[s] != NULL)
@@ -133,19 +149,25 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
     {
       iterObjectsInTransit = mObjectsInTransit.find(iter->first);
-
       if (iterObjectsInTransit != mObjectsInTransit.end())
       {
         //means that we can route messages being held in mObjectsInTransit
 
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          route((iterObjectsInTransit->second)[s],iter->second,true);
+          std::cout<<"\n\nbftm debug:  inside of forwarder.  Actually routing a message that I had saved up\n\n";
+          route((iterObjectsInTransit->second)[s],iter->second,false);
         }
 
         //remove the messages from the objects in transit
         mObjectsInTransit.erase(iterObjectsInTransit);
 
+      }
+      else
+      {
+        //        std::cout<<"\n\nbftm debug:  Inside of forwarder.cpp, couldn't find stored message that matched "<<iter->first.toString()<<"\n\n";
+        //        std::cout<<"\n\nbftm debug: Inside of forwarder.cpp couldn't find stored message that matched. \n\n";
+        
       }
     }
   }
@@ -154,8 +176,9 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
   void Forwarder::tick(const Time&t)
   {
-
-      if (t - mLastSampleTime > mSampleRate) {
+    std::cout<<"\n\nInside of forwarder tick\n\n";
+    
+    if (t - mLastSampleTime > mSampleRate) {
           mServerMessageQueue->reportQueueInfo(t);
           mLastSampleTime = t;
       }
@@ -262,7 +285,9 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
       {
         mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
         mTrace->serverDatagramSent((*mCurrentTime), (*mCurrentTime), 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
-      }else {
+      }
+      else
+      {
           // The more times the message goes through a forward to self loop, the more times this will record, causing an explosion
           // in trace size.  It's probably not worth recording this information...
           //mTrace->serverDatagramQueued((*mCurrentTime), dest_server, msg->id(), offset);
@@ -334,10 +359,10 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
   void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
   {
-    //    ServerID dest_server_id = lookup(dest_obj);
-    mOSeg->lookup(dest_obj);
 
-    printf("\n\nbftm debug.  I am routing a message \n\n");
+    std::cout<<"\n\nbftm debug.  I am routing a message for object:  "<< dest_obj.toString()<<"\n\n";
+    
+    mOSeg->lookup(dest_obj);
 
     
     //add message to objects in transit.
@@ -356,6 +381,10 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
       //add message to queue of objects in transit.
       mObjectsInTransit[dest_obj].push_back(msg);
     }
+
+    
+
+    
   }
 
 
@@ -404,7 +433,6 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           {
               dispatchMessage(msg);
           }
-
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:
           {
@@ -520,10 +548,6 @@ void Forwarder::receiveMessage(Message* msg) {
   }
 
 
-
-
-  
->>>>>>> Added craq code.  Still need to debug and test.:src/Forwarder.cpp
 
   ServerID Forwarder::lookup(const Vector3f& pos)
   {

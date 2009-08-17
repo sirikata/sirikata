@@ -6,13 +6,15 @@
 #include <map>
 #include <vector>
 #include "Statistics.hpp"
-#include "Time.hpp"
+#include "Timer.hpp"
 
 //#include "oseg_dht/Bamboo.hpp"
 //#include "oseg_dht/gateway_prot.h"
 //#include "DhtObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
+#include "craq_oseg/asyncUtil.hpp"
+#include "craq_oseg/asyncConnection.hpp"
 
 
 #include "CoordinateSegmentation.hpp"
@@ -27,60 +29,47 @@ namespace CBR
   /*
     Basic constructor
   */
-  CraqObjectSegmentation::CraqObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, char* dht_host, char* dht_port)
+  //  CraqObjectSegmentation::CraqObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, char* dht_host, char* dht_port)
+  CraqObjectSegmentation::CraqObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, std::vector<CraqInitializeArgs> initArgs)
     : mCSeg (cseg),
-      mCurrentTime(0)
+      mCurrentTime(Time::null())
   {
     
     mID = servID;
     mTrace = tracer;
-
-    craqDht.initialize(dht_host,dht_port);
-
     
-    /*
-    Bamboo::Bamboo_val serv_id_as_dht_val;
-    convert_serv_id_to_dht_val(mID, serv_id_as_dht_val);
-    Bamboo::Bamboo_key obj_id_as_dht_key;
-    printf("\n\nbftm debug message:  about to populate dht oseg.\n\n");
-    */
+    craqDht.initialize(initArgs);
+    
+    std::vector<CraqOperationResult> getResults;
+    std::vector<CraqOperationResult> trackedSetResults;
+
+    //1000 ticks put here to allow lots of connections to be made
+    for (int s=0; s < 1000; ++s)
+    {
+      craqDht.tick(getResults,trackedSetResults);
+    }
+    
 
     CraqDataKey obj_id_as_dht_key;
     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
     {
-      convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
       
-      //   pushes this server id onto the dht associated with the object_id (as key)  (even if it doesn't already exist on the
-      //      bambooDht.put(obj_id_as_dht_key, serv_id_as_dht_val);
+      convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
 
-      //        AsyncCraqReqStatus set(CraqDataKey dataToSet, int  dataToSetTo);
-      craqDht.set(obj_id_as_dht_key,mID);
-
+      CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mID,false,CraqDataSetGet::SET);
+      craqDht.set(cdSetGet);
       
       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
     }
 
-
-  /*
-    std::cout<<"\nPerforming quick get test to ensure that this works:   \n";
-    bamboo_get_result*  get_result;
-    convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[0],obj_id_as_dht_key);
-    get_result = bambooDht.get(obj_id_as_dht_key);
-
-    int numResponses = get_result->values.values_len; //number of servers that the object id is tied to.
+    //50 ticks to update
+    for (int s=0; s < 150; ++s)
+    {
+      craqDht.tick(getResults,trackedSetResults);
       
-    if(numResponses == 0)
-    {
-      std::cout<<"\n\n*************************\nMY GETTING FAILED MISERABLY\n\n";
+      //      craqDht.tick(serverIds,objectIds,trackedMessages);
     }
-    else
-    {
-      std::cout<<"\n\n*************************\nGETTING SUCCESS\n\n";
-    }
-  */
-
-    
   }
     
   /*
@@ -100,24 +89,17 @@ namespace CBR
     UUID tmper = obj_id;
     std::map<UUID,ServerID>::const_iterator iter = mInTransitOrLookup.find(tmper);
     
-    if (iter == mInTransitOrLookup.end()) //means that 
+    if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
 
       //add the mapping of a craqData Key to a uuid.
-      CraqDataKey craqDK;
-      convert_obj_id_to_dht_key(tmper,craqDK);
-
-
-      std::string craqDataKeyToString = craqDK;
-      mapDataKeyToUUID[craqDataKeyToString] = tmper;
       
-      //mapDataKeyToUUID[(std::string)craqDK] = tmper;
+      CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
+      mapDataKeyToUUID[tmper.rawHexData()] = tmper;
+      std::cout<<"\n\nIn craq lookup: this is tmperId:   "<<tmper.toString()<<"\n\n";
 
-      //now call the async craqDht get.
-
-      AsyncCraq::AsyncCraqReqStatus craqDhtResponse;
-      craqDhtResponse =       craqDht.get(craqDK);
+      craqDht.get(cdSetGet); //calling the craqDht to do a get.
     }
   }
 
@@ -160,13 +142,13 @@ namespace CBR
   */
   void CraqObjectSegmentation::addObject(const UUID& obj_id, Object* obj, const ServerID ourID)
   {
-    CraqDataKey obj_id_as_dht_key;
-    convert_obj_id_to_dht_key(obj_id,obj_id_as_dht_key);
+    CraqDataSetGet cdSetGet(obj_id.rawHexData(),ourID,true,CraqDataSetGet::SET);
+    int trackID = craqDht.set(cdSetGet);
     
-    int trackId = craqDht.set(obj_id_as_dht_key, mID,true); //the true argument means that we should be tracking the object that's being moved.
-
+    
     Message* oseg_ack_msg;
-    trackingMessages[trackId] = generateAcknowledgeMessage(obj, (dynamic_cast<OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination());
+    trackingMessages[trackID] = generateAcknowledgeMessage(obj, (dynamic_cast<OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination());
+    std::cout<<"\n\nbftm: debug inside of add object for obj_id:  "<<obj_id.toString()<<"\n\n";
   }
 
   
@@ -283,53 +265,48 @@ namespace CBR
   */
   void CraqObjectSegmentation::tick(const Time& t, std::map<UUID,ServerID>& updated,std::vector<Message*> &messagesToSend)
   {
-    //need to re-write this to include 
-    std::vector<int>serverIds;
-    std::vector<char*>objectIds;
-    std::vector<int> trackedMessages;
+    std::cout<<"\n\nGot into a tick for craqobjectseg\n\n";
+    std::vector<CraqOperationResult> getResults;
+    std::vector<CraqOperationResult> trackedSetResults;
+    craqDht.tick(getResults,trackedSetResults);
 
-    craqDht.tick(serverIds,objectIds,trackedMessages);
+    //bftm note: I don't really know that this should go here.
+    updated = mFinishedMoveOrLookup;
 
-    
-    updated.clear();
-    
-    for (unsigned int s =0; s < objectIds.size(); ++s)
+    //run through all the get results first.
+    for (unsigned int s=0; s < getResults.size(); ++s)
     {
-      updated[mapDataKeyToUUID[(std::string)objectIds[s]]] = serverIds[s];
+      updated[mapDataKeyToUUID[getResults[s].idToString()]]  = getResults[s].servID;
     }
 
-
-    for (unsigned int s=0; s < trackedMessages.size(); ++s)
+    for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
-      if (trackingMessages[s] != 0)
+      if (trackedSetResults[s].trackedMessage != 0)
       {
-        //        if (trackingMessages[trackedMessages[s]] != trackingMessages.end())
-        if (trackingMessages.find(trackedMessages[s]) != trackingMessages.end())
+        if (trackingMessages.find(trackedSetResults[s].trackedMessage) !=  trackingMessages.end())
         {
           //means that we were tracking this message.
           //means that we populate the
-          messagesToSend.push_back(trackingMessages[trackedMessages[s]]);
+          printf("\n\nbftm: debug inside of tick of craqObjectSeg: adding messages to push back to forwarder.  \n\n");
+          
+          messagesToSend.push_back(trackingMessages[trackedSetResults[s].trackedMessage]);
+          trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
         }
       }
     }
     
     mCurrentTime = t;
-    updated =  mFinishedMoveOrLookup;
+    //    updated =  mFinishedMoveOrLookup;
     mFinishedMoveOrLookup.clear();
   }
 
 
   /*
-
   */
   //  void DhtObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, Bamboo::Bamboo_key& returner) const
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
   {
-
-    //    std::cout<<"This is the size of the ";
-    //    strncpy(returner,obj_id.toString().c_str(),obj_id.toString().size() + 1);
-
-    //    strncpy(returner,obj_id->toString().c_str(),sizeof(returner));
+    std::cout<<"\n\ngot into convert_obj_id_to_dht_key\n\n";
     strncpy(returner,obj_id.rawHexData().c_str(),obj_id.rawHexData().size() + 1);
   }
 

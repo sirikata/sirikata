@@ -6,7 +6,7 @@
 #include "Message.hpp"
 #include "Object.hpp"
 #include "Statistics.hpp"
-#include "Time.hpp"
+#include "Timer.hpp"
 #include "ObjectSegmentation.hpp"
 
 #include "craq_oseg/asyncCraq.hpp"
@@ -39,7 +39,8 @@ namespace CBR
 
     
   public:
-    CraqObjectSegmentation(CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer,ServerID servID,  Trace* tracer, char* dht_host, char* dht_port);
+    //CraqObjectSegmentation(CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer,ServerID servID,  Trace* tracer, char* dht_host, char* dht_port);
+    CraqObjectSegmentation (CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, ServerID servID,  Trace* tracer, std::vector<CraqInitializeArgs> initArgs);
     
     virtual ~CraqObjectSegmentation();
     virtual void lookup(const UUID& obj_id);

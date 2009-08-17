@@ -223,6 +223,7 @@ void Server::handleMigration(const UUID& obj_id) {
     ObjectConnection* obj_conn = obj_map_it->second;
     CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
 
+
     // Extract the migration message data
     TimedMotionVector3f obj_loc(
         migrate_msg->loc().t(),
@@ -281,7 +282,13 @@ void Server::tick(const Time& t)
   // Check for object migrations
   checkObjectMigrations();
 
+<<<<<<< HEAD:src/Server.cpp
 //   printf("\n\nbftm debug: inside of server.cpp.  Got into tick \n\n");
+=======
+  //  printf("\n\nbftm debug: inside of server.cpp.  Got into tick \n\n");
+
+
+>>>>>>> New attempt at asynchronous object segmentation.:src/Server.cpp
   
 //   // Give objects a chance to process
 //   for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
@@ -324,6 +331,7 @@ void Server::proximityTick(const Time& t)
         removal.set_object( evt.object() );
     }
 
+
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     obj_msg->set_source_object(UUID::null());
     obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
@@ -333,6 +341,7 @@ void Server::proximityTick(const Time& t)
     obj_msg->set_payload( serializePBJMessage(prox_results) );
 
     mForwarder->route(obj_msg);
+
 
     proximity_events.pop();
   }
@@ -404,9 +413,7 @@ void Server::checkObjectMigrations()
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
 
-          printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
-
-          
+            printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
             mForwarder->route( migrate_msg , new_server_id);
 
             // Stop Forwarder from delivering via this Object's

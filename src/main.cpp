@@ -366,6 +366,32 @@ void *main_loop(void *) {
       //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
 
+
+
+      //alternate craq approach
+
+//       std::vector<CraqInitializeArgs> craqArgs;
+//       CraqInitializeArgs cInitArgs;
+//       cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//       cInitArgs.port    =      "4999";
+    
+//       craqArgs.push_back(cInitArgs);
+//       cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//       cInitArgs.port    =      "4998";
+//       craqArgs.push_back(cInitArgs);
+    
+//       ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs);
+
+    
+      //end create oseg
+
+      
+
+
+      //end alternate craq approach
+
+
+      
     //end create oseg
 
 
@@ -451,8 +477,8 @@ void *main_loop(void *) {
         while( true )
         {
             Duration elapsed = timer.elapsed() * inv_time_dilation;
-            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
-            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
+            //            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
+            //            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
             if (elapsed > duration)
                 break;
 
