@@ -4,9 +4,9 @@ Regenerating Xcode project files using cmake v2.6
 Steps are:
 
    1. cd build/cmake
-   2. cmake -G Xcode .
-   3. ln -s ../../dependencies/Frameworks Frameworks
-         1. to fix brittle paths in project
+   2. ln -s ../../dependencies/Frameworks Frameworks
+         1. to fix brittle paths in Xcode project.
+   3. cmake -G Xcode .
    4. launch Xcode
    5. open Sirikata.xcodeproj
    6. edit project settings
