@@ -256,6 +256,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
+  ${CBR_SOURCE_DIR}/ENetNetwork.cpp
   ${CBR_SOURCE_DIR}/SolidAngle.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp

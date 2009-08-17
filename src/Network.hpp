@@ -40,7 +40,9 @@ public:
 
     static Address4 Null;
 };
-
+inline size_t hash_value(const Address4&addy) {
+    return std::tr1::hash<unsigned int>()(addy.ip)^std::tr1::hash<unsigned short>()(addy.port);
+}
 class Network {
 public:
     typedef Sirikata::Network::Chunk Chunk;
