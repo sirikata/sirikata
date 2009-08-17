@@ -224,12 +224,27 @@ IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
 
 
     IF(NOT PKG_CONFIG_FOUND)
+      
       MESSAGE(STATUS "Could not find suitable pkg-config to search for Mono")
       SET(MONO_FOUND FALSE)
     ELSE(NOT PKG_CONFIG_FOUND)
-      PKG_CHECK_MODULES(MONO mono)  # will set MONO_FOUND
-      IF(APPLE AND EXISTS "/Library/Frameworks/Mono.framework")
-        SET(MONO_FOUND TRUE)
+      IF(MONO_ROOT AND EXISTS ${MONO_ROOT}/lib/pkgconfig AND NOT APPLE)
+        PKG_CHECK_MODULES(MONO glib-2.0 gthread-2.0)  # will set MONO_FOUND
+        PKG_CHECK_MODULES(MONO_MANA mono)  # will set MONO_MANA_FOUND
+        IF(NOT MONO_MANA_FOUND)
+           SET(MONO_FOUND FALSE)
+           MESSAGE(STATUS "Found glib and gthread but could not locate mono")
+        ENDIF()
+        SET(MONO_INCLUDE_DIRS ${MONO_ROOT}/include/mono-1.0 ${MONO_INCLUDE_DIRS})
+        SET(MONO_LIBRARY_DIRS ${MONO_ROOT}/lib ${MONO_LIBRARY_DIRS})
+        SET(MONO_LIBRARIES ${MONO_MANA_LIBRARIES})
+        SET(MONO_LDFLAGS -Wl,--export-dynamic ${MONO_LDFLAGS})
+        SET(MONO_CFLAGS -D_REENTRANT ${MONO_CFLAGS})# MONO_MANA_CFLAGS not compatible with spaces
+      ELSE()
+        PKG_CHECK_MODULES(MONO mono)  # will set MONO_FOUND
+        IF(APPLE AND EXISTS "/Library/Frameworks/Mono.framework")
+          SET(MONO_FOUND TRUE)
+        ENDIF()
       ENDIF()
     ENDIF(NOT PKG_CONFIG_FOUND)
 

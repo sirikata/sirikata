@@ -102,17 +102,21 @@ sub expandWildcards() {
 my (@suites, $suite, $test, $inBlock);
 my $numTotalTests = 0;
 
-sub scanInputFiles() {
-  foreach my $file (@ARGV) {
-    scanInputFile( $file );
+sub scanInputFileX($) {
+  my ($argnum) = @_;
+  my ($file) = $ARGV[$argnum];
+  ($argnum)=$argnum+1;
+
+  while(!open FILE, "<$file") {
+    if ($argnum > $#ARGV) {
+        die ("cannot open file: ".$argnum. " : ".$file);
+    }
+    my ($otherhalffile) = $ARGV[$argnum];
+    $argnum=$argnum+1;
+    $file = $file.' '.$otherhalffile;
+    #print ("trying ".$file."\n");
   }
-  scalar @suites or $root or die("No tests defined\n");
-}
-
-sub scanInputFile($) {
-  my ($file) = @_;
-  open FILE, "<$file" or die("Cannot open input file \"$file\"\n");
-
+  #print "opened ".$file;
   my $line;
   while (defined($line = <FILE>)) {
     scanLineForExceptionHandling( $line );
@@ -130,7 +134,17 @@ sub scanInputFile($) {
   }
   closeSuite();
   close FILE;
+  return $argnum;
 }
+
+sub scanInputFiles() {
+  my $argnum=0;
+  while ($argnum < $#ARGV) {
+      $argnum=scanInputFileX($argnum);
+  }
+  scalar @suites or $root or die("No tests defined\n");
+}
+
 
 sub lineBelongsToSuite($$$) {
   my ($suite, $lineNo, $line) = @_;
