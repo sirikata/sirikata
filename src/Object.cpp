@@ -86,6 +86,10 @@ void Object::tick(const Time& t) {
     checkPositionUpdate(t);
 }
 
+const TimedMotionVector3f Object::location() const {
+    return mLocation;
+}
+
 void Object::checkPositionUpdate(const Time& t) {
     const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
     while(update != NULL && update->time() <= t) {
@@ -166,8 +170,8 @@ void Object::subscriptionMessage(const UUID& subscriber, bool subscribing) {
 }
 
 void Object::migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs) {
-    mID = oid;
-    mQueryAngle = sa;
+    assert(mID == oid);
+    assert(mQueryAngle == sa);
 
     for (uint32 i = 0; i < subs.size(); i++) {
       addSubscriber(subs[i]);

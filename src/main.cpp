@@ -161,7 +161,7 @@ void *main_loop(void *) {
 
     Forwarder* forwarder = new Forwarder(server_id);
 
-    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration, gTrace);
 
     LocationService* loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
 

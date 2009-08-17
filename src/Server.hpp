@@ -47,10 +47,10 @@ class Server : public MessageRecipient
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
 
-      /** Sets up a connection for the given object. Can handle migrations by waiting
-       *  to truly connect the object until the migration data has arrived.
-       */
-      void connect(Object* obj, bool wait_for_migrate = true);
+    // Handle Connect message from object
+    void connect(ObjectConnection* conn, const std::string& connectPayload);
+    // Handle Migrate message from object
+    void migrate(ObjectConnection* conn, const std::string& migratePayload);
 
       virtual void receiveMessage(Message* msg);
   private:
@@ -58,10 +58,7 @@ class Server : public MessageRecipient
     void networkTick(const Time& t);
     void checkObjectMigrations();
 
-    MigrateMessage* wrapObjectStateForMigration(Object* obj);
-
-
-
+    void handleMigration(const UUID& obj_id);
 
     ServerID mID;
     LocationService* mLocationService;
@@ -72,9 +69,13 @@ class Server : public MessageRecipient
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
 
-    ObjectMap mObjects;
-      ObjectMap mObjectsAwaitingMigration;
+    typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
 
+    ObjectConnectionMap mObjects;
+    ObjectConnectionMap mObjectsAwaitingMigration;
+
+    typedef std::map<UUID, CBR::Protocol::Migration::MigrationMessage*> ObjectMigrationMap;
+      ObjectMigrationMap mObjectMigrations;
 }; // class Server
 
 } // namespace CBR

@@ -88,10 +88,8 @@ namespace CBR
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  Message* UniformObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
+  Message* UniformObjectSegmentation::generateAcknowledgeMessage(const UUID& obj_id,ServerID sID_to)
   {
-    const UUID& obj_id = obj->uuid();
-
     Message* oseg_change_msg = new OSegMigrateMessage(this->getHostServerID(),  this->getHostServerID(),  sID_to, sID_to,    this->getHostServerID(),      obj_id, OSegMigrateMessage::ACKNOWLEDGE);
                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
     //returner =  oseg_change_msg;

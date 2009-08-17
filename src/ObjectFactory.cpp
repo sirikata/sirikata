@@ -38,19 +38,21 @@
 #include "QuakeMotionPath.hpp"
 #include "StaticMotionPath.hpp"
 #include "ObjectMessageQueue.hpp"
-
+#include "ObjectConnection.hpp"
 #include "Server.hpp"
 
 #include "Options.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 
-ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)
+ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration, Trace* trace)
  : mObjectMessageQueue(NULL),
    mServerID(0),
    mServer(NULL),
    mCSeg(NULL),
-   mFirstTick(true)
+   mFirstTick(true),
+   mTrace(trace)
 {
     Time start(Time::null());
     Time end = start + duration;
@@ -169,12 +171,38 @@ static bool isInServerRegion(const BoundingBoxList& bboxlist, Vector3f pos) {
 void ObjectFactory::tick(const Time& t) {
     BoundingBoxList serverRegion = mCSeg->serverRegion(mServerID);
     for(iterator it = begin(); it != end(); it++) {
-        if (isActive(*it)) continue; // already active, no need to check
-        Vector3f curPos = motion(*it)->at(t).extrapolate(t).position();
+        // Active objects receive a tick
+        if (isActive(*it)) {
+            object(*it)->tick(t);
+            continue;
+        }
+        // Inactive objects get checked to see if they have moved into this server region
+        TimedMotionVector3f curMotion = motion(*it)->at(t);
+        Vector3f curPos = curMotion.extrapolate(t).position();
         if (isInServerRegion(serverRegion, curPos)) {
             // The object has moved into the region, so start its connection process
             Object* obj = object(*it);
-            mServer->connect(obj, !mFirstTick);
+            ObjectConnection* conn = new ObjectConnection(obj, mTrace);
+
+            if (mFirstTick) { // initial connection
+                CBR::Protocol::Session::Connect connect_msg;
+                connect_msg.set_object(*it);
+                CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
+                loc.set_t(curMotion.updateTime());
+                loc.set_position(curMotion.position());
+                loc.set_velocity(curMotion.velocity());
+                connect_msg.set_bounds(obj->bounds());
+                connect_msg.set_query_angle(obj->queryAngle().asFloat());
+
+                std::string connect_serialized = serializePBJMessage(connect_msg);
+                mServer->connect(conn, connect_serialized);
+            }
+            else { // migration
+                CBR::Protocol::Session::Migrate migrate_msg;
+                migrate_msg.set_object(*it);
+                std::string migrate_serialized = serializePBJMessage(migrate_msg);
+                mServer->migrate(conn, migrate_serialized);
+            }
         }
     }
 

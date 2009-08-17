@@ -125,12 +125,16 @@ BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
     return locinfo.bounds;
 }
 
-void OracleLocationService::addLocalObject(const UUID& uuid) {
+void OracleLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+
     // This is an oracle, so we don't need to track these.
     if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
         mReplicaObjects.erase(uuid);
         notifyReplicaObjectRemoved(uuid);
     }
+
+    // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
+    // reasonable compared to the loc and bounds passed in
 
     mLocalObjects.insert(uuid);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));

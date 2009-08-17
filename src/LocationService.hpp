@@ -109,7 +109,7 @@ public:
     virtual BoundingSphere3f bounds(const UUID& uuid) = 0;
 
     /** Methods dealing with local objects. */
-    virtual void addLocalObject(const UUID& uuid) = 0;
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
     virtual void removeLocalObject(const UUID& uuid) = 0;
 
     /** Methods dealing with listeners. */

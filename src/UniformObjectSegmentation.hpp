@@ -47,7 +47,7 @@ namespace CBR
       virtual void addObject(const UUID& obj_id, const ServerID ourID);
 
 
-      virtual Message* generateAcknowledgeMessage(Object* obj, ServerID sID_to);
+      virtual Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
       virtual ServerID getHostServerID();
 
   }; //end class

@@ -48,14 +48,29 @@ class Trace;
 class ObjectConnection {
 public:
     ObjectConnection(Object* obj, Trace* trace);
+    ~ObjectConnection();
+
+    // Get the UUID of the object associated with this connection.
+    UUID id() const;
 
     // XXX FIXME passing the time in isn't nice, but we need it for
     // tracing purposes.
-    void deliver(const CBR::Protocol::Object::ObjectMessage& msg, const Time& t);
+    void deliver(const CBR::Protocol::Object::ObjectMessage& msg);
 
+    void tick(const Time& t);
+
+    // FIXME this should only be here temporarily.  Once we actually separate out object hosts, this
+    // should not be necessary since the data won't need to be shipped around
+    void handleMigrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
+    // FIXME this should only be here temporarily.  Once we actually separate out object hosts, this
+    // should not be necessary since the data won't need to be shipped around
+    void fillMigrateMessage(MigrateMessage* migrate_msg) const;
 private:
     Object* mObject;
     Trace* mTrace;
+
+    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> MessageQueue;
+    MessageQueue mReceiveQueue;
 };
 
 } // namespace CBR

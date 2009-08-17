@@ -53,7 +53,7 @@ public:
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual BoundingSphere3f bounds(const UUID& uuid);
 
-    virtual void addLocalObject(const UUID& uuid);
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     virtual void removeLocalObject(const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);

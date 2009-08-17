@@ -38,7 +38,7 @@ namespace CBR
     virtual void osegMigrateMessage(OSegMigrateMessage*);
     virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
-    virtual  Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to);
+    virtual  Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
 
     virtual void processLookupMessage(OSegLookupMessage* msg);
     virtual ServerID getHostServerID();

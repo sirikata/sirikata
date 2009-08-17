@@ -413,7 +413,7 @@ void Forwarder::receiveMessage(Message* msg) {
     UUID dest = obj_msg->contents.dest_object();
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL) {
-        conn->deliver(obj_msg->contents, *mCurrentTime);
+        conn->deliver(obj_msg->contents);
     }
     else {
         CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);

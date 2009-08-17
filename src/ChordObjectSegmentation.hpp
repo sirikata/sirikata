@@ -52,7 +52,7 @@ namespace CBR
 
       virtual void processLookupMessage(OSegLookupMessage* msg);
 
-      virtual Message* generateAcknowledgeMessage(Object* obj, ServerID sID_to);
+      virtual Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
       virtual ServerID getHostServerID();
 
   }; //end class

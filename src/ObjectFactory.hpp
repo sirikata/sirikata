@@ -40,6 +40,7 @@ class MotionPath;
 class Object;
 class CoordinateSegmentation;
 class Server;
+class Trace;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.
  *  First, it generates MotionPaths for every object that will exist in the
@@ -60,7 +61,7 @@ public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
-    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
+    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration, Trace* trace);
     ~ObjectFactory();
 
     void initialize(ServerID sid, Server* server, CoordinateSegmentation* cseg);
@@ -93,6 +94,7 @@ private:
     Server* mServer;
     CoordinateSegmentation* mCSeg;
     bool mFirstTick; // Temporary solution since on the first connection we can't wait for migration data
+    Trace* mTrace;
 }; // class ObjectFactory
 
 } // namespace CBR

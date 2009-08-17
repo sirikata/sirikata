@@ -1,7 +1,6 @@
 #include "Network.hpp"
 #include "Server.hpp"
 #include "Proximity.hpp"
-#include "Object.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -47,7 +46,7 @@ Server::~Server()
 {
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
-    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+    for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
         mLocationService->removeLocalObject(obj_id);
         // FIXME there's probably quite a bit more cleanup to do here
@@ -65,72 +64,109 @@ void Server::networkTick(const Time&t)
 }
 
 
-void Server::connect(Object* obj, bool wait_for_migrate) {
-    if (!wait_for_migrate) {
-        UUID obj_id = obj->uuid();
-        mObjects[obj_id] = obj;
-        // Add object as local object to LocationService
-        mLocationService->addLocalObject(obj_id);
-        // Register proximity query
-        mProximity->addQuery(obj_id, obj->queryAngle()); // FIXME how to set proximity radius?
-        // Create "connection" and let forwarder deliver to it
-        ObjectConnection* conn = new ObjectConnection(obj, mTrace);
-        mForwarder->addObjectConnection(obj_id, conn);
-    }
-    else {
-        mObjectsAwaitingMigration[obj->uuid()] = obj;
-    }
+
+// Handle Connect message from object
+void Server::connect(ObjectConnection* conn, const std::string& connectPayload) {
+    CBR::Protocol::Session::Connect connect_msg;
+    bool parse_success = connect_msg.ParseFromArray((void*)&connectPayload[0], connectPayload.size());
+    assert(parse_success);
+
+    UUID obj_id = conn->id();
+    assert(obj_id == connect_msg.object());
+
+    mObjects[obj_id] = conn;
+    // Add object as local object to LocationService
+    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
+    mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
+    // Register proximity query
+    mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
+    // Allow the forwarder to send to ship messages to this connection
+    mForwarder->addObjectConnection(obj_id, conn);
+}
+
+// Handle Migrate message from object
+void Server::migrate(ObjectConnection* conn, const std::string& migratePayload) {
+    CBR::Protocol::Session::Migrate migrate_msg;
+    bool parse_success = migrate_msg.ParseFromArray((void*)&migratePayload[0], migratePayload.size());
+    assert(parse_success);
+
+    assert(conn->id() == migrate_msg.object());
+    mObjectsAwaitingMigration[migrate_msg.object()] = conn;
+
+    // Try to handle this migration if all info is available
+    handleMigration(migrate_msg.object());
 }
 
 void Server::receiveMessage(Message* msg) {
     MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
     if (migrate_msg != NULL) {
         const UUID obj_id = migrate_msg->contents.object();
-        SolidAngle obj_query_angle( migrate_msg->contents.query_angle() );
-        std::vector<UUID> obj_subs;
-        for(uint32 i = 0; i < migrate_msg->contents.subscriber_size(); i++)
-            obj_subs.push_back(migrate_msg->contents.subscriber(i));
-
-        ObjectMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
-        if (obj_map_it == mObjectsAwaitingMigration.end()) {
-            printf("Warning: Got migration message, but this server doesn't have a connection for that object.\n");
-        }
-
-        Object* obj = obj_map_it->second;
-
-        obj->migrateMessage(obj_id, obj_query_angle, obj_subs);
-
-        // Move from list waiting for migration message to active objects
-        mObjectsAwaitingMigration.erase(obj_map_it);
-        mObjects[obj_id] = obj;
-
-        ServerID idOSegAckTo = (ServerID)migrate_msg->contents.source_server();
-
-        // Update LOC to indicate we have this object locally
-        mLocationService->addLocalObject(obj_id);
-
-        //update our oseg to show that we know that we have this object now.
-        mOSeg->addObject(obj_id, mID);
-
-        //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-        Message* oseg_ack_msg;
-        //              mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo,oseg_ack_msg);
-        oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj, idOSegAckTo);
-
-        if (oseg_ack_msg != NULL)
-        {
-            mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
-        }
-
-        // Finally, subscribe the object for proximity queries
-        mProximity->addQuery(obj_id, obj->queryAngle());
-
-        // Create "connection" and let forwarder deliver to it
-        ObjectConnection* conn = new ObjectConnection(obj, mTrace);
-        mForwarder->addObjectConnection(obj_id, conn);
-
-        delete migrate_msg;
+        mObjectMigrations[obj_id] = new CBR::Protocol::Migration::MigrationMessage( migrate_msg->contents );
+        // Try to handle this migration if all the info is available
+        handleMigration(obj_id);
     }
+
+    delete msg;
+}
+
+void Server::handleMigration(const UUID& obj_id) {
+    // Try to find the info in both lists -- the connection and migration information
+    ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
+    if (obj_map_it == mObjectsAwaitingMigration.end())
+        return;
+
+    ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
+    if (migration_map_it == mObjectMigrations.end())
+        return;
+
+
+    // Get the data from the two maps
+    ObjectConnection* obj_conn = obj_map_it->second;
+    CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
+
+    // Extract the migration message data
+    TimedMotionVector3f obj_loc(
+        migrate_msg->loc().t(),
+        MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
+    );
+    BoundingSphere3f obj_bounds( migrate_msg->bounds() );
+    SolidAngle obj_query_angle( migrate_msg->query_angle() );
+    std::vector<UUID> obj_subs;
+    for(uint32 i = 0; i < migrate_msg->subscriber_size(); i++)
+        obj_subs.push_back(migrate_msg->subscriber(i));
+
+
+    obj_conn->handleMigrateMessage(obj_id, obj_query_angle, obj_subs);
+
+    // Move from list waiting for migration message to active objects
+    mObjects[obj_id] = obj_conn;
+
+
+    // Update LOC to indicate we have this object locally
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
+
+    //update our oseg to show that we know that we have this object now.
+    mOSeg->addObject(obj_id, mID);
+
+    //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
+    ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
+    Message* oseg_ack_msg;
+    //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
+    oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
+
+    if (oseg_ack_msg != NULL)
+        mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
+
+    // Finally, subscribe the object for proximity queries
+    mProximity->addQuery(obj_id, obj_query_angle);
+
+    // Allow the forwarder to deliver to this connection
+    mForwarder->addObjectConnection(obj_id, obj_conn);
+
+
+    // Clean out the two records from the migration maps
+    mObjectsAwaitingMigration.erase(obj_map_it);
+    mObjectMigrations.erase(migration_map_it);
 }
 
 void Server::tick(const Time& t)
@@ -140,19 +176,11 @@ void Server::tick(const Time& t)
   // Update object locations
   mLocationService->tick(t);
 
-
   // Check proximity updates
   proximityTick(t);
   networkTick(t);
   // Check for object migrations
   checkObjectMigrations();
-
-  // Give objects a chance to process
-  for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
-  {
-    Object* obj = it->second;
-    obj->tick(t);
-  }
 }
 
 void Server::proximityTick(const Time& t)
@@ -209,10 +237,10 @@ void Server::checkObjectMigrations()
     // * delete object on this side
 
     std::vector<UUID> migrated_objects;
-    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
+    for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
     {
-        Object* obj = it->second;
-        const UUID& obj_id = obj->uuid();
+        const UUID& obj_id = it->first;
+        ObjectConnection* obj_conn = it->second;
 
         Vector3f obj_pos = mLocationService->currentPosition(obj_id);
 	ServerID new_server_id = lookup(obj_pos);
@@ -224,7 +252,9 @@ void Server::checkObjectMigrations()
           //
 
             // Send out the migrate message
-	    MigrateMessage* migrate_msg = wrapObjectStateForMigration(obj);
+            MigrateMessage* migrate_msg = new MigrateMessage(id());
+            migrate_msg->contents.set_source_server(this->id());
+            obj_conn->fillMigrateMessage(migrate_msg);
 /*
 	    printf("migrating object %s due to position %s \n",
 		   obj_id.readableHexData().c_str(),
@@ -248,25 +278,9 @@ void Server::checkObjectMigrations()
     }
 
     for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
-        ObjectMap::iterator obj_map_it = mObjects.find(*it);
-        Object* obj = obj_map_it->second;
-        delete obj;
+        ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
         mObjects.erase(obj_map_it);
     }
-}
-
-MigrateMessage* Server::wrapObjectStateForMigration(Object* obj)
-{
-  const UUID& obj_id = obj->uuid();
-
-  MigrateMessage* migrate_msg = new MigrateMessage(id());
-  migrate_msg->contents.set_object(obj_id);
-  migrate_msg->contents.set_query_angle(obj->queryAngle().asFloat());
-  for (ObjectSet::iterator it = obj->subscriberSet().begin(); it != obj->subscriberSet().end(); it++)
-      migrate_msg->contents.add_subscriber(*it);
-  migrate_msg->contents.set_source_server(this->id());
-
-  return migrate_msg;
 }
 
 ServerID Server::lookup(const Vector3f& pos)

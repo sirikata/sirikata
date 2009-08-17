@@ -1,5 +1,5 @@
 /*  CBR
- *  Migration.pbj
+ *  Session.pbj
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package CBR.Protocol.Migration;
+package CBR.Protocol.Session;
 
 message TimedMotionVector {
     required time t = 1;
@@ -38,11 +38,14 @@ message TimedMotionVector {
     required vector3f velocity = 3;
 }
 
-message MigrationMessage {
+
+message Connect {
     required uuid object = 1;
     required TimedMotionVector loc = 2;
     required boundingsphere3f bounds = 3;
     required float query_angle = 4;
-    repeated uuid subscriber = 5; // FIXME we shouldn't need this
-    required uint32 source_server = 6; // FIXME should come from server to server header
+}
+
+message Migrate {
+    required uuid object = 1;
 }

@@ -69,6 +69,12 @@ public:
         return mQueryAngle;
     }
 
+    const TimedMotionVector3f location() const;
+
+    const BoundingSphere3f bounds() const {
+        return BoundingSphere3f( Vector3f(0, 0, 0), 1.f ); // FIXME
+    }
+
     const ObjectSet& subscriberSet() const {
         return mSubscribers;
     }

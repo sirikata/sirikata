@@ -34,7 +34,7 @@ namespace CBR
   }
 
 
-  Message* LocObjectSegmentation::generateAcknowledgeMessage(Object* obj, ServerID sID_to)
+  Message* LocObjectSegmentation::generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to)
   {
     return NULL;
   }

@@ -4,7 +4,6 @@
 #include "Utility.hpp"
 #include "Statistics.hpp"
 #include "Message.hpp"
-#include "Object.hpp"
 #include "Statistics.hpp"
 
 //object segmenter h file
@@ -38,7 +37,7 @@ namespace CBR
     virtual ~ObjectSegmentation() {}
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
     virtual void addObject(const UUID& obj_id, const ServerID ourID) = 0;
-    virtual  Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to) = 0;
+    virtual  Message* generateAcknowledgeMessage(const UUID& obj_id,ServerID sID_to) = 0;
     virtual ServerID getHostServerID() = 0;
     virtual void processLookupMessage(OSegLookupMessage* msg) = 0;
 

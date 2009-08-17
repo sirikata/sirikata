@@ -45,6 +45,7 @@
 #include "CBR_Subscription.pbj.hpp"
 #include "CBR_Migration.pbj.hpp"
 #include "CBR_CSeg.pbj.hpp"
+#include "CBR_Session.pbj.hpp"
 
 namespace CBR {
 
