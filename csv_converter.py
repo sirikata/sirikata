@@ -55,6 +55,7 @@ PHYSICAL_MODES = {
     'dynamicbox': Sirikata.PhysicalParameters.DYNAMICBOX,
     'dynamicsphere': Sirikata.PhysicalParameters.DYNAMICSPHERE,
     'dynamiccylinder': Sirikata.PhysicalParameters.DYNAMICCYLINDER,
+    'character': Sirikata.PhysicalParameters.CHARACTER,
     '': Sirikata.PhysicalParameters.NONPHYSICAL
 }
 

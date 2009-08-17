@@ -130,6 +130,10 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
         mDynamic = true;
         mShape = ShapeSphere;
         break;
+    case PhysicalParameters::Character:
+        mDynamic = true;
+        mShape = ShapeCharacter;
+        break;
     }
     if (!(pp.mode==PhysicalParameters::Disabled)) {
         DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: adding to bullet" << endl);
@@ -200,6 +204,11 @@ void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, f
             DEBUG_OUTPUT(cout << "dbm: shape=sphere " << endl);
             mColShape = new btSphereShape(btScalar(mSizeX*mHull.x));
             mass = mSizeX*mSizeX*mSizeX * mDensity * 4.189;                         /// Thanks, Wolfram Alpha!
+        }
+        if (mShape == ShapeCharacter) {
+            DEBUG_OUTPUT(cout << "dbm: shape=character " << endl);                  /// for now, it's a sphere
+            mColShape = new btSphereShape(btScalar(mSizeX*mHull.x));                /// should be ellipsoid or capsule, some day
+            mass = mSizeX*mSizeX*mSizeX * mDensity * 20.0;                          /// yeah! Massive, dude!
         }
         else if (mShape == ShapeBox) {
             DEBUG_OUTPUT(cout << "dbm: shape=boxen " << endl);
@@ -303,8 +312,8 @@ void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
         body->setActivationState(DISABLE_DEACTIVATION);
     }
     else {
-        if (mName.substr(0,6) == "Avatar") {
-            body->setAngularFactor(0);
+        if (mShape==ShapeCharacter) {
+            body->setAngularFactor(0);  /// for now, all we do with characters is avoid external angular effects
         }
     }
     system->dynamicsWorld->addRigidBody(body);

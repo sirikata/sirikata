@@ -1146,22 +1146,25 @@ void HostedObject::receivedPropertyUpdate(
             // FIXME: allow missing fields, and do not hardcode enum values.
             PhysicalParameters params;
             switch (parsedProperty.mode()) {
-              case Protocol::PhysicalParameters::NONPHYSICAL:
+            case Protocol::PhysicalParameters::NONPHYSICAL:
                 params.mode = PhysicalParameters::Disabled;
                 break;
-              case Protocol::PhysicalParameters::STATIC:
+            case Protocol::PhysicalParameters::STATIC:
                 params.mode = PhysicalParameters::Static;
                 break;
-              case Protocol::PhysicalParameters::DYNAMICBOX:
+            case Protocol::PhysicalParameters::DYNAMICBOX:
                 params.mode = PhysicalParameters::DynamicBox;
                 break;
-              case Protocol::PhysicalParameters::DYNAMICSPHERE:
+            case Protocol::PhysicalParameters::DYNAMICSPHERE:
                 params.mode = PhysicalParameters::DynamicSphere;
                 break;
-              case Protocol::PhysicalParameters::DYNAMICCYLINDER:
+            case Protocol::PhysicalParameters::DYNAMICCYLINDER:
                 params.mode = PhysicalParameters::DynamicCylinder;
                 break;
-              default:
+            case Protocol::PhysicalParameters::CHARACTER:
+                params.mode = PhysicalParameters::Character;
+                break;
+            default:
                 params.mode = PhysicalParameters::Disabled;
             }
             params.density = parsedProperty.density();

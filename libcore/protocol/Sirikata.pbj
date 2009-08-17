@@ -238,6 +238,7 @@ message PhysicalParameters {
 		DYNAMICBOX = 2;
 		DYNAMICSPHERE = 3;
 		DYNAMICCYLINDER = 4;
+		CHARACTER = 5;
 //		DYNAMICMESH = 123456789;
 	}
 	optional Mode mode = 2 ;

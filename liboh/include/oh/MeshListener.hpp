@@ -44,7 +44,8 @@ struct PhysicalParameters {
         Static,                 /// collisions, no dynamic movement (bullet mass==0)
         DynamicBox,                 /// fully physical -- collision & dynamics
         DynamicSphere,
-        DynamicCylinder
+        DynamicCylinder,
+        Character
     };
 
     std::string name;

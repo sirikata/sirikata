@@ -812,6 +812,9 @@ private:
             case PhysicalParameters::DynamicCylinder:
                 subtype="dynamiccylinder";
                 break;
+            case PhysicalParameters::Character:
+                subtype="character";
+                break;
             default:
                 std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
             }

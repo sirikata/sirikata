@@ -285,7 +285,8 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
         ShapeMesh,
         ShapeBox,
         ShapeSphere,
-        ShapeCylinder
+        ShapeCylinder,
+        ShapeCharacter
     };
     BulletSystem* system;
     void setPhysical (const PhysicalParameters &pp);
@@ -338,8 +339,8 @@ public:
         system = sys;
     }
     ~BulletObj();
-	const ObjectReference& getObjectReference()const;
-	const SpaceID& getSpaceID()const;
+    const ObjectReference& getObjectReference()const;
+    const SpaceID& getSpaceID()const;
     positionOrientation getBulletState();
     void setBulletState(positionOrientation pq);
     void buildBulletBody(const unsigned char*, int);
@@ -356,10 +357,10 @@ public:
         BulletObj *mLower;
         BulletObj *mHigher;
     public:
-        BulletObj* getLower() const{
+        BulletObj* getLower() const {
             return mLower;
         }
-        BulletObj* getHigher() const{
+        BulletObj* getHigher() const {
             return mHigher;
         }
         bool operator < (const OrderedCollisionPair&other)const {
@@ -373,15 +374,17 @@ public:
             if (a<b) {
                 mLower=a;
                 mHigher=b;
-            }else {
+            }
+            else {
                 mLower=b;
                 mHigher=a;
             }
         }
-        class Hasher {public:
-                size_t operator()(const OrderedCollisionPair&p) const{
+        class Hasher {
+        public:
+            size_t operator()(const OrderedCollisionPair&p) const {
                 return std::tr1::hash<void*>()(p.getLower())^std::tr1::hash<void*>()(p.getHigher());
-                }
+            }
         };
     };
     class ActiveCollisionState {
@@ -396,7 +399,7 @@ public:
         int mCollisionFlag;
     public:
         std::vector<PointCollision> mPointCollisions;
-        enum CollisionFlag{
+        enum CollisionFlag {
             NEVER_COLLIDED=0,
             COLLIDED_THIS_FRAME=1,
             COLLIDED_LAST_FRAME=2,
@@ -405,10 +408,10 @@ public:
         ActiveCollisionState() {
             mCollisionFlag=NEVER_COLLIDED;
         }
-        bool collidedThisFrame() const{
+        bool collidedThisFrame() const {
             return mCollisionFlag&COLLIDED_THIS_FRAME;
         }
-        bool collidedLastFrame() const{
+        bool collidedLastFrame() const {
             return mCollisionFlag&COLLIDED_LAST_FRAME;
         }
         void resetCollisionFlag() {
@@ -453,7 +456,7 @@ public:
     std::tr1::unordered_map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<BulletObj*>objects;
-	vector<MessageService*>messageServices;
+    vector<MessageService*>messageServices;
 //    btAlignedObjectArray<btCollisionShape*> collisionShapes;
     Transfer::TransferManager*transferManager;
     void addPhysicalObject(BulletObj* obj, positionOrientation po,
@@ -461,7 +464,7 @@ public:
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
     static TimeSteppedQueryableSimulation* create(Provider<ProxyCreationListener*>*proxyManager,
-                                         const String&options) {
+            const String&options) {
         BulletSystem*os= new BulletSystem;
         if (os->initialize(proxyManager,options))
             return os;
@@ -470,7 +473,7 @@ public:
     }
     BulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
         BulletObj* bo=0;
-        for(unsigned int i=0; i<objects.size(); i++) {
+        for (unsigned int i=0; i<objects.size(); i++) {
             if (objects[i]->mMeshptr==meshptr) {
                 bo=objects[i];
                 break;
