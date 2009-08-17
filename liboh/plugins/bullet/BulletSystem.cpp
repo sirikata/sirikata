@@ -695,7 +695,7 @@ BulletSystem::~BulletSystem() {
 
 void BulletSystem::createProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
+    if (meshptr && meshptr->isLocal()) {
         DEBUG_OUTPUT(cout << "dbm: createProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
         objects.push_back(new BulletObj(this));     /// clean up memory!!!
         objects.back()->mMeshptr = meshptr;

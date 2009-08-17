@@ -52,9 +52,15 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
                            Vector3f(0,0,0),Vector3f(0,1,0),0),
                   UpdateNeeded()),
         mParentId(SpaceObjectReference::null()),
-        mLocationAuthority(0) {}
+        mLocationAuthority(0) {
+    mLocal = true;
+}
 
 ProxyObject::~ProxyObject() {}
+
+void ProxyObject::setLocal(bool loc) {
+    mLocal = loc;
+}
 
 void ProxyObject::destroy() {
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);

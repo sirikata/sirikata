@@ -80,6 +80,7 @@ private:
     TimedWeightedExtrapolator<Location,UpdateNeeded> mLocation;
     SpaceObjectReference mParentId;
     LocationAuthority* mLocationAuthority;
+    bool mLocal;
 protected:
     /// Notification that the Parent has been destroyed.
     virtual void destroyed();
@@ -92,6 +93,11 @@ public:
     */
     ProxyObject(ProxyManager *man, const SpaceObjectReference&id);
     virtual ~ProxyObject();
+
+    void setLocal(bool isLocal);
+    bool isLocal() {
+        return mLocal;
+    }
 
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();

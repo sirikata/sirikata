@@ -520,6 +520,7 @@ struct HostedObject::PrivateCallbacks {
             SILOG(cppoh,info, "* I found a MESH named " << proximateObjectId.object());
             proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, proximateObjectId));
         }
+        proxyObj->setLocal(false);
         realThis->receivedPositionUpdate(proxyObj, objLoc, true);
         proxyMgr->createViewedObject(proxyObj, realThis->getTracker());
         for (int i = 0; i < sentMessage->body().reads_size(); ++i) {
@@ -983,6 +984,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 printstr<<"RetObj: I am now a Mesh known as "<<objectId.object();
                 proxyObj = ProxyObjectPtr(new ProxyMeshObject(proxyMgr, objectId));
             }
+            proxyObj->setLocal(true);
             perSpaceIter->second.mProxyObject = proxyObj;
             proxyMgr->registerHostedObject(objectId.object(), getSharedPtr());
             receivedPositionUpdate(proxyObj, retObj.location(), true);
