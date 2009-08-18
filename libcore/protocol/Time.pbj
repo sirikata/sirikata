@@ -47,4 +47,5 @@ message TimeSync {
          REPLY_ORDERED=2;
     }
     optional ReturnOptions return_options=12;
+    optional time round_trip=2561;
 }

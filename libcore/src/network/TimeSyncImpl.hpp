@@ -63,6 +63,7 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
             Protocol::TimeSync sync;
             sync.ParseFromArray(&data[0],data.size());
             if (sync.has_sync_round()&&sync.sync_round()==mSyncRound&&sync.has_server_time()&&sync.has_client_time()) {
+                sync.set_round_trip(Time::now());
                 mSamples.push_back(sync);
                 incrementSyncRound();
                 if (mSamples.size()>=(size_t)mNumAverage) {
@@ -75,17 +76,18 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
         }
     }
     void calculateDuration() {
-        std::vector<Time> mOffsets(mSamples.size(),Time::epoch());
-        Time now(Time::now());
+        std::vector<Duration> mOffsets(mSamples.size(),Duration::seconds(0));
         for (size_t i=0,ie=mOffsets.size();i<ie;++i) {
-            mOffsets[i]=mSamples[i].server_time()-(now-mSamples[i].client_time())*.5;
+            Duration latency(mSamples[i].round_trip()-mSamples[i].client_time());
+            Duration halfLatency=latency/2.0;
+            mOffsets[i]=mSamples[i].server_time()+halfLatency-mSamples[i].round_trip();
         }
         std::sort(mOffsets.begin(),mOffsets.end());
         for (size_t i=0,ie=mOffsets.size();i<ie;++i) {
-            SILOGNOCR(objecthost,debug,mOffsets[i]-now<<',');
+            SILOGNOCR(objecthost,debug,mOffsets[i]<<',');
         }
         Duration oldOffset=mOffset;
-        mOffset=mOffsets[mOffsets.size()/2]-now;
+        mOffset=mOffsets[mOffsets.size()/2];
         SILOG(objecthost,debug,"Old offset was "<<oldOffset<<" new offset is "<<mOffset);
     }
     void incrementSyncRound(){
