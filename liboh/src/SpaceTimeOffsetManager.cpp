@@ -6,7 +6,7 @@
 AUTO_SINGLETON_INSTANCE(Sirikata::SpaceTimeOffsetManager);
 namespace Sirikata {
 namespace {
-boost::shared_mutex sSpaceIdDurationMutex;
+boost::mutex sSpaceIdDurationMutex;
 std::tr1::unordered_map<SpaceID,Duration,SpaceID::Hasher> sSpaceIdDuration;
 Duration nilDuration(Duration::seconds(0));;
 }
@@ -20,7 +20,7 @@ SpaceTimeOffsetManager& SpaceTimeOffsetManager::getSingleton() {
     return AutoSingleton<SpaceTimeOffsetManager>::getSingleton();
 }
 const Duration& SpaceTimeOffsetManager::getSpaceTimeOffset(const SpaceID& sid)const {
-    boost::shared_lock<boost::shared_mutex> lok(sSpaceIdDurationMutex);
+    boost::unique_lock<boost::mutex> lok(sSpaceIdDurationMutex);
     std::tr1::unordered_map<SpaceID,Duration>::iterator where=sSpaceIdDuration.find(sid);
     if (where==sSpaceIdDuration.end()) {
         return nilDuration;
@@ -28,7 +28,7 @@ const Duration& SpaceTimeOffsetManager::getSpaceTimeOffset(const SpaceID& sid)co
     return where->second;
 }
 void SpaceTimeOffsetManager::setSpaceTimeOffset(const SpaceID& sid, const Duration&dur) {
-    boost::unique_lock<boost::shared_mutex> lok(sSpaceIdDurationMutex);
+    boost::unique_lock<boost::mutex> lok(sSpaceIdDurationMutex);
     sSpaceIdDuration[sid]=dur;
 }
 
