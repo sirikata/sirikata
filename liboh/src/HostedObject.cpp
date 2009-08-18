@@ -72,6 +72,7 @@ public:
 };
 
 
+ 
 HostedObject::HostedObject(ObjectHost*parent, const UUID &objectName)
     : mTracker(parent->getSpaceIO()),
       mInternalObjectReference(objectName) {
@@ -1104,6 +1105,13 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                       std::insert_iterator<std::string>(*response, response->begin()));
         }
     }
+}
+const Duration&HostedObject::getSpaceTimeOffset(const SpaceID&space) {
+    static Duration nil(Duration::seconds(0));
+    SpaceDataMap::iterator where=mSpaceData->find(space);
+    if (where!=mSpaceData->end()) 
+        return where->second.mSpaceConnection.getTopLevelStream()->getServerTimeOffset();
+    return nil;
 }
 
 void HostedObject::receivedPropertyUpdate(

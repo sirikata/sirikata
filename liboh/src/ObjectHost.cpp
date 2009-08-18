@@ -284,7 +284,29 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
         }
     }
 }
-
+const Duration&ObjectHost::getSpaceTimeOffset(const SpaceID&id)const{
+    SpaceConnectionMap::const_iterator where=mSpaceConnections.find(id);
+    if (where!=mSpaceConnections.end()) {
+        std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection=where->second.lock();
+        if (topLevelConnection) {
+            return topLevelConnection->getServerTimeOffset();
+        }
+    }
+    static Duration nil(Duration::seconds(0));
+    return nil;
+}
+const Duration&ObjectHost::getSpaceTimeOffset(const Network::Address&id)const{
+    boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
+    AddressConnectionMap::const_iterator where=mAddressConnections.find(id);
+    if (where!=mAddressConnections.end()) {
+        std::tr1::shared_ptr<TopLevelSpaceConnection> topLevelConnection=where->second.lock();
+        if (topLevelConnection) {
+            return topLevelConnection->getServerTimeOffset();
+        }
+    }
+    static Duration nil(Duration::seconds(0));
+    return nil;
+}
 ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
     SpaceConnectionMap::const_iterator iter = mSpaceConnections.find(space);
     if (iter != mSpaceConnections.end()) {

@@ -43,6 +43,7 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
     int mNumAverage;
     int mNumParallel;
     uint64 mSyncRound;
+    std::tr1::function<void(const Duration&)>mCallback;
     std::vector<Protocol::TimeSync>mSamples;
     void sendParallelPackets() {
         RoutableMessageHeader rmh;
@@ -83,12 +84,14 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
             mOffsets[i]=mSamples[i].server_time()+halfLatency-mSamples[i].round_trip();
         }
         std::sort(mOffsets.begin(),mOffsets.end());
+/*
         for (size_t i=0,ie=mOffsets.size();i<ie;++i) {
             SILOGNOCR(objecthost,debug,mOffsets[i]<<',');
         }
+*/
         Duration oldOffset=mOffset;
-        mOffset=mOffsets[mOffsets.size()/2];
-        SILOG(objecthost,debug,"Old offset was "<<oldOffset<<" new offset is "<<mOffset);
+        mOffset=mOffsets[mOffsets.size()/2];        
+        mCallback(mOffsets[mOffsets.size()/2]);
     }
     void incrementSyncRound(){
         ++mSyncRound;
@@ -115,7 +118,7 @@ protected:
         }
     }
 public:
-    TimeSyncImpl(const WeakRef& parent, IOService *waitService){
+    TimeSyncImpl(const WeakRef& parent, IOService *waitService):mCallback(&TimeSync::defaultCallback){
         mParent=parent;
         mWaitService=waitService;
         mStream=NULL;
@@ -139,7 +142,9 @@ public:
         startSync(thus,delay);
     }
     
-    
+    void setCallback(const std::tr1::function<void(const Duration&)>&cb) {
+        mCallback=cb;
+    }
 
 
 };

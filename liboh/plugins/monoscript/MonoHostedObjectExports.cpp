@@ -1,6 +1,7 @@
 #include "oh/Platform.hpp"
 #include "oh/SpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
+#include "oh/SpaceTimeOffsetManager.hpp"
 #include "MonoDefs.hpp"
 #include "MonoDomain.hpp"
 #include "MonoContext.hpp"
@@ -16,6 +17,9 @@ static MonoObject* Mono_Context_CurrentUUID() {
     Mono::Object obj = MonoContext::getSingleton().getDomain().UUID(uuid);
     return obj.object();
 }
+
+
+
 /*
 static MonoObject* Mono_Context_CurrentObject() {
     Mono::Object obj =  Mono::Domain::root().UUID(MonoContext::getSingleton().getVWObject());
@@ -110,7 +114,17 @@ static void Mono_Context_TickDelay(MonoObject*duration) {
         //ho->tickDelay(period)
     }
 }
+static MonoObject* Mono_Context_GetTime(MonoObject*space_id) {
+    SpaceID sid=SpaceID(Mono::Object(space_id).unboxUUID());
+    Duration offset = SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(sid);
+    Time cur=Time::now()+offset;
+    return MonoContext::getSingleton().getDomain().Time(cur).object();
+}
 
+
+static MonoObject* Mono_Context_GetLocalTime() {
+    return MonoContext::getSingleton().getDomain().Time(Time::now()).object();
+}
 namespace Sirikata {
 
 void 
@@ -120,5 +134,7 @@ InitHostedObjectExports () {
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTickPeriod", (void*)Mono_Context_TickDelay);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::GetTime", (void*)Mono_Context_GetTime);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::GetLocalTime", (void*)Mono_Context_GetLocalTime);
 }
 }

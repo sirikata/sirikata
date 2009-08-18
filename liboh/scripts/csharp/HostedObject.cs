@@ -23,6 +23,13 @@ public class HostedObject{
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iTickPeriod(System.DateTime t);
 
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    internal static extern System.DateTime GetTime(Guid spaceid);
+
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    public static extern System.DateTime GetLocalTime();
+
+
     internal static long TimeTicks(System.DateTime t) {
         return t.Ticks;
     }
@@ -43,6 +50,6 @@ public class HostedObject{
         if (message==null||message.Length==0)
             return false;
         return iSendMessage(message);
-    }
+    }    
 }
 }

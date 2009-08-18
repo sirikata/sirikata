@@ -111,7 +111,8 @@ public:
         }
         return NULL;
     }
-
+    const Duration&getSpaceTimeOffset(const SpaceID&)const;
+    const Duration&getSpaceTimeOffset(const Network::Address&)const;
     /** Register object by private UUID, so that it is possible to
         talk to objects/services which are not part of any space.
         Done automatically by HostedObject::initialize* functions.

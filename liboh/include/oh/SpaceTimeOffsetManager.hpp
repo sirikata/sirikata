@@ -1,5 +1,5 @@
-/*  Sirikata Network Utilities
- *  TimeSync.hpp
+/*  Sirikata liboh -- Object Host
+ *  SpaceTimeOffsetManager.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,30 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#ifndef SIRIKATA_TimeSync_HPP__
-#define SIRIKATA_TimeSync_HPP__
+#ifndef _SIRIKATA_SPACE_TIME_OFFSET_MANAGER_HPP_
+#define _SIRIKATA_SPACE_TIME_OFFSET_MANAGER_HPP_
+#include <util/Singleton.hpp>
 
 namespace Sirikata {
-namespace Network {
-class TimeSync {
-protected:
-    Duration mOffset;
-    static void defaultCallback(const Duration&offset){
-        SILOG(objecthost,debug,"New offset is "<<offset);
-    }
-
-public:
-    virtual void setCallback(const std::tr1::function<void(const Duration&)>&)=0;
-    const Duration&getOffset() const{
-        return mOffset;
-    }
-    TimeSync():mOffset(Duration::seconds(0)){ 
-    }
-    virtual ~TimeSync(){}
+class SIRIKATA_OH_EXPORT SpaceTimeOffsetManager :public AutoSingleton<SpaceTimeOffsetManager>{public:
+    static SpaceTimeOffsetManager&getSingleton();
+    static void destroy();
+    const Duration&getSpaceTimeOffset(const SpaceID&)const;
+    static void setSpaceTimeOffset(const SpaceID&, const Duration&);
+    SpaceTimeOffsetManager();
+    ~SpaceTimeOffsetManager();
 };
-
-
-}
 }
 #endif
+
