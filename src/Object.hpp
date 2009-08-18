@@ -37,6 +37,7 @@
 #include "Message.hpp"
 #include "MotionPath.hpp"
 #include "SolidAngle.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 
@@ -55,9 +56,9 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle);
+    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, const std::set<UUID>& objects);
+    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace, const std::set<UUID>& objects);
 
     ~Object();
 
@@ -81,12 +82,14 @@ public:
 
     void tick(const Time& t);
 
-    void locationMessage(const UUID& src, const TimedMotionVector3f& loc);
-    void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg, const CBR::Protocol::Prox::ProximityResults& prox);
-    void subscriptionMessage(const UUID& subscriber, bool subscribing);
-    void migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
+    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
 
+    void migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
 private:
+    void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+    void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+    void subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+
     void addSubscriber(const UUID& sub);
     void removeSubscriber(const UUID& sub);
 
@@ -102,6 +105,8 @@ private:
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;
     ObjectFactory* mParent;
+    Trace* mTrace;
+    Time mLastTime;
 }; // class Object
 
 } // namespace CBR

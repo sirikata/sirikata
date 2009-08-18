@@ -53,8 +53,6 @@ public:
     // Get the UUID of the object associated with this connection.
     UUID id() const;
 
-    // XXX FIXME passing the time in isn't nice, but we need it for
-    // tracing purposes.
     void deliver(const CBR::Protocol::Object::ObjectMessage& msg);
 
     void tick(const Time& t);
