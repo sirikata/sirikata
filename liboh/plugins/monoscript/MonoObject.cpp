@@ -502,56 +502,56 @@ guint32 Object::unboxUInt32() const {
 //#####################################################################
 // Function unboxUInt64
 //#####################################################################
-guint64 Object::unboxUInt64() const {
+Sirikata::uint64 Object::unboxUInt64() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
     assert(mono_object_get_class(obj) == mono_get_uint64_class());
-    return *(guint64*)mono_object_unbox(mGCObject->object());
+    return *(Sirikata::uint64*)mono_object_unbox(mGCObject->object());
 }
 
 //#####################################################################
 // Function unboxSByte
 //#####################################################################
-gint8 Object::unboxSByte() const {
+Sirikata::int8 Object::unboxSByte() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
     assert(mono_object_get_class(obj) == mono_get_sbyte_class());
-    return *(gint8*)mono_object_unbox(mGCObject->object());
+    return *(Sirikata::int8*)mono_object_unbox(mGCObject->object());
 }
 
 //#####################################################################
 // Function unboxInt16
 //#####################################################################
-gint16 Object::unboxInt16() const {
+Sirikata::int16 Object::unboxInt16() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
     assert(mono_object_get_class(obj) == mono_get_int16_class());
-    return *(gint16*)mono_object_unbox(mGCObject->object());
+    return *(Sirikata::int16*)mono_object_unbox(mGCObject->object());
 }
 
 //#####################################################################
 // Function unboxInt32
 //#####################################################################
-gint32 Object::unboxInt32() const {
+Sirikata::int32 Object::unboxInt32() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
     assert(mono_object_get_class(obj) == mono_get_int32_class());
-    return *(gint32*)mono_object_unbox(mGCObject->object());
+    return *(Sirikata::int32*)mono_object_unbox(mGCObject->object());
 }
 
 //#####################################################################
 // Function unboxInt64
 //#####################################################################
-gint64 Object::unboxInt64() const {
+Sirikata::int64 Object::unboxInt64() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
     assert(mono_object_get_class(obj) == mono_get_int64_class());
-    return *(gint64*)mono_object_unbox(mGCObject->object());
+    return *(Sirikata::int64*)mono_object_unbox(mGCObject->object());
 }
 
 //#####################################################################
@@ -579,7 +579,7 @@ double Object::unboxDouble() const {
 //#####################################################################
 // Function unboxEnum
 //#####################################################################
-gint32 Object::unboxEnum() const {
+Sirikata::int32 Object::unboxEnum() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
 
@@ -589,21 +589,21 @@ gint32 Object::unboxEnum() const {
     MonoClass* enumclass = mono_class_from_mono_type(mono_class_enum_basetype(klass));
 
     if (enumclass == mono_get_byte_class())
-        return (gint32)(*(guint8*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::uint8*)mono_object_unbox(obj));
     else if (enumclass == mono_get_uint16_class())
-        return (gint32)(*(guint16*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::uint16*)mono_object_unbox(obj));
     else if (enumclass == mono_get_uint32_class())
-        return (gint32)(*(guint32*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::uint32*)mono_object_unbox(obj));
     else if (enumclass == mono_get_uint64_class())
-        return (gint32)(*(guint64*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::uint64*)mono_object_unbox(obj));
     else if (enumclass == mono_get_sbyte_class())
-        return (gint32)(*(gint8*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::int8*)mono_object_unbox(obj));
     else if (enumclass == mono_get_int16_class())
-        return (gint32)(*(gint16*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::int16*)mono_object_unbox(obj));
     else if (enumclass == mono_get_int32_class())
-        return (gint32)(*(gint32*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::int32*)mono_object_unbox(obj));
     else if (enumclass == mono_get_int64_class())
-        return (gint32)(*(gint64*)mono_object_unbox(obj));
+        return (Sirikata::int32)(*(Sirikata::int64*)mono_object_unbox(obj));
     else
         assert(false);
 

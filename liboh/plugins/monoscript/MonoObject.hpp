@@ -177,36 +177,36 @@ public:
     /** Returns the unboxed value of this Byte object. The object *must* represent
      *  a Byte.
      */
-    guint8 unboxByte() const;
+    Sirikata::uint8 unboxByte() const;
     /** Returns the unboxed value of this UInt16 object. The object *must* represent
      *  a UInt16.
      */
-    guint16 unboxUInt16() const;
+    Sirikata::uint16 unboxUInt16() const;
     /** Returns the unboxed value of this UInt32 object. The object *must* represent
      *  a UInt32.
      */
-    guint32 unboxUInt32() const;
+    Sirikata::uint32 unboxUInt32() const;
     /** Returns the unboxed value of this UInt64 object. The object *must* represent
      *  a UInt64.
      */
-    guint64 unboxUInt64() const;
+    Sirikata::uint64 unboxUInt64() const;
 
     /** Returns the unboxed value of this SByte object. The object *must* represent
      *  a SByte.
      */
-    gint8 unboxSByte() const;
+    Sirikata::int8 unboxSByte() const;
     /** Returns the unboxed value of this Int16 object. The object *must* represent
      *  a Int16.
      */
-    gint16 unboxInt16() const;
+    Sirikata::int16 unboxInt16() const;
     /** Returns the unboxed value of this Int32 object. The object *must* represent
      *  a Int32.
      */
-    gint32 unboxInt32() const;
+    Sirikata::int32 unboxInt32() const;
     /** Returns the unboxed value of this Int64 object. The object *must* represent
      *  a Int64.
      */
-    gint64 unboxInt64() const;
+    Sirikata::int64 unboxInt64() const;
 
     /** Returns the unboxed value of this Single object. The object *must* represent
      *  a Single.
@@ -220,7 +220,7 @@ public:
     /** Returns the unboxed value of this enum object.  The object *must* represent
      *  an enum, but may use any underlying type.
      */
-    gint32 unboxEnum() const;
+    Sirikata::int32 unboxEnum() const;
 
     /** Returns the unboxed value of this IntPtr. */
     void* unboxIntPtr() const;
