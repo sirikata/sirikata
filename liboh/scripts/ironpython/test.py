@@ -7,7 +7,7 @@ import protocol.MessageHeader_pb2 as pbHead
 
 from Sirikata.Runtime import HostedObject
 print dir(HostedObject)
-
+import System
 import util
 
 DEBUG_OUTPUT=False
@@ -129,6 +129,13 @@ class exampleclass:
             header = pbHead.Header()
             print "sendprox5"
             header.destination_space = util.tupleFromUUID(self.spaceid);
+            print dir(HostedObject)
+            print "time locally ",HostedObject.GetLocalTime().microseconds();
+
+            from System import Array, Byte
+            arry=Array[Byte](tuple(Byte(c) for c in util.tupleFromUUID(self.spaceid)))
+            print "time on spaceA ",HostedObject.GetTimeFromByteArraySpace(arry).microseconds()
+            #print "time on spaceB ",HostedObject.GetTime(self.spaceid).microseconds()
             header.destination_object = util.tupleFromUUID(uuid.UUID(int=0))
             header.destination_port = 3 # libcore/src/util/KnownServices.hpp
             headerstr = header.SerializeToString()

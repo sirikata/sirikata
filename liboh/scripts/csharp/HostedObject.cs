@@ -24,16 +24,16 @@ public class HostedObject{
     internal static extern void iTickPeriod(System.DateTime t);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern Sirikata.Runtime.Time iGetTime(Guid spaceid);
+    internal static extern void iGetTime(Guid spaceid,  Sirikata.Runtime.TimeClass retval);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern Sirikata.Runtime.Time iGetTimeByteArray(byte[] spaceid);
+    internal static extern void iGetTimeByteArray(byte[] spaceid,  Sirikata.Runtime.TimeClass retval);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern Sirikata.Runtime.Time iGetTimeString(string spaceid);
+    internal static extern void iGetTimeString(string spaceid,  Sirikata.Runtime.TimeClass retval);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern Sirikata.Runtime.Time iGetLocalTime( );
+    internal static extern void iGetLocalTime( Sirikata.Runtime.TimeClass retval);
 
 
     internal static long TimeTicks(Sirikata.Runtime.Time t) {
@@ -57,11 +57,15 @@ public class HostedObject{
             return false;
         return iSendMessage(message);
     }    
-    public Sirikata.Runtime.Time GetTime(Guid spaceid){
-        return iGetTime(spaceid);
+    public static Sirikata.Runtime.Time GetTime(Guid spaceid){
+        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
+        iGetTime(spaceid,retval);
+        return new Sirikata.Runtime.Time(retval);        
     }
     public static Sirikata.Runtime.Time GetLocalTime() {
-        return iGetLocalTime();
+        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
+        iGetLocalTime(retval);
+        return new Sirikata.Runtime.Time(retval);
     }
     public static Sirikata.Runtime.Time GetTimeFromByteArraySpace(byte[] spaceid){
         if (spaceid==null) {
@@ -73,16 +77,18 @@ public class HostedObject{
             newArray[i]=(System.Byte)spaceid[i];
         }
 */
-
-        return iGetTimeByteArray(spaceid);
-
+        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
+        iGetTimeByteArray(spaceid,retval);
+        return new Sirikata.Runtime.Time(retval);
         //return GetLocalTime();
     }
     public static Sirikata.Runtime.Time GetTimeFromStringSpace(string spaceid){
         if (spaceid==null) {
             return GetLocalTime();
         }
-        return iGetTimeString(spaceid);
+        Sirikata.Runtime.TimeClass retval=new Sirikata.Runtime.TimeClass();
+        iGetTimeString(spaceid,retval);
+        return new Sirikata.Runtime.Time(retval);        
     }
 }
 }
