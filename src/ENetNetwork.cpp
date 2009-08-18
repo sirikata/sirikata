@@ -72,23 +72,27 @@ bool ENetNetwork::connect(const Address4&addy) {
     return false;
 }
 
-bool ENetNetwork::send(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority){
+bool ENetNetwork::internalSend(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority, bool force){
     if (mPeerInit.find(addy)!=mPeerInit.end()) {
         return false;
     }
     PeerMap::iterator where=mSendPeers.find(addy);
     if (where!=mSendPeers.end()) {
-        size_t totalSize=enet_peer_send_buffer_size(where->second)+dat.size();
-        if (totalSize<=mSendBufferSize) {
+        size_t esend_buffer_size=enet_peer_send_buffer_size(where->second);
+        size_t totalSize=esend_buffer_size+dat.size();
+        if (totalSize<=mSendBufferSize||esend_buffer_size==0||force) {
             ENetPacket *pkt=enet_packet_create(dat.empty()?NULL:&dat[0],dat.size(),((reliable?ENET_PACKET_FLAG_RELIABLE:0)|(ordered?0:ENET_PACKET_FLAG_UNSEQUENCED)));
             return (enet_peer_send(where->second,1,pkt))==0;
         }
     }else {
         //connect
         mPeerInit[addy]=dat;
-        connect(addy);
+        return connect(addy);
     }
     return false;
+}
+bool ENetNetwork::send(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority){
+    return internalSend(addy,dat,reliable,ordered,priority,false);
 }
 void ENetNetwork::listen (const Address4&addy){
     ENetAddress address=toENetAddress(addy);   
@@ -101,13 +105,30 @@ Network::Chunk* ENetNetwork::front(const Address4& from, uint32 max_size){
         return *retval;
     PeerMap::iterator where=mRecvPeers.find(from);
     if (where!=mRecvPeers.end()) {
-        ENetPacket* pkt=enet_peer_receive (where->second, 1);
-        if (pkt) {
-            (*retval)=new Network::Chunk ((unsigned char*)pkt->data,((unsigned char*)pkt->data)+pkt->dataLength);
-            enet_packet_destroy(pkt);
-            if ((*retval)->size()<=max_size)
-                return *retval;
-            return NULL;
+        ENetEvent event;
+        if (enet_peer_check_events(mHost,where->second,&event)) {
+            switch (event.type) {
+              case ENET_EVENT_TYPE_NONE:
+                printf("None event\n");
+                break;
+              case ENET_EVENT_TYPE_RECEIVE:
+                printf("Recv event size %d\n",event.packet->dataLength);
+                  {
+                      ENetPacket* pkt=event.packet;
+                      if (pkt) {
+                          (*retval)=new Network::Chunk ((unsigned char*)pkt->data,((unsigned char*)pkt->data)+pkt->dataLength);
+                          enet_packet_destroy(pkt);
+                          if ((*retval)->size()<=max_size)
+                              return *retval;
+                          return NULL;
+                      }
+                  }
+                  break;
+              case ENET_EVENT_TYPE_CONNECT:
+              case ENET_EVENT_TYPE_DISCONNECT:
+                assert(0);
+                break;
+            }
         }
     }
     return NULL;
@@ -119,42 +140,56 @@ Network::Chunk* ENetNetwork::receiveOne(const Address4& from, uint32 max_size){
     }
     return tmp;    
 }
+void ENetNetwork::processOutboundEvent(ENetEvent&event) {
+    switch (event.type) {
+      case ENET_EVENT_TYPE_NONE:
+        printf("None event\n");
+        break;
+      case ENET_EVENT_TYPE_RECEIVE:
+        assert(0);
+        break;
+      case ENET_EVENT_TYPE_CONNECT:
+        printf ("Connect event %d\n",event.peer->address.port);
+          {
+              Address4 addy=fromENetAddress(event.peer->address);
+              PeerMap::iterator where=mSendPeers.find(addy);
+              if (where!=mSendPeers.end()&&where->second==event.peer) {
+                  PeerInitMap::iterator datawhere=mPeerInit.find(addy);
+                  if (datawhere!=mPeerInit.end()) {
+                      Network::Chunk datachunk;
+                      datachunk.swap(datawhere->second);
+                      mPeerInit.erase(datawhere);
+                      internalSend(addy,datachunk,true,true,1,true);
+                  }
+              }else {
+                  mRecvPeers[addy]=event.peer;
+              }
+              break;
+          }
+          break;
+      case ENET_EVENT_TYPE_DISCONNECT:
+        printf ("DisConnect event %d\n",event.peer->address.port);
+          {
+              PeerMap::iterator where=mRecvPeers.find(fromENetAddress(event.peer->address));
+              if (where!=mRecvPeers.end()) {
+                  mRecvPeers.erase(where);
+              }
+          }
+          break;
+    }
+}
 void ENetNetwork::service(const Time& t){
     do {
         ENetEvent event;
-        enet_host_service_one_outbound (mHost, & event);
-        switch (event.type) {
-          case ENET_EVENT_TYPE_NONE:
-            break;
-          case ENET_EVENT_TYPE_RECEIVE:
-            assert(0);
-            break;
-          case ENET_EVENT_TYPE_CONNECT:
-            {
-                Address4 addy=fromENetAddress(event.peer->address);
-                PeerMap::iterator where=mSendPeers.find(addy);
-                if (where!=mSendPeers.end()&&where->second==event.peer) {
-                    PeerInitMap::iterator datawhere=mPeerInit.find(addy);
-                    if (datawhere!=mPeerInit.end()) {
-                        Network::Chunk datachunk;
-                        datachunk.swap(datawhere->second);
-                        mPeerInit.erase(datawhere);
-                        send(addy,datachunk,true,true,1);
-                    }
-                }else {
-                    mRecvPeers[addy]=event.peer;
-                }
-                break;
-            }
-            break;
-          case ENET_EVENT_TYPE_DISCONNECT:
-            {
-                PeerMap::iterator where=mRecvPeers.find(fromENetAddress(event.peer->address));
-                if (where!=mRecvPeers.end()) {
-                    mRecvPeers.erase(where);
-                }
-            }
-            break;
+        
+        if (enet_host_service_one_outbound (mHost, & event))
+            processOutboundEvent(event);
+        //if (enet_host_service (mHost, & event,1000))
+        //    processOutboundEvent(event);
+        
+        for (PeerMap::iterator i=mSendPeers.begin(),ie=mSendPeers.end();i!=ie;++i) {
+            if (enet_peer_check_events(mHost, i->second,&event))
+                processOutboundEvent(event);
         }
     }while (Time::now()<t);
 }

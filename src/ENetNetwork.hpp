@@ -19,6 +19,8 @@ class ENetNetwork :public Network{
     bool connect(const Address4&addy);
     static ENetAddress toENetAddress(const Address4&addy);
     static Address4 fromENetAddress(const ENetAddress&addy);
+    void processOutboundEvent(ENetEvent&event);
+    bool internalSend(const Address4&,const Chunk&, bool reliable, bool ordered, int priority, bool force);
 public:
     
     ENetNetwork(Trace* trace, size_t mPeerSendBufferSize, uint32 icomingBandwidth,uint32 outgoingBandwidth);
