@@ -40,6 +40,7 @@
 #include "util/KnownServices.hpp"
 #include "space/Registration.hpp"
 #include "space/ObjectConnections.hpp"
+#include "Space_Time.pbj.hpp"
 namespace Sirikata {
 ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress) {
@@ -71,12 +72,48 @@ void ObjectConnections::newStreamCallback(Network::Stream*stream, Network::Strea
         //whole object host has disconnected
     }
 }
+
+void processTimePacket(Network::Stream *stream, const RoutableMessageHeader&hdr,MemoryReference message_body) {
+    RoutableMessageHeader retval;
+    retval.set_source_object(ObjectReference::spaceServiceID());
+    retval.set_source_port(Services::TIMESYNC);
+    retval.set_destination_port(hdr.source_port());
+    if (hdr.has_source_object())
+        retval.set_destination_object(hdr.source_object());
+    if (hdr.has_source_space())
+        retval.set_destination_space(hdr.source_space());
+    std::string toSend;
+    retval.SerializeToString(&toSend);
+    Network::Protocol::TimeSync sync;
+    sync.ParseFromArray(message_body.data(),message_body.size());
+    sync.set_server_time(Time::now());
+    sync.AppendToString(&toSend);
+    Network::StreamReliability rel=Network::Unreliable;
+    if (sync.has_return_options()) {
+        if (sync.return_options()&Network::Protocol::TimeSync::REPLY_RELIABLE) {
+            rel=Network::ReliableUnordered;
+        }
+        if ((sync.return_options()&Network::Protocol::TimeSync::REPLY_RELIABLE)&&
+            (sync.return_options()&Network::Protocol::TimeSync::REPLY_ORDERED)) {
+            rel=Network::ReliableOrdered;
+        }else if ((sync.return_options()&Network::Protocol::TimeSync::REPLY_ORDERED)) {
+            rel=Network::ReliableOrdered;
+        }
+    }
+    stream->send(MemoryReference(toSend),rel);
+}
+
+
 void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk) {
-    //find the temporary stream ID and connected boolean
-    std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
     RoutableMessageHeader hdr;
     MemoryReference chunkRef(chunk);//parse header
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
+    if (hdr.destination_port()==Services::TIMESYNC&&hdr.has_destination_object()&&hdr.destination_object()==ObjectReference::spaceServiceID()) {
+        processTimePacket(stream,hdr,message_body);//for low latency shortcut the other processing
+        return;
+    }
+    //find the temporary stream ID and connected boolean
+    std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
     //munge header to reflect known ID
     hdr.set_source_object(ObjectReference(where->second.uuid()));
     if (false&&((!hdr.has_destination_object())||hdr.destination_object()==ObjectReference::null())&&message_body.size()==0) {

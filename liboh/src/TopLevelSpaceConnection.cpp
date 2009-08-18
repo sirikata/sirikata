@@ -38,6 +38,9 @@
 #include "oh/SpaceIDMap.hpp"
 #include "oh/ObjectHost.hpp"
 #include "oh/HostedObject.hpp"
+#include "ObjectHost_Time.pbj.hpp"
+#include "util/KnownServices.hpp"
+#include "network/TimeSyncImpl.hpp"
 
 namespace Sirikata {
 namespace {
@@ -53,6 +56,7 @@ void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thu
 
 TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io):mRegisteredAddress(Network::Address::null()) {
     mParent=NULL;
+    mIOService=io;
     mTopLevelStream=Network::StreamFactory::getSingleton().getDefaultConstructor()(io);
     ObjectHostProxyManager::initialize();
 }
@@ -60,9 +64,13 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     mSpaceID=id;
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+    std::tr1::shared_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > sync(new Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >(thus,mIOService));
+    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync); 
+    mTimeSync=sync;
     mTopLevelStream->prepareOutboundConnection(&Network::Stream::ignoreSubstreamCallback,
                                                std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
-                                               &Network::Stream::ignoreBytesReceived);
+                                               std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1));
+    sync->go(sync,3,6,Duration::seconds(10),mTopLevelStream);
     oh->spaceIDMap()->lookup(id,std::tr1::bind(&TopLevelSpaceConnection::connectToAddress,thus,oh,_1));
 }
 
@@ -72,10 +80,14 @@ void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConn
     mParent=oh;
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
+    std::tr1::shared_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > sync(new Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >(thus,mIOService));
+    mTimeSync=sync;
+    std::tr1::weak_ptr<Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> > > weak_sync(sync); 
     mTopLevelStream->connect(addy,
                              &Network::Stream::ignoreSubstreamCallback,
                              std::tr1::bind(&connectionStatus, thus,_1,_2),                                               
-                             &Network::Stream::ignoreBytesReceived);
+                             std::tr1::bind(&Network::TimeSyncImpl<std::tr1::weak_ptr<TopLevelSpaceConnection> >::bytesReceived,weak_sync,_1));
+    sync->go(sync,3,6,Duration::seconds(10),mTopLevelStream);
 }
 
 void TopLevelSpaceConnection::removeFromMap() {
@@ -104,6 +116,10 @@ void TopLevelSpaceConnection::connectToAddress(const std::tr1::weak_ptr<TopLevel
     }
 }
 TopLevelSpaceConnection::~TopLevelSpaceConnection() {
+    std::tr1::weak_ptr<Network::TimeSync> weakTimeSync(mTimeSync);
+    mTimeSync=std::tr1::shared_ptr<Network::TimeSync>();
+    while (weakTimeSync.lock())
+        SILOG(objecthost,warning,"Weak Time Sync holding onto resources. Waiting until unacquired");
     ObjectHostProxyManager::destroy();
     if (mParent) {
         removeFromMap();

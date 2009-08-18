@@ -599,7 +599,7 @@ ENDFOREACH()
 #protocol buffers preprocessing
 SET(ProtocolBuffersRoot ${LIBCORE_DIR}/protocol)
 SET(ProtocolBuffersSources
-  Persistence Sirikata Subscription Test
+  Persistence Sirikata Time Subscription Test
 )
 
 

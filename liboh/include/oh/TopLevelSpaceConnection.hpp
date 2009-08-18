@@ -36,6 +36,7 @@
 #include <oh/Platform.hpp>
 #include <network/Address.hpp>
 #include <oh/ObjectHostProxyManager.hpp>
+#include <network/TimeSync.hpp>
 namespace Sirikata {
 
 class HostedObject;
@@ -45,7 +46,7 @@ class ObjectHost;
 
 class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager {
     typedef std::tr1::unordered_map<ObjectReference,HostedObjectWPtr,ObjectReference::Hasher> HostedObjectMap;
-
+    Network::IOService *mIOService;
     ObjectHost*mParent;
     Network::Address mRegisteredAddress;
     Network::Stream *mTopLevelStream;
@@ -53,7 +54,7 @@ class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager 
 
     void removeFromMap();
     static void connectToAddress(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*oh,const Network::Address*addy);
-
+    std::tr1::shared_ptr<Network::TimeSync> mTimeSync;
   public:
     TopLevelSpaceConnection(Network::IOService*);
     ~TopLevelSpaceConnection();
@@ -70,6 +71,7 @@ class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager 
     void registerHostedObject(const ObjectReference &mRef, const HostedObjectPtr &hostedObj);
     void unregisterHostedObject(const ObjectReference &mRef);
     HostedObjectPtr getHostedObject(const ObjectReference &mref) const;
+    const Duration& getServerTimeOffset()const {return mTimeSync->getOffset();};
 };
 /*
 class HostedObjectListener {

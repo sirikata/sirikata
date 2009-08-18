@@ -144,7 +144,7 @@ TCPStream::~TCPStream() {
 TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0)) {
 }
 
-#define NUM_SIMULANEOUS_CONNECTIONS 1 // 3 is a good number here.
+#define NUM_SIMULANEOUS_CONNECTIONS 3 //is a good number here.
 
 void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,

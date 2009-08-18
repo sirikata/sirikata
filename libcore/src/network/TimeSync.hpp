@@ -1,5 +1,5 @@
-/*  Sirikata libspace -- Known Service Ports
- *  KnownServices.hpp
+/*  Sirikata Network Utilities
+ *  TimeSync.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,21 +29,26 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_KNOWN_SERVICES_HPP_
-#define SIRIKATA_KNOWN_SERVICES_HPP_
+
+#ifndef SIRIKATA_TimeSync_HPP__
+#define SIRIKATA_TimeSync_HPP__
+
 namespace Sirikata {
-namespace Services{
-enum Ports{
-    RPC=0, // Default MessageBody RPC service
-    REGISTRATION=1,
-    LOC=2,
-    GEOM=3, // Proximity service: Also known as PROX
-    ROUTER=4,
-    PERSISTENCE=5,
-	PHYSICS=6,
-    TIMESYNC=7,
-    OBJECT_CONNECTIONS=16383
+namespace Network {
+class TimeSync {
+protected:
+    Duration mOffset;
+    virtual void internalStartSync()=0;
+public:
+    const Duration&getOffset() const{
+        return mOffset;
+    }
+    TimeSync():mOffset(Duration::seconds(0)){ 
+    }
+    virtual ~TimeSync(){}
 };
+
+
 }
 }
 #endif
