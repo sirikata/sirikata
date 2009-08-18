@@ -145,7 +145,7 @@ static void Mono_Context_GetTimeByteArray(MonoObject*space_id,MonoObject *timeRe
     MemoryBuffer buf;
     Mono::Array(space_id).unboxInPlaceByteArray(buf);
     if (buf.size()==16) {
-        SpaceID sid=SpaceID(*Sirikata::Array<unsigned char, 16,true>().memcpy(buf.data(),buf.size()));
+        SpaceID sid=SpaceID(*Sirikata::Array<unsigned char, 16,true>().memcpy(&buf[0],buf.size()));
         Duration offset = SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(sid);
         Time cur=Time::now()+offset;
         //SILOG(monoscript,warning,"Time should be "<<cur.raw());
