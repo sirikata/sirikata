@@ -760,7 +760,7 @@ Sirikata::Time Object::unboxTime() const {
     // FIXME stopgap solution to value type mono_runtime_invoke memory leak
     // problem - call a static method on a utility class instead
     static Class RuntimeUtility = Domain::root().getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "HostedObject");
-    return Time( RuntimeUtility.send("TimeTicks", *this).unboxInt64() );
+    return RawTime( RuntimeUtility.send("TimeTicks", *this).unboxInt64() );
     //return Time( getProperty("Ticks").unboxInt64() );
 }
 

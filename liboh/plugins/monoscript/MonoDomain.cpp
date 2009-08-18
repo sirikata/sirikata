@@ -342,16 +342,20 @@ Object Domain::SpaceObjectReference(const Sirikata::SpaceObjectReference& sor) {
 }
 
 
+
+
 //#####################################################################
 // Function Time
 //#####################################################################
 Object Domain::Time(const Sirikata::Time& time) {
-    Sirikata::int64 ticks = ConvertTime(time);
-
-    return getAssembly("mscorlib").getClass("System", "DateTime").instance(
+    CSharpDuration ticks = ConvertTime(time);
+    return boxObject("Sirikata.Runtime","Sirikata.Runtime","Time",&ticks);
+/*
+    return getAssembly("m").getClass("System", "DateTime").instance();
         Int64(ticks)//, // FIXME whether we have the second parameter depends on the version of .NET
         //getAssembly("mscorlib").getClass("System", "DateTimeKind").getField("Utc")
     );
+*/
 }
 
 //#####################################################################

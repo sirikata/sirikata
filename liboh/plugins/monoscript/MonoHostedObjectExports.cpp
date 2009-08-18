@@ -115,7 +115,9 @@ static void Mono_Context_TickDelay(MonoObject*duration) {
     }
 }
 
-void Mono_Context_setTime(MonoObject *timeRetval, const Time& cur) {
+Mono::Object Mono_Context_setTime(const Time& cur) {
+    return MonoContext::getSingleton().getDomain().Time(cur);
+/*
     uint64 curRaw=cur.raw();
     Mono::Object retval(timeRetval);
     uint32 curLowerLower=curRaw%65536;
@@ -127,40 +129,41 @@ void Mono_Context_setTime(MonoObject *timeRetval, const Time& cur) {
     retval.send("setLowerUpper",
                 MonoContext::getSingleton().getDomain().UInt32(curLower),
                 MonoContext::getSingleton().getDomain().UInt32(curUpper)); 
+*/
 }
-static void Mono_Context_GetTime(MonoObject*space_id,MonoObject *timeRetval) {
+static MonoObject* Mono_Context_GetTime(MonoObject*space_id) {
     SpaceID sid=SpaceID(Mono::Object(space_id).unboxUUID());
     Duration offset = SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(sid);
     Time cur=Time::now()+offset;
-    Mono_Context_setTime(timeRetval,cur);
+    return Mono_Context_setTime(cur).object();
 }
 
 
-static void Mono_Context_GetLocalTime(MonoObject *timeRetval) {
-    Mono_Context_setTime(timeRetval,Time::now());
+static MonoObject* Mono_Context_GetLocalTime() {
+    return Mono_Context_setTime(Time::now()).object();
 }
-static void Mono_Context_GetTimeByteArray(MonoObject*space_id,MonoObject *timeRetval) {
+static MonoObject* Mono_Context_GetTimeByteArray(MonoObject*space_id) {
     MemoryBuffer buf;
     Mono::Array(space_id).unboxInPlaceByteArray(buf);
     if (buf.size()==16) {
         SpaceID sid=SpaceID(*Sirikata::Array<unsigned char, 16,true>().memcpy(buf.data(),buf.size()));
         Duration offset = SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(sid);
         Time cur=Time::now()+offset;
-        Mono_Context_setTime(timeRetval,cur);
+        return Mono_Context_setTime(cur).object();
     }else {
-         Mono_Context_GetLocalTime(timeRetval);
+         return Mono_Context_GetLocalTime();
     }
 }
 
-static void Mono_Context_GetTimeString(MonoObject*space_id, MonoObject* timeRetval) {
+static MonoObject* Mono_Context_GetTimeString(MonoObject*space_id) {
     std::string ss=Mono::Object(space_id).unboxString();
     try {
         SpaceID sid=SpaceID(UUID(ss,UUID::HumanReadable()));
         Duration offset = SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(sid);
         Time cur=Time::now()+offset;
-        Mono_Context_setTime(timeRetval,cur);
+        return Mono_Context_setTime(cur).object();
     }catch (std::invalid_argument&ia){
-         Mono_Context_GetLocalTime(timeRetval);
+        return Mono_Context_GetLocalTime();
     }
 }
 

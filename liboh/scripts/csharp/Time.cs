@@ -1,15 +1,15 @@
 using System;
 namespace Sirikata.Runtime {
-public class Time {
+public struct Time {
     uint mLowerWord;
     uint mUpperWord;
     
-    public ulong microseconds() {
+    public long microseconds() {
         ulong micro=mUpperWord;
         micro*=65536;
         micro*=65536;
         micro+=mLowerWord;
-        return micro;
+        return (long)micro;
     }
     public double seconds() {
         return (double)microseconds()/1000000.0;
@@ -39,10 +39,6 @@ public class Time {
         microsecond/=65536;
         mUpperWord=(uint)microsecond;
 
-    }
-    public Time() {
-        mUpperWord=0;
-        mLowerWord=0;
     }
     public Time(ulong microsecond) {
         mUpperWord=0;

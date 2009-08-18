@@ -267,36 +267,50 @@ void* ConvertSpaceObjectReferenceCSharpToCPP(CSharpSpaceObjectReference* csharp_
 
 
 
-/** NOTE: These depend on the fact that Time::raw and Time::fromRaw
- *  work using the same epoch as Mono.
- */
-Sirikata::int64 ConvertTime(const Sirikata::Time& in) {
-    return (in-Time(0.0)).toMicroseconds() * 10;
-}
-
+/*
 SIRIKATA_PLUGIN_EXPORT_C
 Sirikata::int64 ConvertTimeCPPToCSharpAndFree(void* jarg) {
     Sirikata::Time* arg = (Sirikata::Time*)jarg;
     Sirikata::int64 ticks = ConvertTime(*arg);
     delete arg;
     return ticks;
-}
-
-Sirikata::Time Time(Sirikata::int64 ticks) {
-    return Sirikata::Time::microseconds(ticks / 10);
-}
+    }*/
+/*
 
 SIRIKATA_PLUGIN_EXPORT_C
 void* ConvertTimeCSharpToCPP(Sirikata::int64 csharp_time) {
     return (void*) new Sirikata::Time( Time(csharp_time) );
 }
+*/
 
-
+Sirikata::Time RawTime(Sirikata::int64 ticks) {
+    return Sirikata::Time::microseconds(ticks);
+}
 
 
 
 void ConvertDuration(const Sirikata::Duration& in, CSharpDuration* out) {
-    out->ticks = in.toMicroseconds() * 10;
+    Sirikata::uint64 micro=in.toMicroseconds();
+    Sirikata::uint32 lowerlower=micro%65536;
+    Sirikata::uint32 upperlower=micro/65536%65536;
+    micro/=65536;
+    micro/=65536;
+    out->lowerTicks = lowerlower+65536*upperlower;
+    out->upperTicks = (Sirikata::uint32)micro;
+}
+void ConvertTime(const Sirikata::Time& in, CSharpDuration* out) {
+    Sirikata::uint64 micro=in.raw();
+    Sirikata::uint32 lowerlower=micro%65536;
+    Sirikata::uint32 upperlower=micro/65536%65536;
+    micro/=65536;
+    micro/=65536;
+    out->lowerTicks = lowerlower+65536*upperlower;
+    out->upperTicks = (Sirikata::uint32)micro;
+}
+CSharpDuration ConvertTime(const Sirikata::Time& in) {
+    CSharpDuration retval;
+    ConvertTime(in,&retval);
+    return retval;
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
@@ -306,9 +320,21 @@ void ConvertDurationCPPToCSharpAndFree(void* jarg, void* jout) {
     ConvertDuration(*arg, out);
     delete arg;
 }
+SIRIKATA_PLUGIN_EXPORT_C
+void ConvertTimeCPPToCSharpAndFree(void* jarg, void* jout) {
+    Sirikata::Time* arg = (Sirikata::Time*)jarg;
+    CSharpDuration* out = (CSharpDuration*)jout;
+    ConvertTime(*arg, out);
+    delete arg;
+}
 
 Sirikata::Duration Duration(CSharpDuration* in) {
-    return Sirikata::Duration::microseconds(in->ticks / 10);
+    Sirikata::uint64 micro;
+    micro=in->upperTicks;
+    micro*=65536;
+    micro*=65536;
+    micro+=in->lowerTicks;
+    return Sirikata::Duration::microseconds(micro);
 }
 
 SIRIKATA_PLUGIN_EXPORT_C
