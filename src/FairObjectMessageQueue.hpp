@@ -50,9 +50,8 @@ public:
 
     FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
 
-    void registerClient(UUID,float weight);
-    void removeClient(UUID);
-
+    virtual void registerClient(const UUID& oid,float weight);
+    virtual void unregisterClient(const UUID& oid);
 
     virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
     virtual void service(const Time&t);

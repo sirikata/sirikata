@@ -35,6 +35,7 @@
 
 #include "Forwarder.hpp"
 
+#include "ObjectHost.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 
@@ -161,7 +162,8 @@ void *main_loop(void *) {
 
     Forwarder* forwarder = new Forwarder(server_id);
 
-    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration, gTrace);
+    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    ObjectHost* obj_host = new ObjectHost(server_id, obj_factory, gTrace);
 
     LocationService* loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
 
@@ -351,7 +353,7 @@ void *main_loop(void *) {
     }
 
 
-    obj_factory->setObjectMessageQueue(oq);
+    obj_host->setObjectMessageQueue(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(
             server_id,
@@ -396,7 +398,7 @@ void *main_loop(void *) {
       Server* server = new Server(server_id, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
 
       prox->initialize(cseg);
-      obj_factory->initialize(server_id, server, cseg);
+      obj_factory->initialize(obj_host->context(), server_id, server, cseg);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -448,7 +450,7 @@ void *main_loop(void *) {
                 last_sample_time = last_sample_time + stats_sample_rate;
             }
 
-            obj_factory->tick(tbegin + elapsed);
+            obj_host->tick(tbegin + elapsed);
             gNetwork->service(tbegin + elapsed);
             cseg->tick(tbegin + elapsed);
             server->tick(tbegin + elapsed);
@@ -465,6 +467,7 @@ void *main_loop(void *) {
     delete cseg;
     delete loc_service;
     delete obj_factory;
+    delete obj_host;
 
     String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
     if (!sync_file.empty()) {

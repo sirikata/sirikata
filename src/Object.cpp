@@ -40,39 +40,31 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 0.0;
 
-Object::Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace)
+Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
+   mContext(ctx),
    mGlobalIntroductions(false),
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mOriginID(origin_id),
-   mObjectMessageQueue(obj_msg_q),
-   mQueryAngle(queryAngle),
-   mParent(parent),
-   mTrace(trace),
-   mLastTime(Time::null())
+   mQueryAngle(queryAngle)
 {
 }
 
-Object::Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace, const std::set<UUID>& objects)
+Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
  : mID(id),
+   mContext(ctx),
    mGlobalIntroductions(true),
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mOriginID(origin_id),
-   mObjectMessageQueue(obj_msg_q),
-   mQueryAngle(queryAngle),
-   mParent(parent),
-   mTrace(trace),
-   mLastTime(Time::null())
+   mQueryAngle(queryAngle)
 {
     mSubscribers = objects;
 }
 
 Object::~Object() {
-    mParent->notifyDestroyed(mID);
+    mContext->objectFactory->notifyDestroyed(mID);
 }
 
 void Object::addSubscriber(const UUID& sub) {
@@ -86,16 +78,17 @@ void Object::removeSubscriber(const UUID& sub) {
         mSubscribers.erase(it);
 }
 
-void Object::tick(const Time& t) {
-    checkPositionUpdate(t);
-    mLastTime = t;
+void Object::tick() {
+    checkPositionUpdate();
 }
 
 const TimedMotionVector3f Object::location() const {
     return mLocation;
 }
 
-void Object::checkPositionUpdate(const Time& t) {
+void Object::checkPositionUpdate() {
+    const Time& t = mContext->time;
+
     const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
     while(update != NULL && update->time() <= t) {
         mLocation = *update;
@@ -115,10 +108,10 @@ void Object::checkPositionUpdate(const Time& t) {
             obj_msg->set_source_port(OBJECT_PORT_LOCATION);
             obj_msg->set_dest_object(*it);
             obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
-            obj_msg->set_unique(GenerateUniqueID(mOriginID));
+            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
             obj_msg->set_payload( serializePBJMessage(loc) );
 
-            bool success = mObjectMessageQueue->send(obj_msg);
+            bool success = mContext->objectHost->send(this, obj_msg);
             // XXX FIXME do something on failure
         }
     }
@@ -152,8 +145,8 @@ void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
     TimedMotionVector3f loc(contents.t(), MotionVector3f(contents.position(), contents.velocity()));
 
-    mTrace->loc(
-        mLastTime,
+    mContext->trace->loc(
+        mContext->time,
         msg.dest_object(),
         msg.source_object(),
         loc
@@ -173,8 +166,8 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-        mTrace->prox(
-            mLastTime,
+        mContext->trace->prox(
+            mContext->time,
             msg.dest_object(),
             addition.object(),
             true,
@@ -190,17 +183,18 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
             obj_msg->set_dest_object(addition.object());
             obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_unique(GenerateUniqueID(mOriginID));
+            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
             obj_msg->set_payload( serializePBJMessage(subs) );
 
-            mObjectMessageQueue->send(obj_msg);
+            bool success = mContext->objectHost->send(this, obj_msg);
+            // FIXME do something on failure
         }
     }
     for(uint32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::IObjectRemoval removal = contents.removal(idx);
 
-        mTrace->prox(
-            mLastTime,
+        mContext->trace->prox(
+            mContext->time,
             msg.dest_object(),
             removal.object(),
             false,
@@ -216,10 +210,11 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
             obj_msg->set_dest_object(removal.object());
             obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_unique(GenerateUniqueID(mOriginID));
+            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
             obj_msg->set_payload( serializePBJMessage(subs) );
 
-            mObjectMessageQueue->send(obj_msg);
+            bool success = mContext->objectHost->send(this, obj_msg);
+            // FIXME do something on failure
         }
     }
 }
@@ -229,8 +224,8 @@ void Object::subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg
     bool parse_success = contents.ParseFromString(msg.payload());
     assert(parse_success);
 
-    mTrace->subscription(
-        mLastTime,
+    mContext->trace->subscription(
+        mContext->time,
         msg.dest_object(),
         msg.source_object(),
         (contents.action() == CBR::Protocol::Subscription::SubscriptionMessage::Subscribe) ? true : false

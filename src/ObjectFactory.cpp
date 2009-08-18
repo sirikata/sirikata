@@ -46,13 +46,12 @@
 
 namespace CBR {
 
-ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration, Trace* trace)
- : mObjectMessageQueue(NULL),
+ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)
+ : mContext(NULL),
    mServerID(0),
    mServer(NULL),
    mCSeg(NULL),
-   mFirstTick(true),
-   mTrace(trace)
+   mFirstTick(true)
 {
     Time start(Time::null());
     Time end = start + duration;
@@ -92,7 +91,8 @@ ObjectFactory::~ObjectFactory() {
     }
 }
 
-void ObjectFactory::initialize(ServerID sid, Server* server, CoordinateSegmentation* cseg) {
+void ObjectFactory::initialize(const ObjectHostContext* ctx, ServerID sid, Server* server, CoordinateSegmentation* cseg) {
+    mContext = ctx;
     mServerID = sid;
     mServer = server;
     mCSeg = cseg;
@@ -138,24 +138,15 @@ Object* ObjectFactory::object(const UUID& id) {
     ObjectMap::iterator it = mObjects.find(id);
     if (it != mObjects.end()) return it->second;
 
-    assert( mObjectMessageQueue != NULL);
-
     Object* new_obj = NULL;
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(mServerID, this, id, mObjectMessageQueue, motion(id), queryAngle(id), mTrace, mObjectIDs);
+        new_obj = new Object(id, motion(id), queryAngle(id), mContext, mObjectIDs);
     else
-        new_obj = new Object(mServerID, this, id, mObjectMessageQueue, motion(id), queryAngle(id), mTrace);
+        new_obj = new Object(id, motion(id), queryAngle(id), mContext);
     mObjects[id] = new_obj;
     return new_obj;
 }
 
-void ObjectFactory::setObjectMessageQueue(ObjectMessageQueue* omq) {
-    mObjectMessageQueue = omq;
-    for(ObjectSet::iterator it = mObjectIDs.begin(); it != mObjectIDs.end(); it++) {
-        UUID id = *it;
-        mObjectMessageQueue->registerClient(id, 1);
-    }
-}
 
 bool ObjectFactory::isActive(const UUID& id) {
     ObjectMap::iterator it = mObjects.find(id);
@@ -168,12 +159,13 @@ static bool isInServerRegion(const BoundingBoxList& bboxlist, Vector3f pos) {
     return false;
 }
 
-void ObjectFactory::tick(const Time& t) {
+void ObjectFactory::tick() {
+    Time t = mContext->time;
     BoundingBoxList serverRegion = mCSeg->serverRegion(mServerID);
     for(iterator it = begin(); it != end(); it++) {
         // Active objects receive a tick
         if (isActive(*it)) {
-            object(*it)->tick(t);
+            object(*it)->tick();
             continue;
         }
         // Inactive objects get checked to see if they have moved into this server region
@@ -182,7 +174,7 @@ void ObjectFactory::tick(const Time& t) {
         if (isInServerRegion(serverRegion, curPos)) {
             // The object has moved into the region, so start its connection process
             Object* obj = object(*it);
-            ObjectConnection* conn = new ObjectConnection(obj, mTrace);
+            ObjectConnection* conn = new ObjectConnection(obj, mContext->trace);
 
             if (mFirstTick) { // initial connection
                 CBR::Protocol::Session::Connect connect_msg;

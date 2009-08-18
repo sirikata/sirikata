@@ -35,12 +35,12 @@
 #include "Server.hpp"
 
 namespace CBR {
-class ObjectMessageQueue;
 class MotionPath;
 class Object;
 class CoordinateSegmentation;
 class Server;
 class Trace;
+class ObjectHostContext;
 
 /** Generates objects for the simulation.  This class actually has 2 jobs.
  *  First, it generates MotionPaths for every object that will exist in the
@@ -61,10 +61,10 @@ public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
-    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration, Trace* trace);
+    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 
-    void initialize(ServerID sid, Server* server, CoordinateSegmentation* cseg);
+    void initialize(const ObjectHostContext* ctx, ServerID sid, Server* server, CoordinateSegmentation* cseg);
 
     iterator begin();
     const_iterator begin() const;
@@ -76,9 +76,7 @@ public:
     SolidAngle queryAngle(const UUID& id);
     Object* object(const UUID& id);
 
-    void setObjectMessageQueue(ObjectMessageQueue* sq);
-
-    void tick(const Time& t);
+    void tick();
 
 private:
     bool isActive(const UUID& id);
@@ -86,15 +84,14 @@ private:
     friend class Object;
     void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
 
+    const ObjectHostContext* mContext;
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
     ObjectMap mObjects;
-    ObjectMessageQueue* mObjectMessageQueue;
     ServerID mServerID;
     Server* mServer;
     CoordinateSegmentation* mCSeg;
     bool mFirstTick; // Temporary solution since on the first connection we can't wait for migration data
-    Trace* mTrace;
 }; // class ObjectFactory
 
 } // namespace CBR

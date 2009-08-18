@@ -448,9 +448,11 @@ void Forwarder::receiveMessage(Message* msg) {
 
 void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
     mObjectConnections[dest_obj] = conn;
+    mObjectMessageQueue->registerClient(dest_obj, 1); // FIXME weight?
 }
 
 ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
+    mObjectMessageQueue->unregisterClient(dest_obj);
     ObjectConnection* conn = mObjectConnections[dest_obj];
     mObjectConnections.erase(dest_obj);
     return conn;

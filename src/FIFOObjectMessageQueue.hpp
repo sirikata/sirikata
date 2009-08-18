@@ -16,8 +16,8 @@ public:
     virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
     virtual void service(const Time& t);
 
-    virtual void registerClient(UUID oid,float weight=1);
-
+    virtual void registerClient(const UUID& oid,float weight=1);
+    virtual void unregisterClient(const UUID& oid);
 private:
     class ServerMessagePair {
     private:

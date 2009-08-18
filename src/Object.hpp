@@ -37,7 +37,7 @@
 #include "Message.hpp"
 #include "MotionPath.hpp"
 #include "SolidAngle.hpp"
-#include "Statistics.hpp"
+#include "ObjectHost.hpp"
 
 namespace CBR {
 
@@ -56,9 +56,9 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace);
+    Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const ServerID& origin_id, ObjectFactory* parent, const UUID& id, ObjectMessageQueue* obj_msg_q, MotionPath* motion, SolidAngle queryAngle, Trace* trace, const std::set<UUID>& objects);
+    Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects);
 
     ~Object();
 
@@ -80,7 +80,7 @@ public:
         return mSubscribers;
     }
 
-    void tick(const Time& t);
+    void tick();
 
     void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
 
@@ -93,20 +93,16 @@ private:
     void addSubscriber(const UUID& sub);
     void removeSubscriber(const UUID& sub);
 
-    void checkPositionUpdate(const Time& t);
+    void checkPositionUpdate();
 
     UUID mID;
+    const ObjectHostContext* mContext;
     bool mGlobalIntroductions;
     MotionPath* mMotion;
     TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
-    ServerID mOriginID;
-    ObjectMessageQueue* mObjectMessageQueue;
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;
-    ObjectFactory* mParent;
-    Trace* mTrace;
-    Time mLastTime;
 }; // class Object
 
 } // namespace CBR

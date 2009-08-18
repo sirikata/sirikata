@@ -22,8 +22,8 @@ public:
     virtual bool send(CBR::Protocol::Object::ObjectMessage* msg) = 0;
     virtual void service(const Time& t)=0;
 
-    virtual void registerClient(UUID oid,float weight=1) = 0;
-
+    virtual void registerClient(const UUID& oid, float weight=1) = 0;
+    virtual void unregisterClient(const UUID& oid) = 0;
 protected:
     ServerID lookup(const UUID& obj_id) {
         Vector3f pos = mLocationService->currentPosition(obj_id);

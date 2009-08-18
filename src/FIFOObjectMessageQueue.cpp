@@ -54,8 +54,10 @@ void FIFOObjectMessageQueue::service(const Time& t){
     mLastTime = t;
 }
 
-void FIFOObjectMessageQueue::registerClient(UUID sid, float weight) {
+void FIFOObjectMessageQueue::registerClient(const UUID& sid, float weight) {
+}
 
+void FIFOObjectMessageQueue::unregisterClient(const UUID& sid) {
 }
 
 
