@@ -42,7 +42,8 @@ class Object;
 class ObjectFactory;
 class ObjectHost;
 class Trace;
-class ObjectMessageQueue;
+class Server;
+class ObjectConnection;
 
 class ObjectHostContext {
 public:
@@ -70,6 +71,8 @@ public:
 
     const ObjectHostContext* context() const;
 
+    void openConnection(ObjectConnection* conn);
+
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 
     void tick(const Time& t);
@@ -77,12 +80,12 @@ public:
     // FIXME this is temporary until we have messages going out over
     // a real network connection to the server, which should then put
     // them on its ObjectMessageQueue
-    void setObjectMessageQueue(ObjectMessageQueue* omq);
+    void setServer(Server* server);
 
 private:
     ObjectHostContext* mContext;
     uint64 mOHId;
-    ObjectMessageQueue* mObjectMessageQueue;
+    Server* mServer;
 }; // class ObjectHost
 
 } // namespace CBR

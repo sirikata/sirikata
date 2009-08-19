@@ -353,7 +353,6 @@ void *main_loop(void *) {
     }
 
 
-    obj_host->setObjectMessageQueue(oq);
     ServerWeightCalculator* weight_calc =
         new ServerWeightCalculator(
             server_id,
@@ -399,6 +398,7 @@ void *main_loop(void *) {
 
       prox->initialize(cseg);
       obj_factory->initialize(obj_host->context(), server_id, server, cseg);
+    obj_host->setServer(server);
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();

@@ -297,6 +297,10 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
 }
 
 
+bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    return mObjectMessageQueue->send(obj_msg);
+}
+
 
 
   void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
@@ -411,10 +415,17 @@ void Forwarder::receiveMessage(Message* msg) {
     assert(obj_msg != NULL);
 
     UUID dest = obj_msg->contents.dest_object();
-    ObjectConnection* conn = getObjectConnection(dest);
-    if (conn != NULL) {
-        conn->deliver(obj_msg->contents);
+
+    // Special case: Object 0 is the space itself
+    if (dest == UUID::null()) {
+        dispatchMessage(obj_msg->contents);
+        return;
     }
+
+    // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
+    ObjectConnection* conn = getObjectConnection(dest);
+    if (conn != NULL)
+        conn->deliver(obj_msg->contents);
     else {
         CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
         route(obj_msg_cpy, true);

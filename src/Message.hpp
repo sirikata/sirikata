@@ -67,9 +67,10 @@ typedef uint8 MessageType;
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
 
 // List of well known object ports, which should replace message types
-#define OBJECT_PORT_PROXIMITY     1
-#define OBJECT_PORT_LOCATION      2
-#define OBJECT_PORT_SUBSCRIPTION  3
+#define OBJECT_PORT_SESSION       1
+#define OBJECT_PORT_PROXIMITY     2
+#define OBJECT_PORT_LOCATION      3
+#define OBJECT_PORT_SUBSCRIPTION  4
 
 template <typename scalar>
 class SplitRegion {
@@ -121,18 +122,34 @@ public:
     virtual void receiveMessage(Message* msg) = 0;
 }; // class MessageRecipient
 
+/** Interface for classes that need to receive object messages, i.e. those that
+ *  need to talk to objects/object hosts.
+ */
+class ObjectMessageRecipient {
+public:
+    virtual ~ObjectMessageRecipient() {}
+
+    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
+};
+
 /** Base class for a message dispatcher. */
 class MessageDispatcher {
 public:
     void registerMessageRecipient(MessageType type, MessageRecipient* recipient);
     void unregisterMessageRecipient(MessageType type, MessageRecipient* recipient);
 
+    // Registration and unregistration for object messages destined for the space
+    void registerObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
+    void unregisterObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
 protected:
     void dispatchMessage(Message* msg) const;
+    void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
 private:
     typedef std::map<MessageType, MessageRecipient*> MessageRecipientMap;
     MessageRecipientMap mMessageRecipients;
+    typedef std::map<uint16, ObjectMessageRecipient*> ObjectMessageRecipientMap;
+    ObjectMessageRecipientMap mObjectMessageRecipients;
 }; // class MessageDispatcher
 
 /** Base class for an object that can route messages to their destination. */

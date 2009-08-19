@@ -169,6 +169,30 @@ void MessageDispatcher::unregisterMessageRecipient(MessageType type, MessageReci
     mMessageRecipients.erase(it);
 }
 
+void MessageDispatcher::registerObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient) {
+    ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
+    if (it != mObjectMessageRecipients.end()) {
+        // FIXME warn that we are overriding old recipient
+    }
+
+    mObjectMessageRecipients[port] = recipient;
+}
+
+void MessageDispatcher::unregisterObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient) {
+    ObjectMessageRecipientMap::iterator it = mObjectMessageRecipients.find(port);
+    if (it == mObjectMessageRecipients.end()) {
+        // FIXME warn that we are trying to remove an recipient that hasn't been registered
+        return;
+    }
+
+    if (it->second != recipient) {
+        // FIXME warn that we tried to remove the wrong recipient
+        return;
+    }
+
+    mObjectMessageRecipients.erase(it);
+}
+
 void MessageDispatcher::dispatchMessage(Message* msg) const {
     if (msg == NULL) return;
 
@@ -180,6 +204,20 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
     }
 
     MessageRecipient* recipient = it->second;
+    recipient->receiveMessage(msg);
+}
+
+void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const {
+    // This is on the space server, so we should only be calling this if the dest is the space
+    assert(msg.dest_object() == UUID::null());
+    ObjectMessageRecipientMap::const_iterator it = mObjectMessageRecipients.find(msg.dest_port());
+
+    if (it == mObjectMessageRecipients.end()) {
+        // FIXME log warning
+        return;
+    }
+
+    ObjectMessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
 }
 

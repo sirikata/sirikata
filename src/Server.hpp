@@ -34,7 +34,7 @@ namespace CBR
    *  object -> server mapping.  This is a singleton for each simulated
    *  server.  Other servers are referenced by their ServerID.
    */
-class Server : public MessageRecipient
+class Server : public MessageRecipient, public ObjectMessageRecipient
   {
   public:
       Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
@@ -47,16 +47,28 @@ class Server : public MessageRecipient
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
 
-    // Handle Connect message from object
-    void connect(ObjectConnection* conn, const std::string& connectPayload);
-    // Handle Migrate message from object
-    void migrate(ObjectConnection* conn, const std::string& migratePayload);
+      // FIXME this should come form the network, currently just this way because ObjectHosts
+      // aren't actually networked yet
+      void handleOpenConnection(ObjectConnection* conn);
+      // FIXME this should come from the network instead of directly from ObjectHost
+      // Note that this method should *only* be used for messages from the object host
+      // ObjectMessages from other space servers should arrive via the normal ServerMessage
+      // pipeline
+      bool receiveObjectHostMessage(const std::string& msg);
 
       virtual void receiveMessage(Message* msg);
+      virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
   private:
     void proximityTick(const Time& t);
     void networkTick(const Time& t);
     void checkObjectMigrations();
+
+    // Handle Session messages from an object
+    void handleSessionMessage(ObjectConnection* conn, const std::string& session_payload);
+    // Handle Connect message from object
+    void handleConnect(ObjectConnection* conn, const CBR::Protocol::Session::Connect& connect_msg);
+    // Handle Migrate message from object
+    void handleMigrate(ObjectConnection* conn, const CBR::Protocol::Session::Migrate& migrate_msg);
 
     void handleMigration(const UUID& obj_id);
 
@@ -76,6 +88,8 @@ class Server : public MessageRecipient
 
     typedef std::map<UUID, CBR::Protocol::Migration::MigrationMessage*> ObjectMigrationMap;
       ObjectMigrationMap mObjectMigrations;
+
+    ObjectConnectionMap mConnectingObjects;
 }; // class Server
 
 } // namespace CBR

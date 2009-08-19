@@ -34,14 +34,14 @@
 #include "Statistics.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
-#include "ObjectMessageQueue.hpp"
+#include "Server.hpp"
 
 namespace CBR {
 
 ObjectHost::ObjectHost(const ServerID& sid, ObjectFactory* obj_factory, Trace* trace)
  : mContext( new ObjectHostContext() ),
    mOHId((uint64)sid),
-   mObjectMessageQueue(NULL)
+   mServer(NULL)
 {
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
@@ -56,16 +56,20 @@ const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
-bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-    obj_msg->set_source_object(src->uuid());
-    obj_msg->set_source_port(src_port);
-    obj_msg->set_dest_object(dest);
-    obj_msg->set_dest_port(dest_port);
-    obj_msg->set_unique(GenerateUniqueID(mOHId));
-    obj_msg->set_payload( payload );
+void ObjectHost::openConnection(ObjectConnection* conn) {
+    mServer->handleOpenConnection(conn);
+}
 
-    return mObjectMessageQueue->send(obj_msg);
+bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+    CBR::Protocol::Object::ObjectMessage obj_msg;
+    obj_msg.set_source_object(src->uuid());
+    obj_msg.set_source_port(src_port);
+    obj_msg.set_dest_object(dest);
+    obj_msg.set_dest_port(dest_port);
+    obj_msg.set_unique(GenerateUniqueID(mOHId));
+    obj_msg.set_payload( payload );
+
+    return mServer->receiveObjectHostMessage( serializePBJMessage(obj_msg) );
 }
 
 void ObjectHost::tick(const Time& t) {
@@ -75,8 +79,8 @@ void ObjectHost::tick(const Time& t) {
     mContext->objectFactory->tick();
 }
 
-void ObjectHost::setObjectMessageQueue(ObjectMessageQueue* omq) {
-    mObjectMessageQueue = omq;
+void ObjectHost::setServer(Server* server) {
+    mServer = server;
 }
 
 } // namespace CBR

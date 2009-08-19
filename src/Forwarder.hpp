@@ -94,6 +94,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // This version is provided if you already know which server the message should be sent to
       void route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward);
   public:
+      bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 
       void receiveMessage(Message* msg);
 

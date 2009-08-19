@@ -38,7 +38,7 @@ message TimedMotionVector {
     required vector3f velocity = 3;
 }
 
-
+// Connection request sent to space server
 message Connect {
     required uuid object = 1;
     required TimedMotionVector loc = 2;
@@ -46,6 +46,25 @@ message Connect {
     required float query_angle = 4;
 }
 
+// Message sent from space server to object host telling
+// it that it needs to migrate
+message InitiateMigration {
+    required uint64 new_server = 1;
+}
+
+// Message sent from new instantiation of object to space
+// server to indicate it is ready to take over.
+// FIXME should go away when objects are in separate object
+// hosts.
 message Migrate {
     required uuid object = 1;
+}
+
+
+
+// Container for session messages.
+message Container {
+    optional Connect connect = 1;
+    optional InitiateMigration init_migration = 2;
+    optional Migrate migrate = 3;
 }

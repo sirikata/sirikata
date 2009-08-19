@@ -176,8 +176,11 @@ void ObjectFactory::tick() {
             Object* obj = object(*it);
             ObjectConnection* conn = new ObjectConnection(obj, mContext->trace);
 
+            mContext->objectHost->openConnection(conn);
+
             if (mFirstTick) { // initial connection
-                CBR::Protocol::Session::Connect connect_msg;
+                CBR::Protocol::Session::Container session_msg;
+                CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
                 connect_msg.set_object(*it);
                 CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
                 loc.set_t(curMotion.updateTime());
@@ -186,14 +189,24 @@ void ObjectFactory::tick() {
                 connect_msg.set_bounds(obj->bounds());
                 connect_msg.set_query_angle(obj->queryAngle().asFloat());
 
-                std::string connect_serialized = serializePBJMessage(connect_msg);
-                mServer->connect(conn, connect_serialized);
+                bool success = mContext->objectHost->send(
+                    obj, OBJECT_PORT_SESSION,
+                    UUID::null(), OBJECT_PORT_SESSION,
+                    serializePBJMessage(session_msg)
+                );
+                // FIXME do something on failure
             }
             else { // migration
-                CBR::Protocol::Session::Migrate migrate_msg;
+                CBR::Protocol::Session::Container session_msg;
+                CBR::Protocol::Session::IMigrate migrate_msg = session_msg.mutable_migrate();
                 migrate_msg.set_object(*it);
-                std::string migrate_serialized = serializePBJMessage(migrate_msg);
-                mServer->migrate(conn, migrate_serialized);
+                std::string session_serialized = serializePBJMessage(session_msg);
+                bool success = mContext->objectHost->send(
+                    obj, OBJECT_PORT_SESSION,
+                    UUID::null(), OBJECT_PORT_SESSION,
+                    serializePBJMessage(session_msg)
+                );
+                // FIXME do something on failure
             }
         }
     }

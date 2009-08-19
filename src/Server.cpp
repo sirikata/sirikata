@@ -37,6 +37,7 @@ Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, 
       mForwarder(forwarder)
   {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
+      mForwarder->registerObjectMessageRecipient(OBJECT_PORT_SESSION, this);
 
     mForwarder->initialize(trace,cseg,oseg,loc_service,omq,smq,lm,&mCurrentTime, mProximity);    //run initialization for forwarder
 
@@ -44,6 +45,7 @@ Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, 
 
 Server::~Server()
 {
+    mForwarder->unregisterObjectMessageRecipient(OBJECT_PORT_SESSION, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
@@ -63,18 +65,56 @@ void Server::networkTick(const Time&t)
   mForwarder->tick(t);
 }
 
+void Server::handleOpenConnection(ObjectConnection* conn) {
+    mConnectingObjects[conn->id()] = conn;
+}
 
-
-// Handle Connect message from object
-void Server::connect(ObjectConnection* conn, const std::string& connectPayload) {
-    CBR::Protocol::Session::Connect connect_msg;
-    bool parse_success = connect_msg.ParseFromArray((void*)&connectPayload[0], connectPayload.size());
+bool Server::receiveObjectHostMessage(const std::string& msg) {
+    // All messages from object host to space server are object messages
+    // They are either to another object or to the space (UUID 0)
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    bool parse_success = obj_msg->ParseFromArray((void*)&msg[0], msg.size());
     assert(parse_success);
 
+    // Messages destined for the space skip the object message queue
+    if (obj_msg->dest_object() == UUID::null()) {
+        receiveMessage(*obj_msg);
+        delete obj_msg;
+        return true;
+    }
+    else {
+        return mForwarder->routeObjectHostMessage(obj_msg);
+    }
+}
+
+// Handle Session messages from an object
+void Server::handleSessionMessage(ObjectConnection* conn, const std::string& session_payload) {
+    CBR::Protocol::Session::Container session_msg;
+    bool parse_success = session_msg.ParseFromArray((void*)&session_payload[0], session_payload.size());
+    assert(parse_success);
+
+    // Connect messages
+    if (session_msg.has_connect())
+        handleConnect(conn, session_msg.connect());
+
+    // InitiateMigration messages
+    assert(!session_msg.has_init_migration());
+
+    // Migrate messages
+    if (session_msg.has_migrate())
+        handleMigrate(conn, session_msg.migrate());
+}
+
+// Handle Connect message from object
+void Server::handleConnect(ObjectConnection* conn, const CBR::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = conn->id();
     assert(obj_id == connect_msg.object());
 
     mObjects[obj_id] = conn;
+
+    // If the connection is in the connecting list, remove it
+    mConnectingObjects.erase(obj_id);
+
     // Add object as local object to LocationService
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
@@ -85,13 +125,12 @@ void Server::connect(ObjectConnection* conn, const std::string& connectPayload) 
 }
 
 // Handle Migrate message from object
-void Server::migrate(ObjectConnection* conn, const std::string& migratePayload) {
-    CBR::Protocol::Session::Migrate migrate_msg;
-    bool parse_success = migrate_msg.ParseFromArray((void*)&migratePayload[0], migratePayload.size());
-    assert(parse_success);
-
+void Server::handleMigrate(ObjectConnection* conn, const CBR::Protocol::Session::Migrate& migrate_msg) {
     assert(conn->id() == migrate_msg.object());
     mObjectsAwaitingMigration[migrate_msg.object()] = conn;
+
+    // If the connection is in the connecting list, remove it
+    mConnectingObjects.erase(migrate_msg.object());
 
     // Try to handle this migration if all info is available
     handleMigration(migrate_msg.object());
@@ -109,6 +148,33 @@ void Server::receiveMessage(Message* msg) {
     delete msg;
 }
 
+void Server::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+    switch( msg.dest_port() ) {
+      case OBJECT_PORT_SESSION:
+          {
+              ObjectConnection* conn = NULL;
+
+              {
+                  ObjectConnectionMap::iterator it = mObjects.find(msg.source_object());
+                  if(it != mObjects.end())
+                      conn = it->second;
+              }
+
+              {
+                  ObjectConnectionMap::iterator it = mConnectingObjects.find(msg.source_object());
+                  if (it != mObjects.end())
+                      conn = it->second;
+              }
+
+              handleSessionMessage(conn, msg.payload());
+          }
+        break;
+      default:
+        printf("Received message for unknown port: %d\n", msg.dest_port());
+        break;
+    }
+}
+
 void Server::handleMigration(const UUID& obj_id) {
     // Try to find the info in both lists -- the connection and migration information
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
@@ -118,7 +184,6 @@ void Server::handleMigration(const UUID& obj_id) {
     ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
     if (migration_map_it == mObjectMigrations.end())
         return;
-
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
@@ -247,6 +312,29 @@ void Server::checkObjectMigrations()
 
         if (new_server_id != mID)
         {
+            // FIXME While we're working on the transition to a separate object host
+            // we do 2 things when we detect a server boundary crossing:
+            // 1. Generate a message which is sent to the object host telling it to
+            //    transition to the new server
+            // 2. Generate the migrate message which contains the current state of
+            //    the object which will be reconstituted on the other space server.
+
+
+            // Part 1
+/*
+            CBR::Protocol::Session::InitiateMigration init_migration_msg;
+            init_migration_msg.set_new_server( (uint64)new_server_id );
+            CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = new CBR::Protocol::Object::ObjectMessage();
+            init_migr_obj_msg->set_source_object(UUID::null());
+            init_migr_obj_msg->set_source_port(OBJECT_PORT_SESSION);
+            init_migr_obj_msg->set_dest_object(obj_id);
+            init_migr_obj_msg->set_dest_port(OBJECT_PORT_SESSION);
+            init_migr_obj_msg->set_unique(GenerateUniqueID(id()));
+            init_migr_obj_msg->set_payload( serializePBJMessage(init_migration_msg) );
+            mForwarder->route(init_migr_obj_msg);
+*/
+            // Part 2
+
           //bftm
           //          mOSeg->migrateObject(obj_id,new_server_id);
           //
