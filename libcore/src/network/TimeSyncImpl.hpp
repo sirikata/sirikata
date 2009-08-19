@@ -53,7 +53,7 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
         rmh.SerializeToString(&syncstr);
         Protocol::TimeSync sync;
         sync.set_sync_round(mSyncRound);
-        sync.set_client_time(Time::now());
+        sync.set_client_time(Time::now(Duration::zero()));
         sync.AppendToString(&syncstr);
         for (int i=0;i<mNumParallel;++i) {
             mStream->send(MemoryReference(syncstr),Unreliable);
@@ -64,7 +64,7 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
             Protocol::TimeSync sync;
             sync.ParseFromArray(&data[0],data.size());
             if (sync.has_sync_round()&&sync.sync_round()==mSyncRound&&sync.has_server_time()&&sync.has_client_time()) {
-                sync.set_round_trip(Time::now());
+                sync.set_round_trip(Time::now(Duration::zero()));
                 mSamples.push_back(sync);
                 incrementSyncRound();
                 if (mSamples.size()>=(size_t)mNumAverage) {

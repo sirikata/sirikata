@@ -37,13 +37,14 @@
 #include "../OgreSystem.hpp"
 #include "../CameraEntity.hpp"
 #include "../MeshEntity.hpp"
+#include "oh/SpaceTimeOffsetManager.hpp"
 
 using std::set;
 
 namespace Meru {
 
 GraphicsResourceEntity::GraphicsResourceEntity(const SpaceObjectReference &id, GraphicsEntity *graphicsEntity)
-: GraphicsResource(id.toString(), ENTITY), mGraphicsEntity(graphicsEntity), mLoadTime(Time::now())
+    : GraphicsResource(id.toString(), ENTITY), mGraphicsEntity(graphicsEntity), mLoadTime(Sirikata::Task::LocalTime::now())
 {
 }
 
@@ -61,7 +62,7 @@ float GraphicsResourceEntity::calcBenefit()
     return 0.0f;
   }
   if (MESH_DISTANCE_IS_KING || STANDARD_COST_BENEFIT) {
-    const Location& curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Time::now());
+    const Location& curLoc = mGraphicsEntity->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(mGraphicsEntity->getProxy().getObjectReference().space()));
 
     /*****************
      *  Loop through all OgreSystem's, and loop through the list of attached cameras
@@ -77,7 +78,7 @@ float GraphicsResourceEntity::calcBenefit()
         cameraEnd = system->mAttachedCameras.end();
       for (; cameraIter != cameraEnd; ++cameraIter) {
         CameraEntity *camera = *cameraIter;
-        const Location& avatarLoc = camera->getProxy().extrapolateLocation(Time::now());
+        const Location& avatarLoc = camera->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space()));
         float dist = (curLoc.getPosition() - avatarLoc.getPosition()).length();
         float radius = mGraphicsEntity->getBoundingInfo().radius();
 
@@ -119,7 +120,7 @@ void GraphicsResourceEntity::doLoad()
 {
   assert(mDependencies.size() > 0);
 
-  mLoadTime = CURRENT_TIME;
+  mLoadTime = Sirikata::Task::LocalTime::now();
   if (mMeshID.filename().empty()) {
       SILOG(ogre, error, "Attempt to load an empty mesh filename. ID = " << mID << "; URI = "<<mGraphicsEntity->getMeshURI());
   }
@@ -135,7 +136,7 @@ void GraphicsResourceEntity::doUnload()
   if (mGraphicsEntity) {
     mGraphicsEntity->unloadMesh();
   }
-  mLoadTime = Time::now();
+  mLoadTime = Sirikata::Task::LocalTime::now();
   unloaded(true, mLoadEpoch);
 }
 

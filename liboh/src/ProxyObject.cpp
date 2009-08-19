@@ -40,7 +40,7 @@
 #include "util/RoutableMessageBody.hpp"
 #include "util/RoutableMessageHeader.hpp"
 #include "util/KnownServices.hpp"
-
+#include "oh/SpaceTimeOffsetManager.hpp"
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id)
@@ -92,7 +92,7 @@ bool ProxyObject::isStatic(const TemporalValue<Location>::Time& when) const {
 // protected:
 // Notification that the Parent has been destroyed
 void ProxyObject::destroyed() {
-    unsetParent(TemporalValue<Location>::Time::now());
+    unsetParent(SpaceTimeOffsetManager::getSingleton().now(mID.space()));
 }
 
 QueryTracker *ProxyObject::getQueryTracker() const {
@@ -122,7 +122,6 @@ void ProxyObject::setLocation(TemporalValue<Location>::Time timeStamp,
     PositionProvider::notify(&PositionListener::updateLocation, timeStamp, location);
 }
 
-Task::AbsTime startTime(Task::AbsTime::now());
 
 void ProxyObject::requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc) {
     if (mLocationAuthority) {

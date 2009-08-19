@@ -107,7 +107,7 @@ void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraE
 void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians);
 
 template <class Iterator>
-inline Vector3d averageSelectedPosition(Task::AbsTime now, Iterator iter, Iterator end) {
+inline Vector3d averageSelectedPosition(const Time &now, Iterator iter, Iterator end) {
     Vector3d totalPosition(0,0,0);
     size_t count = 0;
     for (;iter != end; ++iter) {

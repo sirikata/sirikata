@@ -150,14 +150,14 @@ public:
 	virtual unsigned int dequeueAll()=0;
 
 	/** Calls dequeuePoll in a loop until either the time runs out, or no more
-	 * jobs are left. Calling this with AbsTime::null() executes dequeueAll(). */
-	virtual unsigned int dequeueUntil(AbsTime deadline) {
-		if (deadline == AbsTime::null()) {
+	 * jobs are left. Calling this with LocalTime::null() executes dequeueAll(). */
+	virtual unsigned int dequeueUntil(LocalTime deadline) {
+		if (deadline == LocalTime::null()) {
 			return dequeueAll();
 		}
 		unsigned int count = 0;
 		// Do at least one item no matter what.
-		while (dequeuePoll() && AbsTime::now() < deadline) {
+		while (dequeuePoll() && LocalTime::now() < deadline) {
 			count += 1;
 		}
 		return count;

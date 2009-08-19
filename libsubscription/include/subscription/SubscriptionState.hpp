@@ -55,14 +55,14 @@ private:
         Subscriber(const std::tr1::shared_ptr<Network::Stream>&sender,const Protocol::Subscribe&);
         ///broadcasts the message to the mSender
         void broadcast(const MemoryReference&);
-        Time computeNextUpdateFromNow();
+        Task::LocalTime computeNextUpdateFromNow();
     };
     class SubscriberTimePair {
         friend class SubscriptionState;
       public:
-        Time mNextUpdateTime;
+        Task::LocalTime mNextUpdateTime;
         Subscriber* mSubscriber;
-        SubscriberTimePair(const Time&nextUpdate, Subscriber*subscriber):mNextUpdateTime(nextUpdate) {
+        SubscriberTimePair(const Task::LocalTime&nextUpdate, Subscriber*subscriber):mNextUpdateTime(nextUpdate) {
             mSubscriber=subscriber;
         }
         bool operator <(const SubscriberTimePair&other)const {
@@ -75,8 +75,8 @@ private:
     };
     UUID mName;
     Network::Stream*mBroadcaster;
-    Time mLatestSentTime;
-    Time mLatestUnsentTime;
+    Task::LocalTime mLatestSentTime;
+    Task::LocalTime mLatestUnsentTime;
     EpochType mEpoch;
     bool mEverReceivedMessage;
     bool mPolling;
@@ -88,9 +88,9 @@ private:
     ///this is the heap of subscribers that received the last message
     std::vector<SubscriberTimePair>mSentSubscribersHeap;
     ///does the heap management for sent or unsent subscribers based on the passed vector
-    Time pushSubscriber(Subscriber*,std::vector<SubscriberTimePair>*);
+    Task::LocalTime pushSubscriber(Subscriber*,std::vector<SubscriberTimePair>*);
     ///Push a subscriber who missed a broadcast into the mUnsentSubscribersHeap
-    void pushNewSubscriber(Subscriber*,const Time&);
+    void pushNewSubscriber(Subscriber*,const Task::LocalTime&);
     ///Push a Subscriber who has just heard a broadcast into the mSentSubscribersHeap
     void pushJustReceivedSubscriber(Subscriber*);
 public:

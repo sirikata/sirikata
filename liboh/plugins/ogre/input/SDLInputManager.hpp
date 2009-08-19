@@ -76,7 +76,7 @@ public:
                     int ogrePixelFmt, // fixme: which one do we use?
                     bool grabCursor,
                     void *&currentWindowData);
-    bool tick(Time currentTime, Duration frameTime);
+    bool tick(Task::LocalTime currentTime, Duration frameTime);
 
 	void filesDropped(const std::vector<std::string> &files);
 

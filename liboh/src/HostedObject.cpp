@@ -666,7 +666,7 @@ void HostedObject::sendNewObj(
     newObj.set_object_uuid_evidence(getUUID());
     newObj.set_bounding_sphere(meshBounds);
     IObjLoc loc = newObj.mutable_requested_object_loc();
-    loc.set_timestamp(Time::now());
+    loc.set_timestamp(Time::now(getSpaceTimeOffset(spaceID)));
     loc.set_position(startingLocation.getPosition());
     loc.set_orientation(startingLocation.getOrientation());
     loc.set_velocity(startingLocation.getVelocity());
@@ -865,7 +865,7 @@ void HostedObject::receivedPositionUpdate(
     }
     force_reset = force_reset || (objLoc.update_flags() & ObjLoc::FORCE);
     if (!objLoc.has_timestamp()) {
-        objLoc.set_timestamp(Task::AbsTime::now());
+        objLoc.set_timestamp(Time::now(getSpaceTimeOffset(proxy->getObjectReference().space())));
     }
     Location currentLoc = proxy->globalLocation(objLoc.timestamp());
     if (force_reset || objLoc.has_position()) {
@@ -906,7 +906,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
         printstr<<"LocRequest: ";
         query.ParseFromArray(args.data(), args.length());
         ObjLoc loc;
-        Task::AbsTime now = Task::AbsTime::now();
+        Time now = Time::now(getSpaceTimeOffset(msg.source_space()));
         if (thisObj) {
             Location globalLoc = thisObj->globalLocation(now);
             loc.set_timestamp(now);
@@ -1196,7 +1196,7 @@ void HostedObject::receivedPropertyUpdate(
                     proxy->getObjectReference().space(),
                     ObjectReference(parsedProperty.value())));
             if (obj && obj != proxy) {
-                proxy->setParent(obj, Time::now());
+                proxy->setParent(obj, Time::now(getSpaceTimeOffset(proxy->getObjectReference().space())));
             }
         }
     }

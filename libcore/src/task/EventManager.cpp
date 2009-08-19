@@ -425,7 +425,7 @@ void EventManager<T>::fire(EventPtr ev) {
 };
 
 
-/* FIXME: We need a "never" constant for AbsTime that is
+/* FIXME: We need a "never" constant for LocalTime that is
    always grreater than anything else */
 
 template <class T>

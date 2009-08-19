@@ -37,10 +37,11 @@ namespace Sirikata {
 class SIRIKATA_OH_EXPORT SpaceTimeOffsetManager :public AutoSingleton<SpaceTimeOffsetManager>{public:
     static SpaceTimeOffsetManager&getSingleton();
     static void destroy();
-    const Duration&getSpaceTimeOffset(const SpaceID&)const;
+    static const Duration&getSpaceTimeOffset(const SpaceID&);
     static void setSpaceTimeOffset(const SpaceID&, const Duration&);
     SpaceTimeOffsetManager();
     ~SpaceTimeOffsetManager();
+    static Time now(const SpaceID&id);
 };
 }
 #endif

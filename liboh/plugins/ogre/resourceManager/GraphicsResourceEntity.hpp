@@ -61,7 +61,7 @@ protected:
   GraphicsEntity *mGraphicsEntity;
   URI mMeshID;
   SharedResourcePtr mCurMesh;
-  Time mLoadTime;
+  Sirikata::Task::LocalTime mLoadTime;
 };
 
 }

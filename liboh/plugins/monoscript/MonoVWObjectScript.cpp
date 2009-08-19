@@ -142,7 +142,7 @@ void MonoVWObjectScript::tick(){
     MonoContext::getSingleton().push(MonoContextData());
     MonoContext::getSingleton().setVWObject(mParent,mDomain);
     try {
-        Mono::Object retval=mObject.send("tick",mDomain.Time(Time::now()));
+        Mono::Object retval=mObject.send("tick",mDomain.Time(Time::now(Duration::zero())));
     }catch (Mono::Exception&e) {
         SILOG(mono,debug,"Tick Exception "<<e);
     }

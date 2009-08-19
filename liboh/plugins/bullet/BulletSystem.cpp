@@ -34,6 +34,7 @@
 #include <oh/Platform.hpp>
 #include <oh/SimulationFactory.hpp>
 #include <oh/ProxyObject.hpp>
+#include <oh/SpaceTimeOffsetManager.hpp>
 #include <options/Options.hpp>
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
@@ -413,10 +414,10 @@ void BulletSystem::removePhysicalObject(BulletObj* obj) {
 }
 
 bool BulletSystem::tick() {
-    static Task::AbsTime lasttime = mStartTime;
+    static Task::LocalTime lasttime = mStartTime;
     static Task::DeltaTime waittime = Task::DeltaTime::seconds(0.02);
     static int mode = 0;
-    Task::AbsTime now = Task::AbsTime::now();
+    Task::LocalTime now = Task::LocalTime::now();
     Task::DeltaTime delta;
     positionOrientation po;
 
@@ -449,11 +450,12 @@ bool BulletSystem::tick() {
                 if (objects[i]->mActive) {
                     po = objects[i]->getBulletState();
                     DEBUG_OUTPUT(cout << "    dbm: object, " << objects[i]->mName << ", delta, "
-                                 << delta.toSeconds() << ", newpos, " << po.p << "obj: " << objects[i] << endl;)
-                    Location loc (objects[i]->mMeshptr->globalLocation(now));
+                                 << delta.toSeconds() << ", newpos, " << po.p << "obj: " << objects[i] << endl);
+                    Time remoteNow=Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(objects[i]->mMeshptr->getObjectReference().space()));
+                    Location loc (objects[i]->mMeshptr->globalLocation(remoteNow));
                     loc.setPosition(po.p);
                     loc.setOrientation(po.o);
-                    objects[i]->mMeshptr->setLocation(now, loc);
+                    objects[i]->mMeshptr->setLocation(remoteNow, loc);
                 }
             }
 
@@ -480,6 +482,7 @@ bool BulletSystem::tick() {
                 BulletObj* b1=i->first.getHigher();
                 ObjectReference b0id=b0->getObjectReference();
                 ObjectReference b1id=b1->getObjectReference();
+                Time spaceNow=Time::convertFrom(now,SpaceTimeOffsetManager::getSingleton().getSpaceTimeOffset(b0->getSpaceID()));
 
                 if (i->second.collidedThisFrame()) {             /// recently colliding; send msg & change mode
                     if (!i->second.collidedLastFrame()) {
@@ -487,7 +490,7 @@ bool BulletSystem::tick() {
                             RoutableMessageBody *body=&mBeginCollisionMessagesToSend[b1id];
 
                             Physics::Protocol::CollisionBegin collide;
-                            collide.set_timestamp(now);
+                            collide.set_timestamp(spaceNow);
                             collide.set_other_object_reference(b0id.getAsUUID());
                             for (std::vector<customDispatch::ActiveCollisionState::PointCollision>::iterator iter=i->second.mPointCollisions.begin(),iterend=i->second.mPointCollisions.end();iter!=iterend;++iter) {
                                 collide.add_this_position(iter->mWorldOnHigher);
@@ -498,13 +501,13 @@ bool BulletSystem::tick() {
                             }
                             collide.SerializeToString(body->add_message("BegCol"));
                             cout << "   begin collision msg: " << b0->mName << " --> " << b1->mName
-                            << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                            << " time: " << (Task::LocalTime::now()-mStartTime).toSeconds() << endl;
                         }
                         if (b0->colMsg & b1->colMask) {
                             RoutableMessageBody *body=&mBeginCollisionMessagesToSend[b0id];
 
                             Physics::Protocol::CollisionBegin collide;
-                            collide.set_timestamp(now);
+                            collide.set_timestamp(spaceNow);
                             collide.set_other_object_reference(b1id.getAsUUID());
                             for (std::vector<customDispatch::ActiveCollisionState::PointCollision>::iterator iter=i->second.mPointCollisions.begin(),iterend=i->second.mPointCollisions.end();iter!=iterend;++iter) {
                                 collide.add_other_position(iter->mWorldOnHigher);
@@ -515,7 +518,7 @@ bool BulletSystem::tick() {
                             }
                             collide.SerializeToString(body->add_message("BegCol"));
                             cout << "   begin collision msg: " << b1->mName << " --> " << b0->mName
-                            << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                            << " time: " << (Task::LocalTime::now()-mStartTime).toSeconds() << endl;
                         }
                     }
                     i->second.resetCollisionFlag();
@@ -527,22 +530,22 @@ bool BulletSystem::tick() {
                         RoutableMessageBody *body=&mEndCollisionMessagesToSend[b1id];
 
                         Physics::Protocol::CollisionEnd collide;
-                        collide.set_timestamp(now);
+                        collide.set_timestamp(spaceNow);
                         collide.set_other_object_reference(b0id.getAsUUID());
                         collide.SerializeToString(body->add_message("EndCol"));
 
                         cout << "     end collision msg: " << b0->mName << " --> " << b1->mName
-                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::LocalTime::now()-mStartTime).toSeconds() << endl;
                     }
                     if (b0->colMsg & b1->colMask) {
                         RoutableMessageBody *body=&mEndCollisionMessagesToSend[b0id];
 
                         Physics::Protocol::CollisionEnd collide;
-                        collide.set_timestamp(now);
+                        collide.set_timestamp(spaceNow);
                         collide.set_other_object_reference(b1id.getAsUUID());
                         collide.SerializeToString(body->add_message("EndCol"));
                         cout << "     end collision msg: " << b1->mName << " --> " << b0->mName
-                        << " time: " << (Task::AbsTime::now()-mStartTime).toSeconds() << endl;
+                        << " time: " << (Task::LocalTime::now()-mStartTime).toSeconds() << endl;
                     }
                     dispatcher->collisionPairs.erase(i++);
                 }
@@ -684,7 +687,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     return true;
 }
 
-BulletSystem::BulletSystem() :             mStartTime(Task::AbsTime::now()) {
+BulletSystem::BulletSystem() :             mStartTime(Task::LocalTime::now()) {
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }
 

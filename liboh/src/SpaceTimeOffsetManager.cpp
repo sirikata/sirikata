@@ -28,7 +28,10 @@ void SpaceTimeOffsetManager::destroy() {
 SpaceTimeOffsetManager& SpaceTimeOffsetManager::getSingleton() {
     return AutoSingleton<SpaceTimeOffsetManager>::getSingleton();
 }
-const Duration& SpaceTimeOffsetManager::getSpaceTimeOffset(const SpaceID& sid)const {
+Time SpaceTimeOffsetManager::now(const SpaceID& sid) {
+    return Time::now(getSpaceTimeOffset(sid));
+}
+const Duration& SpaceTimeOffsetManager::getSpaceTimeOffset(const SpaceID& sid) {
     SharedLock lok(sSpaceIdDurationMutex);
     std::tr1::unordered_map<SpaceID,Duration>::iterator where=sSpaceIdDuration.find(sid);
     if (where==sSpaceIdDuration.end()) {

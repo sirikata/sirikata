@@ -41,24 +41,24 @@
 #include <windows.h>
 // probably something like this function
 
-Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
+Sirikata::Task::LocalTime Sirikata::Task::LocalTime::now() {
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	ULARGE_INTEGER uli;
 	uli.LowPart = ft.dwLowDateTime;
 	uli.HighPart = ft.dwHighDateTime;
 	ULONGLONG time64 = uli.QuadPart/10;
-	return AbsTime::microseconds(time64);
+	return LocalTime::microseconds(time64);
 }
 
 #else
-Sirikata::Task::AbsTime Sirikata::Task::AbsTime::now() {
+Sirikata::Task::LocalTime Sirikata::Task::LocalTime::now() {
 	struct timeval tv = {0, 0};
 	gettimeofday(&tv, NULL);
     uint64 total_time=tv.tv_sec;
     total_time*=1000000;
     total_time+=tv.tv_usec;
-	return AbsTime::microseconds(total_time);
+	return LocalTime::microseconds(total_time);
 }
 #endif
 

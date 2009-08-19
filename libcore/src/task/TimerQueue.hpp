@@ -55,7 +55,7 @@ typedef std::tr1::function<DeltaTime()> TimedEvent;
 
 /** A work queue that runs on each frame. */
 class TimerQueue {
-	std::map<AbsTime, std::list<TimedEvent> > mQueue;
+	std::map<LocalTime, std::list<TimedEvent> > mQueue;
 public:
 
 	/**
@@ -68,7 +68,7 @@ public:
 	 * @param nextTime  The absolute time to sechedule ev.
 	 * @param ev        A (usually bound) std::tr1::function to be called at nextTime.
 	 */
-	void schedule(AbsTime nextTime,
+	void schedule(LocalTime nextTime,
 				const TimedEvent &ev);
 
 	/**
@@ -83,7 +83,7 @@ public:
 	 * @returns         An id that can be passed to unschedule to prematurely cancel
 	 *                  the timed event from being thrown.
 	 */
-	SubscriptionId scheduleId(AbsTime nextTime,
+	SubscriptionId scheduleId(LocalTime nextTime,
 				const TimedEvent &ev);
 
 	/**

@@ -42,7 +42,7 @@
 
 
 namespace Sirikata { namespace Subscription {
-SubscriptionState::SubscriptionState(Network::Stream*broadcaster):mName(UUID::null()),mLatestSentTime(Time::null()),mLatestUnsentTime(Time::null()){
+SubscriptionState::SubscriptionState(Network::Stream*broadcaster):mName(UUID::null()),mLatestSentTime(Task::LocalTime::null()),mLatestUnsentTime(Task::LocalTime::null()){
     mEpoch=ReservedEpoch;
     mBroadcaster=broadcaster;
     mEverReceivedMessage=false;
@@ -59,14 +59,14 @@ void SubscriptionState::setLastSentMessage(Network::Chunk&chunk) {
 }
 
 
-Time SubscriptionState::pushSubscriber(Subscriber*subscriber,std::vector<SubscriberTimePair>*heap) {
-    Time retval=subscriber->computeNextUpdateFromNow();
+Task::LocalTime SubscriptionState::pushSubscriber(Subscriber*subscriber,std::vector<SubscriberTimePair>*heap) {
+    Task::LocalTime retval=subscriber->computeNextUpdateFromNow();
     heap->push_back(SubscriberTimePair(retval,subscriber));
     std::push_heap(heap->begin(),heap->end());
     return retval;
 }
 
-void SubscriptionState::pushNewSubscriber(Subscriber*s,const Time&oldTime) {
+void SubscriptionState::pushNewSubscriber(Subscriber*s,const Task::LocalTime&oldTime) {
     mUnsentSubscribersHeap.push_back(SubscriberTimePair(oldTime,s));
     std::push_heap(mUnsentSubscribersHeap.begin(),mUnsentSubscribersHeap.end());
     if (mLatestUnsentTime<oldTime) {
@@ -74,7 +74,7 @@ void SubscriptionState::pushNewSubscriber(Subscriber*s,const Time&oldTime) {
     }
 }
 void SubscriptionState::pushJustReceivedSubscriber(Subscriber*s) {
-    Time retval=pushSubscriber(s,&mSentSubscribersHeap);
+    Task::LocalTime retval=pushSubscriber(s,&mSentSubscribersHeap);
     if (mLatestSentTime<retval) {
         mLatestSentTime=retval;
     }
@@ -88,10 +88,10 @@ void SubscriptionState::registerSubscriber(const std::tr1::shared_ptr<Network::S
 
 
 void SubscriptionState::broadcast(Server*poll,const MemoryReference&data){
-    Time now=Time::now();
+    Task::LocalTime now=Task::LocalTime::now();
     std::vector<SubscriberTimePair> newUnsenders;
     if (mLatestSentTime<now||mLatestUnsentTime<now) {//there exists a completing queue
-        Time latestSentTime=mLatestSentTime;
+        Task::LocalTime latestSentTime=mLatestSentTime;
         bool unsentSwap=false;
         if (!(mLatestSentTime<now)) {//if the queue of those items that were marked as having sent the last packet isn't fully ready to send
             mLatestSentTime=now;//make sure to reset the time for things in the sent queue
@@ -183,7 +183,7 @@ void SubscriptionState::Subscriber::broadcast(const MemoryReference&data){
     }
 }
 void SubscriptionState::poll(Server*parent) {
-    Time now=Time::now();
+    Task::LocalTime now=Task::LocalTime::now();
     while (!mUnsentSubscribersHeap.empty()) {
         SubscriberTimePair* iter=&mUnsentSubscribersHeap.front();
         if (mUnsentSubscribersHeap.front().mNextUpdateTime<now) {
@@ -202,8 +202,8 @@ void SubscriptionState::poll(Server*parent) {
     }
 }
 
-Time SubscriptionState::Subscriber::computeNextUpdateFromNow(){
-    return Time::now()+mPeriod;
+Task::LocalTime SubscriptionState::Subscriber::computeNextUpdateFromNow(){
+    return Task::LocalTime::now()+mPeriod;
 }
 
 

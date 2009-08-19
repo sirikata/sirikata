@@ -440,7 +440,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
     OptionValue* mTempTferManager;
     OptionValue* mWorkQueue;
     OptionValue* mEventManager;
-    Task::AbsTime mStartTime;
+    Task::LocalTime mStartTime;
 
     ///local bullet stuff:
     btDefaultCollisionConfiguration* collisionConfiguration;

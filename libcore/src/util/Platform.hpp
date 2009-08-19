@@ -294,10 +294,10 @@ template<class T> void aligned_free(T* data) {
     }
 }
 namespace Task {
-class AbsTime;
+class LocalTime;
 class DeltaTime;
 }
-typedef Task::AbsTime Time;
+class Time;
 typedef Task::DeltaTime Duration;
 typedef Vector2<float32> Vector2f;
 typedef Vector2<float64> Vector2d;

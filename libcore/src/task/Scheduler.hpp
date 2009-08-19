@@ -44,11 +44,11 @@ namespace Task {
  * needs processing time.  NOTE: Because this interface needs to be fast
  * and should be kept simple,
  *
- * @param AbsTime  When the task should aim to finish.
+ * @param LocalTime  When the task should aim to finish.
  * @returns        'true' if the task should remain on the ready queue
  *                 (if it needs more time), or false if it should sleep.
  */
-typedef std::tr1::function1<bool(AbsTime)> TaskFunction;
+typedef std::tr1::function1<bool(LocalTime)> TaskFunction;
 
 /// Scheduler interface
 class Scheduler {

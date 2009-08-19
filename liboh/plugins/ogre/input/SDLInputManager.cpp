@@ -237,7 +237,7 @@ void SDLInputManager::filesDropped(const std::vector<std::string> &files) {
     fire(Task::EventPtr(new DragAndDropEvent(files)));
 }
 
-bool SDLInputManager::tick(Time currentTime, Duration frameTime){
+bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
 #ifndef _WIN32
     SDL_GL_SwapBuffers();
 #endif
@@ -422,7 +422,7 @@ bool SDLInputManager::tick(Time currentTime, Duration frameTime){
     }
     SDL_SelectMouse(oldmouse);
     */
-    getWorkQueue()->dequeueUntil(Task::AbsTime::now()+Duration::seconds(.01));
+    getWorkQueue()->dequeueUntil(Task::LocalTime::now()+Duration::seconds(.01));
     return continueRendering;
 
 }

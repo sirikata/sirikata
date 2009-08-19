@@ -63,7 +63,7 @@ void ProxBridge::newObjectStreamCallback(Network::Stream*newStream, Network::Str
 void ProxBridge::update(const Duration&duration,const std::tr1::weak_ptr<Prox::QueryHandler>&listen) {
     std::tr1::shared_ptr<Prox::QueryHandler> listener=listen.lock();
     if (listener) {
-        listener->tick(Prox::Time((Time::now()-Time::epoch()).toMicroseconds()));
+        listener->tick(Prox::Time((Time::now(Duration::zero())-Time::epoch()).toMicroseconds()));//FIXME for distributed space servers
         Network::IOServiceFactory::dispatchServiceMessage(mIO,duration,std::tr1::bind(&ProxBridge::update,this,duration,listen));
     }
 }
@@ -317,7 +317,7 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
         queryState->mOffset=Vector3d(0,0,0);
         queryState->mQueryType=new_query.stateless()?QueryState::RELATIVE_STATELESS:QueryState::RELATIVE_STATEFUL;
         if (new_query.has_absolute_center()) {
-            pos.update((Time::now()-Time::epoch()).toMicroseconds(),
+            pos.update((Time::now(Duration::zero())-Time::epoch()).toMicroseconds(),//FIXME for distributed space servers
                        new_query.absolute_center().convert<Prox::Query::PositionVectorType::CoordType>(),
                        Prox::Query::PositionVectorType::CoordType(0,0,0));
             queryState->mOffset=new_query.absolute_center();

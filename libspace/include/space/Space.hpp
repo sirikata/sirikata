@@ -73,6 +73,7 @@ class SIRIKATA_SPACE_EXPORT Space :public MessageService{
     ///map from message port to space service
     std::tr1::unordered_map<unsigned int,MessageService*> mServices;
 public:
+    Time now()const;
     ///Space does not forward messages outside of what it chooses by looking at the mServices and mRouter classes
     bool forwardMessagesTo(MessageService*){return false;}
     ///Space does not forward messages outside of what it chooses by looking at the mServices and mRouter classes

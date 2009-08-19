@@ -85,7 +85,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     Task::EventResponse performUpload(Task::EventPtr ev);
     void allocMouseHandler();
     void destroyMouseHandler();
-    void tickInputHandler(const Time& t) const;
+    void tickInputHandler(const Task::LocalTime& t) const;
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
@@ -104,7 +104,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     ///How many seconds we aim to spend in each frame
     OptionValue*mFrameDuration;
     OptionSet*mOptions;
-    Time mLastFrameTime;
+    Task::LocalTime mLastFrameTime;
     static Ogre::Plugin*sCDNArchivePlugin;
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
@@ -112,11 +112,11 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     OgreSystem();
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    bool renderOneFrame(Time, Duration frameTime);
+    bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
-    void preFrame(Time, Duration);
+    void preFrame(Task::LocalTime, Duration);
     ///all the things that should happen once the frame finishes
-    void postFrame(Time, Duration);
+    void postFrame(Task::LocalTime, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;

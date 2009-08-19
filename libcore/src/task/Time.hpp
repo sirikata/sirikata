@@ -36,7 +36,7 @@
 namespace Sirikata {
 
 /**
- * Time.hpp -- Task-oriented time functions: DeltaTime and AbsTime
+ * Time.hpp -- Task-oriented time functions: DeltaTime and LocalTime
  * for representing relative and absolute work queue times.
  */
 namespace Task {
@@ -48,9 +48,9 @@ namespace Task {
  * absolute times.
  *
  * @par
- * To convert x to an absolute time, use <code>AbsTime::now() + x</code>
+ * To convert x to an absolute time, use <code>LocalTime::now() + x</code>
  *
- * @see AbsTime
+ * @see LocalTime
  */
 class SIRIKATA_EXPORT DeltaTime {
     int64 mDeltaTime;
@@ -116,8 +116,8 @@ public:
         return DeltaTime::nanoseconds(0);
     }
 
-	/// Simple helper function -- returns "AbsTime::now() + (*this)".
-	class AbsTime fromNow() const;
+	/// Simple helper function -- returns "LocalTime::now() + (*this)".
+	class LocalTime fromNow() const;
 
 	/// Arethmetic operator-- subtract two DeltaTime values.
 	inline DeltaTime operator- (const DeltaTime &other) const {
@@ -178,54 +178,50 @@ public:
 };
 
 /**
- * Represents an absolute system time.  Note: AbsTime is stored internally
- * as a double.  The only two ways to create an AbsTime object are by adding
- * to another AbsTime, and by calling AbsTime::now().
+ * Represents an absolute system time on this machine.  Note: LocalTime is stored internally
+ * as an int64.  The only two ways to create an LocalTime object are by adding
+ * to another LocalTime, and by calling LocalTime::now().
  *
  * @par
- * Note that as AbsTime is a local time for purposes of event processing
+ * Note that as LocalTime is a local time for purposes of event processing
  * only, there are no conversion functions, except by taking the difference
- * of two AbsTime objects.
+ * of two LocalTime objects.
  *
  * @see DeltaTime
  */
-class SIRIKATA_EXPORT AbsTime {
+class SIRIKATA_EXPORT LocalTime {
 
 	uint64 mTime;
-
-	/// Private constructor-- Use "now()" to create an AbsTime.
-	explicit AbsTime(uint64 t) {
+protected:
+	/// Private constructor-- Use "now()" to create an LocalTime.
+	explicit LocalTime(uint64 t) {
 		this->mTime = t;
 	}
 
-/*
-	static AbsTime sLastFrameTime; // updated in "updateFrameTime"
-	static void updateFrameTime();
-*/
 public:
-        uint64 raw() const {
-            return mTime;
-        }
-
+    uint64 raw() const {
+        return mTime;
+    }
+    
 	/// Equality comparison (same as (*this - other) == 0)
-	inline bool operator== (const AbsTime &other) const {
+    inline bool operator== (const LocalTime &other) const {
 		return (mTime == other.mTime);
 	}
-        inline bool operator!= (const AbsTime& other) const {
-            return (mTime != other.mTime);
-        }
+    inline bool operator!= (const LocalTime& other) const {
+        return (mTime != other.mTime);
+    }
 
 	/// Ordering comparison (same as (*this - other) < 0)
-	inline bool operator< (const AbsTime &other) const {
+	inline bool operator< (const LocalTime &other) const {
 		return (mTime < other.mTime);
 	}
-	inline bool operator<= (const AbsTime &other) const {
+	inline bool operator<= (const LocalTime &other) const {
 		return (mTime <= other.mTime);
 	}
-	inline bool operator> (const AbsTime &other) const {
+	inline bool operator> (const LocalTime &other) const {
 		return (mTime > other.mTime);
 	}
-	inline bool operator>= (const AbsTime &other) const {
+	inline bool operator>= (const LocalTime &other) const {
 		return (mTime >= other.mTime);
 	}
 
@@ -234,7 +230,7 @@ public:
 	 *
 	 * @returns a DeltaTime that can be cast to a double in seconds.
 	 */
-	inline DeltaTime operator- (const AbsTime &other) const {
+	inline DeltaTime operator- (const LocalTime &other) const {
 		return DeltaTime::microseconds((int64)mTime - (int64)other.mTime);
 	}
 	/**
@@ -242,10 +238,10 @@ public:
 	 *
 	 * @returns a new absolute time--does not modify the existing one.
 	 */
-	inline AbsTime operator+ (const DeltaTime &otherDelta) const {
-		return AbsTime(mTime + otherDelta.toMicro());
+	inline LocalTime operator+ (const DeltaTime &otherDelta) const {
+		return LocalTime(mTime + otherDelta.toMicro());
 	}
-	inline AbsTime operator- (const DeltaTime &otherDelta) const {
+	inline LocalTime operator- (const DeltaTime &otherDelta) const {
 		return (*this) + (-otherDelta);
 	}
 	inline void operator+= (const DeltaTime &otherDelta) {
@@ -255,8 +251,8 @@ public:
 		(*this) += (-otherDelta);
 	}
 
-    static AbsTime microseconds(int64 abstime){
-        return AbsTime(abstime);
+    static LocalTime microseconds(int64 abstime){
+        return LocalTime(abstime);
     }
 
 	/**
@@ -265,14 +261,14 @@ public:
 	 * @returns the current system time (gettimeofday), not to be used
 	 * for time synchronization over the network.
 	 */
-	static AbsTime now(); // Only way to generate an AbsTime for now...
+	static LocalTime now(); // Only way to generate an LocalTime for now...
 
 	/**
 	 * Creates the time when items are 0
 	 *
 	 * @returns the beginning of time--so that a subtraction can be used with an actual time
 	 */
-	static AbsTime epoch() { return AbsTime(0); }
+	static LocalTime epoch() { return LocalTime(0); }
 
 	/**
 	 * Creates a 'null' absolute time that is equivalent to
@@ -281,15 +277,15 @@ public:
 	 *
 	 * @returns a 'null' time to be used if a timeout is not applicable.
 	 */
-	static AbsTime null() { return AbsTime(0); }
+	static LocalTime null() { return LocalTime(0); }
 
 
 };
 
 SIRIKATA_EXPORT std::ostream& operator<<(std::ostream& os, const Duration& rhs);
 SIRIKATA_EXPORT std::istream& operator>>(std::istream& is, Duration& rhs);
-inline AbsTime DeltaTime::fromNow() const {
-	return AbsTime::now() + (*this);
+inline LocalTime DeltaTime::fromNow() const {
+	return LocalTime::now() + (*this);
 }
 
 }

@@ -40,7 +40,9 @@
 #include "util/KnownServices.hpp"
 #include "space/Registration.hpp"
 #include "space/ObjectConnections.hpp"
+#include "space/Space.hpp"
 #include "Space_Time.pbj.hpp"
+
 namespace Sirikata {
 ObjectConnections::ObjectConnections(Network::StreamListener*listener,
                                      const Network::Address&listenAddress) {
@@ -73,7 +75,7 @@ void ObjectConnections::newStreamCallback(Network::Stream*stream, Network::Strea
     }
 }
 
-void processTimePacket(Network::Stream *stream, const RoutableMessageHeader&hdr,MemoryReference message_body) {
+void processTimePacket(MessageService* mSpace, Network::Stream *stream, const RoutableMessageHeader&hdr,MemoryReference message_body) {
     RoutableMessageHeader retval;
     retval.set_source_object(ObjectReference::spaceServiceID());
     retval.set_source_port(Services::TIMESYNC);
@@ -86,7 +88,7 @@ void processTimePacket(Network::Stream *stream, const RoutableMessageHeader&hdr,
     retval.SerializeToString(&toSend);
     Network::Protocol::TimeSync sync;
     sync.ParseFromArray(message_body.data(),message_body.size());
-    sync.set_server_time(Time::now());
+    sync.set_server_time(mSpace!=NULL?static_cast<Space*>(mSpace)->now():Time::now(Duration::zero()));
     sync.AppendToString(&toSend);
     Network::StreamReliability rel=Network::Unreliable;
     if (sync.has_return_options()) {
@@ -109,7 +111,7 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
     MemoryReference chunkRef(chunk);//parse header
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
     if (hdr.destination_port()==Services::TIMESYNC&&hdr.has_destination_object()&&hdr.destination_object()==ObjectReference::spaceServiceID()) {
-        processTimePacket(stream,hdr,message_body);//for low latency shortcut the other processing
+        processTimePacket(mSpace,stream,hdr,message_body);//for low latency shortcut the other processing
         return;
     }
     //find the temporary stream ID and connected boolean

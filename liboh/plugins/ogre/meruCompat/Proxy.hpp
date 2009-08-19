@@ -29,14 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _PROXY_HPP_
-#define _PROXY_HPP_
+#ifndef _MERU_PROXY_HPP_
+#define _MERU_PROXY_HPP_
 
 #include "MeruDefs.hpp"
 #include "Event.hpp"
 #include "../OgreSystem.hpp"
 #include "../Entity.hpp"
-
+#include "oh/SpaceTimeOffsetManager.hpp"
 namespace Meru {
 
 class ProxyObject;
@@ -50,13 +50,14 @@ typedef ProxyObject *WeakProxyPtr;
 class ProxyObject {
   Sirikata::Graphics::Entity *mEntity;
 public:
-    ProxyObject() : mEntity(NULL) {}
+    ProxyObject() : mEntity(NULL),mSpace(SpaceID::null()) {}
 
     /** Initializes the proxy.  This performs initalizations that
      *  call virtual methods that cannot be called during construction.
      *  This should *always* be called immediately after construction.
      */
     void initialize(Sirikata::Graphics::OgreSystem *sys, const SpaceObjectReference& ref) {
+      mSpace=ref.space();
       mEntity = sys->getEntity(ref);
     }
 
@@ -99,7 +100,7 @@ public:
 
     void setLocalLocation(const Location &loc);
     const Location getLocation()const {
-        return mEntity->getProxy().extrapolateLocation(Time::now());
+        return mEntity->getProxy().extrapolateLocation(Sirikata::SpaceTimeOffsetManager::getSingleton().now(mSpace));
     }
     void ignoreNetwork(bool ignore);
     const String& getName() const {
@@ -131,6 +132,7 @@ public:
     LocationInterpolator* mLocationInterpolator;
     int mIgnoreNetwork;
     */
+    SpaceID mSpace;
     String mName;
     bool mNamed;
     bool mSelected;

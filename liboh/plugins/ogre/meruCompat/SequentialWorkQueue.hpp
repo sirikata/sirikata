@@ -94,7 +94,7 @@ public:
     inline bool dequeuePoll() {
         return mWorkQueue->dequeuePoll();
     }
-    inline bool dequeueUntil(Sirikata::Task::AbsTime until) {
+    inline bool dequeueUntil(Sirikata::Task::LocalTime until) {
         return mWorkQueue->dequeueUntil(until);
     }
 };
