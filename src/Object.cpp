@@ -103,15 +103,11 @@ void Object::checkPositionUpdate() {
             loc.set_position(mLocation.position());
             loc.set_velocity(mLocation.velocity());
 
-            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-            obj_msg->set_source_object(uuid());
-            obj_msg->set_source_port(OBJECT_PORT_LOCATION);
-            obj_msg->set_dest_object(*it);
-            obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
-            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
-            obj_msg->set_payload( serializePBJMessage(loc) );
-
-            bool success = mContext->objectHost->send(this, obj_msg);
+            bool success = mContext->objectHost->send(
+                this, OBJECT_PORT_LOCATION,
+                *it, OBJECT_PORT_LOCATION,
+                serializePBJMessage(loc)
+            );
             // XXX FIXME do something on failure
         }
     }
@@ -178,15 +174,11 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             CBR::Protocol::Subscription::SubscriptionMessage subs;
             subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
 
-            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-            obj_msg->set_source_object(uuid());
-            obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_dest_object(addition.object());
-            obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
-            obj_msg->set_payload( serializePBJMessage(subs) );
-
-            bool success = mContext->objectHost->send(this, obj_msg);
+            bool success = mContext->objectHost->send(
+                this, OBJECT_PORT_SUBSCRIPTION,
+                addition.object(), OBJECT_PORT_SUBSCRIPTION,
+                serializePBJMessage(subs)
+            );
             // FIXME do something on failure
         }
     }
@@ -205,15 +197,11 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             CBR::Protocol::Subscription::SubscriptionMessage subs;
             subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
 
-            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-            obj_msg->set_source_object(uuid());
-            obj_msg->set_source_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_dest_object(removal.object());
-            obj_msg->set_dest_port(OBJECT_PORT_SUBSCRIPTION);
-            obj_msg->set_unique(GenerateUniqueID(mContext->objectHost->unique()));
-            obj_msg->set_payload( serializePBJMessage(subs) );
-
-            bool success = mContext->objectHost->send(this, obj_msg);
+            bool success = mContext->objectHost->send(
+                this, OBJECT_PORT_SUBSCRIPTION,
+                removal.object(), OBJECT_PORT_SUBSCRIPTION,
+                serializePBJMessage(subs)
+            );
             // FIXME do something on failure
         }
     }

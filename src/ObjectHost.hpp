@@ -69,9 +69,8 @@ public:
     ~ObjectHost();
 
     const ObjectHostContext* context() const;
-    uint64 unique() const;
 
-    bool send(Object* src, CBR::Protocol::Object::ObjectMessage* msg);
+    bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 
     void tick(const Time& t);
 

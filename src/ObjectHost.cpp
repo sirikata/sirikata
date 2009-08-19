@@ -56,13 +56,16 @@ const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
-uint64 ObjectHost::unique() const {
-    return mOHId;
-}
+bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    obj_msg->set_source_object(src->uuid());
+    obj_msg->set_source_port(src_port);
+    obj_msg->set_dest_object(dest);
+    obj_msg->set_dest_port(dest_port);
+    obj_msg->set_unique(GenerateUniqueID(mOHId));
+    obj_msg->set_payload( payload );
 
-bool ObjectHost::send(Object* src, CBR::Protocol::Object::ObjectMessage* msg) {
-    assert(src->uuid() == msg->source_object());
-    return mObjectMessageQueue->send(msg);
+    return mObjectMessageQueue->send(obj_msg);
 }
 
 void ObjectHost::tick(const Time& t) {
