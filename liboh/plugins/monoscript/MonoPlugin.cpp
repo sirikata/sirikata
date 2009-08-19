@@ -54,6 +54,7 @@ bool loadDependencyAssembly(Mono::MonoSystem*mono_system, const Sirikata::String
         ||mono_system->loadAssembly(assembly,"../../dependencies/Cecil")
         ||mono_system->loadAssembly(assembly,".")
         ||mono_system->loadAssembly(assembly,"bin")
+        ||mono_system->loadAssembly(assembly,"..")
         ||mono_system->loadAssembly(assembly,"dependencies/IronPython")
         ||mono_system->loadAssembly(assembly,"dependencies/Cecil");
 }
@@ -62,7 +63,9 @@ bool loadCustomAssembly(Mono::MonoSystem*mono_system, const Sirikata::String&ass
             mono_system->loadAssembly(assembly,".")
             ||mono_system->loadAssembly(assembly,"bin")
             ||mono_system->loadAssembly(assembly,"Release")
-            ||mono_system->loadAssembly(assembly,"Debug");
+            ||mono_system->loadAssembly(assembly,"Debug")
+            ||mono_system->loadAssembly(assembly,"..");//for XCode
+
 }
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
