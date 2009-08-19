@@ -1,6 +1,7 @@
 #include "Network.hpp"
 #include "ENetNetwork.hpp"
 namespace CBR {
+#define MAGIC_PORT_OFFSET 8192
 ENetAddress ENetNetwork::toENetAddress(const Address4&addy){
     ENetAddress retval;
     retval.host=addy.ip;
@@ -18,22 +19,26 @@ ENetNetwork::ENetNetwork(Trace* trace, size_t peerSendBufferSize, uint32 incomin
     mOutgoingBandwidth=outgoingBandwidth;
     mSendBufferSize=peerSendBufferSize;
     mTrace=trace;
-    mHost=NULL;
+    mSendHost=NULL;
+    mRecvHost=NULL;
 }
 ENetNetwork::~ENetNetwork(){
     for (PeerFrontMap::iterator i=mPeerFront.begin(),ie=mPeerFront.end();i!=ie;++i) {
         delete i->second;
     }
-    if (mHost) {
+    if (mRecvHost) {
         for (PeerMap::iterator i=mSendPeers.begin(),ie=mSendPeers.end();i!=ie;++i) {
             enet_peer_disconnect(i->second,0);
         }
         for (PeerMap::iterator i=mRecvPeers.begin(),ie=mRecvPeers.end();i!=ie;++i) {
             enet_peer_disconnect(i->second,0);
         }
-        enet_host_flush(mHost); 
-        enet_host_destroy(mHost);
-        mHost=NULL;
+        enet_host_flush(mSendHost); 
+        enet_host_destroy(mSendHost);
+        enet_host_flush(mRecvHost); 
+        enet_host_destroy(mRecvHost);
+        mSendHost=NULL;
+        mRecvHost=NULL;
     }
 }
 
@@ -48,23 +53,25 @@ void ENetNetwork::start(){
     // Checks if this chunk, when passed to send, would be successfully pushed.
 bool ENetNetwork::canSend(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority){
     if (mPeerInit.find(addy)!=mPeerInit.end()) {
-        return false;
+        return true;
     }
+    size_t totalSize=0;
     PeerMap::iterator where=mSendPeers.find(addy);
     if (where!=mSendPeers.end()) {
-        size_t totalSize=enet_peer_send_buffer_size(where->second)+dat.size();
+        totalSize=enet_peer_send_buffer_size(where->second)+dat.size();
         if (totalSize<=mSendBufferSize) {
             return true;
         }
     }else {//no peer initialized--init communication buffer can hold one packet
         return true;
     }
+    //printf ("Cant send to %d [%d < %d]\n",addy.port,(int)totalSize,(int)mSendBufferSize);
     return false;
 }
 
 bool ENetNetwork::connect(const Address4&addy) {
     ENetAddress address=toENetAddress(addy);
-    ENetPeer*peer=enet_host_connect(mHost,&address,2);
+    ENetPeer*peer=enet_host_connect(mSendHost,&address,31);
     if (peer) {
         mSendPeers[addy]=peer;
         return true;
@@ -74,7 +81,8 @@ bool ENetNetwork::connect(const Address4&addy) {
 
 bool ENetNetwork::internalSend(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority, bool force){
     if (mPeerInit.find(addy)!=mPeerInit.end()) {
-        return false;
+        mPeerInit[addy].push_back(dat);
+        return true;
     }
     PeerMap::iterator where=mSendPeers.find(addy);
     if (where!=mSendPeers.end()) {
@@ -82,11 +90,17 @@ bool ENetNetwork::internalSend(const Address4&addy,const Chunk&dat, bool reliabl
         size_t totalSize=esend_buffer_size+dat.size();
         if (totalSize<=mSendBufferSize||esend_buffer_size==0||force) {
             ENetPacket *pkt=enet_packet_create(dat.empty()?NULL:&dat[0],dat.size(),((reliable?ENET_PACKET_FLAG_RELIABLE:0)|(ordered?0:ENET_PACKET_FLAG_UNSEQUENCED)));
-            return (enet_peer_send(where->second,1,pkt))==0;
+            int retval=(enet_peer_send(where->second,1,pkt));
+            if (retval!=0) {
+                printf ("Failure\n");
+            }
+            return retval==0;
+        }else {
+            printf ("Failed to have buffer room %d %d \n",(int)esend_buffer_size,(int)totalSize);
         }
     }else {
         //connect
-        mPeerInit[addy]=dat;
+        mPeerInit[addy].push_back(dat);
         return connect(addy);
     }
     return false;
@@ -96,7 +110,9 @@ bool ENetNetwork::send(const Address4&addy,const Chunk&dat, bool reliable, bool 
 }
 void ENetNetwork::listen (const Address4&addy){
     ENetAddress address=toENetAddress(addy);   
-    mHost=enet_host_create(&address,16383, mIncomingBandwidth, mOutgoingBandwidth);
+    mRecvHost=enet_host_create(&address,254, mIncomingBandwidth, mOutgoingBandwidth);
+    address.port+=MAGIC_PORT_OFFSET;
+    mSendHost=enet_host_create(&address,254, mIncomingBandwidth, mOutgoingBandwidth);
 
 }
 Network::Chunk* ENetNetwork::front(const Address4& from, uint32 max_size){
@@ -106,13 +122,12 @@ Network::Chunk* ENetNetwork::front(const Address4& from, uint32 max_size){
     PeerMap::iterator where=mRecvPeers.find(from);
     if (where!=mRecvPeers.end()) {
         ENetEvent event;
-        if (enet_peer_check_events(mHost,where->second,&event)) {
+        if (enet_peer_check_events(mRecvHost,where->second,&event)) {
             switch (event.type) {
               case ENET_EVENT_TYPE_NONE:
                 printf("None event\n");
                 break;
               case ENET_EVENT_TYPE_RECEIVE:
-                printf("Recv event size %d\n",event.packet->dataLength);
                   {
                       ENetPacket* pkt=event.packet;
                       if (pkt) {
@@ -126,7 +141,7 @@ Network::Chunk* ENetNetwork::front(const Address4& from, uint32 max_size){
                   break;
               case ENET_EVENT_TYPE_CONNECT:
               case ENET_EVENT_TYPE_DISCONNECT:
-                assert(0);
+                processOutboundEvent(event);
                 break;
             }
         }
@@ -156,12 +171,17 @@ void ENetNetwork::processOutboundEvent(ENetEvent&event) {
               if (where!=mSendPeers.end()&&where->second==event.peer) {
                   PeerInitMap::iterator datawhere=mPeerInit.find(addy);
                   if (datawhere!=mPeerInit.end()) {
-                      Network::Chunk datachunk;
-                      datachunk.swap(datawhere->second);
+                      std::vector<Network::Chunk> datachunks;
+                      datachunks.swap(datawhere->second);
                       mPeerInit.erase(datawhere);
-                      internalSend(addy,datachunk,true,true,1,true);
+                      for (std::vector<Network::Chunk>::iterator i=datachunks.begin(),ie=datachunks.end();i!=ie;++i) {
+                          internalSend(addy,*i,true,true,1,true);
+                      }
+                      printf("send connect event %d\n",(int)datachunks.size());
                   }
               }else {
+                  printf("recv connect event\n");
+                  addy.port-=MAGIC_PORT_OFFSET;
                   mRecvPeers[addy]=event.peer;
               }
               break;
@@ -182,15 +202,11 @@ void ENetNetwork::service(const Time& t){
     do {
         ENetEvent event;
         
-        if (enet_host_service_one_outbound (mHost, & event))
+        if (enet_host_service_one_outbound (mRecvHost, & event))
             processOutboundEvent(event);
-        //if (enet_host_service (mHost, & event,1000))
-        //    processOutboundEvent(event);
-        
-        for (PeerMap::iterator i=mSendPeers.begin(),ie=mSendPeers.end();i!=ie;++i) {
-            if (enet_peer_check_events(mHost, i->second,&event))
-                processOutboundEvent(event);
-        }
+
+        if (enet_host_service (mSendHost, & event,0))
+            processOutboundEvent(event);
     }while (Time::now()<t);
 }
 

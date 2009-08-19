@@ -4,11 +4,12 @@ namespace CBR {
 class Trace;
 class ENetNetwork :public Network{
     Trace*mTrace;
-    ENetHost *mHost;
+    ENetHost *mSendHost;
+    ENetHost *mRecvHost;
 
     typedef std::tr1::unordered_map<Address4,Chunk*> PeerFrontMap;
     PeerFrontMap mPeerFront;
-    typedef std::tr1::unordered_map<Address4,Chunk> PeerInitMap;
+    typedef std::tr1::unordered_map<Address4,std::vector<Chunk> > PeerInitMap;
     PeerInitMap mPeerInit;
     typedef std::tr1::unordered_map<Address4,ENetPeer*> PeerMap;
     PeerMap mSendPeers;

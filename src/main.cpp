@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     else if (network_type == "sst")
         gNetwork = new SSTNetwork(gTrace);
     else if (network_type == "enet")
-        gNetwork = new ENetNetwork(gTrace,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+        gNetwork = new ENetNetwork(gTrace,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     gNetwork->init(&main_loop);
     return 0;
 }
