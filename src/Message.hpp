@@ -46,6 +46,8 @@
 #include "CBR_Migration.pbj.hpp"
 #include "CBR_CSeg.pbj.hpp"
 #include "CBR_Session.pbj.hpp"
+#include "CBR_OSeg.pbj.hpp"
+
 
 namespace CBR {
 
@@ -269,24 +271,23 @@ private:
 class OSegMigrateMessageAcknowledge : public Message
 {
 public:
-  OSegMigrateMessageAcknowledge(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id);
-
+  OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id);
   
-    virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+  virtual MessageType type() const;
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
-    CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
+  CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
 
-    ServerID            getServFrom();
-    ServerID            getServTo();
-    UUID                getObjID();
-    ServerID            getMessageDestination();
-    ServerID            getMessageFrom();
+  ServerID            getServFrom();
+  ServerID            getServTo();
+  UUID                getObjID();
+  ServerID            getMessageDestination();
+  ServerID            getMessageFrom();
   
   
 private:
-    friend class Message;
-    OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
+  friend class Message;
+  OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
 };
 
 

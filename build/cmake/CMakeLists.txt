@@ -216,8 +216,7 @@ INCLUDE_DIRECTORIES(BEFORE
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/Analysis.cpp
-  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
-  ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp #  ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
@@ -231,8 +230,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
-  ${CBR_SOURCE_DIR}/LocationService.cpp
-  ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/LocationService.cpp #  ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
@@ -259,8 +257,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp #  ${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
@@ -282,6 +279,7 @@ SET(CBR_PROTOCOLS
   Migration.pbj
   CSeg.pbj
   Session.pbj
+  OSeg.pbj
 )
 SET(PBJ_CPP_HEADER "\n")
 # protocol targets

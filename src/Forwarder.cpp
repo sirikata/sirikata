@@ -48,6 +48,9 @@ Forwarder::Forwarder(ServerID id)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
+
+
+    
 }
 
   //Don't need to do anything special for destructor
@@ -60,17 +63,18 @@ Forwarder::Forwarder(ServerID id)
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
 void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Time* currTime, Proximity* prox)
-  {
-      mTrace = trace;
-      mCSeg = cseg;
-      mOSeg = oseg;
-      mLocationService = locService;
-      mObjectMessageQueue = omq;
-      mServerMessageQueue =smq;
-      mLoadMonitor = lm;
-    mCurrentTime = currTime;
-    mProximity = prox;
-  }
+{
+  mTrace = trace;
+  mCSeg = cseg;
+  mOSeg = oseg;
+  mLocationService = locService;
+  mObjectMessageQueue = omq;
+  mServerMessageQueue =smq;
+  mLoadMonitor = lm;
+  mCurrentTime = currTime;
+  mProximity = prox;
+  
+}
 
   //used to access server id, which was given in initialization
   const ServerID& Forwarder::serv_id() const
@@ -78,25 +82,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     return m_serv_ID;
   }
 
-
-
-  /*
-  void Forwarder::getOSegMessages()
-  {
-    std::vector<Message*> messToSendFromOSegToForwarder;
-    std::vector<ServerID> destServers;
-
-
-    mOSeg -> getMessages (messToSendFromOSegToForwarder,destServers);
-
-    for (int s=0; s < (signed)messToSendFromOSegToForwarder.size(); ++s)
-    {
-      //route
-      route(messToSendFromOSegToForwarder[s],destServers[s],false);
-    }
-
-  }
-  */
 
 
   /*
@@ -114,20 +99,12 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     std::map<UUID,ServerID>::iterator iter;
     std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
-    std::vector<Message*>messagesToSend;
     
-    mOSeg -> tick(t,updatedObjectLocations,messagesToSend);
-
+    mOSeg -> tick(t,updatedObjectLocations);
 
     //deliver acknowledge messages.
 
-
     
-    if (messagesToSend.size() !=0)
-    {
-      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of messages that I have to send:  "<<messagesToSend.size()<<"\n\n";
-    }
-
     if (updatedObjectLocations.size() !=0)
     {
       std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
@@ -135,16 +112,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
     std::cout<<"\n\nThis is the size of the objects in transit:   "<<mObjectsInTransit.size()<<"\n\n";
 
-    
-    for (unsigned int s=0; s < messagesToSend.size(); ++s)
-    {
-      if (messagesToSend[s] != NULL)
-      {
-        route (messagesToSend[s],(dynamic_cast<OSegMigrateMessage*>(messagesToSend[s]))->getMessageDestination(),false);
-      }
-    }
-    
-    
     //    cross-check updates against held messages.  
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
     {
@@ -165,23 +132,21 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
       }
       else
       {
-        //        std::cout<<"\n\nbftm debug:  Inside of forwarder.cpp, couldn't find stored message that matched "<<iter->first.toString()<<"\n\n";
         //        std::cout<<"\n\nbftm debug: Inside of forwarder.cpp couldn't find stored message that matched. \n\n";
-        
       }
     }
   }
-
 
 
   void Forwarder::tick(const Time&t)
   {
     std::cout<<"\n\nInside of forwarder tick\n\n";
     
-    if (t - mLastSampleTime > mSampleRate) {
+    if (t - mLastSampleTime > mSampleRate)
+    {
           mServerMessageQueue->reportQueueInfo(t);
           mLastSampleTime = t;
-      }
+    }
 
     mLoadMonitor->tick(t);
 
@@ -264,7 +229,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   }
 
 
-
+//bftm note: this is fine even after message overhaul.
   // Routing interface for servers.  This is used to route messages that originate from
   // a server provided service, and thus don't have a source object.  Messages may be destined
   // for either servers or objects.  The second form will simply automatically do the destination
@@ -272,7 +237,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
   void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
   {
-
     uint32 offset = 0;
     Network::Chunk msg_serialized;
     offset = msg->serialize(msg_serialized, offset);
@@ -318,7 +282,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     {
       //no messages have been queued for mObjectsInTransit
       //add this as the beginning of a vector of message pointers.
-      std::vector<Message*> tmp;
+      ObjectMessageList tmp;
       tmp.push_back(msg);
       mObjectsInTransit[dest_obj] = tmp;
     }
@@ -328,9 +292,8 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
       mObjectsInTransit[dest_obj].push_back(msg);
     }
   }
-  //end what i think it should be replaced with
-  
 
+//end what i think it should be replaced with
 
 
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -357,39 +320,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 //     if (dest_serv == OBJECT_IN_TRANSIT)
 
 
-  void Forwarder::route(Message* msg, const UUID& dest_obj, bool is_forward)
-  {
 
-    std::cout<<"\n\nbftm debug.  I am routing a message for object:  "<< dest_obj.toString()<<"\n\n";
-    
-    mOSeg->lookup(dest_obj);
-
-    
-    //add message to objects in transit.
-    //      if (mObjectsInTransit[dest_obj] == null)
-    if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
-    {
-      //no messages have been queued for mObjectsInTransit
-      //add this as the beginning of a vector of message pointers.
-      std::vector<Message*> tmp;
-      tmp.push_back(msg);
-      mObjectsInTransit[dest_obj] = tmp;
-
-    }
-    else
-    {
-      //add message to queue of objects in transit.
-      mObjectsInTransit[dest_obj].push_back(msg);
-    }
-
-    
-
-    
-  }
-
-
-  
-  
 
   void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
   {
@@ -444,31 +375,14 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
               dispatchMessage(msg);
           }
           break;
-      case MESSAGE_TYPE_OSEG_MIGRATE:
+      case MESSAGE_TYPE_OSEG_MIGRATE_MOVE:
         {
-          
-          OSegMigrateMessage* oseg_change_msg = dynamic_cast<OSegMigrateMessage*> (msg);
-          assert(oseg_change_msg != NULL);
-
-          if (oseg_change_msg->getMessageDestination() != this->serv_id())
-          {
-            //route it on to another server
-            route(oseg_change_msg, oseg_change_msg->getMessageDestination(),true);
-          }
-          else
-          {
-            //otherwise, deliver to local oseg.
-
-            //bftm debug
-            mOSeg->osegMigrateMessage(oseg_change_msg);
-            delete oseg_change_msg;
-          }
+          dispatchMessage(msg);
         }
         break;
-      case MESSAGE_TYPE_OSEG_LOOKUP:
+      case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
         {
-          printf("\n\nI caugt an oseg lookup message exception in forwarder.cpp\n\n");
-          assert(false);
+          dispatchMessage(msg);
         }
         break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
@@ -491,6 +405,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         break;
     }
   }
+
 
 
 void Forwarder::receiveMessage(Message* msg) {
@@ -525,52 +440,35 @@ void Forwarder::receiveMessage(Message* msg) {
 
   void Forwarder::forward(Message* msg, const UUID& dest_obj)
   {
-
-    mOSeg->lookup(dest_obj);
-    
-    printf("\n\nbftm debug.  I am forwarding a message to \n\n");
-
-    //add message to objects in transit.
-    //      if (mObjectsInTransit[dest_obj] == null)
-    if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
-    {
-      //no messages have been queued for mObjectsInTransit
-      //add this as the beginning of a vector of message pointers.
-      std::vector<Message*> tmp;
-      tmp.push_back(msg);
-      mObjectsInTransit[dest_obj] = tmp;
-    }
-    else
-    {
-      //add message to queue of objects in transit.
-      mObjectsInTransit[dest_obj].push_back(msg);
-    }
+    conn->deliver(obj_msg->contents, *mCurrentTime);
   }
-
-
-
-  ServerID Forwarder::lookup(const Vector3f& pos)
+  else
   {
-    ServerID sid = mCSeg->lookup(pos);
-    return sid;
+    CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
+    route(obj_msg_cpy, true);
   }
 
-  /*
-    May return that it's in transit.
-  */
-  /*
-  ServerID Forwarder::lookup(const UUID& obj_id)
-  {
+  delete msg;
+}
 
-    ServerID sid = mOSeg->lookup(obj_id);
-    //need to change this lookup function to query oseg instead.
 
-//    Vector3f pos = mLocationService->currentPosition(obj_id);
-//    ServerID sid = mCSeg->lookup(pos);
 
-    return sid;
-  }
-  */
+void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward)
+{
+  // Wrap it up in one of our ObjectMessages and ship it.
+  ObjectMessage* obj_msg = new ObjectMessage(m_serv_ID, *msg);  //turns the cbr::prot::message into just an object message.
+  route(obj_msg, dest_serv, is_forward);
+  delete msg;
+}
+
+
+
+ServerID Forwarder::lookup(const Vector3f& pos)
+{
+  ServerID sid = mCSeg->lookup(pos);
+  return sid;
+}
+
 
 void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
     mObjectConnections[dest_obj] = conn;

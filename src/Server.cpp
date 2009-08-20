@@ -249,14 +249,18 @@ void Server::handleMigration(const UUID& obj_id) {
     mOSeg->addObject(obj_id, mID);
 
     //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-    ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
-    Message* oseg_ack_msg;
-    //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
-    oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
 
-    if (oseg_ack_msg != NULL)
-        mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
 
+    
+//     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
+//     Message* oseg_ack_msg;
+//     //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
+//     oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
+
+//     if (oseg_ack_msg != NULL)
+//         mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
+
+    
     // Finally, subscribe the object for proximity queries
     mProximity->addQuery(obj_id, obj_query_angle);
 
@@ -282,13 +286,7 @@ void Server::tick(const Time& t)
   // Check for object migrations
   checkObjectMigrations();
 
-<<<<<<< HEAD:src/Server.cpp
-//   printf("\n\nbftm debug: inside of server.cpp.  Got into tick \n\n");
-=======
-  //  printf("\n\nbftm debug: inside of server.cpp.  Got into tick \n\n");
 
-
->>>>>>> New attempt at asynchronous object segmentation.:src/Server.cpp
   
 //   // Give objects a chance to process
 //   for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)

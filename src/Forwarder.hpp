@@ -15,16 +15,16 @@ namespace CBR
 {
   class Object;
   class ServerIDMap;
-class LocationService;
-class ObjectSegmentation;
+  class LocationService;
+  class ObjectSegmentation;
   class CoordinateSegmentation;
   class ServerMessageQueue;
   class ObjectMessageQueue;
   class Network;
   class Trace;
   class LoadMonitor;
-class Proximity;
-class ObjectConnection;
+  class Proximity;
+  class ObjectConnection;
 
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
   {
@@ -65,14 +65,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
       ServerID lookup(const Vector3f&); //returns the server id that is responsible for the 3d point Vector3f
       ServerID lookup(const UUID&); //
-
-
       void tickOSeg(const Time&t);
-    //      void getOSegMessages();
-    
-
       const ServerID& serv_id() const; //used to access server id of the processes
-
 
 
 

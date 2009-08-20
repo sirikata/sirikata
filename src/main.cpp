@@ -69,7 +69,7 @@
 //#include "UniformObjectSegmentation.hpp"
 //#include "DhtObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
-#include "craq_oseg/asyncCraq.hpp"
+//#include "craq_oseg/asyncCraq.hpp"
 //#include "OSegHasher.hpp"
 
 
@@ -370,19 +370,20 @@ void *main_loop(void *) {
 
       //alternate craq approach
 
-//       std::vector<CraqInitializeArgs> craqArgs;
-//       CraqInitializeArgs cInitArgs;
-//       cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
-//       cInitArgs.port    =      "4999";
+//     std::vector<CraqInitializeArgs> craqArgs;
+//     CraqInitializeArgs cInitArgs;
+//     cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//     cInitArgs.port    =      "4999";
     
-//       craqArgs.push_back(cInitArgs);
-//       cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
-//       cInitArgs.port    =      "4998";
-//       craqArgs.push_back(cInitArgs);
+//     craqArgs.push_back(cInitArgs);
+//     cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//     cInitArgs.port    =      "4998";
+//     craqArgs.push_back(cInitArgs);
     
-//       ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs);
+//     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
 
-    
+
+      
       //end create oseg
 
       
@@ -423,6 +424,7 @@ void *main_loop(void *) {
                 std::tr1::placeholders::_4),
             sq
         );
+
 
 
       Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);
