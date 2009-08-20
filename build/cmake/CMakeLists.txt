@@ -1409,28 +1409,6 @@ IF(OIS_ROOT AND FOUND_OIS)
   ENDIF()
 ENDIF()
 
-#install ois
-IF(sdl_ROOT AND FOUND_SDL)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${sdl_ROOT}/bin/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)        
-  ELSE()
-    INSTALL(DIRECTORY ${sdl_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)        
-  ENDIF()
-ENDIF()
-
-
-
-
 
 #install sql
 IF(SQLite3_ROOT)
@@ -1461,14 +1439,22 @@ IF(sdl_FOUND AND sdl_ROOT)
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE
             PATTERN "*.lib" EXCLUDE)        
-  ELSE()
+  ELSEIF(APPLE)
     INSTALL(DIRECTORY ${sdl_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION lib/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.a" EXCLUDE
             PATTERN "*.la" EXCLUDE
-            PATTERN "*.exe" EXCLUDE)        
+            PATTERN "*.exe" EXCLUDE)
+  ELSE()
+    INSTALL(DIRECTORY ${sdl_LIBRARY_DIRS}/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
   ENDIF()
 ENDIF()
 
