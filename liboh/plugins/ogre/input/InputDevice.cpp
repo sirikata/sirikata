@@ -139,6 +139,12 @@ void PointerDevice::firePointerClick(
         di.mOffsetX = 0;
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);
+        em->fire(EventPtr(
+                 new MousePressedEvent(
+                    thisptr,
+                    xPixel,
+                    yPixel,
+                    cursor, button)));
     } else {
         if (state) return;
         if ((*iter).mIsDragging) {
@@ -188,28 +194,24 @@ void PointerDevice::firePointerMotion(
                 yPixel = di.mDragY + yPixelArg;
             }
             if (first) {
+                MouseDragType dragType = DRAG_DEADBAND;
                 if (!di.mIsDragging) {
                     float xdiff = (xPixel - di.mDragStartX);
                     float ydiff = (yPixel - di.mDragStartY);
                     if (xdiff*xdiff + ydiff*ydiff >= mDeadband*mDeadband) {
                         di.mIsDragging = true;
-                        em->fire(EventPtr(new MouseDragEvent(
-                                              thisptr, DRAG_START,
-                                              di.mDragStartX, di.mDragStartY,
-                                              xPixel+di.mOffsetX, yPixel+di.mOffsetY,
-                                              di.mDragX+di.mOffsetX, di.mDragY+di.mOffsetY,
-                                              cursorType, di.mButton,
-                                              pressure, pressmin, pressmax)));
+                        dragType = DRAG_START;
                     }
                 } else {
-                    em->fire(EventPtr(new MouseDragEvent(
-                                          thisptr, DRAG_DRAG,
-                                          di.mDragStartX, di.mDragStartY,
-                                          xPixel+di.mOffsetX, yPixel+di.mOffsetY,
-                                          di.mDragX+di.mOffsetX, di.mDragY+di.mOffsetY,
-                                          cursorType, di.mButton,
-                                          pressure, pressmin, pressmax)));
+                    dragType = DRAG_DRAG;
                 }
+                em->fire(EventPtr(new MouseDragEvent(
+                                      thisptr, dragType,
+                                      di.mDragStartX, di.mDragStartY,
+                                      xPixel+di.mOffsetX, yPixel+di.mOffsetY,
+                                      di.mDragX+di.mOffsetX, di.mDragY+di.mOffsetY,
+                                      cursorType, di.mButton,
+                                      pressure, pressmin, pressmax)));
                 first = false;
                 if (mRelativeMode) {
                     di.mOffsetX += xPixelArg;

@@ -57,6 +57,13 @@ EventDescriptor EventDescriptor::MouseClick(MouseButton button) {
     return result;
 }
 
+EventDescriptor EventDescriptor::MousePressed(MouseButton button) {
+    EventDescriptor result;
+    result.mTag = MousePressedEventTag;
+    result.mDescriptor.mousePressed.button = button;
+    return result;
+}
+
 EventDescriptor EventDescriptor::MouseDrag(MouseButton button, MouseDragType type) {
     EventDescriptor result;
     result.mTag = MouseDragEventTag;
@@ -145,6 +152,15 @@ bool EventDescriptor::isMouseClick() const {
 MouseButton EventDescriptor::mouseClickButton() const {
     assert(isMouseClick());
     return mDescriptor.mouseClick.button;
+}
+
+bool EventDescriptor::isMousePressed() const {
+    return mTag == MousePressedEventTag;
+}
+
+MouseButton EventDescriptor::mousePressedButton() const {
+    assert(isMousePressed());
+    return mDescriptor.mousePressed.button;
 }
 
 

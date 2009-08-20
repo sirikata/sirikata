@@ -916,6 +916,23 @@ private:
         return EventResponse::nop();
     }
 
+    EventResponse mousePressedHandler(EventPtr ev) {
+        std::tr1::shared_ptr<MousePressedEvent> mouseev (
+            std::tr1::dynamic_pointer_cast<MousePressedEvent>(ev));
+        if (!mouseev)
+            return EventResponse::nop();
+
+        // Give the browsers a chance to use this input first
+        EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
+        if (browser_resp == EventResponse::cancel())
+            return EventResponse::cancel();
+
+        InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+        mInputBinding.handle(inputev);
+
+        return EventResponse::nop();
+    }
+
     EventResponse mouseClickHandler(EventPtr ev) {
         std::tr1::shared_ptr<MouseClickEvent> mouseev (
             std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
@@ -1162,6 +1179,10 @@ public:
         mEvents.push_back(mParent->mInputManager->subscribeId(
                 MouseHoverEvent::getEventId(),
                 std::tr1::bind(&MouseHandler::mouseHoverHandler, this, _1)));
+
+        mEvents.push_back(mParent->mInputManager->subscribeId(
+                MousePressedEvent::getEventId(),
+                std::tr1::bind(&MouseHandler::mousePressedHandler, this, _1)));
 
         mEvents.push_back(mParent->mInputManager->subscribeId(
                 MouseDragEvent::getEventId(),

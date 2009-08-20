@@ -43,13 +43,14 @@ enum EventTypeTag {
     Bogus = 0,
     KeyEventTag = 1,
     MouseHoverEventTag = 2,
-    MouseClickEventTag = 3,
-    MouseDragEventTag = 4,
-    AxisEventTag = 5,
-    TextEventTag = 6,
-    WindowEventTag = 7,
-    DragAndDropEventTag = 8,
-    WebEventTag = 9
+    MousePressedEventTag = 3,
+    MouseClickEventTag = 4,
+    MouseDragEventTag = 5,
+    AxisEventTag = 6,
+    TextEventTag = 7,
+    WindowEventTag = 8,
+    DragAndDropEventTag = 9,
+    WebEventTag = 10
 };
 
 class EventDescriptor {
@@ -57,6 +58,7 @@ public:
     static EventDescriptor Key(KeyButton button, KeyEvent type = KEY_PRESSED, Modifier mod = MOD_NONE);
     static EventDescriptor MouseHover();
     static EventDescriptor MouseClick(MouseButton button);
+    static EventDescriptor MousePressed(MouseButton button);
     static EventDescriptor MouseDrag(MouseButton button, MouseDragType type);
     static EventDescriptor Axis(AxisIndex axis);
     static EventDescriptor Text();
@@ -75,6 +77,9 @@ public:
 
     bool isMouseClick() const;
     MouseButton mouseClickButton() const;
+
+    bool isMousePressed() const;
+    MouseButton mousePressedButton() const;
 
     bool isMouseDrag() const;
     MouseButton mouseDragButton() const;
@@ -102,6 +107,9 @@ private:
         struct {
             MouseButton button;
         } mouseClick;
+        struct {
+            MouseButton button;
+        } mousePressed;
         struct {
             MouseButton button;
             MouseDragType type;

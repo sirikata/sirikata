@@ -191,8 +191,13 @@ enum KeyEvent {
 /** The three types of drag events. The START event will only be
     triggered once the motion is determined to be a drag (exceeded
     some number of pixels). The END event happens at the time the
-    mouse button is released (mPressure == 0) */
+    mouse button is released (mPressure == 0)
+
+    The DRAG_END event Will not be called on release if still in
+    the DRAG_DEADBAND state -- in this case, see MouseClickEvent.
+*/
 enum MouseDragType {
+    DRAG_DEADBAND, // Have not yet started an actual drag
     DRAG_START,
     DRAG_DRAG,
     DRAG_END
