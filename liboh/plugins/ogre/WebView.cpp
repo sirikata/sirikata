@@ -208,7 +208,8 @@ void WebView::createMaterial()
 	MaterialPtr material = MaterialManager::getSingleton().create(viewName + "Material",
 		ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	matPass = material->getTechnique(0)->getPass(0);
-	matPass->setSceneBlending(SBT_TRANSPARENT_ALPHA);
+	//matPass->setSeparateSceneBlending (SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
+	matPass->setSeparateSceneBlending (SBF_ONE, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
 	matPass->setDepthWriteEnabled(false);
 
 	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
