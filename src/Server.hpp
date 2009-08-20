@@ -90,6 +90,9 @@ class Server : public MessageRecipient, public ObjectMessageRecipient
       ObjectMigrationMap mObjectMigrations;
 
     ObjectConnectionMap mConnectingObjects;
+
+    typedef std::set<ObjectConnection*> ObjectConnectionSet;
+    ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages
 }; // class Server
 
 } // namespace CBR

@@ -63,6 +63,18 @@ const ServerID& Server::id() const {
 void Server::networkTick(const Time&t)
 {
   mForwarder->tick(t);
+
+  // Tick closing object connections, deleting them when they are
+  ObjectConnectionSet persistingConnections;
+  for(ObjectConnectionSet::iterator it = mClosingConnections.begin(); it != mClosingConnections.end(); it++) {
+      ObjectConnection* conn = *it;
+      conn->tick(t);
+      if (conn->empty())
+          delete conn;
+      else
+          persistingConnections.insert(conn);
+  }
+  mClosingConnections.swap(persistingConnections);
 }
 
 void Server::handleOpenConnection(ObjectConnection* conn) {
@@ -75,6 +87,19 @@ bool Server::receiveObjectHostMessage(const std::string& msg) {
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray((void*)&msg[0], msg.size());
     assert(parse_success);
+
+    // The object could be migrating and we get outdated packets.  Currently this can
+    // happen because we need to maintain the connection long enough to deliver the init migration
+    // message.  Currently we just discard these messages, but we may need to account for this.
+    // NOTE that we check connecting objects as well since we need to get past this point to deliver
+    // Session::Connect messages.
+    if (mObjects.find(obj_msg->source_object()) == mObjects.end() &&
+        mConnectingObjects.find(obj_msg->source_object()) == mConnectingObjects.end())
+    {
+        //printf("Warning: Server got message from object after migration started.\n");
+        return true;
+    }
+
 
     // Messages destined for the space skip the object message queue
     if (obj_msg->dest_object() == UUID::null()) {
@@ -321,8 +346,8 @@ void Server::checkObjectMigrations()
 
 
             // Part 1
-/*
-            CBR::Protocol::Session::InitiateMigration init_migration_msg;
+            CBR::Protocol::Session::Container session_msg;
+            CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
             init_migration_msg.set_new_server( (uint64)new_server_id );
             CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = new CBR::Protocol::Object::ObjectMessage();
             init_migr_obj_msg->set_source_object(UUID::null());
@@ -330,9 +355,11 @@ void Server::checkObjectMigrations()
             init_migr_obj_msg->set_dest_object(obj_id);
             init_migr_obj_msg->set_dest_port(OBJECT_PORT_SESSION);
             init_migr_obj_msg->set_unique(GenerateUniqueID(id()));
-            init_migr_obj_msg->set_payload( serializePBJMessage(init_migration_msg) );
-            mForwarder->route(init_migr_obj_msg);
-*/
+            init_migr_obj_msg->set_payload( serializePBJMessage(session_msg) );
+            obj_conn->deliver(*init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
+            delete init_migr_obj_msg;
+            //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
+
             // Part 2
 
           //bftm
@@ -359,7 +386,7 @@ void Server::checkObjectMigrations()
             // Stop Forwarder from delivering via this Object's
             // connection, destroy said connection
             ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-            delete migrated_conn;
+            mClosingConnections.insert(migrated_conn);
 
 	    migrated_objects.push_back(obj_id);
         }

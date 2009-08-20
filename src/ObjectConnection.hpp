@@ -57,6 +57,9 @@ public:
 
     void tick(const Time& t);
 
+    // Returns true if no messages are waiting to be delivered
+    bool empty() const { return mReceiveQueue.empty(); }
+
     // FIXME this should only be here temporarily.  Once we actually separate out object hosts, this
     // should not be necessary since the data won't need to be shipped around
     void handleMigrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);

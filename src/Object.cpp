@@ -117,6 +117,9 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     assert( msg->dest_object() == uuid() );
 
     switch( msg->dest_port() ) {
+      case OBJECT_PORT_SESSION:
+        sessionMessage(*msg);
+        break;
       case OBJECT_PORT_PROXIMITY:
         proximityMessage(*msg);
         break;
@@ -132,6 +135,20 @@ void Object::receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg) {
     }
 
     delete msg;
+}
+
+void Object::sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+    CBR::Protocol::Session::Container session_msg;
+    bool parse_success = session_msg.ParseFromString(msg.payload());
+    assert(parse_success);
+
+    assert(!session_msg.has_connect());
+    assert(!session_msg.has_migrate());
+
+    if (session_msg.has_init_migration()) {
+        CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
+        //printf("Object %s was told to init migration to %d\n", uuid().toString().c_str(), (uint32)init_migr.new_server());
+    }
 }
 
 void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {

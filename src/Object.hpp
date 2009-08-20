@@ -86,6 +86,7 @@ public:
 
     void migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
 private:
+    void sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
