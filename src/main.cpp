@@ -49,6 +49,7 @@
 #include "Analysis.hpp"
 #include "Visualization.hpp"
 #include "OracleLocationService.hpp"
+#include "StandardLocationService.hpp"
 #include "Test.hpp"
 #include "RaknetNetwork.hpp"
 #include "SSTNetwork.hpp"
@@ -165,8 +166,14 @@ void *main_loop(void *) {
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
     ObjectHost* obj_host = new ObjectHost(server_id, obj_factory, gTrace);
 
-    LocationService* loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
-
+    LocationService* loc_service = NULL;
+    String loc_service_type = GetOption(LOC)->as<String>();
+    if (loc_service_type == "oracle")
+        loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
+    else if (loc_service_type == "standard")
+        loc_service = new StandardLocationService(server_id, forwarder, forwarder, obj_factory);
+    else
+        assert(false);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());

@@ -253,6 +253,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
+  ${CBR_SOURCE_DIR}/StandardLocationService.cpp
   ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp

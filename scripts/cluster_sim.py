@@ -29,6 +29,7 @@ class ClusterSimSettings:
         self.object_global = 'false'
         self.noise = 'false'
         self.debug = True
+        self.loc = 'oracle'
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -106,6 +107,7 @@ class ClusterSim:
         cmd += "--object.static=" + self.settings.object_static + " "
         cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
+        cmd += "--loc=" + self.settings.loc + " "
         ClusterDeploymentRun(self.config, cmd)
 
     def retrieve_data(self):

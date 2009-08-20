@@ -69,6 +69,8 @@
 
 #define NOISE               "noise"
 
+#define LOC                 "loc"
+
 namespace CBR {
 
 void InitOptions();

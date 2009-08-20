@@ -49,6 +49,7 @@ LocationUpdatePolicy::LocationUpdatePolicy(ServerID sid, LocationService* locser
 LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
+
 LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher)
  : mDispatcher(dispatcher)
 {
