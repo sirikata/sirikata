@@ -284,6 +284,13 @@ void ObjectHost::removeTopLevelSpaceConnection(const SpaceID&id, const Network::
         }
     }
 }
+
+void ObjectHost::tick() {
+    for (HostedObjectMap::iterator iter = mHostedObjects.begin(); iter != mHostedObjects.end(); ++iter) {
+        iter->second->tick();
+    }
+}
+
 const Duration&ObjectHost::getSpaceTimeOffset(const SpaceID&id)const{
     SpaceConnectionMap::const_iterator where=mSpaceConnections.find(id);
     if (where!=mSpaceConnections.end()) {

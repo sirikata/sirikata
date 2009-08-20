@@ -275,6 +275,7 @@ int main ( int argc,const char**argv ) {
         for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
             continue_simulation = continue_simulation && (*it)->tick();
         }
+        oh->tick();
         Network::IOServiceFactory::pollService(ioServ);
     }
 	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {

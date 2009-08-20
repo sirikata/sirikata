@@ -66,18 +66,19 @@ class SIRIKATA_OH_EXPORT ProxyObject
     protected ProxyObjectListener // Parent death notification. FIXME: or should we leave the parent here, but ignore it in globalLocation()???
 {
 
+public:
     class UpdateNeeded {
     public:
         bool operator()(
             const Location&updatedValue,
             const Location&predictedValue) const;
     };
-
+    typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
 private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
-    TimedWeightedExtrapolator<Location,UpdateNeeded> mLocation;
+    Extrapolator mLocation;
     SpaceObjectReference mParentId;
     LocationAuthority* mLocationAuthority;
     bool mLocal;
@@ -160,7 +161,11 @@ public:
         Space that we have moved, but it is the first step in moving a local object. */
     void setLocation(TemporalValue<Location>::Time timeStamp,
                              const Location&location);
-    
+
+    static void updateLocationWithObjLoc(
+        Location&location,
+        const Protocol::ObjLoc& reqLoc);
+
     /** requests a new location for this object.  May involve physics 
     or other authority to actually move object */
     void requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc);

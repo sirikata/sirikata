@@ -62,12 +62,59 @@ class HostedObject::PerSpaceData {
 public:
     SpaceConnection mSpaceConnection;
     ProxyObjectPtr mProxyObject;
+    ProxyObject::Extrapolator mUpdatedLocation;
+
+    void locationWasReset(Time timestamp, Location loc) {
+        loc.setVelocity(Vector3f::nil());
+        loc.setAngularSpeed(0);
+        mUpdatedLocation.resetValue(timestamp, loc);
+    }
+    void locationWasSet(const Protocol::ObjLoc &msg) {
+        Time timestamp = msg.timestamp();
+        Location loc = mUpdatedLocation.extrapolate(timestamp);
+        ProxyObject::updateLocationWithObjLoc(loc, msg);
+        loc.setVelocity(Vector3f::nil());
+        loc.setAngularSpeed(0);
+        mUpdatedLocation.updateValue(timestamp, loc);
+    }
+
+    void updateLocation(HostedObject *ho) {
+        if (!mProxyObject) {
+            return;
+        }
+        SpaceID space = mProxyObject->getObjectReference().space();
+        Time now = Time::now(ho->getSpaceTimeOffset(space));
+        Location realLocation = mProxyObject->globalLocation(now);
+        if (mUpdatedLocation.needsUpdate(now, realLocation)) {
+            Protocol::ObjLoc toSet;
+            toSet.set_position(realLocation.getPosition());
+            toSet.set_velocity(realLocation.getVelocity());
+            RoutableMessageBody body;
+            toSet.SerializeToString(body.add_message("ObjLoc"));
+            RoutableMessageHeader header;
+            header.set_destination_port(Services::LOC);
+            header.set_destination_object(ObjectReference::spaceServiceID());
+            header.set_destination_space(space);
+            std::string bodyStr;
+            body.SerializeToString(&bodyStr);
+            // Avoids waiting a loop.
+            ho->sendViaSpace(header, MemoryReference(bodyStr));
+
+            locationWasSet(toSet);
+        }
+    }
 
     typedef std::map<uint32, std::set<ObjectReference> > ProxQueryMap;
     ProxQueryMap mProxQueryMap; ///< indexed by ProxCall::query_id()
 
     PerSpaceData(const std::tr1::shared_ptr<TopLevelSpaceConnection>&topLevel,Network::Stream*stream)
-        :mSpaceConnection(topLevel,stream) {
+        :mSpaceConnection(topLevel,stream),
+        mUpdatedLocation(
+            Duration::seconds(.1),
+            TemporalValue<Location>::Time::null(),
+            Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
+                     Vector3f(0,0,0),Vector3f(0,1,0),0),
+            ProxyObject::UpdateNeeded()) {
     }
 };
 
@@ -855,6 +902,14 @@ void HostedObject::send(const RoutableMessageHeader &hdrOrig, MemoryReference bo
     }
 }
 
+void HostedObject::tick() {
+    for (SpaceDataMap::iterator iter = mSpaceData->begin(); iter != mSpaceData->end(); ++iter) {
+        // send update to LOC (2) service in the space, if necessary
+        iter->second.updateLocation(this);
+        // Is it useful to call every script's tick() function?
+    }
+}
+
 void HostedObject::receivedPositionUpdate(
     const ProxyObjectPtr &proxy,
     const ObjLoc &objLoc,
@@ -989,6 +1044,7 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
             perSpaceIter->second.mProxyObject = proxyObj;
             proxyMgr->registerHostedObject(objectId.object(), getSharedPtr());
             receivedPositionUpdate(proxyObj, retObj.location(), true);
+            perSpaceIter->second.locationWasReset(retObj.location().timestamp(), proxyObj->getLastLocation());
             if (proxyMgr) {
                 proxyMgr->createObject(proxyObj);
                 ProxyCameraObject* cam = dynamic_cast<ProxyCameraObject*>(proxyObj.get());

@@ -60,7 +60,7 @@ bool Loc::endForwardingMessagesTo(MessageService*ms) {
 void Loc::processMessage(const ObjectReference&object_reference,const Protocol::ObjLoc&loc){
     RoutableMessageBody body;
     ;
-    loc.SerializeToString(body.add_message(std::string()));
+    loc.SerializeToString(body.add_message("ObjLoc"));
     std::string message_body;
     body.SerializeToString(&message_body);
     RoutableMessageHeader destination_header;

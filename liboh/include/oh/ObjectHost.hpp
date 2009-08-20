@@ -136,6 +136,8 @@ public:
     ///immediately returns a usable stream for the spaceID. The stream may or may not connect successfully, but will allow queueing messages. The stream will be deallocated if the return value is discarded. In most cases, this should not be called directly.
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
+    void tick();
+
     /** Gets an IO service corresponding to this object host.
         This can be used to schedule timeouts that are guaranteed
         to be in the correct thread. */

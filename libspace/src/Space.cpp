@@ -99,7 +99,6 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
 
     mGeom->forwardMessagesTo(mObjectConnections);
     mLoc->forwardMessagesTo(mGeom);
-    mLoc->forwardMessagesTo(mObjectConnections);//FIXME: is this necessary
 }
 void Space::run() {
     Network::IOServiceFactory::runService(mIO);
