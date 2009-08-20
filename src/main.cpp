@@ -373,10 +373,11 @@ void *main_loop(void *) {
 
 
     //Trying to populate objectToServerMap
+    // FIXME this needs to go away, we can't rely on the object factory being there
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
       {
         UUID obj_id = *it;
-        Vector3f start_pos = loc_service->currentPosition(obj_id);
+        Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time::null()).position();
         dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
       }
 
