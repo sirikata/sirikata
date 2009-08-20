@@ -9,6 +9,7 @@ from cluster_run import ClusterRun
 from cluster_run import ClusterDeploymentRun
 from cluster_scp import ClusterSCP
 
+CBR_WRAPPER = "./cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:
@@ -27,6 +28,7 @@ class ClusterSimSettings:
         self.object_static = 'false'
         self.object_global = 'false'
         self.noise = 'false'
+        self.debug = True
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -41,9 +43,6 @@ class ClusterSim:
 
     def ip_file(self):
         return "serverip-" + str(self.settings.layout_x) + '-' + str(self.settings.layout_y) + '.txt'
-
-    def build_dir(self):
-        return self.config.code_dir + "/build/cmake/"
 
     def scripts_dir(self):
         return self.config.code_dir + "/scripts/"
@@ -65,7 +64,7 @@ class ClusterSim:
         subprocess.call(['rm -f *.dat'], 0, None, None, None, None, None, False, True)
 
     def clean_remote_data(self):
-        clean_cmd = "cd " + self.build_dir() + "; rm trace*; rm sync*; rm serverip*;"
+        clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm sync*; rm serverip*;"
         ClusterRun(self.config, clean_cmd)
 
     def generate_ip_file(self):
@@ -80,13 +79,15 @@ class ClusterSim:
                 port += 1
                 server_index += 1
         fp.close()
-        ClusterSCP(self.config, [serveripfile, "remote:" + self.build_dir()])
+        ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
 
     def run_instances(self):
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
         # Construct the command lines to do the actual run and dispatch them
-        cmd = "cd " + self.build_dir() + "; "
-        cmd += "./cbr "
+        cmd = "cd " + self.scripts_dir() + "; "
+        cmd += CBR_WRAPPER + " "
+        if (self.settings.debug):
+            cmd += "--debug "
         cmd += "--id=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
         cmd += "--serverips=" + self.ip_file() + " "
@@ -109,14 +110,14 @@ class ClusterSim:
 
     def retrieve_data(self):
         # Copy the trace and sync data back here
-        trace_file_pattern = "remote:" + self.build_dir() + "trace-%(node)04d.txt"
-        sync_file_pattern = "remote:" + self.build_dir() + "sync-%(node)04d.txt"
+        trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
+        sync_file_pattern = "remote:" + self.scripts_dir() + "sync-%(node)04d.txt"
         ClusterSCP(self.config, [trace_file_pattern, sync_file_pattern, "."])
 
     def run_analysis(self):
         # Run analysis
-        subprocess.call(['../build/cmake/cbr', '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms'])
-        subprocess.call(['../build/cmake/cbr', '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms'])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms'])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms'])
 
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_send.dat'])
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_receive.dat'])
