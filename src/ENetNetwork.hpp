@@ -1,3 +1,7 @@
+#ifndef _CBR_ENET_NETWORK_HPP_
+#define _CBR_ENET_NETWORK_HPP_
+
+#include "Network.hpp"
 #include <enet/enet.h>
 
 namespace CBR {
@@ -7,11 +11,11 @@ class ENetNetwork :public Network{
     ENetHost *mSendHost;
     ENetHost *mRecvHost;
 
-    typedef std::tr1::unordered_map<Address4,Chunk*> PeerFrontMap;
+    typedef std::tr1::unordered_map<Address4,Chunk*,Address4::Hasher> PeerFrontMap;
     PeerFrontMap mPeerFront;
-    typedef std::tr1::unordered_map<Address4,std::vector<Chunk> > PeerInitMap;
+    typedef std::tr1::unordered_map<Address4,std::vector<Chunk>,Address4::Hasher> PeerInitMap;
     PeerInitMap mPeerInit;
-    typedef std::tr1::unordered_map<Address4,ENetPeer*> PeerMap;
+    typedef std::tr1::unordered_map<Address4,ENetPeer*,Address4::Hasher> PeerMap;
     PeerMap mSendPeers;
     PeerMap mRecvPeers;
     size_t mSendBufferSize;
@@ -23,7 +27,7 @@ class ENetNetwork :public Network{
     void processOutboundEvent(ENetEvent&event);
     bool internalSend(const Address4&,const Chunk&, bool reliable, bool ordered, int priority, bool force);
 public:
-    
+
     ENetNetwork(Trace* trace, size_t mPeerSendBufferSize, uint32 icomingBandwidth,uint32 outgoingBandwidth);
     virtual ~ENetNetwork();
 
@@ -43,3 +47,6 @@ public:
     virtual void reportQueueInfo(const Time& t) const;
 };
 }
+
+
+#endif //_CBR_ENET_NETWORK_HPP_

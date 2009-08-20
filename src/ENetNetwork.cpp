@@ -1,6 +1,7 @@
-#include "Network.hpp"
 #include "ENetNetwork.hpp"
+
 namespace CBR {
+
 #define MAGIC_PORT_OFFSET 8192
 ENetAddress ENetNetwork::toENetAddress(const Address4&addy){
     ENetAddress retval;
@@ -33,9 +34,9 @@ ENetNetwork::~ENetNetwork(){
         for (PeerMap::iterator i=mRecvPeers.begin(),ie=mRecvPeers.end();i!=ie;++i) {
             enet_peer_disconnect(i->second,0);
         }
-        enet_host_flush(mSendHost); 
+        enet_host_flush(mSendHost);
         enet_host_destroy(mSendHost);
-        enet_host_flush(mRecvHost); 
+        enet_host_flush(mRecvHost);
         enet_host_destroy(mRecvHost);
         mSendHost=NULL;
         mRecvHost=NULL;
@@ -109,7 +110,7 @@ bool ENetNetwork::send(const Address4&addy,const Chunk&dat, bool reliable, bool 
     return internalSend(addy,dat,reliable,ordered,priority,false);
 }
 void ENetNetwork::listen (const Address4&addy){
-    ENetAddress address=toENetAddress(addy);   
+    ENetAddress address=toENetAddress(addy);
     mRecvHost=enet_host_create(&address,254, mIncomingBandwidth, mOutgoingBandwidth);
     address.port+=MAGIC_PORT_OFFSET;
     mSendHost=enet_host_create(&address,254, mIncomingBandwidth, mOutgoingBandwidth);
@@ -153,7 +154,7 @@ Network::Chunk* ENetNetwork::receiveOne(const Address4& from, uint32 max_size){
     if (tmp) {
         mPeerFront.find(from)->second=NULL;
     }
-    return tmp;    
+    return tmp;
 }
 void ENetNetwork::processOutboundEvent(ENetEvent&event) {
     switch (event.type) {
@@ -201,7 +202,7 @@ void ENetNetwork::processOutboundEvent(ENetEvent&event) {
 void ENetNetwork::service(const Time& t){
     do {
         ENetEvent event;
-        
+
         if (enet_host_service_one_outbound (mRecvHost, & event))
             processOutboundEvent(event);
 
@@ -214,4 +215,3 @@ void ENetNetwork::reportQueueInfo(const Time& t) const{
 
 }
 }
-
