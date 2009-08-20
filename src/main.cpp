@@ -171,7 +171,7 @@ void *main_loop(void *) {
     if (loc_service_type == "oracle")
         loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
     else if (loc_service_type == "standard")
-        loc_service = new StandardLocationService(server_id, forwarder, forwarder, obj_factory);
+        loc_service = new StandardLocationService(server_id, forwarder, forwarder);
     else
         assert(false);
 

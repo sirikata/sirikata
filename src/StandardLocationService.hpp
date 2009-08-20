@@ -34,18 +34,15 @@
 #define _CBR_STANDARD_LOCATION_SERVICE_HPP_
 
 #include "LocationService.hpp"
-#include "MotionPath.hpp"
 
 namespace CBR {
-
-class ObjectFactory;
 
 /** Standard location service, which functions entirely based on location
  *  updates from objects and other spaces servers.
  */
 class StandardLocationService : public LocationService {
 public:
-    StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, ObjectFactory* objfactory);
+    StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual void tick(const Time& t);
@@ -61,9 +58,6 @@ public:
 private:
     struct LocationInfo {
         TimedMotionVector3f location;
-        bool has_next;
-        TimedMotionVector3f next;
-        MotionPath* path;
         BoundingSphere3f bounds;
     };
     typedef std::map<UUID, LocationInfo> LocationMap;
@@ -74,12 +68,7 @@ private:
     typedef std::set<UUID> UUIDSet;
     UUIDSet mLocalObjects;
     UUIDSet mReplicaObjects;
-    // Indicates whether we've done the initial notification of replica objects. This is
-    // necessary since we set up the replica objects in our constructor, but we need the
-    // resulting notifications to be sent to listeners which won't be subscribed until
-    // later.
-    bool mInitialNotification;
-}; // class LocationService
+}; // class StandardLocationService
 
 } // namespace CBR
 

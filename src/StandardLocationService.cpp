@@ -35,71 +35,15 @@
 
 namespace CBR {
 
-StandardLocationService::StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, ObjectFactory* objfactory)
+StandardLocationService::StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher)
  : LocationService(sid, router, dispatcher),
    mCurrentTime(Time::null()),
    mLocalObjects(),
-   mReplicaObjects(),
-   mInitialNotification(false)
+   mReplicaObjects()
 {
-    assert(objfactory);
-
-    for(ObjectFactory::iterator it = objfactory->begin(); it != objfactory->end(); it++) {
-        UUID objid = *it;
-        MotionPath* objpath = objfactory->motion(objid);
-
-        LocationInfo objinfo;
-        objinfo.path = objpath;
-        objinfo.location = objpath->initial();
-        const TimedMotionVector3f* next = objpath->nextUpdate( objinfo.location.time() );
-        if (next == NULL) {
-            objinfo.has_next = false;
-        }
-        else {
-            objinfo.has_next = true;
-            objinfo.next = *next;
-        }
-        objinfo.bounds = objfactory->bounds(objid);
-
-        mLocations[objid] = objinfo;
-    }
 }
 
 void StandardLocationService::tick(const Time& t) {
-    // Add an non-local objects as replicas.  We do this here instead of in the constructor
-    // since we need to notify listeners, who would not have been subscribed yet. This is how
-    // the real system would do it since it wouldn't find out about replicas until it talked to
-    // other servers.
-    if (!mInitialNotification) {
-        for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
-            UUID obj_id = it->first;
-            if (mLocalObjects.find(obj_id) == mLocalObjects.end()) {
-                mReplicaObjects.insert(obj_id);
-                notifyReplicaObjectAdded(obj_id, location(obj_id), bounds(obj_id));
-            }
-        }
-        mInitialNotification = true;
-    }
-
-    // FIXME we could maintain a heap of event times instead of scanning through this list every time
-    for(LocationMap::iterator it = mLocations.begin(); it != mLocations.end(); it++) {
-        UUID objid = it->first;
-        LocationInfo& locinfo = it->second;
-        if(locinfo.has_next && locinfo.next.time() <= t) {
-            locinfo.location = locinfo.next;
-            if (mLocalObjects.find(objid) != mLocalObjects.end())
-                notifyLocalLocationUpdated(objid, locinfo.location);
-            else if (mReplicaObjects.find(objid) != mReplicaObjects.end())
-                notifyReplicaLocationUpdated(objid, locinfo.location);
-            const TimedMotionVector3f* next = locinfo.path->nextUpdate(t);
-            if (next == NULL)
-                locinfo.has_next = false;
-            else
-                locinfo.next = *next;
-        }
-    }
-    // FIXME we should update bounds as well
-
     mCurrentTime = t;
     mUpdatePolicy->tick(t);
 }
@@ -126,8 +70,13 @@ BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
 }
 
 void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+    // Add to the information to the cache
+    LocationInfo info;
+    info.location = loc;
+    info.bounds = bnds;
+    mLocations[uuid] = info;
 
-    // This is an oracle, so we don't need to track these.
+    // Remove from replicated objects if its founds
     if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
         mReplicaObjects.erase(uuid);
         notifyReplicaObjectRemoved(uuid);
@@ -136,19 +85,28 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
     // reasonable compared to the loc and bounds passed in
 
+    // Add to the list of local objects
     mLocalObjects.insert(uuid);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
-    // This is an oracle, so we don't need to track these.
+    // Remove from mLocations, but save the cached state
+    assert( mLocations.find(uuid) != mLocations.end() );
+    LocationInfo cachedInfo = mLocations[uuid];
+    mLocations.erase(uuid);
+
+    // Remove from the list of local objects
     if (mLocalObjects.find(uuid) != mLocalObjects.end()) {
         mLocalObjects.erase(uuid);
         notifyLocalObjectRemoved(uuid);
     }
 
-    mReplicaObjects.insert(uuid);
-    notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+    // Add to list of replicated objects. FIXME should we actually do this?
+    // shouldn't the indication of whether to do this come from another server?
+    // what about the time in between
+    //mReplicaObjects.insert(uuid);
+    //notifyReplicaObjectAdded(uuid, cachedInfo.location, cachedInfo.bounds);
 }
 
 void StandardLocationService::receiveMessage(Message* msg) {

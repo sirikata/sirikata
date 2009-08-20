@@ -50,7 +50,17 @@ Server::~Server()
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
+
+        // Stop any proximity queries for this object
+        mProximity->removeQuery(obj_id);
+
         mLocationService->removeLocalObject(obj_id);
+
+        // Stop Forwarder from delivering via this Object's
+        // connection, destroy said connection
+        ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+        mClosingConnections.insert(migrated_conn);
+
         // FIXME there's probably quite a bit more cleanup to do here
     }
     mObjects.clear();
