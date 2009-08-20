@@ -560,6 +560,10 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
                 return true;
             if (ogreLoadPlugin("../../../dependencies/lib/OGRE",filename,false))
                 return true;
+            if (ogreLoadPlugin("../lib/OGRE",filename,false))
+                return true;
+            if (ogreLoadPlugin("OGRE",filename,false))
+                return true;
             if (ogreLoadPlugin("Debug",filename,false))
                 return true;
             if (ogreLoadPlugin("Release",filename,false))

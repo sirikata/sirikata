@@ -171,7 +171,7 @@ public class PythonObject {
                     }
                 }
             }
-            ScriptSource initsource=_engine.CreateScriptSourceFromString("import sys;sys.path+=[\"../../liboh/scripts/ironpython\",\"../../../liboh/scripts/ironpython\",\"scripts/ironpython\",\"ironpython\",\"../../liboh/scripts/ironpython/site-packages\",\"../../../liboh/scripts/ironpython/site-packages\",\"scripts/ironpython/site_packages\",\"ironpython/site_packages\"];print sys.path;from "+python_module+" import "+python_class,SourceCodeKind.Statements);
+            ScriptSource initsource=_engine.CreateScriptSourceFromString("import sys;sys.path+=[\"../../liboh/scripts/ironpython\",\"../../../liboh/scripts/ironpython\",\"scripts/ironpython\",\"ironpython\",\"../../liboh/scripts/ironpython/site-packages\",\"../../../liboh/scripts/ironpython/site-packages\",\"scripts/ironpython/site-packages\",\"ironpython/site_packages\",\"../lib/scripts/ironpython\",\"../lib/scripts/ironpython/site-packages\"];print sys.path;from "+python_module+" import "+python_class,SourceCodeKind.Statements);
             
             initsource.Execute(_scope);
             initsource=_engine.CreateScriptSourceFromString(python_class+"("+arglist+")",SourceCodeKind.Expression);

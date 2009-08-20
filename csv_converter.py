@@ -30,19 +30,33 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
-import sqlite3
 import sys
-import os
-import csv
-import math
-import random
-import time
-import uuid
-from urllib import unquote_plus
-
-sys.path.append('liboh/scripts/ironpython')
-sys.path.append('liboh/scripts/ironpython/site-packages')
+try:
+    import sqlite3
+    import os
+    import csv
+    import math
+    import random
+    import time
+    import uuid
+    from urllib import unquote_plus
+except:
+    print "Missing library: ", sys.exc_info()[0],", not generating scene.db" 
+    sys.exit(0);
+basepath=''
+if len(sys.argv):
+    where1=sys.argv[0].rfind("/")
+    where2=sys.argv[0].rfind("\\")
+    if where1!=-1:
+        if where2!=-1 and where2>where1:
+            where1=where2
+    else:
+        where1=where2
+    if where1!=-1:
+        basepath=sys.argv[0][0:where1]+'/'
+    
+sys.path.append(basepath+'liboh/scripts/ironpython')
+sys.path.append(basepath+'liboh/scripts/ironpython/site-packages')
 
 from protocol import Sirikata_pb2 as Sirikata
 from protocol import Persistence_pb2 as Persistence
