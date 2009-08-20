@@ -1435,13 +1435,34 @@ ENDIF()
 #install sql
 IF(SQLite3_ROOT)
   IF(WIN32)
-    INSTALL(DIRECTORY ${SQLite3_ROOT}/bin/
+    INSTALL(DIRECTORY ${SQLite3_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION bin/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)        
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)        
   ELSE()
     INSTALL(DIRECTORY ${SQLite3_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)        
+  ENDIF()
+ENDIF()
+
+#install SDL
+IF(sdl_FOUND AND sdl_ROOT)
+  IF(WIN32)
+    INSTALL(DIRECTORY ${sdl_ROOT}/bin/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION bin/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)        
+  ELSE()
+    INSTALL(DIRECTORY ${sdl_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION lib/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
@@ -1497,6 +1518,8 @@ IF(OGRE_FOUND)
               DESTINATION bin/
               PATTERN "*.a" EXCLUDE
               PATTERN "*.la" EXCLUDE
+	      PATTERN "*.h" EXCLUDE
+	      PATTERN "*.lib" EXCLUDE
               #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
               PATTERN "*.exe" EXCLUDE)        
     ELSE()
@@ -1512,16 +1535,24 @@ ENDIF()
 #install boost
 IF(BOOST_ROOT)
   IF(WIN32)
-    INSTALL(DIRECTORY ${BOOST_ROOT}/lib/
+    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}installed-boost/lib)
+      IF(EXISTS ${Boost_LIBRARY_DIR})
+      INSTALL(DIRECTORY ${Boost_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION bin/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE
-            PATTERN "*.lib" EXCLUDE
+            #PATTERN "*.so"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.me" EXCLUDE
+            PATTERN "*.hpp" EXCLUDE
+	    PATTERN "*.lib" EXCLUDE
             PATTERN "*wave-vc90-mt-1_37.dll" EXCLUDE
             PATTERN "*wave-vc90-mt-gd-1_37.dll" EXCLUDE
             PATTERN "*wave-vc80-mt-1_35.dll" EXCLUDE
-            PATTERN "*wave-vc80-mt-gd-1_35.dll" EXCLUDE)
+            PATTERN "*wave-vc80-mt-gd-1_35.dll" EXCLUDE
+            )          
+     ENDIF()
+     ENDFOREACH()
   ELSE()
     INSTALL(DIRECTORY ${BOOST_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
@@ -1545,11 +1576,15 @@ IF(MONO_FOUND)
           FILE_PERMISSIONS ${EXEC_PERMS}
           DESTINATION lib/)
   IF(MONO_ROOT)
+    INSTALL(PROGRAMS
+        ${MONO_ROOT}/lib/mono/2.0/System.Xml.dll
+        DESTINATION lib/)
     INSTALL(DIRECTORY
           ${MONO_ROOT}/lib/
           FILE_PERMISSIONS ${EXEC_PERMS}
           DESTINATION lib/
           #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+	  PATTERN "*zlib1.dll" EXCLUDE
           PATTERN "*.xsd" EXCLUDE
           PATTERN "*.config" EXCLUDE
           PATTERN "*.rsp" EXCLUDE
@@ -1570,6 +1605,7 @@ IF(MONO_FOUND)
     INSTALL(DIRECTORY ${MONO_ROOT}/bin/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION bin/
+  	    PATTERN "*zlib1.dll" EXCLUDE
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)        
   ENDIF()
@@ -1578,11 +1614,18 @@ ENDIF()
 #install curl #MUST BE DONE AFTER MONO to get correct libz
 IF(CURL_ROOT)
   IF(WIN32)
-    INSTALL(DIRECTORY ${CURL_ROOT}/bin/
+    INSTALL(DIRECTORY ${CURL_ROOT}/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION bin/
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
+            PATTERN "*.lib" EXCLUDE
+            PATTERN "*README" EXCLUDE
+            PATTERN "*COPYING" EXCLUDE
+            PATTERN "*Makefile" EXCLUDE
+            PATTERN "*.am" EXCLUDE
+            PATTERN "*.in" EXCLUDE
+            PATTERN "*CHANGES" EXCLUDE
+            PATTERN "*.exp" EXCLUDE
+            PATTERN "*.h" EXCLUDE
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)        
   ELSE()
