@@ -372,17 +372,17 @@ void *main_loop(void *) {
 
 //     std::vector<CraqInitializeArgs> craqArgs;
 //     CraqInitializeArgs cInitArgs;
-//     cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
 //     cInitArgs.port    =      "4999";
     
 //     craqArgs.push_back(cInitArgs);
-//     cInitArgs.ipAdd   = "171.67.77.229"; //will need to change this over and over.
+//     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
 //     cInitArgs.port    =      "4998";
 //     craqArgs.push_back(cInitArgs);
     
 //     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
 
-
+      
       
       //end create oseg
 

@@ -153,9 +153,9 @@ namespace CBR
        --really need to think about this.
   */
   //  void CraqObjectSegmentation::addObject(const UUID& obj_id, Object* obj, const ServerID idServerAckTo)
-  virtual void addObject(const UUID& obj_id, const ServerID ourID) = 0;
+  void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo)
   {
-    CraqDataSetGet cdSetGet(obj_id.rawHexData(),mID,true,CraqDataSetGet::SET);
+    CraqDataSetGet cdSetGet(obj_id.rawHexData(), mID ,true,CraqDataSetGet::SET);
     int trackID = craqDht.set(cdSetGet);
     
     //bftm this part doesn't make any sort of sense.  how could this have message destination information yet?

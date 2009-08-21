@@ -438,18 +438,18 @@ void Forwarder::receiveMessage(Message* msg) {
 
 
 
-  void Forwarder::forward(Message* msg, const UUID& dest_obj)
-  {
-    conn->deliver(obj_msg->contents, *mCurrentTime);
-  }
-  else
-  {
-    CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
-    route(obj_msg_cpy, true);
-  }
+//   void Forwarder::forward(Message* msg, const UUID& dest_obj)
+//   {
+//     conn->deliver(obj_msg->contents, *mCurrentTime);
+//   }
+//   else
+//   {
+//     CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
+//     route(obj_msg_cpy, true);
+//   }
 
-  delete msg;
-}
+//   delete msg;
+// }
 
 
 
