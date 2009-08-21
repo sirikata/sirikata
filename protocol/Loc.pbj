@@ -47,3 +47,16 @@ message LocationUpdate {
 message BulkLocationUpdate {
     repeated LocationUpdate update = 1;
 }
+
+
+// Payload for request from an object to space to update its location.
+// This should be sent from object -> Space(Loc) in an
+// ObjectMessage.
+message LocationUpdateRequest {
+    optional TimedMotionVector location = 1;
+    optional boundingsphere3f bounds = 2;
+}
+
+message Container {
+    optional LocationUpdateRequest update_request = 1;
+}

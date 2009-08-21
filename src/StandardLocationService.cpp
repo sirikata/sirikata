@@ -43,6 +43,21 @@ StandardLocationService::StandardLocationService(ServerID sid, MessageRouter* ro
 {
 }
 
+bool StandardLocationService::contains(const UUID& uuid) const {
+    return ( mLocalObjects.find(uuid) != mLocalObjects.end() ||
+        mReplicaObjects.find(uuid) != mReplicaObjects.end() );
+}
+
+LocationService::TrackingType StandardLocationService::type(const UUID& uuid) const {
+    if (mLocalObjects.find(uuid) != mLocalObjects.end())
+        return Local;
+    else if (mReplicaObjects.find(uuid) != mReplicaObjects.end())
+        return Replica;
+    else
+        return NotTracking;
+}
+
+
 void StandardLocationService::tick(const Time& t) {
     mCurrentTime = t;
     mUpdatePolicy->tick(t);
@@ -116,6 +131,42 @@ void StandardLocationService::receiveMessage(Message* msg) {
         // we already know all the positions. Normally these would generate
         // replica events.
         delete msg;
+    }
+}
+
+void StandardLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+    assert(msg.dest_object() == UUID::null());
+    assert(msg.dest_port() == OBJECT_PORT_LOCATION);
+
+    CBR::Protocol::Loc::Container loc_container;
+    bool parse_success = loc_container.ParseFromString(msg.payload());
+    assert(parse_success);
+
+    if (loc_container.has_update_request()) {
+        CBR::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
+
+        if (mLocalObjects.find( msg.source_object() ) == mLocalObjects.end()) {
+            // FIXME warn about update to non-local object
+        }
+        else {
+            LocationMap::iterator loc_it = mLocations.find( msg.source_object() );
+            assert(loc_it != mLocations.end());
+
+            if (request.has_location()) {
+                TimedMotionVector3f newloc(
+                    request.location().t(),
+                    MotionVector3f( request.location().position(), request.location().velocity() )
+                );
+                loc_it->second.location = newloc;
+                notifyLocalLocationUpdated( msg.source_object(), newloc );
+            }
+
+            if (request.has_bounds()) {
+                BoundingSphere3f newbounds = request.bounds();
+                loc_it->second.bounds = newbounds;
+                notifyLocalBoundsUpdated( msg.source_object(), newbounds );
+            }
+        }
     }
 }
 

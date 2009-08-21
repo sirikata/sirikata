@@ -97,6 +97,23 @@ void Object::checkPositionUpdate() {
 
     if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
         mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
+
+        // Generate and send an update to Loc
+        CBR::Protocol::Loc::Container container;
+        CBR::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
+        CBR::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
+        requested_loc.set_t(mLocation.updateTime());
+        requested_loc.set_position(mLocation.position());
+        requested_loc.set_velocity(mLocation.velocity());
+        bool success = mContext->objectHost->send(
+            this, OBJECT_PORT_LOCATION,
+            UUID::null(), OBJECT_PORT_LOCATION,
+            serializePBJMessage(container)
+        );
+        // XXX FIXME do something on failure
+
+
+        // FIXME Updates directly to objects should go away eventually.
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
             CBR::Protocol::Loc::TimedMotionVector loc;
             loc.set_t(mLocation.updateTime());

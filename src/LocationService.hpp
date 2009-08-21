@@ -96,12 +96,23 @@ protected:
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class LocationService : public MessageRecipient {
+class LocationService : public MessageRecipient, public ObjectMessageRecipient {
 public:
+    enum TrackingType {
+        NotTracking,
+        Local,
+        Replica
+    };
+
     LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
     virtual ~LocationService();
 
     virtual void tick(const Time& t) = 0;
+
+    /** Indicates whether this location service is tracking the given object.  It is only
+     *  safe to request information */
+    virtual bool contains(const UUID& uuid) const = 0;
+    virtual TrackingType type(const UUID& uuid) const = 0;
 
     /** Methods dealing with information requests. */
     virtual TimedMotionVector3f location(const UUID& uuid) = 0;
@@ -124,7 +135,8 @@ public:
 
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;
-
+    /** ObjectMessageRecipient Interface. */
+    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
 protected:
     void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
     void notifyLocalObjectRemoved(const UUID& uuid) const;

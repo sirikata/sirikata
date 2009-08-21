@@ -189,7 +189,9 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
             update.set_bounds(up_it->second.bounds);
 
         }
-        mRouter->route(msg, sid);
+        if (msg->contents.update_size() > 0) {
+            mRouter->route(msg, sid);
+        }
 
         sub_info->outstandingUpdates.clear();
 

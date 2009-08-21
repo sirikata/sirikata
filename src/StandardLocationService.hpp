@@ -45,6 +45,9 @@ public:
     StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
+    virtual bool contains(const UUID& uuid) const;
+    virtual TrackingType type(const UUID& uuid) const;
+
     virtual void tick(const Time& t);
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
@@ -54,7 +57,7 @@ public:
     virtual void removeLocalObject(const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
-
+    virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
 private:
     struct LocationInfo {
         TimedMotionVector3f location;

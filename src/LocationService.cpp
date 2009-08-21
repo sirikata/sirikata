@@ -54,12 +54,18 @@ LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDis
  : mDispatcher(dispatcher)
 {
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(sid, this, router);
+
     mDispatcher->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+
+    mDispatcher->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 LocationService::~LocationService() {
     delete mUpdatePolicy;
+
     mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+
+    mDispatcher->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {

@@ -65,6 +65,22 @@ OracleLocationService::OracleLocationService(ServerID sid, MessageRouter* router
     }
 }
 
+bool OracleLocationService::contains(const UUID& uuid) const {
+    assert( mLocalObjects.find(uuid) != mLocalObjects.end() ||
+        mReplicaObjects.find(uuid) != mReplicaObjects.end() );
+    return true;
+}
+
+LocationService::TrackingType OracleLocationService::type(const UUID& uuid) const {
+    if (mLocalObjects.find(uuid) != mLocalObjects.end())
+        return Local;
+    else {
+        assert(mReplicaObjects.find(uuid) != mReplicaObjects.end());
+        return Replica;
+    }
+}
+
+
 void OracleLocationService::tick(const Time& t) {
     // Add an non-local objects as replicas.  We do this here instead of in the constructor
     // since we need to notify listeners, who would not have been subscribed yet. This is how
@@ -161,5 +177,8 @@ void OracleLocationService::receiveMessage(Message* msg) {
     }
 }
 
+void OracleLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+    // FIXME we should probably at least decode this, maybe verify it
+}
 
 } // namespace CBR
