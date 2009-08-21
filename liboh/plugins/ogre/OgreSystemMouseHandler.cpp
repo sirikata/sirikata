@@ -129,6 +129,7 @@ class OgreSystem::MouseHandler {
        each cursor should have its own MouseHandler instance */
     std::map<int, DragAction> mDragAction;
     std::map<int, ActiveDrag*> mActiveDrag;
+    std::set<int> mWebViewActiveButtons;
     /*
         typedef EventResponse (MouseHandler::*ClickAction) (EventPtr evbase);
         std::map<int, ClickAction> mClickAction;
@@ -924,8 +925,10 @@ private:
 
         // Give the browsers a chance to use this input first
         EventResponse browser_resp = WebViewManager::getSingleton().onMousePressed(mouseev);
-        if (browser_resp == EventResponse::cancel())
+        if (browser_resp == EventResponse::cancel()) {
+            mWebViewActiveButtons.insert(mouseev->mButton);
             return EventResponse::cancel();
+        }
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
@@ -941,8 +944,12 @@ private:
 
         // Give the browsers a chance to use this input first
         EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
-        if (browser_resp == EventResponse::cancel())
+        if (browser_resp == EventResponse::cancel()) {
             return EventResponse::cancel();
+        }
+        if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
+            return EventResponse::cancel();
+        }
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
@@ -956,10 +963,19 @@ private:
             return EventResponse::nop();
         }
 
-        // Give the browsers a chance to use this input first
-        EventResponse browser_resp = WebViewManager::getSingleton().onMouseDrag(ev);
-        if (browser_resp == EventResponse::cancel())
-            return EventResponse::cancel();
+        std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
+        if (iter != mWebViewActiveButtons.end()) {
+            // Give the browser a chance to use this input
+            EventResponse browser_resp = WebViewManager::getSingleton().onMouseDrag(ev);
+
+            if (ev->mType == Input::DRAG_END) {
+                mWebViewActiveButtons.erase(iter);
+            }
+
+            if (browser_resp == EventResponse::cancel()) {
+                return EventResponse::cancel();
+            }
+        }
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
         mInputBinding.handle(inputev);
