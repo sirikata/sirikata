@@ -298,6 +298,13 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
 
 
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    // Messages destined for the space skip the object message queue and just get dispatched
+    if (obj_msg->dest_object() == UUID::null()) {
+        dispatchMessage(*obj_msg);
+        delete obj_msg;
+        return true;
+    }
+
     return mObjectMessageQueue->send(obj_msg);
 }
 

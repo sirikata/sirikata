@@ -110,16 +110,7 @@ bool Server::receiveObjectHostMessage(const std::string& msg) {
         return true;
     }
 
-
-    // Messages destined for the space skip the object message queue
-    if (obj_msg->dest_object() == UUID::null()) {
-        receiveMessage(*obj_msg);
-        delete obj_msg;
-        return true;
-    }
-    else {
-        return mForwarder->routeObjectHostMessage(obj_msg);
-    }
+    return mForwarder->routeObjectHostMessage(obj_msg);
 }
 
 // Handle Session messages from an object
