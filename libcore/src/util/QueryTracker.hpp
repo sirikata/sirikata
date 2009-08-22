@@ -58,7 +58,7 @@ public:
      If timerService is NULL, timeouts will not be honored.
     */
     explicit QueryTracker(Network::IOService *timerService, MessageService *forwarder=NULL) {
-        mNextQueryId = NULL;
+        mNextQueryId = 0;
         mIOService = timerService;
         mForwardService = forwarder;
     }
