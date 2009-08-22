@@ -1,12 +1,12 @@
 
-#include <boost/asio.hpp>
+
 #include "asyncCraq.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
 #include <string.h>
 #include <sstream>
 #include <boost/regex.hpp>
-
+#include <boost/asio.hpp>
 #include "asyncConnection.hpp"
 
 
