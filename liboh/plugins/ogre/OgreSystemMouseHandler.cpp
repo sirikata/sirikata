@@ -86,7 +86,7 @@ bool compareEntity (const Entity* one, const Entity* two) {
     ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
     ProxyLightObject* light1 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
-    Time now = SpaceTimeOffsetManager::getSingleton().now(mesh1->getObjectReference().space());
+    Time now = SpaceTimeOffsetManager::getSingleton().now(pp->getObjectReference().space());
     Location loc1 = pp->globalLocation(now);
     pp = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
@@ -688,8 +688,10 @@ private:
             perror("Failed to open scene_new.csv");
             return;
         }
-        fprintf(output, "objtype,subtype,name,parent,");
-        fprintf(output, "pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
+        fprintf(output, "objtype,subtype,name,parent,script,scriptparams,");
+        fprintf(output, "pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,");
+        fprintf(output, "vel_x,vel_y,vel_z,rot_axis_x,rot_axis_y,rot_axis_z,rot_speed,");
+        fprintf(output, "scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
         fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
         fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
         fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
@@ -766,6 +768,10 @@ private:
             temp << loc.getOrientation().w;
             w = temp.str();
         }
+        
+        Vector3f angAxis(loc.getAxisOfRotation());
+        float angSpeed(loc.getAngularSpeed());
+        
         string parent;
         ProxyObjectPtr parentObj = pp->getParentProxy();
         if (parentObj) {
@@ -786,10 +792,10 @@ private:
             float32 ambientPower, shadowPower;
             ambientPower = LightEntity::computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
             shadowPower = LightEntity::computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,,%s,%f,%f,%f,%f,%f,%f,%s,,,,,,,,,,,,,",typestr,parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    x,y,z,w.c_str());
-
+            fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
+                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
+            
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
@@ -828,9 +834,9 @@ private:
                 std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
             }
             std::string name = physicalName(mesh, saveSceneNames);
-            fprintf(fp, "mesh,%s,%s,%s,%f,%f,%f,%f,%f,%f,%s,",subtype.c_str(),name.c_str(),parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                    x,y,z,w.c_str());
+            fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
+                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
 
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
                     mesh->getScale().x,mesh->getScale().y,mesh->getScale().z,
@@ -838,9 +844,9 @@ private:
                     phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
         else if (camera) {
-            fprintf(fp, "camera,,,%s,%f,%f,%f,%f,%f,%f,%s\n",parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,
-                                    x,y,z,w.c_str());
+            fprintf(fp, "camera,,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f\n",parent.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
+                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
         }
         else {
             fprintf(fp, "#unknown object type in dumpObject\n");
