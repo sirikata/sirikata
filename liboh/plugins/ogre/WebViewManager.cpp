@@ -584,7 +584,7 @@ void WebViewManager::navigate(NavigationAction action) {
         break;
       case NavigateRefresh:
 // Until we recompile Awesomium on Mac and Windows:
-#if 0
+#if !defined(WIN32) && !defined(__APPLE__)
         focusedNonChromeWebView->webView->refresh();
 #else
         SILOG(ogre,error,"FIXME: refresh() is disabled...");
