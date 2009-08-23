@@ -91,6 +91,11 @@
       function goForward() { Client.event("navforward"); }
       function goRefresh() { Client.event("navrefresh"); }
       function goNewTab() { Client.event("navnewtab"); }
+      function goMoveForward(amt) { Client.event("navmoveforward", amt); }
+      function goTurnLeft(amt) { Client.event("navturnleft", amt); }
+      function goTurnRight(amt) { Client.event("navturnright", amt); }
+//      function goHelp() { Client.event("navhelp", "python camera insertObject"); }
+      function goHelp() { Client.event("navcommand", "python camera insertObject"); }
     </script>
   </head>
   <body onLoad="initButtons()">
