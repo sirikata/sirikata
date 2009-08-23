@@ -1341,6 +1341,10 @@ IF(PYTHON_EXECUTABLE)
 
 ENDIF()
 
+SET(MONO_SCRIPT_TARGET)
+IF(FOUND_MONO)
+SET(MONO_SCRIPT_TARGET monoscript)
+ENDIF()
 
 SET(EXEC_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
 #installation information
@@ -1357,7 +1361,7 @@ INSTALL(TARGETS
           ogregraphics
           prox
           bulletphysics
-          monoscript
+          ${MONO_SCRIPT_TARGET}
           ${SIRIKATA_OH_LIB}
           ${SPACE_BINARY}
           ${PROXIMITY_BINARY}
