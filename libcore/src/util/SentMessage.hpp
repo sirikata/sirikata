@@ -35,6 +35,7 @@
 #define _SIRIKATA_SentMessage_HPP_
 
 #include "QueryTracker.hpp"
+#include <network/IOServiceFactory.hpp>
 
 namespace Sirikata {
 
@@ -60,14 +61,15 @@ public:
     typedef std::tr1::function<void (SentMessage* sentMessage, const RoutableMessageHeader &responseHeader, MemoryReference responseBody)> QueryCallback;
 
 private:
-    struct TimerHandler;
-    TimerHandler *mTimerHandle; ///< Holds onto the timeout, if one exists.
-    const int64 mId; ///< This query ID. Passed to the constructor.
+    void timedOut();
 
+    const int64 mId; ///< This query ID. Passed to the constructor.
     RoutableMessageHeader mHeader; ///< Header embedded into the struct
 
     QueryCallback mResponseCallback; ///< Callback, or null if not yet set.
     QueryTracker *const mTracker;
+    /// Manages timeout, cancelled when response received or SentMessage deleted.
+    std::tr1::shared_ptr<Network::TimerHandle> mTimerHandle;
 
 public:
     /// Destructor: Caution: NOT VIRTUAL!!! Make sure to downcast if necessary!!

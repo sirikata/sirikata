@@ -45,44 +45,23 @@
 
 namespace Sirikata {
 
-class SentMessage::TimerHandler {
-    boost::asio::deadline_timer mTimer;
-    SentMessage *mSentMessage;
-    int64 mMessageId;
-
-    void timedOut(const boost::system::error_code &error) {
-        std::auto_ptr<TimerHandler> scopedDestructor(this);
-        if (error == boost::asio::error::operation_aborted) {
-            return; // don't care if the timer was cancelled.
-        }
-        RoutableMessageHeader msg;
-        if (mSentMessage->header().has_destination_object()) {
-            msg.set_source_object(mSentMessage->header().destination_object());
-        }
-        if (mSentMessage->header().has_destination_space()) {
-            msg.set_source_space(mSentMessage->header().destination_space());
-        }
-        msg.set_source_port(mSentMessage->header().destination_port());
-        msg.set_return_status(RoutableMessageHeader::TIMEOUT_FAILURE);
-        msg.set_reply_id(mSentMessage->getId());
-        mSentMessage->mTimerHandle=NULL;
-        mSentMessage->mResponseCallback(mSentMessage, msg, MemoryReference(NULL,0));
-        //formerly called this, but that asked asio to unset an ignored callback mSentMessage->processMessage(msg, MemoryReference(NULL,0));
+void SentMessage::timedOut() {
+    RoutableMessageHeader msg;
+    if (this->header().has_destination_object()) {
+        msg.set_source_object(this->header().destination_object());
     }
-public:
-    TimerHandler(Network::IOService *io, SentMessage *messageInfo, const Duration& num_seconds)
-        : mTimer(*static_cast<boost::asio::io_service*>(io), boost::posix_time::microseconds(num_seconds.toMicroseconds())) {
-
-        mSentMessage = messageInfo;
-        mTimer.async_wait(
-            boost::bind(&TimerHandler::timedOut, this, boost::asio::placeholders::error));
+    if (this->header().has_destination_space()) {
+        msg.set_source_space(this->header().destination_space());
     }
+    msg.set_source_port(this->header().destination_port());
+    msg.set_return_status(RoutableMessageHeader::TIMEOUT_FAILURE);
+    msg.set_reply_id(this->getId());
+    this->mTimerHandle.reset();
 
-    void cancel() {
-        mMessageId = -1;
-        mTimer.cancel();
-    }
-};
+    // Make sure this is on the same thread--
+    // We can use mQueryTracker->sendMessage(msg) to send it via the same loop
+    this->mResponseCallback(this, msg, MemoryReference(NULL,0));
+}
 
 void SentMessage::processMessage(const RoutableMessageHeader &header, MemoryReference body) {
     unsetTimeout();
@@ -90,28 +69,28 @@ void SentMessage::processMessage(const RoutableMessageHeader &header, MemoryRefe
 }
 
 SentMessage::SentMessage(int64 newId, QueryTracker *tracker)
-    : mTimerHandle(NULL), mId(newId), mTracker(tracker)
+    : mId(newId), mTracker(tracker)
 {
     header().set_id(mId);
     tracker->insert(this);
 }
 
 SentMessage::SentMessage(int64 newId, QueryTracker *tracker, const QueryCallback& cb)
- : mTimerHandle(NULL), mId(newId), mResponseCallback(cb), mTracker(tracker)
+ : mId(newId), mResponseCallback(cb), mTracker(tracker)
 {
     header().set_id(mId);
     tracker->insert(this);
 }
 
 SentMessage::SentMessage(QueryTracker *tracker)
- : mTimerHandle(NULL), mId(tracker->allocateId()), mTracker(tracker)
+ : mId(tracker->allocateId()), mTracker(tracker)
 {
     header().set_id(mId);
     tracker->insert(this);
 }
 
 SentMessage::SentMessage(QueryTracker *tracker, const QueryCallback& cb)
- : mTimerHandle(NULL), mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker)
+ : mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker)
 {
     header().set_id(mId);
     tracker->insert(this);
@@ -140,7 +119,7 @@ void SentMessage::send(MemoryReference bodystr) {
 void SentMessage::unsetTimeout() {
     if (mTimerHandle) {
         mTimerHandle->cancel();
-        mTimerHandle = 0;
+        mTimerHandle.reset();
     }
 }
 
@@ -149,7 +128,9 @@ void SentMessage::setTimeout(const Duration& timeout) {
     if (mTracker) {
         Network::IOService *io = mTracker->getIOService();
         if (io) {
-            mTimerHandle = new TimerHandler(io, this, timeout);
+            mTimerHandle.reset(new Network::TimerHandle(io));
+            mTimerHandle->setCallback(std::tr1::bind(&SentMessage::timedOut, this));
+            mTimerHandle->wait(mTimerHandle, timeout);
         }
     }
 }

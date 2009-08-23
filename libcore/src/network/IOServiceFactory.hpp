@@ -34,6 +34,41 @@
 
 namespace Sirikata { namespace Network {
 class IOService;
+
+
+class BoostAsioDeadlineTimer;
+class SIRIKATA_EXPORT TimerHandle {
+    BoostAsioDeadlineTimer *mTimer;
+    std::tr1::function<void()> mFunc;
+    class TimedOut;
+public:
+    TimerHandle(IOService *io);
+
+    TimerHandle(IOService *io, const std::tr1::function<void()>&f);
+
+    void wait(const std::tr1::shared_ptr<TimerHandle> &thisPtr,
+              const Duration &num_seconds);
+
+    void wait(const std::tr1::shared_ptr<TimerHandle> &thisPtr,
+              const Duration &num_seconds,
+              const std::tr1::function<void()>&f) {
+        setCallback(f);
+        wait(thisPtr, num_seconds);
+    }
+
+    void setCallback(const std::tr1::function<void()>&f) {
+        mFunc = f;
+    }
+
+    ~TimerHandle();
+
+    void cancel();
+};
+
+typedef std::tr1::shared_ptr<TimerHandle> TimerHandlePtr;
+typedef std::tr1::weak_ptr<TimerHandle> TimerHandleWPtr;
+
+
 class SIRIKATA_EXPORT IOServiceFactory {
     static void io_service_initializer(IOService*io_ret);
   public:

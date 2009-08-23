@@ -94,6 +94,57 @@ void IOServiceFactory::dispatchServiceMessage(IOService*ios,const Duration&waitF
     t->async_wait(std::tr1::bind(&handle_deadline_timer,_1,t,f));
 }
 
+class BoostAsioDeadlineTimer : public boost::asio::deadline_timer {
+public:
+    BoostAsioDeadlineTimer(boost::asio::io_service &io)
+        : boost::asio::deadline_timer(io) {
+    }
+};
+
+class TimerHandle::TimedOut {
+public:
+    static void timedOut(
+            const boost::system::error_code &error,
+            std::tr1::weak_ptr<TimerHandle> wthis)
+    {
+        std::tr1::shared_ptr<TimerHandle> sharedThis (wthis.lock());
+        if (!sharedThis) {
+            return; // we've been deleted already.
+        }
+        if (error == boost::asio::error::operation_aborted) {
+            return; // don't care if the timer was cancelled.
+        }
+        sharedThis->mFunc();
+    }
+};
+
+TimerHandle::TimerHandle(IOService *io) {
+    mTimer = new BoostAsioDeadlineTimer(*io);
+}
+
+TimerHandle::TimerHandle(IOService *io, const std::tr1::function<void()>&f) {
+    mTimer = new BoostAsioDeadlineTimer(*io);
+    setCallback(f);
+}
+
+void TimerHandle::wait(
+        const std::tr1::shared_ptr<TimerHandle> &thisPtr,
+        const Duration &num_seconds) {
+    mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
+    mTimer->async_wait(
+        boost::bind(
+            &TimerHandle::TimedOut::timedOut,
+            boost::asio::placeholders::error,
+            thisPtr));
+}
+
+TimerHandle::~TimerHandle() {
+    cancel();
+}
+
+void TimerHandle::cancel() {
+    mTimer->cancel();
+}
 
 IOService::IOService():boost::asio::io_service(1){}
 IOService::~IOService(){}
