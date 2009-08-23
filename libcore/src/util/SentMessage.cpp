@@ -44,9 +44,13 @@
 
 
 namespace Sirikata {
-
+void  checkThreadId(void *mDebugThreadId){
+    boost::thread::id*prev_thread_id=(boost::thread::id*)mDebugThreadId;
+    assert(*prev_thread_id==boost::this_thread::get_id());
+}
 void SentMessage::timedOut() {
     RoutableMessageHeader msg;
+    checkThreadId(mDebugThreadId);
     if (this->header().has_destination_object()) {
         msg.set_source_object(this->header().destination_object());
     }
@@ -65,33 +69,41 @@ void SentMessage::timedOut() {
 
 void SentMessage::processMessage(const RoutableMessageHeader &header, MemoryReference body) {
     unsetTimeout();
+    checkThreadId(mDebugThreadId);
     mResponseCallback(this, header, body);
 }
 
 SentMessage::SentMessage(int64 newId, QueryTracker *tracker)
-    : mId(newId), mTracker(tracker)
+    : mId(newId), mTracker(tracker), mDebugThreadId(NULL)
 {
     header().set_id(mId);
     tracker->insert(this);
+    assert (mDebugThreadId=new boost::thread::id(boost::this_thread::get_id()));
 }
 
 SentMessage::SentMessage(int64 newId, QueryTracker *tracker, const QueryCallback& cb)
- : mId(newId), mResponseCallback(cb), mTracker(tracker)
+    : mId(newId), mResponseCallback(cb), mTracker(tracker), mDebugThreadId(NULL)
 {
     header().set_id(mId);
+    assert (mDebugThreadId=new boost::thread::id(boost::this_thread::get_id()));
     tracker->insert(this);
 }
 
 SentMessage::SentMessage(QueryTracker *tracker, const QueryCallback& cb)
- : mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker)
+    : mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker),mDebugThreadId(NULL)
 {
     header().set_id(mId);
+    assert (mDebugThreadId=new boost::thread::id(boost::this_thread::get_id()));
     tracker->insert(this);
 }
 
 SentMessage::~SentMessage() {
     unsetTimeout();
     mTracker->remove(this);
+    checkThreadId(mDebugThreadId);
+    if (mDebugThreadId) {
+        delete (boost::thread::id*)mDebugThreadId;
+    }
 }
 
 static SpaceID nul = SpaceID::null();
@@ -107,6 +119,7 @@ const SpaceID &SentMessage::getSpace() const {
 void SentMessage::send(MemoryReference bodystr) {
     mHeader.set_id(mId);
     mTracker->sendMessage(header(), bodystr);
+    checkThreadId(mDebugThreadId);
 }
 
 void SentMessage::unsetTimeout() {
@@ -119,6 +132,7 @@ void SentMessage::unsetTimeout() {
 void SentMessage::setTimeout(const Duration& timeout) {
     unsetTimeout();
     if (mTracker) {
+        checkThreadId(mDebugThreadId);
         Network::IOService *io = mTracker->getIOService();
         if (io) {
             mTimerHandle.reset(new Network::TimerHandle(io));

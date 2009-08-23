@@ -68,6 +68,9 @@ private:
 
     QueryCallback mResponseCallback; ///< Callback, or null if not yet set.
     QueryTracker *const mTracker;
+
+    ///asserts that these requests are all happening on the same thread
+    void * mDebugThreadId;
     /// Manages timeout, cancelled when response received or SentMessage deleted.
     std::tr1::shared_ptr<Network::TimerHandle> mTimerHandle;
 
