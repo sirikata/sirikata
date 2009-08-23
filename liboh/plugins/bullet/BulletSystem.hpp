@@ -47,6 +47,8 @@
 #include <transfer/TransferManager.hpp>
 #include "btBulletDynamicsCommon.h"
 
+#define GRAVITY (-9.8f)
+
 using namespace std;
 namespace Sirikata {
 
@@ -317,6 +319,7 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
     float mSizeZ;
     string mName;
     Vector3f mHull;
+    Vector3f mGravity;
 
     /// PID Control parameters
     bool mPIDControlEnabled;
@@ -342,6 +345,7 @@ public:
             mSizeY(0),
             mSizeZ(0),
             mName(""),
+            mGravity(0, GRAVITY, 0),
             mPIDControlEnabled(false) {
         system = sys;
     }
@@ -442,7 +446,7 @@ public:
 class BulletSystem: public TimeSteppedQueryableSimulation {
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
                     const String&options);
-    Vector3d gravity;
+    Vector3f mGravity;
     double groundlevel;
     OptionValue* mTempTferManager;
     OptionValue* mWorkQueue;
@@ -460,6 +464,7 @@ class BulletSystem: public TimeSteppedQueryableSimulation {
 
 public:
     BulletSystem();
+    Vector3f getGravity() { return mGravity; };
     std::tr1::unordered_map<btCollisionObject*, BulletObj*> bt2siri;  /// map bullet bodies (what we get in the callbacks) to BulletObj's
     btDiscreteDynamicsWorld* dynamicsWorld;
     vector<BulletObj*>objects;

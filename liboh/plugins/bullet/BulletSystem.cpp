@@ -106,6 +106,7 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
     DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
+    mGravity = system->getGravity() * pp.gravity;
     colMask = pp.colMask;
     colMsg = pp.colMsg;
     switch (pp.mode) {
@@ -199,7 +200,7 @@ void BulletObj::setScale (const Vector3f &newScale) {
     }
     mBulletBodyPtr->setCollisionShape(mColShape);
     mBulletBodyPtr->setMassProps(mass, localInertia);
-    mBulletBodyPtr->setGravity(btVector3(0, -9.8, 0));                              /// otherwise gravity assumes old inertia!
+    mBulletBodyPtr->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));  /// otherwise gravity assumes old inertia!
     mBulletBodyPtr->activate(true);
     DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << mSizeX << " mass: "
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
@@ -326,6 +327,7 @@ void BulletObj::buildBulletBody(const unsigned char* meshdata, int meshbytes) {
         }
     }
     system->dynamicsWorld->addRigidBody(body);
+    body->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));
     mBulletBodyPtr=body;
     mActive=true;
     system->bt2siri[body]=this;
@@ -674,8 +676,6 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     Transfer::TransferManager* tm = (Transfer::TransferManager*)mTempTferManager->as<void*>();
     this->transferManager = tm;
 
-    gravity = Vector3d(0, -9.8, 0);
-    //groundlevel = 3044.0;
     groundlevel = 0.0;
     btTransform groundTransform;
     btDefaultMotionState* mMotionState;
@@ -692,7 +692,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     overlappingPairCache= new btAxisSweep3(worldAabbMin,worldAabbMax,maxProxies);
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
-    dynamicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
+    dynamicsWorld->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));
 
     /// create ground
     groundShape= new btBoxShape(btVector3(btScalar(1500.),btScalar(1.0),btScalar(1500.)));
@@ -713,7 +713,9 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     return true;
 }
 
-BulletSystem::BulletSystem() :             mStartTime(Task::LocalTime::now()) {
+BulletSystem::BulletSystem() :
+        mGravity(0, GRAVITY, 0),
+        mStartTime(Task::LocalTime::now()) {
     DEBUG_OUTPUT(cout << "dbm: I am the BulletSystem constructor!" << endl);
 }
 

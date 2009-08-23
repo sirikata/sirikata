@@ -217,6 +217,10 @@ class CsvToSql:
                 physical.bounce = float(row['bounce'])
                 physical.collide_mask = int(row['colMask'])
                 physical.collide_msg = int(row['colMsg'])
+                if not row['gravity'] == "":
+                    physical.gravity = float(row['gravity'])
+                else:
+                    physical.gravity = 1.0
                 if row.get('hull_x',''):
                     self.protovec(physical.hull, row, 'hull')
                 self.set(cursor, uuid, 'PhysicalParameters', physical.SerializeToString())

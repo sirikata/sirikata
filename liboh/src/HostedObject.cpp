@@ -1239,6 +1239,7 @@ void HostedObject::receivedPropertyUpdate(
             params.colMsg = parsedProperty.collide_msg();
             params.colMask = parsedProperty.collide_mask();
             params.hull = parsedProperty.hull();
+            params.gravity = parsedProperty.gravity();
             params.name = proxymesh->getPhysical().name;        /// otherwise setPhysical will wipe it
             proxymesh->setPhysical(params);
         }
