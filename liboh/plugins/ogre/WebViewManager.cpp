@@ -661,11 +661,11 @@ void WebViewManager::navigate(NavigationAction action, const String& arg) {
             focusedNonChromeWebView->loadURL(arg);
         break;
       case NavigateCommand:
-        fprintf(stderr, "NavigateCommand: %s\n", arg.c_str());
+        SILOG(ogre, info, "NavigateCommand: " + arg);
         NavigateCommandDispatcher(arg);
         break;
       default:
-        SILOG(ogre,error,"Unknown navigation action from navigate(action, arg).");
+        SILOG(ogre, error, "Unknown navigation action from navigate(action, arg).");
         break;
     }
 #endif //HAVE_AWESOMIUM
