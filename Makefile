@@ -33,7 +33,7 @@ clean:
 dependencies:
 	case "`uname`" in \
 		*arwin*) \
-			svn co http://sirikata.googlecode.com/svn/trunk/osx10.4 dependencies \
+			svn co http://sirikataosx.googlecode.com/svn/trunk dependencies \
 			;; \
 		*MINGW*|*CYGWIN*|*win32*) \
 			if [ x = x"$(VCVER)" ]; then \
