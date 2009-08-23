@@ -121,8 +121,7 @@ private:
     }
 
 public:
-    PersistenceSentMessage(QueryTracker *tracker) : SuperClass(tracker) {
-        SentMessage::setCallback(&ThisClass::receivedPersistenceMessageStatic);
+    PersistenceSentMessage(QueryTracker *tracker) : SuperClass(tracker,&ThisClass::receivedPersistenceMessageStatic) {
     }
     ~PersistenceSentMessage() {}
     

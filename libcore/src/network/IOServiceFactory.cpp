@@ -131,11 +131,12 @@ void TimerHandle::wait(
         const std::tr1::shared_ptr<TimerHandle> &thisPtr,
         const Duration &num_seconds) {
     mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
+    std::tr1::weak_ptr<TimerHandle> weakThisPtr(thisPtr);
     mTimer->async_wait(
         boost::bind(
             &TimerHandle::TimedOut::timedOut,
             boost::asio::placeholders::error,
-            thisPtr));
+            weakThisPtr));
 }
 
 TimerHandle::~TimerHandle() {

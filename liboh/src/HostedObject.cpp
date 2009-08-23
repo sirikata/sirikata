@@ -294,7 +294,7 @@ struct HostedObject::PrivateCallbacks {
         Response immedResponse;
         int immedIndex = 0;
 
-        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker);
+        SentMessageBody<ReadWriteSet> *persistenceMsg = new SentMessageBody<ReadWriteSet>(&realThis->mTracker,std::tr1::bind(&handlePersistenceResponse, realThis, header, _1, _2, _3));
         int outIndex = 0;
         ReadWriteSet &outMessage = persistenceMsg->body();
         if (rws.has_options()) {
@@ -407,7 +407,7 @@ struct HostedObject::PrivateCallbacks {
             persistenceMsg->header().set_destination_space(SpaceID::null());
             persistenceMsg->header().set_destination_object(ObjectReference::spaceServiceID());
             persistenceMsg->header().set_destination_port(Services::PERSISTENCE);
-            persistenceMsg->setCallback(std::tr1::bind(&handlePersistenceResponse, realThis, header, _1, _2, _3));
+
             persistenceMsg->serializeSend();
         } else {
             delete persistenceMsg;
@@ -579,12 +579,11 @@ struct HostedObject::PrivateCallbacks {
             realThis->receivedPropertyUpdate(proxyObj, sentMessage->body().reads(i).field_name(), sentMessage->body().reads(i).data());
         }
         {
-            RPCMessage *request = new RPCMessage(&realThis->mTracker);
+            RPCMessage *request = new RPCMessage(&realThis->mTracker,std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
             request->header().set_destination_space(proximateObjectId.space());
             request->header().set_destination_object(proximateObjectId.object());
             Protocol::LocRequest loc;
             loc.SerializeToString(request->body().add_message("LocRequest"));
-            request->setCallback(std::tr1::bind(&receivedPositionUpdateResponse, weakThis, _1, _2, _3));
             request->serializeSend();
         }
         return;
@@ -1126,15 +1125,15 @@ void HostedObject::processRPC(const RoutableMessageHeader &msg, const std::strin
                 printstr<<" (Requesting information...)";
 
                 {
-                    RPCMessage *locRequest = new RPCMessage(&mTracker);
+                    RPCMessage *locRequest = new RPCMessage(&mTracker,std::tr1::bind(&PrivateCallbacks::receivedProxObjectLocation,
+                                                                                     getWeakPtr(), _1, _2, _3,
+                                                        proxCall.query_id()));
                     locRequest->header().set_destination_space(proximateObjectId.space());
                     locRequest->header().set_destination_object(proximateObjectId.object());
                     LocRequest loc;
                     loc.SerializeToString(locRequest->body().add_message("LocRequest"));
 
-                    locRequest->setCallback(std::tr1::bind(&PrivateCallbacks::receivedProxObjectLocation,
-                                                        getWeakPtr(), _1, _2, _3,
-                                                        proxCall.query_id()));
+                  
                     locRequest->setTimeout(Duration::seconds(5.0));
                     locRequest->serializeSend();
                 }

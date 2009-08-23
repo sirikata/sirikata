@@ -82,13 +82,6 @@ SentMessage::SentMessage(int64 newId, QueryTracker *tracker, const QueryCallback
     tracker->insert(this);
 }
 
-SentMessage::SentMessage(QueryTracker *tracker)
- : mId(tracker->allocateId()), mTracker(tracker)
-{
-    header().set_id(mId);
-    tracker->insert(this);
-}
-
 SentMessage::SentMessage(QueryTracker *tracker, const QueryCallback& cb)
  : mId(tracker->allocateId()), mResponseCallback(cb), mTracker(tracker)
 {

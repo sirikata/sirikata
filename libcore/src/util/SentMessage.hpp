@@ -76,8 +76,6 @@ public:
     ~SentMessage();
 
     /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
-    SentMessage(QueryTracker *sender);
-    /// Constructor allocates a new queryId. Caller is expected to keep track of a map.
     SentMessage(QueryTracker *sender, const QueryCallback& cb);
 
     /// Constructor takes in a queryId. Caller is expected to keep track of a map.
@@ -125,11 +123,6 @@ public:
         return mTracker;
     }
 
-    /// sets the callback handler. Must be called at least once.
-    void setCallback(const QueryCallback &cb) {
-        mResponseCallback = cb;
-    }
-
     /** Unsets any pending timeout. This will happen automatically upon
         receiving a callback. */
     void unsetTimeout();
@@ -163,11 +156,11 @@ public:
 private:
     Body mBody;
 public:
-    SentMessageBody(QueryTracker *tracker)
-        : SentMessage(tracker) {
+    SentMessageBody(QueryTracker *tracker, const QueryCallback& cb)
+        : SentMessage(tracker, cb) {
     }
-    SentMessageBody(int64 id, QueryTracker *tracker)
-        : SentMessage(id, tracker) {
+    SentMessageBody(int64 id, QueryTracker *tracker, const QueryCallback& cb)
+        : SentMessage(id, tracker, cb) {
     }
     /// Note: Not virtual, make sure to downcast!!! Template + Virtual = :-(
     ~SentMessageBody() {
