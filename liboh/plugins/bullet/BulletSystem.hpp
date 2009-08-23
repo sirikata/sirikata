@@ -317,6 +317,12 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
     float mSizeZ;
     string mName;
     Vector3f mHull;
+
+    /// PID Control parameters
+    bool mPIDControlEnabled;
+    btVector3 mDesiredLinearVelocity;
+    btVector3 mDesiredAngularVelocity;
+
 public:
     /// public members -- yes, I use 'em.  No, I don't always thicken my code with gettr/settr's
     int colMask;
@@ -335,7 +341,8 @@ public:
             mSizeX(0),
             mSizeY(0),
             mSizeZ(0),
-            mName("") {
+            mName(""),
+            mPIDControlEnabled(false) {
         system = sys;
     }
     ~BulletObj();
