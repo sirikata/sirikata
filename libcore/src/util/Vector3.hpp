@@ -188,7 +188,7 @@ public:
     scalar normalizeThis() {
         scalar len=length();
         if (len>1e-08)
-            this/=len;
+            *this/=len;
         return len;
     }
     std::string toString()const {
