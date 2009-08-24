@@ -644,7 +644,7 @@ static void NavigateCommandDispatcher(const String& str) {
     const char *ccommand = command.c_str();
     const NavigateDispatch *p;
     for (p = dispatchTable; p->name != NULL; ++p)
-        if (strcasecmp(ccommand, p->name) == 0)
+        if (strcmp(ccommand, p->name) == 0)
             break;
 
     // Invoke the handler
