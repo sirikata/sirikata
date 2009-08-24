@@ -125,7 +125,9 @@ void SentMessage::send(MemoryReference bodystr) {
 void SentMessage::unsetTimeout() {
     if (mTimerHandle) {
         mTimerHandle->cancel();
+        std::tr1::weak_ptr<Network::TimerHandle> tmp(mTimerHandle);
         mTimerHandle.reset();
+        assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
     }
 }
 
@@ -135,7 +137,10 @@ void SentMessage::setTimeout(const Duration& timeout) {
         checkThreadId(mDebugThreadId);
         Network::IOService *io = mTracker->getIOService();
         if (io) {
+            std::tr1::weak_ptr<Network::TimerHandle> tmp(mTimerHandle);
             mTimerHandle.reset(new Network::TimerHandle(io));
+            assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
+
             mTimerHandle->setCallback(std::tr1::bind(&SentMessage::timedOut, this));
             mTimerHandle->wait(mTimerHandle, timeout);
         }
