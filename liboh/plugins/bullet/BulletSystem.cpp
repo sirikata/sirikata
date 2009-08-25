@@ -97,6 +97,9 @@ const SpaceID&BulletObj::getSpaceID()const {
     return mMeshptr->getObjectReference().space();
 }
 
+/////////////////////////////////////////////////////////////////////
+// overrides from MeshListener
+
 void BulletObj::meshChanged (const URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << endl;)
     mMeshname = newMesh;
@@ -156,7 +159,9 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
     }
 }
 
-positionOrientation BulletObj::getBulletState() {
+/////////////////////////////////////////////////////////////////////
+    
+positionOrientation bulletObj::getBulletState() {
     btTransform trans;
     this->mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
     return positionOrientation(system, trans.getOrigin(),trans.getRotation());
@@ -844,4 +849,4 @@ bool BulletSystem::queryRay(const Vector3d& position,
 }
 
 
-}//namespace sirikata
+} //namespace sirikata

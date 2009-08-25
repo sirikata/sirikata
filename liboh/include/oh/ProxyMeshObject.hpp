@@ -1,7 +1,7 @@
 /*  Sirikata Object Host
  *  ProxyMeshObject.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Daniel Reiter Horn, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,35 +32,62 @@
 
 #ifndef _SIRIKATA_PROXY_MESH_OBJECT_HPP_
 #define _SIRIKATA_PROXY_MESH_OBJECT_HPP_
+
+#include "oh/models/MeshObject.hpp"
+
 #include "MeshListener.hpp"
 #include "ProxyObject.hpp"
+
 namespace Sirikata {
 
-typedef Provider<MeshListener*> MeshProvider;
+typedef Provider< MeshListener* > MeshProvider;
 
 /** Represents any object with an attached mesh. */
 class SIRIKATA_OH_EXPORT ProxyMeshObject
-  : public MeshProvider,
-    public ProxyObject {
-protected:
-    URI mMeshURI;
-    Vector3f mScale;
-    PhysicalParameters mPhysical;
-public:
-    ProxyMeshObject(ProxyManager *man, const SpaceObjectReference&id);
-    void setMesh (const URI &newMesh);
-    void setScale (const Vector3f &newScale);
-    void setPhysical (const PhysicalParameters &pp);
+:   public MeshObject,
+    public MeshProvider,
+    public ProxyObject
+{
+    public:
+        ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id );
 
-    inline const URI & getMesh() const {
-        return mMeshURI;
-    }
-    inline const Vector3f &getScale() const {
-        return mScale;
-    }
-    inline const PhysicalParameters getPhysical() const {
-        return mPhysical;
-    }
-    };
-}
+    protected:
+    
+    private:
+    // MCB: private data for proxy (mediator) operations only
+    
+    // interface from MeshObject
+    public:
+        virtual void setMesh ( URI const& rhs );
+        virtual URI const& getMesh () const;
+        
+        virtual void setScale ( Vector3f const& rhs );
+        virtual Vector3f const& getScale () const;
+        
+        virtual void setPhysical ( physicalParameters const& rhs );
+        virtual physicalParameters const& getPhysical () const;
+    
+    protected:
+    
+    // interface from MeshProvider
+    // MCB: Provider needs to supply a listener typedef
+    public:
+//        virtual void addListener ( MeshListener* p );
+//        virtual void removeListener ( MeshListener* p );
+
+    protected:
+//        virtual void listenerAdded ( MeshListener* p );
+//        virtual void listenerRemoved ( MeshListener* p );
+//        virtual void firstListenerAdded ( MeshListener* p );
+//        virtual void lastListenerRemoved ( MeshListener* p );
+    
+    // interface from ProxyPositionObject
+    public:
+    protected:
+//        virtual void destroyed ();
+        
+};
+    
+} // namespace Sirikata
+
 #endif

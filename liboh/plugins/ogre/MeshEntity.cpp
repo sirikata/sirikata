@@ -56,14 +56,6 @@ MeshEntity::MeshEntity(OgreSystem *scene,
     unloadMesh();
 }
 
-void MeshEntity::meshChanged(const URI &meshFile) {
-    mMeshURI = meshFile;
-
-    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr();
-    Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset(meshFile, Meru::GraphicsResource::MESH);
-    mResource->setMeshResource(newMeshPtr);
-}
-
 std::string MeshEntity::ogreMeshName(const SpaceObjectReference&ref) {
     return "Mesh:"+ref.toString();
 }
@@ -102,7 +94,7 @@ void MeshEntity::loadMesh(const String& meshname)
         throw;
       }
     } catch (...) {
-        SILOG(ogre,error,"Failed to load mesh "<<mMeshURI<< " (id "<<id()<<")!");
+        SILOG(ogre,error,"Failed to load mesh "<<getProxy().getMesh()<< " (id "<<id()<<")!");
         new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
         /*
         init(NULL);
@@ -150,6 +142,29 @@ void MeshEntity::unloadMesh() {
     }
 }
 
+/////////////////////////////////////////////////////////////////////
+// overrides from MeshListener
+// MCB: integrate these with the MeshObject model class
+
+void MeshEntity::meshChanged ( URI const& meshFile )
+{
+    // MCB: responsibility to load model meshes must move to MeshObject plugin
+
+    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
+    Meru::SharedResourcePtr newMeshPtr = grm->getResourceAsset ( meshFile, Meru::GraphicsResource::MESH );
+
+    mResource->setMeshResource ( newMeshPtr );
+}
+
+void MeshEntity::scaleChanged ( Vector3f const& scale )
+{
+    mSceneNode->setScale ( toOgre ( scale ) );
+}
+
+void MeshEntity::physicalChanged ( physicalParameters const& pp )
+{
 
 }
-}
+
+} // namespace Graphics
+} // namespace Sirikata

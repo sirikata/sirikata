@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyMeshObject.cpp
+/*  Sirikata liboh -- MeshObject Model Interface (Bridge Pattern)
+ *  MeshObject.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn, Mark C. Barnes
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,63 +30,69 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyMeshObject.hpp>
-
-//#include <util/ListenerProvider.hpp>
+#include <oh/models/MeshObject.hpp>
 
 namespace Sirikata {
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
-    :   MeshObject (),
-        MeshProvider (),
-        ProxyObject ( man, id )
-{
-
-}
-
+using Transfer::URI;
+    
 /////////////////////////////////////////////////////////////////////
-// overrides from MeshObject
 
-void ProxyMeshObject::setMesh ( URI const& mesh )
+MeshObject::MeshObject ()
+    :   mMeshURI (),
+        mScale ( 1.0f, 1.0f, 1.0f ),
+        mPhysical ()
 {
-    MeshObject::setMesh ( mesh );
-    MeshProvider::notify ( &MeshListener::meshChanged, mesh );
+
 }
 
-URI const& ProxyMeshObject::getMesh () const
-{
-    return MeshObject::getMesh ();
-}
+//MeshObject::MeshObject ( MeshObject const& rhs )
+//{
+//
+//}
 
-void ProxyMeshObject::setScale ( Vector3f const& scale )
-{
-    MeshObject::setScale ( scale );
-    MeshProvider::notify ( &MeshListener::scaleChanged, scale );
-}
+//MeshObject::MeshObject& operator = ( MeshObject const& rhs )
+//{
+//
+//}
 
-Vector3f const& ProxyMeshObject::getScale () const
+MeshObject::~MeshObject ()
 {
-    return MeshObject::getScale ();
+    // MCB: Might be memory leaks during integration
 }
-
-void ProxyMeshObject::setPhysical ( physicalParameters const& pp )
-{
-    MeshObject::setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::physicalChanged, pp );
-}
-
-physicalParameters const& ProxyMeshObject::getPhysical () const
-{
-    return MeshObject::getPhysical ();
-}
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshProvider
 
 
 /////////////////////////////////////////////////////////////////////
-// overrides from ProxyObject
 
-
+void MeshObject::setMesh ( URI const& rhs )
+{
+    mMeshURI = rhs;
 }
+
+URI const& MeshObject::getMesh () const
+{
+    return mMeshURI;
+}
+
+void MeshObject::setScale ( Vector3f const& rhs )
+{
+    mScale = rhs;
+}
+
+Vector3f const& MeshObject::getScale () const
+{
+    return mScale;
+}
+
+void MeshObject::setPhysical ( physicalParameters const& rhs )
+{
+    mPhysical = rhs;
+}
+
+physicalParameters const& MeshObject::getPhysical () const 
+{
+    return mPhysical;
+}
+
+
+} // namespace Sirikata

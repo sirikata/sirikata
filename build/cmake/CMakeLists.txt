@@ -555,6 +555,7 @@ SET(INCLUDE_DIRECTORIES
   ${LIBPROXIMITY_INCLUDE_DIR}
   ${LIBSUBSCRIPTION_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
+  ${LIBOH_INCLUDE_DIR}/models
   ${LIBOH_DIR}/plugins/ogre/meruCompat #temporary hack
   ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
@@ -948,7 +949,10 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
-                  ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp )
+                  ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/models/MeshObject.cpp
+                   )
+
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(SUBSCRIPTION_SOURCES ${SUBSCRIPTION_SOURCE_DIR}/main.cpp )
