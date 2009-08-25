@@ -418,7 +418,7 @@ void BulletSystem::removePhysicalObject(BulletObj* obj) {
     }
 }
 
-float btMagSq(btVector3 v) {
+float btMagSq(const btVector3& v) {
     return v.x() * v.x()
            + v.y() * v.y()
            + v.z() * v.z();
