@@ -20,9 +20,9 @@ cache=(
 
 namelookup=(
     meru:/// = (
-      0 = http://www.sirikata.com/content/names
-       2 = file:///./Staging/names.txt
-      1 = http://graphics.stanford.edu/~danielrh/dns/names/global
+      0 = file:///./Staging/names.txt
+      1 = http://www.sirikata.com/content/names
+      2 = http://graphics.stanford.edu/~danielrh/dns/names/global
     )
     meru://cplatz@/ = (
        1 = http://graphics.stanford.edu/~danielrh/dns/names/global/cplatz

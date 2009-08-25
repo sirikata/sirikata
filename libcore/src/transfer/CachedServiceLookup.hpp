@@ -77,6 +77,7 @@ class CachedServiceLookup : public ServiceLookup {
 				const ListOfServicesPtr &services,
 				const URIContext &origService)
 			: mCurrentService(num), mIteration(0), mServicesList(services), mCache(parent), origContext(origService) {
+            mCurrentService=0;      /// make sure we always do 0 first
 		}
 
 		virtual ~CachedServiceIterator() {
@@ -86,6 +87,8 @@ class CachedServiceLookup : public ServiceLookup {
 		 * This may help ServiceLookup to pick a better service next time.
 		 */
 		virtual void finished(ErrorType reason=SUCCESS) {
+            /// don't store last successful server -- always start at top of list in cdn.txt
+            /*
 			if (reason == SUCCESS) {
 				boost::shared_lock<boost::shared_mutex> lookuplock(mCache->mMut);
 				ServiceMap::iterator iter = mCache->mLookupCache.find(origContext);
@@ -93,6 +96,7 @@ class CachedServiceLookup : public ServiceLookup {
 					(*iter).second.first = mCurrentService-1;
 				}
 			}
+            */
 			delete this;
 		}
 	};
