@@ -67,6 +67,7 @@ message ObjectRemoval {
 }
 
 message ProximityResults {
-    repeated ObjectAddition addition = 1;
-    repeated ObjectRemoval removal = 2;
+    required time t = 1;
+    repeated ObjectAddition addition = 2;
+    repeated ObjectRemoval removal = 3;
 }

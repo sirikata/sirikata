@@ -123,6 +123,10 @@ public:
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
     virtual void removeLocalObject(const UUID& uuid) = 0;
 
+    /** Methods dealing with replica objects. */
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
+    virtual void removeReplicaObject(const Time& t, const UUID& uuid) = 0;
+
     /** Methods dealing with listeners. */
     virtual void addListener(LocationServiceListener* listener);
     virtual void removeListener(LocationServiceListener* listener);

@@ -142,7 +142,6 @@ BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {
 }
 
 void OracleLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
-
     // This is an oracle, so we don't need to track these.
     if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
         mReplicaObjects.erase(uuid);
@@ -163,8 +162,23 @@ void OracleLocationService::removeLocalObject(const UUID& uuid) {
         notifyLocalObjectRemoved(uuid);
     }
 
+    // Removed in favor of listening to other servers for notifications about
+    // replica creationg/destruction, but may be useful for debugging.
     mReplicaObjects.insert(uuid);
     notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+}
+
+void OracleLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    // Add to the list of replica objects
+    //mReplicaObjects.insert(uuid);
+    // notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+}
+
+void OracleLocationService::removeReplicaObject(const Time& t, const UUID& uuid) {
+    //if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
+    //   mReplicaObjects.erase(uuid);
+    //  notifyReplicaObjectRemoved(uuid);
+    //}
 }
 
 void OracleLocationService::receiveMessage(Message* msg) {

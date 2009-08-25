@@ -90,6 +90,7 @@ private:
     struct ObjectData {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
+        bool tracking;
     };
     typedef std::map<UUID, ObjectData> ObjectDataMap;
     ObjectDataMap mObjects;

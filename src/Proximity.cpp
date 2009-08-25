@@ -144,7 +144,27 @@ void Proximity::receiveMessage(Message* msg) {
 
     ServerProximityResultMessage* prox_result_msg = dynamic_cast<ServerProximityResultMessage*>(msg);
     if (prox_result_msg != NULL) {
-        //printf("result_msg\n");
+        assert( prox_result_msg->contents.has_t() );
+        Time t = prox_result_msg->contents.t();
+
+        if (prox_result_msg->contents.addition_size() > 0) {
+            for(uint32 idx = 0; idx < prox_result_msg->contents.addition_size(); idx++) {
+                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg->contents.addition(idx);
+                mLocService->addReplicaObject(
+                    t,
+                    addition.object(),
+                    TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
+                    addition.bounds()
+                );
+            }
+        }
+
+        if (prox_result_msg->contents.removal_size() > 0) {
+            for(uint32 idx = 0; idx < prox_result_msg->contents.removal_size(); idx++) {
+                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg->contents.removal(idx);
+                mLocService->removeReplicaObject(t, removal.object());
+            }
+        }
     }
 }
 
@@ -205,6 +225,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
         if (evts.empty()) continue;
 
         ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mID);
+        result_msg->contents.set_t(t);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added) {
                 mLocService->subscribe(sid, evt_it->id());

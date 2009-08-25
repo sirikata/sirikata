@@ -59,6 +59,9 @@ public:
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     virtual void removeLocalObject(const UUID& uuid);
 
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    virtual void removeReplicaObject(const Time& t, const UUID& uuid);
+
     virtual void receiveMessage(Message* msg);
     virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
 

@@ -288,7 +288,7 @@ void Server::proximityTick(const Time& t)
   {
     ProximityEventInfo& evt = proximity_events.front();
     CBR::Protocol::Prox::ProximityResults prox_results;
-
+    prox_results.set_t(t);
     if (evt.type() == ProximityEventInfo::Entered) {
         CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
         addition.set_object( evt.object() );

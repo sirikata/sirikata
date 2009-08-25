@@ -117,19 +117,83 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
         notifyLocalObjectRemoved(uuid);
     }
 
-    // Add to list of replicated objects. FIXME should we actually do this?
-    // shouldn't the indication of whether to do this come from another server?
-    // what about the time in between
-    //mReplicaObjects.insert(uuid);
-    //notifyReplicaObjectAdded(uuid, cachedInfo.location, cachedInfo.bounds);
+    // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
+    // instead of immediately removing all traces of the object.
+    // However, this needs to be handled carefully, prefer updates from another server, and expire
+    // automatically.
 }
+
+void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
+    // FIXME we should do checks on timestamps to decide which setting is "more" sane
+
+    bool is_local = (mLocalObjects.find(uuid) != mLocalObjects.end());
+
+    // If its not local we need to insert the loc info
+    if (!is_local) {
+        LocationInfo locinfo;
+        locinfo.location = loc;
+        locinfo.bounds = bnds;
+        mLocations[uuid] = locinfo;
+    }
+    else { // Otherwise we just maintain the existing state since we trust the local info more, although we might want to tcheck timestamps instead of just believing the local number
+        assert( mLocations.find(uuid) != mLocations.end() );
+    }
+
+    // Regardless of who's state is authoritative, we need to add to the list of replicas a let people know
+    mReplicaObjects.insert(uuid);
+    notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
+}
+
+void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uuid) {
+    // FIXME we should maintain some time information and check t against it to make sure this is sane
+
+    bool is_local = (mLocalObjects.find(uuid) != mLocalObjects.end());
+
+    // If the object isn't already marked as local, its going away for good so delete its loc info
+    if (!is_local)
+        mLocations.erase(uuid);
+
+    // And no matter what, we need to erase it from the replica object list and tell people about it
+    mReplicaObjects.erase(uuid);
+    notifyReplicaObjectRemoved(uuid);
+}
+
 
 void StandardLocationService::receiveMessage(Message* msg) {
     BulkLocationMessage* bulk_loc = dynamic_cast<BulkLocationMessage*>(msg);
     if (bulk_loc != NULL) {
-        // We don't actually use these updates here because we are an Oracle --
-        // we already know all the positions. Normally these would generate
-        // replica events.
+        for(uint32 idx = 0; idx < bulk_loc->contents.update_size(); idx++) {
+            CBR::Protocol::Loc::LocationUpdate update = bulk_loc->contents.update(idx);
+
+            // Its possible we'll get an out of date update. We only use this update
+            // if (a) we have this object marked as a replica object and (b) we don't
+            // have this object marked as a local object
+            if (mLocalObjects.find(update.object()) != mLocalObjects.end())
+                continue;
+            if (mReplicaObjects.find(update.object()) == mReplicaObjects.end())
+                continue;
+
+            LocationMap::iterator loc_it = mLocations.find( update.object() );
+            assert(loc_it != mLocations.end());
+
+
+            if (update.has_location()) {
+                TimedMotionVector3f newloc(
+                    update.location().t(),
+                    MotionVector3f( update.location().position(), update.location().velocity() )
+                );
+                loc_it->second.location = newloc;
+                notifyReplicaLocationUpdated( update.object(), newloc );
+            }
+
+            if (update.has_bounds()) {
+                BoundingSphere3f newbounds = update.bounds();
+                loc_it->second.bounds = newbounds;
+                notifyReplicaBoundsUpdated( update.object(), newbounds );
+            }
+
+        }
+
         delete msg;
     }
 }

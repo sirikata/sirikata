@@ -54,21 +54,15 @@ CBRLocationServiceCache::~CBRLocationServiceCache() {
 }
 
 void CBRLocationServiceCache::startTracking(const UUID& id) {
-    ObjectData data;
-    try {
-        data.location = mLoc->location(id);
-        data.bounds = BoundingSphere3f();
-        data.bounds = mLoc->bounds(id); //XXX FIXME
-    }
-    catch(...) { // FIXME mLoc should be throwing exceptions when it can't look something up
-    }
+    ObjectDataMap::iterator it = mObjects.find(id);
+    assert(it != mObjects.end());
 
-    mObjects[id] = data;
+    it->second.tracking = true;
 }
 
 void CBRLocationServiceCache::stopTracking(const UUID& id) {
     ObjectDataMap::iterator it = mObjects.find(id);
-    if (it == mObjects.end()) {
+    if (it == mObjects.end() || it->second.tracking == false) {
         printf("Warning: stopped tracking unknown object\n");
         return;
     }
@@ -137,11 +131,26 @@ void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const Bound
 
 
 void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    if (mObjects.find(uuid) != mObjects.end())
+        return;
+
+    ObjectData data;
+    data.location = loc;
+    data.bounds = bounds;
+    data.tracking = false;
+    mObjects[uuid] = data;
+
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationConnected(uuid, loc, bounds);
 }
 
 void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
+    ObjectDataMap::iterator data_it = mObjects.find(uuid);
+    if (data_it == mObjects.end()) return;
+
+    if (data_it->second.tracking == false)
+        mObjects.erase(data_it);
+
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationDisconnected(uuid);
 }
