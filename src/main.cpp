@@ -51,7 +51,6 @@
 #include "OracleLocationService.hpp"
 #include "StandardLocationService.hpp"
 #include "Test.hpp"
-#include "RaknetNetwork.hpp"
 #include "SSTNetwork.hpp"
 #include "ENetNetwork.hpp"
 #include "LossyQueue.hpp"
@@ -112,9 +111,7 @@ int main(int argc, char** argv) {
     gTrace = new Trace();
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
-    if (network_type == "raknet")
-        gNetwork = new RaknetNetwork();
-    else if (network_type == "sst")
+    if (network_type == "sst")
         gNetwork = new SSTNetwork(gTrace);
     else if (network_type == "enet")
         gNetwork = new ENetNetwork(gTrace,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());

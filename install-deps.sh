@@ -2,7 +2,6 @@
 
 opt_update="false"
 opt_components_all="true"
-opt_components_raknet="false"
 opt_components_sst="false"
 opt_components_enet="false"
 opt_components_sirikata="false"
@@ -14,9 +13,6 @@ do
   if [ "$1" == "update" ]; then
     opt_update="true"
     echo "Performing update"
-  elif [ "$1" == "raknet" ]; then
-    opt_components_all="false"
-    opt_components_raknet="true"
   elif [ "$1" == "sst" ]; then
     opt_components_all="false"
     opt_components_sst="true"
@@ -37,7 +33,6 @@ done
 
 # if opt_components_all is still marked, mark all for processing
 if [ ${opt_components_all} == "true" ]; then
-  opt_components_raknet="true"
   opt_components_sst="true"
   opt_components_enet="true"
   opt_components_sirikata="true"
@@ -57,36 +52,6 @@ fi
 cd dependencies
 
 deps_dir=`pwd`
-
-
-# raknet
-if [ ${opt_components_raknet} == "true" ]; then
-
-  if [ ${opt_update} != "true" ]; then
-    if [ -e raknet ]; then
-      rm -rf raknet
-    fi
-    if [ -e installed-raknet ]; then
-      rm -rf installed-raknet
-    fi
-    mkdir raknet
-  fi
-
-  cd raknet
-
-  if [ ${opt_update} != "true" ]; then
-    wget http://www.jenkinssoftware.com/raknet/downloads/RakNet-3.51.zip
-    unzip RakNet-3.51.zip
-    patch -p1 < ../raknet_gcc_4_3.patch
-  fi
-
-  sh bootstrap
-  ./configure --prefix=${deps_dir}/installed-raknet
-  make
-  make install
-  cd ..
-
-fi # opt_components_raknet
 
 
 # sst

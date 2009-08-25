@@ -153,15 +153,7 @@ IF(NOT GLUT_FOUND)
   MESSAGE(SEND_ERROR "Couldn't find GLUT.")
 ENDIF(NOT GLUT_FOUND)
 
-#dependency: raknet core
-IF(EXISTS ${DEPENDENCIES_ROOT}/installed-raknet)
-  SET(Raknet_ROOT ${DEPENDENCIES_ROOT}/installed-raknet)
-ELSE()
-  SET(Raknet_ROOT ${DEPENDENCIES_ROOT})
-ENDIF()
-FIND_PACKAGE(Raknet REQUIRED)
-
-#dependency: raknet core
+#dependency: enet core
 IF(EXISTS ${DEPENDENCIES_ROOT}/installed-enet)
   SET(Enet_ROOT ${DEPENDENCIES_ROOT}/installed-enet)
 ELSE()
@@ -212,7 +204,6 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Sirikata_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
-        ${Raknet_INCLUDE_DIRS}
         ${Enet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${SST_INCLUDE_DIRS}
@@ -245,7 +236,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
-  ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
@@ -317,7 +307,6 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
-        ${Raknet_LIBRARIES}
         ${Enet_LIBRARIES}
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}

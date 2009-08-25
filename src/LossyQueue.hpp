@@ -34,6 +34,7 @@
 #define _CBR_LOSSYQUEUE_HPP_
 
 #include "Utility.hpp"
+#include "Queue.hpp"
 
 namespace CBR {
 

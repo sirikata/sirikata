@@ -6,7 +6,6 @@
 
 namespace CBR {
 class Network;
-class RaknetNetwork;
 class Address4 {
 public:
     unsigned int ip;
