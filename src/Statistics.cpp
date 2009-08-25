@@ -69,7 +69,7 @@ void BatchedBuffer::write(std::ostream& os) {
 
 
 const uint8 Trace::ProximityTag;
-const uint8 Trace::LocationTag;
+const uint8 Trace::ObjectLocationTag;
 const uint8 Trace::SubscriptionTag;
 const uint8 Trace::ServerDatagramQueueInfoTag;
 const uint8 Trace::ServerDatagramQueuedTag;
@@ -81,7 +81,8 @@ const uint8 Trace::PacketReceivedTag;
 const uint8 Trace::SegmentationChangeTag;
 const uint8 Trace::ObjectBeginMigrateTag;
 const uint8 Trace::ObjectAcknowledgeMigrateTag;
-
+const uint8 Trace::ServerLocationTag;
+const uint8 Trace::ServerObjectEventTag;
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
@@ -118,9 +119,9 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
     data.write( &loc, sizeof(loc) );
 }
 
-void Trace::loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
+void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
     if (mShuttingDown) return;
-    data.write( &LocationTag, sizeof(LocationTag) );
+    data.write( &ObjectLocationTag, sizeof(ObjectLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
@@ -134,6 +135,28 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &start, sizeof(start) );
+}
+
+void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
+    if (mShuttingDown) return;
+    data.write( &ServerLocationTag, sizeof(ServerLocationTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &sender, sizeof(sender) );
+    data.write( &receiver, sizeof(receiver) );
+    data.write( &obj, sizeof(obj) );
+    data.write( &loc, sizeof(loc) );
+}
+
+void Trace::serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
+    if (mShuttingDown) return;
+    data.write( &ServerObjectEventTag, sizeof(ServerObjectEventTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &source, sizeof(source) );
+    data.write( &dest, sizeof(dest) );
+    data.write( &obj, sizeof(obj) );
+    uint8 raw_added = (added ? 1 : 0);
+    data.write( &raw_added, sizeof(raw_added) );
+    data.write( &loc, sizeof(loc) );
 }
 
 void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
@@ -242,7 +265,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&t, sizeof(t));
 
     //    printf("\n\n******In Statistics.cpp.  Have an object begin migrate message. \n\n");
-    
+
     data.write(&obj_id, sizeof(obj_id));
     data.write(&migrate_from, sizeof(migrate_from));
     data.write(&migrate_to,sizeof(migrate_to));
@@ -264,7 +287,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 
 
 
-  
+
 void Trace::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
 

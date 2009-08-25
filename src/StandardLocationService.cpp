@@ -35,8 +35,8 @@
 
 namespace CBR {
 
-StandardLocationService::StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher)
- : LocationService(sid, router, dispatcher),
+StandardLocationService::StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace)
+ : LocationService(sid, router, dispatcher, trace),
    mCurrentTime(Time::null()),
    mLocalObjects(),
    mReplicaObjects()
@@ -93,6 +93,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     // Remove from replicated objects if its founds
     if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
+        mTrace->serverObjectEvent(mCurrentTime, 0, mID, uuid, false, TimedMotionVector3f()); // FIXME remote server ID
         mReplicaObjects.erase(uuid);
         notifyReplicaObjectRemoved(uuid);
     }
@@ -101,6 +102,7 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
+    mTrace->serverObjectEvent(mCurrentTime, mID, mID, uuid, true, loc);
     mLocalObjects.insert(uuid);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
@@ -113,6 +115,7 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
 
     // Remove from the list of local objects
     if (mLocalObjects.find(uuid) != mLocalObjects.end()) {
+        mTrace->serverObjectEvent(mCurrentTime, mID, mID, uuid, false, TimedMotionVector3f());
         mLocalObjects.erase(uuid);
         notifyLocalObjectRemoved(uuid);
     }
@@ -140,6 +143,7 @@ void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, 
     }
 
     // Regardless of who's state is authoritative, we need to add to the list of replicas a let people know
+    mTrace->serverObjectEvent(mCurrentTime, 0, mID, uuid, true, loc); // FIXME add remote server ID
     mReplicaObjects.insert(uuid);
     notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
 }
@@ -154,6 +158,7 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
         mLocations.erase(uuid);
 
     // And no matter what, we need to erase it from the replica object list and tell people about it
+    mTrace->serverObjectEvent(mCurrentTime, 0, mID, uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
     mReplicaObjects.erase(uuid);
     notifyReplicaObjectRemoved(uuid);
 }
@@ -184,6 +189,8 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 );
                 loc_it->second.location = newloc;
                 notifyReplicaLocationUpdated( update.object(), newloc );
+
+                mTrace->serverLoc( mCurrentTime, GetUniqueIDServerID(msg->id()), mID, update.object(), newloc );
             }
 
             if (update.has_bounds()) {

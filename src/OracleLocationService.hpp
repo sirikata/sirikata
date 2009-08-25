@@ -45,7 +45,7 @@ class ObjectFactory;
  */
 class OracleLocationService : public LocationService {
 public:
-    OracleLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, ObjectFactory* objfactory);
+    OracleLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace, ObjectFactory* objfactory);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual bool contains(const UUID& uuid) const;

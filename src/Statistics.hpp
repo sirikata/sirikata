@@ -76,7 +76,7 @@ class ServerIDMap;
 class Trace {
 public:
     static const uint8 ProximityTag = 0;
-    static const uint8 LocationTag = 1;
+    static const uint8 ObjectLocationTag = 1;
     static const uint8 SubscriptionTag = 2;
     static const uint8 ServerDatagramQueueInfoTag = 3;
     static const uint8 ServerDatagramQueuedTag = 4;
@@ -88,8 +88,8 @@ public:
     static const uint8 SegmentationChangeTag = 10;
     static const uint8 ObjectBeginMigrateTag = 11;
     static const uint8 ObjectAcknowledgeMigrateTag = 12;
-
-
+    static const uint8 ServerLocationTag = 13;
+    static const uint8 ServerObjectEventTag = 14;
 
 
 
@@ -98,8 +98,14 @@ public:
     void setServerIDMap(ServerIDMap* sidmap);
 
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
-    void loc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
+    void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
+
+    // Server received a loc update
+    void serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc);
+    // Object tracking change
+    void serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc);
+
 
     void serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
     void serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size);

@@ -42,7 +42,7 @@ namespace CBR {
  */
 class StandardLocationService : public LocationService {
 public:
-    StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
+    StandardLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual bool contains(const UUID& uuid) const;

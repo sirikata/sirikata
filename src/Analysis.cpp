@@ -72,7 +72,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = pevt;
           }
           break;
-      case Trace::LocationTag:
+      case Trace::ObjectLocationTag:
           {
               LocationEvent* levt = new LocationEvent;
               is.read( (char*)&levt->time, sizeof(levt->time) );
@@ -208,10 +208,35 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           evt = objAckMig_evt;
         }
         break;
+      case Trace::ServerLocationTag:
+          {
+              ServerLocationEvent* levt = new ServerLocationEvent;
+              is.read( (char*)&levt->time, sizeof(levt->time) );
+              is.read( (char*)&levt->source, sizeof(levt->source) );
+              is.read( (char*)&levt->dest, sizeof(levt->dest) );
+              is.read( (char*)&levt->object, sizeof(levt->object) );
+              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              evt = levt;
+          }
+          break;
+      case Trace::ServerObjectEventTag:
+          {
+              ServerObjectEventEvent* levt = new ServerObjectEventEvent;
+              is.read( (char*)&levt->time, sizeof(levt->time) );
+              is.read( (char*)&levt->source, sizeof(levt->source) );
+              is.read( (char*)&levt->dest, sizeof(levt->dest) );
+              is.read( (char*)&levt->object, sizeof(levt->object) );
+              uint8 raw_added = 0;
+              is.read( (char*)&raw_added, sizeof(raw_added) );
+              levt->added = (raw_added > 0);
+              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              evt = levt;
+          }
+          break;
 
       default:
 
-        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<tag<<"\n";
+        std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
         assert(false);
         break;
     }

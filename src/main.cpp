@@ -166,9 +166,9 @@ void *main_loop(void *) {
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
     if (loc_service_type == "oracle")
-        loc_service = new OracleLocationService(server_id, forwarder, forwarder, obj_factory);
+        loc_service = new OracleLocationService(server_id, forwarder, forwarder, gTrace, obj_factory);
     else if (loc_service_type == "standard")
-        loc_service = new StandardLocationService(server_id, forwarder, forwarder);
+        loc_service = new StandardLocationService(server_id, forwarder, forwarder, gTrace);
     else
         assert(false);
 

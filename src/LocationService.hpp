@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 #include "Message.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 
@@ -104,7 +105,7 @@ public:
         Replica
     };
 
-    LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher);
+    LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace);
     virtual ~LocationService();
 
     virtual void tick(const Time& t) = 0;
@@ -152,6 +153,9 @@ protected:
     void notifyReplicaObjectRemoved(const UUID& uuid) const;
     void notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
+
+    ServerID mID;
+    Trace* mTrace;
 
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;

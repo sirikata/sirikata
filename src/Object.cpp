@@ -175,7 +175,7 @@ void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
     TimedMotionVector3f loc(contents.t(), MotionVector3f(contents.position(), contents.velocity()));
 
-    mContext->trace->loc(
+    mContext->trace->objectLoc(
         mContext->time,
         msg.dest_object(),
         msg.source_object(),

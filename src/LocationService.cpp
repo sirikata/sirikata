@@ -50,8 +50,10 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
 
-LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher)
- : mDispatcher(dispatcher)
+LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace)
+ : mID(sid),
+   mTrace(trace),
+   mDispatcher(dispatcher)
 {
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(sid, this, router);
 

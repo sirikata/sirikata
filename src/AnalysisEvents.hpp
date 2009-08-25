@@ -143,4 +143,19 @@ struct ObjectAcknowledgeMigrateEvent : public Event
 };
 
 
+struct ServerLocationEvent : public ObjectEvent {
+    ServerID source;
+    ServerID dest;
+    UUID object;
+    TimedMotionVector3f loc;
+};
+
+struct ServerObjectEventEvent : public ObjectEvent {
+    ServerID source;
+    ServerID dest;
+    UUID object;
+    bool added;
+    TimedMotionVector3f loc;
+};
+
 }
