@@ -501,6 +501,8 @@ MACRO(ADD_PLUGIN_TARGET)
   ENDIF()
 ENDMACRO(ADD_PLUGIN_TARGET)
 
+#variable which contains list of plugin targets we want to install
+SET(PLUGIN_INSTALL_LIST)
 
 #project directory locations
 SET(LIBCORE_DIR ${TOP_LEVEL}/libcore)
@@ -1203,13 +1205,14 @@ ADD_PLUGIN_TARGET(sqlite
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} sqlite)
 ENDIF()
 
 ADD_PLUGIN_TARGET(tcpsst
                     SOURCES ${LIBCORE_PLUGIN_TCPSST_SOURCES}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
-
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
 IF(OGRE_FOUND AND sdl_FOUND)
 ADD_PLUGIN_TARGET(ogregraphics
@@ -1220,6 +1223,7 @@ ADD_PLUGIN_TARGET(ogregraphics
                     LIBRARIES ${OGRE_LIBRARIES} ${sdl_LIBRARIES} ${AWESOMIUM_LIBRARIES}
                               ${Boost_REGEX_LIBRARY_${UPPERCASE_BUILD_TYPE}}
                                ${PROTOCOLBUFFERS_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} ogregraphics)
 ENDIF(OGRE_FOUND AND sdl_FOUND)
 
 
@@ -1230,6 +1234,7 @@ ADD_PLUGIN_TARGET(prox
                     TARGET_LDFLAGS ${PROX_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_PROXIMITY_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${PROX_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} prox)
 ENDIF(PROX_FOUND)
 
 SET(LIBOH_PLUGIN_BULLETPHYSICS_DIR ${LIBOH_PLUGIN_DIR}/bullet)
@@ -1244,6 +1249,7 @@ ADD_PLUGIN_TARGET(bulletphysics
                     TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${bullet_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} bulletphysics)
 ENDIF()
 
 
@@ -1278,6 +1284,7 @@ ADD_PLUGIN_TARGET(monoscript
                     TARGET_LDFLAGS ${MONO_LDFLAGS} ${sirikata_LDFLAGS}
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${MONO_LIBRARIES})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
 
 
@@ -1341,11 +1348,6 @@ IF(PYTHON_EXECUTABLE)
 
 ENDIF()
 
-SET(MONO_SCRIPT_TARGET)
-IF(FOUND_MONO)
-SET(MONO_SCRIPT_TARGET monoscript)
-ENDIF()
-
 SET(EXEC_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
 #installation information
 INSTALL(TARGETS
@@ -1354,15 +1356,9 @@ INSTALL(TARGETS
           ${SIRIKATA_SPACE_LIB}
           ${SIRIKATA_PROXIMITY_LIB}
           ${SIRIKATA_SUBSCRIPTION_LIB}
-          ${PROXIMITY_LIB}
-          tcpsst
-          sqlite
-          skeleton
-          ogregraphics
-          prox
-          bulletphysics
-          ${MONO_SCRIPT_TARGET}
           ${SIRIKATA_OH_LIB}
+          ${PROXIMITY_LIB}
+          ${PLUGIN_INSTALL_LIST}
           ${SPACE_BINARY}
           ${PROXIMITY_BINARY}
           ${SUBSCRIPTION_BINARY}
@@ -1555,12 +1551,20 @@ ENDIF()
 IF(MONO_FOUND)
   INSTALL(PROGRAMS
           ${SirikataScriptRuntime}
-          ${SirikataScriptProtocol}
         DESTINATION lib/)
   INSTALL(PROGRAMS
         ${SirikataScriptRuntime_LIBRARY}
-        ${SirikataProtoScriptRuntime_LIBRARY}
         DESTINATION lib/)
+
+  IF(PROTOCOLBUFFERS_SUPPORTS_CSHARP)
+    INSTALL(PROGRAMS
+              ${SirikataScriptProtocol}
+            DESTINATION lib/)
+    INSTALL(PROGRAMS
+              ${SirikataProtoScriptRuntime_LIBRARY}
+            DESTINATION lib/)
+  ENDIF()
+
   INSTALL(DIRECTORY
           ${IRON_PYTHON_ROOT}/
           FILE_PERMISSIONS ${EXEC_PERMS}
