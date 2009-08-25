@@ -1,5 +1,5 @@
 #include "ENetNetwork.hpp"
-
+#include "Statistics.hpp"
 namespace CBR {
 
 #define MAGIC_PORT_OFFSET 8192
@@ -200,15 +200,58 @@ void ENetNetwork::processOutboundEvent(ENetEvent&event) {
     }
 }
 void ENetNetwork::service(const Time& t){
+    PeerMap::iterator senditer,recviter;
+    std::vector<std::pair<Address4,size_t> > sendBufferSizes(mSendPeers.size());
+    std::vector<std::pair<Address4,size_t> > recvBufferSizes(mRecvPeers.size());
+    senditer=mSendPeers.begin();
+    recviter=mRecvPeers.begin();
+    for (size_t i=0,ie=mSendPeers.size();i!=ie;++i,++senditer) {
+        sendBufferSizes[i].first=senditer->first;
+        sendBufferSizes[i].second=senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size;
+    }
+    for (size_t i=0,ie=mRecvPeers.size();i!=ie;++i,++recviter) {
+        recvBufferSizes[i].first=recviter->first;
+        recvBufferSizes[i].second=0;
+        for (unsigned int j=0;j<recviter->second->channelCount;++j) {
+            recvBufferSizes[i].second+=recviter->second->channels[j].incomingReliableCommands.byte_size+recviter->second->channels[j].incomingUnreliableCommands.byte_size;
+        }
+    }
     do {
         ENetEvent event;
-
         if (enet_host_service_one_outbound (mRecvHost, & event))
             processOutboundEvent(event);
 
         if (enet_host_service (mSendHost, & event,0))
             processOutboundEvent(event);
     }while (Time::now()<t);
+
+
+    senditer=mSendPeers.begin();
+    recviter=mRecvPeers.begin();
+
+    for (size_t i=0,ie=sendBufferSizes.size();i!=ie;++i) {
+        senditer=mSendPeers.find(sendBufferSizes[i].first);
+        if (senditer!=mSendPeers.end()) {
+            ptrdiff_t diff=sendBufferSizes[i].second-(senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size);
+            if (diff>0) {
+                mTrace->packetSent(t,sendBufferSizes[i].first,diff);
+            }
+        }
+    }
+    for (size_t i=0,ie=recvBufferSizes.size();i!=ie;++i) {
+        size_t curincoming=0;
+        recviter=mRecvPeers.find(recvBufferSizes[i].first);
+        if (recviter!=mRecvPeers.end()) {
+            for (unsigned int j=0;j<recviter->second->channelCount;++j) {
+                curincoming+=recviter->second->channels[j].incomingReliableCommands.byte_size+recviter->second->channels[j].incomingUnreliableCommands.byte_size;
+            }
+            ptrdiff_t diff=curincoming-recvBufferSizes[i].second;
+            if (diff>0) {
+                mTrace->packetReceived(t,recvBufferSizes[i].first,diff);
+            }
+        }
+
+    }
 }
 
 void ENetNetwork::reportQueueInfo(const Time& t) const{
