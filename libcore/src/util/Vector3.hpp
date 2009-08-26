@@ -76,6 +76,10 @@ public:
         return T(x,y,z);
     }
 #endif
+    template<class T> Vector3<T> downCast() const{
+        return Vector3<T>((T)x,(T)y,(T)z);
+    }
+    
     scalar operator[](const unsigned int i) const{
         assert(i<3);
         return v[i];

@@ -1,7 +1,7 @@
-/*  Meru
- *  OgreDefs.hpp
+/*  Sirikata liboh -- Ogre Graphics Plugin
+ *  OgreHeaders.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _OGRE_DEFS_HPP_
-#define _OGRE_DEFS_HPP_
-#include "../OgreHeaders.hpp"
 
-#ifdef HAVE_OGRE
-
-// Forward declarations for some Ogre classes
-// that we want compatibility for
-
-// OgrePrerequisites does this for us....
-
-
-#endif //HAVE_OGRE
-
-#endif //_OGRE_DEFS_HPP_
+#ifndef _OGRE_HEADERS_HPP_
+#define _OGRE_HEADERS_HPP_
+#include <oh/Platform.hpp>
+#include <boost/thread.hpp>
+#ifdef _WIN32
+#undef BOOST_ALL_DYN_LINK
+#endif
+#include <OgrePrerequisites.h>
+#include <OgreConfig.h>
+#ifdef _WIN32
+#ifndef BOOST_ALL_DYN_LINK
+#define BOOST_ALL_DYN_LINK
+#endif
+#endif
+#endif

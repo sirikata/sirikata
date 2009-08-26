@@ -83,7 +83,7 @@ public:
         }else{
             return mValuePast.extrapolate(t)
                 .blend(mValuePresent.extrapolate(t),
-                       timeSinceUpdate/mFadeTime);
+                       (float32)(timeSinceUpdate/mFadeTime));
         }
     }
     const Value& lastValue() const {
@@ -121,6 +121,9 @@ public:
     TimedWeightedExtrapolator(const Duration&fadeTime, const Time&t, const Value&actualValue, const UpdatePredicate&needsUpdate)
      : TimedWeightedExtrapolatorBase<Value, UpdatePredicate, Time, Duration>(fadeTime, t, actualValue, needsUpdate)
     {}
+    virtual bool needsUpdate(const Time&now, const Value&actualValue) const {
+        return this->Sirikata::TimedWeightedExtrapolatorBase<Value,UpdatePredicate,Time,Duration>::needsUpdate(now,actualValue);
+    }
 };
 
 }

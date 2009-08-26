@@ -46,6 +46,11 @@ namespace Transfer {
 
 // should really be a config option.
 //#define NUM_WORKER_THREADS 10
+#if defined(__WIN32__) || defined(_WIN32)
+// disable warning for 'this' : used in base member initializer list
+#pragma warning (disable: 4251)
+#endif
+
 
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
 class SIRIKATA_EXPORT DiskCacheLayer : public CacheLayer {
@@ -225,5 +230,10 @@ public:
 
 }
 }
+#if defined(__WIN32__) || defined(_WIN32)
+// disable warning for 'this' : used in base member initializer list
+#pragma warning (enable: 4251)
+#endif
+
 
 #endif /* SIRIKATA_DiskCache_HPP__ */

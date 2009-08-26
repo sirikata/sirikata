@@ -31,7 +31,7 @@
  */
 #ifndef _REPLACING_DATA_STREAM_HPP_
 #define _REPLACING_DATA_STREAM_HPP_
-
+#include "../OgreHeaders.hpp"
 #include <OgreDataStream.h>
 #ifndef STANDALONE
 #include <OgreCommon.h>

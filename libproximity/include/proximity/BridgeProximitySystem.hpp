@@ -118,7 +118,8 @@ public:
         BridgeProximitySystem*mParent;
 
     public:
-        IncomingProxCallMessages(BridgeProximitySystem*par) : mParent(par) {}
+        IncomingProxCallMessages(){mParent=NULL;}
+        void setIncomingProxCallMessages(BridgeProximitySystem*par){mParent=par;}
         virtual bool forwardMessagesTo(MessageService*ms){return false;}
         virtual bool endForwardingMessagesTo(MessageService*ms){return false;}
         virtual void processMessage(const RoutableMessageHeader& mesg,
@@ -131,7 +132,8 @@ public:
 
     }mIncomingMessages;
 
-    BridgeProximitySystem(ProximityConnection*connection,const unsigned int registrationPort) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationPort),mProximityConnection(connection), mIncomingMessages(this) {
+    BridgeProximitySystem(ProximityConnection*connection,const unsigned int registrationPort) : ObjectSpaceBridgeProximitySystem<MessageService*>(&mMulticast,registrationPort),mProximityConnection(connection) {
+        mIncomingMessages.setIncomingProxCallMessages(this);
         bool retval=mProximityConnection->forwardMessagesTo(&mIncomingMessages);
         assert(retval);
     }

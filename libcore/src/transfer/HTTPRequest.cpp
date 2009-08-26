@@ -91,7 +91,7 @@ size_t HTTPRequest::write(const unsigned char *copyFrom, size_t length) {
 	}
 	cache_usize_type totalNeeded = startByte + length;
 	if (mData->length() < totalNeeded) {
-		mData->setLength(totalNeeded, mRequestedRange.goesToEndOfFile());
+		mData->setLength((size_t)totalNeeded, mRequestedRange.goesToEndOfFile());
 	}
 	// FIXME: do not adjust the length until actually copying data.
 	unsigned char *copyTo = mData->writableData() + startByte;
@@ -108,7 +108,7 @@ size_t HTTPRequest::read(unsigned char *copyTo, size_t length) {
 		return 0;
 	}
 	const unsigned char *copyFrom = mStreamUploadData->data() + mUploadOffset;
-	size_t dataLength = mStreamUploadData->length() - mUploadOffset;
+	size_t dataLength = (size_t)(mStreamUploadData->length() - mUploadOffset);
 	if (dataLength < length) {
 		length = dataLength;
 	}
@@ -158,7 +158,7 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		istr >> dataToReserve;
 		if (dataToReserve) {
 			// FIXME: only reserve() here -- do not adjust the actual length until copying data.
-			mData->setLength(dataToReserve, mRequestedRange.goesToEndOfFile());
+			mData->setLength((size_t)dataToReserve, mRequestedRange.goesToEndOfFile());
 			SILOG(transfer,debug,"Downloading file range " << (Range)(*mData) << " from "<<mURI);
 
 			if (mRequestedRange.startbyte() == 0 && mRequestedRange.goesToEndOfFile()) {

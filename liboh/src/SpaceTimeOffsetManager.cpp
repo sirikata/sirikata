@@ -3,7 +3,7 @@
 #include "oh/SpaceTimeOffsetManager.hpp"
 #include "util/Time.hpp"
 #include <boost/thread.hpp>
-AUTO_SINGLETON_INSTANCE(Sirikata::SpaceTimeOffsetManager);
+
 namespace Sirikata {
 #if BOOST_VERSION >= 103600
 typedef boost::shared_mutex SharedMutex;
@@ -45,3 +45,5 @@ void SpaceTimeOffsetManager::setSpaceTimeOffset(const SpaceID& sid, const Durati
 }
 
 }
+AUTO_SINGLETON_INSTANCE(Sirikata::SpaceTimeOffsetManager);
+

@@ -46,7 +46,7 @@ public:
 
     BoundingBox(const Vector3<real>&center, float radius){
         mMin=center-Vector3<real>(radius,radius,radius);
-        mAcross=Vector3f(2.0*radius,2.0*radius,2.0*radius);
+        mAcross=Vector3f(2.0f*radius,2.0f*radius,2.0f*radius);
     }
     template <typename flt> BoundingBox(const BoundingBox<flt>&input) {
         mMin=Vector3<real>(input.mMin);

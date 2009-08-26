@@ -89,7 +89,7 @@ class URIContext {
 		inline bool operator()(const unsigned char c) {
 			using namespace std;
 			int kspace=(char)c;
-			return isspace(kspace);
+			return isspace(kspace)!=false;
 		}
 	};
 

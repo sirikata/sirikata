@@ -36,6 +36,10 @@
 
 #include "CacheLayer.hpp"
 #include "CacheMap.hpp"
+#if defined(__WIN32__) || defined(_WIN32)
+// disable warning for 'this' : used in base member initializer list
+#pragma warning (disable: 4251)
+#endif
 
 namespace Sirikata {
 /** MemoryCacheLayer.hpp -- MemoryCacheLayer -- the first layer of transfer cache. */
@@ -139,5 +143,9 @@ public:
 
 }
 }
+#if defined(__WIN32__) || defined(_WIN32)
+// disable warning for 'this' : used in base member initializer list
+#pragma warning (enable: 4251)
+#endif
 
 #endif /* SIRIKATA_MemoryCache_HPP__ */

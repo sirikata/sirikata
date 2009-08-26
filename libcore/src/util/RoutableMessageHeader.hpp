@@ -44,8 +44,9 @@ class RoutableMessageHeader {
     ObjectReference mSourceObject;
     SpaceID mDestinationSpace;
     SpaceID mSourceSpace;
-    uint32 mDestinationPort;
-    uint32 mSourcePort;
+    typedef uint32 PortType;
+    PortType mDestinationPort;
+    PortType mSourcePort;
     bool mHasDestinationObject;
     bool mHasSourceObject;
     bool mHasDestinationSpace;
@@ -53,7 +54,8 @@ class RoutableMessageHeader {
 
     uint64 mMessageId;
     uint64 mMessageReplyId;
-    uint32 mReturnStatus;
+    typedef uint32 ReturnStatusType;
+    ReturnStatusType mReturnStatus;
     bool mHasMessageId;
     bool mHasMessageReplyId;
 
@@ -84,14 +86,29 @@ public:
         mReturnStatus = SUCCESS;
     }
 private:
-    size_t parseLength(const unsigned char*&input, size_t&size) {
-        size_t retval=0;
-        size_t offset=1;
+    uint32 parseLength(const unsigned char*&input, size_t&size) {
+        uint32 retval=0;
+        uint32 offset=1;
         while (size) {
             unsigned char cur=*input;
             input++;
             --size;
-            size_t digit=(cur&127);
+            uint32 digit=(cur&127);
+            retval+=digit*offset;
+            if ((cur&128)==0)break;
+            offset*=128;
+        }
+        return retval;
+    }
+
+    uint64 parseLength64(const unsigned char*&input, size_t&size) {
+        uint64 retval=0;
+        uint64 offset=1;
+        while (size) {
+            unsigned char cur=*input;
+            input++;
+            --size;
+            uint64 digit=(cur&127);
             retval+=digit*offset;
             if ((cur&128)==0)break;
             offset*=128;
@@ -99,7 +116,7 @@ private:
         return retval;
     }
     UUID parseUUID(const unsigned char*&input, size_t&size) {
-        size_t len=parseLength(input,size);
+        uint32 len=parseLength(input,size);
         if (len<=size) {
             unsigned char uuidArray[UUID::static_size]={0};
             memcpy(uuidArray,input,len<UUID::static_size?len:UUID::static_size);
@@ -121,25 +138,25 @@ public:
         while (size) {
             const unsigned char *dataStart=curInput;
             size_t oldSize=size;
-            size_t keyType=parseLength(curInput,size);
-            size_t key=(keyType/8);
+            uint64 keyType=parseLength64(curInput,size);
+            uint64 key=(keyType/8);
             if (!isReserved(key)) {
                 //std::cout << "Key "<<key<<" is not reserved. size="<<size<<", pos="<<(curInput-(const unsigned char *)input)<<"\n";
                 curInput=dataStart;
                 size=oldSize;
                 break;
             }
-            unsigned int type=keyType%8;
+            unsigned int type=(unsigned int)(keyType%8);
             switch(type) {
               case 0:
                   {
-                      uint64 value=parseLength(curInput,size);
+                      uint64 value=parseLength64(curInput,size);
                       if (key==Sirikata::Protocol::MessageHeader::destination_port_field_tag) {
-                          mDestinationPort=value;
+                          mDestinationPort=(PortType)value;
                           continue;
                       }
                       if (key==Sirikata::Protocol::MessageHeader::source_port_field_tag) {
-                          mSourcePort=value;
+                          mSourcePort=(PortType)value;
                           continue;
                       }
                       if (key==Sirikata::Protocol::MessageHeader::id_field_tag) {
@@ -153,7 +170,7 @@ public:
                           continue;
                       }
                       if (key==Sirikata::Protocol::MessageHeader::return_status_field_tag) {
-                          mReturnStatus=value;
+                          mReturnStatus=(ReturnStatusType)value;
                           continue;
                       }
                   }
@@ -186,7 +203,7 @@ public:
                     mDestinationSpace=SpaceID(parseUUID(curInput,size));
                     continue;
                   default: {
-                      size_t len=parseLength(curInput,size);
+                      uint32 len=parseLength(curInput,size);
                       if (len>=size) {
                           size-=len;
                           curInput+=len;
@@ -214,7 +231,7 @@ public:
         return ParseFromArray(size.data(),size.size());
     }
 private:
-    static unsigned int getIntSize(uint32 myint) {
+    static unsigned int getIntSize(uint64 myint) {
         unsigned int retval = 0;
         do {
             retval++;
@@ -223,7 +240,9 @@ private:
         return retval;
     }
     static unsigned int getFieldSize(uint32 field_tag) {
-        return getIntSize(field_tag*8);
+        uint64 tmp=field_tag;
+        tmp*=8;
+        return getIntSize(tmp);
     }
     static unsigned int getSize(uint64 uuid, uint32 field_tag) {
         return getIntSize(uuid) + getFieldSize(field_tag);
@@ -243,7 +262,7 @@ private:
         return retval;
     }
 
-    std::string::iterator copyIntValue(std::string&s,std::string::iterator output, unsigned int value, unsigned int &size) const{
+    std::string::iterator copyIntValue(std::string&s,std::string::iterator output, uint64 value, unsigned int &size) const{
         do {
             assert(size >= 2);
             --size;

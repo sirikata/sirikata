@@ -32,6 +32,7 @@
 #include <oh/Platform.hpp>
 #include "MeshEntity.hpp"
 #include <util/AtomicTypes.hpp>
+#include "OgreHeaders.hpp"
 #include <OgreMeshManager.h>
 #include <OgreResourceGroupManager.h>
 #include <OgreSubEntity.h>

@@ -31,7 +31,7 @@
  */
 #ifndef _CDN_ARCHIVE_PLUGIN_HPP_
 #define _CDN_ARCHIVE_PLUGIN_HPP_
-
+#include "../OgreHeaders.hpp"
 #include <Ogre.h>
 #include <OgrePlugin.h>
 #include "CDNArchiveFactory.hpp"

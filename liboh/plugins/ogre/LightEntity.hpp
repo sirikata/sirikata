@@ -34,6 +34,7 @@
 
 #include <oh/LightListener.hpp>
 #include "Entity.hpp"
+#include "OgreHeaders.hpp"
 #include <OgreLight.h>
 #include <oh/ProxyLightObject.hpp>
 namespace Sirikata {

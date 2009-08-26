@@ -31,6 +31,7 @@
  */
 #include "precomp.hpp"
 #include "ResourceLoadingQueue.hpp"
+#include "../OgreHeaders.hpp"
 #include <OgreDataStream.h>
 #include <OgreResourceBackgroundQueue.h>
 #include <OgreResourceManager.h>

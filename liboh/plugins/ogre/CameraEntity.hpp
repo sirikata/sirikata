@@ -33,6 +33,7 @@
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
 #include "Entity.hpp"
 #include <oh/CameraListener.hpp>
+#include "OgreHeaders.hpp"
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreRenderTarget.h>

@@ -126,7 +126,7 @@ FileProtocolHandler::~FileProtocolHandler() {
 bool read_full(int fd, unsigned char *data, cache_ssize_type amount) {
 	cache_ssize_type ret;
  	while (amount > 0) {
-		ret = read(fd, data, amount);
+		ret = read(fd, data, (size_t)amount);
 		if (ret <= 0) {
 			if (ret == 0 || (errno != EAGAIN && errno != EINTR)) {
 				// ret == 0 means end-of-file.
@@ -143,7 +143,7 @@ bool read_full(int fd, unsigned char *data, cache_ssize_type amount) {
 bool write_full(int fd, const unsigned char *data, cache_ssize_type amount) {
 	cache_ssize_type ret;
  	while (amount > 0) {
-		ret = write(fd, data, amount);
+		ret = write(fd, data, (size_t)amount);
 		if (ret <= 0) {
 			if (ret == 0 || (errno != EAGAIN && errno != EINTR)) {
 				// ret == 0 means end-of-file.
@@ -298,7 +298,7 @@ public:
 				continue;
 			}
 			MutableDenseDataPtr mddp (new DenseData(Range(pos, amount_read, LENGTH)));
-			memcpy(mddp->writableData(), temporary_buffer, amount_read);
+			memcpy(mddp->writableData(), temporary_buffer, (size_t)amount_read);
 			mCallback(mddp, true, mDiskSize);
 			pos += amount_read;
 		}
@@ -360,7 +360,7 @@ public:
 		do {
 			const unsigned char *data = mData.dataAt(pos, length);
 			if (!data) {
-				lseek64(mFd, SEEK_CUR, length);
+				lseek64(mFd, length, SEEK_CUR);
 			} else {
 				if (!write_full(mFd, data, length)) {
 					aborted();
@@ -487,7 +487,6 @@ void FileProtocolHandler::remove(UploadHandler::TransferDataPtr *ptrRef,
 void FileNameHandler::finishedDownload(const NameLookupHandler::Callback &cb,
 	const std::string &filename, DenseDataPtr data, bool success)
 {
-	size_t pos;
 	bool exists = false;
 	RemoteFileId foundURI;
 	if (success) {

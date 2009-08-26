@@ -34,7 +34,6 @@
 #include <oh/ObjectScript.hpp>
 #include <oh/ObjectScriptManager.hpp>
 #include <oh/ObjectScriptManagerFactory.hpp>
-AUTO_SINGLETON_INSTANCE(Sirikata::ObjectScriptManagerFactory);
 namespace Sirikata {
 ObjectScriptManagerFactory& ObjectScriptManagerFactory::getSingleton() {
     return AutoSingleton<ObjectScriptManagerFactory>::getSingleton();
@@ -43,3 +42,4 @@ void ObjectScriptManagerFactory::destroy() {
 	AutoSingleton<ObjectScriptManagerFactory>::destroy();
 }
 }
+AUTO_SINGLETON_INSTANCE(Sirikata::ObjectScriptManagerFactory);

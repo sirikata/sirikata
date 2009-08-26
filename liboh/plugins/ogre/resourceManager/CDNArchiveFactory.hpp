@@ -31,7 +31,7 @@
  */
 #ifndef _CDN_ARCHIVE_FACTORY_HPP_
 #define _CDN_ARCHIVE_FACTORY_HPP_
-
+#include "../OgreHeaders.hpp"
 #include <Ogre.h>
 #include <OgreArchiveFactory.h>
 

@@ -71,17 +71,17 @@ DeltaTime CameraPath::endTime() const {
 
 int32 CameraPath::clampKeyIndex(int32 idx) const {
     if (idx < 0) return 0;
-    if (idx >= numPoints()) return numPoints()-1;
+    if (idx >= (int32)numPoints()) return numPoints()-1;
     return idx;
 }
 
 DeltaTime CameraPath::keyFrameTime(int32 idx) const {
-    if (idx < 0 || idx >= numPoints()) return DeltaTime::zero();
+    if (idx < 0 || idx >= (int32)numPoints()) return DeltaTime::zero();
     return mPathPoints[idx].time;
 }
 
 void CameraPath::changeTimeDelta(int32 idx, const DeltaTime& d_dt) {
-    if (idx < 0 || idx >= numPoints()) return;
+    if (idx < 0 || idx >= (int32)numPoints()) return;
 
     DeltaTime old_dt = mPathPoints[idx].dt;
     DeltaTime new_dt = old_dt + d_dt;
@@ -107,7 +107,7 @@ int32 CameraPath::insert(int32 idx, const Vector3d& pos, const Quaternion& orien
 
 // returns the closest available key point index after the removal
 int32 CameraPath::remove(int32 idx) {
-    if (idx < 0 || idx >= numPoints())
+    if (idx < 0 || idx >= (int32)numPoints())
         return idx;
 
     mDirty = true;
@@ -183,7 +183,7 @@ void CameraPath::computeDensities() {
 
     mDensities.clear();
 
-    for(int32 idx = 0; idx < mPathPoints.size(); idx++) {
+    for(int32 idx = 0; idx < (int32)mPathPoints.size(); idx++) {
         uint32 min_idx = clampKeyIndex(idx - k);
         uint32 max_idx = clampKeyIndex(idx + k);
 
@@ -225,7 +225,7 @@ bool CameraPath::evaluate(const DeltaTime& t, Vector3d* pos_out, Quaternion* ori
     Quaternion orient_sum(0.0f, 0.0f, 0.0f, 0.0f, Quaternion::XYZW());
     float weight_sum = 0.0f;
 
-    for(int32 i = 0; i < mPathPoints.size(); i++) {
+    for(int32 i = 0; i < (int32)mPathPoints.size(); i++) {
         float difft = 0;
         if (keyFrameTime(i) > t)
             difft = (keyFrameTime(i) - t).toSeconds();

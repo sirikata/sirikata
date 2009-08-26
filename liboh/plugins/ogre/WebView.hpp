@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_GRAPHICS_WEBVIEW_HPP_
 #define _SIRIKATA_GRAPHICS_WEBVIEW_HPP_
 
+#include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "WebViewManager.hpp"
 #include "oh/ProxyObjectListener.hpp"

@@ -46,7 +46,7 @@ class Location: public Transform {
         addAngularRotation(reference.getAxisOfRotation(), reference.getAngularSpeed());
         setVelocity(getVelocity() +
                     reference.getAngularSpeed() * (
-                        reference.getAxisOfRotation().cross(Vector3<float32>(getPosition()))));
+                        reference.getAxisOfRotation().cross(getPosition().downCast<float32>())));
 
         Transform temp = Transform::toWorld(reference);
         setPosition(temp.getPosition());
@@ -59,7 +59,7 @@ class Location: public Transform {
 
         setVelocity(getVelocity() -
                     reference.getAngularSpeed() * (
-                        reference.getAxisOfRotation().cross(Vector3<float32>(getPosition()))));
+                        reference.getAxisOfRotation().cross(getPosition().downCast<float32>())));
         addAngularRotation(reference.getAxisOfRotation(), -reference.getAngularSpeed());
         Quaternion inverseOtherOrientation (reference.getOrientation().inverse());
         setVelocity(inverseOtherOrientation * (getVelocity() - reference.getVelocity()));

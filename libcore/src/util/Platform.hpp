@@ -157,7 +157,9 @@
 #endif
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 //need to get rid of GetMessage for protocol buffer compatibility

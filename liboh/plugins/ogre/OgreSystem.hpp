@@ -37,7 +37,7 @@
 #include <util/ListenerProvider.hpp>
 #include <oh/TimeSteppedQueryableSimulation.hpp>
 #include <oh/ProxyObject.hpp>
-#include <OgrePrerequisites.h>
+#include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
 //Thank you Apple:

@@ -1,4 +1,5 @@
-#include "oh/Platform.hpp"
+#include <oh/Platform.hpp>
+#include "OgreHeaders.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "OgreSubMesh.h"
 #include "OgreEntity.h"

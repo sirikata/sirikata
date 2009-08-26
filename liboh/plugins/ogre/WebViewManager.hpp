@@ -32,7 +32,7 @@
 
 #ifndef _SIRIKATA_GRAPHICS_WEBVIEWMANAGER_HPP_
 #define _SIRIKATA_GRAPHICS_WEBVIEWMANAGER_HPP_
-
+#include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
 #include "input/InputEvents.hpp"
