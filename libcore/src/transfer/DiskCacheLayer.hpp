@@ -68,7 +68,7 @@ private:
 
 	struct DiskRequest;
 	ThreadSafeQueue<std::tr1::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
-	boost::thread mWorkerThread;
+	boost::thread *mWorkerThread;
 
 	CacheMap mFiles;
 
@@ -172,8 +172,8 @@ public:
 			mFiles(NULL, policy),
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
-		mFiles.setOwner(this);//to avoid warning in visual studio
-		mWorkerThread=boost::thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
+		mFiles.setOwner(this);
+		mWorkerThread=new boost::thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
 		try {
 			unserialize();
 		} catch (...) {
@@ -190,7 +190,7 @@ public:
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.
 
 		mCleaningUp = true; // don't allow destroyCacheEntry to delete files.
-
+		delete mWorkerThread;
 	}
 
 	virtual void purgeFromCache(const Fingerprint &fileId) {
