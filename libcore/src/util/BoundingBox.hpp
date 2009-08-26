@@ -55,9 +55,9 @@ public:
     BoundingBox(const Vector3<real>&imin,const Vector3<real>&imax){
         mMin=imin;
         Vector3<real> tmp(imax-imin);
-        mAcross.x=tmp.x;
-        mAcross.y=tmp.y;
-        mAcross.z=tmp.z;
+        mAcross.x=(float)tmp.x;
+        mAcross.y=(float)tmp.y;
+        mAcross.z=(float)tmp.z;
     }
 
     const Vector3<real> &min()const{
