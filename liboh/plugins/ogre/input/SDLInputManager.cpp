@@ -35,9 +35,8 @@
 #define _WIN32_WINNT 0x0501
 #endif
 
-#include <util/Standard.hh>
 #include <oh/Platform.hpp>
-
+#include "../OgreHeaders.hpp"
 #include <OgreRenderWindow.h>
 #include <SDL.h>
 #include <SDL_video.h>

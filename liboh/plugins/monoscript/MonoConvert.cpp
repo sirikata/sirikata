@@ -65,7 +65,7 @@ void ConvertVector3CPPToCSharpAndFree(void* jarg, void* jout) {
 }
 
 Sirikata::Vector3f Vector3f(CSharpVector3* in) {
-    return Sirikata::Vector3f(in->x, in->y, in->z);
+    return Sirikata::Vector3f(in->x, in->y, in->z);//warns cus we should have Vector3f and Vector3d in C# land
 }
 
 Sirikata::Vector3d Vector3d(CSharpVector3* in) {

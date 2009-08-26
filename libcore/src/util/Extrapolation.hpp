@@ -139,7 +139,9 @@ public:
     virtual Value extrapolate(const Time&t) const {
         return this->Sirikata::TimedWeightedExtrapolatorBase<Value,UpdatePredicate,Time,Duration>::extrapolate(t);
     }
-
+    virtual Time lastUpdateTime()const{
+        return this->Sirikata::TimedWeightedExtrapolatorBase<Value,UpdatePredicate,Time,Duration>::lastUpdateTime();
+    }
 
 };
 

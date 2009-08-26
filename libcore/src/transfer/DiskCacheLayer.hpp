@@ -46,10 +46,6 @@ namespace Transfer {
 
 // should really be a config option.
 //#define NUM_WORKER_THREADS 10
-#if defined(__WIN32__) || defined(_WIN32)
-// disable warning for 'this' : used in base member initializer list
-#pragma warning (disable: 4355)
-#endif
 
 
 /// Disk Cache keeps track of what files are on disk, and manages a helper thread to retrieve it.
@@ -174,10 +170,10 @@ public:
 	DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
 			mWorkerThread(std::tr1::bind(&DiskCacheLayer::workerThread, this)),
-			mFiles(this, policy),
+			mFiles(NULL, policy),
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
-
+        mFiles.setOwner(this);//to avoid warning in visual studio
 		try {
 			unserialize();
 		} catch (...) {
@@ -230,10 +226,6 @@ public:
 
 }
 }
-#if defined(__WIN32__) || defined(_WIN32)
-// disable warning for 'this' : used in base member initializer list
-#pragma warning (enable: 4355)
-#endif
 
 
 #endif /* SIRIKATA_DiskCache_HPP__ */

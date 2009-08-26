@@ -58,8 +58,8 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     unsigned int rsi=Services::REGISTRATION;
     unsigned int lsi=Services::LOC;
     unsigned int gsi=Services::GEOM;
-    unsigned int osi;
-    unsigned int csi;
+    //unsigned int osi;
+    //unsigned int csi;
     unsigned int fsi=Services::ROUTER;
     unsigned char randomKey[SHA256::static_size]={3,2,1,4,5,6,3,8,235,124,24,15,26,165,123,95,
                                                   53,2,111,114,125,166,123,158,232,144,4,152,221,161,122,96};

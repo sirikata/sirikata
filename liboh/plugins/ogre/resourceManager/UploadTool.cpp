@@ -225,7 +225,7 @@ String stripslashes (DiskFile inputdp) {
 }
 
 
-struct ResourceFileUploadData : public ResourceFileUpload, public DependencyPair {
+class ResourceFileUploadData : public ResourceFileUpload, public DependencyPair {
 //    bool mProcessedDependencies;
 //    ResourceFileUploadData() : mProcessedDependencies(false) {}
 };
@@ -928,7 +928,7 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
 /////////////// Not sure what this code does at all
 
   String mesh_old_name;
-  Fingerprint mesh_new_hash;
+  //Fingerprint mesh_new_hash;
   String mesh_new_name;
   std::set<Fingerprint> mesh_hashes;
   std::set<Fingerprint> skeleton_hashes;

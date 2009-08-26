@@ -54,7 +54,7 @@ class SIRIKATA_SUBSCRIPTION_EXPORT SubscriptionClient {
             return mAddress==other.mAddress&&mUUID==other.mUUID;
         }
         class Hasher {public:
-            bool operator() (const AddressUUID&au) const{
+            size_t operator() (const AddressUUID&au) const{
                 return Network::Address::Hasher()(au.mAddress)^UUID::Hasher()(au.mUUID);
             }
         };

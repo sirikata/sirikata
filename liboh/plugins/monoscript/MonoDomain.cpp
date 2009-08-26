@@ -106,7 +106,7 @@ bool Domain::null() const {
 // Function set
 //#####################################################################
 void Domain::set() const {
-    bool was_set = mono_domain_set(mDomain->domain(), FALSE);
+    bool was_set = (mono_domain_set(mDomain->domain(), FALSE)!=0);
     assert(was_set);
 }
 
@@ -170,7 +170,7 @@ Assembly Domain::getAssembly(const Meru::String& name) const {
     // For the time being, just use the global version which checks for a loaded
     // assembly with the given name.
     MonoAssemblyName aname;
-    bool parsed = mono_assembly_name_parse(name.c_str(), &aname);
+    bool parsed = (mono_assembly_name_parse(name.c_str(), &aname)!=0);
     if (!parsed) return Assembly(NULL);
 
     MonoAssembly* assembly = mono_assembly_loaded(&aname);

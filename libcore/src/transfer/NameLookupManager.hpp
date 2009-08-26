@@ -86,7 +86,7 @@ private:
 			try {
         			rfid = RemoteFileId(origNamedUri);
         			success = true;
-			} catch (std::invalid_argument &e) {
+			} catch (std::invalid_argument &) {
 				SILOG(transfer,error,"Received an exception when trying to parse hash URI " <<
 				    origNamedUri);
 			}

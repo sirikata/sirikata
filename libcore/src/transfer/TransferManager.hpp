@@ -252,7 +252,7 @@ public:
 			const EventListener &listener,
 			bool forceIfExists) {
 		RemoteFileId rfid(
-			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
+			Fingerprint::computeDigest(toUpload->data(), (size_t)toUpload->length()),
 			hashContext);
 		upload(name, rfid, toUpload, listener, forceIfExists);
 	}
@@ -302,7 +302,7 @@ public:
 			const EventListener &listener,
 			bool forceIfExists) {
 		RemoteFileId rfid(
-			Fingerprint::computeDigest(toUpload->data(), toUpload->length()),
+			Fingerprint::computeDigest(toUpload->data(), (size_t)toUpload->length()),
 			hashContext);
 		uploadByHash(rfid, toUpload, listener, forceIfExists);
 	}

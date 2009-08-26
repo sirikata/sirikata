@@ -133,7 +133,7 @@ public:
         return Location(getPosition()+Vector3<float64>(getVelocity())*dt.toSeconds(),
                         getAngularSpeed()
                          ? getOrientation()*Quaternion(getAxisOfRotation(),
-                             getAngularSpeed()*dt.toSeconds())
+                                                       (float)(getAngularSpeed()*dt.toSeconds()))
                          : getOrientation(),
                         getVelocity(),
                         getAxisOfRotation(),

@@ -77,7 +77,7 @@ class HTTPDownloadHandler :
 
 	struct IsSpace {
 		bool operator()(const unsigned char c) {
-			return std::isspace(c);
+			return std::isspace(c)!=false;
 		}
 	};
 
@@ -99,7 +99,7 @@ class HTTPDownloadHandler :
 				try {
 					success = true;
 					fp = Fingerprint::convertFromHex(shasum);
-				} catch (std::invalid_argument &e) {
+				} catch (std::invalid_argument &) {
 					SILOG(transfer,error,"HTTP name lookup gave URI " << httpreq->getURI() << " which is not a hash URI!");
 				}
 				callback(fp, receivedUri, success);

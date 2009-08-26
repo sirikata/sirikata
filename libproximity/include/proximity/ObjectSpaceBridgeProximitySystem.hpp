@@ -195,7 +195,7 @@ protected:
                 
             }
             return obj_is_deleted;
-        }catch(std::invalid_argument&ia) {
+        }catch(std::invalid_argument&) {
             SILOG(proximity,warning,"Could not parse message");
             return OBJECT_NOT_DESTROYED;
         }

@@ -65,7 +65,9 @@ static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObj
 static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoObject*callback, const Duration&duration){
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
     MemoryBuffer buf;
-    
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+    using std::tr1::placeholders::_3;
     Mono::Array(message).unboxInPlaceByteArray(buf);
     if (ho&&!buf.empty()) {
         RoutableMessageHeader hdr;

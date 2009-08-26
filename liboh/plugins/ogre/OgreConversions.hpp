@@ -51,7 +51,7 @@ inline Ogre::Vector3 toOgre(const Sirikata::Vector3f &pos) {
 
 // Ogre uses floating points internally. Base should be equal to the translation of the scene.
 inline Ogre::Vector3 toOgre(const Sirikata::Vector3d &pos, const Sirikata::Vector3d &base) {
-    return (pos - base).convert<Ogre::Vector3>();
+    return (pos - base).downCast<Ogre::Real>().convert<Ogre::Vector3>();
 }
 
 inline Ogre::Vector4 toOgre(const Sirikata::Vector4f &pos) {

@@ -74,6 +74,7 @@ bool loadCustomAssembly(Mono::MonoSystem*mono_system, const Sirikata::String&ass
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
+    using std::tr1::placeholders::_1;
     if (core_plugin_refcount==0) {
         mono_system = new Mono::MonoSystem();
         ObjectScriptManagerFactory::getSingleton().registerConstructor("monoscript",

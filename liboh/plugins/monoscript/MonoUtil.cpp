@@ -169,7 +169,7 @@ parse_public_key (const gchar *key, gchar** pubkey)
 		arr [offset++] = keylen;
 	} else {
             arr = (gchar*)g_malloc (keylen + 2);
-		arr [offset++] = 0x80; /* 10bs */
+            arr [offset++] = (char)(unsigned char)0x80; /* 10bs */
 		arr [offset++] = keylen;
 	}
 

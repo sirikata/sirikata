@@ -69,10 +69,12 @@ private:
 	}
 
 public:
-
 	CacheMap(CacheLayer *owner, CachePolicy *policy) :
 		mOwner(owner), mPolicy(policy) {
 	}
+    void setOwner(CacheLayer *owner) {//if you can't afford to initialize in initializer list
+        mOwner=owner;
+    }
 
 	~CacheMap() {
 		write_iterator clearIterator(*this);
