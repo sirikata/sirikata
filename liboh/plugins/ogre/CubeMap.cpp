@@ -182,8 +182,8 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
         mCubeMapSceneCamera[i]->setFOVy(Ogre::Radian(Ogre::Math::PI/2));
 
         bool reverse=true;//defeat ogre reflection vector bug
-        Ogre::Vector3 offset;
-        Ogre::Vector3 up;
+        Ogre::Vector3 offset(0,0,0);//initialize to prevent gcc warning
+        Ogre::Vector3 up(0,1,0);
         switch (i){
           case 0:
             offset=Ogre::Vector3(-1,0,0);

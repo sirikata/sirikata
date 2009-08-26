@@ -261,6 +261,7 @@ bool EventDescriptor::operator<(const EventDescriptor& rhs) const {
     }
 
     assert(false); // we should have checked all types of tags by now
+    return false;//would have hit abort already, but no need to warn about this in compiler
 }
 
 EventDescriptor& EventDescriptor::operator=(const EventDescriptor& rhs) {
