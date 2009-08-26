@@ -213,7 +213,7 @@ void *main_loop(void *) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,loc_service,cseg);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,cseg);
         lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
         exit(0);
     }

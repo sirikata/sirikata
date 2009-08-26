@@ -1,9 +1,8 @@
 #include "Analysis.hpp"
 #include "Visualization.hpp"
 #include "CoordinateSegmentation.hpp"
-#include "LocationService.hpp"
 #include "ObjectFactory.hpp"
-
+#include "MotionPath.hpp"
 #include "Options.hpp"
 #include <GL/glut.h>
 
@@ -58,7 +57,6 @@ void LocationVisualization::mainLoop() {
 
     }
     if (mCurEvent!=mObservedEvents->end()) {
-        mLoc->tick(mCurTime);
 	mSeg->tick(mCurTime);
     }
 
@@ -123,7 +121,7 @@ void LocationVisualization::mainLoop() {
     glPointSize(2);
     glBegin(GL_POINTS);
     for (ObjectFactory::iterator it=mFactory->begin();it!=mFactory->end();++it) {
-        Vector3f pos=mLoc->currentPosition(*it);
+        Vector3f pos = mFactory->motion(*it)->at(mCurTime).extrapolate(mCurTime).position();
         if (*it==mObserver) {
             glEnd();
             glColor3f(.125,.125,.125);
@@ -179,10 +177,9 @@ void main_loop() {
   sVis->mainLoop();
 
 }
-LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*factory, LocationService*loc_serv, CoordinateSegmentation*cseg):
+LocationVisualization::LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*factory, CoordinateSegmentation*cseg):
  LocationErrorAnalysis(opt_name,nservers),mCurTime(Time::null()){
     mFactory=factory;
-    mLoc=loc_serv;
     mSeg=cseg;
     mSamplingRate=Duration::milliseconds(30.0f);
 
