@@ -72,7 +72,7 @@ void InitOptions() {
         .addOption(new OptionValue(MAX_EXTRAPOLATOR_DIST, "1.0", Sirikata::OptionValueType<float64>(), "The maximum distance an object is permitted to deviate from the predictions by other objects before an update is sent out."))
 
         .addOption(new OptionValue(ANALYSIS_LOC, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
-        .addOption(new OptionValue(ANALYSIS_LOCVIS, "false", Sirikata::OptionValueType<bool>(), "Do a loc analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_LOCVIS, "none", Sirikata::OptionValueType<String>(), "The type of visualization to run, none to disable."))
         .addOption(new OptionValue(ANALYSIS_LOCVIS_SEED, "5", Sirikata::OptionValueType<int>(), "Do a loc analysis on this object"))
 
         .addOption(new OptionValue(ANALYSIS_BANDWIDTH, "false", Sirikata::OptionValueType<bool>(), "Do a bandwidth analysis instead of a normal run"))

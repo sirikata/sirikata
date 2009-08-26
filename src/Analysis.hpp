@@ -64,12 +64,15 @@ public:
     // Return the average error in object position approximation over all observers and observed objects, sampled at the given rate.
     double globalAverageError(const Duration& sampling_rate, ObjectFactory* obj_factory) const;
 protected:
-    typedef std::vector<ObjectEvent*> EventList;
+    typedef std::vector<Event*> EventList;
     typedef std::map<UUID, EventList*> ObjectEventListMap;
+    typedef std::map<ServerID, EventList*> ServerEventListMap;
 
     EventList* getEventList(const UUID& observer) const;
+    EventList* getEventList(const ServerID& observer) const;
 
     ObjectEventListMap mEventLists;
+    ServerEventListMap mServerEventLists;
 }; // class LocationErrorAnalysis
 
 /** Does analysis of bandwidth, e.g. checking total bandwidth in and out of a server,

@@ -25,11 +25,18 @@ class LocationVisualization :public LocationErrorAnalysis {
     std::vector<SegmentationChangeEvent*> mSegmentationChangeEvents;
     std::vector<SegmentationChangeEvent*>::iterator mSegmentationChangeIterator;
 
+    void handleObjectEvent(const UUID& obj, bool add, const TimedMotionVector3f& loc);
+    void handleLocEvent(const UUID& obj, const TimedMotionVector3f& loc);
+
+    void displayError(const Duration& sampling_rate);
 public:
     void mainLoop();
     LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*obj_factory, CoordinateSegmentation*cseg);
     void displayError(const UUID&observer, const Duration& sampling_rate);
+    void displayError(const ServerID&observer, const Duration& sampling_rate);
+
     void displayRandomViewerError(int seed, const Duration& sampling_rate);
+    void displayRandomServerError(int seed, const Duration& sampling_rate);
 
 };
 }

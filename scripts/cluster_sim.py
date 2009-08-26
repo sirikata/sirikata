@@ -58,7 +58,7 @@ class ClusterSim:
         self.run_analysis()
 
     def vis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.locvis=true'])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.locvis=server'])
 
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)

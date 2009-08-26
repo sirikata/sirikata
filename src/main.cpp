@@ -212,9 +212,15 @@ void *main_loop(void *) {
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10), obj_factory));
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_LOCVIS)->as<bool>() ) {
+    else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
+        String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
         LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,cseg);
-        lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
+
+        if (vistype == "object")
+            lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
+        else if (vistype == "server")
+            lea.displayRandomServerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
+
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LATENCY)->as<bool>() ) {

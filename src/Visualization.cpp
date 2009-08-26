@@ -7,44 +7,62 @@
 #include <GL/glut.h>
 
 namespace CBR {
+
+void LocationVisualization::handleObjectEvent(const UUID& obj, bool add, const TimedMotionVector3f& loc) {
+    VisibilityMap::iterator where;
+    if (add) {
+        mVisible[obj]=loc;
+        if ((where=mInvisible.find(obj))!=mInvisible.end()) {
+            mInvisible.erase(where);
+        }
+    }else {
+        if ((where=mVisible.find(obj))!=mVisible.end()) {
+            mVisible.erase(where);
+        }else {
+            std::cerr<<"Guy "<<obj.readableHexData()<<"not got erased from visibility\n";
+            if ((where=mInvisible.find(obj))!=mInvisible.end()) {
+                mInvisible.erase(where);
+            }
+        }
+    }
+}
+
+void LocationVisualization::handleLocEvent(const UUID& obj, const TimedMotionVector3f& loc) {
+    VisibilityMap::iterator where=mVisible.find(obj);
+    if (where==mVisible.end()) {
+        mInvisible[obj]=loc;
+        std::cerr<<"Guy "<<obj.readableHexData()<<"not visible but gave update.\n";
+    }else {
+        where->second=loc;
+    }
+}
+
 static LocationVisualization*gVis=NULL;
 void LocationVisualization::mainLoop() {
     mCurTime+=mSamplingRate;
     while (mCurEvent!=mObservedEvents->end()) {
-        ObjectEvent*oe=*mCurEvent;
+        Event*oe=*mCurEvent;
         if (oe->end_time()>mCurTime) {
             break;
         }
 
-        ProximityEvent*pe;
-        if ((pe=dynamic_cast<ProximityEvent*>(oe))) {
-            VisibilityMap::iterator where;
-            if (pe->entered) {
-                mVisible[pe->source]=pe->loc;
-                if ((where=mInvisible.find(pe->source))!=mInvisible.end()) {
-                    mInvisible.erase(where);
-                }
-            }else {
-                if ((where=mVisible.find(pe->source))!=mVisible.end()) {
-                    mVisible.erase(where);
-                }else {
-                    std::cerr<<"Guy "<<pe->source.readableHexData()<<"not got erased from visibility\n";
-                    if ((where=mInvisible.find(pe->source))!=mInvisible.end()) {
-                        mInvisible.erase(where);
-                    }
-                }
-            }
-        }
-        LocationEvent*le;
-        if ((le=dynamic_cast<LocationEvent*>(oe))) {
-            VisibilityMap::iterator where=mVisible.find(le->source);
-            if (where==mVisible.end()) {
-                mInvisible[le->source]=le->loc;
-                std::cerr<<"Guy "<<le->source.readableHexData()<<"not visible who gave update to "<<le->receiver.readableHexData()<<"\n";
-            }else {
-                where->second=le->loc;
-            }
-        }
+        ProximityEvent* pe = dynamic_cast<ProximityEvent*>(oe);
+        if (pe != NULL)
+            handleObjectEvent(pe->source, pe->entered, pe->loc);
+
+        ServerObjectEventEvent* sobj_evt = dynamic_cast<ServerObjectEventEvent*>(oe);
+        if (sobj_evt != NULL)
+            handleObjectEvent(sobj_evt->object, sobj_evt->added, sobj_evt->loc);
+
+
+        LocationEvent* le = dynamic_cast<LocationEvent*>(oe);
+        if (le != NULL)
+            handleLocEvent(le->source, le->loc);
+
+        ServerLocationEvent* sloc_evt = dynamic_cast<ServerLocationEvent*>(oe);
+        if (sloc_evt != NULL)
+            handleLocEvent(sloc_evt->object, sloc_evt->loc);
+
 
 	if (mSegmentationChangeIterator != mSegmentationChangeEvents.end()) {
 	  if ((*mSegmentationChangeIterator)->begin_time() <= mCurTime) {
@@ -203,10 +221,25 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
 }
 
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
+    std::cout << "Observer is: "  << observer.readableHexData() << "\n";
+    this->mObserver=observer;
+    mObservedEvents = getEventList(observer);
+
+    displayError(sampling_rate);
+}
+
+void LocationVisualization::displayError(const ServerID&observer, const Duration&sampling_rate) {
+    std::cout << "Observer is: "  << (uint32)observer << "\n";
+    this->mObserver=UUID::null();
+    mObservedEvents = getEventList(observer);
+
+    displayError(sampling_rate);
+}
+
+void LocationVisualization::displayError(const Duration&sampling_rate) {
 
     int argc=1; char argvv[]="test";
 
-    std::cout << "Observer is: "  << observer.readableHexData() << "\n";
     char*argv=&argvv[0];
     glutInit(&argc,&argv);
     glutInitDisplayMode(GLUT_RGB|GLUT_DEPTH|GLUT_DOUBLE);
@@ -214,8 +247,6 @@ void LocationVisualization::displayError(const UUID&observer, const Duration&sam
     glViewport(0,0,1024,768);
     int win=glutCreateWindow("Viewer");
     gVis=this;
-    this->mObserver=observer;
-    mObservedEvents = getEventList(observer);
     mCurEvent=mObservedEvents->begin();
     mSamplingRate=sampling_rate;
     if (mCurEvent!=mObservedEvents->end()) {
@@ -230,6 +261,16 @@ void LocationVisualization::displayRandomViewerError(int seed, const Duration&sa
     unsigned int which=seed;
     which=which%mEventLists.size();
     ObjectEventListMap::iterator iter=mEventLists.begin();
+    for (unsigned int i=0;i<which;++i,++iter) {
+    }
+    displayError(iter->first,sampling_rate);
+
+}
+
+void LocationVisualization::displayRandomServerError(int seed, const Duration&sampling_rate) {
+    unsigned int which=seed;
+    which=which%mEventLists.size();
+    ServerEventListMap::iterator iter=mServerEventLists.begin();
     for (unsigned int i=0;i<which;++i,++iter) {
     }
     displayError(iter->first,sampling_rate);

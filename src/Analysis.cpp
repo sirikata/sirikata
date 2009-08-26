@@ -302,21 +302,49 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
             Event* evt = Event::read(is, server_id);
             if (evt == NULL)
                 break;
+
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
-            if (obj_evt == NULL) {
+            ServerObjectEventEvent* sobj_evt = dynamic_cast<ServerObjectEventEvent*>(evt);
+            ServerLocationEvent* sloc_evt = dynamic_cast<ServerLocationEvent*>(evt);
+
+            if (obj_evt != NULL) {
+                ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
+                if (it == mEventLists.end()) {
+                    mEventLists[ obj_evt->receiver ] = new EventList;
+                    it = mEventLists.find( obj_evt->receiver );
+                }
+                assert( it != mEventLists.end() );
+
+                EventList* evt_list = it->second;
+                evt_list->push_back(obj_evt);
+            }
+            else if (sobj_evt != NULL) {
+                ServerEventListMap::iterator it = mServerEventLists.find( sobj_evt->dest );
+                if (it == mServerEventLists.end()) {
+                    mServerEventLists[ sobj_evt->dest ] = new EventList;
+                    it = mServerEventLists.find( sobj_evt->dest );
+                }
+                assert( it != mServerEventLists.end() );
+
+                EventList* evt_list = it->second;
+                evt_list->push_back(sobj_evt);
+            }
+            else if (sloc_evt != NULL) {
+                ServerEventListMap::iterator it = mServerEventLists.find( sloc_evt->dest );
+                if (it == mServerEventLists.end()) {
+                    mServerEventLists[ sloc_evt->dest ] = new EventList;
+                    it = mServerEventLists.find( sloc_evt->dest );
+                }
+                assert( it != mServerEventLists.end() );
+
+                EventList* evt_list = it->second;
+                evt_list->push_back(sloc_evt);
+            }
+            else {
                 delete evt;
                 continue;
             }
 
-            ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
-            if (it == mEventLists.end()) {
-                mEventLists[ obj_evt->receiver ] = new EventList;
-                it = mEventLists.find( obj_evt->receiver );
-            }
-            assert( it != mEventLists.end() );
-
-            EventList* evt_list = it->second;
-            evt_list->push_back(obj_evt);
         }
     }
 
@@ -328,6 +356,12 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
 
 LocationErrorAnalysis::~LocationErrorAnalysis() {
     for(ObjectEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
+        EventList* event_list = event_lists_it->second;
+        for(EventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++)
+            delete *events_it;
+    }
+
+    for(ServerEventListMap::iterator event_lists_it = mServerEventLists.begin(); event_lists_it != mServerEventLists.end(); event_lists_it++) {
         EventList* event_list = event_lists_it->second;
         for(EventList::iterator events_it = event_list->begin(); events_it != event_list->end(); events_it++)
             delete *events_it;
@@ -415,7 +449,9 @@ double LocationErrorAnalysis::averageError(const UUID& observer, const UUID& see
     double error_sum = 0.0;
     uint32 sample_count = 0;
     for(EventList::iterator main_it = events->begin(); main_it != events->end(); main_it++) {
-        ObjectEvent* cur_event = *main_it;
+        ObjectEvent* cur_event = dynamic_cast<ObjectEvent*>(*main_it);
+        assert(cur_event != NULL);
+
         if (!(cur_event->source == seen)) continue;
 
         if (mode == SEARCHING_PROX) {
@@ -497,6 +533,13 @@ double LocationErrorAnalysis::globalAverageError(const Duration& sampling_rate, 
 LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const UUID& observer) const {
     ObjectEventListMap::const_iterator event_lists_it = mEventLists.find(observer);
     if (event_lists_it == mEventLists.end()) return NULL;
+
+    return event_lists_it->second;
+}
+
+LocationErrorAnalysis::EventList* LocationErrorAnalysis::getEventList(const ServerID& observer) const {
+    ServerEventListMap::const_iterator event_lists_it = mServerEventLists.find(observer);
+    if (event_lists_it == mServerEventLists.end()) return NULL;
 
     return event_lists_it->second;
 }
