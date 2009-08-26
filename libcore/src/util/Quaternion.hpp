@@ -203,8 +203,8 @@ public:
         Vector3<myscalar> quat_axis(x,y,z);
         Vector3<myscalar>uv = quat_axis.cross(other);
         Vector3<myscalar>uuv= quat_axis.cross(uv);
-        uv *=(2.0*w);
-        uuv*=2.0;
+        uv *=(2.0f*w);
+        uuv*=2.0f;
         return other + uv + uuv;
     }
 

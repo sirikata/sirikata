@@ -140,7 +140,7 @@ public:
             size_t oldSize=size;
             uint64 keyType=parseLength64(curInput,size);
             uint64 key=(keyType/8);
-            if (!isReserved(key)) {
+            if (!isReserved((uint32)key)) {
                 //std::cout << "Key "<<key<<" is not reserved. size="<<size<<", pos="<<(curInput-(const unsigned char *)input)<<"\n";
                 curInput=dataStart;
                 size=oldSize;
@@ -266,7 +266,7 @@ private:
         do {
             assert(size >= 2);
             --size;
-            *output = (value & 127) + (value/128?128:0);
+            *output = (char)(unsigned char)((value & 127) + (value/128?128:0));
             value >>= 7;
             ++output;
         } while (value);

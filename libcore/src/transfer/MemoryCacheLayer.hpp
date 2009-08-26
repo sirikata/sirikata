@@ -38,7 +38,7 @@
 #include "CacheMap.hpp"
 #if defined(__WIN32__) || defined(_WIN32)
 // disable warning for 'this' : used in base member initializer list
-#pragma warning (disable: 4251)
+#pragma warning (disable: 4355)
 #endif
 
 namespace Sirikata {
@@ -145,7 +145,7 @@ public:
 }
 #if defined(__WIN32__) || defined(_WIN32)
 // disable warning for 'this' : used in base member initializer list
-#pragma warning (enable: 4251)
+#pragma warning (enable: 4355)
 #endif
 
 #endif /* SIRIKATA_MemoryCache_HPP__ */
