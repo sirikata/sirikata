@@ -74,6 +74,12 @@ void Server::networkTick(const Time&t)
 {
   mForwarder->tick(t);
 
+  // Tick all active connections
+  for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+      ObjectConnection* conn = it->second;
+      conn->tick(t);
+  }
+
   // Tick closing object connections, deleting them when they are
   ObjectConnectionSet persistingConnections;
   for(ObjectConnectionSet::iterator it = mClosingConnections.begin(); it != mClosingConnections.end(); it++) {
@@ -144,6 +150,8 @@ void Server::handleConnect(ObjectConnection* conn, const CBR::Protocol::Session:
     // Add object as local object to LocationService
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
+    //update our oseg to show that we know that we have this object now.
+    mOSeg->addObject(obj_id, mID);
     // Register proximity query
     mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
     // Allow the forwarder to send to ship messages to this connection
