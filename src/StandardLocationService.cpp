@@ -230,6 +230,8 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
                 );
                 loc_it->second.location = newloc;
                 notifyLocalLocationUpdated( msg.source_object(), newloc );
+
+                mTrace->serverLoc( mCurrentTime, mID, mID, msg.source_object(), newloc );
             }
 
             if (request.has_bounds()) {
