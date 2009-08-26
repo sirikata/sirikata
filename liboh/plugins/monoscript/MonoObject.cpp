@@ -236,7 +236,7 @@ bool Object::instanceOf(Class klass) const {
     if (obj == NULL)
         return false;
 
-    return mono_object_isinst(obj, klass.mClass);
+    return mono_object_isinst(obj, klass.mClass)!=NULL;
 }
 
 //#####################################################################

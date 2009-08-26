@@ -163,7 +163,9 @@ public:
         return SizedAtomicValue<sizeof(T)>::add(getThisAlignedAddress(mMemory),other);
     }
     T operator -=(const T&other) {
-        return *this+=-other;
+        T temp=0;
+        temp-=other;//to avoid unsigned unary operator problems, just wrap
+        return *this+=temp;
     }
     T operator ++() {
         return (T)SizedAtomicValue<sizeof(T)>::inc(getThisAlignedAddress(mMemory));

@@ -94,7 +94,7 @@ Sirikata::String Assembly::fullname() const {
 
     MonoImage* image = mono_assembly_get_image(mAssembly);
     assert(image != NULL);
-    bool filled_name = mono_assembly_fill_assembly_name(image, &aname);
+    bool filled_name = (mono_assembly_fill_assembly_name(image, &aname)!=0);
     if (!filled_name) {
         printf("!!! Loaded assembly, mono_assembly_fill_assembly_name failed\n");
         return "(Unknown)";
@@ -115,7 +115,7 @@ Sirikata::String Assembly::name() const {
 
     MonoImage* image = mono_assembly_get_image(mAssembly);
     assert(image != NULL);
-    bool filled_name = mono_assembly_fill_assembly_name(image, &aname);
+    bool filled_name = (mono_assembly_fill_assembly_name(image, &aname)!=0);
     if (!filled_name) {
         printf("!!! Loaded assembly, mono_assembly_fill_assembly_name failed\n");
         return "(Unknown)";

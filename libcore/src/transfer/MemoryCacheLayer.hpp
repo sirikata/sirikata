@@ -92,7 +92,7 @@ public:
 	MemoryCacheLayer(CachePolicy *policy, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
 			mData(NULL, policy) {
-        mData.setOwner(this);//to avoid warning in visual studio
+		mData.setOwner(this);//to avoid warning in visual studio
 	}
 
 	virtual void purgeFromCache(const Fingerprint &fileId) {

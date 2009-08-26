@@ -83,7 +83,7 @@ MonoClass* Class::klass() const {
 // Function valuetype
 //#####################################################################
 bool Class::valuetype() const {
-    return mono_class_is_valuetype(mClass);
+    return (mono_class_is_valuetype(mClass)!=0);
 }
 
 //#####################################################################

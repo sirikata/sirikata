@@ -95,7 +95,7 @@ Class MonoSystem::getClass(const Meru::String& name_space, const Meru::String& k
             Class found_klass = mAssemblies[i].getClass(name_space, klass);
             return found_klass;
         }
-        catch (Exception& e) {
+        catch (Exception& ) {
             // do nothing, just means it wasn't in this assembly
         }
     }
@@ -109,7 +109,7 @@ Class MonoSystem::getClass(const Meru::String& name_space, const Meru::String& k
 //#####################################################################
 bool MonoSystem::loadAssembly(const Meru::String& name) const {
     MonoAssemblyName aname;
-    bool parsed = mono_assembly_name_parse(name.c_str(), &aname);
+    bool parsed = (mono_assembly_name_parse(name.c_str(), &aname)!=0);
     if (!parsed) return false;
 
     MonoImageOpenStatus image_open_status;
@@ -124,7 +124,7 @@ bool MonoSystem::loadAssembly(const Meru::String& name) const {
 //#####################################################################
 bool MonoSystem::loadAssembly(const Meru::String& name, const Meru::String& dir) const {
     MonoAssemblyName aname;
-    bool parsed = mono_assembly_name_parse(name.c_str(), &aname);
+    bool parsed = (mono_assembly_name_parse(name.c_str(), &aname)!=0);
     if (!parsed) return false;
 
     MonoImageOpenStatus image_open_status;

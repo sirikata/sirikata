@@ -290,20 +290,20 @@ public:
 
     /** mX - mXStart: Returns a value between -1 and 1 */
     float deltaX() const {
-        return (mX - mXStart)/2.;
+        return (mX - mXStart)/2.0f;
     }
 
     /** mY - mYStart: Returns a value between -1 and 1 */
     float deltaY() const {
-        return (mY - mYStart)/2.;
+        return (mY - mYStart)/2.0f;
     }
 
     float deltaLastY() const {
-        return (mY - mLastY)/2.;
+        return (mY - mLastY)/2.0f;
     }
 
     float deltaLastX() const {
-        return (mX - mLastX)/2.;
+        return (mX - mLastX)/2.0f;
     }
 
     static IdPair::Secondary getSecondaryId(int button) {

@@ -169,11 +169,11 @@ public:
 
 	DiskCacheLayer(CachePolicy *policy, const std::string &prefix, CacheLayer *tryNext)
 			: CacheLayer(tryNext),
-			mWorkerThread(std::tr1::bind(&DiskCacheLayer::workerThread, this)),
 			mFiles(NULL, policy),
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
-        mFiles.setOwner(this);//to avoid warning in visual studio
+		mFiles.setOwner(this);//to avoid warning in visual studio
+		mWorkerThread=boost::thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
 		try {
 			unserialize();
 		} catch (...) {

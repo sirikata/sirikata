@@ -42,7 +42,7 @@ namespace Sirikata {
 class ObjectHost;
 class ProxyObject;
 class ProxyObject;
-class LightInfo;
+struct LightInfo;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class TopLevelSpaceConnection;
 // ObjectHost_Sirikata.pbj.hpp

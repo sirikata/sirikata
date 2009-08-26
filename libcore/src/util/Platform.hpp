@@ -210,8 +210,9 @@ namespace Sirikata {
 // numeric typedefs to get standardized types
 typedef unsigned char uchar;
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#ifndef NOMINMAX
 #define NOMINMAX
-
+#endif
 typedef __int8 int8;
 typedef unsigned __int8 uint8;
 typedef __int16 int16;

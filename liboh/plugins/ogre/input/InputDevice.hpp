@@ -84,7 +84,7 @@ Choose two analog inputs and one keyboard/joystick->key bindings
 struct AxisValue {
     float value;
     float get01() const {
-        return (value + 1)/2.;
+        return (value + 1.0f)/2.0f;
     }
     float getCentered() const {
         return value;
@@ -94,11 +94,11 @@ struct AxisValue {
         return ret;
     }
     static AxisValue from01(float val) {
-        AxisValue ret = {(val-0.5)*2.};
+        AxisValue ret = {(val-0.5f)*2.0f};
         return ret;
     }
     static AxisValue null() {
-        return fromCentered(0.0);
+        return fromCentered(0.0f);
     }
 
     bool isNegative() const {

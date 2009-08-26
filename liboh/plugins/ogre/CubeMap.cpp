@@ -95,7 +95,6 @@ CubeMap::CubeMap(OgreSystem*parent,const std::vector<String>&cubeMapTexture, int
     mFrontbufferCloser=true;
     mAlpha=0;
     mParent=parent;
-    char cameraIdentifier;
     int num_mipmaps=0;
     for (int tsize=size;tsize;tsize/=2) {
         num_mipmaps++;

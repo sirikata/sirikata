@@ -552,7 +552,6 @@ public:
         camera = info.camera;
     }
     void mouseMoved(MouseDragEventPtr ev) {
-        double distance;
         Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3d amount (ev->deltaX(), ev->deltaY(), 0);

@@ -167,7 +167,7 @@ static void Mono_Context_GetTimeString(MonoObject*space_id, MonoObject* timeRetv
         SpaceID sid=SpaceID(UUID(ss,UUID::HumanReadable()));
         Time cur = SpaceTimeOffsetManager::getSingleton().now(sid);
         Mono_Context_setTime(timeRetval,cur);
-    }catch (std::invalid_argument&ia){
+    }catch (std::invalid_argument&){
          Mono_Context_GetLocalTime(timeRetval);
     }
 }

@@ -97,7 +97,7 @@ void MeshEntity::loadMesh(const String& meshname)
       try {
         new_entity = getScene()->getSceneManager()->createEntity(
             ogreMovableName(), meshname);
-      } catch (Ogre::InvalidParametersException &e) {
+      } catch (Ogre::InvalidParametersException &) {
         SILOG(ogre,error,"Got invalid parameters");
         throw;
       }

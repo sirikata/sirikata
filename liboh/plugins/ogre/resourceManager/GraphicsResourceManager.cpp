@@ -109,7 +109,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
     try {
       curWeakPtr = getResource(RemoteFileId(id).fingerprint().convertToHexString());
       curSharedPtr = curWeakPtr.lock();
-    } catch (std::invalid_argument &ia) {
+    } catch (std::invalid_argument &) {
     }
   }
   if (!curSharedPtr) {
@@ -146,7 +146,7 @@ SharedResourcePtr GraphicsResourceManager::getResourceAsset(const URI &id, Graph
       mIDResourceMap[curSharedPtr->getID()] = curSharedPtr;
       mResources.insert(curSharedPtr.get());
     }
-    catch (std::invalid_argument& exc) {
+    catch (std::invalid_argument& ) {
 
     }
 
