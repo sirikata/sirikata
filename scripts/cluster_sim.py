@@ -57,6 +57,9 @@ class ClusterSim:
         self.retrieve_data()
         self.run_analysis()
 
+    def vis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.locvis=true'])
+
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f sync*'], 0, None, None, None, None, None, False, True)
@@ -141,4 +144,9 @@ class ClusterSim:
 if __name__ == "__main__":
     cc = ClusterConfig()
     cluster_sim = ClusterSim(cc, 2, 2)
-    cluster_sim.run()
+
+    if len(sys.argv) < 2:
+        cluster_sim.run()
+    else:
+        if sys.argv[1] == 'vis':
+            cluster_sim.vis()
