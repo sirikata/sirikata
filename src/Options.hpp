@@ -55,8 +55,14 @@
 
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"
+
 #define OBJECT_STATIC        "object.static"
+#define OBJECT_SIMPLE        "object.simple"
+#define OBJECT_2D            "object.2d"
+
 #define OBJECT_GLOBAL        "object.global"
+
+
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"
 

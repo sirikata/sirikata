@@ -26,6 +26,8 @@ class ClusterSimSettings:
         self.object_queue = 'fairfifo'
         self.object_queue_length = 8192
         self.object_static = 'false'
+        self.object_simple = 'true'
+        self.object_2d = 'true'
         self.object_global = 'false'
         self.noise = 'false'
         self.debug = True
@@ -58,7 +60,16 @@ class ClusterSim:
         self.run_analysis()
 
     def vis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.locvis=server'])
+        subprocess.call([CBR_WRAPPER,
+                         '--id=1',
+                         "--layout=" + self.settings.layout(),
+                         "--serverips=" + self.ip_file(),
+                         "--duration=" + self.settings.duration,
+                         '--analysis.locvis=server',
+                         "--object.static=" + self.settings.object_static,
+                         "--object.simple=" + self.settings.object_simple,
+                         "--object.2d=" + self.settings.object_2d
+                         ])
 
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
@@ -108,6 +119,8 @@ class ClusterSim:
         cmd += "--object.queue=" + self.settings.object_queue + " "
         cmd += "--object.queue.length=" + str(self.settings.object_queue_length) + " "
         cmd += "--object.static=" + self.settings.object_static + " "
+        cmd += "--object.simple=" + self.settings.object_simple + " "
+        cmd += "--object.2d=" + self.settings.object_2d + " "
         cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
         cmd += "--loc=" + self.settings.loc + " "

@@ -59,6 +59,10 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
+    bool simple = GetOption(OBJECT_SIMPLE)->as<bool>();
+    bool only_2d = GetOption(OBJECT_2D)->as<bool>();
+    float zfactor = (only_2d ? 0.f : 1.f);
+
     for(uint32 i = 0; i < count; i++) {
         uint8 raw_uuid[UUID::static_size];
         for(uint32 ui = 0; ui < UUID::static_size; ui++)
@@ -67,12 +71,13 @@ ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Du
 
         ObjectInputs* inputs = new ObjectInputs;
 
-        Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z);
+        Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z * zfactor);
         if (GetOption(OBJECT_STATIC)->as<bool>() == true)
             inputs->motion = new StaticMotionPath(start, startpos);
         else
-            inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((int64)1000), region); // FIXME
-        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), randFloat() * 20 );
+            inputs->motion = new RandomMotionPath(start, end, startpos, 10, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
+        float bounds_radius = (simple ? 10.f : (randFloat()*20));
+        inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
 
         mObjectIDs.insert(id);

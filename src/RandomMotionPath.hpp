@@ -46,7 +46,7 @@ namespace CBR {
  */
 class RandomMotionPath : public MotionPath {
 public:
-    RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region);
+    RandomMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor);
 
     virtual const TimedMotionVector3f initial() const;
     virtual const TimedMotionVector3f* nextUpdate(const Time& curtime) const;
