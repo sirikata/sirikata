@@ -247,7 +247,11 @@ void Server::handleMigration(const UUID& obj_id) {
 
     //update our oseg to show that we know that we have this object now.
     mOSeg->addObject(obj_id, mID);
+    
+    //    mOSeg->addObject(obj_id,migrate_msg->id());
 
+
+    
     //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
 
 
@@ -352,82 +356,81 @@ void Server::checkObjectMigrations()
     //     to reinstantiate the object there
     // * delete object on this side
 
-  printf("\n\nbftm debug: got inside of checkObjectMigrations in Server.cpp.\n\n");
   
-    std::vector<UUID> migrated_objects;
-    for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
-    {
-        const UUID& obj_id = it->first;
-        ObjectConnection* obj_conn = it->second;
+  std::vector<UUID> migrated_objects;
+  for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
+  {
+    const UUID& obj_id = it->first;
+    ObjectConnection* obj_conn = it->second;
 
-        Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-	ServerID new_server_id = lookup(obj_pos);
+    Vector3f obj_pos = mLocationService->currentPosition(obj_id);
+    ServerID new_server_id = lookup(obj_pos);
 
         
-        if (new_server_id != mID)
-        {
-            // FIXME While we're working on the transition to a separate object host
-            // we do 2 things when we detect a server boundary crossing:
-            // 1. Generate a message which is sent to the object host telling it to
-            //    transition to the new server
-            // 2. Generate the migrate message which contains the current state of
-            //    the object which will be reconstituted on the other space server.
+    if (new_server_id != mID)
+    {
+      // FIXME While we're working on the transition to a separate object host
+      // we do 2 things when we detect a server boundary crossing:
+      // 1. Generate a message which is sent to the object host telling it to
+      //    transition to the new server
+      // 2. Generate the migrate message which contains the current state of
+      //    the object which will be reconstituted on the other space server.
+      
 
-
-            // Part 1
-            CBR::Protocol::Session::Container session_msg;
-            CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
-            init_migration_msg.set_new_server( (uint64)new_server_id );
-            CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = new CBR::Protocol::Object::ObjectMessage();
-            init_migr_obj_msg->set_source_object(UUID::null());
-            init_migr_obj_msg->set_source_port(OBJECT_PORT_SESSION);
-            init_migr_obj_msg->set_dest_object(obj_id);
-            init_migr_obj_msg->set_dest_port(OBJECT_PORT_SESSION);
-            init_migr_obj_msg->set_unique(GenerateUniqueID(id()));
-            init_migr_obj_msg->set_payload( serializePBJMessage(session_msg) );
-            obj_conn->deliver(*init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
-            delete init_migr_obj_msg;
-            //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
-
-            // Part 2
-
-            //means that we're migrating from this server to another
-            //bftm
-            mOSeg->migrateObject(obj_id,new_server_id);
-            //says that 
+      // Part 1
+      CBR::Protocol::Session::Container session_msg;
+      CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
+      init_migration_msg.set_new_server( (uint64)new_server_id );
+      CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = new CBR::Protocol::Object::ObjectMessage();
+      init_migr_obj_msg->set_source_object(UUID::null());
+      init_migr_obj_msg->set_source_port(OBJECT_PORT_SESSION);
+      init_migr_obj_msg->set_dest_object(obj_id);
+      init_migr_obj_msg->set_dest_port(OBJECT_PORT_SESSION);
+      init_migr_obj_msg->set_unique(GenerateUniqueID(id()));
+      init_migr_obj_msg->set_payload( serializePBJMessage(session_msg) );
+      obj_conn->deliver(*init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
+      delete init_migr_obj_msg;
+      //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
+      
+      // Part 2
+      
+      //means that we're migrating from this server to another
+      //bftm
+      mOSeg->migrateObject(obj_id,new_server_id);
+      //says that 
           
 
 
-            // Send out the migrate message
-            MigrateMessage* migrate_msg = new MigrateMessage(id());
-            migrate_msg->contents.set_source_server(this->id());
-            obj_conn->fillMigrateMessage(migrate_msg);
+      // Send out the migrate message
+      MigrateMessage* migrate_msg = new MigrateMessage(id());
+      migrate_msg->contents.set_source_server(this->id());
+      obj_conn->fillMigrateMessage(migrate_msg);
 
 
 
-            // Stop any proximity queries for this object
-            mProximity->removeQuery(obj_id);
+      // Stop any proximity queries for this object
+      mProximity->removeQuery(obj_id);
+      
+      // Stop tracking the object locally
+      mLocationService->removeLocalObject(obj_id);
 
-            // Stop tracking the object locally
-            mLocationService->removeLocalObject(obj_id);
+      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
+      mForwarder->route( migrate_msg , new_server_id);
 
-            printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
-            mForwarder->route( migrate_msg , new_server_id);
-
-            // Stop Forwarder from delivering via this Object's
-            // connection, destroy said connection
-            ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-            mClosingConnections.insert(migrated_conn);
-
-	    migrated_objects.push_back(obj_id);
-        }
+      // Stop Forwarder from delivering via this Object's
+      // connection, destroy said connection
+      ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+      mClosingConnections.insert(migrated_conn);
+      
+      migrated_objects.push_back(obj_id);
     }
+  }
 
-    for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
-        ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
-        mObjects.erase(obj_map_it);
+  for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
+    ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
+    mObjects.erase(obj_map_it);
 
-    }
+  }
 }
 
 ServerID Server::lookup(const Vector3f& pos)

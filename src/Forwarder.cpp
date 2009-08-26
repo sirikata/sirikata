@@ -90,7 +90,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   void Forwarder::tickOSeg(const Time&t)
   {
     //    getOSegMessages();
-    std::cout<<"\n\nI got into tickOSeg in forwarder.cpp\n\n";
 
     //bftm tmp, nothing
     //    mOSeg -> tick(t,mOutgoingMessages);
@@ -140,7 +139,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
   void Forwarder::tick(const Time&t)
   {
-    std::cout<<"\n\nInside of forwarder tick\n\n";
     
     if (t - mLastSampleTime > mSampleRate)
     {
@@ -241,7 +239,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     Network::Chunk msg_serialized;
     offset = msg->serialize(msg_serialized, offset);
 
-    printf("\n\nbftm debug.  I am routing a message in 1 to %i\n\n", dest_server);
     
     if (dest_server==serv_id())
     {
@@ -274,7 +271,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
     //    ServerID dest_server_id = lookup(dest_obj);
     mOSeg->lookup(dest_obj);
-    printf("\n\nbftm debug.  I am routing a message \n\n");
     
     //add message to objects in transit.
     //      if (mObjectsInTransit[dest_obj] == null)

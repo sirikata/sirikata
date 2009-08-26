@@ -229,6 +229,37 @@ public:
 }; //class ObjectSegmentationAnalysis
 
 
+class ObjectSegmentationLookupRequestsAnalysis
+{
+private:
+  std::vector<Time> times;
+  std::vector<UUID> obj_ids;
+  std::vector<ServerID> sID_lookup;
+public:
+  ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut);
+  ~ObjectSegmentationLookupRequestsAnalysis();
+};
+
+
+class ObjectSegmentationProcessedRequestsAnalysis
+{
+private:
+  std::vector<Time> times;
+  std::vector<UUID> obj_ids;
+  std::vector<ServerID> sID_processor;
+  std::vector<ServerID> sID_objectOn;
+  
+public:
+  ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut);
+  ~ObjectSegmentationProcessedRequestsAnalysis();
+};
+
+
+
+  
+
 } // namespace CBR
 
 #endif //_CBR_ANALYSIS_HPP_

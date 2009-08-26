@@ -142,6 +142,18 @@ struct ObjectAcknowledgeMigrateEvent : public Event
   ServerID mAcknowledgeFrom, mAcknowledgeTo;
 };
 
+struct ObjectLookupEvent: public Event
+{
+  UUID mObjID;
+  ServerID mID_lookup;
+};
+
+struct ObjectLookupProcessedEvent: public Event
+{
+  UUID mObjID;
+  ServerID mID_processor, mID_objectOn;
+};
+
 
 struct ServerLocationEvent : public Event {
     ServerID source;

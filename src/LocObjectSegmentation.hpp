@@ -31,24 +31,24 @@ namespace CBR
 
   public:
     //    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
+
     LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
     virtual ~LocObjectSegmentation();
 
-    //    virtual ServerID lookup(const UUID& obj_id) const;
-    virtual void lookup(const UUID& obj_id) const;
-    
-    virtual void osegMigrateMessage(OSegMigrateMessage*);
-    virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
-    //    virtual void generateAcknowledgeMessage(Object* obj, ServerID sID_to, Message* returner);
-    virtual  Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
+    //virtual void lookup(const UUID& obj_id) const;
+    virtual void lookup(const UUID& obj_id);
 
-    virtual void processLookupMessage(OSegLookupMessage* msg);
+    //virtual  Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
+    //virtual void osegMigrateMessage(OSegMigrateMessage*);
+    //virtual void processLookupMessage(OSegLookupMessage* msg);
+    virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
     virtual ServerID getHostServerID();
-    //    virtual void migrateMessage(MigrateMessage*);
+    virtual void receiveMessage(Message* msg);
+    
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID);
-    virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
-
+    //virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
+    
   };
 }
 #endif

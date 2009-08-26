@@ -65,7 +65,7 @@
 #include "LBCoordinateSegmentation.hpp"
 #include "LoadMonitor.hpp"
 
-//#include "LocObjectSegmentation.hpp"
+#include "LocObjectSegmentation.hpp"
 //#include "UniformObjectSegmentation.hpp"
 //#include "DhtObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
@@ -331,7 +331,7 @@ void *main_loop(void *) {
 
         //bftm additional object messages log file creation.
 
-
+        //oseg migrates
         String object_segmentation_filename = "object_segmentation_file";
         object_segmentation_filename += ".dat";
 
@@ -341,6 +341,32 @@ void *main_loop(void *) {
         object_seg_stream.flush();
         object_seg_stream.close();
 
+
+        //oseg lookup
+        String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
+        object_segmentation_lookup_filename += ".dat";
+
+        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,nservers);
+        std::ofstream oseg_lookup_stream(object_segmentation_lookup_filename.c_str());
+        lookupAnalysis.printData(oseg_lookup_stream);
+        oseg_lookup_stream.flush();
+        oseg_lookup_stream.close();
+        
+
+        //oseg processed lookups
+        String object_segmentation_processed_filename = "object_segmentation_processed_file";
+        object_segmentation_processed_filename += ".dat";
+
+
+        ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,nservers);
+        std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
+
+        processedAnalysis.printData(oseg_process_stream);
+        oseg_process_stream.flush();
+        oseg_process_stream.close();
+        
+                
+        
         //end bftm additional object message log file creation.
 
         exit(0);
@@ -424,7 +450,6 @@ void *main_loop(void *) {
                 std::tr1::placeholders::_4),
             sq
         );
-
 
 
       Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);

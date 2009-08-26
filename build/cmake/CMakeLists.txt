@@ -230,7 +230,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Forwarder.cpp
   ${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
-  ${CBR_SOURCE_DIR}/LocationService.cpp #  ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/LocationService.cpp
+  ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
@@ -257,7 +258,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp #  ${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp #${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )

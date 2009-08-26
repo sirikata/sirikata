@@ -92,7 +92,10 @@ namespace CBR
   {
     UUID tmper = obj_id;
     std::map<UUID,ServerID>::const_iterator iter = mInTransitOrLookup.find(tmper);
-    
+
+    //    mTrace->objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    mTrace->objectSegmentationLookupRequest(mCurrentTime, obj_id, mID);
+        
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
@@ -182,7 +185,6 @@ namespace CBR
     mInTransitOrLookup[obj_id] = new_server_id;
   }
 
-
   
   /*
     Behavior:
@@ -247,10 +249,21 @@ namespace CBR
     //bftm note: I don't really know that this should go here.
     updated = mFinishedMoveOrLookup;
 
+    if (trackedSetResults.size() != 0)
+      std::cout<<"\n\nbftm debug: inside of tick got this many trackedSetResults:   "<<trackedSetResults.size()<<"\n\n";
+
+    if (getResults.size() != 0)
+    {
+      std::cout<<"\n\nbftm debug: inside of tick got this many getResults:   "<<getResults.size()<<"\n\n";
+    }
+    
+
+    
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
       updated[mapDataKeyToUUID[getResults[s].idToString()]]  = getResults[s].servID;
+      mTrace->objectSegmentationProcessedRequest(mCurrentTime, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mID);
     }
     processCraqTrackedSetResults(trackedSetResults);
     
@@ -271,6 +284,8 @@ namespace CBR
   //This receives messages oseg migrate and acknowledge messages
   void CraqObjectSegmentation::receiveMessage(Message* msg)
   {
+    std::cout<<"\n\nbftm debug: in craqObjectSegmentation.cpp I just received a message\n\n";
+    
     bool correctMessage = false;
     OSegMigrateMessageMove* oseg_move_msg = dynamic_cast<OSegMigrateMessageMove*>(msg);
     if(oseg_move_msg != NULL)
@@ -319,7 +334,7 @@ namespace CBR
     obj_id    = msg->getObjID();
 
 
-    printf("\n\n bftm debug: in DhtObjectSegmentation.cpp.  Got an acknowledge. \n\n");
+    printf("\n\n bftm debug: in CraqObjectSegmentation.cpp.  Got an acknowledge. \n\n");
           
     std::map<UUID,ServerID>::iterator inTransIt;
         
@@ -337,71 +352,6 @@ namespace CBR
     
   }
   
-
-//   void CraqObjectSegmentation::osegMigrateMessage(OSegMigrateMessage* msg)
-//   {
-//     ServerID serv_from, serv_to;
-//     UUID obj_id;
-//     OSegMigrateMessage::OSegMigrateAction oaction;
-
-//     serv_from = msg->getServFrom();
-//     serv_to   = msg->getServTo();
-//     obj_id    = msg->getObjID();
-//     oaction   = msg->getAction();
-    
-//     switch (oaction)
-//     {
-//       case OSegMigrateMessage::CREATE:      //msg says something has been added
-//         {
-//           std::cout<<"\n\nReceived a create osegmigratemessage.  Should not have.  Killing now\n\n";
-//           assert(false);
-//         }
-//         break;
-
-//       case OSegMigrateMessage::KILL:
-//         {
-//           std::cout<<"\n\nReceived a kill osegmigratemessage.  Should not have.  Killing now\n\n";
-//           assert(false);
-//         }
-        
-//         break;
-
-//       case OSegMigrateMessage::MOVE:     //means that an object moved from one server to another.
-//         {
-//           //should never receive this message.
-//           printf("\n\nIn CraqObjectSegmentation.cpp under osegMigrateMessage.  Got a move message that I should not have.\n\n");
-//           assert(false);
-//         }
-//         break;
-
-//       case OSegMigrateMessage::ACKNOWLEDGE:
-//         {
-//           //When receive an acknowledge, it means that we can free the messages that we were holding for the node that's being moved.
-//           //remove object id from in transit.
-//           //place it in mFinishedMove
-
-//           printf("\n\n bftm debug: in DhtObjectSegmentation.cpp.  Got an acknowledge. \n\n");
-          
-//           std::map<UUID,ServerID>::iterator inTransIt;
-        
-//           inTransIt = mInTransitOrLookup.find(obj_id);
-//           if (inTransIt != mInTransitOrLookup.end())
-//           {
-//             //means that we now remove the obj_id from mInTransit
-//             mInTransitOrLookup.erase(inTransIt);
-//             //add it to mFinishedMove.  serv_from
-//             mFinishedMoveOrLookup[obj_id] = serv_from;
-
-//             //log reception of acknowled message
-//             mTrace->objectAcknowledgeMigrate(mCurrentTime, obj_id,serv_from,this->getHostServerID());
-//           }
-//         }        
-//         break;
-//     }
-//   }
-
-  
-
 
 
   

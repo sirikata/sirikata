@@ -34,10 +34,10 @@ namespace CBR
   }
 
 
-  Message* LocObjectSegmentation::generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to)
-  {
-    return NULL;
-  }
+//   Message* LocObjectSegmentation::generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to)
+//   {
+//     return NULL;
+//   }
 
 
 
@@ -45,7 +45,8 @@ namespace CBR
     Lookup server id based on check with location service and mcseg.
   */
   //  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
-  void LocObjectSegmentation::lookup(const UUID& obj_id) const
+  //  void LocObjectSegmentation::lookup(const UUID& obj_id) const
+  void LocObjectSegmentation::lookup(const UUID& obj_id) 
   {
       if (mLocationService->contains(obj_id)) {
           Vector3f pos = mLocationService->currentPosition(obj_id);
@@ -64,27 +65,38 @@ namespace CBR
       }
                //    Vector3f pos = mLocationService->currentPosition(obj_id);
                //    ServerID sid = mCSeg->lookup(pos);
+               //    Vector3f pos = mLocationService->currentPosition(obj_id);
+               //    ServerID sid = mCSeg->lookup(pos);
+               //    mObjectToServerMap[obj_id] = sid;
+
     //    return sid;
                //    return;
   }
 
+  
+  void LocObjectSegmentation::receiveMessage(Message* msg)
+  {
+    delete msg; //delete message here.
+  }
+
+  
 
   /*
     Doesn't do anything for now.
   */
-  void LocObjectSegmentation::getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers )
-  {
-    return;
-  }
+//   void LocObjectSegmentation::getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers )
+//   {
+//     return;
+//   }
 
 
   /*
     Doesn't do anything for now.
   */
-  void LocObjectSegmentation::processLookupMessage(OSegLookupMessage* msg)
-  {
-    delete msg;
-  }
+//   void LocObjectSegmentation::processLookupMessage(OSegLookupMessage* msg)
+//   {
+//     delete msg;
+//   }
 
   /*
     Behavior:
@@ -92,58 +104,51 @@ namespace CBR
     If receives a create message and object already exists, moves object to new server.
     If receives a kill message, deletes object server pair from map.
   */
-  void LocObjectSegmentation::osegMigrateMessage(OSegMigrateMessage* msg)
-  {
-    ServerID serv_from, serv_to;
-    UUID obj_id;
-    OSegMigrateMessage::OSegMigrateAction oaction;
+//   void LocObjectSegmentation::osegMigrateMessage(OSegMigrateMessage* msg)
+//   {
+//     ServerID serv_from, serv_to;
+//     UUID obj_id;
+//     OSegMigrateMessage::OSegMigrateAction oaction;
 
-    serv_from = msg->getServFrom();
-    serv_to   = msg->getServTo();
-    obj_id    = msg->getObjID();
-    oaction   = msg->getAction();
+//     serv_from = msg->getServFrom();
+//     serv_to   = msg->getServTo();
+//     obj_id    = msg->getObjID();
+//     oaction   = msg->getAction();
 
-
-
-
-    switch (oaction)
-    {
-      case OSegMigrateMessage::CREATE:      //msg says something has been added
-        if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-        {
-          //means that object exists.  we will move it.
-          mObjectToServerMap[obj_id] = serv_to;
-        }
-        else
-        {
-          //means that object doesn't exist.  we will create it.
-          mObjectToServerMap[obj_id] = serv_to;
-        }
-
-        break;
-      case OSegMigrateMessage::KILL:    //msg says object has been deleted
-
-        mObjectToServerMap.erase(obj_id);
-
-        break;
-      case OSegMigrateMessage::MOVE:     //means that an object moved from one server to another.
-        if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
-        {
-          //means that object exists.  Will move it.
-          mObjectToServerMap[obj_id] = serv_to;
-        }
-        else
-        {
-          //means that object doesn't exist.  We will create it.
-          mObjectToServerMap[obj_id] = serv_to;
-        }
-        break;
-      case OSegMigrateMessage::ACKNOWLEDGE:
-        //do nothing for now.
-        break;
-
-    }
-  }
+//     switch (oaction)
+//     {
+//       case OSegMigrateMessage::CREATE:      //msg says something has been added
+//         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
+//         {
+//           //means that object exists.  we will move it.
+//           mObjectToServerMap[obj_id] = serv_to;
+//         }
+//         else
+//         {
+//           //means that object doesn't exist.  we will create it.
+//           mObjectToServerMap[obj_id] = serv_to;
+//         }
+//         break;
+//       case OSegMigrateMessage::KILL:    //msg says object has been deleted
+//         mObjectToServerMap.erase(obj_id);
+//         break;
+//       case OSegMigrateMessage::MOVE:     //means that an object moved from one server to another.
+//         if (mObjectToServerMap.find(obj_id) != mObjectToServerMap.end())
+//         {
+//           //means that object exists.  Will move it.
+//           mObjectToServerMap[obj_id] = serv_to;
+//         }
+//         else
+//         {
+//           //means that object doesn't exist.  We will create it.
+//           mObjectToServerMap[obj_id] = serv_to;
+//         }
+//         break;
+//       case OSegMigrateMessage::ACKNOWLEDGE:
+//         //do nothing for now.
+//         break;
+//     }
+//   }
 
   /*
     Nothing to populate with currently
@@ -151,6 +156,9 @@ namespace CBR
    */
   void LocObjectSegmentation::tick(const Time& t, std::map<UUID,ServerID> &updated)
   {
+
+    updated = mObjectToServerMap;
+    mObjectToServerMap.clear();
     return;
   }
 

@@ -234,6 +234,33 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           }
           break;
 
+
+
+      case Trace::ObjectSegmentationLookupRequestAnalysisTag:
+        {
+          ObjectLookupEvent* obj_lookupReq_evt = new ObjectLookupEvent;
+          is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
+          is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
+          is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
+
+          evt = obj_lookupReq_evt;
+
+        }
+        break;
+      case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
+        {
+          ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
+          is.read( (char* )&obj_lookupProc_evt->time, sizeof(obj_lookupProc_evt->time)  );
+          is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
+          is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
+          is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
+
+          evt = obj_lookupProc_evt;
+        }
+        break;
+
+
+        
       default:
 
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
@@ -1214,8 +1241,6 @@ LatencyAnalysis::~LatencyAnalysis() {
 
 
 
-
-
   //object move messages
   ObjectSegmentationAnalysis::ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers)
   {
@@ -1302,4 +1327,112 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
+
+
+
+  ////ObjectSegLookupReqAnalysis
+  ObjectSegmentationLookupRequestsAnalysis::ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+        
+        ObjectLookupEvent* obj_lookup_evt = dynamic_cast<ObjectLookupEvent*> (evt);
+        if (obj_lookup_evt != NULL)
+        {
+          times.push_back(obj_lookup_evt->time);
+          obj_ids.push_back(obj_lookup_evt->mObjID);
+          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+        }
+      }
+    }
+  }
+
+  void ObjectSegmentationLookupRequestsAnalysis::printData(std::ostream &fileOut)
+  {
+
+    fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
+    fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+
+    for (int s= 0; s < (int) times.size(); ++s)
+    {
+      fileOut<< "\n\n********************************\n";
+      fileOut<< "\tRegistered from:   "<<sID_lookup[s]<<"\n";
+      fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
+      fileOut<< "\tObj id:            "<<obj_ids[s].toString()<<"\n";
+    }
+
+
+    fileOut<<"\n\n\n\nEND\n";
+  }
+
+  ObjectSegmentationLookupRequestsAnalysis::~ObjectSegmentationLookupRequestsAnalysis()
+  {
+
+  }
+  
+
+  
+  ///ObjectSegProcessAnalysis
+  ObjectSegmentationProcessedRequestsAnalysis::ObjectSegmentationProcessedRequestsAnalysis (const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+        ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt); 
+        
+        if (obj_lookup_proc_evt != NULL)
+        {
+          times.push_back(obj_lookup_proc_evt->time);
+          obj_ids.push_back(obj_lookup_proc_evt->mObjID);
+          sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
+          sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
+        }
+      }
+    }
+  }
+  
+
+  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut)
+  {
+
+    fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+    fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+
+    for (int s= 0; s < (int) times.size(); ++s)
+    {
+      fileOut<< "\n\n********************************\n";
+      fileOut<< "\tRegistered from:   "<<sID_processor[s]<<"\n";
+      fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
+      fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
+      fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
+    }
+
+    fileOut<<"\n\n\n\nEND\n";
+
+  }
+
+  ObjectSegmentationProcessedRequestsAnalysis::~ObjectSegmentationProcessedRequestsAnalysis ()
+  {
+
+  }
+
+  
 } // namespace CBR

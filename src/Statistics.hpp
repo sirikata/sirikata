@@ -90,6 +90,8 @@ public:
     static const uint8 ObjectAcknowledgeMigrateTag = 12;
     static const uint8 ServerLocationTag = 13;
     static const uint8 ServerObjectEventTag = 14;
+    static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
+    static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
 
 
 
@@ -122,6 +124,11 @@ public:
     void objectBeginMigrate(const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
     void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
 
+    void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor);
+
+
+  
     void prepareShutdown();
     void save(const String& filename);
 

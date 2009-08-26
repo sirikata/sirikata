@@ -81,8 +81,14 @@ const uint8 Trace::PacketReceivedTag;
 const uint8 Trace::SegmentationChangeTag;
 const uint8 Trace::ObjectBeginMigrateTag;
 const uint8 Trace::ObjectAcknowledgeMigrateTag;
+
 const uint8 Trace::ServerLocationTag;
 const uint8 Trace::ServerObjectEventTag;
+
+const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
+const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
+
+
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
@@ -286,6 +292,32 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
 
+  //
+  //static const uint8 ObjectSegmentationLookupRequestsAnalysisTag = 13;
+  //static const uint8 ObjectSegmentationProcessedRequestsAnalysisTag = 14;
+
+  
+  void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
+  {
+    if (mShuttingDown) return;
+
+    data.write(&ObjectSegmentationLookupRequestAnalysisTag, sizeof(ObjectSegmentationLookupRequestAnalysisTag));
+    data.write(&t, sizeof(t));
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(&sID_lookupTo, sizeof(sID_lookupTo));
+                   
+    
+  }
+  void Trace::objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor)
+  {
+    if (mShuttingDown) return;
+
+    data.write(&ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag));
+    data.write(&t, sizeof(t));
+    data.write(&obj_id, sizeof(obj_id));
+    data.write(&sID, sizeof(sID));
+    data.write(&sID_processor, sizeof(sID_processor));
+  }
 
 
 void Trace::save(const String& filename) {
