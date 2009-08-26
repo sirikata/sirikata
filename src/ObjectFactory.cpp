@@ -44,6 +44,8 @@
 #include "Options.hpp"
 #include "Statistics.hpp"
 
+#include "CoordinateSegmentation.hpp"
+
 namespace CBR {
 
 ObjectFactory::ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration)

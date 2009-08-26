@@ -340,17 +340,39 @@ void *main_loop(void *) {
     }
 
 
+    //Create OSeg
+    std::vector<ServerID> dummyServerList; //bftm note: this should be filled in later with a list of server names.
+    std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
+
+    //Trying to populate objectToServerMap
+    // FIXME this needs to go away, we can't rely on the object factory being there
+      for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
+      {
+        UUID obj_id = *it;
+        Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time::null()).position();
+        dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
+      }
+
+    //End of populating objectToServerMap
+
+      //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
+      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
+      ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
+
+    //end create oseg
+
+
 
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(), gTrace);
+        oq = new FIFOObjectMessageQueue(sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(), gTrace);
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, loc_service, cseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else {
         assert(false);
         exit(-1);
@@ -369,31 +391,6 @@ void *main_loop(void *) {
             sq
         );
 
-
-    //Create OSeg
-    std::vector<ServerID> dummyServerList; //bftm note: this should be filled in later with a list of server names.
-    std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
-
-
-
-    //Trying to populate objectToServerMap
-    // FIXME this needs to go away, we can't rely on the object factory being there
-      for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
-      {
-        UUID obj_id = *it;
-        Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time::null()).position();
-        dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
-      }
-
-
-
-    //End of populating objectToServerMap
-
-      //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
-
-    //end create oseg
 
       Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);
 

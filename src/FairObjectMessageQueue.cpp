@@ -7,8 +7,8 @@
 #include "Message.hpp"
 #include "Options.hpp"
 namespace CBR{
-template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace)
- : ObjectMessageQueue(sm, loc, cseg, trace),
+template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace)
+ : ObjectMessageQueue(sm, oseg, trace),
    mClientQueues(),
    mLastTime(Time::null()),
    mRate(bytes_per_second),

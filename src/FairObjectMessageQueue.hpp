@@ -39,7 +39,7 @@ namespace FairObjectMessageNamespace {
 }
 
 template <class TQueue=Queue<FairObjectMessageNamespace::ServerMessagePair*> >
-class FairObjectMessageQueue:public ObjectMessageQueue {
+class FairObjectMessageQueue : public ObjectMessageQueue {
 protected:
     typedef FairObjectMessageNamespace::ServerMessagePair ServerMessagePair;
     FairQueue<ServerMessagePair,UUID,TQueue > mClientQueues;
@@ -48,7 +48,7 @@ protected:
     uint32 mRemainderBytes;
 public:
 
-    FairObjectMessageQueue(ServerMessageQueue* sm, LocationService* loc, CoordinateSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
+    FairObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);

@@ -3,18 +3,16 @@
 
 #include "Utility.hpp"
 #include "Statistics.hpp"
-#include "LocationService.hpp"
-#include "CoordinateSegmentation.hpp"
+#include "ObjectSegmentation.hpp"
 
 namespace CBR{
 class ServerMessageQueue;
 
 class ObjectMessageQueue {
 public:
-    ObjectMessageQueue(ServerMessageQueue*sm, LocationService* loc, CoordinateSegmentation* cseg, Trace* trace)
+    ObjectMessageQueue(ServerMessageQueue*sm, ObjectSegmentation* oseg, Trace* trace)
       : mServerMessageQueue(sm),
-        mLocationService(loc),
-        mCSeg(cseg),
+        mOSeg(oseg),
         mTrace(trace)
     {}
 
@@ -26,13 +24,11 @@ public:
     virtual void unregisterClient(const UUID& oid) = 0;
 protected:
     ServerID lookup(const UUID& obj_id) {
-        Vector3f pos = mLocationService->currentPosition(obj_id);
-        return mCSeg->lookup(pos);
+        return mOSeg->lookup(obj_id);
     }
 
     ServerMessageQueue *mServerMessageQueue;
-    LocationService* mLocationService;
-    CoordinateSegmentation* mCSeg;
+    ObjectSegmentation* mOSeg;
     Trace* mTrace;
 };
 }
