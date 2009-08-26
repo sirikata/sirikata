@@ -106,10 +106,10 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     
     if (updatedObjectLocations.size() !=0)
     {
-      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
+      //      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
     }
 
-    std::cout<<"\n\nThis is the size of the objects in transit:   "<<mObjectsInTransit.size()<<"\n\n";
+    //    std::cout<<"\n\nThis is the size of the objects in transit:   "<<mObjectsInTransit.size()<<"\n\n";
 
     //    cross-check updates against held messages.  
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
@@ -121,7 +121,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          std::cout<<"\n\nbftm debug:  inside of forwarder.  Actually routing a message that I had saved up\n\n";
+          //          std::cout<<"\n\nbftm debug:  inside of forwarder.  Actually routing a message that I had saved up\n\n";
           route((iterObjectsInTransit->second)[s],iter->second,false);
         }
 
@@ -131,7 +131,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
       }
       else
       {
-        //        std::cout<<"\n\nbftm debug: Inside of forwarder.cpp couldn't find stored message that matched. \n\n";
+        //        //        std::cout<<"\n\nbftm debug: Inside of forwarder.cpp couldn't find stored message that matched. \n\n";
       }
     }
   }

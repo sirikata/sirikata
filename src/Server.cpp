@@ -414,7 +414,7 @@ void Server::checkObjectMigrations()
       // Stop tracking the object locally
       mLocationService->removeLocalObject(obj_id);
 
-      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
+      //      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
       mForwarder->route( migrate_msg , new_server_id);
 
       // Stop Forwarder from delivering via this Object's

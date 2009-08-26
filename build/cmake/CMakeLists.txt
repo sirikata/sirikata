@@ -239,8 +239,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/ObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
-  ${CBR_SOURCE_DIR}/OSegHasher.cpp
-  ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
+  ${CBR_SOURCE_DIR}/OSegHasher.cpp  #  ${CBR_SOURCE_DIR}/RaknetNetwork.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
