@@ -31,6 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import sys
+noisy=False
 try:
     try:
         import sqlite3
@@ -193,13 +194,15 @@ class CsvToSql:
             scrprop = Sirikata.StringProperty()
             scrprop.value = row['script']
             self.set(cursor, uuid, '_Script', scrprop.SerializeToString())
-            print row['script']
+            if noisy:
+                print row['script']
             scrprop = Sirikata.StringMapProperty()
             for kv in row['scriptparams'].split('&'):
                 key, value = kv.split('=',1)
                 scrprop.keys.append(unquote_plus(key))
                 scrprop.values.append(unquote_plus(value))
-                print 'param',key,'=',value
+                if noisy:
+                    print 'param',key,'=',value
             self.set(cursor, uuid, '_ScriptParams', scrprop.SerializeToString())
 
         if row.get('parent',''):
@@ -234,9 +237,11 @@ class CsvToSql:
                 meshuri = Sirikata.StringProperty()
                 meshuri.value = row['name']
                 self.set(cursor, uuid, 'Name', meshuri.SerializeToString())
-            print "** Adding a Mesh ",uuid,"named",row.get('name',''),"with",row['meshURI']
+            if noisy:
+                print "** Adding a Mesh ",uuid,"named",row.get('name',''),"with",row['meshURI']
         elif row['objtype']=='light':
-            print "** Adding a Light ",uuid
+            if noisy:
+                print "** Adding a Light ",uuid
             lightinfo = Sirikata.LightInfoProperty()
             self.protovec(lightinfo.diffuse_color, row, 'diffuse')
             self.protovec(lightinfo.specular_color, row, 'specular')
@@ -273,10 +278,12 @@ class CsvToSql:
             lightinfo.cone_outer_radians = float(row['cone_out'])
             lightinfo.cone_falloff = float(row['cone_fall'])
             lightinfo.casts_shadow = bool(row['shadow'])
-            print lightinfo
+            if noisy:
+                print lightinfo
             self.set(cursor, uuid, 'LightInfo', lightinfo.SerializeToString())
         elif row['objtype']=='camera':
-            print "** Adding a Camera ",uuid
+            if noisy:
+                print "** Adding a Camera ",uuid
             self.set(cursor, uuid, 'IsCamera', '')
 
 if __name__=='__main__':
@@ -288,6 +295,8 @@ if __name__=='__main__':
         sqlfile = sys.argv[2]
     else:
         sqlfile = 'scene.db'
+    if len(sys.argv) > 3:
+        noisy=True
     try:
         os.rename(sqlfile, sqlfile+'.bak')
     except OSError:
