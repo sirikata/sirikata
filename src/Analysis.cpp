@@ -317,6 +317,14 @@ private:
 };
 
 
+template<typename EventListType, typename EventListMapType>
+void sort_events(EventListMapType& lists) {
+    for(typename EventListMapType::iterator event_lists_it = lists.begin(); event_lists_it != lists.end(); event_lists_it++) {
+        EventListType* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
+    }
+}
+
 
 
 LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 nservers) {
@@ -331,10 +339,12 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
                 break;
 
             ObjectEvent* obj_evt = dynamic_cast<ObjectEvent*>(evt);
+            ProximityEvent* pe = dynamic_cast<ProximityEvent*>(evt);
+            LocationEvent* le = dynamic_cast<LocationEvent*>(evt);
             ServerObjectEventEvent* sobj_evt = dynamic_cast<ServerObjectEventEvent*>(evt);
             ServerLocationEvent* sloc_evt = dynamic_cast<ServerLocationEvent*>(evt);
 
-            if (obj_evt != NULL) {
+            if (obj_evt != NULL && (pe != NULL || le != NULL)) {
                 ObjectEventListMap::iterator it = mEventLists.find( obj_evt->receiver );
                 if (it == mEventLists.end()) {
                     mEventLists[ obj_evt->receiver ] = new EventList;
@@ -375,15 +385,8 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         }
     }
 
-    for(ObjectEventListMap::iterator event_lists_it = mEventLists.begin(); event_lists_it != mEventLists.end(); event_lists_it++) {
-        EventList* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
-    }
-
-    for(ServerEventListMap::iterator event_lists_it = mServerEventLists.begin(); event_lists_it != mServerEventLists.end(); event_lists_it++) {
-        EventList* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
-    }
+    sort_events<EventList, ObjectEventListMap>(mEventLists);
+    sort_events<EventList, ServerEventListMap>(mServerEventLists);
 }
 
 LocationErrorAnalysis::~LocationErrorAnalysis() {
@@ -605,14 +608,6 @@ void insert_event(EventType* evt, EventListMapType& lists) {
 
     evt_list = dest_it->second;
     evt_list->push_back(evt);
-}
-
-template<typename EventListType, typename EventListMapType>
-void sort_events(EventListMapType& lists) {
-    for(typename EventListMapType::iterator event_lists_it = lists.begin(); event_lists_it != lists.end(); event_lists_it++) {
-        EventListType* event_list = event_lists_it->second;
-        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
-    }
 }
 
 BandwidthAnalysis::BandwidthAnalysis(const char* opt_name, const uint32 nservers) {

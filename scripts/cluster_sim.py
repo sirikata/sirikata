@@ -16,9 +16,9 @@ class ClusterSimSettings:
     def __init__(self, x, y):
         self.layout_x = x
         self.layout_y = y
-        self.duration = '10s'
-        self.tx_bandwidth = 10000
-        self.rx_bandwidth = 10000
+        self.duration = '100s'
+        self.tx_bandwidth = 1000000
+        self.rx_bandwidth = 1000000
         self.flatness = .001
         self.num_objects = 100
         self.server_queue = 'fair'
@@ -76,6 +76,7 @@ class ClusterSim:
                          "--serverips=" + self.ip_file(),
                          "--duration=" + self.settings.duration,
                          '--analysis.locvis=server',
+                         '--analysis.locvis.seed=1',
                          "--object.static=" + self.settings.object_static,
                          "--object.simple=" + self.settings.object_simple,
                          "--object.2d=" + self.settings.object_2d
