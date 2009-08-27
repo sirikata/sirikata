@@ -318,13 +318,13 @@ void ProxBridge::newProxQuery(ObjectStateMap::iterator source,
         queryState->mQueryType=new_query.stateless()?QueryState::RELATIVE_STATELESS:QueryState::RELATIVE_STATEFUL;
         if (new_query.has_absolute_center()) {
             pos.update((Time::now(Duration::zero())-Time::epoch()).toMicroseconds(),//FIXME for distributed space servers
-                       new_query.absolute_center().convert<Prox::Query::PositionVectorType::CoordType>(),
+                       new_query.absolute_center().downCast<Prox::Object::PositionVectorType::CoordType::real>().convert<Prox::Object::PositionVectorType::CoordType>(),
                        Prox::Query::PositionVectorType::CoordType(0,0,0));
             queryState->mOffset=new_query.absolute_center();
             queryState->mQueryType=new_query.stateless()?QueryState::ABSOLUTE_STATELESS:QueryState::ABSOLUTE_STATEFUL;
         }
         if (new_query.has_relative_center()) {
-            pos+=new_query.relative_center().convert<Prox::Query::PositionVectorType::CoordType>();
+            pos+=new_query.relative_center().downCast<Prox::Object::PositionVectorType::CoordType::real>().convert<Prox::Object::PositionVectorType::CoordType>();
             queryState->mOffset.x+=new_query.relative_center().x;
             queryState->mOffset.y+=new_query.relative_center().y;
             queryState->mOffset.z+=new_query.relative_center().z;
@@ -401,7 +401,7 @@ void ProxBridge::objLoc(ObjectStateMap::iterator where,
                         const void *optionalSerializedObjLoc,
                         size_t optionalSerializedObjLocSize){
     Prox::Object::PositionVectorType position(Prox::Time((obj_loc.timestamp()-Time::epoch()).toMicroseconds()),
-                                                  obj_loc.position().convert<Prox::Object::PositionVectorType::CoordType>(),
+                                                  obj_loc.position().downCast<Prox::Object::PositionVectorType::CoordType::real>().convert<Prox::Object::PositionVectorType::CoordType>(),
                                                   obj_loc.velocity().convert<Prox::Vector3f>());
 
     where->second->mObject->position(position);
@@ -409,7 +409,7 @@ void ProxBridge::objLoc(ObjectStateMap::iterator where,
         if (i->second.mQueryType==QueryState::RELATIVE_STATEFUL||i->second.mQueryType==QueryState::RELATIVE_STATELESS) {
             if (i->second.mOffset.x||i->second.mOffset.y||i->second.mOffset.z) {
                 Prox::Query::PositionVectorType pos(position);
-                i->second.mQuery->position(pos+=i->second.mOffset.convert<Prox::Query::PositionVectorType::CoordType>());
+                i->second.mQuery->position(pos+=i->second.mOffset.downCast<Prox::Object::PositionVectorType::CoordType::real>().convert<Prox::Object::PositionVectorType::CoordType>());
             }else {
                 i->second.mQuery->position(position);
             }

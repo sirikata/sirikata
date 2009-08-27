@@ -88,13 +88,13 @@ public:
         assert_near(test.inverse() * test, id);
     }
     void testAngleAxis(void) {
-        float origAngle = 1.234;
-        Vector3f origAxis = Vector3f(.5,.5,1).normal();
+        float origAngle = 1.234f;
+        Vector3f origAxis = Vector3f(.5f,.5f,1.0f).normal();
         Quaternion test2(origAxis,origAngle);
         float angle;
         Vector3f axis;
         test2.toAngleAxis(angle,axis);
-        TS_ASSERT_DELTA(origAngle, angle, 1e-6);
+        TS_ASSERT_DELTA(origAngle, angle, 1.0e-6f);
         assert_near(origAxis,axis);
     }
 };
