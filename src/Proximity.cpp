@@ -37,6 +37,8 @@
 #include <prox/BruteForceQueryHandler.hpp>
 #include <prox/RTreeQueryHandler.hpp>
 
+#define PROXLOG(level,msg) SILOG(prox,level,"[PROX] " << msg)
+
 namespace CBR {
 
 Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher)
@@ -132,7 +134,9 @@ void Proximity::receiveMessage(Message* msg) {
 
             CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg->contents.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
-            addQuery(source_server, qloc, prox_query_msg->contents.bounds(), SolidAngle(prox_query_msg->contents.min_angle()));
+            SolidAngle minangle(prox_query_msg->contents.min_angle());
+
+            addQuery(source_server, qloc, prox_query_msg->contents.bounds(), minangle);
         }
         else if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
@@ -170,11 +174,16 @@ void Proximity::receiveMessage(Message* msg) {
 
 void Proximity::addQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     assert( mServerQueries.find(sid) == mServerQueries.end() );
+
+    PROXLOG(debug,"Add server query from " << sid << ", min angle " << sa.asFloat());
+
     Query* q = mServerQueryHandler->registerQuery(loc, bounds, sa);
     mServerQueries[sid] = q;
 }
 
 void Proximity::removeQuery(ServerID sid) {
+    PROXLOG(debug,"Remove server query from " << sid);
+
     ServerQueryMap::iterator it = mServerQueries.find(sid);
     if (it == mServerQueries.end()) return;
 
@@ -247,6 +256,9 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
                 removal.set_object( evt_it->id() );
             }
         }
+
+        PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
+
         mRouter->route(result_msg, sid);
     }
 

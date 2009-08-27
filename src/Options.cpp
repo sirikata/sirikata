@@ -36,6 +36,9 @@ namespace CBR {
 
 void InitOptions() {
     InitializeOptions::module(CBR_MODULE)
+        .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel) )
+        .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
+        .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
         .addOption(new OptionValue("test", "none", Sirikata::OptionValueType<String>(), "Type of test to run"))
         .addOption(new OptionValue("flatness", ".0001", Sirikata::OptionValueType<double>(), "k where e^-kx is the bandwidth function and x is the distance between 2 server points"))
         .addOption(new OptionValue("server-port", "8080", Sirikata::OptionValueType<String>(), "Port for server side of test"))

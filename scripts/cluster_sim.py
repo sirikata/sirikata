@@ -31,8 +31,12 @@ class ClusterSimSettings:
         self.object_global = 'false'
         self.noise = 'false'
         self.debug = True
-        self.loc = 'oracle'
-        self.blocksize = 100
+        self.loc = 'standard'
+        self.blocksize = 200
+
+        self.loglevels = {
+            "prox" : "warn",
+            }
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -131,6 +135,19 @@ class ClusterSim:
         cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
         cmd += "--loc=" + self.settings.loc + " "
+
+        if len(self.settings.loglevels) > 0:
+            cmd += "\""
+            cmd += "--moduleloglevel="
+            mods_count = 0
+            for mod,level in self.settings.loglevels.items():
+                if mods_count > 1:
+                    cmd += ","
+                cmd += mod + "=" + level
+                mods_count = mods_count + 1
+            cmd += "\""
+        cmd += " "
+
         ClusterDeploymentRun(self.config, cmd)
 
     def retrieve_data(self):
