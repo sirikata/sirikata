@@ -269,7 +269,7 @@ void LocationVisualization::displayRandomViewerError(int seed, const Duration&sa
 
 void LocationVisualization::displayRandomServerError(int seed, const Duration&sampling_rate) {
     unsigned int which=seed;
-    which=which%mEventLists.size();
+    which=which%mServerEventLists.size();
     ServerEventListMap::iterator iter=mServerEventLists.begin();
     for (unsigned int i=0;i<which;++i,++iter) {
     }
