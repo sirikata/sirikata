@@ -53,7 +53,7 @@ void FIFOObjectMessageQueue::service(const Time& t){
     while( bytes > 0) {
         ServerMessagePair* next_msg = mQueue.front(&bytes);
         if (next_msg == NULL) break;
-        if (next_msg->dest() == NULL) break; // FIXME head of line blocking...
+        if (next_msg->dest() == NullServerID) break; // FIXME head of line blocking...
 
         bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
         if (!sent_success) break;

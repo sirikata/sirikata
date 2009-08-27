@@ -36,6 +36,7 @@
 namespace CBR {
 
 typedef uint32 ServerID;
+#define NullServerID 0
 
 } // namespace CBR
 

@@ -13,7 +13,7 @@ protected:
     public:
         HasDestServerCanSendPredicate(FairObjectMessageQueue<TQueue>* _fq) : fq(_fq) {}
         bool operator()(const UUID& key, const ServerMessagePair* msg) const {
-            return msg->dest() != NULL;
+            return msg->dest() != NullServerID;
             // && fq->canSend(msg);
         }
     private:
