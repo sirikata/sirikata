@@ -305,4 +305,4 @@ if __name__=='__main__':
     conn = sqlite3.connect(sqlfile)
     converter = CsvToSql(conn)
     converter.go(open(csvfile))
-    print "SUCCESS!"
+    print "Generating scene: SUCCESS!"
