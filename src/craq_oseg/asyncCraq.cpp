@@ -70,7 +70,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   boost::asio::ip::tcp::socket* passSocket;
   
-  if (ipAddPort.size() >= CRAQ_NUM_CONNECTIONS)
+  if (((int)ipAddPort.size()) >= CRAQ_NUM_CONNECTIONS)
   {
     //just assign each connection a separate router (in order that they were provided).
     for (int s = 0; s < CRAQ_NUM_CONNECTIONS; ++s)
@@ -422,7 +422,7 @@ void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<Cr
   std::vector<CraqOperationResult> tickedMessages_errorResults;
   std::vector<CraqOperationResult> tickedMessages_trackedSetResults;
   
-  for (int s=0; s < mConnections.size(); ++s)
+  for (int s=0; s < (int)mConnections.size(); ++s)
   {
     tickedMessages_getResults.clear();
     tickedMessages_errorResults.clear();
@@ -431,11 +431,11 @@ void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<Cr
     //can optimize by setting separate tracks for 
     mConnections[s].tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
 
-    for (int t= 0; t < tickedMessages_getResults.size(); ++t)
+    for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
     {
       getResults.push_back(tickedMessages_getResults[t]);
     }
-    for (int t= 0; t < tickedMessages_trackedSetResults.size(); ++t)
+    for (int t= 0; t < (int) tickedMessages_trackedSetResults.size(); ++t)
     {
       trackedSetResults.push_back(tickedMessages_trackedSetResults[t]);
     }
@@ -452,7 +452,7 @@ void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<Cr
 */
 void AsyncCraq::processErrorResults(std::vector <CraqOperationResult> & errorRes)
 {
-  for (int s=0;s < errorRes.size(); ++s)
+  for (int s=0;s < (int)errorRes.size(); ++s)
   {
     if (errorRes[s].whichOperation == CraqOperationResult::GET)
     {
@@ -477,7 +477,7 @@ void AsyncCraq::processErrorResults(std::vector <CraqOperationResult> & errorRes
 */
 void AsyncCraq::checkConnections(int s)
 {
-  if (s >= mConnections.size())
+  if (s >= (int)mConnections.size())
     return;
   
   if (mConnections[s].ready() == AsyncConnection::READY)
@@ -512,14 +512,14 @@ void AsyncCraq::checkConnections(int s)
 //means that we need to connect a new socket to the service.
 void AsyncCraq::reInitializeNode(int s)
 {
-  if (s >= mConnections.size())
+  if (s >= (int)mConnections.size())
     return;
 
   boost::asio::ip::tcp::socket* passSocket;
 
   boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
   
-  if (mIpAddPort.size() >= CRAQ_NUM_CONNECTIONS)
+  if ( ((int)mIpAddPort.size()) >= CRAQ_NUM_CONNECTIONS)
   {
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.

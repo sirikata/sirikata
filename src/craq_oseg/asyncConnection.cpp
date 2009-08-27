@@ -133,7 +133,7 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
   std::stringstream ss;
   ss << dataToSetTo;
   std::string tmper = ss.str();
-  for (int s=0; s< CRAQ_SERVER_SIZE - tmper.size(); ++s)
+  for (int s=0; s< CRAQ_SERVER_SIZE - ((int) tmper.size()); ++s)
   {
     query.append("0");
   }
@@ -327,7 +327,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
     
     bool getResp = false;
   
-    if (line.size() >= CRAQ_GET_RESP_SIZE)
+    if (((int)line.size()) >= CRAQ_GET_RESP_SIZE)
     {
       getResp = true;
       
@@ -340,7 +340,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       {
 
         std::string value = "";
-        for (int s=CRAQ_GET_RESP_SIZE; s < bytes_transferred; ++s)
+        for (int s=CRAQ_GET_RESP_SIZE; s < (int) bytes_transferred; ++s)
         {
           if (s-CRAQ_GET_RESP_SIZE < CRAQ_SERVER_SIZE)
           {
