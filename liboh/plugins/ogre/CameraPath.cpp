@@ -226,7 +226,7 @@ bool CameraPath::evaluate(const DeltaTime& t, Vector3d* pos_out, Quaternion* ori
     float weight_sum = 0.0f;
 
     for(int32 i = 0; i < (int32)mPathPoints.size(); i++) {
-        float difft = 0;
+        double difft = 0;
         if (keyFrameTime(i) > t)
             difft = (keyFrameTime(i) - t).toSeconds();
         else

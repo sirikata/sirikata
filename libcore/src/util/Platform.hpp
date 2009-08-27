@@ -42,6 +42,8 @@
 #if defined(__WIN32__) || defined(_WIN32)
 // disable type needs to have dll-interface to be used byu clients due to STL member variables which are not public
 #pragma warning (disable: 4251)
+//disable warning about no suitable definition provided for explicit template instantiation request which seems to have no resolution nor cause any problems
+#pragma warning (disable: 4661)
 //disable non dll-interface class used as base for dll-interface class when deriving from singleton
 #pragma warning (disable : 4275)
 #  define SIRIKATA_PLATFORM PLATFORM_WINDOWS

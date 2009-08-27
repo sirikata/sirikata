@@ -228,7 +228,7 @@ ProxBridge::ObjectStateMap::iterator ProxBridge::newObj(ObjectReference&retval,
         objLoc(where,location);
     } else {
         Prox::Object::PositionVectorType position(Prox::Time((location.timestamp()-Time::epoch()).toMicroseconds()),
-                                                  location.position().convert<Prox::Object::PositionVectorType::CoordType>(),
+                                                  location.position().downCast<Prox::Object::PositionVectorType::CoordType::real>().convert<Prox::Object::PositionVectorType::CoordType>(),
                                                   location.velocity().convert<Prox::Vector3f>());
         Prox::ObjectID id(object_reference.getArray().begin(),UUID::static_size);
         Prox::Object * obj=new Prox::Object(id,

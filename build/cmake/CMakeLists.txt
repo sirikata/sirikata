@@ -1341,7 +1341,7 @@ IF(PYTHON_EXECUTABLE)
               COMMENT "Checking ${CMAKE_CURRENT_BINARY_DIR}/scene.db")
 
   ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/scene.db
-                     COMMAND ${PYTHON_EXECUTABLE} ${TOP_LEVEL}/csv_converter.py ${TOP_LEVEL}/scene.csv ${CMAKE_CURRENT_BINARY_DIR}/scene.db
+                     COMMAND ${PYTHON_EXECUTABLE} ${TOP_LEVEL}/csv_converter.py ${TOP_LEVEL}/scenebig.csv ${CMAKE_CURRENT_BINARY_DIR}/scene.db
   ${CMAKE_CURRENT_BINARY_DIR}/scene.db ${CXXTEST_GEN} ${CXXTEST_OPTIONS} -o ${CXXTEST_CPP_FILE} ${CXXTEST_TEST_FILES}
                      DEPENDS ${AdditionalProtoDepends}
                      COMMENT "Making example scene database from  ${CMAKE_CURRENT_BINARY_DIR}/scene.db")

@@ -81,7 +81,7 @@ public:
 
     template <class T>
     bool check_near(T a, T b) {
-        float delta = 1e-5;
+        float delta = 1e-5f;
         return ((b > a-delta) && (b < a+delta));
     }
 
@@ -163,56 +163,56 @@ public:
         assert_near(worldCoords, testObject);
     }
     void testWorldCoordinates_orientation() {
-        Location frameOfReference(Vector3d(0,0,0),
-                                  Quaternion(Vector3f(0,1,0),0.77),
-                                  Vector3f(0,0,0),
-                                  Vector3f(0,0,0),0);
-        Location testObject(Vector3d(1,0,1),
-                                  Quaternion(Vector3f(1,0,1),0),
-                                  Vector3f(0,100,50),
-                                  Vector3f(0,0,1),1);
+        Location frameOfReference(Vector3d(0.0,0.0,0.0),
+                                  Quaternion(Vector3f(0.0f,1.0f,0.0f),0.77f),
+                                  Vector3f(0.0f,0.0f,0.0f),
+                                  Vector3f(0.0f,0.0f,0.0f),0.0f);
+        Location testObject(Vector3d(1.0,0.0,1.0),
+                                  Quaternion(Vector3f(1.0f,0.0f,1.0f),0),
+                                  Vector3f(0.0f,100.0f,50.0f),
+                                  Vector3f(0.0f,0.0f,1.0f),1.0f);
         Location worldCoords(testObject);
         worldCoords = worldCoords.toWorld(frameOfReference);
         worldCoords = worldCoords.toLocal(frameOfReference);
         assert_near(worldCoords, testObject);
     }
     void testWorldCoordinates_positionorientation() {
-        Location frameOfReference(Vector3d(10,20,0),
-                                  Quaternion(Vector3f(0,1,0),0.77),
-                                  Vector3f(1000,50,50),
-                                  Vector3f(0,0,0),0);
-        Location testObject(Vector3d(1,0,1),
-                                  Quaternion(Vector3f(1,0,1),0),
-                                  Vector3f(0,100,50),
-                                  Vector3f(0,0,1),1);
+        Location frameOfReference(Vector3d(10.0,20.0,0.0),
+                                  Quaternion(Vector3f(0.0f,1.0f,0.0f),0.77f),
+                                  Vector3f(1000.0f,50.0f,50.0f),
+                                  Vector3f(0.0f,0.0f,0.0f),0.0f);
+        Location testObject(Vector3d(1.0,0.0,1.0),
+                                  Quaternion(Vector3f(1.0f,0.0f,1.0f),0.0f),
+                                  Vector3f(0.0f,100.0f,50.0f),
+                                  Vector3f(0.0f,0.0f,1.0f),1.0f);
         Location worldCoords(testObject);
         worldCoords = worldCoords.toWorld(frameOfReference);
         worldCoords = worldCoords.toLocal(frameOfReference);
         assert_near(worldCoords, testObject);
     }
     void testWorldCoordinates_angvel() {
-        Location frameOfReference(Vector3d(10,20,0),
-                                  Quaternion(Vector3f(0,1,0),0.77),
-                                  Vector3f(1000,50,50),
-                                  Vector3f(0,0.71,0.71),-2);
-        Location testObject(Vector3d(1,0,1),
-                                  Quaternion(Vector3f(1,0,1),0),
-                                  Vector3f(0,100,50),
-                                  Vector3f(0,0,0),0);
+        Location frameOfReference(Vector3d(10.0f,20.0f,0),
+                                  Quaternion(Vector3f(0.0f,1,0),0.77),
+                                  Vector3f(1000.0f,50.0f,50),
+                                  Vector3f(0.0f,0.71,0.71),-2);
+        Location testObject(Vector3d(1.0f,0.0f,1.0f),
+                                  Quaternion(Vector3f(1,0.0f,1),0),
+                                  Vector3f(0.0f,100.0f,50),
+                                  Vector3f(0.0f,0.0f,0),0);
         Location worldCoords(testObject);
         worldCoords = worldCoords.toWorld(frameOfReference);
         worldCoords = worldCoords.toLocal(frameOfReference);
         assert_near(worldCoords, testObject);
     }
     void testWorldCoordinates_all() {
-        Location frameOfReference(Vector3d(10,20,0),
-                                  Quaternion(Vector3f(0,1,0),0.77),
-                                  Vector3f(1000,50,50),
-                                  Vector3f(0,0.71,0.71),-2);
-        Location testObject(Vector3d(1,0,1),
-                                  Quaternion(Vector3f(1,0,1),0),
-                                  Vector3f(0,100,50),
-                                  Vector3f(0,0,1),10);
+        Location frameOfReference(Vector3d(10.0f,20.0f,0.0f),
+                                  Quaternion(Vector3f(0.0f,1.0f,0.0f),0.77f),
+                                  Vector3f(1000.0f,50.0f,50.0f),
+                                  Vector3f(0.0f,0.71f,0.71f),-2.0f);
+        Location testObject(Vector3d(1.0f,0.0f,1.0f),
+                                  Quaternion(Vector3f(1.0f,0.0f,1.0f),0.0f),
+                                  Vector3f(0.0f,100.0f,50.0f),
+                                  Vector3f(0.0f,0.0f,1.0f),10.0f);
         Location worldCoords(testObject);
         worldCoords = worldCoords.toWorld(frameOfReference);
         worldCoords = worldCoords.toLocal(frameOfReference);

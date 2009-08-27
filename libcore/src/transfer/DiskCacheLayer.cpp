@@ -55,6 +55,7 @@
 #include <direct.h>
 #include <fcntl.h>
 // Lovely underscores to obscure the beauty of Posix
+#define getcwd _getcwd
 #define fstat64 _fstat64
 #define stat64 _stat64
 #define open _open
