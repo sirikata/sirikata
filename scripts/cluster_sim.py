@@ -31,7 +31,7 @@ class ClusterSimSettings:
         self.object_global = 'false'
         self.noise = 'false'
         self.debug = True
-        self.loc = 'standard'
+        self.loc = 'oracle'
         self.blocksize = 200
 
         self.loglevels = {
