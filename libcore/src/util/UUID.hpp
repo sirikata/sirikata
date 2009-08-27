@@ -79,11 +79,7 @@ public:
     UUID & operator=(const Data & other) { mData = other; return *this; }
     bool operator<(const UUID &other)const {return mData < other.mData;}
     bool operator==(const UUID &other)const {return mData == other.mData;}
-    bool isNil()const{return mData==Data::nil();}
-    static const UUID& nil(){
-        static UUID retval(Data::nil());
-        return retval;
-    }
+    bool isNull()const{return mData==Data::null();}
     size_t hash() const;
     class Hasher{public:
         size_t operator() (const UUID&uuid) const {

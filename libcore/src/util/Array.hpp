@@ -96,11 +96,11 @@ public:
     }
     const T* data() const { return mElems; }
     T* data() { return mElems; }
-    static const Array& nil() {
+    static const Array& null() {
         static Array nix;
         static unsigned char nothing[static_size*sizeof(T)]={0};
-        static Array nil=*nix.memcpy(nothing,static_size);
-        return nil;
+        static Array nulle=*nix.memcpy(nothing,static_size);
+        return nulle;
     }
     template <class InputIterator> static Array construct(InputIterator begin,
                                                           InputIterator end) {
