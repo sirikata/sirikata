@@ -191,14 +191,14 @@ public:
         assert_near(worldCoords, testObject);
     }
     void testWorldCoordinates_angvel() {
-        Location frameOfReference(Vector3d(10.0f,20.0f,0),
-                                  Quaternion(Vector3f(0.0f,1,0),0.77),
-                                  Vector3f(1000.0f,50.0f,50),
-                                  Vector3f(0.0f,0.71,0.71),-2);
+        Location frameOfReference(Vector3d(10.0f,20.0f,0.0f),
+                                  Quaternion(Vector3f(0.0f,1.0f,0.0f),0.77f),
+                                  Vector3f(1000.0f,50.0f,50.0f),
+                                  Vector3f(0.0f,0.71f,0.71f),-2.0f);
         Location testObject(Vector3d(1.0f,0.0f,1.0f),
-                                  Quaternion(Vector3f(1,0.0f,1),0),
-                                  Vector3f(0.0f,100.0f,50),
-                                  Vector3f(0.0f,0.0f,0),0);
+                                  Quaternion(Vector3f(1.0f,0.0f,1.0f),0.0f),
+                                  Vector3f(0.0f,100.0f,50.0f),
+                                  Vector3f(0.0f,0.0f,0.0f),0.0f);
         Location worldCoords(testObject);
         worldCoords = worldCoords.toWorld(frameOfReference);
         worldCoords = worldCoords.toLocal(frameOfReference);

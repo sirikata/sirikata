@@ -179,7 +179,7 @@ public:
 			if (data) {
 				fullData += std::string(data, data+length);
 			} else {
-				fullData += std::string(length, '\0');
+				fullData += std::string((size_t)length, '\0');
 			}
 			pos += length;
 		}

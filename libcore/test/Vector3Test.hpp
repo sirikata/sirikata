@@ -39,7 +39,7 @@ public:
     void testAdd( void )
     {
         Vector3f a(Vector3d(5,6,7).downCast<float>());
-        Vector3f b(Vector3d(8,1,9));
+        Vector3f b(Vector3d(8,1,9).downCast<float>());
         Vector3f c=a+b;
         TS_ASSERT_EQUALS(c.x,a.x+b.x);
         TS_ASSERT_EQUALS(c.y,a.y+b.y);
