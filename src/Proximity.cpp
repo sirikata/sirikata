@@ -45,12 +45,14 @@ Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* r
  : mID(sid),
    mLastTime(Time::null()),
    mLocService(locservice),
+   mCSeg(NULL),
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
    mObjectQueries(),
    mGlobalLocCache(NULL),
    mObjectQueryHandler(NULL),
+   mMinObjectQueryAngle(SolidAngle::Max),
    mRouter(router),
    mDispatcher(dispatcher)
 {
@@ -91,20 +93,28 @@ Proximity::~Proximity() {
 
 
 void Proximity::initialize(CoordinateSegmentation* cseg) {
-    cseg->addListener(this);
+    mCSeg = cseg;
 
+    mCSeg->addListener(this);
+
+    sendQueryRequests();
+}
+
+void Proximity::sendQueryRequests() {
     TimedMotionVector3f loc;
 
-    BoundingBoxList bboxes = cseg->serverRegion(mID);
+    // FIXME avoid computing this so much
+    BoundingBoxList bboxes = mCSeg->serverRegion(mID);
     BoundingBox3f bbox = bboxes[0];
     for(uint32 i = 1; i< bboxes.size(); i++)
         bbox.mergeIn(bboxes[i]);
 
     BoundingSphere3f bounds = bbox.toBoundingSphere();
-    SolidAngle minAngle(SolidAngle::Max / 1000); // FIXME
+
     // FIXME this assumes that ServerIDs are simple sequence of IDs
-    for(ServerID sid = 1; sid <= cseg->numServers(); sid++) {
+    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
         if (sid == mID) continue;
+
         ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mID);
         msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
@@ -112,7 +122,7 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
-        msg->contents.set_min_angle(minAngle.asFloat());
+        msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
         mRouter->route(msg, sid);
     }
 }
@@ -136,7 +146,7 @@ void Proximity::receiveMessage(Message* msg) {
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg->contents.min_angle());
 
-            addQuery(source_server, qloc, prox_query_msg->contents.bounds(), minangle);
+            updateQuery(source_server, qloc, prox_query_msg->contents.bounds(), minangle);
         }
         else if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
@@ -172,13 +182,23 @@ void Proximity::receiveMessage(Message* msg) {
     }
 }
 
-void Proximity::addQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
-    assert( mServerQueries.find(sid) == mServerQueries.end() );
+void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
+    ServerQueryMap::iterator it = mServerQueries.find(sid);
 
-    PROXLOG(debug,"Add server query from " << sid << ", min angle " << sa.asFloat());
+    if (it == mServerQueries.end()) {
+        PROXLOG(debug,"Add server query from " << sid << ", min angle " << sa.asFloat());
 
-    Query* q = mServerQueryHandler->registerQuery(loc, bounds, sa);
-    mServerQueries[sid] = q;
+        Query* q = mServerQueryHandler->registerQuery(loc, bounds, sa);
+        mServerQueries[sid] = q;
+    }
+    else {
+        PROXLOG(debug,"Update server query from " << sid << ", min angle " << sa.asFloat());
+
+        Query* q = it->second;
+        q->position(loc);
+        q->bounds(bounds);
+        q->angle(sa);
+    }
 }
 
 void Proximity::removeQuery(ServerID sid) {
@@ -200,6 +220,13 @@ void Proximity::addQuery(UUID obj, SolidAngle sa) {
     assert( mObjectQueries.find(obj) == mObjectQueries.end() );
     Query* q = mObjectQueryHandler->registerQuery(mLocalLocCache->location(obj), mLocalLocCache->bounds(obj), sa);
     mObjectQueries[obj] = q;
+
+    // Update min query angle, and update remote queries if necessary
+    if (sa < mMinObjectQueryAngle) {
+        mMinObjectQueryAngle = sa;
+        PROXLOG(debug,"Query removal initiated server query request.");
+        sendQueryRequests();
+    }
 }
 
 void Proximity::removeQuery(UUID obj) {
@@ -207,8 +234,17 @@ void Proximity::removeQuery(UUID obj) {
     if (it == mObjectQueries.end()) return;
 
     Query* q = it->second;
+    SolidAngle sa = q->angle();
     mObjectQueries.erase(it);
     delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+
+    // Update min query angle, and update remote queries if necessary
+    if (sa == mMinObjectQueryAngle) {
+        for(ObjectQueryMap::iterator it = mObjectQueries.begin(); it != mObjectQueries.end(); it++)
+            if (it->second->angle() < mMinObjectQueryAngle) mMinObjectQueryAngle = it->second->angle();
+        PROXLOG(debug,"Query removal initiated server query request.");
+        sendQueryRequests();
+    }
 }
 
 void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {

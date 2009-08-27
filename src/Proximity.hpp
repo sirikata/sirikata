@@ -93,7 +93,7 @@ public:
     void initialize(CoordinateSegmentation* cseg);
 
     // Server queries
-    void addQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa);
+    void updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa);
     void removeQuery(ServerID sid);
 
     // Objects
@@ -122,6 +122,9 @@ public:
     // MessageRecipient Interface
     virtual void receiveMessage(Message* msg);
 private:
+    // Send a query add/update request to all the other servers
+    void sendQueryRequests();
+
     typedef std::set<UUID> ObjectSet;
     typedef std::map<ServerID, Query*> ServerQueryMap;
     typedef std::map<UUID, Query*> ObjectQueryMap;
@@ -131,6 +134,7 @@ private:
     Time mLastTime;
 
     LocationService* mLocService;
+    CoordinateSegmentation* mCSeg;
 
     // These track local objects and answer queries from other
     // servers.
@@ -143,6 +147,10 @@ private:
     ObjectQueryMap mObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
     Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
+
+    // This tracks the minimum object query size, which is used
+    // as the angle for queries to other servers.
+    SolidAngle mMinObjectQueryAngle;
 
     MessageRouter* mRouter;
     MessageDispatcher* mDispatcher;
