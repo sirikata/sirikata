@@ -34,10 +34,10 @@ package Sirikata.Protocol;
 
 //This is the standard message container. All items sent over the wire should be preceeded type MessageHeader. Reserved areas may be used in future headers
 message Header {
-    reserve 1 to 6;
+    reserve 1 to 8;
     reserve 1536 to 2560;
     reserve 229376 to 294912;
-
+//******************BEGIN ROUTING HEADER*********************
     //the source ObjectReference (space is implicit)
     optional uuid source_object = 1;
 
@@ -56,7 +56,10 @@ message Header {
     //optional spaceID of the destination object (in case we have a space routing messages, or it is not otherwise implicit)
 
     optional uuid destination_space = 1537;
+//******************END ROUTING HEADER*********************
 
+
+//******************BEGIN RPC HEADER*********************
     /** The message id, used for pairing message responses.
      *
      * - If ommitted, a response is not expected.
@@ -64,14 +67,14 @@ message Header {
      *   be sent even if it is just an empty acknowledgement, but implementations may
      *   decide not to respond if an id is not used.
      */
-    optional int64 id = 1538;
+    optional int64 id = 7;
 
     /** The id of the message we are replying to. Required if the
      * message is a response to a previous message.
      * Usually only either 'id' or 'reply_id' are present. If both are present,
      * treat this as a response message and ignore the 'id' field.
      */
-    optional int64 reply_id = 1539;
+    optional int64 reply_id = 8;
 
     /* In these examples, An object Object Host AA sends to Object BB via space SS.
      * The original message from AA has an 'id' field. AA then gets a response with
@@ -85,12 +88,10 @@ message Header {
         PORT_FAILURE = 5; ///< Object BB does not understand or handle 'destination_port' messages.
         UNKNOWN_OBJECT = 6; ///< BB does not exist, or is not visible to AA. Sent by SS.
     }
-    enum ExampleReturnStatusCodes {
-        SECURITY_FAILURE = 12345; ///< The source has no permission to send messages. Usually sent by SS.
-    }
     /** If not successful, the MessageBody should contain the reason for failure.
      * return_status applies to the whole message body, and is used for network
      * or protocol errors.
      */
-    optional ReturnStatus return_status=1540;
+    optional ReturnStatus return_status=1792;
+//******************END RPC HEADER*********************
 }
