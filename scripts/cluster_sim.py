@@ -32,9 +32,14 @@ class ClusterSimSettings:
         self.noise = 'false'
         self.debug = True
         self.loc = 'oracle'
+        self.blocksize = 100
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
+
+    def region(self):
+        half_extents = [ self.blocksize * x / 2 for x in (self.layout_x, self.layout_y, 1)]
+        return "<<" + str(-half_extents[0]) + "," + str(-half_extents[1]) + "," + str(-half_extents[2]) + ">,<" + str(half_extents[0]) + "," + str(half_extents[1]) + "," + str(half_extents[2]) + ">>"
 
 class ClusterSim:
     def __init__(self, config, x, y):
@@ -63,6 +68,7 @@ class ClusterSim:
         subprocess.call([CBR_WRAPPER,
                          '--id=1',
                          "--layout=" + self.settings.layout(),
+                         "--region=" + self.settings.region(),
                          "--serverips=" + self.ip_file(),
                          "--duration=" + self.settings.duration,
                          '--analysis.locvis=server',
@@ -105,6 +111,7 @@ class ClusterSim:
             cmd += "--debug "
         cmd += "--id=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
+        cmd += "\"--region=" + self.settings.region() + "\" "
         cmd += "--serverips=" + self.ip_file() + " "
         cmd += "--duration=" + self.settings.duration + " "
         cmd += "--send-bandwidth=" + str(self.settings.tx_bandwidth) + " "
