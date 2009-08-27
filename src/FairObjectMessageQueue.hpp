@@ -53,7 +53,11 @@ public:
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);
 
-    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
+  //  virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
+    virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
+    virtual bool endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
+
+  
     virtual void service(const Time&t);
 
 protected:

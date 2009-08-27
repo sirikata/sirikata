@@ -13,7 +13,13 @@ public:
 
     FIFOObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace);
     virtual ~FIFOObjectMessageQueue(){}
-    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
+  //    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
+    virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
+    virtual bool endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
+
+
+
+  
     virtual void service(const Time& t);
 
     virtual void registerClient(const UUID& oid,float weight=1);

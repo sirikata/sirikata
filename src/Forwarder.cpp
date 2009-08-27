@@ -98,18 +98,16 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     std::map<UUID,ServerID>::iterator iter;
     std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
+    std::map<UUID,ObjMessQBeginSendList>::iterator iterQueueMap;
     
     mOSeg -> tick(t,updatedObjectLocations);
 
     //deliver acknowledge messages.
-
     
     if (updatedObjectLocations.size() !=0)
     {
       //      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
     }
-
-    //    std::cout<<"\n\nThis is the size of the objects in transit:   "<<mObjectsInTransit.size()<<"\n\n";
 
     //    cross-check updates against held messages.  
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
@@ -118,7 +116,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
       if (iterObjectsInTransit != mObjectsInTransit.end())
       {
         //means that we can route messages being held in mObjectsInTransit
-
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
           //          std::cout<<"\n\nbftm debug:  inside of forwarder.  Actually routing a message that I had saved up\n\n";
@@ -127,11 +124,17 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
         //remove the messages from the objects in transit
         mObjectsInTransit.erase(iterObjectsInTransit);
-
       }
-      else
+
+      iterQueueMap = queueMap.find(iter->first);
+      if (iterQueueMap != queueMap.end())
       {
-        //        //        std::cout<<"\n\nbftm debug: Inside of forwarder.cpp couldn't find stored message that matched. \n\n";
+        //means that we have to call endSend on the message.
+        for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
+        {
+          mObjectMessageQueue->endSend(iterQueueMap->second[s],iter->second); //iter->second is the dest_server_id
+        }
+        queueMap.erase(iterQueueMap);
       }
     }
   }
@@ -263,7 +266,6 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     delete msg;
   }
 
-  //here's what I think that should be replaced with:
 
   void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward)
   {
@@ -300,7 +302,24 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         return true;
     }
 
-    return mObjectMessageQueue->send(obj_msg);
+    ObjMessQBeginSend beginMess;
+    mObjectMessageQueue->beginSend(obj_msg, beginMess);
+
+    mOSeg->lookup(beginMess.dest_uuid);
+    
+    if (queueMap.find(beginMess.dest_uuid) == queueMap.end())
+    {
+      //nothing is in queueMap
+      ObjMessQBeginSendList tmpList;
+      tmpList.push_back(beginMess);
+      queueMap[beginMess.dest_uuid] = tmpList;
+    }
+    else
+    {
+      queueMap[beginMess.dest_uuid].push_back(beginMess);    
+    }
+    //    return mObjectMessageQueue->send(obj_msg);
+    return true;
 }
   
   //ewen changes.

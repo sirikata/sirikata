@@ -249,12 +249,7 @@ void Server::handleMigration(const UUID& obj_id) {
     mOSeg->addObject(obj_id, mID);
     
     //    mOSeg->addObject(obj_id,migrate_msg->id());
-
-
-    
     //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-
-
     
 //     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
 //     Message* oseg_ack_msg;

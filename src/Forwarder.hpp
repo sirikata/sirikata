@@ -9,6 +9,7 @@
 #include "ServerNetwork.hpp"
 
 #include "ForwarderUtilityClasses.hpp"
+#include "ObjectMessageQueue.hpp"
 
 
 namespace CBR
@@ -49,7 +50,11 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
       typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
       std::map<UUID,ObjectMessageList> mObjectsInTransit;
+      typedef std::vector<ObjMessQBeginSend> ObjMessQBeginSendList;
+      std::map<UUID,ObjMessQBeginSendList> queueMap;
 
+    
+    
       Time mLastSampleTime;
       Duration mSampleRate;
 

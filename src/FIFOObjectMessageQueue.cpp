@@ -17,22 +17,50 @@ FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, ObjectSeg
 {
 }
 
-bool FIFOObjectMessageQueue::send(CBR::Protocol::Object::ObjectMessage* msg) {
-    UUID src_uuid = msg->source_object();
-    UUID dest_uuid = msg->dest_object();
-    ServerID dest_server_id = lookup(dest_uuid);
-    UniqueMessageID msg_id = msg->unique();
+// bool FIFOObjectMessageQueue::send(CBR::Protocol::Object::ObjectMessage* msg) {
+//     UUID src_uuid = msg->source_object();
+//     UUID dest_uuid = msg->dest_object();
+//     ServerID dest_server_id = lookup(dest_uuid);
+//     UniqueMessageID msg_id = msg->unique();
 
-    ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
-    Network::Chunk msg_serialized;
-    obj_msg->serialize(msg_serialized, 0);
+//     ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
+//     Network::Chunk msg_serialized;
+//     obj_msg->serialize(msg_serialized, 0);
 
-    ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
-    bool success = mQueue.push(src_uuid,smp)==QueueEnum::PushSucceeded;
-    if (!success) delete smp;
-    return success;
+//     ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
+//     bool success = mQueue.push(src_uuid,smp)==QueueEnum::PushSucceeded;
+//     if (!success) delete smp;
+//     return success;
+// }
+
+
+
+//template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protocol::Object::ObjectMessage* msg, &fromBegin)
+bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend & fromBegin)
+{
+  fromBegin.src_uuid = msg->source_object();
+  fromBegin.dest_uuid = msg->dest_object();
+  fromBegin.msg_id = msg->unique();
+
+  ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
+  obj_msg->serialize(fromBegin.msg_serialized, 0);
+
+  return true;
 }
 
+bool FIFOObjectMessageQueue::endSend(const ObjMessQBeginSend& fromBegin, ServerID dest_server_id)
+{
+  ServerMessagePair* smp = new ServerMessagePair(dest_server_id,fromBegin.msg_serialized,fromBegin.msg_id);
+  bool success = mQueue.push(fromBegin.src_uuid,smp)==QueueEnum::PushSucceeded;
+  if (!success) delete smp;
+  return success;
+}
+
+
+
+  
+
+  
 void FIFOObjectMessageQueue::service(const Time& t){
     uint64 bytes = mRate * (t - mLastTime).toSeconds() + mRemainderBytes;
 
