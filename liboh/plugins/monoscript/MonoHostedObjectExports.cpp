@@ -62,7 +62,7 @@ static void Mono_Context_CallFunctionCallback(const std::tr1::weak_ptr<HostedObj
         delete sentMessage;
     }
 }
-static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoObject*callback, const Duration&duration){
+static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoObject*callback, const Sirikata::Duration&duration){
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
     MemoryBuffer buf;
     using std::tr1::placeholders::_1;
@@ -96,7 +96,7 @@ static MonoObject* Mono_Context_CallFunctionWithTimeout(MonoObject *message, Mon
     return InternalMono_Context_CallFunction(message,callback,Mono::Object(duration).unboxTime()-Time::epoch());
 }
 static MonoObject* Mono_Context_CallFunction(MonoObject *message, MonoObject*callback){
-    return InternalMono_Context_CallFunction(message,callback,Duration::seconds(4.0));
+    return InternalMono_Context_CallFunction(message,callback,Sirikata::Duration::seconds(4.0));
 }
 static MonoObject* Mono_Context_SendMessage(MonoObject *message){
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
@@ -117,7 +117,7 @@ static MonoObject* Mono_Context_SendMessage(MonoObject *message){
 static void Mono_Context_TickDelay(MonoObject*duration) {
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
     if (ho) {
-        Duration period(Mono::Object(duration).unboxTime()-Time::epoch());
+        Sirikata::Duration period(Mono::Object(duration).unboxTime()-Time::epoch());
         NOT_IMPLEMENTED(mono);
         //ho->tickDelay(period)
     }
@@ -144,7 +144,7 @@ static void Mono_Context_GetTime(MonoObject*space_id,MonoObject *timeRetval) {
 
 
 static void Mono_Context_GetLocalTime(MonoObject *timeRetval) {
-    Time cur=Time::now(Duration::zero());
+    Time cur=Time::now(Sirikata::Duration::zero());
     //SILOG(monoscript,warning,"Time should be "<<cur.raw());
     Mono_Context_setTime(timeRetval,cur);
 }
