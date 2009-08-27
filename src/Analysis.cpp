@@ -352,6 +352,11 @@ LocationErrorAnalysis::LocationErrorAnalysis(const char* opt_name, const uint32 
         EventList* event_list = event_lists_it->second;
         std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
     }
+
+    for(ServerEventListMap::iterator event_lists_it = mServerEventLists.begin(); event_lists_it != mServerEventLists.end(); event_lists_it++) {
+        EventList* event_list = event_lists_it->second;
+        std::sort(event_list->begin(), event_list->end(), EventTimeComparator());
+    }
 }
 
 LocationErrorAnalysis::~LocationErrorAnalysis() {
