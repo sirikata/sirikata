@@ -32,7 +32,10 @@
 """
 import sys
 try:
-    import sqlite3
+    try:
+        import sqlite3
+    except:
+        from pysqlite2 import dbapi2 as sqlite3
     import os
     import csv
     import math
