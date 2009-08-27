@@ -39,6 +39,15 @@
 
 #include "ServerIDMap.hpp"
 
+//#define TRACE_OBJECT
+//#define TRACE_LOCPROX
+//#define TRACE_OSEG
+//#define TRACE_CSEG
+//#define TRACE_MIGRATION
+//#define TRACE_DATAGRAM
+//#define TRACE_PACKET
+
+
 namespace CBR {
 
 // write the specified number of bytes from the pointer to the buffer
@@ -116,6 +125,7 @@ void Trace::prepareShutdown() {
 }
 
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
+#ifdef TRACE_OBJECT
     if (mShuttingDown) return;
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
@@ -123,27 +133,33 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
     data.write( &source, sizeof(source) );
     data.write( &entered, sizeof(entered) );
     data.write( &loc, sizeof(loc) );
+#endif
 }
 
 void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
+#ifdef TRACE_OBJECT
     if (mShuttingDown) return;
     data.write( &ObjectLocationTag, sizeof(ObjectLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &loc, sizeof(loc) );
+#endif
 }
 
 void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
+#ifdef TRACE_OBJECT
     if (mShuttingDown) return;
     data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &start, sizeof(start) );
+#endif
 }
 
 void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
+#ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
     data.write( &ServerLocationTag, sizeof(ServerLocationTag) );
     data.write( &t, sizeof(t) );
@@ -151,9 +167,11 @@ void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& rec
     data.write( &receiver, sizeof(receiver) );
     data.write( &obj, sizeof(obj) );
     data.write( &loc, sizeof(loc) );
+#endif
 }
 
 void Trace::serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
+#ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
     data.write( &ServerObjectEventTag, sizeof(ServerObjectEventTag) );
     data.write( &t, sizeof(t) );
@@ -163,9 +181,11 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
     uint8 raw_added = (added ? 1 : 0);
     data.write( &raw_added, sizeof(raw_added) );
     data.write( &loc, sizeof(loc) );
+#endif
 }
 
 void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+#ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
     data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
     data.write( &t, sizeof(t) );
@@ -176,26 +196,32 @@ void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 
     data.write( &receive_size, sizeof(receive_size) );
     data.write( &receive_queued, sizeof(receive_queued) );
     data.write( &receive_weight, sizeof(receive_weight) );
+#endif
 }
 
 void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size) {
+#ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
     data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
+#endif
 }
 
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data) {
+#ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
     uint64 id = GetMessageUniqueID(data);
     uint32 size = data.size();
 
     serverDatagramSent(start_time, end_time, weight, dest, id, size);
+#endif
 }
 
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
+#ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
     data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
@@ -205,9 +231,11 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
     data.write( &weight, sizeof(weight));
     data.write( &start_time, sizeof(start_time) );
     data.write( &end_time, sizeof(end_time) );
+#endif
 }
 
 void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
+#ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
     data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
@@ -216,9 +244,11 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
     data.write( &size, sizeof(size) );
     data.write( &start_time, sizeof(start_time) );
     data.write( &end_time, sizeof(end_time) );
+#endif
 }
 
 void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
+#ifdef TRACE_PACKET
     if (mShuttingDown) return;
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
@@ -231,9 +261,11 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
     data.write( &receive_size, sizeof(receive_size) );
     data.write( &receive_queued, sizeof(receive_queued) );
     data.write( &receive_weight, sizeof(receive_weight) );
+#endif
 }
 
 void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
+#ifdef TRACE_PACKET
     if (mShuttingDown) return;
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
@@ -242,9 +274,11 @@ void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
     assert(dest_server_id);
     data.write( dest_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
+#endif
 }
 
 void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
+#ifdef TRACE_PACKET
     if (mShuttingDown) return;
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
@@ -253,18 +287,22 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
     assert(src_server_id);
     data.write( src_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
+#endif
 }
 
 void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
+#ifdef TRACE_CSEG
     if (mShuttingDown) return;
     data.write( &SegmentationChangeTag, sizeof(SegmentationChangeTag) );
     data.write( &t, sizeof(t) );
     data.write( &bbox, sizeof(bbox) );
     data.write( &serverID, sizeof(serverID) );
+#endif
 }
 
   void Trace::objectBeginMigrate(const Time& t, const UUID& obj_id, const ServerID migrate_from, const ServerID migrate_to)
   {
+#ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
     data.write(&ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag));
@@ -275,11 +313,13 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&obj_id, sizeof(obj_id));
     data.write(&migrate_from, sizeof(migrate_from));
     data.write(&migrate_to,sizeof(migrate_to));
+#endif
   }
 
   void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to)
   //  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID acknowledge_from, acknowledge_to)
   {
+#ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
     //    printf("\n\n******In Statistics.cpp.  Have an object ack migrate message. \n\n");
@@ -288,7 +328,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&obj_id, sizeof(obj_id));
     data.write(&acknowledge_from, sizeof(ServerID));
     data.write(&acknowledge_to,sizeof(ServerID));
-
+#endif
   }
 
 
@@ -296,20 +336,22 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   //static const uint8 ObjectSegmentationLookupRequestsAnalysisTag = 13;
   //static const uint8 ObjectSegmentationProcessedRequestsAnalysisTag = 14;
 
-  
+
   void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
+#ifdef TRACK_OSEG
     if (mShuttingDown) return;
 
     data.write(&ObjectSegmentationLookupRequestAnalysisTag, sizeof(ObjectSegmentationLookupRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
     data.write(&sID_lookupTo, sizeof(sID_lookupTo));
-                   
-    
+#endif
+
   }
   void Trace::objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor)
   {
+#ifdef TRACK_OSEG
     if (mShuttingDown) return;
 
     data.write(&ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag));
@@ -317,6 +359,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&obj_id, sizeof(obj_id));
     data.write(&sID, sizeof(sID));
     data.write(&sID_processor, sizeof(sID_processor));
+#endif
   }
 
 
