@@ -13,50 +13,15 @@ public:
 
     FIFOObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace);
     virtual ~FIFOObjectMessageQueue(){}
-  //    virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
+
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
-    virtual bool endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
+    virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
 
-
-
-  
     virtual void service(const Time& t);
 
     virtual void registerClient(const UUID& oid,float weight=1);
     virtual void unregisterClient(const UUID& oid);
 private:
-    class ServerMessagePair {
-    private:
-        std::pair<ServerID,Network::Chunk> mPair;
-        UniqueMessageID mID;
-    public:
-        ServerMessagePair(const ServerID&sid, const Network::Chunk&data, UniqueMessageID id):mPair(sid,data),mID(id){}
-        //destructively modifies the data chunk to quickly place it in the queue
-        ServerMessagePair(const ServerID&sid, Network::Chunk&data,UniqueMessageID id):mPair(sid,Network::Chunk()),mID(id){
-            mPair.second.swap(data);
-        }
-        explicit ServerMessagePair(size_t size):mPair(0,Network::Chunk(size)),mID(0){
-
-        }
-        unsigned int size()const {
-            return mPair.second.size();
-        }
-        bool empty() const {
-            return size()==0;
-        }
-        ServerID dest() const {
-            return mPair.first;
-        }
-
-        const Network::Chunk data() const {
-            return mPair.second;
-        }
-
-        UniqueMessageID id() const {
-            return mID;
-        }
-    };
-
     FIFOQueue<ServerMessagePair,UUID> mQueue;
     Time mLastTime;
     uint32 mRate;

@@ -4,45 +4,23 @@
 #include "ServerMessageQueue.hpp"
 #include "PartiallyOrderedList.hpp"
 namespace CBR {
-namespace FairObjectMessageNamespace {
-    class ServerMessagePair {
-    private:
-        std::pair<ServerID,Network::Chunk> mPair;
-        UniqueMessageID mID;
-    public:
-        ServerMessagePair(const ServerID&sid, const Network::Chunk&data,UniqueMessageID id):mPair(sid,data),mID(id){}
-        //destructively modifies the data chunk to quickly place it in the queue
-        ServerMessagePair(const ServerID&sid, Network::Chunk&data,UniqueMessageID id):mPair(sid,Network::Chunk()),mID(id){
-            mPair.second.swap(data);
-        }
-        explicit ServerMessagePair(size_t size):mPair(0,Network::Chunk(size)),mID(0){
 
-        }
-        unsigned int size()const {
-            return mPair.second.size();
-        }
-        bool empty() const {
-            return size()==0;
-        }
-        ServerID dest() const {
-            return mPair.first;
-        }
-
-        const Network::Chunk data() const {
-            return mPair.second;
-        }
-
-        UniqueMessageID id() const {
-            return mID;
-        }
-    };
-}
-
-template <class TQueue=Queue<FairObjectMessageNamespace::ServerMessagePair*> >
+template <class TQueue=Queue<ObjectMessageQueue::ServerMessagePair*> >
 class FairObjectMessageQueue : public ObjectMessageQueue {
 protected:
-    typedef FairObjectMessageNamespace::ServerMessagePair ServerMessagePair;
-    FairQueue<ServerMessagePair,UUID,TQueue > mClientQueues;
+    /** Predicate for FairQueue which checks if the network will be able to send the message. */
+    struct HasDestServerCanSendPredicate {
+    public:
+        HasDestServerCanSendPredicate(FairObjectMessageQueue<TQueue>* _fq) : fq(_fq) {}
+        bool operator()(const UUID& key, const ServerMessagePair* msg) const {
+            return msg->dest() != NULL;
+            // && fq->canSend(msg);
+        }
+    private:
+        FairObjectMessageQueue<TQueue>* fq;
+    };
+
+    FairQueue<ServerMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
     Time mLastTime;
     uint32 mRate;
     uint32 mRemainderBytes;
@@ -53,11 +31,10 @@ public:
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);
 
-  //  virtual bool send(CBR::Protocol::Object::ObjectMessage* msg);
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
-    virtual bool endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
+    virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
 
-  
+
     virtual void service(const Time&t);
 
 protected:

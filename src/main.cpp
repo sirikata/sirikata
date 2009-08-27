@@ -351,7 +351,7 @@ void *main_loop(void *) {
         lookupAnalysis.printData(oseg_lookup_stream);
         oseg_lookup_stream.flush();
         oseg_lookup_stream.close();
-        
+
 
         //oseg processed lookups
         String object_segmentation_processed_filename = "object_segmentation_processed_file";
@@ -364,9 +364,9 @@ void *main_loop(void *) {
         processedAnalysis.printData(oseg_process_stream);
         oseg_process_stream.flush();
         oseg_process_stream.close();
-        
-                
-        
+
+
+
         //end bftm additional object message log file creation.
 
         exit(0);
@@ -400,25 +400,25 @@ void *main_loop(void *) {
 //     CraqInitializeArgs cInitArgs;
 //     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
 //     cInitArgs.port    =      "4999";
-    
+
 //     craqArgs.push_back(cInitArgs);
 //     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
 //     cInitArgs.port    =      "4998";
 //     craqArgs.push_back(cInitArgs);
-    
+
 //     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
 
-      
-      
+
+
       //end create oseg
 
-      
+
 
 
       //end alternate craq approach
 
 
-      
+
     //end create oseg
 
 
@@ -428,11 +428,11 @@ void *main_loop(void *) {
     if (object_queue_type == "fifo")
         oq = new FIFOObjectMessageQueue(sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(), gTrace);
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<Queue<ObjectMessageQueue::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<LossyQueue<ObjectMessageQueue::ServerMessagePair*> > (sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID > >(sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<ObjectMessageQueue::ServerMessagePair*,ServerID > >(sq, oseg, GetOption(SEND_BANDWIDTH)->as<uint32>(),gTrace);
     else {
         assert(false);
         exit(-1);

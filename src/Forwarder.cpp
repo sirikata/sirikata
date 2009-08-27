@@ -50,7 +50,7 @@ Forwarder::Forwarder(ServerID id)
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
 
 
-    
+
 }
 
   //Don't need to do anything special for destructor
@@ -73,7 +73,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
   mLoadMonitor = lm;
   mCurrentTime = currTime;
   mProximity = prox;
-  
+
 }
 
   //used to access server id, which was given in initialization
@@ -99,17 +99,17 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
     std::map<UUID,ObjMessQBeginSendList>::iterator iterQueueMap;
-    
+
     mOSeg -> tick(t,updatedObjectLocations);
 
     //deliver acknowledge messages.
-    
+
     if (updatedObjectLocations.size() !=0)
     {
       //      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
     }
 
-    //    cross-check updates against held messages.  
+    //    cross-check updates against held messages.
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
     {
       iterObjectsInTransit = mObjectsInTransit.find(iter->first);
@@ -142,7 +142,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
   void Forwarder::tick(const Time&t)
   {
-    
+
     if (t - mLastSampleTime > mSampleRate)
     {
           mServerMessageQueue->reportQueueInfo(t);
@@ -242,7 +242,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
     Network::Chunk msg_serialized;
     offset = msg->serialize(msg_serialized, offset);
 
-    
+
     if (dest_server==serv_id())
     {
       if (!is_forward)
@@ -273,7 +273,7 @@ void Forwarder::initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSeg
 
     //    ServerID dest_server_id = lookup(dest_obj);
     mOSeg->lookup(dest_obj);
-    
+
     //add message to objects in transit.
     //      if (mObjectsInTransit[dest_obj] == null)
     if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
@@ -303,25 +303,27 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     }
 
     ObjMessQBeginSend beginMess;
-    mObjectMessageQueue->beginSend(obj_msg, beginMess);
+    bool send_success = mObjectMessageQueue->beginSend(obj_msg, beginMess);
 
-    mOSeg->lookup(beginMess.dest_uuid);
-    
-    if (queueMap.find(beginMess.dest_uuid) == queueMap.end())
-    {
-      //nothing is in queueMap
-      ObjMessQBeginSendList tmpList;
-      tmpList.push_back(beginMess);
-      queueMap[beginMess.dest_uuid] = tmpList;
+    if (send_success) {
+        mOSeg->lookup(beginMess.dest_uuid);
+
+        if (queueMap.find(beginMess.dest_uuid) == queueMap.end())
+        {
+            //nothing is in queueMap
+            ObjMessQBeginSendList tmpList;
+            tmpList.push_back(beginMess);
+            queueMap[beginMess.dest_uuid] = tmpList;
+        }
+        else
+        {
+            queueMap[beginMess.dest_uuid].push_back(beginMess);
+        }
     }
-    else
-    {
-      queueMap[beginMess.dest_uuid].push_back(beginMess);    
-    }
-    //    return mObjectMessageQueue->send(obj_msg);
-    return true;
+
+    return send_success;
 }
-  
+
   //ewen changes.
 // void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward)
 // {

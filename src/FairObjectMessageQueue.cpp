@@ -9,64 +9,43 @@
 namespace CBR{
 template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace)
  : ObjectMessageQueue(sm, oseg, trace),
-   mClientQueues(),
+   mClientQueues( HasDestServerCanSendPredicate(this) ),
    mLastTime(Time::null()),
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
 }
 
-  
-// template <class Queue> bool FairObjectMessageQueue<Queue>::send(CBR::Protocol::Object::ObjectMessage* msg) {
-//     UUID src_uuid = msg->source_object();
-//     UUID dest_uuid = msg->dest_object();
-//     ServerID dest_server_id = lookup(dest_uuid);
-//     UniqueMessageID msg_id = msg->unique();
-
-//     ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
-//     Network::Chunk msg_serialized;
-//     obj_msg->serialize(msg_serialized, 0);
-
-//     ServerMessagePair* smp = new ServerMessagePair(dest_server_id,msg_serialized,msg_id);
-//     bool success = mClientQueues.push(src_uuid,smp)==QueueEnum::PushSucceeded;
-//     if (!success) delete smp;
-//     return success;
-// }
-
 template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend &fromBegin)
 {
-  //  UUID src_uuid = msg->source_object();
-  fromBegin.src_uuid = msg->source_object();
-  //  UUID dest_uuid = msg->dest_object();
-  fromBegin.dest_uuid = msg->dest_object();
-  
-  //UniqueMessageID msg_id = msg->unique();
-  fromBegin.msg_id = msg->unique();
+    fromBegin.data = (void*)NULL;
+    fromBegin.dest_uuid = msg->dest_object();
 
-  ObjectMessage* obj_msg = new ObjectMessage(mServerMessageQueue->getSourceServer(), *msg);
-  //  Network::Chunk msg_serialized;
-  //  obj_msg->serialize(msg_serialized, 0);
-  obj_msg->serialize(fromBegin.msg_serialized, 0);
-  //  fromBegin.msg_serialized   =    msg_serialized;
-  //  fromBegin.msg_id           =            msg_id;
-  //  fromBegin.src_uuid         =          src_uuid;
+    Network::Chunk chunk;
+    ObjectMessage obj_msg(mServerMessageQueue->getSourceServer(), *msg);
+    obj_msg.serialize(chunk, 0);
 
-  return true;
+    ServerMessagePair* smp = new ServerMessagePair(NULL, chunk, obj_msg.id());
+    bool success = mClientQueues.push(msg->source_object(),smp)==QueueEnum::PushSucceeded;
+
+    if (!success)
+        delete smp;
+    else
+        fromBegin.data = (void*)smp;
+
+    return success;
 }
 
 
-template <class Queue> bool FairObjectMessageQueue<Queue>::endSend(const ObjMessQBeginSend& fromBegin, ServerID dest_server_id)
+template <class Queue> void FairObjectMessageQueue<Queue>::endSend(const ObjMessQBeginSend& fromBegin, ServerID dest_server_id)
 {
-  ServerMessagePair* smp = new ServerMessagePair(dest_server_id,fromBegin.msg_serialized,fromBegin.msg_id);
-  bool success = mClientQueues.push(fromBegin.src_uuid,smp)==QueueEnum::PushSucceeded;
-  if (!success) delete smp;
-  return success;
+    ((ServerMessagePair*)fromBegin.data)->dest(dest_server_id);
 }
 
 
-  
 
-  
+
+
 template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t){
     aggregateLocationMessages();
 
@@ -107,7 +86,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const 
 template <class Queue> void FairObjectMessageQueue<Queue>::unregisterClient(const UUID& sid) {
     mClientQueues.removeQueue(sid);
 }
-template class FairObjectMessageQueue<PartiallyOrderedList<FairObjectMessageNamespace::ServerMessagePair*,ServerID> >;
-template class FairObjectMessageQueue<Queue<FairObjectMessageNamespace::ServerMessagePair*> >;
-template class FairObjectMessageQueue<LossyQueue<FairObjectMessageNamespace::ServerMessagePair*> >;
+template class FairObjectMessageQueue<PartiallyOrderedList<ObjectMessageQueue::ServerMessagePair*,ServerID> >;
+template class FairObjectMessageQueue<Queue<ObjectMessageQueue::ServerMessagePair*> >;
+template class FairObjectMessageQueue<LossyQueue<ObjectMessageQueue::ServerMessagePair*> >;
 }
