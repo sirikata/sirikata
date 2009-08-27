@@ -73,6 +73,7 @@ public:
 
     void openConnection(ObjectConnection* conn);
 
+    // FIXME should not be infinite queue and should report push error
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 
     void tick(const Time& t);
@@ -86,6 +87,7 @@ private:
     ObjectHostContext* mContext;
     uint64 mOHId;
     Server* mServer;
+    std::queue<std::string*> mOutgoingQueue;
 }; // class ObjectHost
 
 } // namespace CBR

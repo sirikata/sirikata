@@ -69,7 +69,9 @@ bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest
     obj_msg.set_unique(GenerateUniqueID(mOHId));
     obj_msg.set_payload( payload );
 
-    return mServer->receiveObjectHostMessage( serializePBJMessage(obj_msg) );
+    mOutgoingQueue.push( new std::string(serializePBJMessage(obj_msg)) );
+
+    return true;
 }
 
 void ObjectHost::tick(const Time& t) {
@@ -77,6 +79,16 @@ void ObjectHost::tick(const Time& t) {
     mContext->time = t;
 
     mContext->objectFactory->tick();
+
+    // Service outgoing queue
+    uint32 nserviced = 0;
+    while( !mOutgoingQueue.empty() && mServer->receiveObjectHostMessage( *mOutgoingQueue.front() ) ) {
+        nserviced++;
+        delete mOutgoingQueue.front();
+        mOutgoingQueue.pop();
+    }
+    //if (mOutgoingQueue.size() > 1000)
+    //    SILOG(oh,warn,"[OH] Warning: outgoing queue size > 1000: " << mOutgoingQueue.size());
 }
 
 void ObjectHost::setServer(Server* server) {
