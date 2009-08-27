@@ -62,68 +62,8 @@ class SIRIKATA_EXPORT Stream {
 protected:
     Stream(){}
 public:
-    /**
-     * This class stores up to 30 bits of data in a 4 byte memory slot. It may be serialized to between 1 and 4 bytes
-     * This class is useful for defining unique StreamIDs as well as other lowlevel data like packet lengths
-     */
-    class SIRIKATA_EXPORT uint30{
-        uint32 mID;
-    public:
-        ///The maximum length that any uint30 will be serialized out to
-        enum MaxSerializedLengthConstants{
-            ///The maximum length that any uint30 will be serialized out to
-            MAX_SERIALIZED_LENGTH=4
-        };
-        ///True if this uint32 is odd
-        bool odd() const{
-            return (mID&1);
-        }
-        ///Returns the inmemory value of this uint30
-        uint32 read() const{
-            return mID;
-        }
-        //unserializes a streamID into a buffer of size at least 8. Caller should check return value to see how much space actually used
-        unsigned int serialize(uint8 *destination, unsigned int maxsize)const;
-        //unserializes a streamID into a buffer where the size is at least size...puts bytes consumed into size variable returns false if size too small
-        bool unserialize(const uint8 *src, unsigned int &size);
-        ///Construct an integer filled with 0 sized value. Will be used for control packets for StreamIDs
-        uint30(){
-            mID=0;
-        }
-        ///Construct a uint30 based on given integer value
-        uint30(unsigned int id){
-            assert(id<(1<<30));
-            mID=id;
-        }
-		uint30&operator=(const uint30&other) {
-           this->mID=other.mID;
-		   return *this;
-		}
-		uint30(const uint30&other) {
-           this->mID=other.mID;
-		}
-		/// Hasher functor to be used in a hash_map.
-		struct Hasher {
-            ///returns a hash of the integer value
-			size_t operator() (const uint30 &id) const{
-				return std::tr1::hash<unsigned int>()(id.mID);
-			}
-		};
-        ///Total ordering of uint30
-        bool operator == (const uint30&other)const {
-            return mID==other.mID;
-        }
-        ///Total ordering of uint30
-        bool operator != (const uint30&other)const {
-            return mID!=other.mID;
-        }
-        ///Total ordering of uint30
-        bool operator < (const uint30&other)const {
-            return mID<other.mID;
-        }
-    };
     ///The number of live streams on a single connection must fit into 30 bits. Streams will be reused when they are shutdown
-    typedef uint30 StreamID ;
+    typedef vuint32 StreamID ;
     ///Callback codes indicating whether the socket has connected, had a connection rejected or got a sudden disconnection
     enum ConnectionStatus {
         Connected,

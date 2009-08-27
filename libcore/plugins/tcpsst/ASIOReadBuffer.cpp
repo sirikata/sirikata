@@ -91,7 +91,7 @@ Stream::StreamID ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 p
 void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus) {
         unsigned int chunkPos=0;
         unsigned int packetHeaderLength;
-        Stream::uint30 packetLength;
+        vuint32 packetLength;
         while ((packetHeaderLength=mBufferPos-chunkPos)!=0&&packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {
             if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
                 if (mBufferPos-chunkPos<sLowWaterMark) {

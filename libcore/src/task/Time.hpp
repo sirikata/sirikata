@@ -282,8 +282,8 @@ public:
 
 };
 
-SIRIKATA_EXPORT std::ostream& operator<<(std::ostream& os, const Duration& rhs);
-SIRIKATA_EXPORT std::istream& operator>>(std::istream& is, Duration& rhs);
+SIRIKATA_EXPORT std::ostream& operator<<(std::ostream& os, const DeltaTime& rhs);
+SIRIKATA_EXPORT std::istream& operator>>(std::istream& is, DeltaTime& rhs);
 inline LocalTime DeltaTime::fromNow() const {
 	return LocalTime::now() + (*this);
 }

@@ -276,6 +276,7 @@ class RoutableMessageBody;
 #include "options/OptionValue.hpp"
 #include "Logging.hpp"
 #include "Location.hpp"
+#include "VInt.hpp"
 namespace Sirikata {
 template<class T>T*aligned_malloc(size_t num_bytes, const unsigned char alignment) {
     unsigned char *data=(unsigned char*)malloc(num_bytes+alignment);
@@ -310,6 +311,8 @@ typedef Vector3<float32> Vector3f;
 typedef Vector3<float64> Vector3d;
 typedef Vector4<float32> Vector4f;
 typedef Vector4<float64> Vector4d;
+typedef VInt<uint32> vuint32;
+typedef VInt<uint64> vuint64;
 using std::tr1::placeholders::_1;
 using std::tr1::placeholders::_2;
 using std::tr1::placeholders::_3;

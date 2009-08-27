@@ -78,9 +78,9 @@ void TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
     streamIdLength=successLengthNeeded;
     size_t totalSize=firstChunk.size()+secondChunk.size();
     totalSize+=streamIdLength;
-    uint30 packetLength=uint30(totalSize);
-    uint8 packetLengthSerialized[uint30::MAX_SERIALIZED_LENGTH];
-    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,uint30::MAX_SERIALIZED_LENGTH);
+    vuint32 packetLength=vuint32(totalSize);
+    uint8 packetLengthSerialized[vuint32::MAX_SERIALIZED_LENGTH];
+    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,vuint32::MAX_SERIALIZED_LENGTH);
     //allocate a packet long enough to take both the length of the packet and the stream id as well as the packet data. totalSize = size of streamID + size of data and
     //packetHeaderLength = the length of the length component of the packet
     toBeSent.data=new Chunk(totalSize+packetHeaderLength);

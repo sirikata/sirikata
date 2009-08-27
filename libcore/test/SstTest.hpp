@@ -359,9 +359,9 @@ public:
         --id;
     }
     void testInt30Serialization(void) {
-        Sirikata::Network::Stream::uint30 a(10),b(129),c(257),d(384),e(16300),f(16385),g(32767),h(32768),i(65535),j(131073),guinea;
-        uint8 buffer[Sirikata::Network::Stream::uint30::MAX_SERIALIZED_LENGTH];
-        unsigned int maxlen=Sirikata::Network::Stream::uint30::MAX_SERIALIZED_LENGTH;
+        Sirikata::vuint32 a(10),b(129),c(257),d(384),e(16300),f(16385),g(32767),h(32768),i(65535),j(131073),guinea;
+        uint8 buffer[Sirikata::vuint32::MAX_SERIALIZED_LENGTH];
+        unsigned int maxlen=Sirikata::vuint32::MAX_SERIALIZED_LENGTH;
         unsigned int curlen;
         curlen=a.serialize(buffer,maxlen);
         TS_ASSERT(guinea.unserialize(buffer,curlen));
@@ -404,26 +404,26 @@ public:
         TS_ASSERT_EQUALS(j,guinea);
 
         for (unsigned int iter=1;iter<(1<<30);iter*=2) {
-            Sirikata::Network::Stream::uint30 vartest(iter);
+            Sirikata::vuint32 vartest(iter);
             curlen=vartest.serialize(buffer,maxlen);
             TS_ASSERT(guinea.unserialize(buffer,curlen));
             TS_ASSERT_EQUALS(vartest,guinea);
             {
-                Sirikata::Network::Stream::uint30 vartest(iter+iter-1);
+                Sirikata::vuint32 vartest(iter+iter-1);
                 curlen=vartest.serialize(buffer,maxlen);
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);
 
             }            
             {
-                Sirikata::Network::Stream::uint30 vartest(iter+iter/2);
+                Sirikata::vuint32 vartest(iter+iter/2);
                 curlen=vartest.serialize(buffer,maxlen);
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);
 
             }            
             for (int i=0;i<10;++i) {
-                Sirikata::Network::Stream::uint30 vartest(iter+i);
+                Sirikata::vuint32 vartest(iter+i);
                 curlen=vartest.serialize(buffer,maxlen);
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);

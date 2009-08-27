@@ -306,23 +306,23 @@ void ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&pa
 }
 Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
     const unsigned int max_size=16;
-    uint8 dataStream[max_size+2*Stream::uint30::MAX_SERIALIZED_LENGTH];
+    uint8 dataStream[max_size+2*vuint32::MAX_SERIALIZED_LENGTH];
     unsigned int size=max_size;
     Stream::StreamID controlStream;//control packet
-    size=controlStream.serialize(&dataStream[Stream::uint30::MAX_SERIALIZED_LENGTH],size);
+    size=controlStream.serialize(&dataStream[vuint32::MAX_SERIALIZED_LENGTH],size);
     assert(size<max_size);
-    dataStream[Stream::uint30::MAX_SERIALIZED_LENGTH+size++]=code;
-    unsigned int cur=Stream::uint30::MAX_SERIALIZED_LENGTH+size;
+    dataStream[vuint32::MAX_SERIALIZED_LENGTH+size++]=code;
+    unsigned int cur=vuint32::MAX_SERIALIZED_LENGTH+size;
     size=max_size-cur;
     size=sid.serialize(&dataStream[cur],size);
     assert(size+cur<=max_size);   
-    Stream::uint30 streamSize=Stream::uint30(size+cur-Stream::uint30::MAX_SERIALIZED_LENGTH);
-    unsigned int actualHeaderLength=streamSize.serialize(dataStream,Stream::uint30::MAX_SERIALIZED_LENGTH);
-    if (actualHeaderLength!=Stream::uint30::MAX_SERIALIZED_LENGTH) {
-        unsigned int retval=streamSize.serialize(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,Stream::uint30::MAX_SERIALIZED_LENGTH);
+    vuint32 streamSize=vuint32(size+cur-vuint32::MAX_SERIALIZED_LENGTH);
+    unsigned int actualHeaderLength=streamSize.serialize(dataStream,vuint32::MAX_SERIALIZED_LENGTH);
+    if (actualHeaderLength!=vuint32::MAX_SERIALIZED_LENGTH) {
+        unsigned int retval=streamSize.serialize(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,vuint32::MAX_SERIALIZED_LENGTH);
         assert(retval==actualHeaderLength);
     }
-    return new Chunk(dataStream+Stream::uint30::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
+    return new Chunk(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
 }
 
 void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections) {
