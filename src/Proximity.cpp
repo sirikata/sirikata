@@ -41,9 +41,8 @@
 
 namespace CBR {
 
-Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher)
- : mID(sid),
-   mLastTime(Time::null()),
+Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
+ : mContext(ctx),
    mLocService(locservice),
    mCSeg(NULL),
    mServerQueries(),
@@ -52,9 +51,7 @@ Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* r
    mObjectQueries(),
    mGlobalLocCache(NULL),
    mObjectQueryHandler(NULL),
-   mMinObjectQueryAngle(SolidAngle::Max),
-   mRouter(router),
-   mDispatcher(dispatcher)
+   mMinObjectQueryAngle(SolidAngle::Max)
 {
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(locservice, false);
@@ -68,13 +65,13 @@ Proximity::Proximity(ServerID sid, LocationService* locservice, MessageRouter* r
 
     mLocService->addListener(this);
 
-    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
-    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
 }
 
 Proximity::~Proximity() {
-    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
-    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
 
     // Objects
     while(!mObjectQueries.empty())
@@ -104,7 +101,7 @@ void Proximity::sendQueryRequests() {
     TimedMotionVector3f loc;
 
     // FIXME avoid computing this so much
-    BoundingBoxList bboxes = mCSeg->serverRegion(mID);
+    BoundingBoxList bboxes = mCSeg->serverRegion(mContext->id);
     BoundingBox3f bbox = bboxes[0];
     for(uint32 i = 1; i< bboxes.size(); i++)
         bbox.mergeIn(bboxes[i]);
@@ -113,9 +110,9 @@ void Proximity::sendQueryRequests() {
 
     // FIXME this assumes that ServerIDs are simple sequence of IDs
     for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-        if (sid == mID) continue;
+        if (sid == mContext->id) continue;
 
-        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mID);
+        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mContext->id);
         msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
         msg_loc.set_t(loc.updateTime());
@@ -123,7 +120,7 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
         msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
-        mRouter->route(msg, sid);
+        mContext->router->route(msg, sid);
     }
 }
 
@@ -247,14 +244,14 @@ void Proximity::removeQuery(UUID obj) {
     }
 }
 
-void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) {
+void Proximity::service(std::queue<ProximityEventInfo>& events) {
 /*
     if ( ((uint32)(t-Time(0)).seconds()) - ((uint32)(mLastTime-Time(0)).seconds()) > 0)
         printf("Objects: %d, Queries: %d -- Objects: %d, Queries: %d\n", mServerQueryHandler->numObjects(), mServerQueryHandler->numQueries(), mObjectQueryHandler->numObjects(), mObjectQueryHandler->numQueries());
 */
+    Time t = mContext->time;
     mServerQueryHandler->tick(t);
     mObjectQueryHandler->tick(t);
-    mLastTime = t;
 
     typedef std::deque<QueryEvent> QueryEventList;
 
@@ -269,7 +266,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
         if (evts.empty()) continue;
 
-        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mID);
+        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id);
         result_msg->contents.set_t(t);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added) {
@@ -295,7 +292,7 @@ void Proximity::evaluate(const Time& t, std::queue<ProximityEventInfo>& events) 
 
         PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
 
-        mRouter->route(result_msg, sid);
+        mContext->router->route(result_msg, sid);
     }
 
     // Output QueryEvents for objects

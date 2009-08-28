@@ -85,7 +85,7 @@ public:
     typedef Prox::Query<ProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
 
-    Proximity(ServerID sid, LocationService* locservice, MessageRouter* router, MessageDispatcher* dispatcher);
+    Proximity(SpaceContext* ctx, LocationService* locservice);
     ~Proximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
@@ -101,7 +101,7 @@ public:
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output
-    void evaluate(const Time& t, std::queue<ProximityEventInfo>& events);
+    void service(std::queue<ProximityEventInfo>& events);
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);
@@ -129,9 +129,7 @@ private:
     typedef std::map<ServerID, Query*> ServerQueryMap;
     typedef std::map<UUID, Query*> ObjectQueryMap;
 
-    ServerID mID;
-
-    Time mLastTime;
+    SpaceContext* mContext;
 
     LocationService* mLocService;
     CoordinateSegmentation* mCSeg;
@@ -152,8 +150,6 @@ private:
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
 
-    MessageRouter* mRouter;
-    MessageDispatcher* mDispatcher;
 }; //class Proximity
 
 } // namespace CBR

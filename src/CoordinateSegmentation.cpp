@@ -34,6 +34,11 @@
 
 namespace CBR {
 
+CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
+ : mContext(ctx)
+{
+}
+
 void CoordinateSegmentation::addListener(Listener* listener) {
     assert (mListeners.find(listener) == mListeners.end());
     mListeners.insert(listener);

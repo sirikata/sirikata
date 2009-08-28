@@ -62,7 +62,7 @@ typedef struct ServerLoadInfo{
 
 class LoadMonitor : public MessageRecipient {
 public:
-    LoadMonitor(ServerID, MessageDispatcher* msg_source, MessageRouter* msg_router, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
+    LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
     ~LoadMonitor();
 
   void addLoadReading();
@@ -76,7 +76,7 @@ public:
     // From MessageRecipient
     void receiveMessage(Message* msg);
 
-  void tick(const Time& t);
+    void service();
 
 private:
   void loadStatusMessage(LoadStatusMessage* load_status_msg);
@@ -93,13 +93,11 @@ private:
 
   bool isAdjacent(BoundingBox3f& box1, BoundingBox3f& box2);
 
-    ServerID mServerID;
-    MessageDispatcher* mMessageDispatcher;
-    MessageRouter* mMessageRouter;
+    SpaceContext* mContext;
     ServerMessageQueue* mServerMsgQueue;
     CoordinateSegmentation* mCoordinateSegmentation;
 
-    Time mCurrentTime;
+    Time mLastReadingTime;
 
     float mCurrentLoadReading;
     float mAveragedLoadReading;

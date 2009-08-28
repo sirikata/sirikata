@@ -17,10 +17,11 @@ namespace CBR
   */
   //  LocObjectSegmentation::LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service)
   //  LocObjectSegmentation::LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::vector<ServID> serverList,std::map<UUID,ServID> objectToServerMap)
-  LocObjectSegmentation::LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap)
-    : mCSeg (cseg),
-      mLocationService(loc_service),
-      mObjectToServerMap(objectToServerMap)
+LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap)
+ : ObjectSegmentation(ctx),
+   mCSeg (cseg),
+   mLocationService(loc_service),
+   mObjectToServerMap(objectToServerMap)
   {
 
   }
@@ -46,13 +47,13 @@ namespace CBR
   */
   //  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
   //  void LocObjectSegmentation::lookup(const UUID& obj_id) const
-  void LocObjectSegmentation::lookup(const UUID& obj_id) 
+  void LocObjectSegmentation::lookup(const UUID& obj_id)
   {
       if (mLocationService->contains(obj_id)) {
           Vector3f pos = mLocationService->currentPosition(obj_id);
           ServerID sid = mCSeg->lookup(pos);
           mObjectToServerMap[obj_id] = sid;
-          
+
           //          return sid;
       }
       else {
@@ -73,13 +74,13 @@ namespace CBR
                //    return;
   }
 
-  
+
   void LocObjectSegmentation::receiveMessage(Message* msg)
   {
     delete msg; //delete message here.
   }
 
-  
+
 
   /*
     Doesn't do anything for now.
@@ -154,9 +155,8 @@ namespace CBR
     Nothing to populate with currently
     Doesn't do anything with the messages currently.
    */
-  void LocObjectSegmentation::tick(const Time& t, std::map<UUID,ServerID> &updated)
+  void LocObjectSegmentation::service(std::map<UUID,ServerID> &updated)
   {
-
     updated = mObjectToServerMap;
     mObjectToServerMap.clear();
     return;

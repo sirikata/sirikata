@@ -46,21 +46,19 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
     return sli1.mLoadReading < sli2.mLoadReading;
 }
 
-LoadMonitor::LoadMonitor(ServerID svrID, MessageDispatcher* msg_source, MessageRouter* msg_router, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
- : mServerID(svrID),
-   mMessageDispatcher(msg_source),
-   mMessageRouter(msg_router),
+LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
+ : mContext(ctx),
    mServerMsgQueue(serverMsgQueue),
    mCoordinateSegmentation(cseg),
-   mCurrentTime(Time::null()),
+   mLastReadingTime(Time::null()),
    mCurrentLoadReading(0),
    mAveragedLoadReading(0)
 {
-    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
 }
 
 LoadMonitor::~LoadMonitor() {
-    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
 }
 
 void LoadMonitor::addLoadReading() {
@@ -79,7 +77,7 @@ void LoadMonitor::addLoadReading() {
   mAveragedLoadReading = ALPHA * mAveragedLoadReading +
                          (1.0-ALPHA) * mCurrentLoadReading;
 
-    printf("mAveragedLoadReading at %d=%f\n", mServerID, mAveragedLoadReading);
+    printf("mAveragedLoadReading at %d=%f\n", mContext->id, mAveragedLoadReading);
 
 
   if (mAveragedLoadReading > THRESHOLD) {
@@ -112,12 +110,12 @@ void LoadMonitor::sendLoadReadings() {
   uint32 total_servers = mCoordinateSegmentation->numServers();
 
   for (uint32 i=1 ; i <= total_servers; i++) {
-    if (i != mServerID && handlesAdjacentRegion(i) ) {
-      printf("%d handles adjacent region with %d\n", i, mServerID);
+    if (i != mContext->id && handlesAdjacentRegion(i) ) {
+      printf("%d handles adjacent region with %d\n", i, mContext->id);
 
-      LoadStatusMessage* msg = new LoadStatusMessage(mServerID);
+      LoadStatusMessage* msg = new LoadStatusMessage(mContext->id);
       msg->contents.set_load(mAveragedLoadReading);
-      mMessageRouter->route(msg, i);
+      mContext->router->route(msg, i);
     }
   }
 }
@@ -135,19 +133,19 @@ void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
   mRemoteLoadReadings[id] = load_status_msg->contents.load();
 }
 
-void LoadMonitor::tick(const Time& t) {
+void LoadMonitor::service() {
   if (GetOption("monitor-load")->as<bool>() &&
-      t - mCurrentTime > Duration::seconds(5))
+      mContext->time - mLastReadingTime > Duration::seconds(5))
   {
     addLoadReading();
 
-    mCurrentTime = t;
+    mLastReadingTime = mContext->time;
   }
 }
 
 bool LoadMonitor::handlesAdjacentRegion(ServerID server_id) {
   BoundingBoxList otherBoundingBoxList = mCoordinateSegmentation->serverRegion(server_id);
-  BoundingBoxList myBoundingBoxList = mCoordinateSegmentation->serverRegion(mServerID);
+  BoundingBoxList myBoundingBoxList = mCoordinateSegmentation->serverRegion(mContext->id);
 
   for (std::vector<BoundingBox3f>::iterator other_it=otherBoundingBoxList.begin();
        other_it != otherBoundingBoxList.end();

@@ -1,5 +1,5 @@
 /*  cbr
- *  UniformCoordinateSegmentation.hpp
+ *  SpaceContext.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,44 +30,51 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
-#define _CBR_UNIFORM_COORDINATE_SEGMENTATION_HPP_
+#ifndef _CBR_SPACE_CONTEXT_HPP_
+#define _CBR_SPACE_CONTEXT_HPP_
 
-#include "CoordinateSegmentation.hpp"
+#include "Utility.hpp"
+#include "ServerNetwork.hpp"
 
 namespace CBR {
 
-struct LayoutChangeEntry {
-  uint64 time;
+class MessageRouter;
+class MessageDispatcher;
+class Trace;
 
-  Vector3ui32 layout;
-};
-
-
-/** Uniform grid implementation of CoordinateSegmentation. */
-class UniformCoordinateSegmentation : public CoordinateSegmentation {
+/** SpaceContext holds a number of useful items that are effectively global
+ *  for each space node and used throughout the system -- ServerID, time information,
+ *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
+ *  from messages), and a Trace object.
+ */
+class SpaceContext {
 public:
-    UniformCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
-    virtual ~UniformCoordinateSegmentation();
+    SpaceContext(ServerID _id, const Time& curtime, Trace* _trace)
+     : id(_id),
+       lastTime(curtime),
+       time(curtime),
+       router(NULL),
+       dispatcher(NULL),
+       trace(_trace)
+    {
+    }
 
-    virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const;
-    virtual BoundingBox3f region() const;
-    virtual uint32 numServers() const;
+    void tick(const Time& t) {
+        lastTime = time;
+        time = t;
+    }
 
-    virtual void service();
+    ServerID id;
 
-    // From MessageRecipient
-    virtual void receiveMessage(Message* msg);
-private:
-    BoundingBox3f mRegion;
-    Vector3ui32 mServersPerDim;
+    Time lastTime;
+    Time time;
 
-    std::vector<LayoutChangeEntry> mLayoutChangeEntries;
-    uint32 lastLayoutChangeIdx;
+    MessageRouter* router;
+    MessageDispatcher* dispatcher;
 
-}; // class CoordinateSegmentation
+    Trace* trace;
+}; // class SpaceContext
 
 } // namespace CBR
 
-#endif
+#endif //_CBR_SPACE_CONTEXT_HPP_

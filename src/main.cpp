@@ -146,7 +146,9 @@ void *main_loop(void *) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
 
-    Forwarder* forwarder = new Forwarder(server_id);
+    SpaceContext* space_context = new SpaceContext(server_id, Time::null(), gTrace); // FIXME start time
+
+    Forwarder* forwarder = new Forwarder(space_context);
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
     ObjectHost* obj_host = new ObjectHost(server_id, obj_factory, gTrace);
@@ -154,9 +156,9 @@ void *main_loop(void *) {
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
     if (loc_service_type == "oracle")
-        loc_service = new OracleLocationService(server_id, forwarder, forwarder, gTrace, obj_factory);
+        loc_service = new OracleLocationService(space_context, obj_factory);
     else if (loc_service_type == "standard")
-        loc_service = new StandardLocationService(server_id, forwarder, forwarder, gTrace);
+        loc_service = new StandardLocationService(space_context);
     else
         assert(false);
 
@@ -182,13 +184,12 @@ void *main_loop(void *) {
     String cseg_type = GetOption(CSEG)->as<String>();
     CoordinateSegmentation* cseg = NULL;
     if (cseg_type == "uniform")
-        cseg = new UniformCoordinateSegmentation(region, layout, forwarder);
+        cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "distributed") {
-      cseg = new DistributedCoordinateSegmentation(server_id, region, layout, forwarder, forwarder, gTrace, nservers);
+      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, nservers);
     }
     else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(server_id, region, layout, forwarder, forwarder, gTrace);
-
+      cseg = new CoordinateSegmentationClient(space_context, region, layout);
     }
     else {
         assert(false);
@@ -205,14 +206,15 @@ void *main_loop(void *) {
       while( true ) {
         Duration elapsed = timer.elapsed();
 
-        cseg->tick(tbegin + elapsed);
+        space_context->tick(tbegin + elapsed);
+        cseg->service();
       }
 
       exit(0);
     }
 
 
-    LoadMonitor* loadMonitor = new LoadMonitor(server_id, forwarder, forwarder, sq, cseg);
+    LoadMonitor* loadMonitor = new LoadMonitor(space_context, sq, cseg);
 
 
 
@@ -223,7 +225,7 @@ void *main_loop(void *) {
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
         String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
-        LocationVisualization lea(STATS_TRACE_FILE, nservers, obj_factory,cseg);
+        LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, obj_factory,cseg);
 
         if (vistype == "object")
             lea.displayRandomViewerError(GetOption(ANALYSIS_LOCVIS_SEED)->as<int>(), Duration::milliseconds((int64)30));
@@ -398,7 +400,7 @@ void *main_loop(void *) {
 
       //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      ObjectSegmentation* oseg = new LocObjectSegmentation(cseg,loc_service,dummyObjectToServerMap);
+      ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
 
 
 
@@ -460,11 +462,11 @@ void *main_loop(void *) {
         );
 
 
-      Proximity* prox = new Proximity(server_id, loc_service, forwarder, forwarder);
+    Proximity* prox = new Proximity(space_context, loc_service);
 
 
     //    Server* server = new Server(server_id, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
-      Server* server = new Server(server_id, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace,oseg);
+      Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor,oseg);
 
       prox->initialize(cseg);
       obj_factory->initialize(obj_host->context(), server_id, server, cseg);
@@ -500,9 +502,10 @@ void *main_loop(void *) {
     Time last_sample_time = Time::null();
 
     if (sim) {
-
+        printf("WARNING: Simulation mode hasn't been kept up to date.\n");
+        assert(false);
         for(Time t = tbegin; t < tend; t += sim_step){
-	    server->tick(t);
+	    server->service();
         }
     }
     else {
@@ -524,10 +527,14 @@ void *main_loop(void *) {
                 last_sample_time = last_sample_time + stats_sample_rate;
             }
 
-            obj_host->tick(tbegin + elapsed);
-            gNetwork->service(tbegin + elapsed);
-            cseg->tick(tbegin + elapsed);
-            server->tick(tbegin + elapsed);
+            Time curt = tbegin + elapsed;
+
+            space_context->tick(curt);
+            obj_host->tick(curt);
+
+            gNetwork->service(curt);
+            cseg->service();
+            server->service();
         }
     }
 
@@ -559,6 +566,9 @@ void *main_loop(void *) {
 
     delete gTrace;
     gTrace = NULL;
+
+    delete space_context;
+    space_context = NULL;
 
     return 0;
 }

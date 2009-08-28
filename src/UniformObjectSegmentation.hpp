@@ -34,17 +34,17 @@ namespace CBR
 
 
     public:
-    UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
+      UniformObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID,  Trace* tracer);
     //UniformObjectSegmentation(CoordinateSegmentation* cseg, std::map<UUID,ServerID> objectToServerMap,ServerID servID);
       virtual ~UniformObjectSegmentation();
 
     //      virtual ServerID lookup(const UUID& obj_id) const;
     virtual void lookup(const UUID& obj_id) const;
 
-    
+
       virtual void osegMigrateMessage(OSegMigrateMessage*);
 
-      virtual void tick(const Time& t, std::map<UUID,ServerID>& updated);
+      virtual void service(std::map<UUID,ServerID>& updated);
     //      virtual void migrateMessage(MigrateMessage*);
       virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
       virtual void addObject(const UUID& obj_id, const ServerID ourID);

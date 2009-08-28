@@ -51,14 +51,11 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace, int nservers)
-  : mServerID(server_id),
-    mMessageDispatcher(msg_source),
-    mMessageRouter(msg_router),
-    mCurrentTime(Time::null()),
-    mTrace(trace)
+DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers)
+ : CoordinateSegmentation(ctx),
+   mLastUpdateTime(mContext->time)
 {
-  mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+  mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
@@ -69,7 +66,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const Serve
   float maxX = region.max().x; float maxY = region.max().y;
   float minZ = region.min().z; float maxZ = region.max().z;
 
-  mTopLevelRegion.mLeftChild->mBoundingBox = BoundingBox3f( region.min(), 
+  mTopLevelRegion.mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
                                                   Vector3f( maxX, (minY+maxY)/2, maxZ) );
   mTopLevelRegion.mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX,(minY+maxY)/2,minZ),
                                                              region.max() );
@@ -100,17 +97,17 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const Serve
 
   printf("%d servers\n", nservers);
 
-  ENetAddress address;    
-  
+  ENetAddress address;
+
   /* Bind the server to the default localhost.     */
   /* A specific host address can be specified by   */
   /* enet_address_set_host (& address, "x.x.x.x"); */
-  
+
   address.host = ENET_HOST_ANY;
   /* Bind the server to port 1234. */
   address.port = 1234;
-  
-  server = enet_host_create (& address /* the address to bind the server host to */, 
+
+  server = enet_host_create (& address /* the address to bind the server host to */,
 			     254      /* allow up to 254 clients and/or outgoing connections */,
 			     0      /* assume any amount of incoming bandwidth */,
 			     0      /* assume any amount of outgoing bandwidth */);
@@ -119,11 +116,11 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const Serve
       printf ("An error occurred while trying to create an ENet server host.\n");
       exit (EXIT_FAILURE);
     }
-  
+
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
-   mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   //delete all the SegmentedRegion objects created with 'new'
 }
@@ -166,13 +163,11 @@ uint32 DistributedCoordinateSegmentation::numServers() const {
   return count;
 }
 
-void DistributedCoordinateSegmentation::tick(const Time& t) {
+void DistributedCoordinateSegmentation::service() {
+    Time t = mContext->time;
+
   ENetEvent event;
 
-  if (mCurrentTime == Time::null()) {
-    mCurrentTime = t;
-  }
-     
   /* Wait up to 0 milliseconds for an event. */
   if (enet_host_service (server, & event, 0) > 0)
   {
@@ -182,44 +177,44 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
          break;
        case ENET_EVENT_TYPE_CONNECT:
 	 {
-	   printf ("A new client connected from %x:%u.\n", 
+	   printf ("A new client connected from %x:%u.\n",
 		 event.peer -> address.host,
 		 event.peer -> address.port);
 	   break;
 	 }
-       case ENET_EVENT_TYPE_RECEIVE: 
+       case ENET_EVENT_TYPE_RECEIVE:
 	 {
 	   GenericMessage* genericMessage = (GenericMessage*) event.packet->data;
 
 	   if (genericMessage->type == LOOKUP_REQUEST) {
-	     
-	     LookupRequestMessage* lookupMessage = (LookupRequestMessage*) event.packet->data;		     
-	     
+
+	     LookupRequestMessage* lookupMessage = (LookupRequestMessage*) event.packet->data;
+
 	     LookupResponseMessage lookupResponseMessage;
-	     lookupResponseMessage.serverID = 
+	     lookupResponseMessage.serverID =
 	       lookup(Vector3f(lookupMessage->x, lookupMessage->y, lookupMessage->z));
-	     
+
 	     ENetPacket * packet = enet_packet_create (&lookupResponseMessage,
-						       sizeof(lookupResponseMessage), 
+						       sizeof(lookupResponseMessage),
 						       ENET_PACKET_FLAG_RELIABLE);
 	     enet_peer_send(event.peer, 0, packet);
 	   }
 	   else if (genericMessage->type == NUM_SERVERS_REQUEST) {
-	     NumServersRequestMessage* message = (NumServersRequestMessage*) event.packet->data;		     
-	     
+	     NumServersRequestMessage* message = (NumServersRequestMessage*) event.packet->data;
+
 	     NumServersResponseMessage responseMessage;
 	     responseMessage.numServers = numServers();
-	     
+
 	     ENetPacket * packet = enet_packet_create (&responseMessage,
-						       sizeof(responseMessage), 
+						       sizeof(responseMessage),
 						       ENET_PACKET_FLAG_RELIABLE);
-	     
+
 	     //printf("numServers returning=%d\n", responseMessage.numServers);
 	     enet_peer_send(event.peer, 0, packet);
 	   }
 	   else if (genericMessage->type == REGION_REQUEST) {
-	     RegionRequestMessage* message = (RegionRequestMessage*) event.packet->data;		     
-	     
+	     RegionRequestMessage* message = (RegionRequestMessage*) event.packet->data;
+
 	     RegionResponseMessage responseMessage;
 	     BoundingBox3f bbox = region();
 
@@ -229,16 +224,16 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
 
 	     responseMessage.bbox.maxX = bbox.max().x;
 	     responseMessage.bbox.maxY = bbox.max().y;
-	     responseMessage.bbox.maxZ = bbox.max().z;	     
-	     
+	     responseMessage.bbox.maxZ = bbox.max().z;
+
 	     ENetPacket * packet = enet_packet_create (&responseMessage,
-						       sizeof(responseMessage), 
+						       sizeof(responseMessage),
 						       ENET_PACKET_FLAG_RELIABLE);
 	     enet_peer_send(event.peer, 0, packet);
 	   }
 	   else if (genericMessage->type == SERVER_REGION_REQUEST) {
-	     ServerRegionRequestMessage* message = (ServerRegionRequestMessage*) event.packet->data;		     
-	     
+	     ServerRegionRequestMessage* message = (ServerRegionRequestMessage*) event.packet->data;
+
 	     ServerRegionResponseMessage responseMessage;
 	     BoundingBoxList bboxList = serverRegion(message->serverID);
 
@@ -248,37 +243,37 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
 	       responseMessage.bboxList[i].minX = bbox.min().x;
 	       responseMessage.bboxList[i].minY = bbox.min().y;
 	       responseMessage.bboxList[i].minZ = bbox.min().z;
-	       
+
 	       responseMessage.bboxList[i].maxX = bbox.max().x;
 	       responseMessage.bboxList[i].maxY = bbox.max().y;
-	       responseMessage.bboxList[i].maxZ = bbox.max().z;	     
+	       responseMessage.bboxList[i].maxZ = bbox.max().z;
 	     }
 
 	     responseMessage.listLength = bboxList.size();
-	     
+
 	     ENetPacket * packet = enet_packet_create (&responseMessage,
-						       sizeof(responseMessage), 
+						       sizeof(responseMessage),
 						       ENET_PACKET_FLAG_RELIABLE);
 	     enet_peer_send(event.peer, 0, packet);
 	   }
 	   else if (genericMessage->type == SEGMENTATION_LISTEN){
 	     mSpacePeers.push_back(event.peer);
 	   }
-	   
+
 	   /* Clean up the packet now that we're done using it. */
-	   enet_packet_destroy (event.packet);	   	   
+	   enet_packet_destroy (event.packet);
 	 }
 	 break;
 
        case ENET_EVENT_TYPE_DISCONNECT:
-	 {	   
+	 {
 	   for (std::vector<ENetPeer*>::iterator it=mSpacePeers.begin(); it!=mSpacePeers.end(); it++){
 	     if ( (*it) == event.peer) {
 	       mSpacePeers.erase(it);
 	       break;
 	     }
 	   }
-	   /* Reset the peer's client information. */	   
+	   /* Reset the peer's client information. */
 	   event.peer -> data = NULL;
 	 }
        }
@@ -295,9 +290,9 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
       break;
     }
   }
-  
-  if (availableSvrIndex !=65535 && t - mCurrentTime > Duration::seconds(30)) {
-    mCurrentTime = t;
+
+  if (availableSvrIndex !=65535 && t - mLastUpdateTime > Duration::seconds(30)) {
+    mLastUpdateTime = t;
     std::cout << "split\n";
 
     SegmentedRegion* randomLeaf = mTopLevelRegion.getRandomLeaf();
@@ -343,22 +338,22 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(std::vector<L
 {
   SegmentationChangeMessage segChangeMsg;
 
-  segChangeMsg.numEntries = (MAX_SERVER_REGIONS_CHANGED < segInfoVector.size()) 
+  segChangeMsg.numEntries = (MAX_SERVER_REGIONS_CHANGED < segInfoVector.size())
                            ? MAX_SERVER_REGIONS_CHANGED : segInfoVector.size();
 
   for (unsigned int i=0 ;i<MAX_SERVER_REGIONS_CHANGED && i<segInfoVector.size(); i++) {
-    
+
     SerializedSegmentChange* segmentChange = &segChangeMsg.changedSegments[i];
     segmentChange->serverID = segInfoVector[i].server;
     segmentChange->listLength = segInfoVector[i].region.size();
 
     for (unsigned int j=0; j<segInfoVector[i].region.size(); j++) {
       BoundingBox3f bbox = segInfoVector[i].region[j];
- 
+
       segmentChange->bboxList[j].minX = bbox.min().x;
       segmentChange->bboxList[j].minY = bbox.min().y;
       segmentChange->bboxList[j].minZ = bbox.min().z;
-      
+
       segmentChange->bboxList[j].maxX = bbox.max().x;
       segmentChange->bboxList[j].maxY = bbox.max().y;
       segmentChange->bboxList[j].maxZ = bbox.max().z;
@@ -366,17 +361,17 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(std::vector<L
   }
 
   ENetPacket * packet = enet_packet_create (&segChangeMsg,
-					    sizeof(segChangeMsg), 
+					    sizeof(segChangeMsg),
 					    ENET_PACKET_FLAG_RELIABLE);
-  
+
   for (std::vector<ENetPeer*>::const_iterator it=mSpacePeers.begin(); it!=mSpacePeers.end(); it++){
     enet_peer_send(*it, 0, packet);
   }
 }
 
 void DistributedCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
-  
- 
+
+
 }
 
 void DistributedCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {

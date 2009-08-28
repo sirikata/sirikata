@@ -42,7 +42,7 @@ namespace CBR {
  */
 class AlwaysLocationUpdatePolicy : public LocationUpdatePolicy {
 public:
-    AlwaysLocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router);
+    AlwaysLocationUpdatePolicy(LocationService* locservice);
     virtual ~AlwaysLocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid);
@@ -59,7 +59,7 @@ public:
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 
-    virtual void tick(const Time& t);
+    virtual void service();
 
 private:
     typedef std::set<UUID> UUIDSet;

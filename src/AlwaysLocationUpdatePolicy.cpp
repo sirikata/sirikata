@@ -35,8 +35,8 @@
 
 namespace CBR {
 
-AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router)
- : LocationUpdatePolicy(sid, locservice, router)
+AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(LocationService* locservice)
+ : LocationUpdatePolicy(locservice)
 {
 }
 
@@ -170,14 +170,14 @@ void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const Bo
     // FIXME need to fill in when this is handling object subscriptions
 }
 
-void AlwaysLocationUpdatePolicy::tick(const Time& t) {
+void AlwaysLocationUpdatePolicy::service() {
     std::list<ServerID> to_delete;
 
     for(ServerSubscriptionMap::iterator server_it = mServerSubscriptions.begin(); server_it != mServerSubscriptions.end(); server_it++) {
         ServerID sid = server_it->first;
         ServerSubscriberInfo* sub_info = server_it->second;
 
-        BulkLocationMessage* msg = new BulkLocationMessage(mID);
+        BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id);
 
         for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
             CBR::Protocol::Loc::ILocationUpdate update = msg->contents.add_update();
@@ -190,7 +190,7 @@ void AlwaysLocationUpdatePolicy::tick(const Time& t) {
 
         }
         if (msg->contents.update_size() > 0) {
-            mRouter->route(msg, sid);
+            mLocService->context()->router->route(msg, sid);
         }
 
         sub_info->outstandingUpdates.clear();

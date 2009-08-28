@@ -45,13 +45,14 @@ class ObjectFactory;
  */
 class OracleLocationService : public LocationService {
 public:
-    OracleLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace, ObjectFactory* objfactory);
+    OracleLocationService(SpaceContext* ctx, ObjectFactory* objfactory);
     // FIXME add constructor which can add all the objects being simulated to mLocations
 
     virtual bool contains(const UUID& uuid) const;
     virtual TrackingType type(const UUID& uuid) const;
 
-    virtual void tick(const Time& t);
+    virtual void service();
+
     virtual TimedMotionVector3f location(const UUID& uuid);
     virtual Vector3f currentPosition(const UUID& uuid);
     virtual BoundingSphere3f bounds(const UUID& uuid);
@@ -76,7 +77,6 @@ private:
     typedef std::map<UUID, LocationInfo> LocationMap;
 
     LocationMap mLocations;
-    Time mCurrentTime;
 
     typedef std::set<UUID> UUIDSet;
     UUIDSet mLocalObjects;

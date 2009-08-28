@@ -44,37 +44,33 @@ namespace CBR {
 
 
 
-CoordinateSegmentationClient::CoordinateSegmentationClient(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace)
-  : mServerID(server_id),
-    mMessageDispatcher(msg_source),
-    mMessageRouter(msg_router),
-    mCurrentTime(Time::null()),
-    mTrace(trace)
+CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
+ : CoordinateSegmentation(ctx)
 {
-  mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+  mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
   client = enet_host_create (NULL , 1, 0, 0);
-  
+
   if (client == NULL)
   {
-      printf ("An error occurred while trying to create an ENet client host.\n");      
+      printf ("An error occurred while trying to create an ENet client host.\n");
   }
 
   ENetAddress address;
   ENetEvent event;
 
-  // Connect to CSEG server 
+  // Connect to CSEG server
   enet_address_set_host (&address, "indus");
   address.port = 1234;
 
-  // Initiate the connection, allocating the two channels 0 and 1. 
-  peer = enet_host_connect (client, &address, 1);    
-  
+  // Initiate the connection, allocating the two channels 0 and 1.
+  peer = enet_host_connect (client, &address, 1);
+
   if (peer == NULL)
     {
-      printf ("No available peers for initiating an ENet connection.\n");      
+      printf ("No available peers for initiating an ENet connection.\n");
     }
 
   /* Wait up to 50 milliseconds for the connection attempt to succeed. */
@@ -89,20 +85,20 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(const ServerID server
         printf ("Connection to CSEG failed.\n");
     }
 
-  
+
   mSubscriptionClient = enet_host_create (NULL , 1, 0, 0);
-  
+
   if (mSubscriptionClient == NULL)
   {
-      printf ("An error occurred while trying to create the subscription client host.\n");      
-  }  
+      printf ("An error occurred while trying to create the subscription client host.\n");
+  }
 
-  // Initiate the connection, allocating the two channels 0 and 1. 
-  ENetPeer * subscriptionPeer = enet_host_connect (mSubscriptionClient, &address, 1);    
-  
+  // Initiate the connection, allocating the two channels 0 and 1.
+  ENetPeer * subscriptionPeer = enet_host_connect (mSubscriptionClient, &address, 1);
+
   if (subscriptionPeer == NULL)
   {
-      printf ("No available peers for initiating a subscription connection.\n");      
+      printf ("No available peers for initiating a subscription connection.\n");
   }
 
   /* Wait up to 50 milliseconds for the connection attempt to succeed. */
@@ -119,14 +115,14 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(const ServerID server
 
   SegmentationListenMessage slMessage;
   ENetPacket * packet = enet_packet_create (&slMessage,
-					    sizeof(slMessage), 
+					    sizeof(slMessage),
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(subscriptionPeer, 0, packet);
 }
 
 CoordinateSegmentationClient::~CoordinateSegmentationClient() {
-   mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+   mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
    enet_peer_disconnect (peer, 0);
 
@@ -135,14 +131,14 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 
 }
 
-ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const { 
+ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const {
   LookupRequestMessage lookupMessage;
   lookupMessage.x = pos.x;
   lookupMessage.y = pos.y;
-  lookupMessage.z = pos.z; 
+  lookupMessage.z = pos.z;
 
   ENetPacket * packet = enet_packet_create (&lookupMessage,
-					    sizeof(lookupMessage), 
+					    sizeof(lookupMessage),
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(peer, 0, packet);
@@ -154,8 +150,8 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const {
       //printf("lookupresponsetype=%d\n",  response->type);
 
       ServerID svrID = response->serverID;
-      
-      // Clean up the packet now that we're done using it. 
+
+      // Clean up the packet now that we're done using it.
       enet_packet_destroy (event.packet);
 
       return svrID;
@@ -168,11 +164,11 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const {
 BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& server) const
 {
   BoundingBoxList boundingBoxList;
-  
+
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
   ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage), 
+					    sizeof(requestMessage),
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(peer, 0, packet);
@@ -192,9 +188,9 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
 	boundingBoxList.push_back( BoundingBox3f(vmin, vmax) );
       }
-      
-      // Clean up the packet now that we're done using it. 
-      enet_packet_destroy (event.packet);      
+
+      // Clean up the packet now that we're done using it.
+      enet_packet_destroy (event.packet);
     }
   }
 
@@ -203,10 +199,10 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 
 BoundingBox3f CoordinateSegmentationClient::region() const {
   RegionRequestMessage requestMessage;
-  
-  
+
+
   ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage), 
+					    sizeof(requestMessage),
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(peer, 0, packet);
@@ -214,15 +210,15 @@ BoundingBox3f CoordinateSegmentationClient::region() const {
   ENetEvent event;
   if (enet_host_service (client, & event, 200) > 0) {
     if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      RegionResponseMessage* response = (RegionResponseMessage*) event.packet->data;   
+      RegionResponseMessage* response = (RegionResponseMessage*) event.packet->data;
       //      printf("regionresponsetype=%d\n",  response->type);
-      
+
       SerializedBBox region = response->bbox;
       Vector3f vmin (region.minX,region.minY,region.minZ);
-      Vector3f vmax (region.maxX,region.maxY,region.maxZ);   
+      Vector3f vmax (region.maxX,region.maxY,region.maxZ);
 
       BoundingBox3f bbox(vmin, vmax);
-      
+
       // Clean up the packet now that we're done using it.
       enet_packet_destroy (event.packet);
 
@@ -234,49 +230,49 @@ BoundingBox3f CoordinateSegmentationClient::region() const {
 }
 
 uint32 CoordinateSegmentationClient::numServers() const {
-  NumServersRequestMessage requestMessage;  
-  
+  NumServersRequestMessage requestMessage;
+
   ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage), 
+					    sizeof(requestMessage),
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(peer, 0, packet);
 
   ENetEvent event;
   if (enet_host_service (client, & event, 200) > 0) {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {      
-      NumServersResponseMessage* response = (NumServersResponseMessage*) event.packet->data;      
+    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
+      NumServersResponseMessage* response = (NumServersResponseMessage*) event.packet->data;
 
       int numServers = response->numServers;
       //      printf("numServers=%d, type=%d\n", numServers, response->type);
-      
+
       // Clean up the packet now that we're done using it.
       enet_packet_destroy (event.packet);
 
-      
+
       return numServers;
     }
   }
-  
+
   return 0;
 }
 
-void CoordinateSegmentationClient::tick(const Time& t) {
+void CoordinateSegmentationClient::service() {
   ENetEvent event;
-  ENetPacket* packet;  
+  ENetPacket* packet;
 
   if ( enet_host_service (mSubscriptionClient, & event,0) > 0)
   {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {     
+    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
       SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*)
-	                                                      event.packet->data;	
-      
+	                                                      event.packet->data;
+
       std::vector<Listener::SegmentationInfo> segInfoVector;
       for (int i=0; i<segChangeMessage->numEntries; i++) {
 	Listener::SegmentationInfo segInfo;
 	SerializedSegmentChange segChange = segChangeMessage->changedSegments[i];
 	BoundingBoxList bbList;
-	
+
 	for (unsigned int j=0; j < segChange.listLength; j++) {
 	  Vector3f vmin(segChange.bboxList[j].minX,
 			segChange.bboxList[j].minY,
@@ -289,7 +285,7 @@ void CoordinateSegmentationClient::tick(const Time& t) {
 	  BoundingBox3f bbox (vmin, vmax);
 	  bbList.push_back(bbox);
 	}
-	
+
 	segInfo.server = segChange.serverID;
 	segInfo.region = bbList;
 

@@ -38,10 +38,8 @@ namespace CBR {
 LocationServiceListener::~LocationServiceListener() {
 }
 
-LocationUpdatePolicy::LocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router)
- : mID(sid),
-   mLocService(locservice),
-   mRouter(router)
+LocationUpdatePolicy::LocationUpdatePolicy(LocationService* locservice)
+ : mLocService(locservice)
 {
     mLocService->addListener(this);
 }
@@ -50,24 +48,20 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 }
 
 
-LocationService::LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace)
- : mID(sid),
-   mTrace(trace),
-   mDispatcher(dispatcher)
+LocationService::LocationService(SpaceContext* ctx)
+ : mContext(ctx)
 {
-    mUpdatePolicy = new AlwaysLocationUpdatePolicy(sid, this, router);
+    mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
 
-    mDispatcher->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
-
-    mDispatcher->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+    mContext->dispatcher->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 LocationService::~LocationService() {
     delete mUpdatePolicy;
 
-    mDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
-
-    mDispatcher->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+    mContext->dispatcher->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {

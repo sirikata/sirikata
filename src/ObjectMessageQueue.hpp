@@ -76,7 +76,7 @@ public:
 protected:
 
   void serviceOSeg(const Time&t, std::map<UUID,ServerID>& updated){
-    mOSeg->tick(t, updated);
+    mOSeg->service(updated);
   }
 
     ServerMessageQueue *mServerMessageQueue;

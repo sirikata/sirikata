@@ -34,8 +34,7 @@
 #define _CBR_COORDINATE_SEGMENTATION_HPP_
 
 #include "Utility.hpp"
-#include "ServerNetwork.hpp"
-#include "Message.hpp"
+#include "SpaceContext.hpp"
 #include "LoadMonitor.hpp"
 
 namespace CBR {
@@ -61,7 +60,7 @@ public:
         virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) = 0;
     }; // class Listener
 
-
+    CoordinateSegmentation(SpaceContext* ctx);
     virtual ~CoordinateSegmentation() {}
 
     virtual ServerID lookup(const Vector3f& pos) const = 0;
@@ -75,13 +74,17 @@ public:
     // Callback from MessageDispatcher
     virtual void receiveMessage(Message* msg) = 0;
 
-    virtual void tick(const Time& t) = 0;
+    virtual void service() = 0;
 
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {  }
 
 protected:
     void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
+
+    SpaceContext* mContext;
 private:
+    CoordinateSegmentation();
+
     std::set<Listener*> mListeners;
 }; // class CoordinateSegmentation
 

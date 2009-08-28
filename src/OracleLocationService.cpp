@@ -35,9 +35,8 @@
 
 namespace CBR {
 
-OracleLocationService::OracleLocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace, ObjectFactory* objfactory)
- : LocationService(sid, router, dispatcher, trace),
-   mCurrentTime(Time::null()),
+OracleLocationService::OracleLocationService(SpaceContext* ctx, ObjectFactory* objfactory)
+ : LocationService(ctx),
    mLocalObjects(),
    mReplicaObjects(),
    mInitialNotification(false)
@@ -81,7 +80,9 @@ LocationService::TrackingType OracleLocationService::type(const UUID& uuid) cons
 }
 
 
-void OracleLocationService::tick(const Time& t) {
+void OracleLocationService::service() {
+    Time t = mContext->time;
+
     // Add an non-local objects as replicas.  We do this here instead of in the constructor
     // since we need to notify listeners, who would not have been subscribed yet. This is how
     // the real system would do it since it wouldn't find out about replicas until it talked to
@@ -116,8 +117,7 @@ void OracleLocationService::tick(const Time& t) {
     }
     // FIXME we should update bounds as well
 
-    mCurrentTime = t;
-    mUpdatePolicy->tick(t);
+    mUpdatePolicy->service();
 }
 
 TimedMotionVector3f OracleLocationService::location(const UUID& uuid) {
@@ -130,7 +130,7 @@ TimedMotionVector3f OracleLocationService::location(const UUID& uuid) {
 
 Vector3f OracleLocationService::currentPosition(const UUID& uuid) {
     TimedMotionVector3f loc = location(uuid);
-    return loc.extrapolate(mCurrentTime).position();
+    return loc.extrapolate(mContext->time).position();
 }
 
 BoundingSphere3f OracleLocationService::bounds(const UUID& uuid) {

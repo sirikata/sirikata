@@ -3,31 +3,26 @@
 #define _CBR_SERVER_HPP_
 
 #include "Utility.hpp"
-#include "LocationService.hpp"
-#include "Network.hpp"
-#include "ServerNetwork.hpp"
-#include "ForwarderUtilityClasses.hpp"
-#include "Forwarder.hpp"
+#include "SpaceContext.hpp"
 
 #include "ObjectSegmentation.hpp"
 
 namespace CBR
 {
+class Forwarder;
 
-  class Proximity;
-  class Object;
-  class ServerIDMap;
-  class CoordinateSegmentation;
-  class Message;
-  class ObjectToObjectMessage;
-  class ServerMessageQueue;
-  class ObjectMessageQueue;
-  class Network;
-  class Trace;
-  class MigrateMessage;
-  class LoadStatusMessage;
-  class LoadMonitor;
-  class Forwarder;
+class LocationService;
+class Proximity;
+
+class CoordinateSegmentation;
+
+// FIXME these are only passed to the forwarder...
+class ServerMessageQueue;
+class ObjectMessageQueue;
+
+class LoadMonitor;
+
+class ObjectConnection;
 
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
@@ -37,12 +32,10 @@ namespace CBR
 class Server : public MessageRecipient, public ObjectMessageRecipient
   {
   public:
-      Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace, ObjectSegmentation* oseg);
+      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg);
     ~Server();
 
-    const ServerID& id() const;
-
-    void tick(const Time& t);
+      void service();
 
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
@@ -58,9 +51,9 @@ class Server : public MessageRecipient, public ObjectMessageRecipient
 
       virtual void receiveMessage(Message* msg);
       virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
-  private:
-    void proximityTick(const Time& t);
-    void networkTick(const Time& t);
+private:
+    void serviceProximity();
+    void serviceNetwork();
     void checkObjectMigrations();
 
     // Handle Session messages from an object
@@ -72,12 +65,10 @@ class Server : public MessageRecipient, public ObjectMessageRecipient
 
     void handleMigration(const UUID& obj_id);
 
-    ServerID mID;
+      SpaceContext* mContext;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
-    Time mCurrentTime;
-    Trace* mTrace;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
 

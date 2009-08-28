@@ -48,14 +48,10 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace)
-  : mServerID(server_id),
-    mMessageDispatcher(msg_source),
-    mMessageRouter(msg_router),
-    mCurrentTime(Time::null()),
-    mTrace(trace)
+LBCoordinateSegmentation::LBCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
+ : CoordinateSegmentation(ctx)
 {
-    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
@@ -74,7 +70,7 @@ LBCoordinateSegmentation::LBCoordinateSegmentation(const ServerID server_id, con
 }
 
 LBCoordinateSegmentation::~LBCoordinateSegmentation() {
-    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   //delete all the SegmentedRegion objects created with 'new'
 }
@@ -118,8 +114,7 @@ uint32 LBCoordinateSegmentation::numServers() const {
   return count;
 }
 
-void LBCoordinateSegmentation::tick(const Time& t) {
-   mCurrentTime = t;
+void LBCoordinateSegmentation::service() {
 }
 
 BoundingBox3f LBCoordinateSegmentation::initRegion(const ServerID& server, const Vector3ui32& perdim) const {
@@ -160,7 +155,7 @@ void LBCoordinateSegmentation::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
   int numberOfRegions = ccMsg->contents.region_size();
 
-  //printf("%d received server_split_msg from %d for new server %d\n", mServerID, originID,
+  //printf("%d received server_split_msg from %d for new server %d\n", mContext->id, originID,
   // ccMsg->newServerID());
 
   SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(originID);
@@ -202,7 +197,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
 
     ServerID new_server = svrLoadInfo[0].mServerID;
 
-    SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mServerID);
+    SegmentedRegion* segRegion = mTopLevelRegion.lookupSegmentedRegion(mContext->id);
 
     segRegion->mChildrenCount = 2;
     segRegion->mChildren = new SegmentedRegion[2];
@@ -218,12 +213,12 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
     segRegion->mChildren[0].mBoundingBox = newBox1;
     segRegion->mChildren[1].mBoundingBox = newBox2;
 
-    segRegion->mChildren[0].mServer = mServerID;
+    segRegion->mChildren[0].mServer = mContext->id;
     segRegion->mChildren[1].mServer = new_server;
 
 
-    mTrace->segmentationChanged(mCurrentTime, newBox2, new_server);
-    printf("Server %d Splitting and migrating to new_server %d\n", mServerID, new_server);
+    mContext->trace->segmentationChanged(mContext->time, newBox2, new_server);
+    printf("Server %d Splitting and migrating to new_server %d\n", mContext->id, new_server);
 
     uint32 total_servers = numServers();
     std::vector<Listener::SegmentationInfo> segInfoVector;
@@ -246,13 +241,13 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
 
     printf("total_servers=%d\n", total_servers);
     for (uint32 i=1 ; i <= total_servers; i++) {
-      if (i != mServerID) {
+      if (i != mContext->id) {
 	printf("Sending server_split to %d\n", i);
 
-        CSegChangeMessage* msg = new CSegChangeMessage(mServerID);
+        CSegChangeMessage* msg = new CSegChangeMessage(mContext->id);
 
         CBR::Protocol::CSeg::ISplitRegion region0 = msg->contents.add_region();
-        region0.set_id((uint32)mServerID);
+        region0.set_id((uint32)mContext->id);
         region0.set_bounds(
             BoundingBox3d(Vector3d(newBox1.min()), Vector3d(newBox1.max()))
         );
@@ -263,7 +258,7 @@ void LBCoordinateSegmentation::migrationHint( std::vector<ServerLoadInfo>& svrLo
             BoundingBox3d(Vector3d(newBox2.min()), Vector3d(newBox2.max()))
         );
 
-        mMessageRouter->route(msg, i);
+        mContext->router->route(msg, i);
       }
     }
   }

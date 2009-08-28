@@ -26,20 +26,18 @@
 namespace CBR
 {
 
-Server::Server(ServerID id, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Trace* trace,ObjectSegmentation* oseg)
-    : mID(id),
-      mLocationService(loc_service),
-      mCSeg(cseg),
-      mProximity(prox),
-      mCurrentTime(Time::null()),
-      mTrace(trace),
-      mOSeg(oseg),
-      mForwarder(forwarder)
-  {
+Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg)
+ : mContext(ctx),
+   mLocationService(loc_service),
+   mCSeg(cseg),
+   mProximity(prox),
+   mOSeg(oseg),
+   mForwarder(forwarder)
+{
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
       mForwarder->registerObjectMessageRecipient(OBJECT_PORT_SESSION, this);
 
-    mForwarder->initialize(trace,cseg,oseg,loc_service,omq,smq,lm,&mCurrentTime, mProximity);    //run initialization for forwarder
+    mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
 
   }
 
@@ -66,25 +64,21 @@ Server::~Server()
     mObjects.clear();
 }
 
-const ServerID& Server::id() const {
-    return mID;
-}
-
-void Server::networkTick(const Time&t)
+void Server::serviceNetwork()
 {
-  mForwarder->tick(t);
+    mForwarder->service();
 
   // Tick all active connections
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
       ObjectConnection* conn = it->second;
-      conn->tick(t);
+      conn->tick(mContext->time);
   }
 
   // Tick closing object connections, deleting them when they are
   ObjectConnectionSet persistingConnections;
   for(ObjectConnectionSet::iterator it = mClosingConnections.begin(); it != mClosingConnections.end(); it++) {
       ObjectConnection* conn = *it;
-      conn->tick(t);
+      conn->tick(mContext->time);
       if (conn->empty())
           delete conn;
       else
@@ -151,7 +145,7 @@ void Server::handleConnect(ObjectConnection* conn, const CBR::Protocol::Session:
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
     //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mID);
+    mOSeg->addObject(obj_id, mContext->id);
     // Register proximity query
     mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
     // Allow the forwarder to send to ship messages to this connection
@@ -246,11 +240,11 @@ void Server::handleMigration(const UUID& obj_id) {
     mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
 
     //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mID);
-    
+    mOSeg->addObject(obj_id, mContext->id);
+
     //    mOSeg->addObject(obj_id,migrate_msg->id());
     //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-    
+
 //     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
 //     Message* oseg_ack_msg;
 //     //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
@@ -259,7 +253,7 @@ void Server::handleMigration(const UUID& obj_id) {
 //     if (oseg_ack_msg != NULL)
 //         mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
 
-    
+
     // Finally, subscribe the object for proximity queries
     mProximity->addQuery(obj_id, obj_query_angle);
 
@@ -272,45 +266,27 @@ void Server::handleMigration(const UUID& obj_id) {
     mObjectMigrations.erase(migration_map_it);
 }
 
-void Server::tick(const Time& t)
-{
-  mCurrentTime = t;
-
-  // Update object locations
-  mLocationService->tick(t);
-
-  // Check proximity updates
-  proximityTick(t);
-  networkTick(t);
-  // Check for object migrations
-  checkObjectMigrations();
-
-
-  
-//   // Give objects a chance to process
-//   for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
-//   {
-//     Object* obj = it->second;
-//     obj->tick(t);
-//   }
-
+void Server::service() {
+    mLocationService->service();
+    serviceProximity();
+    serviceNetwork();
+    checkObjectMigrations();
 }
 
-void Server::proximityTick(const Time& t)
-{
+void Server::serviceProximity() {
     // If we have global introduction, then we can just ignore proximity evaluation.
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
         return;
 
   // Check for proximity updates
   std::queue<ProximityEventInfo> proximity_events;
-  mProximity->evaluate(t, proximity_events);
+  mProximity->service(proximity_events);
 
   while(!proximity_events.empty())
   {
     ProximityEventInfo& evt = proximity_events.front();
     CBR::Protocol::Prox::ProximityResults prox_results;
-    prox_results.set_t(t);
+    prox_results.set_t(mContext->time);
     if (evt.type() == ProximityEventInfo::Entered) {
         CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
         addition.set_object( evt.object() );
@@ -334,7 +310,7 @@ void Server::proximityTick(const Time& t)
     obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
     obj_msg->set_dest_object(evt.query());
     obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
-    obj_msg->set_unique(GenerateUniqueID(id()));
+    obj_msg->set_unique(GenerateUniqueID(mContext->id));
     obj_msg->set_payload( serializePBJMessage(prox_results) );
 
     mForwarder->route(obj_msg);
@@ -351,7 +327,7 @@ void Server::checkObjectMigrations()
     //     to reinstantiate the object there
     // * delete object on this side
 
-  
+
   std::vector<UUID> migrated_objects;
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
   {
@@ -361,8 +337,8 @@ void Server::checkObjectMigrations()
     Vector3f obj_pos = mLocationService->currentPosition(obj_id);
     ServerID new_server_id = lookup(obj_pos);
 
-        
-    if (new_server_id != mID)
+
+    if (new_server_id != mContext->id)
     {
       // FIXME While we're working on the transition to a separate object host
       // we do 2 things when we detect a server boundary crossing:
@@ -370,7 +346,7 @@ void Server::checkObjectMigrations()
       //    transition to the new server
       // 2. Generate the migrate message which contains the current state of
       //    the object which will be reconstituted on the other space server.
-      
+
 
       // Part 1
       CBR::Protocol::Session::Container session_msg;
@@ -381,31 +357,31 @@ void Server::checkObjectMigrations()
       init_migr_obj_msg->set_source_port(OBJECT_PORT_SESSION);
       init_migr_obj_msg->set_dest_object(obj_id);
       init_migr_obj_msg->set_dest_port(OBJECT_PORT_SESSION);
-      init_migr_obj_msg->set_unique(GenerateUniqueID(id()));
+      init_migr_obj_msg->set_unique(GenerateUniqueID(mContext->id));
       init_migr_obj_msg->set_payload( serializePBJMessage(session_msg) );
       obj_conn->deliver(*init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
       delete init_migr_obj_msg;
       //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
-      
+
       // Part 2
-      
+
       //means that we're migrating from this server to another
       //bftm
       mOSeg->migrateObject(obj_id,new_server_id);
-      //says that 
-          
+      //says that
+
 
 
       // Send out the migrate message
-      MigrateMessage* migrate_msg = new MigrateMessage(id());
-      migrate_msg->contents.set_source_server(this->id());
+      MigrateMessage* migrate_msg = new MigrateMessage(mContext->id);
+      migrate_msg->contents.set_source_server(mContext->id);
       obj_conn->fillMigrateMessage(migrate_msg);
 
 
 
       // Stop any proximity queries for this object
       mProximity->removeQuery(obj_id);
-      
+
       // Stop tracking the object locally
       mLocationService->removeLocalObject(obj_id);
 
@@ -416,7 +392,7 @@ void Server::checkObjectMigrations()
       // connection, destroy said connection
       ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
       mClosingConnections.insert(migrated_conn);
-      
+
       migrated_objects.push_back(obj_id);
     }
   }

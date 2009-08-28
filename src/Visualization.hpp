@@ -10,11 +10,11 @@ class LocationService;
 class CoordinateSegmentation;
 class LocationVisualization :public LocationErrorAnalysis {
     CoordinateSegmentation*mSeg;
+    SpaceContext* mSpaceContext;
     ObjectFactory*mFactory;
     UUID mObserver;
     EventList* mObservedEvents;
     EventList::iterator mCurEvent;
-    Time mCurTime;
     Duration mSamplingRate;
     typedef std::tr1::unordered_map<UUID,TimedMotionVector3f,UUID::Hasher> VisibilityMap;
     VisibilityMap mVisible;
@@ -31,7 +31,7 @@ class LocationVisualization :public LocationErrorAnalysis {
     void displayError(const Duration& sampling_rate);
 public:
     void mainLoop();
-    LocationVisualization(const char *opt_name, const uint32 nservers, ObjectFactory*obj_factory, CoordinateSegmentation*cseg);
+    LocationVisualization(const char *opt_name, const uint32 nservers, SpaceContext* space_context, ObjectFactory*obj_factory, CoordinateSegmentation*cseg);
     void displayError(const UUID&observer, const Duration& sampling_rate);
     void displayError(const ServerID&observer, const Duration& sampling_rate);
 

@@ -48,7 +48,7 @@ typedef struct ServerAvailability  {
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class DistributedCoordinateSegmentation : public CoordinateSegmentation {
 public:
-    DistributedCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, MessageRouter*, Trace*, int);
+    DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int);
     virtual ~DistributedCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -56,7 +56,7 @@ public:
     virtual BoundingBox3f region() const;
     virtual uint32 numServers() const;
 
-    virtual void tick(const Time& t);
+    virtual void service();
 
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
@@ -69,18 +69,13 @@ private:
 
     void notifySpaceServersOfChange(std::vector<Listener::SegmentationInfo>& segInfoVector);
 
-    ServerID mServerID;
-    MessageDispatcher* mMessageDispatcher;
-    MessageRouter* mMessageRouter;
-
     SegmentedRegion mTopLevelRegion;
-    Time mCurrentTime;
-    Trace* mTrace;
+    Time mLastUpdateTime;
 
     ENetHost * server;
     std::vector<ENetPeer*> mSpacePeers;
-    std::vector<ServerAvailability> mAvailableServers; 
-   
+    std::vector<ServerAvailability> mAvailableServers;
+
 }; // class CoordinateSegmentation
 
 } // namespace CBR

@@ -44,7 +44,7 @@ namespace CBR {
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class CoordinateSegmentationClient : public CoordinateSegmentation {
 public:
-    CoordinateSegmentationClient(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, MessageRouter*, Trace*);
+    CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
     virtual ~CoordinateSegmentationClient();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -52,7 +52,7 @@ public:
     virtual BoundingBox3f region() const;
     virtual uint32 numServers() const;
 
-    virtual void tick(const Time& t);
+    virtual void service();
 
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
@@ -63,12 +63,7 @@ private:
 
     void csegChangeMessage(CSegChangeMessage* ccMsg);
 
-    ServerID mServerID;
-    MessageDispatcher* mMessageDispatcher;
-    MessageRouter* mMessageRouter;
-
     SegmentedRegion mTopLevelRegion;
-    Time mCurrentTime;
     Trace* mTrace;
 
     ENetHost * client;

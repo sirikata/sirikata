@@ -4,6 +4,7 @@
 
 
 #include "Utility.hpp"
+#include "SpaceContext.hpp"
 #include "Message.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
@@ -35,8 +36,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       std::deque<OutgoingMessage> mOutgoingMessages; //will be used in route.
 
 
+      SpaceContext* mContext;
+
     //Shared with server
-      Trace* mTrace;  //will be used in several places.
       CoordinateSegmentation* mCSeg;
       ObjectSegmentation* mOSeg;
       LocationService* mLocationService;
@@ -44,17 +46,16 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ServerMessageQueue* mServerMessageQueue;
       LoadMonitor* mLoadMonitor;
       Proximity* mProximity;
-      ServerID m_serv_ID;//Keeps copy of server id on forwarder.  necessary for sending messages to objects.
 
-      Time* mCurrentTime;
+
 
       typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
       std::map<UUID,ObjectMessageList> mObjectsInTransit;
       typedef std::vector<ObjMessQBeginSend> ObjMessQBeginSendList;
       std::map<UUID,ObjMessQBeginSendList> queueMap;
 
-    
-    
+
+
       Time mLastSampleTime;
       Duration mSampleRate;
 
@@ -71,16 +72,14 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ServerID lookup(const Vector3f&); //returns the server id that is responsible for the 3d point Vector3f
       ServerID lookup(const UUID&); //
       void tickOSeg(const Time&t);
-      const ServerID& serv_id() const; //used to access server id of the processes
-
 
 
     public:
-      Forwarder(ServerID id);
+      Forwarder(SpaceContext* ctx);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(Trace* trace, CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Time* currTime, Proximity* prox);
+      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Proximity* prox);
 
-      void tick(const Time&t);
+      void service();
 
 
       // Routing interface for servers.  This is used to route messages that originate from

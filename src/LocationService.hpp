@@ -34,9 +34,9 @@
 #define _CBR_LOCATION_SERVICE_HPP_
 
 #include "Utility.hpp"
+#include "SpaceContext.hpp"
 #include "MotionVector.hpp"
 #include "Message.hpp"
-#include "Statistics.hpp"
 
 namespace CBR {
 
@@ -68,7 +68,7 @@ public:
  */
 class LocationUpdatePolicy : public LocationServiceListener{
 public:
-    LocationUpdatePolicy(ServerID sid, LocationService* locservice, MessageRouter* router);
+    LocationUpdatePolicy(LocationService* locservice);
     virtual ~LocationUpdatePolicy();
 
     virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
@@ -85,12 +85,10 @@ public:
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) = 0;
 
-    virtual void tick(const Time& t) = 0;
+    virtual void service() = 0;
 
 protected:
-    ServerID mID;
     LocationService* mLocService; // The owner of this UpdatePolicy
-    MessageRouter* mRouter;
 }; // class LocationUpdatePolicy
 
 
@@ -105,10 +103,14 @@ public:
         Replica
     };
 
-    LocationService(ServerID sid, MessageRouter* router, MessageDispatcher* dispatcher, Trace* trace);
+    LocationService(SpaceContext* ctx);
     virtual ~LocationService();
 
-    virtual void tick(const Time& t) = 0;
+    const SpaceContext* context() const {
+        return mContext;
+    }
+
+    virtual void service() = 0;
 
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
@@ -154,14 +156,12 @@ protected:
     void notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
     void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
 
-    ServerID mID;
-    Trace* mTrace;
+    SpaceContext* mContext;
 
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;
 
     LocationUpdatePolicy* mUpdatePolicy;
-    MessageDispatcher* mDispatcher;
 }; // class LocationService
 
 } // namespace CBR

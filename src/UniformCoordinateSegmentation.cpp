@@ -47,12 +47,12 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source)
- : mRegion(region),
-   mServersPerDim(perdim),
-   mMessageDispatcher(msg_source)
+UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
+ : CoordinateSegmentation(ctx),
+   mRegion(region),
+   mServersPerDim(perdim)
 {
-    mMessageDispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   /* Read in the file which maintains how the layout of the region
      changes at different times. */
@@ -107,7 +107,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(const BoundingBox3f
 }
 
 UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {
-    mMessageDispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 }
 
 ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
@@ -161,11 +161,13 @@ uint32 UniformCoordinateSegmentation::numServers() const {
     return mServersPerDim.x * mServersPerDim.y * mServersPerDim.z;
 }
 
-void UniformCoordinateSegmentation::tick(const Time& t) {
+void UniformCoordinateSegmentation::service() {
   /* Short-circuited the code for changing the layout at run-time for now
      but its been tested and it works.
    */
   return;
+
+  Time t = mContext->time;
 
   /* The following code changes the segmentation/layout of the region.*/
 
