@@ -209,7 +209,7 @@ void Forwarder::service()
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
     mObjectMessageQueue->service(t);
-    mServerMessageQueue->service(t);
+    mServerMessageQueue->service();
 
 
     Sirikata::Network::Chunk *c=NULL;

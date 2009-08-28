@@ -5,29 +5,29 @@
 #include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 
-FIFOServerMessageQueue::FIFOServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
- : ServerMessageQueue(net, sid, sidmap, trace),
+FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second)
+ : ServerMessageQueue(ctx, net, sidmap),
    mQueue(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>() * 32), //FIXME * nobjects?
    mReceiveQueues(),
    mSendRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
    mRemainderRecvBytes(0),
-   mLastTime(Time::null()),
-   mLastSendEndTime(Time::null()),
-   mLastReceiveEndTime(Time::null())
+   mLastSendEndTime(mContext->time),
+   mLastReceiveEndTime(mContext->time)
 {
 }
 
 bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mSourceServer == destinationServer) {
+    if (mContext->id == destinationServer) {
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(msg);
-        csp.source = mSourceServer;
+        csp.source = mContext->id;
 
         mReceiveQueue.push(csp);
         return true;
@@ -36,7 +36,7 @@ bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network
     // Otherwise, attach the header and push it to the network
     uint32 offset = 0;
     Network::Chunk with_header;
-    ServerMessageHeader server_header(mSourceServer, destinationServer);
+    ServerMessageHeader server_header(mContext->id, destinationServer);
     offset = server_header.serialize(with_header, offset);
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
@@ -60,9 +60,9 @@ bool FIFOServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
     return true;
 }
 
-void FIFOServerMessageQueue::service(const Time& t){
-    uint64 send_bytes = (t - mLastTime).toSeconds() * mSendRate + mRemainderSendBytes;
-    uint64 recv_bytes = (t - mLastTime).toSeconds() * mRecvRate + mRemainderRecvBytes;
+void FIFOServerMessageQueue::service(){
+    uint64 send_bytes = mContext->sinceLast.toSeconds() * mSendRate + mRemainderSendBytes;
+    uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderRecvBytes;
 
     // Send
 
@@ -84,14 +84,14 @@ void FIFOServerMessageQueue::service(const Time& t){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mTrace->serverDatagramSent(start_time, end_time, 1, next_msg->dest(), next_msg->data());
+        mContext->trace->serverDatagramSent(start_time, end_time, 1, next_msg->dest(), next_msg->data());
 
         delete next_msg;
     }
 
     if (!sent_success || mQueue.empty()) {
         mRemainderSendBytes = 0;
-        mLastSendEndTime = t;
+        mLastSendEndTime = mContext->time;
     }
     else {
         mRemainderSendBytes = send_bytes;
@@ -114,7 +114,7 @@ void FIFOServerMessageQueue::service(const Time& t){
 
         /*
            FIXME at some point we should record this here instead of in Server.cpp
-        mTrace->serverDatagramReceived();
+        mContext->trace->serverDatagramReceived();
         */
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(next_msg->data());
@@ -126,14 +126,12 @@ void FIFOServerMessageQueue::service(const Time& t){
 
     if (mReceiveQueues.empty()) {
         mRemainderRecvBytes = 0;
-        mLastReceiveEndTime = t;
+        mLastReceiveEndTime = mContext->time;
     }
     else {
         mRemainderRecvBytes = recv_bytes;
         //mLastReceiveEndTime = already recorded, last end receive time
     }
-
-    mLastTime = t;
 }
 
 void FIFOServerMessageQueue::setServerWeight(ServerID sid, float weight) {
@@ -148,7 +146,7 @@ void FIFOServerMessageQueue::reportQueueInfo(const Time& t) const {
         float tx_weight = 0;
         uint32 rx_size = 0, rx_used = 0; // no values make sense here since we're not limiting at all
         float rx_weight = 0;
-        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+        mContext->trace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     }
 }
 

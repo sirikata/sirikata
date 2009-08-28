@@ -22,7 +22,6 @@ protected:
     FairQueue<ServerMessagePair, ServerID, Queue<ServerMessagePair*>, CanSendPredicate > mServerQueues;
     FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
-    Time mLastTime;
     uint32 mRate;
     uint32 mRecvRate;
     uint32 mRemainderSendBytes;
@@ -39,11 +38,11 @@ protected:
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
 
-    FairServerMessageQueue(Network*net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
+    FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
-    virtual void service(const Time&t);
+    virtual void service();
 
     virtual void setServerWeight(ServerID, float weight);
 

@@ -22,7 +22,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
     fromBegin.dest_uuid = msg->dest_object();
 
     Network::Chunk chunk;
-    ObjectMessage obj_msg(mServerMessageQueue->getSourceServer(), *msg);
+    ObjectMessage obj_msg(mServerMessageQueue->context()->id, *msg);
     obj_msg.serialize(chunk, 0);
 
     ServerMessagePair* smp = new ServerMessagePair(NULL, chunk, obj_msg.id());

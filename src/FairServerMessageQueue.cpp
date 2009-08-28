@@ -4,6 +4,7 @@
 #include "FairServerMessageQueue.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
+#include "Statistics.hpp"
 
 namespace CBR{
 
@@ -12,11 +13,10 @@ bool FairServerMessageQueue::CanSendPredicate::operator()(const ServerID& key, c
 }
 
 
-FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
- : ServerMessageQueue(net, sid, sidmap, trace),
+FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second)
+ : ServerMessageQueue(ctx, net, sidmap),
    mServerQueues( CanSendPredicate(this) ),
    mReceiveQueues(),
-   mLastTime(Time::null()),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
@@ -28,18 +28,18 @@ FairServerMessageQueue::FairServerMessageQueue(Network* net, uint32 send_bytes_p
 
 bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mSourceServer == destinationServer) {
+    if (mContext->id == destinationServer) {
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(msg);
-        csp.source = mSourceServer;
+        csp.source = mContext->id;
 
         mReceiveQueue.push(csp);
         return true;
     }
-    assert(destinationServer!=mSourceServer);
+    assert(destinationServer!=mContext->id);
     uint32 offset = 0;
     Network::Chunk with_header;
-    ServerMessageHeader server_header(mSourceServer, destinationServer);
+    ServerMessageHeader server_header(mContext->id, destinationServer);
     offset = server_header.serialize(with_header, offset);
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
@@ -70,9 +70,9 @@ bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
     return mNetwork->canSend(*addy,next_msg->data(),false,true,1);
 }
 
-void FairServerMessageQueue::service(const Time&t){
-    uint64 send_bytes = (t - mLastTime).toSeconds() * mRate + mRemainderSendBytes;
-    uint64 recv_bytes = (t - mLastTime).toSeconds() * mRecvRate + mRemainderReceiveBytes;
+void FairServerMessageQueue::service(){
+    uint64 send_bytes = mContext->sinceLast.toSeconds() * mRate + mRemainderSendBytes;
+    uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Send
 
@@ -99,7 +99,7 @@ void FairServerMessageQueue::service(const Time&t){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mTrace->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
+        mContext->trace->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
                                    next_msg->dest(), next_msg->data());
 
 
@@ -108,7 +108,7 @@ void FairServerMessageQueue::service(const Time&t){
 
     if (!sent_success || mServerQueues.empty()) {
         mRemainderSendBytes = 0;
-        mLastSendEndTime = t;
+        mLastSendEndTime = mContext->time;
     }
     else {
         // NOTE: we used to just leave mLastSendEndTime at the last time recorded since the leftover
@@ -125,7 +125,7 @@ void FairServerMessageQueue::service(const Time&t){
         }
         else {
             mRemainderSendBytes = 0;
-            mLastSendEndTime = t;
+            mLastSendEndTime = mContext->time;
         }
     }
 
@@ -144,7 +144,7 @@ void FairServerMessageQueue::service(const Time&t){
 
         /*
            FIXME at some point we should record this here instead of in Server.cpp
-        mTrace->serverDatagramReceived();
+        mContext->trace->serverDatagramReceived();
         */
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(next_msg->data());
@@ -156,16 +156,13 @@ void FairServerMessageQueue::service(const Time&t){
 
     if (mReceiveQueues.empty()) {
         mRemainderReceiveBytes = 0;
-        mLastReceiveEndTime = t;
+        mLastReceiveEndTime = mContext->time;
     }
     else {
         mRemainderReceiveBytes = recv_bytes;
         //mLastReceiveEndTime = already recorded, last end receive time
     }
 
-
-
-    mLastTime = t;
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
@@ -200,7 +197,7 @@ void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
         float tx_weight = mServerQueues.getQueueWeight(*it);
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
         float rx_weight = mReceiveQueues.getQueueWeight(*it);
-        mTrace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+        mContext->trace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     }
 }
 

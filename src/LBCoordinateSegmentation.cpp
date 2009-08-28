@@ -37,7 +37,7 @@
 #include "Options.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
-
+#include "Statistics.hpp"
 
 namespace CBR {
 

@@ -95,7 +95,7 @@ void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Nor
     }
     mSendQueue->setServerWeight(dest, result);
 
-    printf("src_server=%d, dest=%d, weight=%f\n", mSendQueue->getSourceServer(), dest, result );
+    printf("src_server=%d, dest=%d, weight=%f\n", source, dest, result );
 }
 
 } // namespace CBR

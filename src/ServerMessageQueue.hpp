@@ -2,10 +2,10 @@
 #define _CBR_SENDQUEUE_HPP
 
 #include "Utility.hpp"
+#include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 #include "ServerIDMap.hpp"
-#include "Statistics.hpp"
 
 namespace CBR{
 
@@ -13,12 +13,12 @@ typedef struct QueueInfo{
   uint32 mTXSize;
   uint32 mTXUsed;
   float mTXWeight;
-  
+
   uint32 mRXSize;
   uint32 mRXUsed;
   float mRXWeight;
 
-  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight, 
+  QueueInfo(uint32 tx_size, uint32 tx_used, float tx_weight,
 	    uint32 rx_size, uint32 rx_used, float rx_weight
 	   )
   {
@@ -30,20 +30,19 @@ typedef struct QueueInfo{
     mRXUsed = rx_used;
     mRXWeight = rx_weight;
   }
-  
+
 
 } QueueInfo;
 
 class ServerMessageQueue {
 public:
-    ServerMessageQueue(Network* net, const ServerID& sid, ServerIDMap* sidmap, Trace* trace)
-     : mNetwork(net),
-       mSourceServer(sid),
-       mServerIDMap(sidmap),
-       mTrace(trace)
+    ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap)
+     : mContext(ctx),
+       mNetwork(net),
+       mServerIDMap(sidmap)
     {
         // start the network listening
-        Address4* listen_addy = mServerIDMap->lookup(mSourceServer);
+        Address4* listen_addy = mServerIDMap->lookup(mContext->id);
         assert(listen_addy != NULL);
         net->listen(*listen_addy);
     }
@@ -51,20 +50,21 @@ public:
     virtual ~ServerMessageQueue(){}
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg)=0;
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out) = 0;
-    virtual void service(const Time& t)=0;
+
+    virtual void service() = 0;
+
+    const SpaceContext* context() const { return mContext; }
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;
-    ServerID getSourceServer()const{return mSourceServer;}
 
     virtual void reportQueueInfo(const Time& t) const = 0;
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
 
 protected:
+    SpaceContext* mContext;
     Network* mNetwork;
-    ServerID mSourceServer;
     ServerIDMap* mServerIDMap;
-    Trace* mTrace;
 };
 }
 

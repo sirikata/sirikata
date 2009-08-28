@@ -19,7 +19,6 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     uint32 mRecvRate;
     uint32 mRemainderSendBytes;
     uint32 mRemainderRecvBytes;
-    Time mLastTime;
     Time mLastSendEndTime; // the time at which the last send ended, if there are messages that are too big left in the queue
     Time mLastReceiveEndTime; // the time at which the last receive ended, if there are messages that are too big left in the queue
 
@@ -31,10 +30,11 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     };
     std::queue<ChunkSourcePair> mReceiveQueue;
 public:
-    FIFOServerMessageQueue(Network* net, uint32 send_bytes_per_second, uint32 recv_bytes_per_second, const ServerID& sid, ServerIDMap* sidmap, Trace* trace);
+    FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
+
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
-    virtual void service(const Time& t);
+    virtual void service();
 
     virtual void setServerWeight(ServerID sid, float weight);
 

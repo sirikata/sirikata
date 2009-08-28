@@ -62,12 +62,14 @@ public:
     void tick(const Time& t) {
         lastTime = time;
         time = t;
+        sinceLast = time - lastTime;
     }
 
     ServerID id;
 
     Time lastTime;
     Time time;
+    Duration sinceLast;
 
     MessageRouter* router;
     MessageDispatcher* dispatcher;
