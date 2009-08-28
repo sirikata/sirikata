@@ -3,7 +3,6 @@
 
 #include "Utility.hpp"
 #include "Statistics.hpp"
-#include "ObjectSegmentation.hpp"
 
 namespace CBR{
 class ServerMessageQueue;
@@ -19,9 +18,8 @@ struct ObjMessQBeginSend
 
 class ObjectMessageQueue {
 public:
-    ObjectMessageQueue(ServerMessageQueue*sm, ObjectSegmentation* oseg, Trace* trace)
+    ObjectMessageQueue(ServerMessageQueue*sm, Trace* trace)
       : mServerMessageQueue(sm),
-        mOSeg(oseg),
         mTrace(trace)
     {}
 
@@ -75,12 +73,7 @@ public:
 
 protected:
 
-  void serviceOSeg(const Time&t, std::map<UUID,ServerID>& updated){
-    mOSeg->service(updated);
-  }
-
     ServerMessageQueue *mServerMessageQueue;
-    ObjectSegmentation* mOSeg;
     Trace* mTrace;
 };
 }

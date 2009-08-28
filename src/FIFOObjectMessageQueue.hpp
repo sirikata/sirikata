@@ -11,7 +11,7 @@ namespace CBR{
 class FIFOObjectMessageQueue:public ObjectMessageQueue {
 public:
 
-    FIFOObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace);
+    FIFOObjectMessageQueue(ServerMessageQueue* sm, Trace* trace, uint32 bytes_per_second);
     virtual ~FIFOObjectMessageQueue(){}
 
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );

@@ -8,8 +8,8 @@
 
 namespace CBR {
 
-FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* oseg, uint32 bytes_per_second, Trace* trace)
- : ObjectMessageQueue(sm, oseg, trace),
+FIFOObjectMessageQueue::FIFOObjectMessageQueue(ServerMessageQueue* sm, Trace* trace, uint32 bytes_per_second)
+ : ObjectMessageQueue(sm, trace),
    mQueue(GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>() * 32), // FIXME * numObjects?
    mLastTime(Time::null()),
    mRate(bytes_per_second),

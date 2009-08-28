@@ -26,7 +26,7 @@ protected:
     uint32 mRemainderBytes;
 public:
 
-    FairObjectMessageQueue(ServerMessageQueue* sm, ObjectSegmentation* cseg, uint32 bytes_per_second, Trace* trace);
+    FairObjectMessageQueue(ServerMessageQueue* sm, Trace* trace, uint32 bytes_per_second);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);
