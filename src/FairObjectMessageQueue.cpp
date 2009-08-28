@@ -6,11 +6,12 @@
 #include "FairObjectMessageQueue.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
+#include "Statistics.hpp"
+
 namespace CBR{
-template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(ServerMessageQueue* sm, Trace* trace, uint32 bytes_per_second)
- : ObjectMessageQueue(sm, trace),
+template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second)
+ : ObjectMessageQueue(ctx, sm),
    mClientQueues( HasDestServerCanSendPredicate(this) ),
-   mLastTime(Time::null()),
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
@@ -22,7 +23,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
     fromBegin.dest_uuid = msg->dest_object();
 
     Network::Chunk chunk;
-    ObjectMessage obj_msg(mServerMessageQueue->context()->id, *msg);
+    ObjectMessage obj_msg(mContext->id, *msg);
     obj_msg.serialize(chunk, 0);
 
     ServerMessagePair* smp = new ServerMessagePair(NULL, chunk, obj_msg.id());
@@ -46,10 +47,10 @@ template <class Queue> void FairObjectMessageQueue<Queue>::endSend(const ObjMess
 
 
 
-template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t){
+template <class Queue> void FairObjectMessageQueue<Queue>::service(){
     aggregateLocationMessages();
 
-    uint64 bytes = mRate * (t - mLastTime).toSeconds() + mRemainderBytes;
+    uint64 bytes = mRate * mContext->sinceLast.toSeconds() + mRemainderBytes;
 
     ServerMessagePair* next_msg = NULL;
     UUID objectName;
@@ -65,7 +66,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
             }
 */
         }else {
-            mTrace->serverDatagramQueued(t, next_msg->dest(), next_msg->id(), next_msg->data().size());
+            mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->data().size());
 
             mClientQueues.reprioritize(objectName,1.0,.0625,0,1);
             ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
@@ -75,7 +76,6 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(const Time&t)
     }
 
     mRemainderBytes = mClientQueues.empty() ? 0 : bytes;
-    mLastTime = t;
 }
 
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const UUID& sid, float weight) {

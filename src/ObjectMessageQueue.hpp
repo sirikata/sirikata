@@ -2,7 +2,7 @@
 #define _CBR_OBJECT_MESSAGE_QUEUE_HPP
 
 #include "Utility.hpp"
-#include "Statistics.hpp"
+#include "SpaceContext.hpp"
 
 namespace CBR{
 class ServerMessageQueue;
@@ -18,9 +18,9 @@ struct ObjMessQBeginSend
 
 class ObjectMessageQueue {
 public:
-    ObjectMessageQueue(ServerMessageQueue*sm, Trace* trace)
-      : mServerMessageQueue(sm),
-        mTrace(trace)
+    ObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue*sm)
+     : mContext(ctx),
+       mServerMessageQueue(sm)
     {}
 
     virtual ~ObjectMessageQueue(){}
@@ -28,7 +28,7 @@ public:
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& ) = 0;
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id) = 0;
 
-    virtual void service(const Time& t)=0;
+    virtual void service()=0;
 
     virtual void registerClient(const UUID& oid, float weight=1) = 0;
     virtual void unregisterClient(const UUID& oid) = 0;
@@ -72,9 +72,8 @@ public:
     };
 
 protected:
-
+    SpaceContext* mContext;
     ServerMessageQueue *mServerMessageQueue;
-    Trace* mTrace;
 };
 }
 #endif

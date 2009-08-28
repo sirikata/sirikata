@@ -436,13 +436,13 @@ void *main_loop(void *) {
     ObjectMessageQueue* oq = NULL;
     String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
     if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(sq, gTrace, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FIFOObjectMessageQueue(space_context, sq, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<ObjectMessageQueue::ServerMessagePair*> > (sq, gTrace, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<Queue<ObjectMessageQueue::ServerMessagePair*> > (space_context, sq, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<ObjectMessageQueue::ServerMessagePair*> > (sq, gTrace, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<LossyQueue<ObjectMessageQueue::ServerMessagePair*> > (space_context, sq, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<ObjectMessageQueue::ServerMessagePair*,ServerID > >(sq, gTrace, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<ObjectMessageQueue::ServerMessagePair*,ServerID > >(space_context, sq, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else {
         assert(false);
         exit(-1);

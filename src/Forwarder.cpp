@@ -208,7 +208,7 @@ void Forwarder::service()
     }
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    mObjectMessageQueue->service(t);
+    mObjectMessageQueue->service();
     mServerMessageQueue->service();
 
 

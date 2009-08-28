@@ -53,8 +53,6 @@ public:
 
     virtual void service() = 0;
 
-    const SpaceContext* context() const { return mContext; }
-
     virtual void setServerWeight(ServerID sid, float weight) = 0;
 
     virtual void reportQueueInfo(const Time& t) const = 0;

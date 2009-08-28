@@ -21,12 +21,11 @@ protected:
     };
 
     FairQueue<ServerMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
-    Time mLastTime;
     uint32 mRate;
     uint32 mRemainderBytes;
 public:
 
-    FairObjectMessageQueue(ServerMessageQueue* sm, Trace* trace, uint32 bytes_per_second);
+    FairObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);
@@ -35,7 +34,7 @@ public:
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
 
 
-    virtual void service(const Time&t);
+    virtual void service();
 
 protected:
     virtual void aggregateLocationMessages() { }

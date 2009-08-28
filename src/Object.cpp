@@ -35,6 +35,7 @@
 #include "ObjectMessageQueue.hpp"
 #include "Random.hpp"
 #include "ObjectFactory.hpp"
+#include "Statistics.hpp"
 
 namespace CBR {
 
