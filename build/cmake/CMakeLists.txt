@@ -239,7 +239,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/ObjectHost.cpp
-  ${CBR_SOURCE_DIR}/ObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
