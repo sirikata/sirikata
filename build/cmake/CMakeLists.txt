@@ -216,7 +216,7 @@ INCLUDE_DIRECTORIES(BEFORE
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/Analysis.cpp
-  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp #  ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
@@ -259,7 +259,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/TimeSync.cpp
-  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp #${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
