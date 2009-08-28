@@ -12,9 +12,9 @@ build/cmake/cbr
 build/cmake/serverip*
 scripts/serverip*
 # trace files
-build/cmake/sync*
+build/cmake/sync*.txt
 build/cmake/trace*
-scripts/sync*
+scripts/sync*.txt
 scripts/trace*
 # analysis files
 build/cmake/*.dat

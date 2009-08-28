@@ -259,6 +259,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
+  ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp #${CBR_SOURCE_DIR}/UniformObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
