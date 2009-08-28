@@ -28,6 +28,11 @@ build/cmake/moc*
 build/cmake/__/
 src/moc*
 
+# protobuf files
+build/cmake/protobuf_CBR.txt
+build/cmake/temp.cs
+protocol/CBR_*
+
 # dependencies directory
 dependencies
 
