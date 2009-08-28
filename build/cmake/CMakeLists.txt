@@ -787,7 +787,7 @@ IF(MONO_FOUND)
                    COMMAND ${GMCS_EXECUTABLE} -debug
                                      -target:library
                                      -out:${SirikataProtoScriptRuntime_LIBRARY}
-                                     -warn:2
+                                     -warn:2 -nowarn:3021
                                      -r:${PROTOCOLBUFFERS_BIN_DIRS}/Google.ProtocolBuffers.dll
                                      ${SirikataProtoScriptSources}
                    DEPENDS ${SirikataProtoScriptSources}

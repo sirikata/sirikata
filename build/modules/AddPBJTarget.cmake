@@ -1,6 +1,7 @@
 # AddPBJTarget.cmake
 # ADD_PBJ_TARGET - sets up targets to compile pbj -> idl -> cpp.
 # Note: Currently expects PROTOCOLBUFFERS_COMPILER to be defined.
+# Note: Currently expects PROTOCOLBUFFERS_MONO_COMPILER to be defined if PBJ_GENERATE_CSHARP active.
 # Note: Currently expects PBJ_RUNABLE to be defined.
 #
 # Takes a list of files .
@@ -90,15 +91,25 @@ MACRO(ADD_PBJ_TARGET)
       SET(PBJ_PBJCS_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.pbj.cs)
       SET(PBJ_PBJCS_FILES ${PBJ_PBJCS_FILES} ${PBJ_PBJCS_FILE})
       SET(PBJ_CS_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.cs)
+      SET(PBJ_PROTOBIN_FILE ${ScriptsRoot}/csharp/protocol/${FILE}.protobin)
       SET(PBJ_CS_FILES ${PBJ_CS_FILES} ${PBJ_CS_FILE})
       SET(PBJ_OUTPUTS ${PBJ_CS_FILE} ${PBJ_PBJCS_FILE})
       SET(PBJ_ALL_OUTPUTS ${PBJ_ALL_OUTPUTS} ${PBJ_OUTPUTS})
-      SET(PBJ_CS_OPTIONS ${PBJ_CS_OPTIONS} --csharp_out=${ScriptsRoot}/csharp/protocol/)
-      ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_CS_FILE}
+      SET(PBJ_CS_OPTIONS --descriptor_set_out=${PBJ_PROTOBIN_FILE})
+      ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_PROTOBIN_FILE}
                          COMMAND ${PROTOCOLBUFFERS_COMPILER} -I${PBJ_OUTPUTDIR}
                                  ${PBJ_CS_OPTIONS} ${PBJ_PROTO_FILE}
                          DEPENDS ${PBJ_PROTO_FILE} ${PBJ_DEPENDS}
-                         COMMENT "Building ${PBJ_PROTO_FILE} -> ${PBJ_CS_FILE}")
+                         COMMENT "Building ${PBJ_PROTO_FILE} -> ${PBJ_PROTOBIN_FILE}")
+      ADD_CUSTOM_COMMAND(OUTPUT ${FILE}.cs
+                         COMMAND ${MONO_EXECUTABLE} ${PROTOCOLBUFFERS_MONO_COMPILER} ${PBJ_PROTOBIN_FILE}
+                         DEPENDS ${PBJ_PROTOBIN_FILE} ${PBJ_PROTO_FILE} ${PBJ_DEPENDS}
+                         COMMENT "Building ${PBJ_PROTOBIN_FILE} -> ${FILE}.cs")
+      ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_CS_FILE}
+                         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FILE}.cs ${PBJ_CS_FILE}
+                         DEPENDS ${FILE}.cs ${PBJ_PROTOBIN_FILE} ${PBJ_PROTO_FILE} ${PBJ_DEPENDS}
+                         COMMENT "Final copy of generated C# file to ${PBJ_CS_FILE}")
+
     ENDIF()
 
     IF(PBJ_GENERATE_PYTHON)
@@ -140,7 +151,7 @@ MACRO(ADD_PBJ_TARGET)
     ADD_CUSTOM_COMMAND(OUTPUT ${PBJ_OUTPUTCPPFILE}
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PBJ_GenFile} ${PBJ_OUTPUTCPPFILE}
                        DEPENDS ${PBJ_CPP_FILES}
-                       COMMENT "Creating protocol buffers cpp file")
+                       COMMENT "Checking ${PBJ_OUTPUTCPPFILE}")
   ENDIF()
   # else, this is for a scripting language
 
