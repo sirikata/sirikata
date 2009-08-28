@@ -122,7 +122,7 @@ class ClusterSim:
         cmd += "--send-bandwidth=" + str(self.settings.tx_bandwidth) + " "
         cmd += "--receive-bandwidth=" + str(self.settings.rx_bandwidth) + " "
         cmd += "--wait-until=" + "\"" + wait_until_time + "\" "
-        cmd += "--wait-additional=6 "
+        cmd += "--wait-additional=6s "
         cmd += "--flatness=" + str(self.settings.flatness) + " "
         cmd += "--capexcessbandwidth=false "
         cmd += "--objects=" + str(self.settings.num_objects) + " "

@@ -476,18 +476,19 @@ void *main_loop(void *) {
     float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
 
-    ///////////Wait until start of simulation/////////////////////
-
-
+    // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
-        Duration waiting_time=Duration::seconds(GetOption("wait-additional")->as<float>());
-        if (GetOption("wait-until")->as<String>().length()) {
-            waiting_time+=(Timer::getSpecifiedDate(GetOption("wait-until")->as<String>())-Timer::now());
+        String start_time_str = GetOption("wait-until")->as<String>();
+        Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+
+        start_time += GetOption("wait-additional")->as<Duration>();
+
+        Time now_time = Timer::now();
+        if (start_time > now_time) {
+            Duration sleep_time = start_time - now_time;
+            printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
+            usleep( sleep_time.toMicroseconds() );
         }
-        float32 waitin=waiting_time.toMilliseconds();
-        printf ("waiting for %f seconds\n",waitin/1000.);
-        if (waitin>0)
-            usleep(waitin*1000.);
     }
 
     ///////////Go go go!! start of simulation/////////////////////
