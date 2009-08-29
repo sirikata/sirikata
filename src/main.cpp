@@ -397,26 +397,36 @@ void *main_loop(void *) {
       ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
 
 
-
       //alternate craq approach
+//       std::vector<UUID> initServObjVec;
+//       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
+//       {
+//         UUID obj_id = *it;
+//         Vector3f start_pos = loc_service->currentPosition(obj_id);
 
-//     std::vector<CraqInitializeArgs> craqArgs;
-//     CraqInitializeArgs cInitArgs;
-//     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
-//     cInitArgs.port    =      "4999";
+//         if (cseg->lookup(start_pos) == server_id)
+//         {
+//           initServObjVec.push_back(obj_id);
 
-//     craqArgs.push_back(cInitArgs);
-//     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
-//     cInitArgs.port    =      "4998";
-//     craqArgs.push_back(cInitArgs);
+//           std::cout<<obj_id.toString()<<"\n";
+          
+//         }
+//       }
 
-//     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
-
-
+      
+//      std::vector<CraqInitializeArgs> craqArgs;
+//      CraqInitializeArgs cInitArgs;
+//      cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//      cInitArgs.port    =      "4999";
+    
+//      craqArgs.push_back(cInitArgs);
+//      cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//      cInitArgs.port    =      "4998";
+//      craqArgs.push_back(cInitArgs);
+    
+//      ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
 
       //end create oseg
-
-
 
 
       //end alternate craq approach

@@ -305,16 +305,16 @@ void Server::handleMigration(const UUID& obj_id) {
     mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
 
     //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mContext->id);
+    ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
+    mOSeg->addObject(obj_id, idOSegAckTo);
 
-    //    mOSeg->addObject(obj_id,migrate_msg->id());
-    //We also send an oseg message to the server that the object was formerly hosted on.  This is an acknwoledge message that says, we're handling the object now...that's going to be the server with the origin tag affixed.
-
-//     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
 //     Message* oseg_ack_msg;
 //     //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
 //     oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
 
+    
+//    std::cout<<"\n\n   bftm debug: this is id from migrate message:  "<< migrate_msg->source_server <<"\n\n";
+    
 //     if (oseg_ack_msg != NULL)
 //         mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
 
