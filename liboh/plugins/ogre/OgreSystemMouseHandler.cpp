@@ -658,13 +658,21 @@ private:
         std::cout << "input path name for import: " << std::endl;
         std::string filename;
         // a bit of a cludge right now, type name into console.
+        std::vector<std::string> files;
         fflush(stdin);
         while (!feof(stdin)) {
             int c = fgetc(stdin);
             if (c == '\r') {
                 c = fgetc(stdin);
             }
+            if (c==' ') {
+                files.push_back(filename);
+                filename="";
+                std::cout << '\n';
+                continue;
+            }
             if (c=='\n') {
+                files.push_back(filename);
                 break;
             }
             if (c=='\033' || c <= 0) {
@@ -675,8 +683,6 @@ private:
             filename += (unsigned char)c;
         }
         std::cout << '\n';
-        std::vector<std::string> files;
-        files.push_back(filename);
         mParent->mInputManager->filesDropped(files);
     }
 
