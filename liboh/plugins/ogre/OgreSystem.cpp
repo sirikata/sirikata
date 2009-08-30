@@ -863,7 +863,8 @@ void OgreSystem::uploadFinished(UploadStatusMap &uploadStatus)
             if ((*iter).first.mType == Meru::MESH) {
                 Time now(SpaceTimeOffsetManager::getSingleton().now(mPrimaryCamera->id().space()));
                 SpaceObjectReference newId = SpaceObjectReference(mPrimaryCamera->id().space(), ObjectReference(UUID::random()));
-                Location loc = mPrimaryCamera->getProxy().globalLocation(now);
+                Location loc (mPrimaryCamera->getProxy().globalLocation(now).getPosition(), Quaternion::identity(),
+                              Vector3f::nil(), Vector3f(0,1,0), 0);
                 float scale = mInputManager->mWorldScale->as<float>();
                 loc.setPosition(loc.getPosition()+Vector3d(-scale*loc.getOrientation().zAxis())); // z-axis is backwards.
                 ProxyManager *proxyMgr = mPrimaryCamera->getProxy().getProxyManager();
