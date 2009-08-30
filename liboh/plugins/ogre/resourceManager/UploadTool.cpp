@@ -1150,12 +1150,12 @@ void UploadFilesAndConfirmReplacement(::Sirikata::Transfer::TransferManager*tm,
         if (current.mID.context() == hashContext) {
             tm->uploadByHash(Transfer::RemoteFileId(current.mHash, current.mID),
                        current.mData,
-                       std::tr1::bind(&UploadFinished, status, current, _1),false);
+                       std::tr1::bind(&UploadFinished, status, current, _1),true);
         } else {
             tm->upload(current.mID,
                        Transfer::RemoteFileId(current.mHash, hashContext),
                        current.mData,
-                       std::tr1::bind(&UploadFinished, status, current, _1),false);
+                       std::tr1::bind(&UploadFinished, status, current, _1),true);
         }
     }
 }
