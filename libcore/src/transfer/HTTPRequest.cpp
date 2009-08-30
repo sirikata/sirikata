@@ -127,13 +127,13 @@ void HTTPRequest::gotHeader(const std::string &header) {
 		istr >> ver >> code;
 		if (code) {
 			if (code == 200 && (!mRequestedRange.goesToEndOfFile() || mRequestedRange.startbyte() != 0)) {
-				SILOG(transfer,debug,"Server does not support partial content for " << mURI);
+				SILOG(transfer,insane,"Server does not support partial content for " << mURI);
 				mRequestedRange = Range(true); // Server is giving us the whole file.
 				mData->setBase(0);
 				mData->setLength(0, true);
 			}
 			mStatusCode = code;
-			SILOG(transfer,debug,"Got status " << code << " (" << ver << ") for "<<mURI);
+			SILOG(transfer,insane,"Got status " << code << " (" << ver << ") for "<<mURI);
 		}
 		return;
 	}

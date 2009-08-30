@@ -68,7 +68,7 @@ protected:
 		mFreeSpace += oldsize;
 		mFreeSpace -= newsize;
 		oss << "; free space is now " << mFreeSpace << ".";
-		SILOG(transfer,debug,oss.str());
+		SILOG(transfer,insane,oss.str());
 	}
 
 public:
@@ -135,10 +135,10 @@ public:
 			return false;
 		}
 		if ((double)requiredSpace >= (double)mTotalSize * mMaxSizePct) {
-			SILOG(transfer,debug,"[CachePolicy] Rejecting allocation for " << requiredSpace << " bytes of " << mFreeSpace << " free");
+			SILOG(transfer,insane,"[CachePolicy] Rejecting allocation for " << requiredSpace << " bytes of " << mFreeSpace << " free");
 			return false;
 		}
-		SILOG(transfer,debug,"[CachePolicy] Need to allocate " << requiredSpace << " bytes of " << mFreeSpace << " free");
+		SILOG(transfer,insane,"[CachePolicy] Need to allocate " << requiredSpace << " bytes of " << mFreeSpace << " free");
 		return true;
 	}
 

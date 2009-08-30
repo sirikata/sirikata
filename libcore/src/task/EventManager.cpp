@@ -70,16 +70,16 @@ struct EventManager<T>::ListenerUnsubRequest : public WorkItem {
 
 		typename RemoveMap::iterator iter = mParent->mRemoveById.find(mListenerId);
 		if (iter == mParent->mRemoveById.end()) {
-			SILOG(task,warning,"Double-Unsubscribe for removeId " << mListenerId);
+			SILOG(task,insane,"Double-Unsubscribe for removeId " << mListenerId);
 		} else {
 			EventSubscriptionInfo &subInfo = (*iter).second;
-			SILOG(task,debug,"**** Unsubscribe " << mListenerId);
+			SILOG(task,insane,"**** Unsubscribe " << mListenerId);
 			if (mNotifyListener) {
 				(*subInfo.mIter).first(EventPtr());
 			}
 			subInfo.mList->erase(subInfo.mIter);
 			if (subInfo.secondaryMap) {
-				SILOG(task,debug," with Secondary ID " <<
+				SILOG(task,insane," with Secondary ID " <<
 						  subInfo.secondaryId << std::endl << "\t");
 				typename SecondaryListenerMap::iterator deleteIter =
 					subInfo.secondaryMap->find(subInfo.secondaryId);
@@ -407,7 +407,7 @@ bool EventManager<T>::cleanUp(
 		isEmpty = isEmpty && (*slm_iter).second->get(i).empty();
 	}
 	if (isEmpty) {
-		SILOG(task,debug,"[Cleaning up Secondary ID " << (*slm_iter).first << "]");
+		SILOG(task,insane,"[Cleaning up Secondary ID " << (*slm_iter).first << "]");
 		delete (*slm_iter).second;
 		slm->erase(slm_iter);
 	}
