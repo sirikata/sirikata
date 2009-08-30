@@ -86,8 +86,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     UUID tmper = obj_id;
     std::map<UUID,ServerID>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
+
     //    mContext->trace->objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
+    std::cout<<"\n\n Got into a craq lookup\n\n";
+    
 
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
@@ -96,7 +99,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
       mapDataKeyToUUID[tmper.rawHexData()] = tmper;
-      std::cout<<"\n\nIn craq lookup: this is tmperId:   "<<tmper.toString()<<"\n\n";
+      //      std::cout<<"\n\nIn craq lookup: this is tmperId:   "<<tmper.toString()<<"\n\n";
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
     }
@@ -226,7 +229,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
-    std::cout<<"\n\nGot into a tick for craqobjectseg\n\n";
     std::vector<CraqOperationResult> getResults;
     std::vector<CraqOperationResult> trackedSetResults;
     craqDht.tick(getResults,trackedSetResults);

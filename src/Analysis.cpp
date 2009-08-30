@@ -245,6 +245,8 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
           evt = obj_lookupReq_evt;
 
+          std::cout<<"\n\nbftm debug in analysis.cpp:   got an objseglookupreqanaltag\n\n";
+          
         }
         break;
       case Trace::ObjectSegmentationProcessedRequestAnalysisTag:

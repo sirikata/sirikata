@@ -308,10 +308,10 @@ void Server::handleMigration(const UUID& obj_id) {
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
     mOSeg->addObject(obj_id, idOSegAckTo);
 
+    
 //     Message* oseg_ack_msg;
 //     //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
 //     oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
-
     
 //    std::cout<<"\n\n   bftm debug: this is id from migrate message:  "<< migrate_msg->source_server <<"\n\n";
     
