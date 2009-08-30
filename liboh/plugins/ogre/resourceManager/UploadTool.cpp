@@ -394,9 +394,6 @@ public:
                                            Ogre::String::size_type &return_lexeme_end,
                                            const Ogre::String &filename){
   String extension;
-  if (input.length() > where_lexeme_start+8 && input.substr(where_lexeme_start,8)=="delegate") {
-    extension = ".program";
-  }
   find_lexeme(input,where_lexeme_start,return_lexeme_end);
   if (where_lexeme_start<return_lexeme_end) {
     Ogre::String provided=input.substr(where_lexeme_start,return_lexeme_end-where_lexeme_start);
@@ -630,6 +627,15 @@ public:
                                            Ogre::String::size_type where_lexeme_start,
                                            Ogre::String::size_type &return_lexeme_end,
                                            const Ogre::String &filename){
+
+  String extension;
+  std::string::size_type last_newline = input.rfind('\n', where_lexeme_start);
+  if (last_newline > 0 && last_newline != std::string::npos && where_lexeme_start+8 < input.length()) {
+      if (input.substr(last_newline, where_lexeme_start+8-last_newline-1).find("delegate")!=std::string::npos) {
+          extension = ".program";
+      }
+  }
+
     find_lexeme(input,where_lexeme_start,return_lexeme_end);
     if (where_lexeme_start<return_lexeme_end) {
       Ogre::String depended=input.substr(where_lexeme_start,return_lexeme_end-where_lexeme_start);
@@ -645,22 +651,22 @@ public:
           my_dependencies->files.insert(where->second);
           return '\"'+getFileURI(where->second,*username)+':'+depended+'\"';
         }else {
-              /*
-          depends_on.push_back(depended);
 
-          DependencyPair * other_dep=getFileData(depended,*username);
+          return eliminateFilename(filename,depended);
+        }
+      }else if (!extension.empty()) {
+          depends_on.push_back(depended);
+          DiskFile wheresecond (DiskFile::makediskfile(depended+extension));
+          std::cerr << " ****** Delegate does not exist ******: "<<(depended+extension)<<std::endl;
+
+          DependencyPair * other_dep=getFileData(wheresecond,*username);
           if (other_dep == NULL) {
           }
           my_dependencies->files.insert(other_dep->files.begin(),other_dep->files.end());
-          my_dependencies->files.insert(depended);
-          overarching_dependencies->insert(
-          return '\"'+getFileURI(depended,*username)+':'+depended+'\"';
-
-               */
-           return eliminateFilename(filename,depended);
-        }
-      }else {
-        return depended;
+          my_dependencies->files.insert(wheresecond);
+          return '\"'+getFileURI(wheresecond,*username)+':'+depended+'\"';
+      } else {
+          return depended;
       }
     }else {
       return Ogre::String();
@@ -1029,7 +1035,7 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
                 if (fhandle.good()) {
                     input = Ogre::DataStreamPtr(new Ogre::FileStreamDataStream(&fhandle,false));
                 } else {
-                    fprintf(stderr, "Error: File %s does not exist!\n", filenames[i].diskpath().c_str());
+                    fprintf(stderr, "Error: Dependent File %s does not exist!\n", filenames[i].diskpath().c_str());
                     filenames.erase(filenames.begin()+i);
                     --i;
                 }
