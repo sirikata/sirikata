@@ -832,7 +832,7 @@ bool replaceOne(DenseDataPtr &dataptr, DiskFile src, String strippedsrc, String 
 }
 void replaceAll(DenseDataPtr &data, FileMap &filemap, const MaterialMap&materialmap, DependencyPair&my_dependencies, ReplaceMaterialOptionsAndReturn &opts,bool allow_binary) {
     for (FileMap::iterator i=filemap.begin(),ie=filemap.end();i!=ie;++i) {
-        if (i->second->mType != MATERIAL) {
+        if (i->second->mType != MATERIAL && i->second->mType != MESH) {
             if (replaceOne(data,i->first,std::string(),getFileURI(i->first, opts),filemap,materialmap,opts, true,allow_binary)) {
                 my_dependencies.files.insert(i->first);
                 DependencyPair *dp=i->second;
@@ -896,11 +896,18 @@ bool find_all_files_from_file( std::string mesh_path,         // in this directo
                                std::vector<boost::filesystem::path> & path_found )            // placing path here if found
 {
     std::string::size_type where=mesh_path.find_last_of("\\/");
+    std::string mesh_dir;
     if (where==std::string::npos) {
-        where=1;
-        mesh_path="./"+mesh_path;
+        mesh_dir="..";
+    } else {
+        mesh_dir=mesh_path.substr(0,where);
+        where=mesh_dir.find_last_of("\\/");
+        if (where == std::string::npos) {
+            mesh_dir = "..";
+        } else {
+            mesh_dir = mesh_dir.substr(0,where);
+        }
     }
-    std::string mesh_dir=mesh_path.substr(0,where)+"/..";
     return find_all_files(mesh_dir,
                           file_name,
                           path_found);
@@ -920,6 +927,7 @@ std::vector<ResourceFileUpload> ProcessOgreMeshMaterialDependencies(const std::v
           printf ("Evaluating %s:",temp.c_str());
           if (boost::filesystem::extension(*i)==".os"||
               boost::filesystem::extension(*i)==".material"||
+              boost::filesystem::extension(*i)==".mesh"||
               boost::filesystem::extension(*i)==".program") {
               filenames.push_back(DiskFile::makediskfile(i->string()));
               printf("ok\n");
