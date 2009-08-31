@@ -302,63 +302,6 @@ private:
 
 
 
-//   class OSegMigrateMessage : public Message
-//   {
-//   public:
-//     enum OSegMigrateAction {CREATE,KILL,MOVE,ACKNOWLEDGE};
-
-//     OSegMigrateMessage(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id, OSegMigrateAction action);
-//     ~OSegMigrateMessage();
-
-//     virtual MessageType type() const;
-//     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
-//     ServerID            getServFrom();
-//     ServerID            getServTo();
-//     UUID                getObjID();
-//     OSegMigrateAction   getAction();
-//     ServerID            getMessageDestination();
-//     ServerID            getMessageFrom();
-
-
-//   private:
-//     friend class Message;
-//     OSegMigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-//     ServerID mServID_from, mServID_to, mMessageDestination, mMessageFrom; //need from so know where to send acknowledge back to.
-//     UUID mObjID;
-//     OSegMigrateAction mAction;
-
-//   };
-
-
-//   class OSegLookupMessage : public Message
-//   {
-//   public:
-//     enum OSegLookupAction {I_HAVE_IT, WHERE_IS_IT};
-
-//     OSegLookupMessage(const ServerID& origin,ServerID sID_seeker, ServerID sID_keeper, UUID obj_id, OSegLookupAction action);
-//     ~OSegLookupMessage();
-
-//     virtual MessageType type() const;
-//     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
-//     ServerID getSeeker();
-//     ServerID getKeeper();
-//     UUID     getObjID();
-//     OSegLookupAction getAction();
-
-//   private:
-//     friend class Message;
-//     OSegLookupMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-//     ServerID mSeeker,mKeeper; //seeker represents the server that is looking for the object.  keeper represents the server that has the object.
-//     UUID mObjID; //the id of the object that we are looking for.
-//     OSegLookupAction mAction; //are we posting that we're looking for something or that we have something?
-
-//   };
-
-
-
   //end oseg message
 
 

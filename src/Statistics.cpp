@@ -45,8 +45,8 @@
 #define TRACE_OSEG
 //#define TRACE_CSEG
 #define TRACE_MIGRATION
-#define TRACE_DATAGRAM
-#define TRACE_PACKET
+//#define TRACE_DATAGRAM
+//#define TRACE_PACKET
 
 
 namespace CBR {
@@ -340,17 +340,11 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 
   void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
-
-    std::cout<<"bftm debug: in statistics.cpp under object segmentation lookup request initial \n\n";
-    
 #ifdef TRACE_OSEG
-
-    std::cout<<"bftm debug: in statistics.cpp under object segmentation lookup request 1 \n\n";
     
     if (mShuttingDown) return;
 
-    std::cout<<"bftm debug: in statistics.cpp under object segmentation lookup request 2 \n\n";
-    
+
     data.write(&ObjectSegmentationLookupRequestAnalysisTag, sizeof(ObjectSegmentationLookupRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));

@@ -23,7 +23,6 @@ namespace CBR
     SpaceContext* mContext;
 
 
-
   public:
       ObjectSegmentation(SpaceContext* ctx)
        : mContext(ctx)
@@ -35,17 +34,10 @@ namespace CBR
     virtual void lookup(const UUID& obj_id) = 0;// const = 0;
     virtual void service(std::map<UUID,ServerID>& updated) = 0;
 
+
+
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
-
     virtual void addObject(const UUID& obj_id, const ServerID ourID) = 0;
-
-
-    //    virtual  Message* generateAcknowledgeMessage(const UUID& obj_id,ServerID sID_to) = 0;
-    //    virtual void addObject(const UUID& obj_id, const ServerID ourID, const ServerID) = 0;
-    //    virtual void addObject(const UUID& obj_id, Object* obj, const ServerID idServerAckTo) = 0;
-    //    virtual void processLookupMessage(OSegLookupMessage* msg) = 0; //no longer need to do this on account of not having oseg lookup messages.
-    //    virtual Message* generateAcknowledgeMessage(Object* obj,ServerID sID_to) = 0;
-
 
   };
 }

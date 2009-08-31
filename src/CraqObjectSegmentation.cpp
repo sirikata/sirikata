@@ -7,10 +7,6 @@
 #include <vector>
 #include "Statistics.hpp"
 #include "Timer.hpp"
-
-//#include "oseg_dht/Bamboo.hpp"
-//#include "oseg_dht/gateway_prot.h"
-//#include "DhtObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
 #include "craq_oseg/asyncCraq.hpp"
 #include "craq_oseg/asyncUtil.hpp"
@@ -58,6 +54,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mContext->id,false,CraqDataSetGet::SET);
       craqDht.set(cdSetGet);
       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
+
+      mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
+      
     }
 
     //50 ticks to update
@@ -79,17 +78,44 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
 
   /*
+    This function checks to see whether the obj_id is hosted on this space server
+  */
+  bool CraqObjectSegmentation::checkOwn(const UUID& obj_id)
+  {
+    //    std::vector<UUID>::const_iterator iter  = mObjects.find(obj_id);
+    //    if (iter == mObjects.end())
+    
+    if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
+    {
+      //means that the object isn't hosted on this space server
+      return false;
+    }
+
+    //means that the object *is* hosted on this space server
+    //need to queue the result as a response.
+    mFinishedMoveOrLookup[obj_id]= mID;
+    
+    return true;  
+  }
+
+  /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
   void CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
+    
+     if (checkOwn(obj_id))  //this call just checks through
+     {
+       return;
+     }
+
+    
     UUID tmper = obj_id;
     std::map<UUID,ServerID>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
 
     //    mContext->trace->objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
-    std::cout<<"\n\n Got into a craq lookup\n\n";
     
 
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
@@ -99,7 +125,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
       mapDataKeyToUUID[tmper.rawHexData()] = tmper;
-      //      std::cout<<"\n\nIn craq lookup: this is tmperId:   "<<tmper.toString()<<"\n\n";
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
     }
@@ -108,7 +133,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   /*
     This creates an acknowledge message to be sent out through forwarder.  Acknowledge message says that this oseg now knows that it's in charge of the object obj, acknowledge message recipient is sID_to.
   */
-  //  OSegMigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
+
   OSegMigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to)
   {
     //    const UUID& obj_id = obj->uuid();
@@ -118,15 +143,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     return oseg_ack_msg;
   }
 
-
-//   OSegMigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(Object* obj,ServerID sID_to)
-//   {
-//     const UUID& obj_id = obj->uuid();
-
-//     OSegMigrateMessageAcknowledge* oseg_ack_msg = new OSegMigrateMessageAcknowledge(mContext->id,  mContext->id,  sID_to, sID_to,    mContext->id,obj_id);
-//                                                     //origin,id_from, id_to,   messDest  messFrom   obj_id   osegaction
-//     return oseg_ack_msg;
-//   }
 
 
   /*
@@ -143,7 +159,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     Generates an acknowledge message.  Only sends the acknowledge message when the trackId has been returned by
        --really need to think about this.
   */
-  //  void CraqObjectSegmentation::addObject(const UUID& obj_id, Object* obj, const ServerID idServerAckTo)
   void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo)
   {
     CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
@@ -164,40 +179,29 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const ServerID new_server_id)
   {
-    printf("\n\n bftm got a migrateObject call in DhtObjecSegmentation.cpp \n\n");
+    printf("\n\n bftm got a migrateObject call in CraqObjecSegmentation.cpp \n\n");
 
     //log the message.
     mContext->trace->objectBeginMigrate(mContext->time,obj_id,mContext->id,new_server_id); //log it.
 
     //if we do, then say that the object is in transit.
     mInTransitOrLookup[obj_id] = new_server_id;
+
+    //erases the local copy of obj_id
+    UUID tmp_id = obj_id; //note: can probably delete this line
+    //    mObjects.erase(obj_id); //erase the local copy of the object.
+
+    std::vector<UUID>::iterator iter = std::find(mObjects.begin(),mObjects.end(),obj_id);
+
+    if (iter != mObjects.end())
+    {
+      mObjects.erase (iter);//erase the local copy of the object.q
+    }
+    
   }
 
-
-  /*
-    Behavior:
-
-    If receives a create message:
-      1) Checks to make sure that object does not already exist in dht
-      2) If it doesn't, adds the object and my server name to dht.
-      3) If it does, throws an error and kills program.
-
-    If receives a kill message:
-      1) Gets all records of object from dht.
-      2) Systematically deletes every object/server pair from dht.
-      3) ????Also deletes object from inTransit (not implemented yet)???
-      4) Note: if object doesn't exist, does nothing.
-
-    Should never receive a move message.
-      Kills program if I do.
-
-    If receives an acknowledged message, it means that we can start forwarding messages that we received:
-      1) Checks to see if object id was stored in inTransit.
-      2) If it is, then we remove it from inTransit.
-      3) Put it in mFinishedMove.
-      4) Log the acknowledged message.
-
-  */
+  
+  //this function takes all the tracked set results 
   void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults)
   {
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
@@ -209,9 +213,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         {
           //means that we were tracking this message.
           //means that we populate the
-          printf("\n\nbftm: debug inside of tick of craqObjectSeg: adding messages to push back to forwarder.  \n\n");
+          //          printf("\n\nbftm: debug inside of tick of craqObjectSeg: adding messages to push back to forwarder.  \n\n");
 
+               //add to mObjects the uuid associated with trackedMessage.
+          mObjects.push_back(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
+               
           mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
+            //prior to rebase:    
+            //          mContext->router->route(trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
 
           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
         }
@@ -298,7 +307,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
     ServerID serv_from, serv_to;
     UUID obj_id;
-
 
     serv_from = msg->getServFrom();
     serv_to   = msg->getServTo();

@@ -68,14 +68,12 @@
 #include "DistributedCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
-
 #include "LocObjectSegmentation.hpp"
-//#include "UniformObjectSegmentation.hpp"
-//#include "DhtObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
-//#include "craq_oseg/asyncCraq.hpp"
-//#include "OSegHasher.hpp"
 #include "ServerProtocolMessagePair.hpp"
+
+#define CRAQ_OBJ_SEG
+
 
 #include "ServerWeightCalculator.hpp"
 namespace {
@@ -378,7 +376,8 @@ void *main_loop(void *) {
 
 
     //Create OSeg
-    std::vector<ServerID> dummyServerList; //bftm note: this should be filled in later with a list of server names.
+#ifndef CRAQ_OBJ_SEG
+
     std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
     //Trying to populate objectToServerMap
@@ -391,10 +390,14 @@ void *main_loop(void *) {
       }
 
     //End of populating objectToServerMap
-
       //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
       ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
+
+#endif  //end oracle approach
+
+      
+#ifdef CRAQ_OBJ_SEG
 
       //alternate craq approach
       std::vector<UUID> initServObjVec;
@@ -409,7 +412,6 @@ void *main_loop(void *) {
           std::cout<<obj_id.toString()<<"\n";
         }
       }
-
       
      std::vector<CraqInitializeArgs> craqArgs;
      CraqInitializeArgs cInitArgs;
@@ -423,12 +425,8 @@ void *main_loop(void *) {
     
      ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
 
-      //end create oseg
 
-
-      //end alternate craq approach
-
-
+#endif      //end craq approach
 
     //end create oseg
 
