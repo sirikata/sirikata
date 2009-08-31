@@ -51,7 +51,7 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
-DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace, bool startServer)
+DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace, int nservers)
   : mServerID(server_id),
     mMessageDispatcher(msg_source),
     mMessageRouter(msg_router),
@@ -84,36 +84,42 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(const Serve
   mTopLevelRegion.mRightChild->mLeftChild->mServer = 3;
   mTopLevelRegion.mRightChild->mRightChild->mServer = 4;
 
-
   mTopLevelRegion.mLeftChild->mLeftChild->mBoundingBox = BoundingBox3f( Vector3f(minX, minY, minZ), Vector3f( (minX+maxX)/2, (minY+maxY)/2, maxZ) );
   mTopLevelRegion.mLeftChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, minY, minZ), Vector3f(maxX, (minY+maxY)/2, maxZ));
 
   mTopLevelRegion.mRightChild->mLeftChild->mBoundingBox = BoundingBox3f( Vector3f(minX, (minY+maxY)/2, minZ), Vector3f( (minX+maxX)/2, maxY, maxZ));
   mTopLevelRegion.mRightChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, (minY+maxY)/2, minZ), Vector3f(maxX, maxY, maxZ));
 
+  for (int i=0; i<nservers;i++) {
+    ServerAvailability sa;
+    sa.mServer = i+1;
+    (i<4) ? (sa.mAvailable = 0) : (sa.mAvailable = 1);
 
-  if (startServer) {
-    ENetAddress address;    
-
-    /* Bind the server to the default localhost.     */
-    /* A specific host address can be specified by   */
-    /* enet_address_set_host (& address, "x.x.x.x"); */
-
-    address.host = ENET_HOST_ANY;
-    /* Bind the server to port 1234. */
-    address.port = 1234;
-
-    server = enet_host_create (& address /* the address to bind the server host to */, 
-                                 254      /* allow up to 254 clients and/or outgoing connections */,
-                                  0      /* assume any amount of incoming bandwidth */,
-                                  0      /* assume any amount of outgoing bandwidth */);
-    if (server == NULL)
-    {
-        printf ("An error occurred while trying to create an ENet server host.\n");
-        exit (EXIT_FAILURE);
-    }
+    mAvailableServers.push_back(sa);
   }
 
+  printf("%d servers\n", nservers);
+
+  ENetAddress address;    
+  
+  /* Bind the server to the default localhost.     */
+  /* A specific host address can be specified by   */
+  /* enet_address_set_host (& address, "x.x.x.x"); */
+  
+  address.host = ENET_HOST_ANY;
+  /* Bind the server to port 1234. */
+  address.port = 1234;
+  
+  server = enet_host_create (& address /* the address to bind the server host to */, 
+			     254      /* allow up to 254 clients and/or outgoing connections */,
+			     0      /* assume any amount of incoming bandwidth */,
+			     0      /* assume any amount of outgoing bandwidth */);
+  if (server == NULL)
+    {
+      printf ("An error occurred while trying to create an ENet server host.\n");
+      exit (EXIT_FAILURE);
+    }
+  
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
@@ -156,7 +162,7 @@ BoundingBox3f DistributedCoordinateSegmentation::region() const {
 
 uint32 DistributedCoordinateSegmentation::numServers() const {
   int count = mTopLevelRegion.countServers();
-  return 4;
+  return mAvailableServers.size();
   return count;
 }
 
@@ -280,12 +286,19 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
      return;
   }
 
-  static bool split = false;
+  uint16_t availableSvrIndex = 65535;
+  ServerID availableServer;
+  for (int i=0; i<mAvailableServers.size(); i++) {
+    if (mAvailableServers[i].mAvailable == true) {
+      availableSvrIndex = i;
+      availableServer = mAvailableServers[i].mServer;
+      break;
+    }
+  }
   
-  if (!split && t - mCurrentTime > Duration::seconds(15)) {
-    //split = true;
+  if (availableSvrIndex !=65535 && t - mCurrentTime > Duration::seconds(30)) {
     mCurrentTime = t;
-    std::cout << "!split\n";
+    std::cout << "split\n";
 
     SegmentedRegion* randomLeaf = mTopLevelRegion.getRandomLeaf();
     randomLeaf->mLeftChild = new SegmentedRegion();
@@ -301,7 +314,13 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
     randomLeaf->mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX,(minY+maxY)/2,minZ),
                                                              region.max() );
     randomLeaf->mLeftChild->mServer = randomLeaf->mServer;
-    randomLeaf->mRightChild->mServer = 1;
+    randomLeaf->mRightChild->mServer = availableServer;
+
+    std::cout << randomLeaf->mServer << " : " << randomLeaf->mLeftChild->mBoundingBox << "\n";
+    std::cout << availableServer << " : " << randomLeaf->mRightChild->mBoundingBox << "\n";
+
+
+    mAvailableServers[availableSvrIndex].mAvailable = false;
 
     std::vector<Listener::SegmentationInfo> segInfoVector;
     Listener::SegmentationInfo segInfo, segInfo2;
@@ -309,8 +328,8 @@ void DistributedCoordinateSegmentation::tick(const Time& t) {
     segInfo.region = serverRegion(randomLeaf->mServer);
     segInfoVector.push_back( segInfo );
 
-    segInfo2.server = 1;
-    segInfo2.region = serverRegion(1);
+    segInfo2.server = availableServer;
+    segInfo2.region = serverRegion(availableServer);
     segInfoVector.push_back(segInfo2);
 
     notifySpaceServersOfChange(segInfoVector);

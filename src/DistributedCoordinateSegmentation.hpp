@@ -39,11 +39,16 @@
 
 namespace CBR {
 
+typedef struct ServerAvailability  {
+  ServerID mServer;
+  bool mAvailable;
+
+} ServerAvailability;
 
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class DistributedCoordinateSegmentation : public CoordinateSegmentation {
 public:
-    DistributedCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, MessageRouter*, Trace*,bool);
+    DistributedCoordinateSegmentation(const ServerID svrID, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher*, MessageRouter*, Trace*, int);
     virtual ~DistributedCoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) const;
@@ -74,7 +79,8 @@ private:
 
     ENetHost * server;
     std::vector<ENetPeer*> mSpacePeers;
-    
+    std::vector<ServerAvailability> mAvailableServers; 
+   
 }; // class CoordinateSegmentation
 
 } // namespace CBR

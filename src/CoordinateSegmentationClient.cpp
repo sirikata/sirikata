@@ -43,12 +43,6 @@
 namespace CBR {
 
 
-template<typename T>
-T clamp(T val, T minval, T maxval) {
-    if (val < minval) return minval;
-    if (val > maxval) return maxval;
-    return val;
-}
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(const ServerID server_id, const BoundingBox3f& region, const Vector3ui32& perdim, MessageDispatcher* msg_source, MessageRouter* msg_router, Trace* trace)
   : mServerID(server_id),
@@ -72,7 +66,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(const ServerID server
   ENetEvent event;
 
   // Connect to CSEG server 
-  enet_address_set_host (&address, "localhost");
+  enet_address_set_host (&address, "indus");
   address.port = 1234;
 
   // Initiate the connection, allocating the two channels 0 and 1. 
