@@ -62,7 +62,8 @@
 #include "ExpIntegral.hpp"
 #include "PartiallyOrderedList.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-#include "LBCoordinateSegmentation.hpp"
+#include "DistributedCoordinateSegmentation.hpp"
+#include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
 
 #include "LocObjectSegmentation.hpp"
@@ -196,11 +197,32 @@ void *main_loop(void *) {
     CoordinateSegmentation* cseg = NULL;
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(region, layout, forwarder);
-    else if (cseg_type == "lb")
-        cseg = new LBCoordinateSegmentation(server_id, region, layout, forwarder, forwarder, gTrace);
+    else if (cseg_type == "distributed") {
+      cseg = new DistributedCoordinateSegmentation(server_id, region, layout, forwarder, forwarder, gTrace, nservers);
+    }
+    else if (cseg_type == "client") {
+      cseg = new CoordinateSegmentationClient(server_id, region, layout, forwarder, forwarder, gTrace);
+
+    }
     else {
         assert(false);
         exit(-1);
+    }
+
+    if (cseg_type == "distributed") {
+      Time tbegin = Time::null();
+      Time tend = tbegin + duration;
+
+      Timer timer;
+      timer.start();
+
+      while( true ) {
+        Duration elapsed = timer.elapsed();
+
+        cseg->tick(tbegin + elapsed);
+      }
+
+      exit(0);
     }
 
 

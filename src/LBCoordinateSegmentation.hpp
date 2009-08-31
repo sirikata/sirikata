@@ -37,6 +37,7 @@
 
 namespace CBR {
 
+#if 0
 typedef struct SegmentedRegion {
 
   SegmentedRegion() {
@@ -131,7 +132,7 @@ typedef struct SegmentedRegion {
 
 
 } SegmentedRegion;
-
+#endif
 
 /** Uniform grid implementation of CoordinateSegmentation. */
 class LBCoordinateSegmentation : public CoordinateSegmentation {

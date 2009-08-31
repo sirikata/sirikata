@@ -218,7 +218,9 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Analysis.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp #  ${CBR_SOURCE_DIR}/ChordObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
@@ -228,7 +230,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairObjectMessageQueue.cpp
   ${CBR_SOURCE_DIR}/Forwarder.cpp
-  ${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
+  #${CBR_SOURCE_DIR}/LBCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
