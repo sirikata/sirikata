@@ -60,11 +60,11 @@ void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synce
             }
             //printf("Got offset %f\n", offset); fflush(stdout);
             // XXX sync only called once, after some testing we should allow it to set more often
-            if (*synced == false) {
+            //if (*synced == false) {
                 //printf("synced %f\n", offset); fflush(stdout);
                 Timer::setSystemClockOffset(Duration::seconds((float64)offset));
                 *synced = true;
-            }
+            //}
         }
 
         // Signal stop to sync.py

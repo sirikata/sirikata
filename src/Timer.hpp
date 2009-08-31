@@ -34,12 +34,13 @@
 #define _CBR_TIMER_HPP_
 
 #include "Utility.hpp"
+#include <sirikata/util/AtomicTypes.hpp>
 #include <boost/date_time.hpp>
 
 namespace CBR {
 
 class Timer {
-    static Duration sOffset;
+    static Sirikata::AtomicValue<Duration> sOffset;
 
 public:
     static void setSystemClockOffset(const Duration &skew);

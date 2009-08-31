@@ -51,7 +51,9 @@ Time Timer::getTimerStarted() const{
     boost::posix_time::time_duration since_start =mStart-gEpoch;
     return Time::null() + Duration::microseconds(since_start.total_microseconds());
 }
-Duration Timer::sOffset=Duration::seconds(0.0);
+
+Sirikata::AtomicValue<Duration> Timer::sOffset(Duration::seconds(0.0));
+
 void Timer::setSystemClockOffset(const Duration&skew) {
     sOffset=skew;
 }
@@ -61,7 +63,7 @@ Duration Timer::getSystemClockOffset(){
 
 Time Timer::now() {
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time()-gEpoch;
-    return Time::null() + Duration::microseconds( since_start.total_microseconds() )+sOffset;
+    return Time::null() + Duration::microseconds( since_start.total_microseconds() ) + sOffset.read();
 }
 
 Duration Timer::elapsed() const{
