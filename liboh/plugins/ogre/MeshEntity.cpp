@@ -161,7 +161,7 @@ void MeshEntity::scaleChanged ( Vector3f const& scale )
     mSceneNode->setScale ( toOgre ( scale ) );
 }
 
-void MeshEntity::physicalChanged ( physicalParameters const& pp )
+void MeshEntity::physicalChanged ( PhysicalParameters const& pp )
 {
 
 }

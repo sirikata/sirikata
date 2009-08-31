@@ -34,8 +34,7 @@
 
 namespace Sirikata {
 
-using Transfer::URI;
-    
+
 /////////////////////////////////////////////////////////////////////
 
 MeshObject::MeshObject ()
@@ -84,12 +83,12 @@ Vector3f const& MeshObject::getScale () const
     return mScale;
 }
 
-void MeshObject::setPhysical ( physicalParameters const& rhs )
+void MeshObject::setPhysical ( PhysicalParameters const& rhs )
 {
     mPhysical = rhs;
 }
 
-physicalParameters const& MeshObject::getPhysical () const 
+PhysicalParameters const& MeshObject::getPhysical () const 
 {
     return mPhysical;
 }

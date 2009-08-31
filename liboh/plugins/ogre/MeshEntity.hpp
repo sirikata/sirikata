@@ -106,7 +106,7 @@ public:
     public:
         virtual void meshChanged ( URI const& meshFile );
         virtual void scaleChanged ( Vector3f const& scale );
-        virtual void physicalChanged ( physicalParameters const& pp );
+        virtual void physicalChanged ( PhysicalParameters const& pp );
     
     protected:    
     

@@ -64,8 +64,8 @@ class SIRIKATA_OH_EXPORT ProxyMeshObject
         virtual void setScale ( Vector3f const& rhs );
         virtual Vector3f const& getScale () const;
         
-        virtual void setPhysical ( physicalParameters const& rhs );
-        virtual physicalParameters const& getPhysical () const;
+        virtual void setPhysical ( PhysicalParameters const& rhs );
+        virtual PhysicalParameters const& getPhysical () const;
     
     protected:
     
@@ -81,7 +81,7 @@ class SIRIKATA_OH_EXPORT ProxyMeshObject
 //        virtual void firstListenerAdded ( MeshListener* p );
 //        virtual void lastListenerRemoved ( MeshListener* p );
     
-    // interface from ProxyPositionObject
+    // interface from ProxyObject
     public:
     protected:
 //        virtual void destroyed ();

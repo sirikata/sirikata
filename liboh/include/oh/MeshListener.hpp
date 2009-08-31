@@ -77,7 +77,7 @@ class SIRIKATA_OH_EXPORT MeshListener
 
         virtual void meshChanged ( URI const& newMesh) = 0;
         virtual void scaleChanged ( Vector3f const& newScale ) = 0;
-        virtual void physicalChanged ( physicalParameters const& pp ) = 0;
+        virtual void physicalChanged ( PhysicalParameters const& pp ) = 0;
 };
 
 } // namespace Sirikata

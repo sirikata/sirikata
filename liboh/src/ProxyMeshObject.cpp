@@ -70,13 +70,13 @@ Vector3f const& ProxyMeshObject::getScale () const
     return MeshObject::getScale ();
 }
 
-void ProxyMeshObject::setPhysical ( physicalParameters const& pp )
+void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
     MeshObject::setPhysical ( pp );
     MeshProvider::notify ( &MeshListener::physicalChanged, pp );
 }
 
-physicalParameters const& ProxyMeshObject::getPhysical () const
+PhysicalParameters const& ProxyMeshObject::getPhysical () const
 {
     return MeshObject::getPhysical ();
 }

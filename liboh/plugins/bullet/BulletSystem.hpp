@@ -362,7 +362,7 @@ public:
     public:
         virtual void meshChanged ( URI const& newMesh );
         virtual void scaleChanged ( Vector3f const& newScale );
-        virtual void physicalChanged ( physicalParameters const& pp );
+        virtual void physicalChanged ( PhysicalParameters const& pp );
 
     protected:
     

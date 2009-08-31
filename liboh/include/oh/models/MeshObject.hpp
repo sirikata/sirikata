@@ -45,7 +45,7 @@ namespace Transfer {
         class URI;
 }
 
-class physicalParameters;
+//class PhysicalParameters;
 
 using Transfer::URI;
 
@@ -62,8 +62,8 @@ class SIRIKATA_OH_EXPORT MeshObject
         virtual void setScale ( Vector3f const& rhs ) = 0;
         virtual Vector3f const& getScale () const = 0;
         
-        virtual void setPhysical ( physicalParameters const& rhs ) = 0;
-        virtual physicalParameters const& getPhysical () const = 0;
+        virtual void setPhysical ( PhysicalParameters const& rhs ) = 0;
+        virtual PhysicalParameters const& getPhysical () const = 0;
     
     protected:
         MeshObject ();
@@ -75,7 +75,7 @@ class SIRIKATA_OH_EXPORT MeshObject
     // MCB: move data members from proxy to plugin, via this route
         URI mMeshURI;
         Vector3f mScale;
-        physicalParameters mPhysical;
+        PhysicalParameters mPhysical;
     
 }; // class MeshObject
 
