@@ -9,7 +9,7 @@ import errno
 
 # Settings
 ntp_interval = 30.0
-heartbeat_interval = 60
+heartbeat_interval = 60.0
 
 # signals if we're done
 done = False;
@@ -47,6 +47,7 @@ class MonitorStdInThread(threading.Thread):
             data = sys.stdin.read(1)
             if len(data) == 0:
                 sys.stderr.write('Monitor read error\n')
+                set_done()
                 sys.exit(-1)
             elif (data == 'h'):
                 heartbeat()
@@ -55,6 +56,7 @@ class MonitorStdInThread(threading.Thread):
         except IOError, e:
             if e.errno == errno.EPIPE:
                 sys.stderr.write('Broken monitor pipe\n')
+                set_done()
                 sys.exit(-1)
 
 class MonitorHeartbeatThread(threading.Thread):
@@ -63,9 +65,10 @@ class MonitorHeartbeatThread(threading.Thread):
         self.daemon = True
 
     def run(self):
+        global heartbeat_interval
         while(True):
             check_heartbeat()
-            time.sleep(heartbeat_interval)
+            time.sleep(heartbeat_interval / 4)
 
 # Main code
 server_name = sys.argv[1]
