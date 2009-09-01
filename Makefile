@@ -25,12 +25,12 @@ tests:
 
 clean:
 	cd build/cmake && \
-	( [ -e Makefile ] && $(MAKE) clean $(*) ) || true
+	( test -e Makefile && $(MAKE) clean $(*) ) || true
 
 
 #========== Dependencies ===========
 
-dependencies:
+distributions:
 	case "`uname`" in \
 		*arwin*) \
 			svn co http://sirikataosx.googlecode.com/svn/trunk dependencies \
@@ -49,12 +49,13 @@ dependencies:
 			svn co http://sirikata.googlecode.com/svn/trunk/source dependencies \
 			;; \
 	esac ; \
-	[ -d dependencies ]
+	svn co http://sirikatamachindep.googlecode.com/svn/trunk/ dependencies/machindependencies
 
-update-dependencies: dependencies
+update-dependencies: distributions
 	git submodule init || true
 	git submodule update || true
 	cd dependencies && svn update
+	cd dependencies/machindependencies && svn update
 
 minimaldepends: update-dependencies
 	$(MAKE) -C dependencies minimaldepends $(*)
