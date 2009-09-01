@@ -1548,6 +1548,11 @@ IF(OGRE_FOUND)
               #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
     ENDIF()
+
+    # data for web views
+    INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/ogre/data/
+      DESTINATION share/ogre/data/
+      )
   ENDIF()
 ENDIF()
 
