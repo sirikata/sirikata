@@ -48,7 +48,8 @@ Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const 
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mQueryAngle(queryAngle)
+   mQueryAngle(queryAngle),
+   mMigrating(false)
 {
 }
 
@@ -59,7 +60,8 @@ Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const 
    mMotion(motion),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mQueryAngle(queryAngle)
+   mQueryAngle(queryAngle),
+   mMigrating(false)
 {
     mSubscribers = objects;
 }
@@ -80,7 +82,8 @@ void Object::removeSubscriber(const UUID& sub) {
 }
 
 void Object::tick() {
-    checkPositionUpdate();
+    if (!mMigrating)
+        checkPositionUpdate();
 }
 
 const TimedMotionVector3f Object::location() const {
@@ -112,7 +115,6 @@ void Object::checkPositionUpdate() {
             serializePBJMessage(container)
         );
         // XXX FIXME do something on failure
-
 
         // FIXME Updates directly to objects should go away eventually.
         for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
@@ -166,6 +168,7 @@ void Object::sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     if (session_msg.has_init_migration()) {
         CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
         //printf("Object %s was told to init migration to %d\n", uuid().toString().c_str(), (uint32)init_migr.new_server());
+        mMigrating = true;
     }
 }
 

@@ -104,6 +104,7 @@ private:
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;
+    bool mMigrating;
 }; // class Object
 
 } // namespace CBR
