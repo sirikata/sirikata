@@ -39,7 +39,7 @@
 
 namespace CBR {
 
-float64 MaxDistUpdatePredicate::maxDist = 0.0;
+float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
 Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
