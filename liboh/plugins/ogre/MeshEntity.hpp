@@ -49,12 +49,12 @@ namespace Graphics {
 
 
 class MeshEntity
-    : public Entity,
-      public MeshListener {
+    :   public Entity,
+        public MeshListener
+{
 
     typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
 
-    URI mMeshURI;
     SharedResourcePtr mResource;
     BoundingInfo mBoundingInfo;
 
@@ -72,16 +72,10 @@ public:
 
     virtual ~MeshEntity();
 
-    void meshChanged(const URI&meshFile);
+//    Vector3f getScale() const {
+//        return fromOgre(mSceneNode->getScale());
+//    }
 
-    Vector3f getScale() const {
-        return fromOgre(mSceneNode->getScale());
-    }
-    void setScale(const Vector3f &scale) {
-        mSceneNode->setScale(toOgre(scale));
-    }
-    void setPhysical(const PhysicalParameters &pp) {
-    }
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
 
@@ -89,9 +83,6 @@ public:
      *  \param meshname the name (ID) of the mesh to use for this entity
      */
     void loadMesh(const String& meshname);
-    const URI &getMeshURI() const {
-        return mMeshURI;
-    }
 
     void unloadMesh();
     ///Returns the scaled bounding info
@@ -110,6 +101,15 @@ public:
         return false;
     }
   */
+
+    // interface from MeshListener
+    public:
+        virtual void meshChanged ( URI const& meshFile );
+        virtual void scaleChanged ( Vector3f const& scale );
+        virtual void physicalChanged ( PhysicalParameters const& pp );
+    
+    protected:    
+    
 };
 
 }

@@ -97,13 +97,45 @@ const SpaceID&BulletObj::getSpaceID()const {
     return mMeshptr->getObjectReference().space();
 }
 
+/////////////////////////////////////////////////////////////////////
+// overrides from MeshListener
+
 void BulletObj::meshChanged (const URI &newMesh) {
-    DEBUG_OUTPUT(cout << "dbm:    meshlistener: " << newMesh << endl;)
+    DEBUG_OUTPUT(cout << "dbm:    meshChanged: " << newMesh << endl;)
     mMeshname = newMesh;
 }
 
-void BulletObj::setPhysical (const PhysicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: setPhysical: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
+void BulletObj::scaleChanged (const Vector3f &newScale) {
+    if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
+        return;
+    if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
+        return;
+    mSizeX = newScale.x;
+    mSizeY = newScale.y;
+    mSizeZ = newScale.z;
+    float mass;
+    btVector3 localInertia(0,0,0);
+    buildBulletShape(NULL, 0, mass);        /// null, 0 means re-use original vertices
+    if (mDynamic) {                          /// inertia meaningless for static objects
+        if (!mShape==ShapeMesh) {
+            mColShape->calculateLocalInertia(mass,localInertia);
+        }
+        else {
+            /// note: this code path not tested, as we don't yet support dynamic mesh
+            cout << "using bounding box for inertia, Bullet does not calculate for mesh!" << endl;
+            localInertia = btVector3(mSizeX, mSizeY, mSizeZ);      /// does this make sense?  it does to me
+        }
+    }
+    mBulletBodyPtr->setCollisionShape(mColShape);
+    mBulletBodyPtr->setMassProps(mass, localInertia);
+    mBulletBodyPtr->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));  /// otherwise gravity assumes old inertia!
+    mBulletBodyPtr->activate(true);
+    DEBUG_OUTPUT(cout << "dbm: scaleChanged: " << newScale << " old X: " << mSizeX << " mass: "
+                 << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
+}    
+
+void BulletObj::physicalChanged (const PhysicalParameters &pp) {
+    DEBUG_OUTPUT(cout << "dbm: physicalChanged: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
     mGravity = system->getGravity() * pp.gravity;
@@ -111,7 +143,7 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
     colMsg = pp.colMsg;
     switch (pp.mode) {
     case PhysicalParameters::Disabled:
-        DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: Disabled" << endl);
+        DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: Disabled" << endl);
         mActive = false;
         mMeshptr->setLocationAuthority(0);
         mDynamic = false;
@@ -139,14 +171,14 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
     }
     if (mMeshptr) {
         if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
-            DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: disabling dynamic&non-local" << endl);
+            DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: disabling dynamic&non-local" << endl);
             mActive = false;
             mMeshptr->setLocationAuthority(0);
             return;
         }
     }
     if (!(pp.mode==PhysicalParameters::Disabled)) {
-        DEBUG_OUTPUT(cout << "  dbm: debug setPhysical: adding to bullet" << endl);
+        DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: adding to bullet" << endl);
         positionOrientation po;
         po.p = mMeshptr->getPosition();
         po.o = mMeshptr->getOrientation();
@@ -156,6 +188,8 @@ void BulletObj::setPhysical (const PhysicalParameters &pp) {
     }
 }
 
+/////////////////////////////////////////////////////////////////////
+    
 positionOrientation BulletObj::getBulletState() {
     btTransform trans;
     this->mBulletBodyPtr->getMotionState()->getWorldTransform(trans);
@@ -175,35 +209,6 @@ void BulletObj::setBulletState(positionOrientation po) {
         mBulletBodyPtr->getMotionState()->setWorldTransform(trans);   /// how to move 'kinematic' objects (animated)
     }
     mBulletBodyPtr->activate(true);      /// wake up, you lazy slob!
-}
-
-void BulletObj::setScale (const Vector3f &newScale) {
-    if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
-        return;
-    if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
-        return;
-    mSizeX = newScale.x;
-    mSizeY = newScale.y;
-    mSizeZ = newScale.z;
-    float mass;
-    btVector3 localInertia(0,0,0);
-    buildBulletShape(NULL, 0, mass);        /// null, 0 means re-use original vertices
-    if (mDynamic) {                          /// inertia meaningless for static objects
-        if (!mShape==ShapeMesh) {
-            mColShape->calculateLocalInertia(mass,localInertia);
-        }
-        else {
-            /// note: this code path not tested, as we don't yet support dynamic mesh
-            cout << "using bounding box for inertia, Bullet does not calculate for mesh!" << endl;
-            localInertia = btVector3(mSizeX, mSizeY, mSizeZ);      /// does this make sense?  it does to me
-        }
-    }
-    mBulletBodyPtr->setCollisionShape(mColShape);
-    mBulletBodyPtr->setMassProps(mass, localInertia);
-    mBulletBodyPtr->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));  /// otherwise gravity assumes old inertia!
-    mBulletBodyPtr->activate(true);
-    DEBUG_OUTPUT(cout << "dbm: setScale " << newScale << " old X: " << mSizeX << " mass: "
-                 << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }
 
 void BulletObj::buildBulletShape(const unsigned char* meshdata, int meshbytes, float &mass) {
@@ -844,4 +849,4 @@ bool BulletSystem::queryRay(const Vector3d& position,
 }
 
 
-}//namespace sirikata
+} //namespace sirikata

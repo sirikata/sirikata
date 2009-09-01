@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyMeshObject.cpp
+/*  Sirikata liboh -- Object Host Plugin
+ *  ColladaPlugin.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn, Mark C. Barnes
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,63 +30,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyMeshObject.hpp>
+#include "ColladaPlugin.hpp"
 
-//#include <util/ListenerProvider.hpp>
+#include "ColladaSystemFactory.hpp"
+#include "ColladaSystem.hpp"
 
-namespace Sirikata {
+static int core_plugin_refcount = 0;
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
-    :   MeshObject (),
-        MeshProvider (),
-        ProxyObject ( man, id )
+SIRIKATA_PLUGIN_EXPORT_C void init ()
 {
+//    using namespace Sirikata;
+    using namespace Sirikata::Models;
 
+    if ( core_plugin_refcount == 0 )
+        ColladaSystemFactory::getSingleton ().registerConstructor
+            ( name (), &ColladaSystem::create, true );
+    
+    ++core_plugin_refcount;
 }
 
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshObject
-
-void ProxyMeshObject::setMesh ( URI const& mesh )
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
 {
-    MeshObject::setMesh ( mesh );
-    MeshProvider::notify ( &MeshListener::meshChanged, mesh );
+    return ++core_plugin_refcount;
 }
 
-URI const& ProxyMeshObject::getMesh () const
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
 {
-    return MeshObject::getMesh ();
+    assert ( core_plugin_refcount > 0 );
+    return --core_plugin_refcount;
 }
 
-void ProxyMeshObject::setScale ( Vector3f const& scale )
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
 {
-    MeshObject::setScale ( scale );
-    MeshProvider::notify ( &MeshListener::scaleChanged, scale );
+//    using namespace Sirikata;
+    using namespace Sirikata::Models;
+    
+    if ( core_plugin_refcount > 0 )
+    {
+        --core_plugin_refcount;
+
+        assert ( core_plugin_refcount == 0 );
+
+        if ( core_plugin_refcount == 0 )
+            ColladaSystemFactory::getSingleton ().unregisterConstructor ( name (), true );
+    }
 }
 
-Vector3f const& ProxyMeshObject::getScale () const
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
 {
-    return MeshObject::getScale ();
+    return "colladamodels";
 }
 
-void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
 {
-    MeshObject::setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::physicalChanged, pp );
-}
-
-PhysicalParameters const& ProxyMeshObject::getPhysical () const
-{
-    return MeshObject::getPhysical ();
-}
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshProvider
-
-
-/////////////////////////////////////////////////////////////////////
-// overrides from ProxyObject
-
-
+    return core_plugin_refcount;
 }

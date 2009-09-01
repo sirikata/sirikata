@@ -97,11 +97,10 @@ static std::string getResourcesDir() {
     // and what's in the source tree.
     path search_paths[] = {
         path("ogre/data"),
+        path("share/ogre/data"),
         path("liboh/plugins/ogre/data")
     };
     uint32 nsearch_paths = 2;
-
-    static std::string search_dir = "plugins/ogre";
 
     for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
         for(uint32 spath = 0; spath < nsearch_paths; spath++) {

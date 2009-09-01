@@ -38,6 +38,7 @@ namespace Sirikata {
 
 using Transfer::URI;
 
+// FIX ME: this definition probably doesn't belong here
 struct PhysicalParameters {
     enum PhysicalMode {
         Disabled = 0,               /// non-active, remove from physics
@@ -69,12 +70,16 @@ struct PhysicalParameters {
     }
 };
 
-class SIRIKATA_OH_EXPORT MeshListener {
-public:
-    virtual ~MeshListener() {}
-    virtual void meshChanged (const URI &newMesh) =0;
-    virtual void setScale (const Vector3f &newScale) = 0;
-    virtual void setPhysical (const PhysicalParameters &pp) = 0;
+class SIRIKATA_OH_EXPORT MeshListener
+{
+    public:
+        virtual ~MeshListener() {}
+
+        virtual void meshChanged ( URI const& newMesh) = 0;
+        virtual void scaleChanged ( Vector3f const& newScale ) = 0;
+        virtual void physicalChanged ( PhysicalParameters const& pp ) = 0;
 };
-}
+
+} // namespace Sirikata
+
 #endif

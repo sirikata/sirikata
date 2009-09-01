@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyMeshObject.cpp
+/*  Sirikata liboh -- MeshObject Model Interface (Bridge Pattern)
+ *  MeshObject.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn, Mark C. Barnes
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,63 +30,55 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyMeshObject.hpp>
+#ifndef _SIRIKATA_MESH_OBJECT_HPP_
+#define _SIRIKATA_MESH_OBJECT_HPP_
 
-//#include <util/ListenerProvider.hpp>
+#include <oh/Platform.hpp>
+
+// MCB: move to model plugin
+#include "transfer/URI.hpp"
+#include "oh/MeshListener.hpp"
 
 namespace Sirikata {
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
-    :   MeshObject (),
-        MeshProvider (),
-        ProxyObject ( man, id )
+namespace Transfer {
+        class URI;
+}
+
+//class PhysicalParameters;
+
+using Transfer::URI;
+
+/** interface to data model for mesh objects
+ *  Declares the Bridge Pattern Implementor interface for proxy mesh object Abstractions.
+ *  Roles are: Abstraction :: ProxyMeshObject, Implementor :: MeshObject, ConcreteImplementor :: [see liboh/plugins/collada]
+ */
+class SIRIKATA_OH_EXPORT MeshObject
 {
+    public:
+        virtual void setMesh ( URI const& rhs ) = 0;
+        virtual URI const& getMesh () const = 0;
 
-}
+        virtual void setScale ( Vector3f const& rhs ) = 0;
+        virtual Vector3f const& getScale () const = 0;
+        
+        virtual void setPhysical ( PhysicalParameters const& rhs ) = 0;
+        virtual PhysicalParameters const& getPhysical () const = 0;
+    
+    protected:
+        MeshObject ();
+//        MeshObject ( MeshObject const& rhs );
+//        MeshObject& operator = ( MeshObject const& rhs );
+        virtual ~MeshObject ();
+    
+    private:
+    // MCB: move data members from proxy to plugin, via this route
+        URI mMeshURI;
+        Vector3f mScale;
+        PhysicalParameters mPhysical;
+    
+}; // class MeshObject
 
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshObject
+} // namespace Sirikata
 
-void ProxyMeshObject::setMesh ( URI const& mesh )
-{
-    MeshObject::setMesh ( mesh );
-    MeshProvider::notify ( &MeshListener::meshChanged, mesh );
-}
-
-URI const& ProxyMeshObject::getMesh () const
-{
-    return MeshObject::getMesh ();
-}
-
-void ProxyMeshObject::setScale ( Vector3f const& scale )
-{
-    MeshObject::setScale ( scale );
-    MeshProvider::notify ( &MeshListener::scaleChanged, scale );
-}
-
-Vector3f const& ProxyMeshObject::getScale () const
-{
-    return MeshObject::getScale ();
-}
-
-void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
-{
-    MeshObject::setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::physicalChanged, pp );
-}
-
-PhysicalParameters const& ProxyMeshObject::getPhysical () const
-{
-    return MeshObject::getPhysical ();
-}
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshProvider
-
-
-/////////////////////////////////////////////////////////////////////
-// overrides from ProxyObject
-
-
-}
+#endif // _SIRIKATA_MESH_OBJECT_HPP_

@@ -122,7 +122,7 @@ void GraphicsResourceEntity::doLoad()
 
   mLoadTime = Sirikata::Task::LocalTime::now();
   if (mMeshID.filename().empty()) {
-      SILOG(ogre, error, "Attempt to load an empty mesh filename. ID = " << mID << "; URI = "<<mGraphicsEntity->getMeshURI());
+      SILOG(ogre, error, "Attempt to load an empty mesh filename. ID = " << mID << "; URI = "<<mGraphicsEntity->getProxy().getMesh());
   }
   if (mGraphicsEntity) {
     mGraphicsEntity->loadMesh(mMeshID.filename());

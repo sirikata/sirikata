@@ -291,9 +291,7 @@ class BulletObj : public MeshListener, LocationAuthority, Noncopyable {
         ShapeCharacter
     };
     BulletSystem* system;
-    void setPhysical (const PhysicalParameters &pp);
-    void meshChanged (const URI &newMesh);
-    void setScale (const Vector3f &newScale);
+
     void requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc);
 
     /// these guys seem to need to stay around for the lifetime of the object.  Otherwise we crash
@@ -359,6 +357,15 @@ public:
     BulletSystem * getBulletSystem() {
         return system;
     }
+
+    // interface from MeshListener
+    public:
+        virtual void meshChanged ( URI const& newMesh );
+        virtual void scaleChanged ( Vector3f const& newScale );
+        virtual void physicalChanged ( PhysicalParameters const& pp );
+
+    protected:
+    
 };
 
 class customDispatch :public btCollisionDispatcher {

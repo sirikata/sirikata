@@ -402,6 +402,8 @@ IF(NOT OGRE_ROOT)
 ENDIF()
 
 FIND_PACKAGE(OGRE)
+
+#dependency: Bullet
 IF(WIN32)
 SET(bullet_ROOT ${PLATFORM_LIBS}/bullet-2.74)
 ELSE()
@@ -409,7 +411,6 @@ SET(bullet_ROOT ${PLATFORM_LIBS}/installed-bullet)
 ENDIF()
 SET(bullet_MINIMUM_VERSION 2.74)
 FIND_PACKAGE(Bullet)
-
 
 
 IF(NOT SQLite3_ROOT)
@@ -427,7 +428,15 @@ ENDIF()
 SET(SQLite3_FIND_REQUIRED TRUE)
 FIND_PACKAGE(SQLite3)
 
+#dependency: OpenCOLLADA
+IF(WIN32)
+  SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
+ELSE()
+  SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
+ENDIF()
 
+SET(OpenCOLLADA_MINIMUM_VERSION 1.1.0)
+FIND_PACKAGE(OpenCOLLADA)
 
 SET(sdl_MINIMUM_VERSION 1.3.0)
 IF(NOT sdl_ROOT)
@@ -555,6 +564,7 @@ SET(INCLUDE_DIRECTORIES
   ${LIBPROXIMITY_INCLUDE_DIR}
   ${LIBSUBSCRIPTION_INCLUDE_DIR}
   ${LIBOH_INCLUDE_DIR}
+  ${LIBOH_INCLUDE_DIR}/models
   ${LIBOH_DIR}/plugins/ogre/meruCompat #temporary hack
   ${SPACE_SOURCE_DIR}
   ${PROXIMITY_SOURCE_DIR}
@@ -948,7 +958,10 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
-                  ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp )
+                  ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/models/MeshObject.cpp
+                   )
+
 SET(SPACE_SOURCES ${SPACE_SOURCE_DIR}/main.cpp )
 SET(PROXIMITY_SOURCES ${PROXIMITY_SOURCE_DIR}/main.cpp )
 SET(SUBSCRIPTION_SOURCES ${SUBSCRIPTION_SOURCE_DIR}/main.cpp )
@@ -1293,6 +1306,21 @@ ADD_PLUGIN_TARGET(monoscript
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
 
+SET(LIBOH_PLUGIN_COLLADAMODELS_DIR ${LIBOH_PLUGIN_DIR}/collada)
+SET(LIBOH_PLUGIN_COLLADAMODELS_SOURCES
+ ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaPlugin.cpp
+ ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaSystem.cpp
+ ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaSystemFactory.cpp
+    )
+
+IF(OpenCOLLADA_FOUND)
+ADD_PLUGIN_TARGET(colladamodels
+                    SOURCES ${LIBOH_PLUGIN_COLLADAMODELS_SOURCES}
+                    TARGET_CXXFLAGS ${COLLADA_CFLAGS}
+                    TARGET_LDFLAGS ${COLLADA_LDFLAGS} ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${COLLADA_LIBRARIES})
+ENDIF(OpenCOLLADA_FOUND)
 
 #binaries
 ADD_EXECUTABLE(${TEST_BINARY} ${TEST_SOURCES})# EXCLUDE_FROM_ALL
@@ -1520,6 +1548,11 @@ IF(OGRE_FOUND)
               #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
     ENDIF()
+
+    # data for web views
+    INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/ogre/data/
+      DESTINATION share/ogre/data/
+      )
   ENDIF()
 ENDIF()
 

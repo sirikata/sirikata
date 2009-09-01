@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyMeshObject.cpp
+/*  Sirikata liboh -- COLLADA Models System
+ *  ColladaSystem.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn, Mark C. Barnes
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,63 +30,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <oh/Platform.hpp>
-#include <oh/ProxyMeshObject.hpp>
+#include "ColladaSystem.hpp"
 
-//#include <util/ListenerProvider.hpp>
+//#include <oh/SimulationFactory.hpp>
+//#include <oh/ProxyObject.hpp>
+//#include <options/Options.hpp>
+//#include <transfer/TransferManager.hpp>
 
-namespace Sirikata {
+#include <iostream>
 
-ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
-    :   MeshObject (),
-        MeshProvider (),
-        ProxyObject ( man, id )
+namespace Sirikata { namespace Models {
+
+ColladaSystem::ColladaSystem ()
 {
-
+        
 }
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshObject
-
-void ProxyMeshObject::setMesh ( URI const& mesh )
+    
+ColladaSystem::~ColladaSystem ()
 {
-    MeshObject::setMesh ( mesh );
-    MeshProvider::notify ( &MeshListener::meshChanged, mesh );
+    std::cout << "MCB: CollataSystem::~ColladaSystem() entered" << std::endl;        
 }
 
-URI const& ProxyMeshObject::getMesh () const
+ColladaSystem* ColladaSystem::create ( String const& options )
 {
-    return MeshObject::getMesh ();
+    std::cout << "MCB: CollataSystem::create( " << options << ") entered" << std::endl; throw;
+    return new ColladaSystem;
 }
+    
 
-void ProxyMeshObject::setScale ( Vector3f const& scale )
-{
-    MeshObject::setScale ( scale );
-    MeshProvider::notify ( &MeshListener::scaleChanged, scale );
-}
-
-Vector3f const& ProxyMeshObject::getScale () const
-{
-    return MeshObject::getScale ();
-}
-
-void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
-{
-    MeshObject::setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::physicalChanged, pp );
-}
-
-PhysicalParameters const& ProxyMeshObject::getPhysical () const
-{
-    return MeshObject::getPhysical ();
-}
-
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshProvider
-
-
-/////////////////////////////////////////////////////////////////////
-// overrides from ProxyObject
-
-
-}
+} // namespace Models
+} // namespace Sirikata
