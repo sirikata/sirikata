@@ -154,13 +154,16 @@ void Forwarder::service()
       self_messages.pop_front();
     }
 
+    std::deque<OutgoingMessage> outgoing_messages;
     while(!mOutgoingMessages.empty())
     {
         OutgoingMessage& next_msg = mOutgoingMessages.front();
         bool send_success = mServerMessageQueue->addMessage(next_msg.dest, next_msg.data);
-        if (!send_success) break;
+        if (!send_success)
+            outgoing_messages.push_back(next_msg);
         mOutgoingMessages.pop_front();
     }
+    mOutgoingMessages.swap(outgoing_messages);
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
 
