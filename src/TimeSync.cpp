@@ -39,6 +39,9 @@
 
 namespace CBR {
 
+#define HEARTBEAT 'h'
+#define KILLSYNC  'k'
+
 void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synced, bool* done) {
         // Close the endpoints that the cbr process doesn't use
         close(ntp_ctl_pipes[STDIN]);
@@ -65,10 +68,15 @@ void TimeSync_sync_thread(int ntp_ctl_pipes[], int ntp_data_pipes[], bool* synce
                 Timer::setSystemClockOffset(Duration::seconds((float64)offset));
                 *synced = true;
             //}
+
+            // Signal heartbeat to sync.py
+            uint8 signalval = HEARTBEAT;
+            fwrite(&signalval, sizeof(signalval), 1, ntp_ctl_fp);
+            fflush(ntp_ctl_fp);
         }
 
         // Signal stop to sync.py
-        uint8 signalval = 1;
+        uint8 signalval = KILLSYNC;
         fwrite(&signalval, sizeof(signalval), 1, ntp_ctl_fp);
         fflush(ntp_ctl_fp);
 
