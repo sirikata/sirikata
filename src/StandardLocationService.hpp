@@ -66,14 +66,11 @@ private:
     struct LocationInfo {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
+        bool local;
     };
     typedef std::map<UUID, LocationInfo> LocationMap;
 
     LocationMap mLocations;
-
-    typedef std::set<UUID> UUIDSet;
-    UUIDSet mLocalObjects;
-    UUIDSet mReplicaObjects;
 }; // class StandardLocationService
 
 } // namespace CBR

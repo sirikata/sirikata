@@ -37,24 +37,22 @@
 namespace CBR {
 
 StandardLocationService::StandardLocationService(SpaceContext* ctx)
- : LocationService(ctx),
-   mLocalObjects(),
-   mReplicaObjects()
+ : LocationService(ctx)
 {
 }
 
 bool StandardLocationService::contains(const UUID& uuid) const {
-    return ( mLocalObjects.find(uuid) != mLocalObjects.end() ||
-        mReplicaObjects.find(uuid) != mReplicaObjects.end() );
+    return (mLocations.find(uuid) != mLocations.end());
 }
 
 LocationService::TrackingType StandardLocationService::type(const UUID& uuid) const {
-    if (mLocalObjects.find(uuid) != mLocalObjects.end())
-        return Local;
-    else if (mReplicaObjects.find(uuid) != mReplicaObjects.end())
-        return Replica;
-    else
+    LocationMap::const_iterator it = mLocations.find(uuid);
+    if (it == mLocations.end())
         return NotTracking;
+    if (it->second.local)
+        return Local;
+    else
+        return Replica;
 }
 
 
@@ -84,40 +82,41 @@ BoundingSphere3f StandardLocationService::bounds(const UUID& uuid) {
 }
 
 void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
-    // Add to the information to the cache
-    LocationInfo info;
-    info.location = loc;
-    info.bounds = bnds;
-    mLocations[uuid] = info;
+    LocationMap::iterator it = mLocations.find(uuid);
 
-    // Remove from replicated objects if its founds
-    if (mReplicaObjects.find(uuid) != mReplicaObjects.end()) {
+    // Add or update the information to the cache
+    if (it == mLocations.end()) {
+        mLocations[uuid] = LocationInfo();
+        it = mLocations.find(uuid);
+    } else {
+        // It was already in there as a replica, notify its removal
+        assert(it->second.local == false);
         mContext->trace->serverObjectEvent(mContext->time, 0, mContext->id, uuid, false, TimedMotionVector3f()); // FIXME remote server ID
-        mReplicaObjects.erase(uuid);
         notifyReplicaObjectRemoved(uuid);
     }
+
+    LocationInfo& locinfo = it->second;
+    locinfo.location = loc;
+    locinfo.bounds = bnds;
+    locinfo.local = true;
 
     // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
     mContext->trace->serverObjectEvent(mContext->time, mContext->id, mContext->id, uuid, true, loc);
-    mLocalObjects.insert(uuid);
     notifyLocalObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
-    LocationInfo cachedInfo = mLocations[uuid];
+    assert( mLocations[uuid].local == true );
     mLocations.erase(uuid);
 
     // Remove from the list of local objects
-    if (mLocalObjects.find(uuid) != mLocalObjects.end()) {
-        mContext->trace->serverObjectEvent(mContext->time, mContext->id, mContext->id, uuid, false, TimedMotionVector3f());
-        mLocalObjects.erase(uuid);
-        notifyLocalObjectRemoved(uuid);
-    }
+    mContext->trace->serverObjectEvent(mContext->time, mContext->id, mContext->id, uuid, false, TimedMotionVector3f());
+    notifyLocalObjectRemoved(uuid);
 
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
     // instead of immediately removing all traces of the object.
@@ -127,38 +126,49 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
 
 void StandardLocationService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bnds) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
+    LocationMap::iterator it = mLocations.find(uuid);
 
-    bool is_local = (mLocalObjects.find(uuid) != mLocalObjects.end());
-
-    // If its not local we need to insert the loc info
-    if (!is_local) {
+    if (it != mLocations.end()) {
+        // It already exists. If its local, ignore the update. If its another replica, somethings out of sync, but perform the update anyway
+        LocationInfo& locinfo = it->second;
+        if (!locinfo.local) {
+            locinfo.location = loc;
+            locinfo.bounds = bnds;
+            //local = false
+            // FIXME should we notify location and bounds updated info?
+        }
+        // else ignore
+    }
+    else {
+        // Its a new replica, just insert it
         LocationInfo locinfo;
         locinfo.location = loc;
         locinfo.bounds = bnds;
+        locinfo.local = false;
         mLocations[uuid] = locinfo;
-    }
-    else { // Otherwise we just maintain the existing state since we trust the local info more, although we might want to tcheck timestamps instead of just believing the local number
-        assert( mLocations.find(uuid) != mLocations.end() );
+
+        // We only run this notification when the object actually is new
+        mContext->trace->serverObjectEvent(mContext->time, 0, mContext->id, uuid, true, loc); // FIXME add remote server ID
+        notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
     }
 
-    // Regardless of who's state is authoritative, we need to add to the list of replicas a let people know
-    mContext->trace->serverObjectEvent(mContext->time, 0, mContext->id, uuid, true, loc); // FIXME add remote server ID
-    mReplicaObjects.insert(uuid);
-    notifyReplicaObjectAdded(uuid, location(uuid), bounds(uuid));
 }
 
 void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uuid) {
     // FIXME we should maintain some time information and check t against it to make sure this is sane
 
-    bool is_local = (mLocalObjects.find(uuid) != mLocalObjects.end());
+    LocationMap::iterator it = mLocations.find(uuid);
+    if (it == mLocations.end())
+        return;
 
-    // If the object isn't already marked as local, its going away for good so delete its loc info
-    if (!is_local)
-        mLocations.erase(uuid);
+    // If the object is marked as local, this is out of date information.  Just ignore it.
+    LocationInfo& locinfo = it->second;
+    if (locinfo.local)
+        return;
 
-    // And no matter what, we need to erase it from the replica object list and tell people about it
+    // Otherwise, remove and notify
+    mLocations.erase(uuid);
     mContext->trace->serverObjectEvent(mContext->time, 0, mContext->id, uuid, false, TimedMotionVector3f()); // FIXME add remote server ID
-    mReplicaObjects.erase(uuid);
     notifyReplicaObjectRemoved(uuid);
 }
 
@@ -172,14 +182,11 @@ void StandardLocationService::receiveMessage(Message* msg) {
             // Its possible we'll get an out of date update. We only use this update
             // if (a) we have this object marked as a replica object and (b) we don't
             // have this object marked as a local object
-            if (mLocalObjects.find(update.object()) != mLocalObjects.end())
-                continue;
-            if (mReplicaObjects.find(update.object()) == mReplicaObjects.end())
+            if (type(update.object()) != Replica)
                 continue;
 
             LocationMap::iterator loc_it = mLocations.find( update.object() );
             assert(loc_it != mLocations.end());
-
 
             if (update.has_location()) {
                 TimedMotionVector3f newloc(
@@ -197,7 +204,6 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 loc_it->second.bounds = newbounds;
                 notifyReplicaBoundsUpdated( update.object(), newbounds );
             }
-
         }
 
         delete msg;
@@ -215,10 +221,8 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
     if (loc_container.has_update_request()) {
         CBR::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();
 
-        if (mLocalObjects.find( msg.source_object() ) == mLocalObjects.end()) {
-            // FIXME warn about update to non-local object
-        }
-        else {
+        TrackingType obj_type = type(msg.source_object());
+        if (obj_type == Local) {
             LocationMap::iterator loc_it = mLocations.find( msg.source_object() );
             assert(loc_it != mLocations.end());
 
@@ -238,6 +242,9 @@ void StandardLocationService::receiveMessage(const CBR::Protocol::Object::Object
                 loc_it->second.bounds = newbounds;
                 notifyLocalBoundsUpdated( msg.source_object(), newbounds );
             }
+        }
+        else {
+            // Warn about update to non-local object
         }
     }
 }
