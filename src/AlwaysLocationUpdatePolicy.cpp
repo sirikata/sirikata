@@ -41,63 +41,32 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(LocationService* locservi
 }
 
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
-    for(ServerSubscriptionMap::iterator sub_it = mServerSubscriptions.begin(); sub_it != mServerSubscriptions.end(); sub_it++)
-        delete sub_it->second;
-    mServerSubscriptions.clear();
-
-    for(ObjectSubscribersMap::iterator sub_it = mObjectSubscribers.begin(); sub_it != mObjectSubscribers.end(); sub_it++)
-        delete sub_it->second;
-    mObjectSubscribers.clear();
 }
 
 void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid) {
-    // Add object to server's subscription list
-    ServerSubscriptionMap::iterator sub_it = mServerSubscriptions.find(remote);
-    if (sub_it == mServerSubscriptions.end()) {
-        mServerSubscriptions[remote] = new ServerSubscriberInfo;
-        sub_it = mServerSubscriptions.find(remote);
-    }
-    ServerSubscriberInfo* subs = sub_it->second;
-    subs->subscribedTo.insert(uuid);
-
-    // Add server to object's subscribers list
-    ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
-    if (obj_sub_it == mObjectSubscribers.end()) {
-        mObjectSubscribers[uuid] = new ServerIDSet();
-        obj_sub_it = mObjectSubscribers.find(uuid);
-    }
-    ServerIDSet* obj_subs = obj_sub_it->second;
-    obj_subs->insert(remote);
+    mServerSubscriptions.subscribe(remote, uuid);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
-    // Remove object from server's list
-    ServerSubscriptionMap::iterator sub_it = mServerSubscriptions.find(remote);
-    if (sub_it != mServerSubscriptions.end()) {
-        ServerSubscriberInfo* subs = sub_it->second;
-        subs->subscribedTo.erase(uuid);
-    }
-
-    // Remove server from object's list
-    ObjectSubscribersMap::iterator obj_it = mObjectSubscribers.find(uuid);
-    if (obj_it != mObjectSubscribers.end()) {
-        ServerIDSet* subs = obj_it->second;
-        subs->erase(remote);
-    }
+    mServerSubscriptions.unsubscribe(remote, uuid);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
-    ServerSubscriptionMap::iterator sub_it = mServerSubscriptions.find(remote);
-    if (sub_it == mServerSubscriptions.end())
-        return;
-
-    ServerSubscriberInfo* subs = sub_it->second;
-    while(!subs->subscribedTo.empty())
-        unsubscribe(remote, *(subs->subscribedTo.begin()));
-
-    // Might have outstanding updates, so leave it in place and
-    // potentially remove in the tick that actually sends updates.
+    mServerSubscriptions.unsubscribe(remote);
 }
+
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
+    mObjectSubscriptions.subscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
+    mObjectSubscriptions.unsubscribe(remote, uuid);
+}
+
+void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
+    mObjectSubscriptions.unsubscribe(remote);
+}
+
 
 void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
     // Ignore, initial additions will be handled by a prox update
@@ -108,101 +77,63 @@ void AlwaysLocationUpdatePolicy::localObjectRemoved(const UUID& uuid) {
 }
 
 void AlwaysLocationUpdatePolicy::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    // Add the update to each subscribed object
-    ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
-    if (obj_sub_it == mObjectSubscribers.end()) return;
-
-    ServerIDSet* object_subscribers = obj_sub_it->second;
-
-    for(ServerIDSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
-        ServerSubscriberInfo* sub_info = mServerSubscriptions[*subscriber_it];
-        assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
-
-        if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
-            UpdateInfo new_ui;
-            new_ui.location = mLocService->location(uuid);
-            new_ui.bounds = mLocService->bounds(uuid);
-            sub_info->outstandingUpdates[uuid] = new_ui;
-        }
-
-        UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-        ui.location = newval;
-    }
+    mServerSubscriptions.locationUpdated(uuid, newval, mLocService);
+    mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    // Add the update to each subscribed object
-    ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
-    if (obj_sub_it == mObjectSubscribers.end()) return;
-
-    ServerIDSet* object_subscribers = obj_sub_it->second;
-
-    for(ServerIDSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
-        ServerSubscriberInfo* sub_info = mServerSubscriptions[*subscriber_it];
-        assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
-
-        if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
-            UpdateInfo new_ui;
-            new_ui.location = mLocService->location(uuid);
-            new_ui.bounds = mLocService->bounds(uuid);
-            sub_info->outstandingUpdates[uuid] = new_ui;
-        }
-
-        UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-        ui.bounds = newval;
-    }
+    mServerSubscriptions.boundsUpdated(uuid, newval, mLocService);
+    mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
 
 void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    // FIXME need to fill in when this is handling object subscriptions
+    // Ignore, initial additions will be handled by a prox update
 }
 
 void AlwaysLocationUpdatePolicy::replicaObjectRemoved(const UUID& uuid) {
-    // FIXME need to fill in when this is handling object subscriptions
+    // Ignore, removals will be handled by a prox update
 }
 
 void AlwaysLocationUpdatePolicy::replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    // FIXME need to fill in when this is handling object subscriptions
+    mObjectSubscriptions.locationUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    // FIXME need to fill in when this is handling object subscriptions
+    mObjectSubscriptions.boundsUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::service() {
-    std::list<ServerID> to_delete;
+    // Server subscriptions
+    typedef std::map<ServerID, CBR::Protocol::Loc::BulkLocationUpdate> ServerUpdateMap;
+    ServerUpdateMap serverLocUpdates;
+    mServerSubscriptions.service(serverLocUpdates);
 
-    for(ServerSubscriptionMap::iterator server_it = mServerSubscriptions.begin(); server_it != mServerSubscriptions.end(); server_it++) {
-        ServerID sid = server_it->first;
-        ServerSubscriberInfo* sub_info = server_it->second;
-
+    for(ServerUpdateMap::iterator it = serverLocUpdates.begin(); it != serverLocUpdates.end(); it++) {
+        ServerID sid = it->first;
         BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id);
-
-        for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
-            CBR::Protocol::Loc::ILocationUpdate update = msg->contents.add_update();
-            update.set_object(up_it->first);
-            CBR::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
-            location.set_t(up_it->second.location.updateTime());
-            location.set_position(up_it->second.location.position());
-            location.set_velocity(up_it->second.location.velocity());
-            update.set_bounds(up_it->second.bounds);
-
-        }
-        if (msg->contents.update_size() > 0) {
-            mLocService->context()->router->route(msg, sid);
-        }
-
-        sub_info->outstandingUpdates.clear();
-
-        if (sub_info->subscribedTo.empty()) {
-            delete sub_info;
-            to_delete.push_back(sid);
-        }
+        msg->contents = it->second;
+        mLocService->context()->router->route(msg, sid);
     }
 
-    for(std::list<ServerID>::iterator it = to_delete.begin(); it != to_delete.end(); it++)
-        mServerSubscriptions.erase(*it);
+    // Object subscriptions
+    typedef std::map<UUID, CBR::Protocol::Loc::BulkLocationUpdate> ObjectUpdateMap;
+    ObjectUpdateMap objectLocUpdates;
+    mObjectSubscriptions.service(objectLocUpdates);
+
+    for(ObjectUpdateMap::iterator it = objectLocUpdates.begin(); it != objectLocUpdates.end(); it++) {
+        UUID obj_id = it->first;
+
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        obj_msg->set_source_object(UUID::null());
+        obj_msg->set_source_port(OBJECT_PORT_LOCATION);
+        obj_msg->set_dest_object(obj_id);
+        obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
+        obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id));
+        obj_msg->set_payload( serializePBJMessage(it->second) );
+
+        mLocService->context()->router->route(obj_msg, false);
+    }
 }
 
 } // namespace CBR

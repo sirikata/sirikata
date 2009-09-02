@@ -49,6 +49,10 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
 
+    virtual void subscribe(const UUID& remote, const UUID& uuid);
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid);
+    virtual void unsubscribe(const UUID& remote);
+
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     virtual void localObjectRemoved(const UUID& uuid);
     virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
@@ -62,24 +66,177 @@ public:
     virtual void service();
 
 private:
-    typedef std::set<UUID> UUIDSet;
-    typedef std::set<ServerID> ServerIDSet;
-
     struct UpdateInfo {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
     };
 
-    struct ServerSubscriberInfo {
-        UUIDSet subscribedTo;
-        std::map<UUID, UpdateInfo> outstandingUpdates;
+    template<typename SubscriberType>
+    struct SubscriberIndex {
+        typedef std::set<UUID> UUIDSet;
+        typedef std::set<SubscriberType> SubscriberSet;
+
+        struct SubscriberInfo {
+            UUIDSet subscribedTo;
+            std::map<UUID, UpdateInfo> outstandingUpdates;
+        };
+
+        // Forward index: Subscriber -> Objects + Updates
+        typedef std::map<SubscriberType, SubscriberInfo*> SubscriberMap;
+        SubscriberMap mSubscriptions;
+        // Reverse index: Objects -> Subscribers
+        typedef std::map<UUID, SubscriberSet*> ObjectSubscribersMap;
+        ObjectSubscribersMap mObjectSubscribers;
+
+
+        ~SubscriberIndex() {
+            for(typename SubscriberMap::iterator sub_it = mSubscriptions.begin(); sub_it != mSubscriptions.end(); sub_it++)
+                delete sub_it->second;
+            mSubscriptions.clear();
+
+            for(typename ObjectSubscribersMap::iterator sub_it = mObjectSubscribers.begin(); sub_it != mObjectSubscribers.end(); sub_it++)
+                delete sub_it->second;
+            mObjectSubscribers.clear();
+        }
+
+        void subscribe(const SubscriberType& remote, const UUID& uuid) {
+            // Add object to server's subscription list
+            typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
+            if (sub_it == mSubscriptions.end()) {
+                mSubscriptions[remote] = new SubscriberInfo;
+                sub_it = mSubscriptions.find(remote);
+            }
+            SubscriberInfo* subs = sub_it->second;
+            subs->subscribedTo.insert(uuid);
+
+            // Add server to object's subscribers list
+            typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
+            if (obj_sub_it == mObjectSubscribers.end()) {
+                mObjectSubscribers[uuid] = new SubscriberSet();
+                obj_sub_it = mObjectSubscribers.find(uuid);
+            }
+            SubscriberSet* obj_subs = obj_sub_it->second;
+            obj_subs->insert(remote);
+        }
+
+        void unsubscribe(const SubscriberType& remote, const UUID& uuid) {
+            // Remove object from server's list
+            typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
+            if (sub_it != mSubscriptions.end()) {
+                SubscriberInfo* subs = sub_it->second;
+                subs->subscribedTo.erase(uuid);
+            }
+
+            // Remove server from object's list
+            typename ObjectSubscribersMap::iterator obj_it = mObjectSubscribers.find(uuid);
+            if (obj_it != mObjectSubscribers.end()) {
+                SubscriberSet* subs = obj_it->second;
+                subs->erase(remote);
+            }
+        }
+
+        void unsubscribe(const SubscriberType& remote) {
+            typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
+            if (sub_it == mSubscriptions.end())
+                return;
+
+            SubscriberInfo* subs = sub_it->second;
+            while(!subs->subscribedTo.empty())
+                unsubscribe(remote, *(subs->subscribedTo.begin()));
+
+            // Might have outstanding updates, so leave it in place and
+            // potentially remove in the tick that actually sends updates.
+        }
+
+
+        void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
+            // Add the update to each subscribed object
+            typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
+            if (obj_sub_it == mObjectSubscribers.end()) return;
+
+            SubscriberSet* object_subscribers = obj_sub_it->second;
+
+            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+                SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
+                assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+
+                if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
+                    UpdateInfo new_ui;
+                    new_ui.location = locservice->location(uuid);
+                    new_ui.bounds = locservice->bounds(uuid);
+                    sub_info->outstandingUpdates[uuid] = new_ui;
+                }
+
+                UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
+                ui.location = newval;
+            }
+        }
+
+        void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval, LocationService* locservice) {
+            // Add the update to each subscribed object
+            typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
+            if (obj_sub_it == mObjectSubscribers.end()) return;
+
+            SubscriberSet* object_subscribers = obj_sub_it->second;
+
+            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+                SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
+                assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+
+                if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
+                    UpdateInfo new_ui;
+                    new_ui.location = locservice->location(uuid);
+                    new_ui.bounds = locservice->bounds(uuid);
+                    sub_info->outstandingUpdates[uuid] = new_ui;
+                }
+
+                UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
+                ui.bounds = newval;
+            }
+        }
+
+        void service(std::map<SubscriberType,CBR::Protocol::Loc::BulkLocationUpdate>& updates) {
+            std::list<SubscriberType> to_delete;
+
+            for(typename SubscriberMap::iterator server_it = mSubscriptions.begin(); server_it != mSubscriptions.end(); server_it++) {
+                SubscriberType sid = server_it->first;
+                SubscriberInfo* sub_info = server_it->second;
+
+                CBR::Protocol::Loc::BulkLocationUpdate bulk_update;
+
+                for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
+                    CBR::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
+                    update.set_object(up_it->first);
+                    CBR::Protocol::Loc::ITimedMotionVector location = update.mutable_location();
+                    location.set_t(up_it->second.location.updateTime());
+                    location.set_position(up_it->second.location.position());
+                    location.set_velocity(up_it->second.location.velocity());
+                    update.set_bounds(up_it->second.bounds);
+
+                }
+                if (bulk_update.update_size() > 0) {
+                    updates[sid] = bulk_update;
+                }
+
+                sub_info->outstandingUpdates.clear();
+
+                if (sub_info->subscribedTo.empty()) {
+                    delete sub_info;
+                    to_delete.push_back(sid);
+                }
+            }
+
+            for(typename std::list<SubscriberType>::iterator it = to_delete.begin(); it != to_delete.end(); it++)
+                mSubscriptions.erase(*it);
+        }
+
     };
 
-    typedef std::map<ServerID, ServerSubscriberInfo*> ServerSubscriptionMap;
-    ServerSubscriptionMap mServerSubscriptions;
+    typedef SubscriberIndex<ServerID> ServerSubscriberIndex;
+    ServerSubscriberIndex mServerSubscriptions;
 
-    typedef std::map<UUID, ServerIDSet*> ObjectSubscribersMap;
-    ObjectSubscribersMap mObjectSubscribers;
+    typedef SubscriberIndex<UUID> ObjectSubscriberIndex;
+    ObjectSubscriberIndex mObjectSubscriptions;
 }; // class AlwaysLocationUpdatePolicy
 
 } // namespace CBR

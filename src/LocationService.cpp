@@ -87,6 +87,19 @@ void LocationService::unsubscribe(ServerID remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
+
+void LocationService::subscribe(const UUID& remote, const UUID& uuid) {
+    mUpdatePolicy->subscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(const UUID& remote, const UUID& uuid) {
+    mUpdatePolicy->unsubscribe(remote, uuid);
+}
+
+void LocationService::unsubscribe(const UUID& remote) {
+    mUpdatePolicy->unsubscribe(remote);
+}
+
 void LocationService::notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->localObjectAdded(uuid, loc, bounds);

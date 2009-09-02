@@ -75,6 +75,11 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
+    virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
+    virtual void unsubscribe(const UUID& remote) = 0;
+
+
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) = 0;
     virtual void localObjectRemoved(const UUID& uuid) = 0;
     virtual void localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) = 0;
@@ -139,6 +144,13 @@ public:
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(ServerID remote);
+
+    /** Subscriptions for local objects. */
+    virtual void subscribe(const UUID& remote, const UUID& uuid);
+    virtual void unsubscribe(const UUID& remote, const UUID& uuid);
+    /** Unsubscripe the given server from all its location subscriptions. */
+    virtual void unsubscribe(const UUID& remote);
+
 
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;

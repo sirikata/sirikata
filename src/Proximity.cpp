@@ -242,6 +242,9 @@ void Proximity::removeQuery(UUID obj) {
         PROXLOG(debug,"Query removal initiated server query request.");
         sendQueryRequests();
     }
+
+    // Remove all location update subscriptions for this object/query
+    mLocService->unsubscribe(obj);
 }
 
 void Proximity::service() {
@@ -256,7 +259,6 @@ void Proximity::service() {
     typedef std::deque<QueryEvent> QueryEventList;
 
     // Output query events for servers
-
     for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
         ServerID sid = query_it->first;
         Query* query = query_it->second;
@@ -307,6 +309,8 @@ void Proximity::service() {
         prox_results.set_t(mContext->time);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
             if (evt_it->type() == QueryEvent::Added) {
+                mLocService->subscribe(query_id, evt_it->id());
+
                 CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
                 addition.set_object( evt_it->id() );
 
@@ -319,6 +323,8 @@ void Proximity::service() {
                 addition.set_bounds( mLocService->bounds(evt_it->id()) );
             }
             else {
+                mLocService->unsubscribe(query_id, evt_it->id());
+
                 CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
                 removal.set_object( evt_it->id() );
             }

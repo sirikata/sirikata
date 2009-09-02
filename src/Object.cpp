@@ -115,21 +115,6 @@ void Object::checkPositionUpdate() {
             serializePBJMessage(container)
         );
         // XXX FIXME do something on failure
-
-        // FIXME Updates directly to objects should go away eventually.
-        for(ObjectSet::iterator it = mSubscribers.begin(); it != mSubscribers.end(); it++) {
-            CBR::Protocol::Loc::TimedMotionVector loc;
-            loc.set_t(mLocation.updateTime());
-            loc.set_position(mLocation.position());
-            loc.set_velocity(mLocation.velocity());
-
-            bool success = mContext->objectHost->send(
-                this, OBJECT_PORT_LOCATION,
-                *it, OBJECT_PORT_LOCATION,
-                serializePBJMessage(loc)
-            );
-            // XXX FIXME do something on failure
-        }
     }
 }
 
@@ -173,20 +158,27 @@ void Object::sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 }
 
 void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    CBR::Protocol::Loc::TimedMotionVector contents;
+    assert(msg.source_object() == UUID::null()); // Should come from space
+
+    CBR::Protocol::Loc::BulkLocationUpdate contents;
     bool parse_success = contents.ParseFromString(msg.payload());
     assert(parse_success);
 
-    TimedMotionVector3f loc(contents.t(), MotionVector3f(contents.position(), contents.velocity()));
+    for(int32 idx = 0; idx < contents.update_size(); idx++) {
+        CBR::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-    mContext->trace->objectLoc(
-        mContext->time,
-        msg.dest_object(),
-        msg.source_object(),
-        loc
-    );
+        CBR::Protocol::Loc::TimedMotionVector update_loc = update.location();
+        TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
-    // FIXME do something with the data
+        mContext->trace->objectLoc(
+            mContext->time,
+            msg.dest_object(),
+            update.object(),
+            loc
+        );
+
+        // FIXME do something with the data
+    }
 }
 
 void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
