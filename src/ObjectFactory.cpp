@@ -147,9 +147,9 @@ Object* ObjectFactory::object(const UUID& id) {
 
     Object* new_obj = NULL;
     if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(id, motion(id), queryAngle(id), mContext, mObjectIDs);
+        new_obj = new Object(id, motion(id), bounds(id), queryAngle(id), mContext, mObjectIDs);
     else
-        new_obj = new Object(id, motion(id), queryAngle(id), mContext);
+        new_obj = new Object(id, motion(id), bounds(id), queryAngle(id), mContext);
     mObjects[id] = new_obj;
     return new_obj;
 }

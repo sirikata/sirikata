@@ -41,11 +41,12 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
-Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx)
+Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
    mGlobalIntroductions(false),
    mMotion(motion),
+   mBounds(bnds),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mQueryAngle(queryAngle),
@@ -53,11 +54,12 @@ Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const 
 {
 }
 
-Object::Object(const UUID& id, MotionPath* motion, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
+Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
  : mID(id),
    mContext(ctx),
    mGlobalIntroductions(true),
    mMotion(motion),
+   mBounds(bnds),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mQueryAngle(queryAngle),
