@@ -74,6 +74,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->trace->objectSegmentationFinalDump(mContext->time,mObjects,mInTransitOrLookup,mContext->id);
+    std::cout<<"\n\n***GOT into destructor of craqobjseg.\n\n";
+
   }
 
 

@@ -92,7 +92,7 @@ public:
     static const uint8 ServerObjectEventTag = 14;
     static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
-
+    static const uint8 ObjectSegmentationFinalDumpTag = 17;
 
 
     Trace();
@@ -127,13 +127,10 @@ public:
     void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor);
 
-
+    void objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& , ServerID );
   
     void prepareShutdown();
     void save(const String& filename);
-
-
-
 
 private:
     BatchedBuffer data;

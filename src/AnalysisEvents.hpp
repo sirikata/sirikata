@@ -1,4 +1,8 @@
 
+#ifndef __CBR_ANALYSIS_EVENTS_HPP__
+#define __CBR_ANALYSIS_EVENTS_HPP__
+
+
 namespace CBR {
 struct Event {
     static Event* read(std::istream& is, const ServerID& trace_server_id);
@@ -155,6 +159,15 @@ struct ObjectLookupProcessedEvent: public Event
 };
 
 
+struct SingleServerOsegFinalDumpEvent : public Event
+{
+  std::vector<UUID> objectsHosted;
+  std::map<UUID,ServerID> inTransitOrLookup;
+  ServerID sID;
+};
+
+
+
 struct ServerLocationEvent : public Event {
     ServerID source;
     ServerID dest;
@@ -171,3 +184,6 @@ struct ServerObjectEventEvent : public Event {
 };
 
 }
+
+#endif
+

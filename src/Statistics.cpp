@@ -97,7 +97,7 @@ const uint8 Trace::ServerObjectEventTag;
 
 const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
-
+const uint8 Trace::ObjectSegmentationFinalDumpTag;
 
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -366,6 +366,21 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #endif
   }
 
+
+  void Trace::objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& tmp_map, ServerID sID)
+  {
+#ifdef TRACE_OSEG_DUMP
+    if (mShuttingDown) return;
+
+    data.write(&ObjectSegmentationFinalDumpTag, sizeof(ObjectSegmentationFinalDumpTag));
+    data.write(&t, sizeof(t));
+    data.write(&objectsHosted, sizeof(objectsHosted));
+    data.write(&tmp_map, sizeof(tmp_map));
+    data.write(&sID,sizeof(sID));
+    
+#endif    
+  }
+    
 
 void Trace::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);

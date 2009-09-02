@@ -367,8 +367,16 @@ void *main_loop(void *) {
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
+        //oseg dump final state of each oseg.
+        String object_segmentation_dump_filename = "object_segmentation_dump_file";
+        object_segmentation_dump_filename += ".dat";
 
-
+        ObjectSegmentationFinalDumpAnalysis osegDumpAnalysis(STATS_TRACE_FILE,nservers);
+        std::ofstream oseg_dump_stream(object_segmentation_dump_filename.c_str());
+        osegDumpAnalysis.printData(oseg_dump_stream);
+        oseg_dump_stream.flush();
+        oseg_dump_stream.close();
+        
         //end bftm additional object message log file creation.
 
         exit(0);

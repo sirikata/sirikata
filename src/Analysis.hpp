@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "MotionVector.hpp"
 #include "ServerNetwork.hpp"
+#include "AnalysisEvents.hpp"
 
 namespace CBR {
 
@@ -256,6 +257,25 @@ public:
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
 
+
+struct SingleServerOsegDump
+{
+  SingleServerOsegDump (SingleServerOsegFinalDumpEvent *dump_evt);
+  ServerID sID;
+  std::vector<UUID> objsOnServer;
+  std::vector<UUID> stillWaitingFor;
+};
+
+class ObjectSegmentationFinalDumpAnalysis
+{
+ private:
+  std::vector<SingleServerOsegDump> osegDumps;
+    
+ public:
+  ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut);
+  ~ObjectSegmentationFinalDumpAnalysis();
+};
 
 
   
