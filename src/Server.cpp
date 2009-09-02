@@ -279,45 +279,7 @@ void Server::serviceProximity() {
         return;
 
   // Check for proximity updates
-  std::queue<ProximityEventInfo> proximity_events;
-  mProximity->service(proximity_events);
-
-  while(!proximity_events.empty())
-  {
-    ProximityEventInfo& evt = proximity_events.front();
-    CBR::Protocol::Prox::ProximityResults prox_results;
-    prox_results.set_t(mContext->time);
-    if (evt.type() == ProximityEventInfo::Entered) {
-        CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-        addition.set_object( evt.object() );
-
-        CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
-        TimedMotionVector3f loc = mLocationService->location(evt.object());
-        motion.set_t(loc.updateTime());
-        motion.set_position(loc.position());
-        motion.set_velocity(loc.velocity());
-
-        addition.set_bounds( mLocationService->bounds(evt.object()) );
-    }
-    else {
-        CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-        removal.set_object( evt.object() );
-    }
-
-
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-    obj_msg->set_source_object(UUID::null());
-    obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
-    obj_msg->set_dest_object(evt.query());
-    obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
-    obj_msg->set_unique(GenerateUniqueID(mContext->id));
-    obj_msg->set_payload( serializePBJMessage(prox_results) );
-
-    mForwarder->route(obj_msg);
-
-
-    proximity_events.pop();
-  }
+  mProximity->service();
 }
 
 void Server::checkObjectMigrations()

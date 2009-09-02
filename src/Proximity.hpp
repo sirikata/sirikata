@@ -42,42 +42,6 @@
 
 namespace CBR {
 
-class ProximityEventInfo {
-public:
-    enum Type {
-        Entered = 1,
-        Exited = 2
-    };
-
-    ProximityEventInfo(const UUID& q, const UUID& obj, TimedMotionVector3f location,Type t)
-      : mQuery(q), mObject(obj), mLocation(location), mType(t) {}
-
-    ProximityEventInfo(const UUID& q, const UUID& obj, Type t)
-        : mQuery(q), mObject(obj), mType(t) {assert(t==Exited);}
-
-    const UUID& query() const {
-        return mQuery;
-    }
-    const TimedMotionVector3f& location() const {
-        return mLocation;
-    }
-
-    const UUID& object() const {
-        return mObject;
-    }
-
-    Type type() const {
-        return mType;
-    }
-private:
-    ProximityEventInfo();
-
-    UUID mQuery;
-    UUID mObject;
-    TimedMotionVector3f mLocation;
-    Type mType;
-}; // class ProximityEvent
-
 class LocationService;
 
 class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient {
@@ -101,7 +65,7 @@ public:
     void removeQuery(UUID obj);
 
     // Update queries based on current state.  FIXME add event output
-    void service(std::queue<ProximityEventInfo>& events);
+    void service();
 
     // QueryEventListener Interface
     void queryHasEvents(Query* query);

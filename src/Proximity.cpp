@@ -244,7 +244,7 @@ void Proximity::removeQuery(UUID obj) {
     }
 }
 
-void Proximity::service(std::queue<ProximityEventInfo>& events) {
+void Proximity::service() {
 /*
     if ( ((uint32)(t-Time(0)).seconds()) - ((uint32)(mLastTime-Time(0)).seconds()) > 0)
         printf("Objects: %d, Queries: %d -- Objects: %d, Queries: %d\n", mServerQueryHandler->numObjects(), mServerQueryHandler->numQueries(), mObjectQueryHandler->numObjects(), mObjectQueryHandler->numQueries());
@@ -303,12 +303,36 @@ void Proximity::service(std::queue<ProximityEventInfo>& events) {
         QueryEventList evts;
         query->popEvents(evts);
 
+        CBR::Protocol::Prox::ProximityResults prox_results;
+        prox_results.set_t(mContext->time);
         for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added)
-                events.push(ProximityEventInfo(query_id, evt_it->id(), mGlobalLocCache->location(evt_it->id()), ProximityEventInfo::Entered));
-            else
-                events.push(ProximityEventInfo(query_id, evt_it->id(), ProximityEventInfo::Exited));
+            if (evt_it->type() == QueryEvent::Added) {
+                CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
+                addition.set_object( evt_it->id() );
+
+                CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                TimedMotionVector3f loc = mLocService->location(evt_it->id());
+                motion.set_t(loc.updateTime());
+                motion.set_position(loc.position());
+                motion.set_velocity(loc.velocity());
+
+                addition.set_bounds( mLocService->bounds(evt_it->id()) );
+            }
+            else {
+                CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
+                removal.set_object( evt_it->id() );
+            }
         }
+
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        obj_msg->set_source_object(UUID::null());
+        obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
+        obj_msg->set_dest_object(query_id);
+        obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
+        obj_msg->set_unique(GenerateUniqueID(mContext->id));
+        obj_msg->set_payload( serializePBJMessage(prox_results) );
+
+        mContext->router->route(obj_msg, false);
     }
 }
 
