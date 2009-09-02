@@ -375,8 +375,15 @@ void Server::checkObjectMigrations()
       // Send out the migrate message
       MigrateMessage* migrate_msg = new MigrateMessage(mContext->id);
       migrate_msg->contents.set_source_server(mContext->id);
-      obj_conn->fillMigrateMessage(migrate_msg);
+      migrate_msg->contents.set_object(obj_id);
+      CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg->contents.mutable_loc();
+      TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
+      migrate_loc.set_t( obj_loc.updateTime() );
+      migrate_loc.set_position( obj_loc.position() );
+      migrate_loc.set_velocity( obj_loc.velocity() );
+      migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
 
+      obj_conn->fillMigrateMessage(migrate_msg);
 
 
       // Stop any proximity queries for this object

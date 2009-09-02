@@ -76,14 +76,6 @@ void ObjectConnection::handleMigrateMessage(const UUID& oid, const SolidAngle& s
 void ObjectConnection::fillMigrateMessage(MigrateMessage* migrate_msg) const {
     const UUID& obj_id = mObject->uuid();
 
-    migrate_msg->contents.set_object(obj_id);
-
-    CBR::Protocol::Migration::ITimedMotionVector loc = migrate_msg->contents.mutable_loc();
-    loc.set_t( mObject->location().updateTime());
-    loc.set_position(mObject->location().position());
-    loc.set_velocity(mObject->location().velocity());
-
-    migrate_msg->contents.set_bounds(mObject->bounds());
     migrate_msg->contents.set_query_angle(mObject->queryAngle().asFloat());
     for (ObjectSet::iterator it = mObject->subscriberSet().begin(); it != mObject->subscriberSet().end(); it++)
         migrate_msg->contents.add_subscriber(*it);
