@@ -461,7 +461,7 @@ void *main_loop(void *) {
 
 
     //    Server* server = new Server(server_id, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
-      Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor,oseg);
+    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor,oseg, server_id_map);
 
       prox->initialize(cseg);
 

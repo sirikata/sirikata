@@ -200,6 +200,7 @@ SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE
         ${CBR_SOURCE_DIR}
+        ${CBR_SOURCE_DIR}/space # FIXME Should go away, preferring to store space code there, or be moved to the cbr/space binaries specifically
         ${CBR_PROTOCOL_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
@@ -237,6 +238,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
+  ${CBR_SOURCE_DIR}/space/ObjectConnectionManager.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp

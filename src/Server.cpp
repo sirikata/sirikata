@@ -15,6 +15,7 @@
 #include "ObjectSegmentation.hpp"
 
 #include "ObjectConnection.hpp"
+#include "ObjectConnectionManager.hpp"
 
 #include "Random.hpp"
 
@@ -26,23 +27,28 @@
 namespace CBR
 {
 
-Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg)
+Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg, ServerIDMap* sidmap)
  : mContext(ctx),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
    mOSeg(oseg),
-   mForwarder(forwarder)
+   mForwarder(forwarder),
+   mObjectConnectionManager(NULL)
 {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
       mForwarder->registerObjectMessageRecipient(OBJECT_PORT_SESSION, this);
 
     mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
 
-  }
+    Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id);
+    mObjectConnectionManager = new ObjectConnectionManager(mContext, *oh_listen_addr);
+}
 
 Server::~Server()
 {
+    delete mObjectConnectionManager;
+
     mForwarder->unregisterObjectMessageRecipient(OBJECT_PORT_SESSION, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 

@@ -23,6 +23,9 @@ class ObjectMessageQueue;
 class LoadMonitor;
 
 class ObjectConnection;
+class ObjectConnectionManager;
+
+class ServerIDMap;
 
   /** Handles all the basic services provided for objects by a server,
    *  including routing and message delivery, proximity services, and
@@ -32,7 +35,7 @@ class ObjectConnection;
 class Server : public MessageRecipient, public ObjectMessageRecipient
   {
   public:
-      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg);
+      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg, ServerIDMap* sidmap);
     ~Server();
 
       void service();
@@ -71,6 +74,8 @@ private:
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
+
+      ObjectConnectionManager* mObjectConnectionManager;
 
     typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
 
