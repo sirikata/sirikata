@@ -166,12 +166,12 @@ class CsvToSql:
     def processRow(self, uuid, row, cursor):
         location = Sirikata.ObjLoc()
         self.protovec(location.position, row, 'pos')
-        if (row['orient_w']):
+        if (row.get('orient_w','')):
             self.protovec(location.orientation, row, 'orient')
         else:
             # Convert from angle
-            phi = float(row['orient_x'])*math.pi/180.
-            theta = float(row['orient_y'])*math.pi/180.
+            theta = float(row['orient_x'])*math.pi/180.
+            phi = float(row['orient_y'])*math.pi/180.
             psi = float(row['orient_z'])*math.pi/180.
             location.orientation.append(math.sin(phi/2)*math.cos(theta/2)*math.cos(psi/2)
                                       + math.cos(phi/2)*math.sin(theta/2)*math.sin(psi/2)) #x
@@ -223,7 +223,7 @@ class CsvToSql:
                 physical.bounce = float(row['bounce'])
                 physical.collide_mask = int(row['colMask'])
                 physical.collide_msg = int(row['colMsg'])
-                if not row['gravity'] == "":
+                if row.get('gravity',''):
                     physical.gravity = float(row['gravity'])
                 else:
                     physical.gravity = 1.0
