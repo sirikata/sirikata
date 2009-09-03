@@ -67,7 +67,6 @@ void InitOptions() {
 
         .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
         .addOption(new OptionValue(STATS_OH_TRACE_FILE, "trace_oh.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
-        .addOption(new OptionValue(STATS_SYNC_FILE, "sync.txt", Sirikata::OptionValueType<String>(), "The filename to save clock sync data"))
         .addOption(new OptionValue(STATS_SAMPLE_RATE, "250ms", Sirikata::OptionValueType<Duration>(), "Frequency to sample non-event statistics such as queue information."))
 
         .addOption(new OptionValue("time-server", "ahoy.stanford.edu", Sirikata::OptionValueType<String>(), "The server to sync with"))

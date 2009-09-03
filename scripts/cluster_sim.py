@@ -168,10 +168,8 @@ class ClusterSim:
     def retrieve_data(self):
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
-        sync_file_pattern = "remote:" + self.scripts_dir() + "sync-%(node)04d.txt"
         trace_oh_file_pattern = "remote:" + self.scripts_dir() + "trace_oh-%(node)04d.txt"
-        sync_oh_file_pattern = "remote:" + self.scripts_dir() + "sync_oh-%(node)04d.txt"
-        ClusterSCP(self.config, [trace_file_pattern, sync_file_pattern, trace_oh_file_pattern, sync_oh_file_pattern, "."])
+        ClusterSCP(self.config, [trace_file_pattern, trace_oh_file_pattern, "."])
 
     def run_analysis(self):
         # Run analysis

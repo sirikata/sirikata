@@ -545,14 +545,6 @@ void *main_loop(void *) {
     delete loc_service;
     delete obj_factory;
 
-    String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
-    if (!sync_file.empty()) {
-        std::ofstream sos(sync_file.c_str(), std::ios::out);
-        if (sos)
-            sos << Timer::getSystemClockOffset().toMilliseconds() << std::endl;
-    }
-
-
     delete gNetwork;
     gNetwork=NULL;
 
