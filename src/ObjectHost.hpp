@@ -79,19 +79,25 @@ private:
         bool is_writing;
 
         boost::asio::streambuf read_buf;
+        std::string read_avail;
         boost::asio::streambuf write_buf;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
 
     // Objects connections
-    typedef std::map<UUID, ServerID> ObjectServerConnectionMap;
-    ObjectServerConnectionMap mObjectServers;
+    struct ObjectInfo {
+        ObjectInfo(Object* obj);
+        ObjectInfo(); // Don't use, necessary for std::map
 
-    // Outstanding session request callbacks
-    std::map<UUID, ConnectedCallback> mConnectionCallbacks;
-
-
+        Object* object;
+        // Server currently connected to
+        ServerID connectedTo;
+        // Outstanding connection callback
+        ConnectedCallback connectionCallback;
+    };
+    typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
+    ObjectInfoMap mObjectInfo;
 
     // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
     bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);

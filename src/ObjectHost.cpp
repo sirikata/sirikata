@@ -55,6 +55,18 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
     }
 }
 
+ObjectHost::ObjectInfo::ObjectInfo()
+  : object(NULL),
+    connectedTo(0)
+{
+}
+
+ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
+ : object(obj),
+   connectedTo(0)
+{
+}
+
 
 ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap)
  : mContext( new ObjectHostContext(_id) ),
@@ -74,6 +86,12 @@ const ObjectHostContext* ObjectHost::context() const {
 }
 
 void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb) {
+    // Make sure we have this object's info stored
+    ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
+    if (it == mObjectInfo.end()) {
+        it = mObjectInfo.insert( ObjectInfoMap::value_type( obj->uuid(), ObjectInfo(obj) ) ).first;
+    }
+
     // Sequence for connection
     // 1. Get or initiate random space node connection
     // 1. Ask server which server we *should* be talking to
@@ -88,7 +106,7 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
 
 void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn) {
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
-    mConnectionCallbacks[uuid] = cb;
+    mObjectInfo[uuid].connectionCallback = cb;
 
     CBR::Protocol::Session::Container session_msg;
     CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
@@ -113,7 +131,7 @@ bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest
 }
 
 bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
-    ServerID dest_server = mObjectServers[src];
+    ServerID dest_server = mObjectInfo[src].connectedTo;
 
     ServerConnectionMap::iterator it = mConnections.find(dest_server);
     if (it == mConnections.end()) {
@@ -248,6 +266,32 @@ void ObjectHost::handleConnectionRead(const boost::system::error_code& err, Spac
         return;
     }
 
+    // dump data
+    uint32 buf_size = conn->read_buf.size();
+    char* buf = new char[buf_size];
+    std::istream is (&conn->read_buf);
+    is.read(buf, buf_size);
+
+    conn->read_avail += std::string(buf, buf_size);
+
+    // try to extract messages
+    while( conn->read_avail.size() > sizeof(uint32) ) {
+        uint32* msg_size_ptr = (uint32*)&(conn->read_avail[0]);
+        uint32 msg_size = *msg_size_ptr;
+        if (conn->read_avail.size() < sizeof(uint32) + msg_size)
+            break; // No more full messages
+
+        std::string real_payload = conn->read_avail.substr(sizeof(uint32), msg_size);
+        conn->read_avail = conn->read_avail.substr(sizeof(uint32) + msg_size);
+
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        bool parse_success = obj_msg->ParseFromString(real_payload);
+        assert(parse_success == true);
+
+        mObjectInfo[ obj_msg->dest_object() ].object->receiveMessage(obj_msg);
+    }
+
+    // continue reading
     startReading(conn);
 }
 
