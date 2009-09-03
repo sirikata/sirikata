@@ -96,7 +96,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     //means that the object *is* hosted on this space server
     //need to queue the result as a response.
-    mFinishedMoveOrLookup[obj_id]= mID;
+    mFinishedMoveOrLookup[obj_id]= mContext->id;
     
     return true;  
   }

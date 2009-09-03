@@ -431,7 +431,8 @@ void *main_loop(void *) {
      cInitArgs.port    =      "4998";
      craqArgs.push_back(cInitArgs);
     
-     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
+     //     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
+     ObjectSegmentation* oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs);
 
 
 #endif      //end craq approach
