@@ -42,7 +42,7 @@ public:
        mServerIDMap(sidmap)
     {
         // start the network listening
-        Address4* listen_addy = mServerIDMap->lookup(mContext->id);
+        Address4* listen_addy = mServerIDMap->lookupInternal(mContext->id);
         assert(listen_addy != NULL);
         net->listen(*listen_addy);
     }

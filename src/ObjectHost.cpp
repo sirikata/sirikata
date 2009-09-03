@@ -219,7 +219,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     mConnections[server] = conn;
 
     // Lookup the server's address
-    Address4* addr = mServerIDMap->lookup(server);
+    Address4* addr = mServerIDMap->lookupExternal(server);
 
     // Try to initiate connection
     tcp::endpoint endpt( address_v4(addr->ip), (unsigned short)addr->port);

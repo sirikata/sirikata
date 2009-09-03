@@ -69,7 +69,7 @@ void FIFOServerMessageQueue::service(){
     ServerMessagePair* next_msg = NULL;
     bool sent_success = true;
     while( send_bytes > 0 && (next_msg = mQueue.front(&send_bytes)) != NULL ) {
-        Address4* addy = mServerIDMap->lookup(next_msg->dest());
+        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
         assert(addy != NULL);
         sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 

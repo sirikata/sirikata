@@ -45,8 +45,17 @@ public:
     {}
     virtual ~ServerIDMap() {}
 
-    virtual ServerID* lookup(const Address4& pos) = 0;
-    virtual Address4* lookup(const ServerID& obj_id) = 0;
+    /** Lookup for internal addresses, i.e. those used for space server
+     *  to space server communication.
+     */
+    virtual ServerID* lookupInternal(const Address4& pos) = 0;
+    virtual Address4* lookupInternal(const ServerID& obj_id) = 0;
+
+    /** Lookup for external addresses, i.e. those used for object host
+     *  to space server communication.
+     */
+    virtual ServerID* lookupExternal(const Address4& pos) = 0;
+    virtual Address4* lookupExternal(const ServerID& obj_id) = 0;
 };
 
 } // namespace CBR

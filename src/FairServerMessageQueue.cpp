@@ -64,7 +64,7 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 }
 
 bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
-    Address4* addy = mServerIDMap->lookup(next_msg->dest());
+    Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
 
     assert(addy != NULL);
     return mNetwork->canSend(*addy,next_msg->data(),false,true,1);
@@ -81,7 +81,7 @@ void FairServerMessageQueue::service(){
     bool sent_success = true;
     bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookup(next_msg->dest());
+        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
 
         assert(addy != NULL);
         sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);

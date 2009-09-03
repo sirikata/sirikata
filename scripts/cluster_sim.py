@@ -103,8 +103,8 @@ class ClusterSim:
         server_index = 0;
         for i in range(0, self.settings.layout_x):
             for j in range(0, self.settings.layout_y):
-                fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+'\n')
-                port += 1
+                fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
+                port += 2
                 server_index += 1
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])

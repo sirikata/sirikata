@@ -41,14 +41,20 @@ namespace CBR {
 /* Represents the physical network addresses of servers
  */
 class TabularServerIDMap:public ServerIDMap {
-    std::tr1::unordered_map<ServerID,Address4> mIDMap;
-    std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mAddressMap;
+    std::tr1::unordered_map<ServerID,Address4> mInternalIDMap;
+    std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mInternalAddressMap;
+
+    std::tr1::unordered_map<ServerID,Address4> mExternalIDMap;
+    std::tr1::unordered_map<Address4,ServerID,Address4::Hasher> mExternalAddressMap;
 public:
     TabularServerIDMap(std::istream&filestream);
     virtual ~TabularServerIDMap() {}
 
-    virtual ServerID* lookup(const Address4& address);
-    virtual Address4* lookup(const ServerID& server_id);
+    virtual ServerID* lookupInternal(const Address4& pos);
+    virtual Address4* lookupInternal(const ServerID& obj_id);
+
+    virtual ServerID* lookupExternal(const Address4& pos);
+    virtual Address4* lookupExternal(const ServerID& obj_id);
 };
 
 } // namespace CBR

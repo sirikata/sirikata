@@ -15,7 +15,7 @@ public:
         mServerID=sid;
         mNetwork=net;
         mMaxRecvSize=(1<<30);
-        mServerAddress=*idmap->lookup(sid);
+        mServerAddress=*idmap->lookupInternal(sid);
         mFront = NULL;
     }
     ~NetworkQueueWrapper(){}
