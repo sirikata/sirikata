@@ -14,7 +14,7 @@ APPNAME=cbr
 GDB=/usr/bin/gdb
 
 usage () {
-  echo "$APPNAME [-h|--help] [-g|--debug] [options]"
+  echo "$APPNAME [cbr|oh] [-h|--help] [-g|--debug] [options]"
   echo
   echo "        -g or --debug           Start within $GDB"
   echo "        -h or --help            This help screen"
@@ -30,6 +30,9 @@ want_valgrind=0
 want_debug=0
 while [ $# -gt 0 ]; do
   case "$1" in
+    cbr | oh )
+      APPNAME="$1"
+      shift;;
     -h | --help | -help )
       usage
       exit 0 ;;

@@ -13,7 +13,8 @@ CBR_WRAPPER = "./cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:
-    def __init__(self, x, y):
+    def __init__(self, x, y, num_object_hosts):
+        self.num_oh = num_object_hosts
         self.layout_x = x
         self.layout_y = y
         self.duration = '100s'
@@ -47,12 +48,12 @@ class ClusterSimSettings:
         return "<<" + str(-half_extents[0]) + "," + str(-half_extents[1]) + "," + str(-half_extents[2]) + ">,<" + str(half_extents[0]) + "," + str(half_extents[1]) + "," + str(half_extents[2]) + ">>"
 
 class ClusterSim:
-    def __init__(self, config, x, y):
+    def __init__(self, config, x, y, num_object_hosts):
         self.config = config
-        self.settings = ClusterSimSettings(x, y)
+        self.settings = ClusterSimSettings(x, y, num_object_hosts)
 
     def num_servers(self):
-        return self.settings.layout_x * self.settings.layout_y
+        return (self.settings.layout_x * self.settings.layout_y) + self.settings.num_oh
 
     def ip_file(self):
         return "serverip-" + str(self.settings.layout_x) + '-' + str(self.settings.layout_y) + '.txt'
@@ -109,15 +110,25 @@ class ClusterSim:
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
 
     def run_instances(self):
+        # Construct the list of binaries to be run
+        binaries = []
+        for x in range(0, self.settings.layout_x * self.settings.layout_y):
+            binaries.append("cbr");
+        for x in range(0, self.settings.num_oh):
+            binaries.append("oh");
+        print binaries
+
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
         # Construct the command lines to do the actual run and dispatch them
         cmd = "cd " + self.scripts_dir() + "; "
         cmd += CBR_WRAPPER + " "
+        cmd += "%(binary)s "
         if (self.settings.debug):
             cmd += "--debug "
         if (self.settings.valgrind):
             cmd += "--valgrind "
         cmd += "--id=%(node)d "
+        cmd += "--ohid=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
         cmd += "\"--region=" + self.settings.region() + "\" "
         cmd += "--serverips=" + self.ip_file() + " "
@@ -152,13 +163,15 @@ class ClusterSim:
             cmd += "\""
         cmd += " "
 
-        ClusterDeploymentRun(self.config, cmd)
+        ClusterDeploymentRun(self.config, cmd, { 'binary' : binaries } )
 
     def retrieve_data(self):
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
         sync_file_pattern = "remote:" + self.scripts_dir() + "sync-%(node)04d.txt"
-        ClusterSCP(self.config, [trace_file_pattern, sync_file_pattern, "."])
+        trace_oh_file_pattern = "remote:" + self.scripts_dir() + "trace_oh-%(node)04d.txt"
+        sync_oh_file_pattern = "remote:" + self.scripts_dir() + "sync_oh-%(node)04d.txt"
+        ClusterSCP(self.config, [trace_file_pattern, sync_file_pattern, trace_oh_file_pattern, sync_oh_file_pattern, "."])
 
     def run_analysis(self):
         # Run analysis
@@ -185,7 +198,7 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cluster_sim = ClusterSim(cc, 2, 2)
+    cluster_sim = ClusterSim(cc, 2, 2, 1)
 
     if len(sys.argv) < 2:
         cluster_sim.run()

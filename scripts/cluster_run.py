@@ -72,7 +72,8 @@ def ClusterRun(cc, command):
 
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
-def ClusterDeploymentRun(cc, command):
+# The user_params dictionary is a user specified set of substitutions to make, in the form of a dictionary whose values are arrays, each with a number of elements equal to the number of deployment node
+def ClusterDeploymentRun(cc, command, user_params = None):
     new_environ = os.environ
     new_environ['DISPLAY'] = ':0.0'
     new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
@@ -80,7 +81,13 @@ def ClusterDeploymentRun(cc, command):
     mts = []
     index = 1
     for node in cc.deploy_nodes:
-        node_command = command % {'host' : node.node, 'user' : node.user, 'node' : index}
+        # Construct substitution dictionary
+        subs = {'host' : node.node, 'user' : node.user, 'node' : index}
+        if (user_params != None):
+            for key,value in user_params.items():
+                subs[key] = value[index-1]
+
+        node_command = command % subs
         print node_command
         sp = subprocess.Popen(['ssh', '-Y' , node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp)
