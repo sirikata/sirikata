@@ -55,6 +55,12 @@ int main(int argc, char** argv) {
 
     Trace* gTrace = new Trace();
 
+    String filehandle = GetOption("serverips")->as<String>();
+    std::ifstream ipConfigFileHandle(filehandle.c_str());
+    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
+    gTrace->setServerIDMap(server_id_map);
+
+
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
     uint32 nobjects = GetOption("objects")->as<uint32>();
@@ -69,13 +75,7 @@ int main(int argc, char** argv) {
     srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace);
-
-    String filehandle = GetOption("serverips")->as<String>();
-    std::ifstream ipConfigFileHandle(filehandle.c_str());
-    ServerIDMap * server_id_map = new TabularServerIDMap(ipConfigFileHandle);
-    gTrace->setServerIDMap(server_id_map);
-
+    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map);
 
     obj_factory->initialize(obj_host->context());
 

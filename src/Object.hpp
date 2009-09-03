@@ -94,6 +94,9 @@ private:
 
     void checkPositionUpdate();
 
+    // Handle a new connection to a space -- initiate session
+    void handleSpaceConnection(ServerID sid);
+
     UUID mID;
     const ObjectHostContext* mContext;
     bool mGlobalIntroductions;
@@ -103,6 +106,8 @@ private:
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
     ObjectSet mSubscribers;
     SolidAngle mQueryAngle;
+
+    ServerID mConnectedTo;
     bool mMigrating;
 }; // class Object
 

@@ -50,6 +50,7 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mQueryAngle(queryAngle),
+   mConnectedTo(0),
    mMigrating(false)
 {
 }
@@ -63,6 +64,7 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mQueryAngle(queryAngle),
+   mConnectedTo(0),
    mMigrating(false)
 {
     mSubscribers = objects;
@@ -93,27 +95,28 @@ const TimedMotionVector3f Object::location() const {
 }
 
 void Object::connect() {
+    assert(mConnectedTo == 0);
+
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);
 
-    SpaceConnection* conn = mContext->objectHost->openConnection(this);
-
-    // Send connection msg
-    CBR::Protocol::Session::Container session_msg;
-    CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
-    connect_msg.set_object(mID);
-    CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
-    loc.set_t(curMotion.updateTime());
-    loc.set_position(curMotion.position());
-    loc.set_velocity(curMotion.velocity());
-    connect_msg.set_bounds(mBounds);
-    connect_msg.set_query_angle(mQueryAngle.asFloat());
-
-    bool success = mContext->objectHost->send(
-        this, OBJECT_PORT_SESSION,
-        UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(session_msg)
+    mContext->objectHost->openConnection(
+        this,
+        curMotion,
+        mBounds,
+        mQueryAngle,
+        boost::bind(&Object::handleSpaceConnection, this, _1)
     );
-    // FIXME do something on failure
+}
+
+void Object::handleSpaceConnection(ServerID sid) {
+    if (sid == 0) {
+        SILOG(cbr,error,"Failed to open connection for object " << mID.toString());
+        return;
+    }
+
+    mConnectedTo = sid;
+
+    TimedMotionVector3f curMotion = mMotion->at(mContext->time);
 }
 
 void Object::checkPositionUpdate() {
