@@ -208,7 +208,7 @@ void ObjectHost::getSpaceConnection(GotSpaceConnectionCallback cb) {
     }
 
     // Otherwise, initiate one at random
-    ServerID server_id = (ServerID)0; // FIXME should be selected at random somehow, and shouldn't already be in the connection map
+    ServerID server_id = (ServerID)1; // FIXME should be selected at random somehow, and shouldn't already be in the connection map
     setupSpaceConnection(server_id, cb);
 }
 
