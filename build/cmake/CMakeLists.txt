@@ -199,6 +199,7 @@ SET(CBR_PROTOCOL_DIR ${TOP_LEVEL}/protocol)
 
 #cxx flags
 INCLUDE_DIRECTORIES(BEFORE
+        ${CBR_SOURCE_DIR}
         ${CBR_PROTOCOL_DIR} # For generated protocol code
         ${Boost_INCLUDE_DIRS}
         ${GLUT_INCLUDE_DIR}
@@ -235,10 +236,8 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
-  ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
-  ${CBR_SOURCE_DIR}/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
@@ -262,6 +261,24 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
+)
+
+SET(OH_SOURCES
+  ${CBR_SOURCE_DIR}/Message.cpp
+  ${CBR_SOURCE_DIR}/Network.cpp
+  ${CBR_SOURCE_DIR}/Object.cpp
+  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/ObjectHost.cpp
+  ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
+  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
+  ${CBR_SOURCE_DIR}/Statistics.cpp
+  ${CBR_SOURCE_DIR}/SolidAngle.cpp
+  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
+  ${CBR_SOURCE_DIR}/Timer.cpp
+  ${CBR_SOURCE_DIR}/TimeSync.cpp
+  ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
 SET(CBR_MOC_HEADERS
@@ -319,3 +336,14 @@ TARGET_LINK_LIBRARIES(cbr
         ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
+
+ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(oh
+        ${Boost_THREAD_LIBRARY}
+        ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
+        ${SirikataCore_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+SET_TARGET_PROPERTIES(oh PROPERTIES COMPILE_FLAGS "-DOH_BUILD")

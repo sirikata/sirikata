@@ -38,10 +38,8 @@
 
 namespace CBR {
 
-ObjectHost::ObjectHost(const ServerID& sid, ObjectFactory* obj_factory, Trace* trace)
- : mContext( new ObjectHostContext() ),
-   mOHId((uint64)sid),
-   mServer(NULL)
+ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace)
+ : mContext( new ObjectHostContext(_id) )
 {
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
@@ -56,8 +54,10 @@ const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
-void ObjectHost::openConnection(ObjectConnection* conn) {
-    mServer->handleOpenConnection(conn);
+SpaceConnection* ObjectHost::openConnection(Object* obj) {
+    assert(false); // FIXME need to open connection
+    //mServer->handleOpenConnection(conn);
+    return NULL;
 }
 
 bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
@@ -66,12 +66,26 @@ bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest
     obj_msg.set_source_port(src_port);
     obj_msg.set_dest_object(dest);
     obj_msg.set_dest_port(dest_port);
-    obj_msg.set_unique(GenerateUniqueID(mOHId));
+    obj_msg.set_unique(GenerateUniqueID(mContext->id));
     obj_msg.set_payload( payload );
 
     mOutgoingQueue.push( new std::string(serializePBJMessage(obj_msg)) );
 
     return true;
+}
+
+void ObjectHost::migrate(Object* src, ServerID sid) {
+    assert(false); // FIXME update, must go to sid
+    CBR::Protocol::Session::Container session_msg;
+    CBR::Protocol::Session::IMigrate migrate_msg = session_msg.mutable_migrate();
+    migrate_msg.set_object(src->uuid());
+    std::string session_serialized = serializePBJMessage(session_msg);
+    bool success = this->send(
+        src, OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(session_msg)
+    );
+    // FIXME do something on failure
 }
 
 void ObjectHost::tick(const Time& t) {
@@ -81,18 +95,17 @@ void ObjectHost::tick(const Time& t) {
     mContext->objectFactory->tick();
 
     // Service outgoing queue
+    assert(false); // FIXME need to service this queue on connections
+/*
     uint32 nserviced = 0;
     while( !mOutgoingQueue.empty() && mServer->receiveObjectHostMessage( *mOutgoingQueue.front() ) ) {
         nserviced++;
         delete mOutgoingQueue.front();
         mOutgoingQueue.pop();
     }
+*/
     //if (mOutgoingQueue.size() > 1000)
     //    SILOG(oh,warn,"[OH] Warning: outgoing queue size > 1000: " << mOutgoingQueue.size());
-}
-
-void ObjectHost::setServer(Server* server) {
-    mServer = server;
 }
 
 } // namespace CBR

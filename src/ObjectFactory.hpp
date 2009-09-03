@@ -32,13 +32,10 @@
 
 #include "Utility.hpp"
 #include "SolidAngle.hpp"
-#include "Server.hpp"
 
 namespace CBR {
 class MotionPath;
 class Object;
-class CoordinateSegmentation;
-class Server;
 class Trace;
 class ObjectHostContext;
 
@@ -64,7 +61,7 @@ public:
     ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 
-    void initialize(const ObjectHostContext* ctx, ServerID sid, Server* server, CoordinateSegmentation* cseg);
+    void initialize(const ObjectHostContext* ctx);
 
     iterator begin();
     const_iterator begin() const;
@@ -74,9 +71,11 @@ public:
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
     SolidAngle queryAngle(const UUID& id);
-    Object* object(const UUID& id);
 
+#ifdef OH_BUILD // These should only ever be used by the object host
+    Object* object(const UUID& id);
     void tick();
+#endif //OH_BUILD
 
 private:
     bool isActive(const UUID& id);
@@ -88,10 +87,6 @@ private:
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
     ObjectMap mObjects;
-    ServerID mServerID;
-    Server* mServer;
-    CoordinateSegmentation* mCSeg;
-    bool mFirstTick; // Temporary solution since on the first connection we can't wait for migration data
 }; // class ObjectFactory
 
 } // namespace CBR

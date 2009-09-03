@@ -225,12 +225,6 @@ void Server::handleMigration(const UUID& obj_id) {
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
     SolidAngle obj_query_angle( migrate_msg->query_angle() );
-    std::vector<UUID> obj_subs;
-    for(uint32 i = 0; i < migrate_msg->subscriber_size(); i++)
-        obj_subs.push_back(migrate_msg->subscriber(i));
-
-
-    obj_conn->handleMigrateMessage(obj_id, obj_query_angle, obj_subs);
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
@@ -344,8 +338,6 @@ void Server::checkObjectMigrations()
       migrate_loc.set_position( obj_loc.position() );
       migrate_loc.set_velocity( obj_loc.velocity() );
       migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
-
-      obj_conn->fillMigrateMessage(migrate_msg);
 
 
       // Stop any proximity queries for this object

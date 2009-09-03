@@ -37,7 +37,6 @@
 
 #include "Forwarder.hpp"
 
-#include "ObjectHost.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 
@@ -124,9 +123,6 @@ void *main_loop(void *) {
     }
 
 
-    MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
-
-
     uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
@@ -151,7 +147,6 @@ void *main_loop(void *) {
     Forwarder* forwarder = new Forwarder(space_context);
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    ObjectHost* obj_host = new ObjectHost(server_id, obj_factory, gTrace);
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
@@ -469,8 +464,10 @@ void *main_loop(void *) {
       Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor,oseg);
 
       prox->initialize(cseg);
-      obj_factory->initialize(obj_host->context(), server_id, server, cseg);
-    obj_host->setServer(server);
+
+      // NOTE: we don't initialize this because nothing should require it. We no longer have object host,
+      // and are only maintaining ObjectFactory for analysis, visualization, and oracle purposes.
+      //obj_factory->initialize(obj_host->context());
 
     bool sim = GetOption("sim")->as<bool>();
     Duration sim_step = GetOption("sim-step")->as<Duration>();
@@ -530,7 +527,6 @@ void *main_loop(void *) {
             Time curt = tbegin + elapsed;
 
             space_context->tick(curt);
-            obj_host->tick(curt);
 
             gNetwork->service(curt);
             cseg->service();
@@ -548,7 +544,6 @@ void *main_loop(void *) {
     delete cseg;
     delete loc_service;
     delete obj_factory;
-    delete obj_host;
 
     String sync_file = GetPerServerFile(STATS_SYNC_FILE, server_id);
     if (!sync_file.empty()) {

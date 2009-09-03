@@ -51,6 +51,7 @@ void InitOptions() {
         .addOption(new OptionValue("time-dilation", "1.0", Sirikata::OptionValueType<float>(), "Factor by which times will be scaled (to allow faster processing when CPU and bandwidth is readily available, slower when they are overloaded)"))
 
         .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
+        .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
         .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
         .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
@@ -65,6 +66,7 @@ void InitOptions() {
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
         .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
+        .addOption(new OptionValue(STATS_OH_TRACE_FILE, "trace_oh.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
         .addOption(new OptionValue(STATS_SYNC_FILE, "sync.txt", Sirikata::OptionValueType<String>(), "The filename to save clock sync data"))
         .addOption(new OptionValue(STATS_SAMPLE_RATE, "250ms", Sirikata::OptionValueType<Duration>(), "Frequency to sample non-event statistics such as queue information."))
 
@@ -124,6 +126,10 @@ String GetPerServerFile(const char* opt_name, const ServerID& sid) {
     sprintf(buffer, "%s-%04d.%s", prefix.c_str(), (uint32)sid, ext.c_str());
 
     return buffer;
+}
+
+String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid) {
+    return (GetPerServerFile(opt_name, (ServerID)ohid)); // FIXME relies on fact that ServerID and ObjectHostID are both uint64
 }
 
 } // namespace CBR

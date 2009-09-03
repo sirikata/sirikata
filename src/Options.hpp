@@ -35,12 +35,14 @@
 
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
+#include "ObjectHostContext.hpp"
 
 #define CBR_MODULE "cbr"
 
 #define MAX_EXTRAPOLATOR_DIST "max-extrapolator-dist"
 
 #define STATS_TRACE_FILE     "stats.trace-filename"
+#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
 #define STATS_SYNC_FILE      "stats.sync-filename"
 #define STATS_SAMPLE_RATE    "stats.sample-rate"
 
@@ -85,6 +87,7 @@ OptionValue* GetOption(const char* name);
 
 /** Get an option which is a filename and modify it to be server specific. */
 String GetPerServerFile(const char* opt_name, const ServerID& sid);
+String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);
 
 } // namespace CBR
 

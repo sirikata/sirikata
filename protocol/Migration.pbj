@@ -43,6 +43,5 @@ message MigrationMessage {
     required TimedMotionVector loc = 2;
     required boundingsphere3f bounds = 3;
     required float query_angle = 4;
-    repeated uuid subscriber = 5; // FIXME we shouldn't need this
     required uint32 source_server = 6; // FIXME should come from server to server header
 }

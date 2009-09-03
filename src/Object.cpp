@@ -92,6 +92,30 @@ const TimedMotionVector3f Object::location() const {
     return mLocation;
 }
 
+void Object::connect() {
+    TimedMotionVector3f curMotion = mMotion->at(mContext->time);
+
+    SpaceConnection* conn = mContext->objectHost->openConnection(this);
+
+    // Send connection msg
+    CBR::Protocol::Session::Container session_msg;
+    CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    connect_msg.set_object(mID);
+    CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
+    loc.set_t(curMotion.updateTime());
+    loc.set_position(curMotion.position());
+    loc.set_velocity(curMotion.velocity());
+    connect_msg.set_bounds(mBounds);
+    connect_msg.set_query_angle(mQueryAngle.asFloat());
+
+    bool success = mContext->objectHost->send(
+        this, OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(session_msg)
+    );
+    // FIXME do something on failure
+}
+
 void Object::checkPositionUpdate() {
     const Time& t = mContext->time;
 
@@ -155,6 +179,8 @@ void Object::sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     if (session_msg.has_init_migration()) {
         CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
         //printf("Object %s was told to init migration to %d\n", uuid().toString().c_str(), (uint32)init_migr.new_server());
+
+        mContext->objectHost->migrate(this, (ServerID)init_migr.new_server());
         mMigrating = true;
     }
 }
@@ -255,15 +281,6 @@ void Object::subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg
         addSubscriber(msg.source_object());
     else
         removeSubscriber(msg.source_object());
-}
-
-void Object::migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs) {
-    assert(mID == oid);
-    assert(mQueryAngle == sa);
-
-    for (uint32 i = 0; i < subs.size(); i++) {
-      addSubscriber(subs[i]);
-    }
 }
 
 } // namespace CBR

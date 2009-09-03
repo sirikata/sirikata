@@ -37,8 +37,8 @@
 
 namespace CBR {
 
-ObjectConnection::ObjectConnection(Object* obj, Trace* trace)
- : mObject(obj),
+ObjectConnection::ObjectConnection(const UUID& _id, Trace* trace)
+ : mID(_id),
    mTrace(trace),
    mReceiveQueue()
 {
@@ -52,7 +52,7 @@ ObjectConnection::~ObjectConnection() {
 }
 
 UUID ObjectConnection::id() const {
-    return mObject->uuid();
+    return mID;
 }
 
 
@@ -61,24 +61,14 @@ void ObjectConnection::deliver(const CBR::Protocol::Object::ObjectMessage& msg) 
 }
 
 void ObjectConnection::tick(const Time& t) {
+    assert(false); // FIXME need to send out over the network
+/*
     for(MessageQueue::iterator msg_it = mReceiveQueue.begin(); msg_it != mReceiveQueue.end(); msg_it++) {
         CBR::Protocol::Object::ObjectMessage* msg = (*msg_it);
         mObject->receiveMessage(msg);
     }
-
+*/
     mReceiveQueue.clear();
-}
-
-void ObjectConnection::handleMigrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs) {
-    mObject->migrateMessage(oid, sa, subs);
-}
-
-void ObjectConnection::fillMigrateMessage(MigrateMessage* migrate_msg) const {
-    const UUID& obj_id = mObject->uuid();
-
-    migrate_msg->contents.set_query_angle(mObject->queryAngle().asFloat());
-    for (ObjectSet::iterator it = mObject->subscriberSet().begin(); it != mObject->subscriberSet().end(); it++)
-        migrate_msg->contents.add_subscriber(*it);
 }
 
 } // namespace CBR

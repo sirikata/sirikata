@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectConnection.hpp
+ *  ObjectHostContext.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,43 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_CONNECTION_HPP_
-#define _CBR_OBJECT_CONNECTION_HPP_
+#ifndef _CBR_OBJECT_HOST_CONTEXT_HPP_
+#define _CBR_OBJECT_HOST_CONTEXT_HPP_
 
 #include "Utility.hpp"
 #include "Message.hpp"
 
 namespace CBR {
 
+class ObjectFactory;
+class ObjectHost;
 class Trace;
 
-/** Represents a connection a space has to an object.
- *  Only valid while a valid network connection to the object
- *  is open.
- */
-class ObjectConnection {
+typedef uint64 ObjectHostID;
+
+class ObjectHostContext {
 public:
-    ObjectConnection(const UUID& _id, Trace* trace);
-    ~ObjectConnection();
+    ObjectHostContext(ObjectHostID _id)
+     : id(_id),
+       objectHost(NULL),
+       objectFactory(NULL),
+       lastTime(Time::null()),
+       time(Time::null()),
+       trace(NULL)
+    {
+    }
 
-    // Get the UUID of the object associated with this connection.
-    UUID id() const;
-
-    void deliver(const CBR::Protocol::Object::ObjectMessage& msg);
-
-    void tick(const Time& t);
-
-    // Returns true if no messages are waiting to be delivered
-    bool empty() const { return mReceiveQueue.empty(); }
-
-private:
-    UUID mID;
-    Trace* mTrace;
-
-    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> MessageQueue;
-    MessageQueue mReceiveQueue;
-};
+    ObjectHostID id;
+    ObjectHost* objectHost;
+    ObjectFactory* objectFactory;
+    Time lastTime;
+    Time time;
+    Trace* trace;
+}; // class ObjectHostContext
 
 } // namespace CBR
 
-#endif //_CBR_OBJECT_CONNECTION_HPP_
+
+#endif //_CBR_OBJECT_HOST_CONTEXT_HPP_

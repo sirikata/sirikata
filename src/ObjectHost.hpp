@@ -33,60 +33,32 @@
 #ifndef _CBR_OBJECT_HOST_HPP_
 #define _CBR_OBJECT_HOST_HPP_
 
-#include "Utility.hpp"
-#include "Message.hpp"
+#include "ObjectHostContext.hpp"
 
 namespace CBR {
 
 class Object;
-class ObjectFactory;
-class ObjectHost;
-class Trace;
-class Server;
-class ObjectConnection;
-
-class ObjectHostContext {
-public:
-    ObjectHostContext()
-     : objectHost(NULL),
-       objectFactory(NULL),
-       lastTime(Time::null()),
-       time(Time::null()),
-       trace(NULL)
-    {
-    }
-
-    ObjectHost* objectHost;
-    ObjectFactory* objectFactory;
-    Time lastTime;
-    Time time;
-    Trace* trace;
-}; // class ObjectHostContext
+class SpaceConnection;
 
 class ObjectHost {
 public:
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(const ServerID& sid, ObjectFactory* obj_factory, Trace* trace);
+    ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace);
     ~ObjectHost();
 
     const ObjectHostContext* context() const;
 
-    void openConnection(ObjectConnection* conn);
+    SpaceConnection* openConnection(Object* obj);
 
     // FIXME should not be infinite queue and should report push error
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 
-    void tick(const Time& t);
+    void migrate(Object* src, ServerID sid);
 
-    // FIXME this is temporary until we have messages going out over
-    // a real network connection to the server, which should then put
-    // them on its ObjectMessageQueue
-    void setServer(Server* server);
+    void tick(const Time& t);
 
 private:
     ObjectHostContext* mContext;
-    uint64 mOHId;
-    Server* mServer;
     std::queue<std::string*> mOutgoingQueue;
 }; // class ObjectHost
 

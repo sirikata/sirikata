@@ -41,9 +41,6 @@
 
 namespace CBR {
 
-class ObjectFactory;
-class ObjectMessageQueue;
-
 typedef std::set<UUID> ObjectSet;
 
 struct MaxDistUpdatePredicate {
@@ -82,9 +79,10 @@ public:
 
     void tick();
 
-    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
+    // Initiate a connection
+    void connect();
 
-    void migrateMessage(const UUID& oid, const SolidAngle& sa, const std::vector<UUID> subs);
+    void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
 private:
     void sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
