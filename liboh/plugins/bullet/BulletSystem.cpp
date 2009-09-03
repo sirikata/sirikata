@@ -100,12 +100,12 @@ const SpaceID&BulletObj::getSpaceID()const {
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 
-void BulletObj::meshChanged (const URI &newMesh) {
-    DEBUG_OUTPUT(cout << "dbm:    meshChanged: " << newMesh << endl;)
+void BulletObj::onSetMesh (const URI &newMesh) {
+    DEBUG_OUTPUT(cout << "dbm:    onSetMesh: " << newMesh << endl;)
     mMeshname = newMesh;
 }
 
-void BulletObj::scaleChanged (const Vector3f &newScale) {
+void BulletObj::onSetScale (const Vector3f &newScale) {
     if (mSizeX == 0)         /// this gets called once before the bullet stuff is ready
         return;
     if (mSizeX==newScale.x && mSizeY==newScale.y && mSizeZ==newScale.z)
@@ -130,12 +130,12 @@ void BulletObj::scaleChanged (const Vector3f &newScale) {
     mBulletBodyPtr->setMassProps(mass, localInertia);
     mBulletBodyPtr->setGravity(btVector3(mGravity.x, mGravity.y, mGravity.z));  /// otherwise gravity assumes old inertia!
     mBulletBodyPtr->activate(true);
-    DEBUG_OUTPUT(cout << "dbm: scaleChanged: " << newScale << " old X: " << mSizeX << " mass: "
+    DEBUG_OUTPUT(cout << "dbm: onSetScale: " << newScale << " old X: " << mSizeX << " mass: "
                  << mass << " localInertia: " << localInertia.getX() << "," << localInertia.getY() << "," << localInertia.getZ() << endl);
 }    
 
-void BulletObj::physicalChanged (const PhysicalParameters &pp) {
-    DEBUG_OUTPUT(cout << "dbm: physicalChanged: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
+void BulletObj::onSetPhysical (const PhysicalParameters &pp) {
+    DEBUG_OUTPUT(cout << "dbm: onSetPhysical: " << this << " mode=" << pp.mode << " name: " << pp.name << " mesh: " << mMeshname << endl);
     mName = pp.name;
     mHull = pp.hull;
     mGravity = system->getGravity() * pp.gravity;
@@ -143,7 +143,7 @@ void BulletObj::physicalChanged (const PhysicalParameters &pp) {
     colMsg = pp.colMsg;
     switch (pp.mode) {
     case PhysicalParameters::Disabled:
-        DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: Disabled" << endl);
+        DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: Disabled" << endl);
         mActive = false;
         mMeshptr->setLocationAuthority(0);
         mDynamic = false;
@@ -171,14 +171,14 @@ void BulletObj::physicalChanged (const PhysicalParameters &pp) {
     }
     if (mMeshptr) {
         if (mDynamic && (!mMeshptr->isLocal()) ) {      /// for now, physics ignores dynamic objects on other hosts
-            DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: disabling dynamic&non-local" << endl);
+            DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: disabling dynamic&non-local" << endl);
             mActive = false;
             mMeshptr->setLocationAuthority(0);
             return;
         }
     }
     if (!(pp.mode==PhysicalParameters::Disabled)) {
-        DEBUG_OUTPUT(cout << "  dbm: debug physicalChanged: adding to bullet" << endl);
+        DEBUG_OUTPUT(cout << "  dbm: debug onSetPhysical: adding to bullet" << endl);
         positionOrientation po;
         po.p = mMeshptr->getPosition();
         po.o = mMeshptr->getOrientation();

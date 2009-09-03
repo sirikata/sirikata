@@ -360,9 +360,9 @@ public:
 
     // interface from MeshListener
     public:
-        virtual void meshChanged ( URI const& newMesh );
-        virtual void scaleChanged ( Vector3f const& newScale );
-        virtual void physicalChanged ( PhysicalParameters const& pp );
+        virtual void onSetMesh ( URI const& meshFile );
+        virtual void onSetScale ( Vector3f const& scale );
+        virtual void onSetPhysical ( PhysicalParameters const& pp );
 
     protected:
     

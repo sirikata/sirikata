@@ -146,7 +146,7 @@ void MeshEntity::unloadMesh() {
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
-void MeshEntity::meshChanged ( URI const& meshFile )
+void MeshEntity::onSetMesh ( URI const& meshFile )
 {
     // MCB: responsibility to load model meshes must move to MeshObject plugin
 
@@ -156,12 +156,12 @@ void MeshEntity::meshChanged ( URI const& meshFile )
     mResource->setMeshResource ( newMeshPtr );
 }
 
-void MeshEntity::scaleChanged ( Vector3f const& scale )
+void MeshEntity::onSetScale ( Vector3f const& scale )
 {
     mSceneNode->setScale ( toOgre ( scale ) );
 }
 
-void MeshEntity::physicalChanged ( PhysicalParameters const& pp )
+void MeshEntity::onSetPhysical ( PhysicalParameters const& pp )
 {
 
 }

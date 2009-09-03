@@ -51,7 +51,7 @@ ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     MeshObject::setMesh ( mesh );
-    MeshProvider::notify ( &MeshListener::meshChanged, mesh );
+    MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
 }
 
 URI const& ProxyMeshObject::getMesh () const
@@ -62,7 +62,7 @@ URI const& ProxyMeshObject::getMesh () const
 void ProxyMeshObject::setScale ( Vector3f const& scale )
 {
     MeshObject::setScale ( scale );
-    MeshProvider::notify ( &MeshListener::scaleChanged, scale );
+    MeshProvider::notify ( &MeshListener::onSetScale, scale );
 }
 
 Vector3f const& ProxyMeshObject::getScale () const
@@ -73,7 +73,7 @@ Vector3f const& ProxyMeshObject::getScale () const
 void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
     MeshObject::setPhysical ( pp );
-    MeshProvider::notify ( &MeshListener::physicalChanged, pp );
+    MeshProvider::notify ( &MeshListener::onSetPhysical, pp );
 }
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
