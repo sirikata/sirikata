@@ -31,6 +31,7 @@ class ClusterSimSettings:
         self.object_global = 'false'
         self.noise = 'false'
         self.debug = True
+        self.valgrind = False
         self.loc = 'oracle'
         self.blocksize = 200
 
@@ -114,6 +115,8 @@ class ClusterSim:
         cmd += CBR_WRAPPER + " "
         if (self.settings.debug):
             cmd += "--debug "
+        if (self.settings.valgrind):
+            cmd += "--valgrind "
         cmd += "--id=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
         cmd += "\"--region=" + self.settings.region() + "\" "

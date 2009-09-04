@@ -26,7 +26,7 @@ usage () {
 #fi
 
 export CBR_WRAPPER=true
-
+want_valgrind=0
 want_debug=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -35,6 +35,9 @@ while [ $# -gt 0 ]; do
       exit 0 ;;
     -g | --debug )
       want_debug=1
+      shift ;;
+    --valgrind )
+      want_valgrind=1
       shift ;;
     -- ) # Stop option prcessing
       shift
@@ -71,5 +74,9 @@ if [ $want_debug -eq 1 ] ; then
   $GDB "$APPDIR/$APPNAME" -x $tmpfile -quiet
   exit $?
 else
-  exec $APPDIR/$APPNAME "$@"
+  if [ $want_valgrind -eq 1 ] ; then
+    exec valgrind $APPDIR/$APPNAME "$@"
+  else
+    exec $APPDIR/$APPNAME "$@"
+  fi
 fi
