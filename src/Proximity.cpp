@@ -221,7 +221,7 @@ void Proximity::addQuery(UUID obj, SolidAngle sa) {
     // Update min query angle, and update remote queries if necessary
     if (sa < mMinObjectQueryAngle) {
         mMinObjectQueryAngle = sa;
-        PROXLOG(debug,"Query removal initiated server query request.");
+        PROXLOG(debug,"Query addition initiated server query request.");
         sendQueryRequests();
     }
 }

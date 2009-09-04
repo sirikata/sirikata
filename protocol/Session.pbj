@@ -78,6 +78,8 @@ message Migrate {
 // Container for session messages.
 message Container {
     optional Connect connect = 1;
-    optional InitiateMigration init_migration = 2;
-    optional Migrate migrate = 3;
+    optional ConnectResponse connect_response = 2;
+
+    optional InitiateMigration init_migration = 3;
+    optional Migrate migrate = 4;
 }

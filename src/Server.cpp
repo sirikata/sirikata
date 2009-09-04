@@ -198,14 +198,15 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     mForwarder->addObjectConnection(obj_id, conn);
 
     // Send reply back indicating that the connection was successful
-    CBR::Protocol::Session::ConnectResponse response;
+    CBR::Protocol::Session::Container response_container;
+    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
     response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
 
     CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id,
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
-        serializePBJMessage(response)
+        serializePBJMessage(response_container)
     );
 
     conn->send( obj_response );

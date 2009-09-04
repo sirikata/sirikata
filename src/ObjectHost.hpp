@@ -65,7 +65,18 @@ private:
     struct SpaceNodeConnection;
 
     // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
-    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    // The allow_connecting parameter allows you to use a connection over which the object is still opening
+    // a connection.  This is safe since it can only be used by this class (since this is private), so it will
+    // only be used to deal with session management.
+    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, bool allow_connecting);
+
+    // Starting point for handling of all messages from the server -- either handled as a special case, such as
+    // for session management, or dispatched to the object
+    void handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg);
+
+    // Handles session messages received from the server -- connection replies, migration requests, etc.
+    void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
+
 
     /** SpaceNodeConnection initiation, session initiation. */
 
@@ -133,6 +144,8 @@ private:
         ObjectInfo(); // Don't use, necessary for std::map
 
         Object* object;
+        // Server we're trying to connect to
+        ServerID connectingTo;
         // Server currently connected to
         ServerID connectedTo;
         // Outstanding connection callback
