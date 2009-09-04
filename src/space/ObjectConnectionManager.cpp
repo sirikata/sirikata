@@ -34,6 +34,8 @@
 #include "Message.hpp"
 #include <boost/bind.hpp>
 
+#define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
+
 namespace CBR {
 
 ObjectConnectionManager::ObjectHostConnection::ObjectHostConnection(boost::asio::io_service& ios)
@@ -97,7 +99,7 @@ void ObjectConnectionManager::startListening() {
 }
 
 void ObjectConnectionManager::handleNewConnection(const boost::system::error_code& error, ObjectHostConnection* new_conn) {
-    SILOG(space,debug,"New object host connection handled");
+    SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index and start reading from it
     mConnections.insert(new_conn);
@@ -113,6 +115,7 @@ void ObjectConnectionManager::startReading(ObjectHostConnection* conn) {
     boost::asio::async_read(
         *(conn->socket),
         conn->read_buf,
+        boost::asio::transfer_at_least(1), // NOTE: This is important, defaults to transfer_all...
         boost::bind( &ObjectConnectionManager::handleConnectionRead, this,
             boost::asio::placeholders::error, conn
         )
@@ -122,9 +125,11 @@ void ObjectConnectionManager::startReading(ObjectHostConnection* conn) {
 void ObjectConnectionManager::handleConnectionRead(const boost::system::error_code& err, ObjectHostConnection* conn) {
     if (err) {
         // FIXME some kind of error, need to handle this
-        SILOG(cbr,error,"Error in connection read\n");
+        SPACE_LOG(error,"Error in connection read\n");
         return;
     }
+
+    SPACE_LOG(insane, "Handling connection read: " << conn->read_buf.size() << " bytes");
 
     // dump data
     uint32 buf_size = conn->read_buf.size();
@@ -133,6 +138,8 @@ void ObjectConnectionManager::handleConnectionRead(const boost::system::error_co
     is.read(buf, buf_size);
 
     conn->read_avail += std::string(buf, buf_size);
+
+    delete buf;
 
     // try to extract messages
     while( conn->read_avail.size() > sizeof(uint32) ) {
@@ -184,7 +191,7 @@ void ObjectConnectionManager::handleConnectionWrite(const boost::system::error_c
 
     if (err) {
         // FIXME some kind of error, need to handle this
-        SILOG(cbr,error,"Error in connection write\n");
+        SPACE_LOG(error,"Error in connection write\n");
         return;
     }
 

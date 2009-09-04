@@ -38,6 +38,8 @@
 
 #include <boost/bind.hpp>
 
+#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+
 namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid)
@@ -107,7 +109,14 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
 }
 
 void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn) {
+    if (conn == NULL) {
+        OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
+        cb(NullServerID);
+        return;
+    }
+
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
+    mObjectInfo[uuid].connectedTo = conn->server;
     mObjectInfo[uuid].connectionCallback = cb;
 
     CBR::Protocol::Session::Container session_msg;
@@ -135,9 +144,14 @@ bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest
 bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     ServerID dest_server = mObjectInfo[src].connectedTo;
 
+    if (dest_server == NullServerID) {
+        OH_LOG(error,"Tried to send message when not connected.");
+        return false;
+    }
+
     ServerConnectionMap::iterator it = mConnections.find(dest_server);
     if (it == mConnections.end()) {
-        SILOG(cbr,warn,"Tried to send message for object to unconnected server.");
+        OH_LOG(warn,"Tried to send message for object to unconnected server.");
         return false;
     }
     SpaceNodeConnection* conn = it->second;
@@ -155,7 +169,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     char payload_size_buffer[ sizeof(uint32) + sizeof(uint8) ];
     *((uint32*)payload_size_buffer) = real_payload.size(); // FIXME endian
     *(payload_size_buffer + sizeof(uint32)) = 0; // null terminator
-    std::string* final_payload = new std::string( std::string(payload_size_buffer) + real_payload );
+    std::string* final_payload = new std::string( std::string(payload_size_buffer,sizeof(uint32)) + real_payload );
 
     conn->queue.push(final_payload);
 
@@ -231,7 +245,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
 
     // Try to initiate connection
     tcp::endpoint endpt( address_v4(ntohl(addr->ip)), (unsigned short)addr->port);
-    SILOG(oh,debug,"Trying to connect to " << endpt);
+    OH_LOG(debug,"Trying to connect to " << endpt);
     conn->connecting = true;
     conn->socket->async_connect(
         endpt,
@@ -242,9 +256,9 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
 void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, ServerID sid) {
     SpaceNodeConnection* conn = mConnections[sid];
 
-    SILOG(oh,debug,"Handling space connection...");
+    OH_LOG(debug,"Handling space connection...");
     if (err) {
-        SILOG(oh,error,"Failed to connect to server " << sid << ": " << err << ", " << err.message());
+        OH_LOG(error,"Failed to connect to server " << sid << ": " << err << ", " << err.message());
         for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
             (*it)(NULL);
         conn->connectCallbacks.clear();
@@ -253,7 +267,7 @@ void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, Ser
         return;
     }
 
-    SILOG(oh,debug,"Successfully connected to " << sid);
+    OH_LOG(debug,"Successfully connected to " << sid);
     conn->connecting = false;
 
     // Set up reading for this connection
@@ -261,7 +275,7 @@ void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, Ser
 
     // Tell all requesters that the connection is available
     for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
-        (*it)(NULL);
+        (*it)(conn);
     conn->connectCallbacks.clear();
 }
 
@@ -269,6 +283,7 @@ void ObjectHost::startReading(SpaceNodeConnection* conn) {
     boost::asio::async_read(
         *(conn->socket),
         conn->read_buf,
+        boost::asio::transfer_at_least(1), // NOTE: This is important, defaults to transfer_all...
         boost::bind( &ObjectHost::handleConnectionRead, this,
             boost::asio::placeholders::error, conn
         )
@@ -278,7 +293,7 @@ void ObjectHost::startReading(SpaceNodeConnection* conn) {
 void ObjectHost::handleConnectionRead(const boost::system::error_code& err, SpaceNodeConnection* conn) {
     if (err) {
         // FIXME some kind of error, need to handle this
-        SILOG(cbr,error,"Error in connection read\n");
+        OH_LOG(error,"Error in connection read:" << err << " = " << err.message());
         return;
     }
 
@@ -289,6 +304,8 @@ void ObjectHost::handleConnectionRead(const boost::system::error_code& err, Spac
     is.read(buf, buf_size);
 
     conn->read_avail += std::string(buf, buf_size);
+
+    delete buf;
 
     // try to extract messages
     while( conn->read_avail.size() > sizeof(uint32) ) {
@@ -323,7 +340,9 @@ void ObjectHost::startWriting(SpaceNodeConnection* conn) {
             write_stream.write( data->c_str(), data->size() );
             delete data;
         }
+
         // And start the write
+        OH_LOG(insane,"Starting write of " << conn->write_buf.size() << " bytes");
         boost::asio::async_write(
             *(conn->socket),
             conn->write_buf,
@@ -339,7 +358,7 @@ void ObjectHost::handleConnectionWrite(const boost::system::error_code& err, Spa
 
     if (err) {
         // FIXME some kind of error, need to handle this
-        SILOG(cbr,error,"Error in connection write\n");
+        OH_LOG(error,"Error in connection write\n");
         return;
     }
 
