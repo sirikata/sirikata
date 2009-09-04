@@ -128,11 +128,11 @@ void *main_loop(void *) {
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
 
-
-    uint32 nservers = GetOption("max-servers")->as<uint32>();
-    if (nservers == 0) {
-      nservers = layout.x * layout.y * layout.z;
-    }
+    uint32 max_space_servers = GetOption("max-servers")->as<uint32>();
+    if (max_space_servers == 0)
+      max_space_servers = layout.x * layout.y * layout.z;
+    uint32 num_oh_servers = GetOption("num-oh")->as<uint32>();
+    uint32 nservers = max_space_servers + num_oh_servers;
 
 
 
@@ -181,7 +181,7 @@ void *main_loop(void *) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "distributed") {
-      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, nservers);
+      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers);
     }
     else if (cseg_type == "client") {
       cseg = new CoordinateSegmentationClient(space_context, region, layout);
@@ -235,16 +235,16 @@ void *main_loop(void *) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
-        BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
+        BandwidthAnalysis ba(STATS_TRACE_FILE, max_space_servers);
         printf("Send rates\n");
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 ba.computeSendRate(sender, receiver);
             }
         }
         printf("Receive rates\n");
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 ba.computeReceiveRate(sender, receiver);
             }
         }
@@ -284,12 +284,12 @@ void *main_loop(void *) {
 
         Duration window = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW)->as<Duration>();
         Duration sample_rate = GetOption(ANALYSIS_WINDOWED_BANDWIDTH_RATE)->as<Duration>();
-        BandwidthAnalysis ba(STATS_TRACE_FILE, nservers);
+        BandwidthAnalysis ba(STATS_TRACE_FILE, max_space_servers);
         Time start_time = Time::null();
         Time end_time = start_time + duration;
         printf("Send rates\n");
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.computeWindowedDatagramSendRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_send_file);
                 else if (windowed_analysis_type == "packet")
@@ -297,8 +297,8 @@ void *main_loop(void *) {
             }
         }
         printf("Receive rates\n");
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.computeWindowedDatagramReceiveRate(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_analysis_receive_file);
                 else if (windowed_analysis_type == "packet")
@@ -307,8 +307,8 @@ void *main_loop(void *) {
         }
         // Queue information
         //  * Raw dump
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.dumpDatagramQueueInfo(sender, receiver, std::cout, queue_info_file);
                 else if (windowed_analysis_type == "packet")
@@ -316,8 +316,8 @@ void *main_loop(void *) {
             }
         }
         //  * Send
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.windowedDatagramSendQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_send_file);
                 else if (windowed_analysis_type == "packet")
@@ -325,8 +325,8 @@ void *main_loop(void *) {
             }
         }
         //  * Receive
-        for(ServerID sender = 1; sender <= nservers; sender++) {
-            for(ServerID receiver = 1; receiver <= nservers; receiver++) {
+        for(ServerID sender = 1; sender <= max_space_servers; sender++) {
+            for(ServerID receiver = 1; receiver <= max_space_servers; receiver++) {
                 if (windowed_analysis_type == "datagram")
                     ba.windowedDatagramReceiveQueueInfo(sender, receiver, window, sample_rate, start_time, end_time, std::cout, windowed_queue_info_receive_file);
                 else if (windowed_analysis_type == "packet")
@@ -340,7 +340,7 @@ void *main_loop(void *) {
         String object_segmentation_filename = "object_segmentation_file";
         object_segmentation_filename += ".dat";
 
-        ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, nservers);
+        ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, max_space_servers);
         std::ofstream object_seg_stream (object_segmentation_filename.c_str());
         osegAnalysis.printData(object_seg_stream);
         object_seg_stream.flush();
@@ -351,7 +351,7 @@ void *main_loop(void *) {
         String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
         object_segmentation_lookup_filename += ".dat";
 
-        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,nservers);
+        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,max_space_servers);
         std::ofstream oseg_lookup_stream(object_segmentation_lookup_filename.c_str());
         lookupAnalysis.printData(oseg_lookup_stream);
         oseg_lookup_stream.flush();
@@ -363,7 +363,7 @@ void *main_loop(void *) {
         object_segmentation_processed_filename += ".dat";
 
 
-        ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,nservers);
+        ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,max_space_servers);
         std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
 
         processedAnalysis.printData(oseg_process_stream);
