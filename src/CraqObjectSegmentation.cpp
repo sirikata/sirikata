@@ -130,6 +130,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       mapDataKeyToUUID[tmper.rawHexData()] = tmper;
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
+
+
+      //also need to say that the object is in transit or lookup.
+      mInTransitOrLookup[tmper] = 0; //just says that we are performing a lookup on the object
+      
     }
   }
 
@@ -170,7 +175,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
       int trackID = craqDht.set(cdSetGet);
       trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
-      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  will generateAck:  "<<obj_id.toString()<<"\n\n";
+      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  will generateAck:  "<<obj_id.toString()<<"   to   "<< idServerAckTo<< "  from  "<< mContext->id << "\n\n";
     }
     else
     {
@@ -270,13 +275,32 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     }
 
 
+    if (craqDht.queueSize() != 0)
+    {
+      std::cout<<"\n\nbftm debug: this is the size of the craq queue  " <<craqDht.queueSize() <<"\n\n";
+    }
+
+    
 
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
       updated[mapDataKeyToUUID[getResults[s].idToString()]]  = getResults[s].servID;
       mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id);
+
+      //need to remove from mInTransitOrLookup
+    
+      UUID tmper = mapDataKeyToUUID[getResults[s].idToString()];
+      std::map<UUID,ServerID>::iterator iter = mInTransitOrLookup.find(tmper);
+
+      if (iter != mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
+      {
+        mInTransitOrLookup.erase(iter);
+        //        ljsdlfjadf;lkj
+      }
     }
+
+    
     processCraqTrackedSetResults(trackedSetResults);
 
     mFinishedMoveOrLookup.clear();

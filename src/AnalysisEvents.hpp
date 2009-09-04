@@ -156,6 +156,8 @@ struct ObjectLookupProcessedEvent: public Event
 {
   UUID mObjID;
   ServerID mID_processor, mID_objectOn;
+  
+  
 };
 
 

@@ -230,15 +230,21 @@ public:
 }; //class ObjectSegmentationAnalysis
 
 
+
+  
 class ObjectSegmentationLookupRequestsAnalysis
 {
 private:
   std::vector<Time> times;
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
+
+  void convertToEvtsAndSort(std::vector<ObjectLookupEvent>&);
+  static bool compareEvts(ObjectLookupEvent A, ObjectLookupEvent B);
+  
 public:
   ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut);
+  void printData(std::ostream &fileOut, bool sortByTime=true);
   ~ObjectSegmentationLookupRequestsAnalysis();
 };
 
@@ -250,33 +256,15 @@ private:
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_processor;
   std::vector<ServerID> sID_objectOn;
+
+  void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
+  static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
   
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut);
+  void printData(std::ostream &fileOut, bool sortByTime = true);
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
-
-
-// struct SingleServerOsegDump
-// {
-//   SingleServerOsegDump (SingleServerOsegFinalDumpEvent *dump_evt);
-//   ServerID sID;
-//   std::vector<UUID> objsOnServer;
-//   std::vector<UUID> stillWaitingFor;
-// };
-
-// class ObjectSegmentationFinalDumpAnalysis
-// {
-//  private:
-//   std::vector<SingleServerOsegDump> osegDumps;
-    
-//  public:
-//   ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers);
-//   void printData(std::ostream &fileOut);
-//   ~ObjectSegmentationFinalDumpAnalysis();
-// };
-
 
   
 

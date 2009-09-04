@@ -26,7 +26,7 @@ class ClusterSimSettings:
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
         self.object_queue_length = 8192
-        self.object_static = 'false'
+        self.object_static = 'true'
         self.object_simple = 'true'
         self.object_2d = 'true'
         self.object_global = 'false'

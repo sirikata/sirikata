@@ -38,6 +38,7 @@
 #include "AnalysisEvents.hpp"
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
+#include <algorithm>
 
 namespace CBR {
 
@@ -1372,25 +1373,78 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  void ObjectSegmentationLookupRequestsAnalysis::printData(std::ostream &fileOut)
+  void ObjectSegmentationLookupRequestsAnalysis::printData(std::ostream &fileOut, bool sortByTime)
   {
 
-    fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
-    fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
-
-
-    for (int s= 0; s < (int) times.size(); ++s)
+    if (sortByTime)
     {
-      fileOut<< "\n\n********************************\n";
-      fileOut<< "\tRegistered from:   "<<sID_lookup[s]<<"\n";
-      fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
-      fileOut<< "\tObj id:            "<<obj_ids[s].toString()<<"\n";
+      std::vector<ObjectLookupEvent> sortedEvents;
+      convertToEvtsAndSort(sortedEvents);
+
+      fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< sortedEvents.size() <<"  \n\n";
+
+
+      for (int s= 0; s < (int) sortedEvents.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+      }
+
+      fileOut<<"\n\n\n\nEND\n";
     }
+    else
+    {
+
+      fileOut<<"\n\n\n\nEND\n";
+    
+    
+      fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
 
 
-    fileOut<<"\n\n\n\nEND\n";
+      for (int s= 0; s < (int) times.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sID_lookup[s]<<"\n";
+        fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
+        fileOut<< "\tObj id:            "<<obj_ids[s].toString()<<"\n";
+      }
+
+      fileOut<<"\n\n\n\nEND\n";
+    }
+    
   }
 
+  //want to sort by times.
+  //probably a bad way to do this.  I could have just read them in correctly in the first place.
+  void ObjectSegmentationLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupEvent> &sortedEvents)
+  {
+    ObjectLookupEvent ole;
+    
+    for (int s= 0; s < (int) times.size(); ++s)
+    {
+      ole.time = times[s];
+      ole.mObjID = obj_ids[s];
+      ole.mID_lookup = sID_lookup[s];
+
+      sortedEvents.push_back(ole);
+    }
+
+    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
+
+
+    
+    
+  }
+
+  bool ObjectSegmentationLookupRequestsAnalysis::compareEvts(ObjectLookupEvent A, ObjectLookupEvent B)
+  {
+    return A.time < B.time;
+  }
+  
   ObjectSegmentationLookupRequestsAnalysis::~ObjectSegmentationLookupRequestsAnalysis()
   {
 
@@ -1432,107 +1486,78 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
   
 
-  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut)
+  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
   {
-
-    fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
-    fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
-
-
-    for (int s= 0; s < (int) times.size(); ++s)
+    if (sortedByTime)
     {
-      fileOut<< "\n\n********************************\n";
-      fileOut<< "\tRegistered from:   "<<sID_processor[s]<<"\n";
-      fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
-      fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
-      fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
-    }
+      std::vector<ObjectLookupProcessedEvent> sortedEvts;
+      convertToEvtsAndSort(sortedEvts);
 
-    fileOut<<"\n\n\n\nEND\n";
+      fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< sortedEvts.size() <<"  \n\n";
+
+      for (int s= 0; s < (int) sortedEvts.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvts[s].mID_processor<<"\n";
+        fileOut<< "\tTime at:           "<<sortedEvts[s].time.raw()<<"\n";
+        fileOut<< "\tID Lookup:         "<<sortedEvts[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObject on:         "<<sortedEvts[s].mID_objectOn<<"\n";
+      }
+      
+      fileOut<<"\n\n\n\nEND\n";
+    }
+    else
+    {
+      fileOut << "\n\n*******************Begin Lookup Processed Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+      for (int s= 0; s < (int) times.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sID_processor[s]<<"\n";
+        fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
+        fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
+        fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
+      }
+
+      fileOut<<"\n\n\n\nEND\n";
+      
+    }
 
   }
 
+  void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&sortedEvts)
+  {
+    ObjectLookupProcessedEvent olpe;
+    
+    for (int s= 0; s < (int) times.size(); ++s)
+    {
+      olpe.time = times[s];
+      olpe.mObjID = obj_ids[s];
+      olpe.mID_processor = sID_processor[s];
+      olpe.mID_objectOn  = sID_objectOn[s];
+
+      sortedEvts.push_back(olpe);
+    }
+
+    std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
+    
+  }
+
+
+  bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+  {
+    return A.time < B.time;
+  }
+  
+
+
+  
   ObjectSegmentationProcessedRequestsAnalysis::~ObjectSegmentationProcessedRequestsAnalysis ()
   {
   }
 
-  //struct constructor fo SingleServerOsegDump struct
-//   SingleServerOsegDump::SingleServerOsegDump(SingleServerOsegFinalDumpEvent* evt)
-//   {
-//     sID = evt->sID;
-        
-//     for (int s=0; s < (int) evt->objectsHosted.size(); ++s)
-//     {
-//       objsOnServer.push_back(evt->objectsHosted[s]);
-//     }
-
-//     for (std::map<UUID,ServerID>::iterator iter = evt->inTransitOrLookup.begin(); iter != evt->inTransitOrLookup.end(); ++iter)
-//     {
-//       stillWaitingFor.push_back(iter->first);
-//     }
-//   }
-
-//   //class ObjectSegmentationFinalDumpAnalysis()
-//   ObjectSegmentationFinalDumpAnalysis::ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers)
-//   {
-
-//     std::cout<<"\n\nGot into an oseg final dump analysis\n\n";
-    
-//     for(uint32 server_id = 1; server_id <= nservers; server_id++)
-//     {
-//       String loc_file = GetPerServerFile(opt_name, server_id);
-//       std::ifstream is(loc_file.c_str(), std::ios::in);
-
-//       while(is)
-//       {
-//         Event* evt = Event::read(is, server_id);
-//         if (evt == NULL)
-//           break;
-
-//         SingleServerOsegFinalDumpEvent* ss_oseg_dump_evt = dynamic_cast<SingleServerOsegFinalDumpEvent*> (evt);
-
-//         if (ss_oseg_dump_evt != NULL)
-//         {
-
-//           std::cout<<"\n\nAnalysis.cpp: not null\n";
-          
-//           SingleServerOsegDump ss_oseg_dump(ss_oseg_dump_evt);
-//           osegDumps.push_back(ss_oseg_dump);
-//         }
-//       }
-//     }
-//   }
-  
-//   void ObjectSegmentationFinalDumpAnalysis::printData(std::ostream &fileOut)
-//   {
-
-//     fileOut << "\n\n*******************Begin Final OSeg Dump Records*************\n\n\n";
-
-//     for (int s= 0; s < (int) osegDumps.size(); ++s)
-//     {
-//       fileOut << "\n\n**************Server: "<<osegDumps[s].sID<<"\n\n";
-
-//       fileOut<<"\n\t****Objects stored:\n";
-//       for (int t=0; t < (int) osegDumps[s].objsOnServer.size(); ++t)
-//       {
-//         fileOut<<"\t\t**"<<osegDumps[s].objsOnServer[t].toString() <<"\n";
-//       }
-
-//       fileOut<<"\n\n\n\t****Still waiting for:\n";
-//       for (int t=0; t < (int) osegDumps[s].stillWaitingFor.size(); ++t)
-//       {
-//         fileOut<<"\t\t**"<<osegDumps[s].stillWaitingFor[s].toString()<<"\n";
-//       }
-//     }
-    
-//     fileOut<<"\n\n\n\nEND\n";
-//   }
-//   ObjectSegmentationFinalDumpAnalysis::~ObjectSegmentationFinalDumpAnalysis()
-//   {
-
-//   }
-
-  //end final dump
 
 
 

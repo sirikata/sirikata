@@ -332,10 +332,6 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
 
-  //
-  //static const uint8 ObjectSegmentationLookupRequestsAnalysisTag = 13;
-  //static const uint8 ObjectSegmentationProcessedRequestsAnalysisTag = 14;
-
 
   void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
@@ -360,8 +356,8 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
-    data.write(&sID, sizeof(sID));
     data.write(&sID_processor, sizeof(sID_processor));
+    data.write(&sID, sizeof(sID));
 #endif
   }
 
