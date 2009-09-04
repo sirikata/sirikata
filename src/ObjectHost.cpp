@@ -222,7 +222,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     Address4* addr = mServerIDMap->lookupExternal(server);
 
     // Try to initiate connection
-    tcp::endpoint endpt( address_v4(addr->ip), (unsigned short)addr->port);
+    tcp::endpoint endpt( address_v4(ntohl(addr->ip)), (unsigned short)addr->port);
     conn->connecting = true;
     conn->socket->async_connect(
         endpt,
@@ -234,7 +234,7 @@ void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, Ser
     SpaceNodeConnection* conn = mConnections[sid];
 
     if (err) {
-        SILOG(cbr,error,"Failed to connect to server " << sid);
+        SILOG(cbr,error,"Failed to connect to server " << sid << ": " << err);
         delete conn;
         mConnections.erase(sid);
         cb(NULL);

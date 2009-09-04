@@ -75,7 +75,7 @@ void ObjectConnectionManager::listen(const Address4& listen_addr) {
 
     assert(mAcceptor == NULL);
 
-    tcp::endpoint endpt( address_v4(listen_addr.ip), (unsigned short)listen_addr.port);
+    tcp::endpoint endpt( address_v4(ntohl(listen_addr.ip)), (unsigned short)listen_addr.port);
     mAcceptor = new tcp::acceptor( mIOService, endpt);
 
     startListening();
