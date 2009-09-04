@@ -49,9 +49,10 @@ ObjectConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
 }
 
 
-ObjectConnectionManager::ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr)
+ObjectConnectionManager::ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
-   mAcceptor(NULL)
+   mAcceptor(NULL),
+   mMessageReceivedCallback(cb)
 {
     listen(listen_addr);
 }
@@ -155,8 +156,7 @@ void ObjectConnectionManager::handleConnectionRead(const boost::system::error_co
         bool parse_success = obj_msg->ParseFromString(real_payload);
         assert(parse_success == true);
 
-        assert(false); // FIXME need to do something with the message
-        //mObjectInfo[ obj_msg->dest_object() ].object->receiveMessage(obj_msg);
+        handleObjectHostMessage(obj_msg);
     }
 
     // continue reading
@@ -198,5 +198,11 @@ void ObjectConnectionManager::handleConnectionWrite(const boost::system::error_c
     startWriting(conn);
 }
 
+
+void ObjectConnectionManager::handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg) {
+    // FIXME handle session messages
+
+    mMessageReceivedCallback(msg);
+}
 
 } // namespace CBR

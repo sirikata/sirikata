@@ -42,7 +42,10 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
 
     Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id);
-    mObjectConnectionManager = new ObjectConnectionManager(mContext, *oh_listen_addr);
+    mObjectConnectionManager = new ObjectConnectionManager(
+        mContext, *oh_listen_addr,
+        std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1)
+    );
 }
 
 Server::~Server()
@@ -100,26 +103,27 @@ void Server::handleOpenConnection(ObjectConnection* conn) {
     mConnectingObjects[conn->id()] = conn;
 }
 
-bool Server::receiveObjectHostMessage(const std::string& msg) {
-    // All messages from object host to space server are object messages
-    // They are either to another object or to the space (UUID 0)
-    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-    bool parse_success = obj_msg->ParseFromArray((void*)&msg[0], msg.size());
-    assert(parse_success);
-
+void Server::handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // The object could be migrating and we get outdated packets.  Currently this can
     // happen because we need to maintain the connection long enough to deliver the init migration
     // message.  Currently we just discard these messages, but we may need to account for this.
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session::Connect messages.
-    if (mObjects.find(obj_msg->source_object()) == mObjects.end() &&
+    if (obj_msg->source_object() != UUID::null() &&
+        mObjects.find(obj_msg->source_object()) == mObjects.end() &&
         mConnectingObjects.find(obj_msg->source_object()) == mConnectingObjects.end())
     {
-        //printf("Warning: Server got message from object after migration started.\n");
-        return true;
+        if (mObjectsAwaitingMigration.find(obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
+            mObjectMigrations.find(obj_msg->source_object()) == mObjectMigrations.end())
+            SILOG(cbr,warn,"Got message for unknown object: " << obj_msg->source_object().toString());
+        else
+            SILOG(cbr,warn,"Server got message from object after migration started: " << obj_msg->source_object().toString());
+
+        return;
     }
 
-    return mForwarder->routeObjectHostMessage(obj_msg);
+    bool route_success = mForwarder->routeObjectHostMessage(obj_msg);
+    // FIXME handle forwarding failure
 }
 
 // Handle Session messages from an object

@@ -46,15 +46,12 @@ class Server : public MessageRecipient, public ObjectMessageRecipient
       // FIXME this should come form the network, currently just this way because ObjectHosts
       // aren't actually networked yet
       void handleOpenConnection(ObjectConnection* conn);
-      // FIXME this should come from the network instead of directly from ObjectHost
-      // Note that this method should *only* be used for messages from the object host
-      // ObjectMessages from other space servers should arrive via the normal ServerMessage
-      // pipeline
-      bool receiveObjectHostMessage(const std::string& msg);
 
       virtual void receiveMessage(Message* msg);
       virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
 private:
+      void handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg);
+
     void serviceProximity();
     void serviceNetwork();
     void checkObjectMigrations();

@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Network.hpp"
+#include "Message.hpp"
 #include <boost/asio.hpp>
 
 namespace CBR {
@@ -46,7 +47,9 @@ namespace CBR {
  */
 class ObjectConnectionManager {
 public:
-    ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr);
+    typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+
+    ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectConnectionManager();
 
     void service();
@@ -72,6 +75,7 @@ private:
     typedef std::set<ObjectHostConnection*> ObjectHostConnectionMap;
     ObjectHostConnectionMap mConnections;
 
+    MessageReceivedCallback mMessageReceivedCallback;
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle
@@ -89,6 +93,9 @@ private:
     void startWriting(ObjectHostConnection* conn);
     // Handle the async writing callback for this connection
     void handleConnectionWrite(const boost::system::error_code& err, ObjectHostConnection* conn);
+
+    /** Handle messages, either directly, e.g. for sessions, or by dispatching them. */
+    void handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg);
 };
 
 } // namespace CBR
