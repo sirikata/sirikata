@@ -23,7 +23,7 @@ class ObjectMessageQueue;
 class LoadMonitor;
 
 class ObjectConnection;
-class ObjectConnectionManager;
+class ObjectHostConnectionManager;
 
 class ServerIDMap;
 
@@ -72,7 +72,7 @@ private:
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
 
-      ObjectConnectionManager* mObjectConnectionManager;
+      ObjectHostConnectionManager* mObjectHostConnectionManager;
 
     typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
 

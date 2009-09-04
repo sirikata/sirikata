@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectConnectionManager.hpp
+ *  ObjectHostConnectionManager.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_OBJECT_CONNECTION_MANAGER_HPP_
-#define _CBR_OBJECT_CONNECTION_MANAGER_HPP_
+#ifndef _CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_
+#define _CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
@@ -41,16 +41,16 @@
 
 namespace CBR {
 
-/** ObjectConnectionManager handles the networking aspects of interacting
+/** ObjectHostConnectionManager handles the networking aspects of interacting
  *  with object hosts.  It listens for connections, maintains per object
  *  connections, and handles shipping messages out to the network.
  */
-class ObjectConnectionManager {
+class ObjectHostConnectionManager {
 public:
     typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
-    ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
-    ~ObjectConnectionManager();
+    ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
+    ~ObjectHostConnectionManager();
 
     void service();
 private:
@@ -100,4 +100,4 @@ private:
 
 } // namespace CBR
 
-#endif //_CBR_OBJECT_CONNECTION_MANAGER_HPP_
+#endif //_CBR_OBJECT_HOST_CONNECTION_MANAGER_HPP_

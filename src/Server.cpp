@@ -15,7 +15,7 @@
 #include "ObjectSegmentation.hpp"
 
 #include "ObjectConnection.hpp"
-#include "ObjectConnectionManager.hpp"
+#include "ObjectHostConnectionManager.hpp"
 
 #include "Random.hpp"
 
@@ -34,7 +34,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mProximity(prox),
    mOSeg(oseg),
    mForwarder(forwarder),
-   mObjectConnectionManager(NULL)
+   mObjectHostConnectionManager(NULL)
 {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
       mForwarder->registerObjectMessageRecipient(OBJECT_PORT_SESSION, this);
@@ -42,7 +42,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
 
     Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id);
-    mObjectConnectionManager = new ObjectConnectionManager(
+    mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1)
     );
@@ -50,7 +50,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
 Server::~Server()
 {
-    delete mObjectConnectionManager;
+    delete mObjectHostConnectionManager;
 
     mForwarder->unregisterObjectMessageRecipient(OBJECT_PORT_SESSION, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
@@ -78,7 +78,7 @@ void Server::serviceNetwork()
     mForwarder->service();
 
 
-    mObjectConnectionManager->service();
+    mObjectHostConnectionManager->service();
 
   // Tick all active connections
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {

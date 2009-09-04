@@ -1,5 +1,5 @@
 /*  cbr
- *  ObjectConnectionManager.cpp
+ *  ObjectHostConnectionManager.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ObjectConnectionManager.hpp"
+#include "ObjectHostConnectionManager.hpp"
 #include "Message.hpp"
 #include <boost/bind.hpp>
 
@@ -38,18 +38,18 @@
 
 namespace CBR {
 
-ObjectConnectionManager::ObjectHostConnection::ObjectHostConnection(boost::asio::io_service& ios)
+ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(boost::asio::io_service& ios)
  : is_writing(false)
 {
     socket = new boost::asio::ip::tcp::socket(ios);
 }
 
-ObjectConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
+ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
     delete socket;
 }
 
 
-ObjectConnectionManager::ObjectConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
+ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
    mAcceptor(NULL),
    mMessageReceivedCallback(cb)
@@ -57,12 +57,12 @@ ObjectConnectionManager::ObjectConnectionManager(SpaceContext* ctx, const Addres
     listen(listen_addr);
 }
 
-ObjectConnectionManager::~ObjectConnectionManager() {
+ObjectHostConnectionManager::~ObjectHostConnectionManager() {
     delete mAcceptor;
 }
 
 
-void ObjectConnectionManager::service() {
+void ObjectHostConnectionManager::service() {
     // Set up writers which are not writing yet
     for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
         ObjectHostConnection* conn = *it;
@@ -74,7 +74,7 @@ void ObjectConnectionManager::service() {
     mIOService.poll();
 }
 
-void ObjectConnectionManager::listen(const Address4& listen_addr) {
+void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     using namespace boost::asio::ip;
 
     assert(mAcceptor == NULL);
@@ -89,17 +89,17 @@ void ObjectConnectionManager::listen(const Address4& listen_addr) {
     startListening();
 }
 
-void ObjectConnectionManager::startListening() {
+void ObjectHostConnectionManager::startListening() {
     ObjectHostConnection* new_conn = new ObjectHostConnection(mIOService);
     mAcceptor->async_accept(
         *(new_conn->socket),
-        boost::bind(&ObjectConnectionManager::handleNewConnection, this,
+        boost::bind(&ObjectHostConnectionManager::handleNewConnection, this,
             boost::asio::placeholders::error,
             new_conn)
     );
 }
 
-void ObjectConnectionManager::handleNewConnection(const boost::system::error_code& error, ObjectHostConnection* new_conn) {
+void ObjectHostConnectionManager::handleNewConnection(const boost::system::error_code& error, ObjectHostConnection* new_conn) {
     SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index and start reading from it
@@ -112,18 +112,18 @@ void ObjectConnectionManager::handleNewConnection(const boost::system::error_cod
 }
 
 
-void ObjectConnectionManager::startReading(ObjectHostConnection* conn) {
+void ObjectHostConnectionManager::startReading(ObjectHostConnection* conn) {
     boost::asio::async_read(
         *(conn->socket),
         conn->read_buf,
         boost::asio::transfer_at_least(1), // NOTE: This is important, defaults to transfer_all...
-        boost::bind( &ObjectConnectionManager::handleConnectionRead, this,
+        boost::bind( &ObjectHostConnectionManager::handleConnectionRead, this,
             boost::asio::placeholders::error, conn
         )
     );
 }
 
-void ObjectConnectionManager::handleConnectionRead(const boost::system::error_code& err, ObjectHostConnection* conn) {
+void ObjectHostConnectionManager::handleConnectionRead(const boost::system::error_code& err, ObjectHostConnection* conn) {
     if (err) {
         // FIXME some kind of error, need to handle this
         SPACE_LOG(error,"Error in connection read\n");
@@ -164,7 +164,7 @@ void ObjectConnectionManager::handleConnectionRead(const boost::system::error_co
 }
 
 // Start async writing for this connection if it has data to be sent
-void ObjectConnectionManager::startWriting(ObjectHostConnection* conn) {
+void ObjectHostConnectionManager::startWriting(ObjectHostConnection* conn) {
     if (!conn->queue.empty() && !conn->is_writing) {
         conn->is_writing = true;
         // Get more data into the buffer
@@ -179,14 +179,14 @@ void ObjectConnectionManager::startWriting(ObjectHostConnection* conn) {
         boost::asio::async_write(
             *(conn->socket),
             conn->write_buf,
-            boost::bind( &ObjectConnectionManager::handleConnectionWrite, this,
+            boost::bind( &ObjectHostConnectionManager::handleConnectionWrite, this,
                 boost::asio::placeholders::error, conn)
         );
     }
 }
 
 // Handle the async writing callback for this connection
-void ObjectConnectionManager::handleConnectionWrite(const boost::system::error_code& err, ObjectHostConnection* conn) {
+void ObjectHostConnectionManager::handleConnectionWrite(const boost::system::error_code& err, ObjectHostConnection* conn) {
     conn->is_writing = false;
 
     if (err) {
@@ -199,7 +199,7 @@ void ObjectConnectionManager::handleConnectionWrite(const boost::system::error_c
 }
 
 
-void ObjectConnectionManager::handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg) {
+void ObjectHostConnectionManager::handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg) {
     // FIXME handle session messages
 
     mMessageReceivedCallback(msg);
