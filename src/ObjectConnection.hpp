@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "Message.hpp"
+#include "ObjectHostConnectionManager.hpp"
 
 namespace CBR {
 
@@ -46,22 +47,23 @@ class Trace;
  */
 class ObjectConnection {
 public:
-    ObjectConnection(const UUID& _id, Trace* trace);
+    ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id);
     ~ObjectConnection();
 
     // Get the UUID of the object associated with this connection.
     UUID id() const;
 
-    void deliver(const CBR::Protocol::Object::ObjectMessage& msg);
+    void send(CBR::Protocol::Object::ObjectMessage* msg);
 
-    void tick(const Time& t);
+    void service();
 
     // Returns true if no messages are waiting to be delivered
     bool empty() const { return mReceiveQueue.empty(); }
 
 private:
     UUID mID;
-    Trace* mTrace;
+    ObjectHostConnectionManager* mConnectionManager;
+    ObjectHostConnectionManager::ConnectionID mOHConnection;
 
     typedef std::vector<CBR::Protocol::Object::ObjectMessage*> MessageQueue;
     MessageQueue mReceiveQueue;

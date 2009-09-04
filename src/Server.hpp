@@ -5,7 +5,7 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 
-#include "ObjectSegmentation.hpp"
+#include "ObjectHostConnectionManager.hpp"
 
 namespace CBR
 {
@@ -15,6 +15,7 @@ class LocationService;
 class Proximity;
 
 class CoordinateSegmentation;
+class ObjectSegmentation;
 
 // FIXME these are only passed to the forwarder...
 class ServerMessageQueue;
@@ -32,7 +33,7 @@ class ServerIDMap;
    *  object -> server mapping.  This is a singleton for each simulated
    *  server.  Other servers are referenced by their ServerID.
    */
-class Server : public MessageRecipient, public ObjectMessageRecipient
+class Server : public MessageRecipient
   {
   public:
       Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg, ServerIDMap* sidmap);
@@ -43,27 +44,30 @@ class Server : public MessageRecipient, public ObjectMessageRecipient
     ServerID lookup(const Vector3f&);
     ServerID lookup(const UUID&);
 
-      // FIXME this should come form the network, currently just this way because ObjectHosts
-      // aren't actually networked yet
-      void handleOpenConnection(ObjectConnection* conn);
-
       virtual void receiveMessage(Message* msg);
-      virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg);
 private:
-      void handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg);
-
+    // Methods for periodic servicing
     void serviceProximity();
     void serviceNetwork();
     void checkObjectMigrations();
 
-    // Handle Session messages from an object
-    void handleSessionMessage(ObjectConnection* conn, const std::string& session_payload);
-    // Handle Connect message from object
-    void handleConnect(ObjectConnection* conn, const CBR::Protocol::Session::Connect& connect_msg);
-    // Handle Migrate message from object
-    void handleMigrate(ObjectConnection* conn, const CBR::Protocol::Session::Migrate& migrate_msg);
+    // Finds the ObjectConnection associated with the given object, returns NULL if the object isn't available.
+    ObjectConnection* getObjectConnection(const UUID& object_id) const;
 
+    // Callback which handles messages from object hosts -- mostly just does sanity checking
+    // before using the forwarder to do routing.
+    void handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+
+    // Handle Session messages from an object
+    void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& msg);
+    // Handle Connect message from object
+    void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
+    // Handle Migrate message from object
+    void handleMigrate(const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Migrate& migrate_msg);
+
+    // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
+
 
       SpaceContext* mContext;
     LocationService* mLocationService;
@@ -81,8 +85,6 @@ private:
 
     typedef std::map<UUID, CBR::Protocol::Migration::MigrationMessage*> ObjectMigrationMap;
       ObjectMigrationMap mObjectMigrations;
-
-    ObjectConnectionMap mConnectingObjects;
 
     typedef std::set<ObjectConnection*> ObjectConnectionSet;
     ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages

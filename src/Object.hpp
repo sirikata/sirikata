@@ -84,6 +84,8 @@ public:
 
     void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
 private:
+    bool connected();
+
     void sessionMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);

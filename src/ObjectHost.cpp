@@ -156,22 +156,10 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     }
     SpaceNodeConnection* conn = it->second;
 
-    CBR::Protocol::Object::ObjectMessage obj_msg;
-    obj_msg.set_source_object(src);
-    obj_msg.set_source_port(src_port);
-    obj_msg.set_dest_object(dest);
-    obj_msg.set_dest_port(dest_port);
-    obj_msg.set_unique(GenerateUniqueID(mContext->id));
-    obj_msg.set_payload( payload );
-
-    // FIXME we need a small header for framing purposes
-    std::string real_payload = serializePBJMessage(obj_msg);
-    char payload_size_buffer[ sizeof(uint32) + sizeof(uint8) ];
-    *((uint32*)payload_size_buffer) = real_payload.size(); // FIXME endian
-    *(payload_size_buffer + sizeof(uint32)) = 0; // null terminator
-    std::string* final_payload = new std::string( std::string(payload_size_buffer,sizeof(uint32)) + real_payload );
-
-    conn->queue.push(final_payload);
+    // FIXME would be nice not to have to do this alloc/dealloc
+    CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
+    conn->queue.push( serializeObjectHostMessage(*obj_msg) );
+    delete obj_msg;
 
     return true;
 }

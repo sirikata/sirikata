@@ -249,7 +249,7 @@ class OSegMigrateMessageMove : public Message
 public:
   OSegMigrateMessageMove(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id);
 
-  
+
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
@@ -260,19 +260,19 @@ public:
     UUID                getObjID();
     ServerID            getMessageDestination();
     ServerID            getMessageFrom();
-  
-  
+
+
 private:
     friend class Message;
     OSegMigrateMessageMove(const Network::Chunk& wire, uint32& offset, uint64 _id);
 };
 
-  
+
 class OSegMigrateMessageAcknowledge : public Message
 {
 public:
   OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id);
-  
+
   virtual MessageType type() const;
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
 
@@ -283,15 +283,15 @@ public:
   UUID                getObjID();
   ServerID            getMessageDestination();
   ServerID            getMessageFrom();
-  
-  
+
+
 private:
   friend class Message;
   OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
 };
 
 
-  
+
 
 //   class OSegMigrateMessage : public Message
 //   {
@@ -413,6 +413,10 @@ std::string serializePBJMessage(const PBJMessageType& contents) {
     return payload;
 }
 
+// FIXME we're using a nasty custom framing for object host messages
+std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+
+CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 } // namespace CBR
 

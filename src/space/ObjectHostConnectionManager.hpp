@@ -47,12 +47,15 @@ namespace CBR {
  */
 class ObjectHostConnectionManager {
 public:
-    typedef std::tr1::function<void(CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
+    typedef uint64 ConnectionID; // Used to identify the OH connection to the rest of the system
+    typedef std::tr1::function<void(const ConnectionID&, CBR::Protocol::Object::ObjectMessage*)> MessageReceivedCallback;
 
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
 
     void service();
+
+    void send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 private:
     SpaceContext* mContext;
 
@@ -60,9 +63,10 @@ private:
     boost::asio::ip::tcp::acceptor* mAcceptor;
 
     struct ObjectHostConnection {
-        ObjectHostConnection(boost::asio::io_service& ios);
+        ObjectHostConnection(boost::asio::io_service& ios, const ConnectionID& conn_id);
         ~ObjectHostConnection();
 
+        ConnectionID id;
         boost::asio::ip::tcp::socket* socket;
         std::queue<std::string*> queue;
 
@@ -72,10 +76,13 @@ private:
         std::string read_avail;
         boost::asio::streambuf write_buf;
     };
-    typedef std::set<ObjectHostConnection*> ObjectHostConnectionMap;
+    typedef std::map<ConnectionID, ObjectHostConnection*> ObjectHostConnectionMap;
     ObjectHostConnectionMap mConnections;
 
     MessageReceivedCallback mMessageReceivedCallback;
+
+
+    ConnectionID getNewConnectionID();
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle
@@ -95,7 +102,7 @@ private:
     void handleConnectionWrite(const boost::system::error_code& err, ObjectHostConnection* conn);
 
     /** Handle messages, either directly, e.g. for sessions, or by dispatching them. */
-    void handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg);
+    void handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 };
 
 } // namespace CBR

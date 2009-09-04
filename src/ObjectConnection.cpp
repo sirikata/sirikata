@@ -37,9 +37,10 @@
 
 namespace CBR {
 
-ObjectConnection::ObjectConnection(const UUID& _id, Trace* trace)
+ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
  : mID(_id),
-   mTrace(trace),
+   mConnectionManager(conn_mgr),
+   mOHConnection(conn_id),
    mReceiveQueue()
 {
 }
@@ -55,19 +56,15 @@ UUID ObjectConnection::id() const {
     return mID;
 }
 
-
-void ObjectConnection::deliver(const CBR::Protocol::Object::ObjectMessage& msg) {
-    mReceiveQueue.push_back( new CBR::Protocol::Object::ObjectMessage(msg) );
+void ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
+    mReceiveQueue.push_back( msg );
 }
 
-void ObjectConnection::tick(const Time& t) {
-    assert(false); // FIXME need to send out over the network
-/*
+void ObjectConnection::service() {
     for(MessageQueue::iterator msg_it = mReceiveQueue.begin(); msg_it != mReceiveQueue.end(); msg_it++) {
         CBR::Protocol::Object::ObjectMessage* msg = (*msg_it);
-        mObject->receiveMessage(msg);
+        mConnectionManager->send(mOHConnection, msg);
     }
-*/
     mReceiveQueue.clear();
 }
 

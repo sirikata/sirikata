@@ -38,8 +38,9 @@
 
 namespace CBR {
 
-ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(boost::asio::io_service& ios)
- : is_writing(false)
+ObjectHostConnectionManager::ObjectHostConnection::ObjectHostConnection(boost::asio::io_service& ios, const ConnectionID& conn_id)
+ : id(conn_id),
+   is_writing(false)
 {
     socket = new boost::asio::ip::tcp::socket(ios);
 }
@@ -62,16 +63,35 @@ ObjectHostConnectionManager::~ObjectHostConnectionManager() {
 }
 
 
+ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::getNewConnectionID() {
+    // FIXME better and atomic way for generating these
+    static ConnectionID src = 0;
+
+    return ++src;
+}
+
 void ObjectHostConnectionManager::service() {
     // Set up writers which are not writing yet
     for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
-        ObjectHostConnection* conn = *it;
+        ObjectHostConnection* conn = it->second;
         startWriting(conn);
     }
 
     // Service the IOService.
     // This will allow both the readers and writers to make progress.
     mIOService.poll();
+}
+
+void ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
+    ObjectHostConnectionMap::iterator conn_it = mConnections.find(conn_id);
+    if (conn_it == mConnections.end()) {
+        SPACE_LOG(error,"Tried to send to unconnected object host.");
+        return;
+    }
+
+    ObjectHostConnection* conn = conn_it->second;
+    conn->queue.push( serializeObjectHostMessage(*msg) );
+    delete msg;
 }
 
 void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
@@ -90,7 +110,7 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
 }
 
 void ObjectHostConnectionManager::startListening() {
-    ObjectHostConnection* new_conn = new ObjectHostConnection(mIOService);
+    ObjectHostConnection* new_conn = new ObjectHostConnection(mIOService, getNewConnectionID());
     mAcceptor->async_accept(
         *(new_conn->socket),
         boost::bind(&ObjectHostConnectionManager::handleNewConnection, this,
@@ -103,11 +123,10 @@ void ObjectHostConnectionManager::handleNewConnection(const boost::system::error
     SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index and start reading from it
-    mConnections.insert(new_conn);
-
+    mConnections[new_conn->id] = new_conn;
     startReading(new_conn);
 
-    // Continue listening for connections
+    // Continue listening for new connections
     startListening();
 }
 
@@ -156,7 +175,7 @@ void ObjectHostConnectionManager::handleConnectionRead(const boost::system::erro
         bool parse_success = obj_msg->ParseFromString(real_payload);
         assert(parse_success == true);
 
-        handleObjectHostMessage(obj_msg);
+        handleObjectHostMessage(conn->id, obj_msg);
     }
 
     // continue reading
@@ -199,10 +218,8 @@ void ObjectHostConnectionManager::handleConnectionWrite(const boost::system::err
 }
 
 
-void ObjectHostConnectionManager::handleObjectHostMessage(CBR::Protocol::Object::ObjectMessage* msg) {
-    // FIXME handle session messages
-
-    mMessageReceivedCallback(msg);
+void ObjectHostConnectionManager::handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
+    mMessageReceivedCallback(conn_id, msg);
 }
 
 } // namespace CBR

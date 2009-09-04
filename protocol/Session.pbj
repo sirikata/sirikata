@@ -38,12 +38,25 @@ message TimedMotionVector {
     required vector3f velocity = 3;
 }
 
+
+/// Object Oriented Session Messages
+
 // Connection request sent to space server
 message Connect {
     required uuid object = 1;
     required TimedMotionVector loc = 2;
     required boundingsphere3f bounds = 3;
     required float query_angle = 4;
+}
+
+// Response to a connection request
+message ConnectResponse {
+    enum Response {
+        Success = 1;
+        Error = 2;
+    }
+
+    required Response response = 1;
 }
 
 // Message sent from space server to object host telling

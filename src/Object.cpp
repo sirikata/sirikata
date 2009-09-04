@@ -87,7 +87,7 @@ void Object::removeSubscriber(const UUID& sub) {
 }
 
 void Object::tick() {
-    if (!mMigrating)
+    if (connected() && !mMigrating)
         checkPositionUpdate();
 }
 
@@ -96,7 +96,7 @@ const TimedMotionVector3f Object::location() const {
 }
 
 void Object::connect() {
-    assert(mConnectedTo == 0);
+    assert(!connected());
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);
 
@@ -118,6 +118,10 @@ void Object::handleSpaceConnection(ServerID sid) {
     mConnectedTo = sid;
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);
+}
+
+bool Object::connected() {
+    return (mConnectedTo != NullServerID);
 }
 
 void Object::checkPositionUpdate() {

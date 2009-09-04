@@ -447,13 +447,13 @@ ServerID OSegMigrateMessageMove::getMessageFrom()
 OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id)
   : Message(origin, true)
 {
-  
+
   contents.set_m_servid_from               (sID_from);
   contents.set_m_servid_to                   (sID_to);
   contents.set_m_message_destination   (sMessageDest);
   contents.set_m_message_from          (sMessageFrom);
   contents.set_m_objid                       (obj_id);
-  
+
 }
 
 OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id)
@@ -577,5 +577,28 @@ uint32 BulkLocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
     return serializePBJMessage(contents, wire, offset);
 }
 
+
+std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
+    // FIXME we need a small header for framing purposes
+    std::string real_payload = serializePBJMessage(msg);
+    char payload_size_buffer[ sizeof(uint32) + sizeof(uint8) ];
+    *((uint32*)payload_size_buffer) = real_payload.size(); // FIXME endian
+    *(payload_size_buffer + sizeof(uint32)) = 0; // null terminator
+    std::string* final_payload = new std::string( std::string(payload_size_buffer,sizeof(uint32)) + real_payload );
+    return final_payload;
+}
+
+CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload) {
+    CBR::Protocol::Object::ObjectMessage* result = new CBR::Protocol::Object::ObjectMessage();
+
+    result->set_source_object(src);
+    result->set_source_port(src_port);
+    result->set_dest_object(dest);
+    result->set_dest_port(dest_port);
+    result->set_unique(GenerateUniqueID(source_server));
+    result->set_payload(payload);
+
+    return result;
+}
 
 } // namespace CBR

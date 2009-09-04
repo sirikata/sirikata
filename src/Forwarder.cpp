@@ -437,13 +437,13 @@ void Forwarder::receiveMessage(Message* msg) {
     }
 
     // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
+    // FIXME having to make this copy is nasty
+    CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL)
-        conn->deliver(obj_msg->contents);
-    else {
-        CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
+        conn->send(obj_msg_cpy);
+    else
         route(obj_msg_cpy, true);
-    }
 
     delete msg;
 }
