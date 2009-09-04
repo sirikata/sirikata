@@ -53,6 +53,7 @@ class LossyQueue {
     uint32 mMaxSize;
     uint32 mSize;
 public:
+    typedef ElementType Type;
     LossyQueue(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;

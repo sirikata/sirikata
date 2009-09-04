@@ -59,6 +59,7 @@ class PartiallyOrderedList {
     uint32 mMaxSize;
     uint32 mSize;
 public:
+    typedef ElementType Type;
     PartiallyOrderedList(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;

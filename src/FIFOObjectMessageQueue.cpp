@@ -6,10 +6,10 @@
 #include "Message.hpp"
 #include "Options.hpp"
 #include "Statistics.hpp"
-
+#include "Forwarder.hpp"
 namespace CBR {
 
-FIFOObjectMessageQueue::FIFOObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second)
+FIFOObjectMessageQueue::FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second)
  : ObjectMessageQueue(ctx, sm),
    mQueue(GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>() * 32), // FIXME * numObjects?
    mRate(bytes_per_second),
@@ -24,9 +24,9 @@ bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg
 
     Network::Chunk chunk;
     ObjectMessage obj_msg(mContext->id, *msg);
-    obj_msg.serialize(chunk, 0);
+    //obj_msg.serialize(chunk, 0);
 
-    ServerMessagePair* smp = new ServerMessagePair(NULL, chunk, obj_msg.id());
+    ServerProtocolMessagePair* smp = new ServerProtocolMessagePair(NULL, obj_msg, obj_msg.id());
     bool success = mQueue.push(msg->source_object(),smp)==QueueEnum::PushSucceeded;
 
     if (!success)
@@ -51,16 +51,16 @@ void FIFOObjectMessageQueue::service(){
     uint64 bytes = mRate * mContext->sinceLast.toSeconds() + mRemainderBytes;
 
     while( bytes > 0) {
-        ServerMessagePair* next_msg = mQueue.front(&bytes);
+        ServerProtocolMessagePair* next_msg = mQueue.front(&bytes);
         if (next_msg == NULL) break;
         if (next_msg->dest() == NullServerID) break; // FIXME head of line blocking...
 
-        bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
-        if (!sent_success) break;
+        /*bool sent_success = */mForwarder->route( new Protocol::Object::ObjectMessage(next_msg->data().contents), next_msg->dest() );
+        //if (!sent_success) break;//FIXME
 
-        mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->data().size());
+        mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
 
-        ServerMessagePair* next_msg_popped = mQueue.pop(&bytes);
+        ServerProtocolMessagePair* next_msg_popped = mQueue.pop(&bytes);
         assert(next_msg_popped == next_msg);
         delete next_msg;
     }

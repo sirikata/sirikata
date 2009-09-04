@@ -3,6 +3,7 @@
 #include "ObjectMessageQueue.hpp"
 #include "ServerMessageQueue.hpp"
 #include "PartiallyOrderedList.hpp"
+#include "ServerProtocolMessagePair.hpp"
 namespace CBR {
 
 template <class TQueue=Queue<ObjectMessageQueue::ServerMessagePair*> >
@@ -12,7 +13,7 @@ protected:
     struct HasDestServerCanSendPredicate {
     public:
         HasDestServerCanSendPredicate(FairObjectMessageQueue<TQueue>* _fq) : fq(_fq) {}
-        bool operator()(const UUID& key, const ServerMessagePair* msg) const {
+        bool operator()(const UUID& key, const typename TQueue::Type msg) const {
             return msg->dest() != NullServerID;
             // && fq->canSend(msg);
         }
@@ -20,12 +21,12 @@ protected:
         FairObjectMessageQueue<TQueue>* fq;
     };
 
-    FairQueue<ServerMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
+    FairQueue<ServerProtocolMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
     uint32 mRate;
     uint32 mRemainderBytes;
 public:
 
-    FairObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second);
+    FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);

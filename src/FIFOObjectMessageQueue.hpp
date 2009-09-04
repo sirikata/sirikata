@@ -6,12 +6,12 @@
 #include "Statistics.hpp"
 #include "ObjectMessageQueue.hpp"
 #include "FIFOQueue.hpp"
-
+#include "ServerProtocolMessagePair.hpp"
 namespace CBR{
 class FIFOObjectMessageQueue:public ObjectMessageQueue {
 public:
 
-    FIFOObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second);
+    FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second);
     virtual ~FIFOObjectMessageQueue(){}
 
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
@@ -22,7 +22,7 @@ public:
     virtual void registerClient(const UUID& oid,float weight=1);
     virtual void unregisterClient(const UUID& oid);
 private:
-    FIFOQueue<ServerMessagePair,UUID> mQueue;
+    FIFOQueue<ServerProtocolMessagePair,UUID> mQueue;
     uint32 mRate;
     uint32 mRemainderBytes;
 };

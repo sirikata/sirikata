@@ -62,11 +62,13 @@ struct MethodSizeFunctor<ElementType*> {
 /** Queue with maximum bytes of storage. */
 template <typename ElementType, typename SizeFunctorType = MethodSizeFunctor<ElementType> >
 class Queue {
+    
     std::deque<ElementType> mElements;
     SizeFunctorType mSizeFunctor;
     uint32 mMaxSize;
     uint32 mSize;
 public:
+    typedef ElementType Type;
     Queue(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;

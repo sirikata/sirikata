@@ -7,9 +7,10 @@
 #include "Message.hpp"
 #include "Options.hpp"
 #include "Statistics.hpp"
-
+#include "Forwarder.hpp"
+#include "ServerProtocolMessagePair.hpp"
 namespace CBR{
-template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue* sm, uint32 bytes_per_second)
+template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second)
  : ObjectMessageQueue(ctx, sm),
    mClientQueues( HasDestServerCanSendPredicate(this) ),
    mRate(bytes_per_second),
@@ -21,12 +22,9 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
 {
     fromBegin.data = (void*)NULL;
     fromBegin.dest_uuid = msg->dest_object();
-
-    Network::Chunk chunk;
     ObjectMessage obj_msg(mContext->id, *msg);
-    obj_msg.serialize(chunk, 0);
-
-    ServerMessagePair* smp = new ServerMessagePair(NULL, chunk, obj_msg.id());
+    
+    ServerProtocolMessagePair* smp = new ServerProtocolMessagePair(NULL,obj_msg, obj_msg.id());
     bool success = mClientQueues.push(msg->source_object(),smp)==QueueEnum::PushSucceeded;
 
     if (!success)
@@ -52,11 +50,12 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
 
     uint64 bytes = mRate * mContext->sinceLast.toSeconds() + mRemainderBytes;
 
-    ServerMessagePair* next_msg = NULL;
+    ServerProtocolMessagePair* next_msg = NULL;
     UUID objectName;
     unsigned int retryMax=mClientQueues.numQueues(),retryCount=0;
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
-        bool sent_success = mServerMessageQueue->addMessage(next_msg->dest(), next_msg->data());
+        bool sent_success=true;//FIXME
+        /*bool sent_success = */mForwarder->route(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
         if (!sent_success) {
             break;
 /*
@@ -66,10 +65,10 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
             }
 */
         }else {
-            mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->data().size());
+            mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
 
             mClientQueues.reprioritize(objectName,1.0,.0625,0,1);
-            ServerMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
+            ServerProtocolMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
             assert(next_msg_popped == next_msg);
             delete next_msg;
         }
@@ -86,7 +85,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const 
 template <class Queue> void FairObjectMessageQueue<Queue>::unregisterClient(const UUID& sid) {
     mClientQueues.removeQueue(sid);
 }
-template class FairObjectMessageQueue<PartiallyOrderedList<ObjectMessageQueue::ServerMessagePair*,ServerID> >;
-template class FairObjectMessageQueue<Queue<ObjectMessageQueue::ServerMessagePair*> >;
-template class FairObjectMessageQueue<LossyQueue<ObjectMessageQueue::ServerMessagePair*> >;
+template class FairObjectMessageQueue<PartiallyOrderedList<ServerProtocolMessagePair*,ServerID> >;
+template class FairObjectMessageQueue<Queue<ServerProtocolMessagePair*> >;
+template class FairObjectMessageQueue<LossyQueue<ServerProtocolMessagePair*> >;
 }

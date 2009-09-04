@@ -5,7 +5,7 @@
 #include "SpaceContext.hpp"
 
 namespace CBR{
-class ServerMessageQueue;
+class Forwarder;
 
 
 struct ObjMessQBeginSend
@@ -18,9 +18,9 @@ struct ObjMessQBeginSend
 
 class ObjectMessageQueue {
 public:
-    ObjectMessageQueue(SpaceContext* ctx, ServerMessageQueue*sm)
+    ObjectMessageQueue(SpaceContext* ctx, Forwarder*sm)
      : mContext(ctx),
-       mServerMessageQueue(sm)
+       mForwarder(sm)
     {}
 
     virtual ~ObjectMessageQueue(){}
@@ -73,7 +73,7 @@ public:
 
 protected:
     SpaceContext* mContext;
-    ServerMessageQueue *mServerMessageQueue;
+    Forwarder *mForwarder;
 };
 }
 #endif
