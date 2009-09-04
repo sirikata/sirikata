@@ -36,6 +36,8 @@
 #include "ObjectFactory.hpp"
 #include "ServerIDMap.hpp"
 
+#include <boost/bind.hpp>
+
 namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid)

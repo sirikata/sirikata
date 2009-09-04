@@ -32,6 +32,7 @@
 
 #include "ObjectConnectionManager.hpp"
 #include "Message.hpp"
+#include <boost/bind.hpp>
 
 namespace CBR {
 

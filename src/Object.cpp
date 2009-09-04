@@ -36,6 +36,7 @@
 #include "Random.hpp"
 #include "ObjectFactory.hpp"
 #include "Statistics.hpp"
+#include <boost/bind.hpp>
 
 namespace CBR {
 
