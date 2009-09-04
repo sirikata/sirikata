@@ -258,24 +258,24 @@ public:
 };
 
 
-struct SingleServerOsegDump
-{
-  SingleServerOsegDump (SingleServerOsegFinalDumpEvent *dump_evt);
-  ServerID sID;
-  std::vector<UUID> objsOnServer;
-  std::vector<UUID> stillWaitingFor;
-};
+// struct SingleServerOsegDump
+// {
+//   SingleServerOsegDump (SingleServerOsegFinalDumpEvent *dump_evt);
+//   ServerID sID;
+//   std::vector<UUID> objsOnServer;
+//   std::vector<UUID> stillWaitingFor;
+// };
 
-class ObjectSegmentationFinalDumpAnalysis
-{
- private:
-  std::vector<SingleServerOsegDump> osegDumps;
+// class ObjectSegmentationFinalDumpAnalysis
+// {
+//  private:
+//   std::vector<SingleServerOsegDump> osegDumps;
     
- public:
-  ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut);
-  ~ObjectSegmentationFinalDumpAnalysis();
-};
+//  public:
+//   ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers);
+//   void printData(std::ostream &fileOut);
+//   ~ObjectSegmentationFinalDumpAnalysis();
+// };
 
 
   

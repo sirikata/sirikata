@@ -191,7 +191,7 @@ LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmen
   /*
     Dummy function
   */
-  void LocObjectSegmentation::addObject(const UUID& obj_id, const ServerID ourID)
+  void LocObjectSegmentation::addObject(const UUID& obj_id, const ServerID ourID, bool nothingHere)
   {
     return;
   }

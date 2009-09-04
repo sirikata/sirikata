@@ -46,7 +46,7 @@ namespace CBR
     virtual void receiveMessage(Message* msg);
 
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
-    virtual void addObject(const UUID& obj_id, const ServerID ourID);
+    virtual void addObject(const UUID& obj_id, const ServerID ourID, bool);
     //virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
 
   };

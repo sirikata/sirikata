@@ -47,7 +47,10 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
     char tag;
     is.read( &tag, sizeof(tag) );
 
-    if (!is) return NULL;
+    if (!is)
+    {
+      return NULL;
+    }
 
     Event* evt = NULL;
 
@@ -209,21 +212,20 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         }
         break;
 
-      case Trace::ObjectSegmentationFinalDumpTag:
-        {
-          SingleServerOsegFinalDumpEvent* osegDump_evt = new SingleServerOsegFinalDumpEvent;
+//       case Trace::ObjectSegmentationFinalDumpTag:
+//         {
+//           SingleServerOsegFinalDumpEvent* osegDump_evt = new SingleServerOsegFinalDumpEvent;
 
-          std::cout<<"\n\nGot a dump tag\n\n";
+//           std::cout<<"\n\nGot a dump tag\n\n";
           
-          is.read((char*)&osegDump_evt->time,sizeof(osegDump_evt->time));
-          is.read((char*)&osegDump_evt->objectsHosted, sizeof(osegDump_evt->objectsHosted));
-          is.read((char*)&osegDump_evt->inTransitOrLookup,sizeof(osegDump_evt->inTransitOrLookup));
-          is.read((char*)&osegDump_evt->sID, sizeof(osegDump_evt->sID));
-
+//           is.read((char*)&osegDump_evt->time,sizeof(osegDump_evt->time));
+//           is.read((char*)&osegDump_evt->objectsHosted, sizeof(osegDump_evt->objectsHosted));
+//           is.read((char*)&osegDump_evt->inTransitOrLookup,sizeof(osegDump_evt->inTransitOrLookup));
+//           is.read((char*)&osegDump_evt->sID, sizeof(osegDump_evt->sID));
           
-          evt = osegDump_evt;
-        }
-        break;
+//           evt = osegDump_evt;
+//         }
+//         break;
       case Trace::ServerLocationTag:
           {
               ServerLocationEvent* levt = new ServerLocationEvent;
@@ -249,8 +251,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = levt;
           }
           break;
-
-
 
       case Trace::ObjectSegmentationLookupRequestAnalysisTag:
         {
@@ -283,10 +283,15 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         assert(false);
         break;
     }
-
+    
     return evt;
 }
 
+
+
+
+
+  
 
 template<typename EventType, typename IteratorType>
 class EventIterator {
@@ -1408,6 +1413,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           break;
 
         ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt); 
+
         
         if (obj_lookup_proc_evt != NULL)
         {
@@ -1416,6 +1422,11 @@ LatencyAnalysis::~LatencyAnalysis() {
           sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
         }
+        else
+        {
+          //          std::cout<<"\n\n Had a problem in analysis.cpp.  Processing obj lookup proc evt was null.  Couldn't dynamically cast. \n\n";
+        }
+        
       }
     }
   }
@@ -1446,80 +1457,80 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
   //struct constructor fo SingleServerOsegDump struct
-  SingleServerOsegDump::SingleServerOsegDump(SingleServerOsegFinalDumpEvent* evt)
-  {
-    sID = evt->sID;
+//   SingleServerOsegDump::SingleServerOsegDump(SingleServerOsegFinalDumpEvent* evt)
+//   {
+//     sID = evt->sID;
         
-    for (int s=0; s < (int) evt->objectsHosted.size(); ++s)
-    {
-      objsOnServer.push_back(evt->objectsHosted[s]);
-    }
+//     for (int s=0; s < (int) evt->objectsHosted.size(); ++s)
+//     {
+//       objsOnServer.push_back(evt->objectsHosted[s]);
+//     }
 
-    for (std::map<UUID,ServerID>::iterator iter = evt->inTransitOrLookup.begin(); iter != evt->inTransitOrLookup.end(); ++iter)
-    {
-      stillWaitingFor.push_back(iter->first);
-    }
-  }
+//     for (std::map<UUID,ServerID>::iterator iter = evt->inTransitOrLookup.begin(); iter != evt->inTransitOrLookup.end(); ++iter)
+//     {
+//       stillWaitingFor.push_back(iter->first);
+//     }
+//   }
 
-  //class ObjectSegmentationFinalDumpAnalysis()
-  ObjectSegmentationFinalDumpAnalysis::ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers)
-  {
+//   //class ObjectSegmentationFinalDumpAnalysis()
+//   ObjectSegmentationFinalDumpAnalysis::ObjectSegmentationFinalDumpAnalysis(const char* opt_name, const uint32 nservers)
+//   {
 
-    std::cout<<"\n\nGot into an oseg final dump analysis\n\n";
+//     std::cout<<"\n\nGot into an oseg final dump analysis\n\n";
     
-    for(uint32 server_id = 1; server_id <= nservers; server_id++)
-    {
-      String loc_file = GetPerServerFile(opt_name, server_id);
-      std::ifstream is(loc_file.c_str(), std::ios::in);
+//     for(uint32 server_id = 1; server_id <= nservers; server_id++)
+//     {
+//       String loc_file = GetPerServerFile(opt_name, server_id);
+//       std::ifstream is(loc_file.c_str(), std::ios::in);
 
-      while(is)
-      {
-        Event* evt = Event::read(is, server_id);
-        if (evt == NULL)
-          break;
+//       while(is)
+//       {
+//         Event* evt = Event::read(is, server_id);
+//         if (evt == NULL)
+//           break;
 
-        SingleServerOsegFinalDumpEvent* ss_oseg_dump_evt = dynamic_cast<SingleServerOsegFinalDumpEvent*> (evt);
+//         SingleServerOsegFinalDumpEvent* ss_oseg_dump_evt = dynamic_cast<SingleServerOsegFinalDumpEvent*> (evt);
 
-        if (ss_oseg_dump_evt != NULL)
-        {
+//         if (ss_oseg_dump_evt != NULL)
+//         {
 
-          std::cout<<"\n\nAnalysis.cpp: not null\n";
+//           std::cout<<"\n\nAnalysis.cpp: not null\n";
           
-          SingleServerOsegDump ss_oseg_dump(ss_oseg_dump_evt);
-          osegDumps.push_back(ss_oseg_dump);
-        }
-      }
-    }
-  }
+//           SingleServerOsegDump ss_oseg_dump(ss_oseg_dump_evt);
+//           osegDumps.push_back(ss_oseg_dump);
+//         }
+//       }
+//     }
+//   }
   
-  void ObjectSegmentationFinalDumpAnalysis::printData(std::ostream &fileOut)
-  {
+//   void ObjectSegmentationFinalDumpAnalysis::printData(std::ostream &fileOut)
+//   {
 
-    fileOut << "\n\n*******************Begin Final OSeg Dump Records*************\n\n\n";
+//     fileOut << "\n\n*******************Begin Final OSeg Dump Records*************\n\n\n";
 
-    for (int s= 0; s < (int) osegDumps.size(); ++s)
-    {
-      fileOut << "\n\n**************Server: "<<osegDumps[s].sID<<"\n\n";
+//     for (int s= 0; s < (int) osegDumps.size(); ++s)
+//     {
+//       fileOut << "\n\n**************Server: "<<osegDumps[s].sID<<"\n\n";
 
-      fileOut<<"\n\t****Objects stored:\n";
-      for (int t=0; t < (int) osegDumps[s].objsOnServer.size(); ++t)
-      {
-        fileOut<<"\t\t**"<<osegDumps[s].objsOnServer[t].toString() <<"\n";
-      }
+//       fileOut<<"\n\t****Objects stored:\n";
+//       for (int t=0; t < (int) osegDumps[s].objsOnServer.size(); ++t)
+//       {
+//         fileOut<<"\t\t**"<<osegDumps[s].objsOnServer[t].toString() <<"\n";
+//       }
 
-      fileOut<<"\n\n\n\t****Still waiting for:\n";
-      for (int t=0; t < (int) osegDumps[s].stillWaitingFor.size(); ++t)
-      {
-        fileOut<<"\t\t**"<<osegDumps[s].stillWaitingFor[s].toString()<<"\n";
-      }
-    }
+//       fileOut<<"\n\n\n\t****Still waiting for:\n";
+//       for (int t=0; t < (int) osegDumps[s].stillWaitingFor.size(); ++t)
+//       {
+//         fileOut<<"\t\t**"<<osegDumps[s].stillWaitingFor[s].toString()<<"\n";
+//       }
+//     }
     
-    fileOut<<"\n\n\n\nEND\n";
-  }
-  ObjectSegmentationFinalDumpAnalysis::~ObjectSegmentationFinalDumpAnalysis()
-  {
+//     fileOut<<"\n\n\n\nEND\n";
+//   }
+//   ObjectSegmentationFinalDumpAnalysis::~ObjectSegmentationFinalDumpAnalysis()
+//   {
 
-  }
+//   }
 
   //end final dump
 

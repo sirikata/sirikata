@@ -6,7 +6,7 @@
 namespace CBR {
 struct Event {
     static Event* read(std::istream& is, const ServerID& trace_server_id);
-
+  
     Event()
      : time(Time::null())
     {}
@@ -159,12 +159,12 @@ struct ObjectLookupProcessedEvent: public Event
 };
 
 
-struct SingleServerOsegFinalDumpEvent : public Event
-{
-  std::vector<UUID> objectsHosted;
-  std::map<UUID,ServerID> inTransitOrLookup;
-  ServerID sID;
-};
+// struct SingleServerOsegFinalDumpEvent : public Event
+// {
+//   std::vector<UUID> objectsHosted;
+//   std::map<UUID,ServerID> inTransitOrLookup;
+//   ServerID sID;
+// };
 
 
 

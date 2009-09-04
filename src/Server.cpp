@@ -223,7 +223,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
     //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mContext->id);
+    mOSeg->addObject(obj_id, mContext->id, false); //don't need to generate an acknowledge message to myself, of course
     // Register proximity query
     mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
     // Allow the forwarder to send to ship messages to this connection
@@ -306,17 +306,7 @@ void Server::handleMigration(const UUID& obj_id) {
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
-    mOSeg->addObject(obj_id, idOSegAckTo);
-
-    
-//     Message* oseg_ack_msg;
-//     //              mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo,oseg_ack_msg);
-//     oseg_ack_msg = mOSeg->generateAcknowledgeMessage(obj_id, idOSegAckTo);
-    
-//    std::cout<<"\n\n   bftm debug: this is id from migrate message:  "<< migrate_msg->source_server <<"\n\n";
-    
-//     if (oseg_ack_msg != NULL)
-//         mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
+    mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
 
     // Handle any data packed into the migration message for space components

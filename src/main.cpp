@@ -368,17 +368,19 @@ void *main_loop(void *) {
         oseg_process_stream.close();
 
         //oseg dump final state of each oseg.
-        String object_segmentation_dump_filename = "object_segmentation_dump_file";
-        object_segmentation_dump_filename += ".dat";
+//         String object_segmentation_dump_filename = "object_segmentation_dump_file";
+//         object_segmentation_dump_filename += ".dat";
 
-        ObjectSegmentationFinalDumpAnalysis osegDumpAnalysis(STATS_TRACE_FILE,nservers);
-        std::ofstream oseg_dump_stream(object_segmentation_dump_filename.c_str());
-        osegDumpAnalysis.printData(oseg_dump_stream);
-        oseg_dump_stream.flush();
-        oseg_dump_stream.close();
+//         ObjectSegmentationFinalDumpAnalysis osegDumpAnalysis(STATS_TRACE_FILE,nservers);
+//         std::ofstream oseg_dump_stream(object_segmentation_dump_filename.c_str());
+//         osegDumpAnalysis.printData(oseg_dump_stream);
+//         oseg_dump_stream.flush();
+//         oseg_dump_stream.close();
         
         //end bftm additional object message log file creation.
 
+        std::cout<<"\n\nbftm debug:  got right before exit(0)\n\n";
+        
         exit(0);
     }
 
@@ -420,17 +422,59 @@ void *main_loop(void *) {
           std::cout<<obj_id.toString()<<"\n";
         }
       }
-      
+
      std::vector<CraqInitializeArgs> craqArgs;
      CraqInitializeArgs cInitArgs;
-     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
-     cInitArgs.port    =      "4999";
-    
+
+     cInitArgs.ipAdd = "localhost";
+     cInitArgs.port  =     "10299";
      craqArgs.push_back(cInitArgs);
-     cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
-     cInitArgs.port    =      "4998";
-     craqArgs.push_back(cInitArgs);
-    
+     
+     // cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//      if (server_id == 0)
+//      {
+//        cInitArgs.port    =      "4999";
+//        craqArgs.push_back(cInitArgs);
+//        cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//        cInitArgs.port    =      "4998";
+//        craqArgs.push_back(cInitArgs);
+//      }
+//      else if (server_id ==1)
+//      {
+//        cInitArgs.port    =      "4997";
+//        craqArgs.push_back(cInitArgs);
+//        cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//        cInitArgs.port    =      "4996";
+//        craqArgs.push_back(cInitArgs);
+
+//      }
+//      else if (server_id ==2)
+//      {
+//        cInitArgs.port    =      "4995";
+//        craqArgs.push_back(cInitArgs);
+//        cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//        cInitArgs.port    =      "4994";
+//        craqArgs.push_back(cInitArgs);
+//      }
+//      else if (server_id == 3)
+//      {
+//        cInitArgs.port    =      "4993";
+//        craqArgs.push_back(cInitArgs);
+//        cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//        cInitArgs.port    =      "4992";
+//        craqArgs.push_back(cInitArgs);
+//      }
+//      else
+//      {
+//        cInitArgs.port    =      "4991";
+//        craqArgs.push_back(cInitArgs);
+//        cInitArgs.ipAdd   = "bmistree.stanford.edu"; //will need to change this over and over.
+//        cInitArgs.port    =      "4990";
+//        craqArgs.push_back(cInitArgs);
+//      }
+
+
+     
      //     ObjectSegmentation* oseg = new CraqObjectSegmentation (cseg, initServObjVec,server_id,  gTrace, craqArgs,forwarder,forwarder);
      ObjectSegmentation* oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs);
 

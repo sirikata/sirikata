@@ -74,7 +74,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
-    mContext->trace->objectSegmentationFinalDump(mContext->time,mObjects,mInTransitOrLookup,mContext->id);
+    //    mContext->trace->objectSegmentationFinalDump(mContext->time,mObjects,mInTransitOrLookup,mContext->id);
     std::cout<<"\n\n***GOT into destructor of craqobjseg.\n\n";
 
   }
@@ -162,16 +162,23 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     Generates an acknowledge message.  Only sends the acknowledge message when the trackId has been returned by
        --really need to think about this.
   */
-  void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo)
+  void CraqObjectSegmentation::addObject(const UUID& obj_id, const ServerID idServerAckTo, bool generateAck)
   {
-    CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
-    int trackID = craqDht.set(cdSetGet);
 
-    //bftm this part doesn't make any sort of sense.  how could this have message destination information yet?
-    //    OSegMigrateMessageAcknowledge* oseg_ack_msg;
-    trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
-
-    std::cout<<"\n\nbftm: debug inside of add object for obj_id:  "<<obj_id.toString()<<"\n\n";
+    if (generateAck)
+    {
+      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
+      int trackID = craqDht.set(cdSetGet);
+      trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
+      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  will generateAck:  "<<obj_id.toString()<<"\n\n";
+    }
+    else
+    {
+      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
+      int trackID = craqDht.set(cdSetGet);
+      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  noAck:  "<<obj_id.toString()<<"\n\n";
+    }
+    
   }
 
 
@@ -198,7 +205,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     if (iter != mObjects.end())
     {
-      mObjects.erase (iter);//erase the local copy of the object.q
+      mObjects.erase (iter);//erase the local copy of the object.
     }
     
   }
@@ -225,7 +232,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
             //prior to rebase:    
             //          mContext->router->route(trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
 
+          std::cout<<"\n\nbftm debug: sending an acknowledge from "<<mContext->id<<"  to "<< trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination()  <<"  for object:  " << trackingMessages[trackedSetResults[s].trackedMessage]->getObjID().toString()<<"\n\n\n";
+
           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
+        }
+        else
+        {
+          std::cout<<"\n\nbftm debug:  received a tracked set that I don't have a record of an acknowledge to send.\n\n";
         }
       }
     }
@@ -300,8 +313,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       correctMessage = !correctMessage;
     }
 
-    printf("\n\nReceived the wrong type of message in receiveMessage of craqobjectsegmentation.cpp.  Or dynamic casting doesn't work.  Shutting down.\n\n ");
-    assert(correctMessage);
+    if (! correctMessage)
+    {
+      printf("\n\nReceived the wrong type of message in receiveMessage of craqobjectsegmentation.cpp.  Or dynamic casting doesn't work.  Shutting down.\n\n ");
+      assert(correctMessage);
+    }
     delete msg; //delete message here.
   }
 

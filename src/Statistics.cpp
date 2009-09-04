@@ -48,7 +48,6 @@
 //#define TRACE_DATAGRAM
 //#define TRACE_PACKET
 
-
 namespace CBR {
 
 // write the specified number of bytes from the pointer to the buffer
@@ -97,7 +96,7 @@ const uint8 Trace::ServerObjectEventTag;
 
 const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
-const uint8 Trace::ObjectSegmentationFinalDumpTag;
+  //const uint8 Trace::ObjectSegmentationFinalDumpTag;
 
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -367,19 +366,19 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
 
-  void Trace::objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& tmp_map, ServerID sID)
-  {
-#ifdef TRACE_OSEG_DUMP
-    if (mShuttingDown) return;
+//   void Trace::objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& tmp_map, ServerID sID)
+//   {
+// #ifdef TRACE_OSEG_DUMP
+//     if (mShuttingDown) return;
 
-    data.write(&ObjectSegmentationFinalDumpTag, sizeof(ObjectSegmentationFinalDumpTag));
-    data.write(&t, sizeof(t));
-    data.write(&objectsHosted, sizeof(objectsHosted));
-    data.write(&tmp_map, sizeof(tmp_map));
-    data.write(&sID,sizeof(sID));
+//     data.write(&ObjectSegmentationFinalDumpTag, sizeof(ObjectSegmentationFinalDumpTag));
+//     data.write(&t, sizeof(t));
+//     data.write(&objectsHosted, sizeof(objectsHosted));
+//     data.write(&tmp_map, sizeof(tmp_map));
+//     data.write(&sID,sizeof(sID));
     
-#endif    
-  }
+// #endif    
+//   }
     
 
 void Trace::save(const String& filename) {

@@ -37,7 +37,7 @@ namespace CBR
 
 
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
-    virtual void addObject(const UUID& obj_id, const ServerID ourID) = 0;
+    virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
 
   };
 }
