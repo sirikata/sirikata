@@ -252,7 +252,7 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
     if (mShuttingDown) return;
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
-    ServerID* dest_server_id = mServerIDMap->lookup(dest);
+    ServerID* dest_server_id = mServerIDMap->lookupInternal(dest);
     assert(dest_server_id);
     data.write( dest_server_id, sizeof(ServerID) );
     data.write( &send_size, sizeof(send_size) );
@@ -270,7 +270,7 @@ void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
-    ServerID* dest_server_id = mServerIDMap->lookup(dest);
+    ServerID* dest_server_id = mServerIDMap->lookupInternal(dest);
     assert(dest_server_id);
     data.write( dest_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
@@ -283,7 +283,7 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
-    ServerID* src_server_id = mServerIDMap->lookup(src);
+    ServerID* src_server_id = mServerIDMap->lookupInternal(src);
     assert(src_server_id);
     data.write( src_server_id, sizeof(ServerID) );
     data.write( &size, sizeof(size) );
