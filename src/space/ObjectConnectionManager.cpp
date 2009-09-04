@@ -75,7 +75,11 @@ void ObjectConnectionManager::listen(const Address4& listen_addr) {
 
     assert(mAcceptor == NULL);
 
-    tcp::endpoint endpt( address_v4(ntohl(listen_addr.ip)), (unsigned short)listen_addr.port);
+    // Note: We don't set the IP address because asio refuses to work
+    // properly with it, saying nothing here, but refusing object host
+    // connections
+    //tcp::endpoint endpt( address_v4(ntohl(listen_addr.ip)), (unsigned short)listen_addr.port);
+    tcp::endpoint endpt( tcp::v4(), (unsigned short)listen_addr.port);
     mAcceptor = new tcp::acceptor( mIOService, endpt);
 
     startListening();
@@ -92,6 +96,8 @@ void ObjectConnectionManager::startListening() {
 }
 
 void ObjectConnectionManager::handleNewConnection(const boost::system::error_code& error, ObjectHostConnection* new_conn) {
+    SILOG(space,debug,"New object host connection handled");
+
     // Add the new connection to our index and start reading from it
     mConnections.insert(new_conn);
 

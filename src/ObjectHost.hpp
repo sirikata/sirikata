@@ -62,6 +62,45 @@ public:
     void tick(const Time& t);
 
 private:
+    struct SpaceNodeConnection;
+
+    // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
+    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+
+    /** SpaceNodeConnection initiation, session initiation. */
+
+    // Get an existing space connection or initiate a new one at random
+    // which can be used for bootstrapping connections
+    typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
+    void getSpaceConnection(GotSpaceConnectionCallback cb);
+
+    // Set up a space connection to the given server
+    void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
+
+    // Handle a connection event, i.e. the socket either successfully connected or failed
+    void handleSpaceConnection(const boost::system::error_code& err, ServerID sid);
+
+    // Final callback in session initiation -- we have all the info and now just have to return it to the object
+    void openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn);
+
+
+
+    /** Reading and writing handling for SpaceNodeConnections. */
+
+    // Start async reading for this connection
+    void startReading(SpaceNodeConnection* conn);
+    // Handle async reading callbacks for this connection
+    void handleConnectionRead(const boost::system::error_code& err, SpaceNodeConnection* conn);
+
+    // Start async writing for this connection if it has data to be sent
+    void startWriting(SpaceNodeConnection* conn);
+    // Handle the async writing callback for this connection
+    void handleConnectionWrite(const boost::system::error_code& err, SpaceNodeConnection* conn);
+
+
+
+
+
     ObjectHostContext* mContext;
     ServerIDMap* mServerIDMap;
 
@@ -74,6 +113,9 @@ private:
 
         ServerID server;
         boost::asio::ip::tcp::socket* socket;
+
+        std::vector<GotSpaceConnectionCallback> connectCallbacks;
+
         std::queue<std::string*> queue;
         bool connecting;
         bool is_writing;
@@ -99,39 +141,6 @@ private:
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
 
-    // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
-    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-
-
-    /** SpaceNodeConnection initiation, session initiation. */
-
-    // Get an existing space connection or initiate a new one at random
-    // which can be used for bootstrapping connections
-    typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
-    void getSpaceConnection(GotSpaceConnectionCallback cb);
-
-    // Set up a space connection to the given server
-    void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
-
-    // Handle a connection event, i.e. the socket either successfully connected or failed
-    void handleSpaceConnection(const boost::system::error_code& err, ServerID sid, GotSpaceConnectionCallback cb);
-
-    // Final callback in session initiation -- we have all the info and now just have to return it to the object
-    void openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn);
-
-
-
-    /** Reading and writing handling for SpaceNodeConnections. */
-
-    // Start async reading for this connection
-    void startReading(SpaceNodeConnection* conn);
-    // Handle async reading callbacks for this connection
-    void handleConnectionRead(const boost::system::error_code& err, SpaceNodeConnection* conn);
-
-    // Start async writing for this connection if it has data to be sent
-    void startWriting(SpaceNodeConnection* conn);
-    // Handle the async writing callback for this connection
-    void handleConnectionWrite(const boost::system::error_code& err, SpaceNodeConnection* conn);
 }; // class ObjectHost
 
 } // namespace CBR

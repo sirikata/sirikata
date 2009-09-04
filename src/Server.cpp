@@ -74,6 +74,9 @@ void Server::serviceNetwork()
 {
     mForwarder->service();
 
+
+    mObjectConnectionManager->service();
+
   // Tick all active connections
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
       ObjectConnection* conn = it->second;

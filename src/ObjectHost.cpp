@@ -200,8 +200,13 @@ void ObjectHost::getSpaceConnection(GotSpaceConnectionCallback cb) {
     if (!mConnections.empty()) {
         for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
             SpaceNodeConnection* rand_conn = it->second;
-            if (rand_conn != NULL && !rand_conn->connecting) {
+            if (rand_conn == NULL) continue;
+            if (!rand_conn->connecting) {
                 cb(rand_conn);
+                return;
+            }
+            else {
+                rand_conn->connectCallbacks.push_back(cb);
                 return;
             }
         }
@@ -216,6 +221,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     using namespace boost::asio::ip;
 
     SpaceNodeConnection* conn = new SpaceNodeConnection(mIOService, server);
+    conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 
     // Lookup the server's address
@@ -223,30 +229,38 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
 
     // Try to initiate connection
     tcp::endpoint endpt( address_v4(ntohl(addr->ip)), (unsigned short)addr->port);
+    SILOG(oh,debug,"Trying to connect to " << endpt);
     conn->connecting = true;
     conn->socket->async_connect(
         endpt,
-        boost::bind(&ObjectHost::handleSpaceConnection, this, boost::asio::placeholders::error, server, cb)
+        boost::bind(&ObjectHost::handleSpaceConnection, this, boost::asio::placeholders::error, server)
     );
 }
 
-void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, ServerID sid, GotSpaceConnectionCallback cb) {
+void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, ServerID sid) {
     SpaceNodeConnection* conn = mConnections[sid];
 
+    SILOG(oh,debug,"Handling space connection...");
     if (err) {
-        SILOG(cbr,error,"Failed to connect to server " << sid << ": " << err);
+        SILOG(oh,error,"Failed to connect to server " << sid << ": " << err << ", " << err.message());
+        for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
+            (*it)(NULL);
+        conn->connectCallbacks.clear();
         delete conn;
         mConnections.erase(sid);
-        cb(NULL);
+        return;
     }
 
+    SILOG(oh,debug,"Successfully connected to " << sid);
     conn->connecting = false;
 
     // Set up reading for this connection
     startReading(conn);
 
-    // Tell the requester that the connection is available
-    cb(conn);
+    // Tell all requesters that the connection is available
+    for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
+        (*it)(NULL);
+    conn->connectCallbacks.clear();
 }
 
 void ObjectHost::startReading(SpaceNodeConnection* conn) {
