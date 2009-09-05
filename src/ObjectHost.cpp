@@ -99,41 +99,38 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
     if (it == mObjectInfo.end()) {
         it = mObjectInfo.insert( ObjectInfoMap::value_type( obj->uuid(), ObjectInfo(obj) ) ).first;
     }
-
-    // Sequence for connection
-    // 1. Get or initiate random space node connection
-    // 1. Ask server which server we *should* be talking to
-    // 2. Open connection to that server
-    // 3. Initiate session
+    mObjectInfo[obj->uuid()].connecting.loc = init_loc;
+    mObjectInfo[obj->uuid()].connecting.bounds = init_bounds;
+    mObjectInfo[obj->uuid()].connecting.queryAngle = init_sa;
+    mObjectInfo[obj->uuid()].connecting.cb = cb;
 
     // Get a connection to request
     getSpaceConnection(
-        boost::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), init_loc, init_bounds, init_sa, cb, _1) // FIXME we should send loc request and redirect based on response here
+        boost::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), _1)
     );
 }
 
-void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn) {
+void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn) {
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
         // FIXME disconnect? retry?
-        cb(NullServerID);
+        mObjectInfo[uuid].connecting.cb(NullServerID);
         return;
     }
 
     // Send connection msg, store callback info so it can be called when we get a response later in a service call
     mObjectInfo[uuid].connectingTo = conn->server;
-    mObjectInfo[uuid].connectionCallback = cb;
 
     CBR::Protocol::Session::Container session_msg;
     CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     connect_msg.set_type(CBR::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
     CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
-    loc.set_t(init_loc.updateTime());
-    loc.set_position(init_loc.position());
-    loc.set_velocity(init_loc.velocity());
-    connect_msg.set_bounds(init_bounds);
-    connect_msg.set_query_angle(init_sa.asFloat());
+    loc.set_t( mObjectInfo[uuid].connecting.loc.updateTime() );
+    loc.set_position( mObjectInfo[uuid].connecting.loc.position() );
+    loc.set_velocity( mObjectInfo[uuid].connecting.loc.velocity() );
+    connect_msg.set_bounds( mObjectInfo[uuid].connecting.bounds );
+    connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
 
     send(
         uuid, OBJECT_PORT_SESSION,
@@ -396,8 +393,8 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                 OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
                 mObjectInfo[obj].connectedTo = connectedTo;
                 mObjectInfo[obj].connectingTo = NullServerID;
-                mObjectInfo[obj].connectionCallback(connectedTo);
-                mObjectInfo[obj].connectionCallback = NULL;
+                mObjectInfo[obj].connecting.cb(connectedTo);
+                mObjectInfo[obj].connecting.cb = NULL;
             }
             else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
                 ServerID migratedTo = mObjectInfo[obj].migratingTo;
@@ -409,11 +406,21 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                 OH_LOG(error,"Got connection response with no outstanding requests.");
             }
         }
+        else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Redirect) {
+            ServerID redirected = conn_resp.redirect();
+            OH_LOG(debug,"Object connection for " << obj.toString() << " redirected to " << redirected);
+            // Get a connection to request
+            getSpaceConnection(
+                redirected,
+                boost::bind(&ObjectHost::openConnectionStartSession, this, obj, _1)
+            );
+
+        }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Error) {
             OH_LOG(error,"Error connecting " << obj.toString() << " to space");
             mObjectInfo[obj].connectingTo = NullServerID;
-            mObjectInfo[obj].connectionCallback(NullServerID);
-            mObjectInfo[obj].connectionCallback = NULL;
+            mObjectInfo[obj].connecting.cb(NullServerID);
+            mObjectInfo[obj].connecting.cb = NULL;
         }
         else {
             OH_LOG(error,"Unknown connection response code: " << conn_resp.response());

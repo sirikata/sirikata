@@ -100,7 +100,7 @@ private:
     /** Object session initiation. */
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
-    void openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn);
+    void openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn);
 
 
     /** Object session migration. */
@@ -161,14 +161,21 @@ private:
         ObjectInfo(); // Don't use, necessary for std::map
 
         Object* object;
-        // Server we're trying to connect to
+
+        // Info associated with opening connections
+        struct ConnectingInfo {
+            TimedMotionVector3f loc;
+            BoundingSphere3f bounds;
+            SolidAngle queryAngle;
+
+            ConnectedCallback cb;
+        };
+        ConnectingInfo connecting;
         ServerID connectingTo;
         // Server currently connected to
         ServerID connectedTo;
         // Server we're trying to migrate to
         ServerID migratingTo;
-        // Outstanding connection callback
-        ConnectedCallback connectionCallback;
     };
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;

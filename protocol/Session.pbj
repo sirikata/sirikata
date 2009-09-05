@@ -59,10 +59,12 @@ message Connect {
 message ConnectResponse {
     enum Response {
         Success = 1;
-        Error = 2;
+        Redirect = 2;
+        Error = 3;
     }
 
     required Response response = 1;
+    optional uint64 redirect = 2;
 }
 
 // Message sent from space server to object host telling

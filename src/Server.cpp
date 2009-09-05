@@ -182,17 +182,37 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     UUID obj_id = container.source_object();
     assert( getObjectConnection(obj_id) == NULL );
 
+    // If the requested location isn't on this server, redirect
+    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
+    ServerID loc_server = mCSeg->lookup( loc.extrapolate(mContext->time).position() );
+    if (loc_server != mContext->id) {
+        // Create and send redirect reply
+        CBR::Protocol::Session::Container response_container;
+        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        response.set_response( CBR::Protocol::Session::ConnectResponse::Redirect );
+        response.set_redirect(loc_server);
+
+        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+            mContext->id,
+            UUID::null(), OBJECT_PORT_SESSION,
+            obj_id, OBJECT_PORT_SESSION,
+            serializePBJMessage(response_container)
+        );
+        // Sent directly via object host connection manager because we don't have an ObjectConnection
+        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
+        return;
+    }
+
+
     // FIXME sanity check the new connection
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
-    // Verify the requested position is on this server
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
     mObjects[obj_id] = conn;
 
     // Add object as local object to LocationService
-    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
     //update our oseg to show that we know that we have this object now.
     mOSeg->addObject(obj_id, mContext->id);
