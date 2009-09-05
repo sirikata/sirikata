@@ -37,6 +37,7 @@
 #include "CBRLocationServiceCache.hpp"
 #include "ServerNetwork.hpp"
 #include "CoordinateSegmentation.hpp"
+#include "MigrationDataClient.hpp"
 #include <prox/QueryHandler.hpp>
 #include <prox/LocationUpdateListener.hpp>
 
@@ -44,7 +45,7 @@ namespace CBR {
 
 class LocationService;
 
-class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient {
+class Proximity : Prox::QueryEventListener<ProxSimulationTraits>, LocationServiceListener, CoordinateSegmentation::Listener, MessageRecipient, MigrationDataClient {
 public:
     typedef Prox::Query<ProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ProxSimulationTraits> QueryEvent;
@@ -85,6 +86,12 @@ public:
 
     // MessageRecipient Interface
     virtual void receiveMessage(Message* msg);
+
+    // MigrationDataClient Interface
+    virtual std::string migrationClientTag();
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server);
+    virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data);
+
 private:
     // Send a query add/update request to all the other servers
     void sendQueryRequests();

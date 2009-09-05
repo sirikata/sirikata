@@ -179,6 +179,37 @@ void Proximity::receiveMessage(Message* msg) {
     }
 }
 
+// MigrationDataClient Interface
+
+std::string Proximity::migrationClientTag() {
+    return "prox";
+}
+
+std::string Proximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) {
+    ObjectQueryMap::iterator it = mObjectQueries.find(obj);
+    if (it == mObjectQueries.end()) // no query registered, return nothing
+        return std::string();
+    else {
+        Query* query = it->second;
+        SolidAngle query_angle = query->angle();
+        removeQuery(obj);
+
+        CBR::Protocol::Prox::ObjectMigrationData migr_data;
+        migr_data.set_min_angle( query_angle.asFloat() );
+        return serializePBJMessage(migr_data);
+    }
+}
+
+void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) {
+    CBR::Protocol::Prox::ObjectMigrationData migr_data;
+    bool parse_success = migr_data.ParseFromString(data);
+    assert(parse_success);
+
+    SolidAngle obj_query_angle(migr_data.min_angle());
+    addQuery(obj, obj_query_angle);
+}
+
+
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
     ServerQueryMap::iterator it = mServerQueries.find(sid);
 

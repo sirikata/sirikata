@@ -53,6 +53,10 @@ message ServerQuery {
     optional float min_angle = 4;
 }
 
+// Object migration data - shipped between space nodes when object migration occurs
+message ObjectMigrationData {
+    optional float min_angle = 1;
+}
 
 // Query Results
 

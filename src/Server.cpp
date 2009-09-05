@@ -182,6 +182,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     // FIXME sanity check the new connection
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
+    // Verify the requested position is on this server
 
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
@@ -256,7 +257,7 @@ void Server::handleMigration(const UUID& obj_id) {
         MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
-    SolidAngle obj_query_angle( migrate_msg->query_angle() );
+
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
@@ -280,8 +281,19 @@ void Server::handleMigration(const UUID& obj_id) {
 //         mForwarder->route(oseg_ack_msg, (dynamic_cast <OSegMigrateMessage*>(oseg_ack_msg))->getMessageDestination(),false);
 
 
-    // Finally, subscribe the object for proximity queries
-    mProximity->addQuery(obj_id, obj_query_angle);
+    // Handle any data packed into the migration message for space components
+    for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
+        CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
+        std::string tag = client_data.key();
+        // FIXME these should live in a map, how do we deal with ordering constraints?
+        if (tag == "prox") {
+            assert( tag == mProximity->migrationClientTag() );
+            mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id, client_data.data());
+        }
+        else {
+            SILOG(space,error,"Got unknown tag for client migration data");
+        }
+    }
 
     // Allow the forwarder to deliver to this connection
     mForwarder->addObjectConnection(obj_id, obj_conn);
@@ -369,9 +381,14 @@ void Server::checkObjectMigrations()
       migrate_loc.set_velocity( obj_loc.velocity() );
       migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
 
-
-      // Stop any proximity queries for this object
-      mProximity->removeQuery(obj_id);
+      // FIXME we should allow components to package up state here
+      // FIXME we should generate these from some map instead of directly
+      std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id, new_server_id);
+      if (!prox_data.empty()) {
+          CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg->contents.add_client_data();
+          client_data.set_key( mProximity->migrationClientTag() );
+          client_data.set_data( prox_data );
+      }
 
       // Stop tracking the object locally
       mLocationService->removeLocalObject(obj_id);

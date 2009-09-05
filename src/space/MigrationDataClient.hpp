@@ -1,5 +1,5 @@
-/*  CBR
- *  Migration.pbj
+/*  cbr
+ *  MigrationDataClient.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -13,7 +13,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- *  * Neither the name of Sirikata nor the names of its contributors may
+ *  * Neither the name of cbr nor the names of its contributors may
  *    be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -30,24 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package CBR.Protocol.Migration;
+#ifndef _CBR_MIGRATION_DATA_CLIENT_HPP_
+#define _CBR_MIGRATION_DATA_CLIENT_HPP_
 
-message TimedMotionVector {
-    required time t = 1;
-    required vector3f position = 2;
-    required vector3f velocity = 3;
-}
+#include "Utility.hpp"
+#include "ServerNetwork.hpp"
 
-// Generic data for components of the space, e.g. prox, loc
-message MigrationClientData {
-    required string key = 1;
-    required bytes data = 2;
-}
+namespace CBR {
 
-message MigrationMessage {
-    required uuid object = 1;
-    required TimedMotionVector loc = 2;
-    required boundingsphere3f bounds = 3;
-    repeated MigrationClientData client_data = 4;
-    required uint32 source_server = 6; // FIXME should come from server to server header
-}
+/** MigrationDataClients produce and accept chunks of data during migration.
+ *  MigrationDataClient is a generic interface to allow any component of the
+ *  space to participate in the migration process.
+ */
+class MigrationDataClient {
+public:
+    virtual ~MigrationDataClient() {}
+
+    /** The tag used to uniquely identify this component. */
+    virtual std::string migrationClientTag() = 0;
+
+    /** Produce data for the migration of obj from source_server to
+     *  dest_server.
+     */
+    virtual std::string generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) = 0;
+
+    /** Receive data for the migration of obj from source_server to
+     *  dest_server.
+     */
+    virtual void receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) = 0;
+};
+
+} // namespace CBR
+
+#endif //_CBR_MIGRATION_DATA_CLIENT_HPP_
