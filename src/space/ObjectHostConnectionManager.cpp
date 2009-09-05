@@ -145,7 +145,7 @@ void ObjectHostConnectionManager::startReading(ObjectHostConnection* conn) {
 void ObjectHostConnectionManager::handleConnectionRead(const boost::system::error_code& err, ObjectHostConnection* conn) {
     if (err) {
         // FIXME some kind of error, need to handle this
-        SPACE_LOG(error,"Error in connection read\n");
+        SPACE_LOG(error,"Error in connection read" << err << " - " << err.message());
         return;
     }
 
@@ -210,7 +210,7 @@ void ObjectHostConnectionManager::handleConnectionWrite(const boost::system::err
 
     if (err) {
         // FIXME some kind of error, need to handle this
-        SPACE_LOG(error,"Error in connection write\n");
+        SPACE_LOG(error,"Error in connection write: " << err << " - " << err.message());
         return;
     }
 

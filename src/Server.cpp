@@ -162,16 +162,19 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     bool parse_success = session_msg.ParseFromString(msg.payload());
     assert(parse_success);
 
-    // Connect messages
-    if (session_msg.has_connect())
-        handleConnect(oh_conn_id, msg, session_msg.connect());
+    // Connect or migrate messages
+    if (session_msg.has_connect()) {
+        if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
+            handleConnect(oh_conn_id, msg, session_msg.connect());
+        else if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Migration)
+            handleMigrate(oh_conn_id, msg, session_msg.connect());
+        else
+            SILOG(space,error,"Unknown connection message type");
+    }
 
     // InitiateMigration messages
     assert(!session_msg.has_init_migration());
 
-    // Migrate messages
-    if (session_msg.has_migrate())
-        handleMigrate(msg, session_msg.migrate());
 }
 
 // Handle Connect message from object
@@ -214,14 +217,21 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 }
 
 // Handle Migrate message from object
-void Server::handleMigrate(const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Migrate& migrate_msg) {
-    ObjectConnection* conn = getObjectConnection(container.source_object());
+void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg) {
+    UUID obj_id = container.source_object();
+    assert( getObjectConnection(obj_id) == NULL );
 
-    assert(conn->id() == migrate_msg.object());
-    mObjectsAwaitingMigration[migrate_msg.object()] = conn;
+    // FIXME sanity check the new connection
+    // -- authentication
+    // -- verify object may connect, i.e. not already in system (e.g. check oseg)
+    // Verify the requested position is on this server
+
+    // Create and store the connection
+    ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
+    mObjectsAwaitingMigration[obj_id] = conn;
 
     // Try to handle this migration if all info is available
-    handleMigration(migrate_msg.object());
+    handleMigration(obj_id);
 }
 
 void Server::receiveMessage(Message* msg) {
@@ -302,6 +312,20 @@ void Server::handleMigration(const UUID& obj_id) {
     // Clean out the two records from the migration maps
     mObjectsAwaitingMigration.erase(obj_map_it);
     mObjectMigrations.erase(migration_map_it);
+
+
+    // Send reply back indicating that the migration was successful
+    CBR::Protocol::Session::Container response_container;
+    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+
+    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        mContext->id,
+        UUID::null(), OBJECT_PORT_SESSION,
+        obj_id, OBJECT_PORT_SESSION,
+        serializePBJMessage(response_container)
+    );
+    obj_conn->send( obj_response );
 }
 
 void Server::service() {

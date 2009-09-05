@@ -41,12 +41,18 @@ message TimedMotionVector {
 
 /// Object Oriented Session Messages
 
-// Connection request sent to space server
+// Connection request sent to space server, for new or migration connections
 message Connect {
-    required uuid object = 1;
-    required TimedMotionVector loc = 2;
-    required boundingsphere3f bounds = 3;
-    required float query_angle = 4;
+    enum ConnectionType {
+        Fresh = 1;
+        Migration = 2;
+    }
+
+    required ConnectionType type = 1;
+    required uuid object = 2;
+    optional TimedMotionVector loc = 3;
+    optional boundingsphere3f bounds = 4;
+    optional float query_angle = 5;
 }
 
 // Response to a connection request
@@ -65,14 +71,6 @@ message InitiateMigration {
     required uint64 new_server = 1;
 }
 
-// Message sent from new instantiation of object to space
-// server to indicate it is ready to take over.
-// FIXME should go away when objects are in separate object
-// hosts.
-message Migrate {
-    required uuid object = 1;
-}
-
 
 
 // Container for session messages.
@@ -81,5 +79,4 @@ message Container {
     optional ConnectResponse connect_response = 2;
 
     optional InitiateMigration init_migration = 3;
-    optional Migrate migrate = 4;
 }

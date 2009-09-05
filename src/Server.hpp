@@ -63,7 +63,7 @@ private:
     // Handle Connect message from object
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
     // Handle Migrate message from object
-    void handleMigrate(const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Migrate& migrate_msg);
+    void handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg);
 
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);

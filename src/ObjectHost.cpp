@@ -60,14 +60,18 @@ ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
 }
 
 ObjectHost::ObjectInfo::ObjectInfo()
-  : object(NULL),
-    connectedTo(0)
+ : object(NULL),
+   connectingTo(0),
+   connectedTo(0),
+   migratingTo(0)
 {
 }
 
 ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
  : object(obj),
-   connectedTo(0)
+   connectingTo(0),
+   connectedTo(0),
+   migratingTo(0)
 {
 }
 
@@ -111,6 +115,7 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
 void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn) {
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
+        // FIXME disconnect? retry?
         cb(NullServerID);
         return;
     }
@@ -121,6 +126,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionV
 
     CBR::Protocol::Session::Container session_msg;
     CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    connect_msg.set_type(CBR::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(uuid);
     CBR::Protocol::Session::ITimedMotionVector loc = connect_msg.mutable_loc();
     loc.set_t(init_loc.updateTime());
@@ -133,21 +139,63 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, const TimedMotionV
         uuid, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(session_msg),
-        true
+        conn->server
     );
     // FIXME do something on failure
 }
 
-bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
-    return send(src->uuid(), src_port, dest, dest_port, payload, false);
+
+void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
+    OH_LOG(info,"Starting migration of " << obj_id.toString() << " to " << sid);
+
+    mObjectInfo[obj_id].migratingTo = sid;
+
+    // Get or start the connection we need to start this migration
+    getSpaceConnection(
+        sid,
+        boost::bind(&ObjectHost::openConnectionStartMigration, this, obj_id, sid, _1)
+    );
 }
 
-bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, bool allow_connecting) {
-    ServerID dest_server = mObjectInfo[src].connectedTo;
+void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, SpaceNodeConnection* conn) {
+    if (conn == NULL) {
+        OH_LOG(warn,"Couldn't open connection to server " << sid << " for migration of object " << obj_id.toString());
+        // FIXME disconnect? retry?
+        return;
+    }
+
+    CBR::Protocol::Session::Container session_msg;
+    CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    connect_msg.set_type(CBR::Protocol::Session::Connect::Migration);
+    connect_msg.set_object(obj_id);
+    send(
+        obj_id, OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(session_msg),
+        sid
+    );
+
+    // FIXME do something on failure
+}
+
+
+ServerID ObjectHost::getConnectedServer(const UUID& obj_id, bool allow_connecting) {
+    // FIXME getConnectedServer during migrations?
+
+    ServerID dest_server = mObjectInfo[obj_id].connectedTo;
 
     if (dest_server == NullServerID && allow_connecting)
-        dest_server = mObjectInfo[src].connectingTo;
+        dest_server = mObjectInfo[obj_id].connectingTo;
 
+    return dest_server;
+}
+
+bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+    // FIXME getConnectedServer during migrations?
+    return send(src->uuid(), src_port, dest, dest_port, payload, getConnectedServer(src->uuid()));
+}
+
+bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     if (dest_server == NullServerID) {
         OH_LOG(error,"Tried to send message when not connected.");
         return false;
@@ -166,21 +214,6 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
     delete obj_msg;
 
     return true;
-}
-
-void ObjectHost::migrate(Object* src, ServerID sid) {
-    assert(false); // FIXME update, must go to sid
-    CBR::Protocol::Session::Container session_msg;
-    CBR::Protocol::Session::IMigrate migrate_msg = session_msg.mutable_migrate();
-    migrate_msg.set_object(src->uuid());
-    std::string session_serialized = serializePBJMessage(session_msg);
-    bool success = this->send(
-        src->uuid(), OBJECT_PORT_SESSION,
-        UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(session_msg),
-        true
-    );
-    // FIXME do something on failure
 }
 
 void ObjectHost::tick(const Time& t) {
@@ -223,7 +256,19 @@ void ObjectHost::getSpaceConnection(GotSpaceConnectionCallback cb) {
 
     // Otherwise, initiate one at random
     ServerID server_id = (ServerID)1; // FIXME should be selected at random somehow, and shouldn't already be in the connection map
-    setupSpaceConnection(server_id, cb);
+    getSpaceConnection(server_id, cb);
+}
+
+void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb) {
+    // Check if we have the connection already
+    ServerConnectionMap::iterator it = mConnections.find(sid);
+    if (it != mConnections.end()) {
+        cb(it->second);
+        return;
+    }
+
+    // Otherwise start it up
+    setupSpaceConnection(sid, cb);
 }
 
 void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb) {
@@ -339,24 +384,36 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     assert(parse_success);
 
     assert(!session_msg.has_connect());
-    assert(!session_msg.has_migrate());
 
     if (session_msg.has_connect_response()) {
         CBR::Protocol::Session::IConnectResponse conn_resp = session_msg.connect_response();
 
+        UUID obj = msg->dest_object();
+
         if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Success) {
-            ServerID connectedTo = mObjectInfo[ msg->dest_object() ].connectingTo;
-            OH_LOG(debug,"Successfully connected " << msg->dest_object().toString() << " to space node " << connectedTo);
-            mObjectInfo[ msg->dest_object() ].connectedTo = connectedTo;
-            mObjectInfo[ msg->dest_object() ].connectingTo = NullServerID;
-            mObjectInfo[ msg->dest_object() ].connectionCallback(connectedTo);
-            mObjectInfo[ msg->dest_object() ].connectionCallback = NULL;
+            if (mObjectInfo[obj].connectingTo != NullServerID) { // We were connecting to a server
+                ServerID connectedTo = mObjectInfo[obj].connectingTo;
+                OH_LOG(debug,"Successfully connected " << obj.toString() << " to space node " << connectedTo);
+                mObjectInfo[obj].connectedTo = connectedTo;
+                mObjectInfo[obj].connectingTo = NullServerID;
+                mObjectInfo[obj].connectionCallback(connectedTo);
+                mObjectInfo[obj].connectionCallback = NULL;
+            }
+            else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
+                ServerID migratedTo = mObjectInfo[obj].migratingTo;
+                OH_LOG(debug,"Successfully migrated " << obj.toString() << " to space node " << migratedTo);
+                mObjectInfo[obj].connectedTo = migratedTo;
+                mObjectInfo[obj].migratingTo = NullServerID;
+            }
+            else { // What were we doing?
+                OH_LOG(error,"Got connection response with no outstanding requests.");
+            }
         }
         else if (conn_resp.response() == CBR::Protocol::Session::ConnectResponse::Error) {
-            OH_LOG(error,"Error connecting " << msg->dest_object().toString() << " to space");
-            mObjectInfo[ msg->dest_object() ].connectingTo = NullServerID;
-            mObjectInfo[ msg->dest_object() ].connectionCallback(NullServerID);
-            mObjectInfo[ msg->dest_object() ].connectionCallback = NULL;
+            OH_LOG(error,"Error connecting " << obj.toString() << " to space");
+            mObjectInfo[obj].connectingTo = NullServerID;
+            mObjectInfo[obj].connectionCallback(NullServerID);
+            mObjectInfo[obj].connectionCallback = NULL;
         }
         else {
             OH_LOG(error,"Unknown connection response code: " << conn_resp.response());
@@ -364,14 +421,9 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     }
 
     if (session_msg.has_init_migration()) {
-        assert(false);
-        /** NOTE: this is what Object was doing
         CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
-        //printf("Object %s was told to init migration to %d\n", uuid().toString().c_str(), (uint32)init_migr.new_server());
-
-        mContext->objectHost->migrate(this, (ServerID)init_migr.new_server());
-        mMigrating = true;
-        */
+        OH_LOG(info,"Received migration request for " << msg->dest_object().toString() << " to " << init_migr.new_server());
+        migrate(msg->dest_object(), init_migr.new_server());
     }
 
     delete msg;

@@ -57,18 +57,21 @@ public:
     // FIXME should not be infinite queue and should report push error
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 
-    void migrate(Object* src, ServerID sid);
-
     void tick(const Time& t);
 
 private:
     struct SpaceNodeConnection;
 
+
+    // Utility method to lookup the ServerID an object is connected to
+    ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
+
     // Private version of send that doesn't verify src UUID, allows us to masquerade for session purposes
     // The allow_connecting parameter allows you to use a connection over which the object is still opening
     // a connection.  This is safe since it can only be used by this class (since this is private), so it will
     // only be used to deal with session management.
-    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, bool allow_connecting);
+    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server);
+
 
     // Starting point for handling of all messages from the server -- either handled as a special case, such as
     // for session management, or dispatched to the object
@@ -78,12 +81,14 @@ private:
     void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
 
 
-    /** SpaceNodeConnection initiation, session initiation. */
+    /** SpaceNodeConnection initiation. */
 
     // Get an existing space connection or initiate a new one at random
     // which can be used for bootstrapping connections
     typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
     void getSpaceConnection(GotSpaceConnectionCallback cb);
+    // Get the connection to the specified space node
+    void getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb);
 
     // Set up a space connection to the given server
     void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
@@ -91,8 +96,20 @@ private:
     // Handle a connection event, i.e. the socket either successfully connected or failed
     void handleSpaceConnection(const boost::system::error_code& err, ServerID sid);
 
+
+    /** Object session initiation. */
+
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const UUID& uuid, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb, SpaceNodeConnection* conn);
+
+
+    /** Object session migration. */
+
+    // Start the migration process for the object to the given server.
+    void migrate(const UUID& obj_id, ServerID sid);
+
+    // Callback that indicates we have a connection to the new server and can now start the migration to it.
+    void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
 
 
 
@@ -148,6 +165,8 @@ private:
         ServerID connectingTo;
         // Server currently connected to
         ServerID connectedTo;
+        // Server we're trying to migrate to
+        ServerID migratingTo;
         // Outstanding connection callback
         ConnectedCallback connectionCallback;
     };
