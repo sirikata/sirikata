@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+"pbj-0.0.3"
+
 package Sirikata.Protocol;
 
 //This is the standard message container. All items sent over the wire should be preceeded type MessageHeader. Reserved areas may be used in future headers
