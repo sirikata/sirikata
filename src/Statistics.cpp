@@ -348,7 +348,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #endif
 
   }
-  void Trace::objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor)
+  void Trace::objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime)
   {
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
@@ -358,6 +358,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&obj_id, sizeof(obj_id));
     data.write(&sID_processor, sizeof(sID_processor));
     data.write(&sID, sizeof(sID));
+    data.write(&dTime, sizeof(dTime));
 #endif
   }
 

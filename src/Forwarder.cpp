@@ -55,9 +55,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
-
-
-
 }
 
   //Don't need to do anything special for destructor
@@ -99,12 +96,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
 
     mOSeg->service(updatedObjectLocations);
 
-    //deliver acknowledge messages.
-
-    if (updatedObjectLocations.size() !=0)
-    {
-      //      std::cout<<"\n\nbftm debug: inside of forwarder.cpp this is the number of updatedObjectLocations:  "<<updatedObjectLocations.size()<<"\n\n";
-    }
 
     //    cross-check updates against held messages.
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
@@ -115,7 +106,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we can route messages being held in mObjectsInTransit
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          //          std::cout<<"\n\nbftm debug:  inside of forwarder.  Actually routing a message that I had saved up\n\n";
           route((iterObjectsInTransit->second)[s],iter->second,false);
         }
 
@@ -123,6 +113,8 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         mObjectsInTransit.erase(iterObjectsInTransit);
       }
 
+      
+      //Now sending messages that we had saved up from oseg lookup calls.
       iterQueueMap = queueMap.find(iter->first);
       if (iterQueueMap != queueMap.end())
       {
@@ -383,7 +375,10 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
-              dispatchMessage(msg);
+            //            MigrateMessage* tmpMig = dynamic_cast<MigrateMesage*>(msg);
+            //            MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
+            //            std::cout<<"\n\nbftm debug: got a message_type migrate id:  "<< migrate_msg->contents.object().toString() <<"\n\n";
+            dispatchMessage(msg);
           }
           break;
       case MESSAGE_TYPE_CSEG_CHANGE:

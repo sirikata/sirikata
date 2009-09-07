@@ -28,27 +28,6 @@ AsyncCraq::AsyncCraq()
 }
 
 
-//runs the
-// void AsyncCraq::tick(std::vector<int> &serverIDs,  std::vector<char*> &objectIDs,std::vector<int>&trackedMessages)  //runs through one iteration of io_service.run_once.
-// {
-//   //  io_service.run_one();
-//   //int numHandled = io_service.poll_one();
-//   int numHandled = io_service.poll();
-//   if (numHandled ==0)
-//   {
-//     io_service.reset();
-//   }
-
-  
-//   serverIDs         =    serverLoc;
-//   objectIDs         =     objectId;
-//   trackedMessages   =     transIds;
-  
-//   serverLoc.clear();
-//   objectId.clear();
-//   transIds.clear();
-  
-// }
 
 
 //void AsyncCraq::initialize(char* ipAdd, char* port)
@@ -60,7 +39,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
   
   boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
 
-  mCurrentTrackNum = 0;
+  mCurrentTrackNum = 10;
   
   AsyncConnection tmpConn;
   for (int s=0; s < CRAQ_NUM_CONNECTIONS; ++s)

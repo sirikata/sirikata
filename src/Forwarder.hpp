@@ -80,9 +80,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
 
       typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
-      std::map<UUID,ObjectMessageList> mObjectsInTransit;
+    std::map<UUID,ObjectMessageList> mObjectsInTransit;  //this is a map of messages's for objects that are being looked up in oseg or are in transit.
       typedef std::vector<ObjMessQBeginSend> ObjMessQBeginSendList;
-      std::map<UUID,ObjMessQBeginSendList> queueMap;
+    std::map<UUID,ObjMessQBeginSendList> queueMap; //this maps the object ids to a list of messages that are being looked up in oseg.
 
 
 

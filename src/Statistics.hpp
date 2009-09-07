@@ -125,9 +125,7 @@ public:
     void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
 
     void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
-    void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor);
-
-  //    void objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& , ServerID );
+    void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime);
   
     void prepareShutdown();
     void save(const String& filename);

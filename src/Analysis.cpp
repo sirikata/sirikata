@@ -271,7 +271,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read( (char* )&obj_lookupProc_evt->mObjID, sizeof(obj_lookupProc_evt->mObjID));
           is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
           is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
-
+          is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
           evt = obj_lookupProc_evt;
         }
         break;
@@ -1475,12 +1475,8 @@ LatencyAnalysis::~LatencyAnalysis() {
           obj_ids.push_back(obj_lookup_proc_evt->mObjID);
           sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
+          dTimes.push_back(obj_lookup_proc_evt->deltaTime);
         }
-        else
-        {
-          //          std::cout<<"\n\n Had a problem in analysis.cpp.  Processing obj lookup proc evt was null.  Couldn't dynamically cast. \n\n";
-        }
-        
       }
     }
   }
@@ -1503,6 +1499,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tTime at:           "<<sortedEvts[s].time.raw()<<"\n";
         fileOut<< "\tID Lookup:         "<<sortedEvts[s].mObjID.toString()<<"\n";
         fileOut<< "\tObject on:         "<<sortedEvts[s].mID_objectOn<<"\n";
+        fileOut<< "\tTime taken:        "<<sortedEvts[s].deltaTime<<"\n";
       }
       
       fileOut<<"\n\n\n\nEND\n";
@@ -1519,6 +1516,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
         fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
         fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
+        fileOut<< "\tTime taken:        "<<dTimes[s]<<"\n";
       }
 
       fileOut<<"\n\n\n\nEND\n";
@@ -1533,11 +1531,12 @@ LatencyAnalysis::~LatencyAnalysis() {
     
     for (int s= 0; s < (int) times.size(); ++s)
     {
-      olpe.time = times[s];
-      olpe.mObjID = obj_ids[s];
-      olpe.mID_processor = sID_processor[s];
-      olpe.mID_objectOn  = sID_objectOn[s];
-
+      olpe.time             = times[s];
+      olpe.mObjID           = obj_ids[s];
+      olpe.mID_processor    = sID_processor[s];
+      olpe.mID_objectOn     = sID_objectOn[s];
+      olpe.deltaTime        = dTimes[s];
+      
       sortedEvts.push_back(olpe);
     }
 

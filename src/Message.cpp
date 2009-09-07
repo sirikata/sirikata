@@ -206,6 +206,13 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
         return;
     }
 
+    //bftm debug
+//     if (msg->type() == MESSAGE_TYPE_MIGRATE)
+//     {
+//       MigrateMessage* tmpMig = dynamic_cast<MigrateMessage*> (msg);
+//       std::cout<<"\n\nbftm debug.  got a migrate message here.  This is object id:  " << tmpMig->contents.object().toString()   << "  \n\n";
+//     }
+    
     MessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
 }

@@ -17,18 +17,35 @@
 
 namespace CBR
 {
+
+  struct TransLookup
+  {
+    ServerID sID;
+    uint64 timeAdmitted;
+  };
+  
   class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
+    //debugging:
+    uint64 numTicks;
+
+    
 
     std::map<std::string, UUID > mapDataKeyToUUID;
-    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+    //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+
+    std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+    
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
     std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
 
+    void iteratedWait(int numWaits,std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
+    void basicWait(std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
 
+    
     AsyncCraq craqDht;
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 

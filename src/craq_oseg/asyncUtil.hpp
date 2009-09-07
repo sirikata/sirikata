@@ -69,7 +69,8 @@ typedef char CraqDataGetResp[CRAQ_DATA_GET_RESP_SIZE];
 
 
 //const int CRAQ_NUM_CONNECTIONS            = 10;
-const int CRAQ_NUM_CONNECTIONS            = 17;
+//const int CRAQ_NUM_CONNECTIONS            = 17;
+  const int CRAQ_NUM_CONNECTIONS            = 30;
 
 struct CraqObjectID
 {
