@@ -28,6 +28,7 @@ usage () {
 export CBR_WRAPPER=true
 want_valgrind=0
 want_debug=0
+want_interactive=0
 while [ $# -gt 0 ]; do
   case "$1" in
     cbr | oh )
@@ -38,6 +39,10 @@ while [ $# -gt 0 ]; do
       exit 0 ;;
     -g | --debug )
       want_debug=1
+      shift ;;
+    -i | --idebug )
+      want_debug=1
+      want_interactive=1
       shift ;;
     --valgrind )
       want_valgrind=1
@@ -71,8 +76,10 @@ if [ $want_debug -eq 1 ] ; then
   done
   echo "set args $args" > $tmpfile
   echo "run" >> $tmpfile
-  echo "bt" >> $tmpfile
-  echo "quit" >> $tmpfile
+  if [ $want_interactive -neq 1] ; then
+    echo "bt" >> $tmpfile
+    echo "quit" >> $tmpfile
+  fi
   echo "$GDB $APPDIR/$APPNAME -x $tmpfile -quiet"
   $GDB "$APPDIR/$APPNAME" -x $tmpfile -quiet
   exit $?
