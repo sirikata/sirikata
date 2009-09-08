@@ -471,9 +471,6 @@ void *main_loop(void *) {
       // and are only maintaining ObjectFactory for analysis, visualization, and oracle purposes.
       //obj_factory->initialize(obj_host->context());
 
-    bool sim = GetOption("sim")->as<bool>();
-    Duration sim_step = GetOption("sim-step")->as<Duration>();
-
     float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
 
@@ -500,40 +497,30 @@ void *main_loop(void *) {
     Duration stats_sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
     Time last_sample_time = Time::null();
 
-    if (sim) {
-        printf("WARNING: Simulation mode hasn't been kept up to date.\n");
-        assert(false);
-        for(Time t = tbegin; t < tend; t += sim_step){
-	    server->service();
+    Timer timer;
+    timer.start();
+    gNetwork->start();
+
+    while( true ) {
+        Duration elapsed = timer.elapsed() * inv_time_dilation;
+        //            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
+        //            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
+        if (elapsed > duration)
+            break;
+
+        Duration since_last_sample = (tbegin + elapsed) - last_sample_time;
+        if (since_last_sample > stats_sample_rate) {
+            gNetwork->reportQueueInfo(tbegin + elapsed);
+            last_sample_time = last_sample_time + stats_sample_rate;
         }
-    }
-    else {
-      Timer timer;
-        timer.start();
-        gNetwork->start();
 
-        while( true )
-        {
-            Duration elapsed = timer.elapsed() * inv_time_dilation;
-            //            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
-            //            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
-            if (elapsed > duration)
-                break;
+        Time curt = tbegin + elapsed;
 
-            Duration since_last_sample = (tbegin + elapsed) - last_sample_time;
-            if (since_last_sample > stats_sample_rate) {
-                gNetwork->reportQueueInfo(tbegin + elapsed);
-                last_sample_time = last_sample_time + stats_sample_rate;
-            }
+        space_context->tick(curt);
 
-            Time curt = tbegin + elapsed;
-
-            space_context->tick(curt);
-
-            gNetwork->service(curt);
-            cseg->service();
-            server->service();
-        }
+        gNetwork->service(curt);
+        cseg->service();
+        server->service();
     }
 
     gTrace->prepareShutdown();
