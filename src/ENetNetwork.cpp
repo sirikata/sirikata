@@ -228,11 +228,12 @@ void ENetNetwork::service(const Time& t){
 
     senditer=mSendPeers.begin();
     recviter=mRecvPeers.begin();
-
+    
     for (size_t i=0,ie=sendBufferSizes.size();i!=ie;++i) {
         senditer=mSendPeers.find(sendBufferSizes[i].first);
         if (senditer!=mSendPeers.end()) {
             ptrdiff_t diff=sendBufferSizes[i].second-(senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size);
+            mBufferSizes[sendBufferSizes[i].first].mSendSize=senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size;
             if (diff>0) {
                 mTrace->packetSent(t,sendBufferSizes[i].first,diff);
             }
@@ -245,12 +246,16 @@ void ENetNetwork::service(const Time& t){
             for (unsigned int j=0;j<recviter->second->channelCount;++j) {
                 curincoming+=recviter->second->channels[j].incomingReliableCommands.byte_size+recviter->second->channels[j].incomingUnreliableCommands.byte_size;
             }
+            mBufferSizes[recvBufferSizes[i].first].mRecvSize=recvBufferSizes[i].second;
             ptrdiff_t diff=curincoming-recvBufferSizes[i].second;
             if (diff>0) {
                 mTrace->packetReceived(t,recvBufferSizes[i].first,diff);
             }
         }
 
+    }
+    for(std::tr1::unordered_map<Address4,BufferSizeStats>::iterator i=mBufferSizes.begin(),ie=mBufferSizes.end();i!=ie;++i){
+        mTrace->packetQueueInfo(t,i->first,mSendBufferSize,i->second.mSendSize,i->second.mSendWeight,ENET_PEER_WINDOW_SIZE_SCALE,i->second.mRecvSize,i->second.mRecvWeight);
     }
 }
 

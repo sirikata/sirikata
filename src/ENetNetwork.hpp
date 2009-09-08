@@ -10,7 +10,14 @@ class ENetNetwork :public Network{
     Trace*mTrace;
     ENetHost *mSendHost;
     ENetHost *mRecvHost;
-
+    struct BufferSizeStats{
+        size_t mSendSize;
+        size_t mRecvSize;
+        double mSendWeight;
+        double mRecvWeight;
+        BufferSizeStats(){mSendSize=mRecvSize=0;mSendWeight=mRecvWeight=0.0;}
+    };
+    std::tr1::unordered_map<Address4,BufferSizeStats > mBufferSizes;
     typedef std::tr1::unordered_map<Address4,Chunk*,Address4::Hasher> PeerFrontMap;
     PeerFrontMap mPeerFront;
     typedef std::tr1::unordered_map<Address4,std::vector<Chunk>,Address4::Hasher> PeerInitMap;
