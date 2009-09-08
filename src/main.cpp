@@ -140,11 +140,23 @@ void *main_loop(void *) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
+    float time_dilation = GetOption("time-dilation")->as<float>();
+    float inv_time_dilation = 1.f / time_dilation;
+
+
     srand( GetOption("rand-seed")->as<uint32>() );
+
+
+    // Compute the starting date/time
+    String start_time_str = GetOption("wait-until")->as<String>();
+    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+    start_time += GetOption("wait-additional")->as<Duration>();
+
 
     ServerID server_id = GetOption("id")->as<ServerID>();
 
-    SpaceContext* space_context = new SpaceContext(server_id, Time::null(), gTrace); // FIXME start time
+    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
+    SpaceContext* space_context = new SpaceContext(server_id, init_space_ctx_time, gTrace);
 
     Forwarder* forwarder = new Forwarder(space_context);
 
@@ -453,14 +465,6 @@ void *main_loop(void *) {
       // NOTE: we don't initialize this because nothing should require it. We no longer have object host,
       // and are only maintaining ObjectFactory for analysis, visualization, and oracle purposes.
       //obj_factory->initialize(obj_host->context());
-
-    float time_dilation = GetOption("time-dilation")->as<float>();
-    float inv_time_dilation = 1.f / time_dilation;
-
-    // Compute the starting date/time
-    String start_time_str = GetOption("wait-until")->as<String>();
-    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {

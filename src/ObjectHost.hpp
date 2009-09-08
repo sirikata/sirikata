@@ -47,7 +47,7 @@ public:
     typedef std::tr1::function<void(ServerID)> ConnectedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap);
+    ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& curt);
     ~ObjectHost();
 
     const ObjectHostContext* context() const;

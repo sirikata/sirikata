@@ -46,12 +46,12 @@ typedef uint64 ObjectHostID;
 
 class ObjectHostContext {
 public:
-    ObjectHostContext(ObjectHostID _id)
+    ObjectHostContext(ObjectHostID _id, const Time& curtime)
      : id(_id),
        objectHost(NULL),
        objectFactory(NULL),
-       lastTime(Time::null()),
-       time(Time::null()),
+       lastTime(curtime),
+       time(curtime),
        trace(NULL)
     {
     }

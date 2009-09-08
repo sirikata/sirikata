@@ -21,8 +21,8 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
    mRemainderReceiveBytes(0),
-   mLastSendEndTime(Time::null()),
-   mLastReceiveEndTime(Time::null())
+   mLastSendEndTime(ctx->time),
+   mLastReceiveEndTime(ctx->time)
 {
 }
 

@@ -117,7 +117,7 @@ void Object::handleSpaceConnection(ServerID sid) {
         return;
     }
 
-    OBJ_LOG(error,"Got space connection callback");
+    OBJ_LOG(insane,"Got space connection callback");
     mConnectedTo = sid;
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);

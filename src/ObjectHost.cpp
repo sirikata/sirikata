@@ -76,8 +76,8 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 }
 
 
-ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap)
- : mContext( new ObjectHostContext(_id) ),
+ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& curt)
+ : mContext( new ObjectHostContext(_id, curt) ),
    mServerIDMap(sidmap)
 {
     mContext->objectHost = this;
@@ -143,7 +143,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
 
 
 void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
-    OH_LOG(info,"Starting migration of " << obj_id.toString() << " to " << sid);
+    OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
     mObjectInfo[obj_id].migratingTo = sid;
 
@@ -429,7 +429,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
     if (session_msg.has_init_migration()) {
         CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
-        OH_LOG(info,"Received migration request for " << msg->dest_object().toString() << " to " << init_migr.new_server());
+        OH_LOG(insane,"Received migration request for " << msg->dest_object().toString() << " to " << init_migr.new_server());
         migrate(msg->dest_object(), init_migr.new_server());
     }
 

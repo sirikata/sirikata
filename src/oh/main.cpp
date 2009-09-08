@@ -70,25 +70,28 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
+    float time_dilation = GetOption("time-dilation")->as<float>();
+    float inv_time_dilation = 1.f / time_dilation;
+
+    // Get the starting time
+    String start_time_str = GetOption("wait-until")->as<String>();
+    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+    start_time += GetOption("wait-additional")->as<Duration>();
+
+
     ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
     ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
-    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map);
+
+    Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
+    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map, init_oh_ctx_time);
 
     obj_factory->initialize(obj_host->context());
 
-    float time_dilation = GetOption("time-dilation")->as<float>();
-    float inv_time_dilation = 1.f / time_dilation;
-
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
-        String start_time_str = GetOption("wait-until")->as<String>();
-        Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-
-        start_time += GetOption("wait-additional")->as<Duration>();
-
         Time now_time = Timer::now();
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
@@ -103,12 +106,9 @@ int main(int argc, char** argv) {
     Time tend = tbegin + duration;
 
     {
-      Timer timer;
-        timer.start();
-
         while( true )
         {
-            Duration elapsed = timer.elapsed() * inv_time_dilation;
+            Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
             if (elapsed > duration)
                 break;
 
