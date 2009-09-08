@@ -25,7 +25,7 @@ namespace CBR
   /*
     Basic constructor
   */
-CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs)
+CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char prefixID)
  : ObjectSegmentation(ctx),
    mCSeg (cseg)
 {
@@ -38,6 +38,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     std::vector<CraqOperationResult> getResults;
     std::vector<CraqOperationResult> trackedSetResults;
 
+    myUniquePrefixKey = prefixID;
 
     numTicks = 0;
     
@@ -54,7 +55,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
     {
       convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
-      CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mContext->id,false,CraqDataSetGet::SET);
+      
+      //      CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mContext->id,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id,false,CraqDataSetGet::SET);
       craqDht.set(cdSetGet);
       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
 
@@ -68,6 +71,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults);
     }
+
+    mTimer.start();
   }
 
   /*
@@ -85,9 +90,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   bool CraqObjectSegmentation::checkOwn(const UUID& obj_id)
   {
-    //    std::vector<UUID>::const_iterator iter  = mObjects.find(obj_id);
-    //    if (iter == mObjects.end())
-    
     if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
     {
       //means that the object isn't hosted on this space server
@@ -101,6 +103,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     return true;  
   }
 
+
+  
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
@@ -115,30 +119,36 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
-    //    mContext->trace->objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
-    //    mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
-    
-
     if (iter == mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
     {
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
       //add the mapping of a craqData Key to a uuid.
 
-      CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
-      mapDataKeyToUUID[tmper.rawHexData()] = tmper;
+      std::string indexer = "";
+      indexer.append(1,myUniquePrefixKey);
+      indexer.append(tmper.rawHexData());
+
+      CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
+      //      CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
+      //      mapDataKeyToUUID[tmper.rawHexData()] = tmper;
+
+      mapDataKeyToUUID[indexer] = tmper; //changed here.
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
 
+      
       mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
+      //      mContext->trace->objectSegmentationLookupRequest(timerDur.toMilliseconds(), obj_id, mContext->id);
 
       //also need to say that the object is in transit or lookup.
+
+      Duration timerDur = mTimer.elapsed();
       TransLookup tmpTransLookup;
-      tmpTransLookup.sID = 0;
-      tmpTransLookup.timeAdmitted = mContext->time.raw();
-      //bftm change. 9.4.2009
+      tmpTransLookup.sID = 0;      
+      //      tmpTransLookup.timeAdmitted = mContext->time.raw();
+      tmpTransLookup.timeAdmitted = timerDur.toMilliseconds();
+
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
-      //mInTransitOrLookup[tmper] = 0; //just says that we are performing a lookup on the object
-      
     }
   }
 
@@ -147,8 +157,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   OSegMigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to)
   {
-    //    const UUID& obj_id = obj->uuid();
-    
     OSegMigrateMessageAcknowledge* oseg_ack_msg = new OSegMigrateMessageAcknowledge(mContext->id,  mContext->id,  sID_to, sID_to,    mContext->id,obj_id);
 
     return oseg_ack_msg;
@@ -174,16 +182,26 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
     if (generateAck)
     {
-      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
+      CraqDataKey cdk;
+      convert_obj_id_to_dht_key(obj_id,cdk);
+
+      //      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,true,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, mContext->id ,true,CraqDataSetGet::SET);
+
+      
       int trackID = craqDht.set(cdSetGet);
       trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
-      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  will generateAck:  "<<obj_id.toString()<<"   to   "<< idServerAckTo<< "  from  "<< mContext->id << "   this is trackID     "  << trackID << "\n\n";
+      //      std::cout<<"\n\nbftm: debug inside of add object for obj_id.  will generateAck:  "<<obj_id.toString()<<"   to   "<< idServerAckTo<< "  from  "<< mContext->id << "   this is trackID     "  << trackID << "\n\n";
     }
     else
     {
-      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
+
+      CraqDataKey cdk;
+      convert_obj_id_to_dht_key(obj_id,cdk);
+
+      //      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, mContext->id ,false,CraqDataSetGet::SET);
       int trackID = craqDht.set(cdSetGet);
-      //std::cout<<"\n\nbftm: debug inside of add object for obj_id.  noAck:  "<<obj_id.toString()<<"\n\n";
     }
   }
 
@@ -195,7 +213,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const ServerID new_server_id)
   {
-    std::cout<<"\n\n bftm got a migrateObject call in CraqObjecSegmentation.cpp.  Migrate from:   "<<mContext->id<< " to  "<<new_server_id<<   "time    " <<mContext->time.raw()  <<" \n\n";
 
     //log the message.
     mContext->trace->objectBeginMigrate(mContext->time,obj_id,mContext->id,new_server_id); //log it.
@@ -257,10 +274,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 //           std::cout<<"  for object:  ";
 //           std::cout<< trackingMessages[trackedSetResults[s].trackedMessage]->getObjID().toString()<<"    at time   "<< mContext->time.raw()  <<  " \n\n";
           
-               
-          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
-            //prior to rebase:    
-            //mContext->router->route(trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
 
           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
         }
@@ -310,32 +323,45 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
-    static uint32 numTicksGreaterThanOneMs = 0;
-    static uint32 numTicksLessThanOneMs    = 0;
-    static uint32 numGetResultsReturned    = 0;
-    
-    //this is for debugging:
-    Timer serviceTimer;
-    serviceTimer.start();
+    Timer osegServiceDurTimer;
+    osegServiceDurTimer.start();
 
+
+    static Timer serviceTimer;
+    static uint64 serviceCount = 0;
+    static uint64 previousTime = 0;
+
+    
+    
+    if (serviceCount == 0)
+    {
+      serviceTimer.start();
+    }
+    else
+    {
+      if ((serviceCount %1000) == 0)
+      {
+        Duration serviceTimerDur = serviceTimer.elapsed();
+        previousTime = serviceTimerDur.toMilliseconds();
+      }
+      if (((serviceCount-1) %1000) == 0)
+      {
+        Duration serviceTimerDur = serviceTimer.elapsed();
+        std::cout<<"\n\nbftm debug.  Time between craqoseg service calls:   "<< ((int64)serviceTimerDur.toMilliseconds()) - ((int64)previousTime)  << "\n\n";
+      }
+    }
+    ++serviceCount;
+    
+    
     std::vector<CraqOperationResult> getResults;
     std::vector<CraqOperationResult> trackedSetResults;
 
     //    iteratedWait(5, getResults,trackedSetResults);
     craqDht.tick(getResults,trackedSetResults);
 
-    ++numTicks;
-    
-    //bftm note: I don't really know that this should go here.
+
     updated = mFinishedMoveOrLookup;
 
-    if (trackedSetResults.size() != 0)
-      std::cout<<"\n\nbftm debug: inside of tick got this many trackedSetResults:   "<<trackedSetResults.size()<<"\n\n";
-
-    if (getResults.size() != 0)
-    {
-      numGetResultsReturned = numGetResultsReturned + getResults.size();
-    }
 
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -347,35 +373,37 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
 
       if (iter != mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
       {
-        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int)mContext->time.raw()) -  (int)(iter->second.timeAdmitted)) );
+        Duration timerDur = mTimer.elapsed();
+        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+
+        //        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int)mContext->time.raw()) -  (int)(iter->second.timeAdmitted)) );
         mInTransitOrLookup.erase(iter);
       }
       else
       {
-        std::cout<<"\n\nbftm debug:   No wonder this isn't going quickly.  \n\n";
+        std::cout<<"\n\nbftm debug:  getting results for objects that we were not looking for.  \n\n";
       }
     }
     
     processCraqTrackedSetResults(trackedSetResults);
     mFinishedMoveOrLookup.clear();
 
-    Duration serviceDur = serviceTimer.elapsed();
-    if (serviceDur.toMilliseconds() > 2)
+
+    
+
+    Duration osegServiceDuration = osegServiceDurTimer.elapsed();
+    if (osegServiceDuration.toMilliseconds() > 1)
     {
-      //      std::cout<<"\n\nbftm debug in service of craqobjseg.cpp.  This is ms:  "<< serviceDur.toMilliseconds()<<"\n\n";
-      ++numTicksGreaterThanOneMs;
+      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  "  \n\n";
     }
-    else
-    {
-      ++numTicksLessThanOneMs;
-    }
+    
   }
 
 
   void CraqObjectSegmentation::convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const
   {
-    //    std::cout<<"\n\ngot into convert_obj_id_to_dht_key\n\n";
-    strncpy(returner,obj_id.rawHexData().c_str(),obj_id.rawHexData().size() + 1);
+    returner[0] = myUniquePrefixKey;
+    strncpy(returner+1,obj_id.rawHexData().c_str(),obj_id.rawHexData().size() + 1);
   }
 
 
@@ -431,7 +459,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     serv_to   = msg->getServTo();
     obj_id    = msg->getObjID();
 
-    std::cout<<"\n\n bftm debug: in CraqObjectSegmentation.cpp.  Got an acknowledge.  Acked from " << serv_from << "   acked to:    " << serv_to<< "   obj_id: " << obj_id.toString()<<"\n\n";
+    //    std::cout<<"\n\n bftm debug: in CraqObjectSegmentation.cpp.  Got an acknowledge.  Acked from " << serv_from << "   acked to:    " << serv_to<< "   obj_id: " << obj_id.toString()<<"\n\n";
 
     std::map<UUID,TransLookup>::iterator inTransIt;
 

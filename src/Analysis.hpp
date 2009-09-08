@@ -221,10 +221,14 @@ private:
   std::vector<ServerID> objectAcknowledgeAcknowledgeFrom;
   std::vector<ServerID> objectAcknowledgeAcknowledgeTo;
 
+  static bool compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B);
+  static bool compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B);
+  void convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents);
+  
 public:
   ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers);
 
-  void printData(std::ostream &fileOut);
+  void printData(std::ostream &fileOut, bool sortByTime=true);
   ~ObjectSegmentationAnalysis();
 
 }; //class ObjectSegmentationAnalysis

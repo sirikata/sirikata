@@ -11,10 +11,11 @@ const int CRAQ_DATA_RESPONSE_SIZE = 70;
 typedef char CraqDataResponseBuffer [CRAQ_DATA_RESPONSE_SIZE];
 
 
-
-const int CRAQ_DATA_KEY_SIZE = 33;
-typedef char CraqDataKey [CRAQ_DATA_KEY_SIZE];
-
+  //multi-usef change
+  //const int CRAQ_DATA_KEY_SIZE = 33;
+  //typedef char CraqDataKey [CRAQ_DATA_KEY_SIZE];
+  const int CRAQ_DATA_KEY_SIZE = 34;
+  typedef char CraqDataKey [CRAQ_DATA_KEY_SIZE];
 
 const char CRAQ_DATA_KEY_QUERY_PREFIX[]  = "get ";
 const char CRAQ_DATA_KEY_QUERY_SUFFIX[] = "\r\n";
@@ -22,10 +23,6 @@ const int  CRAQ_DATA_PREFIX_SIZE          = 4;
 const int  CRAQ_DATA_SUFFIX_SIZE          = 2;
 const int CRAQ_DATA_KEY_QUERY_SIZE       = CRAQ_DATA_KEY_SIZE + CRAQ_DATA_PREFIX_SIZE + CRAQ_DATA_SUFFIX_SIZE;
 typedef char CraqDataKeyQuery[CRAQ_DATA_KEY_QUERY_SIZE];  //this is what actually goes out to the router.
-
-//the above is all okay.
-
-
 
 
 
@@ -36,12 +33,6 @@ const int  CRAQ_DATA_SET_END_LINE_SIZE  =      2;
 
 
 
-/*
-const char DATA_TO_SET_SIZE[]      = " 10";
-const int  DATA_TO_SET_SIZE_SIZE   =     3; //There are 4 digits in the above.
-const int DATA_VALUE_SIZE = 10;
-typedef char DataValue [DATA_VALUE_SIZE];
-*/
 const char CRAQ_DATA_TO_SET_SIZE[]      = " 12";
 const int  CRAQ_DATA_TO_SET_SIZE_SIZE   =     3; //There are 3 digits in the above.
 const int  CRAQ_SERVER_SIZE             =    10;
@@ -54,7 +45,7 @@ typedef char CraqDataValue [CRAQ_DATA_VALUE_SIZE];
 const char CRAQ_GET_RESP[]              =      "VALUE12";
 const int  CRAQ_GET_RESP_SIZE           =              7;
 
-const int CRAQ_THREAD_POOL_CONNECTIONS  =             10;
+  //const int CRAQ_THREAD_POOL_CONNECTIONS  =             10;
 
 
 const int CRAQ_DATA_SET_SIZE       = CRAQ_DATA_SET_PREFIX_SIZE + CRAQ_DATA_KEY_SIZE + CRAQ_DATA_TO_SET_SIZE_SIZE + CRAQ_DATA_SET_END_LINE_SIZE + CRAQ_DATA_VALUE_SIZE + CRAQ_DATA_SET_END_LINE_SIZE +1;
@@ -69,7 +60,6 @@ typedef char CraqDataGetResp[CRAQ_DATA_GET_RESP_SIZE];
 
 
 //const int CRAQ_NUM_CONNECTIONS            = 10;
-//const int CRAQ_NUM_CONNECTIONS            = 17;
   const int CRAQ_NUM_CONNECTIONS            = 30;
 
 struct CraqObjectID

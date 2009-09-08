@@ -213,20 +213,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         }
         break;
 
-//       case Trace::ObjectSegmentationFinalDumpTag:
-//         {
-//           SingleServerOsegFinalDumpEvent* osegDump_evt = new SingleServerOsegFinalDumpEvent;
-
-//           std::cout<<"\n\nGot a dump tag\n\n";
-          
-//           is.read((char*)&osegDump_evt->time,sizeof(osegDump_evt->time));
-//           is.read((char*)&osegDump_evt->objectsHosted, sizeof(osegDump_evt->objectsHosted));
-//           is.read((char*)&osegDump_evt->inTransitOrLookup,sizeof(osegDump_evt->inTransitOrLookup));
-//           is.read((char*)&osegDump_evt->sID, sizeof(osegDump_evt->sID));
-          
-//           evt = osegDump_evt;
-//         }
-//         break;
       case Trace::ServerLocationTag:
           {
               ServerLocationEvent* levt = new ServerLocationEvent;
@@ -1311,36 +1297,115 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
   }
 
-
-  void ObjectSegmentationAnalysis::printData(std::ostream &fileOut)
+  bool ObjectSegmentationAnalysis::compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B)
   {
-
-    fileOut<<"\n\nSize of objectMigrateTimes:               "<<objectBeginMigrateTimes.size()<<"\n\n";
-    fileOut<<"\n\nSize of objectAcknowledgeMigrateTimes:    "<<(int)objectAcknowledgeMigrateTimes.size()<<"\n\n";
-
-
-    fileOut << "\n\n*******************Begin Migrate Messages*************\n\n\n";
+    return A.time < B.time;
+  }
 
 
-    for (int s=0; s < (int)objectBeginMigrateTimes.size(); ++s)
+  bool ObjectSegmentationAnalysis::compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B)
+  {
+    return A.time < B.time;
+  }
+
+  
+  void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents)
+  {
+    //begin migrate events
+    ObjectBeginMigrateEvent obme;
+  
+    for (int s= 0; s < (int) objectBeginMigrateTimes.size(); ++s)
     {
-      fileOut << objectBeginMigrateTimes[s].raw() << "\n";
-      fileOut << "          obj id:       " << objectBeginMigrateID[s].toString() << "\n";
-      fileOut << "          migrate from: " << objectBeginMigrateMigrateFrom[s] << "\n";
-      fileOut << "          migrate to:   " << objectBeginMigrateMigrateTo[s] << "\n";
-      fileOut << "\n\n";
+      obme.time           =        objectBeginMigrateTimes[s];
+      obme.mObjID         =           objectBeginMigrateID[s];
+      obme.mMigrateFrom   =  objectBeginMigrateMigrateFrom[s];
+      obme.mMigrateTo     =    objectBeginMigrateMigrateTo[s];
 
+      sortedBeginMigrateEvents.push_back(obme);
     }
 
-    fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
+    std::sort(sortedBeginMigrateEvents.begin(),sortedBeginMigrateEvents.end(), compareObjectBeginMigrateEvts );
 
-    for (int s=0; s < (int)objectAcknowledgeMigrateTimes.size(); ++s)
+    //acknowledge events
+    ObjectAcknowledgeMigrateEvent oame;
+
+    for (int s =0; s < (int) objectAcknowledgeMigrateTimes.size(); ++s)
     {
-      fileOut << objectAcknowledgeMigrateTimes[s].raw() << "\n";
-      fileOut << "          obj id:           " << objectAcknowledgeMigrateID[s].toString() << "\n";
-      fileOut << "          acknowledge from: " << objectAcknowledgeAcknowledgeFrom[s] << "\n";
-      fileOut << "          acknowledge to:   " << objectAcknowledgeAcknowledgeTo[s] << "\n";
-      fileOut << "\n\n";
+      oame.time             =     objectAcknowledgeMigrateTimes[s];
+      oame.mObjID           =        objectAcknowledgeMigrateID[s];
+      oame.mAcknowledgeFrom =  objectAcknowledgeAcknowledgeFrom[s];
+      oame.mAcknowledgeTo   =    objectAcknowledgeAcknowledgeTo[s];
+
+      sortedAcknowledgeMigrateEvents.push_back(oame);
+    }
+    
+    std::sort(sortedAcknowledgeMigrateEvents.begin(), sortedAcknowledgeMigrateEvents.end(), compareObjectAcknowledgeMigrateEvts);
+    
+  }
+
+
+  
+
+  void ObjectSegmentationAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
+  {
+    if (sortedByTime)
+    {
+      std::vector<ObjectBeginMigrateEvent>               sortedBeginMigrateEvents;
+      std::vector<ObjectAcknowledgeMigrateEvent>   sortedAcknowledgeMigrateEvents;
+            
+      convertToEvtsAndSort(sortedBeginMigrateEvents, sortedAcknowledgeMigrateEvents);
+
+      fileOut<<"\n\nSize of objectMigrateTimes:               "<<sortedBeginMigrateEvents.size()<<"\n\n";
+      fileOut<<"\n\nSize of objectAcknowledgeMigrateTimes:    "<<sortedAcknowledgeMigrateEvents.size()<<"\n\n";
+
+      fileOut << "\n\n*******************Begin Migrate Messages*************\n\n\n";
+
+      for (int s=0; s < (int)sortedBeginMigrateEvents.size(); ++s)
+      {
+        fileOut << sortedBeginMigrateEvents[s].time.raw() << "\n";
+        fileOut << "          obj id:       " << sortedBeginMigrateEvents[s].mObjID.toString() << "\n";
+        fileOut << "          migrate from: " << sortedBeginMigrateEvents[s].mMigrateFrom      << "\n";
+        fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].mMigrateTo        << "\n";
+        fileOut << "\n\n";
+      }
+      
+      fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
+
+      for (int s=0; s < (int) sortedAcknowledgeMigrateEvents.size(); ++s)
+      {
+        fileOut << sortedAcknowledgeMigrateEvents[s].time.raw() << "\n";
+        fileOut << "          obj id:           " << sortedAcknowledgeMigrateEvents[s].mObjID.toString() << "\n";
+        fileOut << "          acknowledge from: " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeFrom  << "\n";
+        fileOut << "          acknowledge to:   " << sortedAcknowledgeMigrateEvents[s].mAcknowledgeTo    << "\n";
+        fileOut << "\n\n";
+      }
+    }
+    else
+    {
+      fileOut<<"\n\nSize of objectMigrateTimes:               "<<objectBeginMigrateTimes.size()<<"\n\n";
+      fileOut<<"\n\nSize of objectAcknowledgeMigrateTimes:    "<<(int)objectAcknowledgeMigrateTimes.size()<<"\n\n";
+
+      fileOut << "\n\n*******************Begin Migrate Messages*************\n\n\n";
+
+      for (int s=0; s < (int)objectBeginMigrateTimes.size(); ++s)
+      {
+        fileOut << objectBeginMigrateTimes[s].raw() << "\n";
+        fileOut << "          obj id:       " << objectBeginMigrateID[s].toString() << "\n";
+        fileOut << "          migrate from: " << objectBeginMigrateMigrateFrom[s] << "\n";
+        fileOut << "          migrate to:   " << objectBeginMigrateMigrateTo[s] << "\n";
+        fileOut << "\n\n";
+      }
+
+      fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
+
+      for (int s=0; s < (int)objectAcknowledgeMigrateTimes.size(); ++s)
+      {
+        fileOut << objectAcknowledgeMigrateTimes[s].raw() << "\n";
+        fileOut << "          obj id:           " << objectAcknowledgeMigrateID[s].toString() << "\n";
+        fileOut << "          acknowledge from: " << objectAcknowledgeAcknowledgeFrom[s] << "\n";
+        fileOut << "          acknowledge to:   " << objectAcknowledgeAcknowledgeTo[s] << "\n";
+        fileOut << "\n\n";
+      }
     }
   }
 
@@ -1433,11 +1498,7 @@ LatencyAnalysis::~LatencyAnalysis() {
       sortedEvents.push_back(ole);
     }
 
-    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
-
-
-    
-    
+    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );    
   }
 
   bool ObjectSegmentationLookupRequestsAnalysis::compareEvts(ObjectLookupEvent A, ObjectLookupEvent B)

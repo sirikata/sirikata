@@ -23,6 +23,9 @@ namespace CBR
     ServerID sID;
     uint64 timeAdmitted;
   };
+
+
+  
   
   class CraqObjectSegmentation : public ObjectSegmentation
   {
@@ -32,7 +35,9 @@ namespace CBR
     //debugging:
     uint64 numTicks;
 
-    
+    Timer mTimer;
+
+    char myUniquePrefixKey; //should just be one character long.
 
     std::map<std::string, UUID > mapDataKeyToUUID;
     //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
@@ -53,7 +58,7 @@ namespace CBR
     bool checkOwn(const UUID& obj_id);
 
   public:
-      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs);
+      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
 
 
     virtual ~CraqObjectSegmentation();
