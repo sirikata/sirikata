@@ -76,7 +76,7 @@ if [ $want_debug -eq 1 ] ; then
   done
   echo "set args $args" > $tmpfile
   echo "run" >> $tmpfile
-  if [ $want_interactive -neq 1] ; then
+  if [ $want_interactive -ne 1 ] ; then
     echo "bt" >> $tmpfile
     echo "quit" >> $tmpfile
   fi
