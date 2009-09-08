@@ -78,6 +78,8 @@
 
 #define LOC                 "loc"
 
+#define PROFILE                 "profile"
+
 namespace CBR {
 
 void InitOptions();

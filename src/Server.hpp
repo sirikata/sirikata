@@ -6,6 +6,7 @@
 #include "SpaceContext.hpp"
 
 #include "ObjectHostConnectionManager.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR
 {
@@ -48,7 +49,7 @@ class Server : public MessageRecipient
 private:
     // Methods for periodic servicing
     void serviceProximity();
-    void serviceNetwork();
+    void serviceObjectHostNetwork();
     void checkObjectMigrations();
 
     // Finds the ObjectConnection associated with the given object, returns NULL if the object isn't available.
@@ -88,6 +89,8 @@ private:
 
     typedef std::set<ObjectConnection*> ObjectConnectionSet;
     ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages
+
+      TimeProfiler mProfiler;
 }; // class Server
 
 } // namespace CBR

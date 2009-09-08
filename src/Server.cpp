@@ -34,7 +34,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mProximity(prox),
    mOSeg(oseg),
    mForwarder(forwarder),
-   mObjectHostConnectionManager(NULL)
+   mObjectHostConnectionManager(NULL),
+   mProfiler("Server Loop")
 {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
@@ -45,10 +46,19 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
         mContext, *oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
     );
+
+    mProfiler.addStage("Loc");
+    mProfiler.addStage("Prox");
+    mProfiler.addStage("Forwarder");
+    mProfiler.addStage("Object Hosts");
+    mProfiler.addStage("Object Migration Check");
 }
 
 Server::~Server()
 {
+    if (GetOption(PROFILE)->as<bool>())
+        mProfiler.report();
+
     delete mObjectHostConnectionManager;
 
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
@@ -83,11 +93,7 @@ ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
     return NULL;
 }
 
-void Server::serviceNetwork()
-{
-    mForwarder->service();
-
-
+void Server::serviceObjectHostNetwork() {
     mObjectHostConnectionManager->service();
 
   // Tick all active connections
@@ -351,10 +357,13 @@ void Server::handleMigration(const UUID& obj_id) {
 }
 
 void Server::service() {
-    mLocationService->service();
-    serviceProximity();
-    serviceNetwork();
-    checkObjectMigrations();
+    mProfiler.startIteration();
+
+    mLocationService->service();  mProfiler.finishedStage();
+    serviceProximity();           mProfiler.finishedStage();
+    mForwarder->service();        mProfiler.finishedStage();
+    serviceObjectHostNetwork();   mProfiler.finishedStage();
+    checkObjectMigrations();      mProfiler.finishedStage();
 }
 
 void Server::serviceProximity() {

@@ -32,6 +32,7 @@
 
 #include "Timer.hpp"
 #include "TimeSync.hpp"
+#include "TimeProfiler.hpp"
 
 #include "Network.hpp"
 
@@ -501,6 +502,12 @@ void *main_loop(void *) {
 
     gNetwork->start();
 
+    TimeProfiler profiler("Main Loop");
+    profiler.addStage("Context Update");
+    profiler.addStage("Network Service");
+    profiler.addStage("CSeg Service");
+    profiler.addStage("Server Service");
+
     while( true ) {
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
         if (elapsed > duration)
@@ -513,12 +520,16 @@ void *main_loop(void *) {
             last_sample_time = last_sample_time + stats_sample_rate;
         }
 
-        space_context->tick(curt);
+        profiler.startIteration();
 
-        gNetwork->service(curt);
-        cseg->service();
-        server->service();
+        space_context->tick(curt); profiler.finishedStage();
+        gNetwork->service(curt); profiler.finishedStage();
+        cseg->service(); profiler.finishedStage();
+        server->service(); profiler.finishedStage();
     }
+
+    if (GetOption(PROFILE)->as<bool>())
+        profiler.report();
 
     gTrace->prepareShutdown();
 
