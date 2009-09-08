@@ -193,23 +193,6 @@ void *main_loop(void *) {
         exit(-1);
     }
 
-    if (cseg_type == "distributed") {
-      Time tbegin = Time::null();
-      Time tend = tbegin + duration;
-
-      Timer timer;
-      timer.start();
-
-      while( true ) {
-        Duration elapsed = timer.elapsed();
-
-        space_context->tick(tbegin + elapsed);
-        cseg->service();
-      }
-
-      exit(0);
-    }
-
 
     LoadMonitor* loadMonitor = new LoadMonitor(space_context, sq, cseg);
 
@@ -474,13 +457,13 @@ void *main_loop(void *) {
     float time_dilation = GetOption("time-dilation")->as<float>();
     float inv_time_dilation = 1.f / time_dilation;
 
+    // Compute the starting date/time
+    String start_time_str = GetOption("wait-until")->as<String>();
+    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+    start_time += GetOption("wait-additional")->as<Duration>();
+
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
-        String start_time_str = GetOption("wait-until")->as<String>();
-        Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-
-        start_time += GetOption("wait-additional")->as<Duration>();
-
         Time now_time = Timer::now();
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
@@ -497,24 +480,34 @@ void *main_loop(void *) {
     Duration stats_sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
     Time last_sample_time = Time::null();
 
-    Timer timer;
-    timer.start();
+
+    // FIXME we have a special case for the distributed cseg server, this should be
+    // turned into a separate binary
+    if (cseg_type == "distributed") {
+      while( true ) {
+        Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
+
+        space_context->tick(tbegin + elapsed);
+        cseg->service();
+      }
+
+      exit(0);
+    }
+
+
     gNetwork->start();
 
     while( true ) {
-        Duration elapsed = timer.elapsed() * inv_time_dilation;
-        //            printf("\n\n bftm debug: In main.cpp.  Doing iteration. \n\n");
-        //            std::cout<<"Duration:  "<<elapsed.seconds()<<"  "<<elapsed.milliseconds()<<"\n\n";
+        Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
         if (elapsed > duration)
             break;
 
-        Duration since_last_sample = (tbegin + elapsed) - last_sample_time;
+        Time curt = tbegin + elapsed;
+        Duration since_last_sample = curt - last_sample_time;
         if (since_last_sample > stats_sample_rate) {
-            gNetwork->reportQueueInfo(tbegin + elapsed);
+            gNetwork->reportQueueInfo(curt);
             last_sample_time = last_sample_time + stats_sample_rate;
         }
-
-        Time curt = tbegin + elapsed;
 
         space_context->tick(curt);
 
