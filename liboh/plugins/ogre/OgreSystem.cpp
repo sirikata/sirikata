@@ -441,6 +441,9 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                     _putenv(tmp);
                 }
 #endif
+                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<rw->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<rw->getHeight()<<'\n');
+                *mWindowWidth->get()=Any(rw->getWidth());
+                *mWindowHeight->get()=Any(rw->getHeight());
                 mInputManager=new SDLInputManager(rw->getWidth(),
                                                   rw->getHeight(),
                                                   mFullScreen->as<bool>(),
@@ -467,6 +470,9 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 misc["currentGLContext"] = String("True");
 #endif
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<rw->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<rw->getHeight()<<'\n');
+                *mWindowWidth->get()=Any(rw->getWidth());
+                *mWindowHeight->get()=Any(rw->getHeight());                
                 rw->setVisible(true);
 
             }
