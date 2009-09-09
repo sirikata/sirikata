@@ -685,7 +685,7 @@ static void KillWebView(ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p);
 }
 
-void OgreSystem::createProxy(ProxyObjectPtr p){
+void OgreSystem::onCreateProxy(ProxyObjectPtr p){
     bool created = false;
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
@@ -730,7 +730,7 @@ void OgreSystem::createProxy(ProxyObjectPtr p){
     }
 
 }
-void OgreSystem::destroyProxy(ProxyObjectPtr p){
+void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 
 }
 struct RayTraceResult {

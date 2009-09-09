@@ -64,7 +64,7 @@ void ProxyObject::setLocal(bool loc) {
 
 void ProxyObject::destroy() {
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
-    //FIXME mManager->notify(&ProxyCreationListener::destroyProxy);
+    //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
 
 bool ProxyObject::UpdateNeeded::operator() (

@@ -737,21 +737,21 @@ BulletSystem::~BulletSystem() {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem destructor finished" << endl;)
 }
 
-void BulletSystem::createProxy(ProxyObjectPtr p) {
+void BulletSystem::onCreateProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     if (meshptr) {
-        DEBUG_OUTPUT(cout << "dbm: createProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
+        DEBUG_OUTPUT(cout << "dbm: onCreateProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
         objects.push_back(new BulletObj(this));     /// clean up memory!!!
         objects.back()->mMeshptr = meshptr;
         meshptr->MeshProvider::addListener(objects.back());
     }
 }
 
-void BulletSystem::destroyProxy(ProxyObjectPtr p) {
+void BulletSystem::onDestroyProxy(ProxyObjectPtr p) {
     ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
     for (unsigned int i=0; i<objects.size(); i++) {
         if (objects[i]->mMeshptr==meshptr) {
-            DEBUG_OUTPUT(cout << "dbm: destroyProxy, object=" << objects[i] << endl);
+            DEBUG_OUTPUT(cout << "dbm: onDestroyProxy, object=" << objects[i] << endl);
             meshptr->MeshProvider::removeListener(objects[i]);
             removePhysicalObject(objects[i]);
             objects.erase(objects.begin()+i);

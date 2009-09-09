@@ -38,8 +38,8 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class SIRIKATA_OH_EXPORT ProxyCreationListener {
 public:
     virtual ~ProxyCreationListener(){}
-    virtual void createProxy (ProxyObjectPtr)=0;
-    virtual void destroyProxy (ProxyObjectPtr)=0;
+    virtual void onCreateProxy ( ProxyObjectPtr ) = 0;
+    virtual void onDestroyProxy ( ProxyObjectPtr ) = 0;
 };
 }
 #endif

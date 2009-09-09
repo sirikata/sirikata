@@ -54,7 +54,7 @@ void ObjectHostProxyManager::createViewedObject(const ProxyObjectPtr &newObj, Qu
     std::pair<ProxyMap::iterator, bool> result = mProxyMap.insert(
         ProxyMap::value_type(newObj->getObjectReference().object(), newObj));
     if (result.second==true) {
-        notify(&ProxyCreationListener::createProxy,newObj);
+        notify(&ProxyCreationListener::onCreateProxy,newObj);
     }
     result.first->second.viewers.insert(viewer);
 }
@@ -67,7 +67,7 @@ void ObjectHostProxyManager::destroyViewedObject(const SpaceObjectReference &new
         viewiter = iter->second.viewers.find(viewer);
         if (viewiter == iter->second.viewers.end()) {
             iter->second.obj->destroy();
-            notify(&ProxyCreationListener::destroyProxy,iter->second.obj);
+            notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
             mProxyMap.erase(iter);
         }
     }

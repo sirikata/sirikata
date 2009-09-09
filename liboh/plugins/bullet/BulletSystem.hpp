@@ -530,8 +530,8 @@ public:
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName);
-    virtual void createProxy(ProxyObjectPtr p);
-    virtual void destroyProxy(ProxyObjectPtr p);
+    virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
+    virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     virtual Duration desiredTickRate()const {
         return Duration::seconds(0.1);
     };

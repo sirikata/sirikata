@@ -219,8 +219,8 @@ public:
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();
-    virtual void createProxy(ProxyObjectPtr p);
-    virtual void destroyProxy(ProxyObjectPtr p);
+    virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
+    virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     ~OgreSystem();
 };
 
