@@ -40,8 +40,8 @@
 #include "ServerIDMap.hpp"
 
 
-//#define TRACE_OBJECT
-//#define TRACE_LOCPROX
+#define TRACE_OBJECT
+#define TRACE_LOCPROX
 #define TRACE_OSEG
 //#define TRACE_CSEG
 #define TRACE_MIGRATION
