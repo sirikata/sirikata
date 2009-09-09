@@ -62,6 +62,7 @@
 #include "FairObjectMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
+#include "SqrIntegral.hpp"
 #include "PartiallyOrderedList.hpp"
 #include "UniformCoordinateSegmentation.hpp"
 #include "DistributedCoordinateSegmentation.hpp"
@@ -440,20 +441,33 @@ void *main_loop(void *) {
         assert(false);
         exit(-1);
     }
-
     ServerWeightCalculator* weight_calc = NULL;
     if (cseg_type != "distributed") {
-      weight_calc =
+      if (GetOption("gaussian")->as<bool>()) {
+        weight_calc =
         new ServerWeightCalculator(
             server_id,
             cseg,
+            
             std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
+                           std::tr1::placeholders::_1,
+                           std::tr1::placeholders::_2,
+                           std::tr1::placeholders::_3,
+                           std::tr1::placeholders::_4),
+            sq
+        );
+      }else {
+        weight_calc =
+        new ServerWeightCalculator(
+            server_id,
+            cseg,
+            std::tr1::bind(SqrIntegral(),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
                 std::tr1::placeholders::_1,
                 std::tr1::placeholders::_2,
                 std::tr1::placeholders::_3,
-                std::tr1::placeholders::_4),
-            sq
-        );
+                           std::tr1::placeholders::_4),
+            sq);
+      }
     }
 
     Proximity* prox = new Proximity(space_context, loc_service);

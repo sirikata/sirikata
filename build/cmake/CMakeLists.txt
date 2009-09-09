@@ -150,6 +150,8 @@ VERIFY_VERSION(Boost 1 35 0)
 
 #dependency: glut
 FIND_PACKAGE(GLUT)
+
+FIND_PACKAGE(GSL)
 IF(NOT GLUT_FOUND)
   MESSAGE(SEND_ERROR "Couldn't find GLUT.")
 ENDIF(NOT GLUT_FOUND)
@@ -209,6 +211,7 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Sirikata_PBJ_ROOT}
         ${Enet_INCLUDE_DIRS}
         ${QT_INCLUDES}
+        ${GSL_INCLUDE_DIR}
         ${SST_INCLUDE_DIRS}
         ${PROX_INCLUDE_DIRS}
         ${PROTOCOLBUFFERS_INCLUDE_DIRS}
@@ -227,6 +230,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
   ${CBR_SOURCE_DIR}/ExpIntegral.cpp
+  ${CBR_SOURCE_DIR}/SqrIntegral.cpp
   ${CBR_SOURCE_DIR}/FIFOServerMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FIFOObjectMessageQueue.cpp
   ${CBR_SOURCE_DIR}/FairServerMessageQueue.cpp
@@ -323,11 +327,13 @@ SET(CBR_PROTOCOL_SOURCES
 #link flags
 LINK_DIRECTORIES(
         ${Boost_LIBRARY_DIRS}
+        ${GSL_LINK_DIRECTORIES}
 )
 
 #binaries
 ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
+        ${GSL_LIBRARIES}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
