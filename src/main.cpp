@@ -89,7 +89,9 @@ int main(int argc, char** argv) {
 
     std::string time_server=GetOption("time-server")->as<String>();
     TimeSync sync;
-    sync.start(time_server);
+
+    if (GetOption("cseg")->as<String>() != "distributed")
+      sync.start(time_server);
 
 
     gTrace = new Trace();

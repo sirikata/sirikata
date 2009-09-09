@@ -53,6 +53,8 @@ Server::~Server()
 
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
 
+    printf("mObjects.size=%d\n", mObjects.size());
+
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
 

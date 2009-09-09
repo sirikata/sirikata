@@ -110,7 +110,7 @@ UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 }
 
-ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
+ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos)  {
     Vector3f region_extents = mRegion.extents();
     Vector3f to_point = pos - mRegion.min();
 
@@ -126,7 +126,7 @@ ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos) const {
     return ServerID(server_index);
 }
 
-BoundingBoxList UniformCoordinateSegmentation::serverRegion(const ServerID& server) const {
+BoundingBoxList UniformCoordinateSegmentation::serverRegion(const ServerID& server)  {
     BoundingBoxList boundingBoxList;
     //assert( server > 0 && server <= mServersPerDim.x * mServersPerDim.y * mServersPerDim.z );
     if ( server > mServersPerDim.x * mServersPerDim.y * mServersPerDim.z ) {
@@ -153,11 +153,11 @@ BoundingBoxList UniformCoordinateSegmentation::serverRegion(const ServerID& serv
     return boundingBoxList;
 }
 
-BoundingBox3f UniformCoordinateSegmentation::region() const {
+BoundingBox3f UniformCoordinateSegmentation::region()  {
     return mRegion;
 }
 
-uint32 UniformCoordinateSegmentation::numServers() const {
+uint32 UniformCoordinateSegmentation::numServers()  {
     return mServersPerDim.x * mServersPerDim.y * mServersPerDim.z;
 }
 

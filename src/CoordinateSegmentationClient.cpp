@@ -42,10 +42,19 @@
 
 namespace CBR {
 
+typedef boost::asio::ip::tcp tcp;
+
+template<typename T>
+T clamp(T val, T minval, T maxval) {
+    if (val < minval) return minval;
+    if (val > maxval) return maxval;
+    return val;
+}
+
 
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
- : CoordinateSegmentation(ctx)
+  : CoordinateSegmentation(ctx), mAvailableServersCount(0), mRegion(region), mBSPTreeValid(true)
 {
   mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
@@ -65,7 +74,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
   enet_address_set_host (&address, "indus");
   address.port = 1234;
 
-  // Initiate the connection, allocating the two channels 0 and 1.
+  // Initiate the connection, allocating one channel.
   peer = enet_host_connect (client, &address, 1);
 
   if (peer == NULL)
@@ -73,8 +82,8 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
       printf ("No available peers for initiating an ENet connection.\n");
     }
 
-  /* Wait up to 50 milliseconds for the connection attempt to succeed. */
-  if (enet_host_service (client, & event, 50) > 0 &&
+  /* Wait up to 200 milliseconds for the connection attempt to succeed. */
+  if (enet_host_service (client, & event, 200) > 0 &&
       event.type == ENET_EVENT_TYPE_CONNECT)
     {
       printf("Connection to CSEG succeeded.\n");
@@ -93,7 +102,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
       printf ("An error occurred while trying to create the subscription client host.\n");
   }
 
-  // Initiate the connection, allocating the two channels 0 and 1.
+  // Initiate the connection, allocating one channel.
   ENetPeer * subscriptionPeer = enet_host_connect (mSubscriptionClient, &address, 1);
 
   if (subscriptionPeer == NULL)
@@ -101,8 +110,8 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
       printf ("No available peers for initiating a subscription connection.\n");
   }
 
-  /* Wait up to 50 milliseconds for the connection attempt to succeed. */
-  if (enet_host_service (mSubscriptionClient, & event, 50) > 0 &&
+  /* Wait up to 200 milliseconds for the connection attempt to succeed. */
+  if (enet_host_service (mSubscriptionClient, & event, 200) > 0 &&
       event.type == ENET_EVENT_TYPE_CONNECT)
     {
       printf("Connection to CSEG for subscription succeeded.\n");
@@ -119,8 +128,10 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
                                             ENET_PACKET_FLAG_RELIABLE);
 
   enet_peer_send(subscriptionPeer, 0, packet);
-}
 
+  downloadUpdatedBSPTree();
+}
+  
 CoordinateSegmentationClient::~CoordinateSegmentationClient() {
    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
@@ -131,7 +142,29 @@ CoordinateSegmentationClient::~CoordinateSegmentationClient() {
 
 }
 
-ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const {
+ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
+
+  if ( mBSPTreeValid) {
+    Vector3f searchVec = pos;
+    BoundingBox3f region = mTopLevelRegion.mBoundingBox;
+    
+    int i=0;
+    (searchVec.z < region.min().z) ? searchVec.z = region.min().z : (i=0);
+    (searchVec.x < region.min().x) ? searchVec.x = region.min().x : (i=0);
+    (searchVec.y < region.min().y) ? searchVec.y = region.min().y : (i=0);
+    
+    (searchVec.z > region.max().z) ? searchVec.z = region.max().z : (i=0);
+    (searchVec.x > region.max().x) ? searchVec.x = region.max().x : (i=0);
+    (searchVec.y > region.max().y) ? searchVec.y = region.max().y : (i=0);
+    
+    ServerID svrID =  mTopLevelRegion.lookup(searchVec);
+    assert(svrID != 1000000);
+
+    return svrID;
+  }
+
+  downloadUpdatedBSPTree();
+
   LookupRequestMessage lookupMessage;
   lookupMessage.x = pos.x;
   lookupMessage.y = pos.y;
@@ -161,9 +194,13 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos) const {
   return NULL;
 }
 
-BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& server) const
+BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& server)
 {
   BoundingBoxList boundingBoxList;
+
+  if (mServerRegionCache.find(server) != mServerRegionCache.end()) {
+    return mServerRegionCache[server];
+  }
 
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
@@ -193,13 +230,21 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
       enet_packet_destroy (event.packet);
     }
   }
+  
+  mServerRegionCache[server] = boundingBoxList;
 
   return boundingBoxList;
 }
 
-BoundingBox3f CoordinateSegmentationClient::region() const {
-  RegionRequestMessage requestMessage;
+BoundingBox3f CoordinateSegmentationClient::region()  {
+  if (mBSPTreeValid) {
+    return mTopLevelRegion.mBoundingBox;
+  }
 
+  downloadUpdatedBSPTree();
+  
+
+  RegionRequestMessage requestMessage;
 
   ENetPacket * packet = enet_packet_create (&requestMessage,
 					    sizeof(requestMessage),
@@ -229,7 +274,9 @@ BoundingBox3f CoordinateSegmentationClient::region() const {
   return BoundingBox3f();
 }
 
-uint32 CoordinateSegmentationClient::numServers() const {
+uint32 CoordinateSegmentationClient::numServers()  { 
+  if (mAvailableServersCount > 0) return mAvailableServersCount;
+
   NumServersRequestMessage requestMessage;
 
   ENetPacket * packet = enet_packet_create (&requestMessage,
@@ -249,7 +296,7 @@ uint32 CoordinateSegmentationClient::numServers() const {
       // Clean up the packet now that we're done using it.
       enet_packet_destroy (event.packet);
 
-
+      mAvailableServersCount = numServers;
       return numServers;
     }
   }
@@ -292,6 +339,10 @@ void CoordinateSegmentationClient::service() {
 	segInfoVector.push_back(segInfo);
       }
 
+      mAvailableServersCount = 0;
+      mBSPTreeValid = false;
+      mTopLevelRegion.destroy();
+      mServerRegionCache.clear();
       notifyListeners(segInfoVector);
     }
   }
@@ -306,5 +357,67 @@ void CoordinateSegmentationClient::csegChangeMessage(CSegChangeMessage* ccMsg) {
 
 void CoordinateSegmentationClient::migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {
 }
+
+void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
+  boost::asio::io_service io_service;
+    
+  tcp::resolver resolver(io_service);
+ 
+  tcp::resolver::query query(tcp::v4(),"indus", "2234");
+
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
+
+
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
+    }
+  if (error)
+    throw boost::system::system_error(error);
+
+ 
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  for (;;)
+    {
+      boost::array<uint8, 1048576> buf;
+      boost::system::error_code error;
+      
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);
+      
+      printf("received %d bytes\n", len);
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error)
+        throw boost::system::system_error(error); // Some other error.
+    }
+
+  uint32 nodeCount;
+  memcpy(&nodeCount, dataReceived, sizeof(uint32));
+  SerializedBSPTree serializedBSPTree(nodeCount);  
+  printf("nodecount=%d\n" ,serializedBSPTree.mNodeCount );
+  memcpy(serializedBSPTree.mSegmentedRegions, dataReceived + 4, bytesReceived-4);
+  serializedBSPTree.deserializeBSPTree(&mTopLevelRegion, 0, &serializedBSPTree);
+    
+  mBSPTreeValid = true;
+  if (dataReceived != NULL) {
+    free(dataReceived);
+  }
+}
+
 
 } // namespace CBR

@@ -33,6 +33,9 @@
 #ifndef _CBR_COORDINATE_SEGMENTATION_CLIENT_HPP_
 #define _CBR_COORDINATE_SEGMENTATION_CLIENT_HPP_
 
+#include <boost/shared_ptr.hpp>
+#include <boost/asio.hpp>
+
 #include "CoordinateSegmentation.hpp"
 
 #include "SegmentedRegion.hpp"
@@ -47,10 +50,10 @@ public:
     CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
     virtual ~CoordinateSegmentationClient();
 
-    virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const;
-    virtual BoundingBox3f region() const;
-    virtual uint32 numServers() const;
+    virtual ServerID lookup(const Vector3f& pos) ;
+    virtual BoundingBoxList serverRegion(const ServerID& server) ;
+    virtual BoundingBox3f region() ;
+    virtual uint32 numServers() ;
 
     virtual void service();
 
@@ -60,15 +63,23 @@ public:
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
-
+    BoundingBox3f mRegion;
     void csegChangeMessage(CSegChangeMessage* ccMsg);
 
+    void downloadUpdatedBSPTree();
+
     SegmentedRegion mTopLevelRegion;
+    bool mBSPTreeValid;
+    
     Trace* mTrace;
 
     ENetHost * client;
     ENetPeer *peer;
     ENetHost * mSubscriptionClient;
+
+    std::map<ServerID, BoundingBoxList> mServerRegionCache;
+
+    uint16 mAvailableServersCount;
 }; // class CoordinateSegmentation
 
 } // namespace CBR

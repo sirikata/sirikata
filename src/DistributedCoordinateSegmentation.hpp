@@ -33,9 +33,14 @@
 #ifndef _CBR_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
 #define _CBR_DISTRIBUTED_COORDINATE_SEGMENTATION_HPP_
 
+#include <boost/shared_ptr.hpp>
+#include <boost/asio.hpp>
+
 #include "CoordinateSegmentation.hpp"
 #include "SegmentedRegion.hpp"
 #include <enet/enet.h>
+
+typedef boost::asio::ip::tcp tcp;
 
 namespace CBR {
 
@@ -51,10 +56,10 @@ public:
     DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int);
     virtual ~DistributedCoordinateSegmentation();
 
-    virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const;
-    virtual BoundingBox3f region() const;
-    virtual uint32 numServers() const;
+    virtual ServerID lookup(const Vector3f& pos) ;
+    virtual BoundingBoxList serverRegion(const ServerID& server);
+    virtual BoundingBox3f region() ;
+    virtual uint32 numServers() ;
 
     virtual void service();
 
@@ -68,6 +73,15 @@ private:
     void csegChangeMessage(CSegChangeMessage* ccMsg);
 
     void notifySpaceServersOfChange(std::vector<Listener::SegmentationInfo>& segInfoVector);
+  
+    void serializeBSPTree(SerializedBSPTree* serializedBSPTree);
+
+
+    void traverseAndStoreTree(SegmentedRegion* region, uint32& idx, 
+			      SerializedBSPTree* serializedTree);
+
+    void startAccepting();
+
 
     SegmentedRegion mTopLevelRegion;
     Time mLastUpdateTime;
@@ -75,6 +89,16 @@ private:
     ENetHost * server;
     std::vector<ENetPeer*> mSpacePeers;
     std::vector<ServerAvailability> mAvailableServers;
+
+
+    boost::asio::io_service mIOService;  //creates an io service
+    boost::shared_ptr<tcp::acceptor> mAcceptor;
+    boost::shared_ptr<tcp::socket> mSocket;
+
+    
+    void accept_handler();
+
+
 
 }; // class CoordinateSegmentation
 

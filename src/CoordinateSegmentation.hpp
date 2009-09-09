@@ -63,10 +63,10 @@ public:
     CoordinateSegmentation(SpaceContext* ctx);
     virtual ~CoordinateSegmentation() {}
 
-    virtual ServerID lookup(const Vector3f& pos) const = 0;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const = 0;
-    virtual BoundingBox3f region() const = 0;
-    virtual uint32 numServers() const = 0;
+    virtual ServerID lookup(const Vector3f& pos) = 0;
+    virtual BoundingBoxList serverRegion(const ServerID& server)  = 0;
+    virtual BoundingBox3f region()  = 0;
+    virtual uint32 numServers()  = 0;
 
     void addListener(Listener* listener);
     void removeListener(Listener* listener);

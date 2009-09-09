@@ -52,6 +52,22 @@ namespace CBR {
 typedef struct SerializedBBox{
   float minX, minY, minZ;
   float maxX, maxY, maxZ;
+
+  void serialize(const BoundingBox3f& bbox) {
+    minX = bbox.min().x;
+    minY = bbox.min().y;
+    minZ = bbox.min().z;
+
+    maxX = bbox.max().x;
+    maxY = bbox.max().y;
+    maxZ = bbox.max().z;    
+  }  
+
+  void deserialize(BoundingBox3f& bbox) {
+    bbox = BoundingBox3f(Vector3f(minX,minY,minZ),
+			 Vector3f(maxX, maxY, maxZ));
+  }
+
 } SerializedBBox;
 
 typedef struct SerializedSegmentChange{
@@ -163,6 +179,25 @@ typedef struct SegmentedRegion {
     mLeftChild  = mRightChild = NULL;
   }
 
+  void destroy() {
+    if (mLeftChild != NULL) {
+      mLeftChild->destroy();
+ 
+      SegmentedRegion* prevLeftChild = mLeftChild;
+      mLeftChild = NULL;
+     
+      delete prevLeftChild;
+    }
+    if (mRightChild != NULL) {
+      mRightChild->destroy();
+
+      SegmentedRegion* prevRightChild = mRightChild;
+      mRightChild = NULL;
+      
+      delete prevRightChild;
+    }
+  }
+
   SegmentedRegion* getRandomLeaf() {
     if (mRightChild == NULL && mLeftChild == NULL) {
       return this;
@@ -173,6 +208,42 @@ typedef struct SegmentedRegion {
       return mLeftChild->getRandomLeaf();
     else
       return mRightChild->getRandomLeaf();
+  }
+
+  SegmentedRegion* getSibling(SegmentedRegion* region) {
+    assert(region->mLeftChild == NULL && region->mRightChild == NULL);    
+
+    if (mRightChild == NULL && mLeftChild == NULL) return NULL;
+
+    if (mRightChild == region) return mLeftChild;
+    if (mLeftChild == region) return mRightChild;
+
+    SegmentedRegion* r1 = mLeftChild->getSibling(region);
+
+    if (r1 != NULL) return r1;
+
+    SegmentedRegion* r2 = mRightChild->getSibling(region);
+
+    if (r2 != NULL) return r2;
+
+    return NULL;
+  }
+
+  SegmentedRegion* getParent(SegmentedRegion* region) {    
+    if (mRightChild == NULL && mLeftChild == NULL) return NULL;
+
+    if (mRightChild == region) return this;
+    if (mLeftChild == region) return this;
+
+    SegmentedRegion* r1 = mLeftChild->getParent(region);
+
+    if (r1 != NULL) return r1;
+
+    SegmentedRegion* r2 = mRightChild->getParent(region);
+
+    if (r2 != NULL) return r2;
+
+    return NULL;
   }
 
   int countServers() const {
@@ -188,6 +259,21 @@ typedef struct SegmentedRegion {
     }
 
     return count;
+  }
+
+  int countNodes() const {
+    if (mRightChild == NULL && mLeftChild == NULL) return 1;
+
+    int count = 0;
+
+    if (mLeftChild != NULL) {
+      count += mLeftChild->countNodes();
+    }
+    if (mRightChild != NULL) {
+      count += mRightChild->countNodes();
+    }
+
+    return count+1;
   }
 
   SegmentedRegion* lookupSegmentedRegion(const ServerID& server_id) {
@@ -219,19 +305,13 @@ typedef struct SegmentedRegion {
     ServerID serverID = FAKE_SVR_ID;
 
     if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {
-      //      printf("going to left child\n");
-      serverID = mLeftChild->lookup(pos);
+     serverID = mLeftChild->lookup(pos);
     }
 
     if (mRightChild!=NULL && serverID == FAKE_SVR_ID && mRightChild->mBoundingBox.contains(pos)){
-      //      printf("going to right child\n");
       serverID= mRightChild->lookup(pos); 
     }
       
-    if (serverID != FAKE_SVR_ID ) {
-      //        printf("%s is in server ID %d\n", pos.toString().c_str(), serverID);
-    }
-
     return serverID;
   }
 
@@ -260,6 +340,75 @@ typedef struct SegmentedRegion {
   BoundingBox3f mBoundingBox;
 
 } SegmentedRegion;
+
+typedef struct SerializedSegmentedRegion {
+  ServerID mServerID;
+  uint32 mLeftChildIdx;
+  uint32 mRightChildIdx;
+  SerializedBBox mBoundingBox;
+  uint32 mLeafCount;
+
+  SerializedSegmentedRegion() {
+    mLeftChildIdx = 0;
+    mRightChildIdx = 0;
+  }
+      
+} SerializedSegmentedRegion;
+
+
+
+typedef struct SerializedBSPTree {
+  uint32 mNodeCount;
+  SerializedSegmentedRegion* mSegmentedRegions;  //allocate dynamically based on
+                                                 //size of region.
+  
+  SerializedBSPTree(int numNodes) {
+    mNodeCount = numNodes;
+    mSegmentedRegions = new SerializedSegmentedRegion[numNodes];
+  }
+
+  ~SerializedBSPTree() {
+    delete mSegmentedRegions;
+  }
+
+  void deserializeBSPTree(SegmentedRegion* region, uint32 idx, 
+			  SerializedBSPTree* serializedTree)
+  {
+    assert(idx<serializedTree->mNodeCount);
+
+    region->mServer = serializedTree->mSegmentedRegions[idx].mServerID;
+    
+    region->mLeafCount = serializedTree->mSegmentedRegions[idx].mLeafCount;
+
+    serializedTree->mSegmentedRegions[idx].mBoundingBox.deserialize(region->mBoundingBox);
+
+    if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx == 0 && 
+       serializedTree->mSegmentedRegions[idx].mRightChildIdx == 0)
+    {    
+      std::cout << region->mServer << " : " <<region->mLeafCount << "\n";
+      std::cout << region->mBoundingBox << "\n";
+    }
+
+    //std::cout << "left " << serializedTree->mSegmentedRegions[idx].mLeftChildIdx << "\n";
+    //std::cout << "right " <<  serializedTree->mSegmentedRegions[idx].mRightChildIdx << "\n";
+
+    if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx != 0) {
+      region->mLeftChild = new SegmentedRegion();
+      deserializeBSPTree(region->mLeftChild, serializedTree->mSegmentedRegions[idx].mLeftChildIdx, serializedTree);
+    }
+
+    if (serializedTree->mSegmentedRegions[idx].mRightChildIdx != 0) {
+      region->mRightChild = new SegmentedRegion();
+      deserializeBSPTree(region->mRightChild,serializedTree->mSegmentedRegions[idx].mRightChildIdx, serializedTree);
+    }
+  }
+
+private:
+  SerializedBSPTree() {
+    mNodeCount = 0;
+  }
+
+} SerializedBSPTree;
 
 }
 #endif

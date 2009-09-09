@@ -50,10 +50,10 @@ public:
     UniformCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
     virtual ~UniformCoordinateSegmentation();
 
-    virtual ServerID lookup(const Vector3f& pos) const;
-    virtual BoundingBoxList serverRegion(const ServerID& server) const;
-    virtual BoundingBox3f region() const;
-    virtual uint32 numServers() const;
+    virtual ServerID lookup(const Vector3f& pos) ;
+    virtual BoundingBoxList serverRegion(const ServerID& server) ;
+    virtual BoundingBox3f region() ;
+    virtual uint32 numServers() ;
 
     virtual void service();
 
