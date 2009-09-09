@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <boost/tokenizer.hpp>
+#include <boost/bind.hpp>
 #include "Options.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
@@ -110,8 +111,8 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
     {
       printf ("An error occurred while trying to create an ENet server host.\n");
       exit (EXIT_FAILURE);
-    }  
-  
+    }
+
   mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
 
   startAccepting();
@@ -140,7 +141,7 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos)  {
   return mTopLevelRegion.lookup(searchVec);
 }
 
-BoundingBoxList DistributedCoordinateSegmentation::serverRegion(const ServerID& server) 
+BoundingBoxList DistributedCoordinateSegmentation::serverRegion(const ServerID& server)
 {
   BoundingBoxList boundingBoxList;
   mTopLevelRegion.serverRegion(server, boundingBoxList);
@@ -283,7 +284,7 @@ void DistributedCoordinateSegmentation::service() {
       break;
     }
   }
-  
+
 
   /* Do splits and merges every 15 seconds, except the first time, when its done
      30 seconds after startup.
@@ -291,7 +292,7 @@ void DistributedCoordinateSegmentation::service() {
   static int duration = 30;
   if (availableSvrIndex !=65535 && t - mLastUpdateTime > Duration::seconds(duration)) {
     mLastUpdateTime = t;
-    duration = 15;    
+    duration = 15;
 
     SegmentedRegion* randomLeaf = mTopLevelRegion.getRandomLeaf();
 
@@ -327,7 +328,7 @@ void DistributedCoordinateSegmentation::service() {
       }
 
       std::cout << "Merged! " << leftChild->mServer << " : " << rightChild->mServer << "\n";
-      
+
       std::vector<Listener::SegmentationInfo> segInfoVector;
       Listener::SegmentationInfo segInfo, segInfo2;
       segInfo.server = parent->mServer;
@@ -363,7 +364,7 @@ void DistributedCoordinateSegmentation::service() {
       std::cout << randomLeaf->mServer << " : " << randomLeaf->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << randomLeaf->mRightChild->mBoundingBox << "\n";
 
-      mAvailableServers[availableSvrIndex].mAvailable = false;    
+      mAvailableServers[availableSvrIndex].mAvailable = false;
 
       std::vector<Listener::SegmentationInfo> segInfoVector;
       Listener::SegmentationInfo segInfo, segInfo2;
@@ -423,7 +424,7 @@ void DistributedCoordinateSegmentation::serializeBSPTree(SerializedBSPTree* seri
   traverseAndStoreTree(&mTopLevelRegion, idx, serializedBSPTree);
 }
 
-void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* region, uint32& idx, 
+void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* region, uint32& idx,
 							     SerializedBSPTree* serializedTree)
 {
   uint32 localIdx = idx;
@@ -432,12 +433,12 @@ void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* re
   serializedTree->mSegmentedRegions[localIdx].mBoundingBox.serialize(region->mBoundingBox);
 
   // std::cout << "at index " << localIdx  <<" bbox=" << region->mBoundingBox << "\n";
-  
+
   if (region->mLeftChild != NULL) {
     serializedTree->mSegmentedRegions[localIdx].mLeftChildIdx = idx+1;
     traverseAndStoreTree(region->mLeftChild, ++idx, serializedTree);
   }
-  
+
   if (region->mRightChild != NULL) {
     serializedTree->mSegmentedRegions[localIdx].mRightChildIdx = idx+1;
     traverseAndStoreTree(region->mRightChild, ++idx, serializedTree);
@@ -445,17 +446,17 @@ void DistributedCoordinateSegmentation::traverseAndStoreTree(SegmentedRegion* re
 }
 
 void DistributedCoordinateSegmentation::accept_handler()
-{    
+{
   int numNodes = mTopLevelRegion.countNodes();
   SerializedBSPTree* serializedBSPTree = new SerializedBSPTree(numNodes);
   int dataSize = 4 + numNodes * sizeof(SerializedSegmentedRegion);
-  
+
   printf("sending %d bytes for nodes=%d\n", dataSize, numNodes);
   serializeBSPTree(serializedBSPTree);
 
   uint8* buffer = new uint8[dataSize];
   memcpy(buffer, serializedBSPTree, 4);
-  memcpy(buffer+sizeof(uint32), serializedBSPTree->mSegmentedRegions, 
+  memcpy(buffer+sizeof(uint32), serializedBSPTree->mSegmentedRegions,
 	 numNodes*sizeof(SerializedSegmentedRegion));
 
   boost::asio::write(*mSocket,
@@ -465,7 +466,7 @@ void DistributedCoordinateSegmentation::accept_handler()
   delete buffer;
   delete serializedBSPTree;
 
-  mSocket->close();  
+  mSocket->close();
 
   startAccepting();
 }
