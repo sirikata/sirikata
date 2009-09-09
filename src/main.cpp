@@ -502,6 +502,9 @@ void *main_loop(void *) {
 
     gNetwork->start();
 
+    TimeProfiler whole_profiler("Whole Main Loop");
+    whole_profiler.addStage("Loop");
+
     TimeProfiler profiler("Main Loop");
     profiler.addStage("Context Update");
     profiler.addStage("Network Service");
@@ -520,16 +523,21 @@ void *main_loop(void *) {
             last_sample_time = last_sample_time + stats_sample_rate;
         }
 
+        whole_profiler.startIteration();
         profiler.startIteration();
 
         space_context->tick(curt); profiler.finishedStage();
         gNetwork->service(curt); profiler.finishedStage();
         cseg->service(); profiler.finishedStage();
         server->service(); profiler.finishedStage();
+
+        whole_profiler.finishedStage();
     }
 
-    if (GetOption(PROFILE)->as<bool>())
+    if (GetOption(PROFILE)->as<bool>()) {
+        whole_profiler.report();
         profiler.report();
+    }
 
     gTrace->prepareShutdown();
 
