@@ -441,8 +441,9 @@ void *main_loop(void *) {
         exit(-1);
     }
 
-
-    ServerWeightCalculator* weight_calc =
+    ServerWeightCalculator* weight_calc = NULL;
+    if (cseg_type != "distributed") {
+      weight_calc =
         new ServerWeightCalculator(
             server_id,
             cseg,
@@ -453,7 +454,7 @@ void *main_loop(void *) {
                 std::tr1::placeholders::_4),
             sq
         );
-
+    }
 
     Proximity* prox = new Proximity(space_context, loc_service);
 
@@ -489,7 +490,7 @@ void *main_loop(void *) {
     // FIXME we have a special case for the distributed cseg server, this should be
     // turned into a separate binary
     if (cseg_type == "distributed") {
-      while( true ) {
+      while( true ) { 
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
 
         space_context->tick(tbegin + elapsed);
@@ -545,7 +546,8 @@ void *main_loop(void *) {
     delete sq;
     delete prox;
     delete server_id_map;
-    delete weight_calc;
+    if (weight_calc != NULL) 
+      delete weight_calc;
     delete cseg;
     delete loc_service;
     delete obj_factory;
