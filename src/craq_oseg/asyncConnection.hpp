@@ -23,7 +23,6 @@ public:
   //  void tick(std::vector<int> &serverIDs,  std::vector<CraqObjectID> &objectIds,std::vector<int>&trackedMessages);  //runs through one iteration of io_service.run_once.
 
   void tick(std::vector<CraqOperationResult>&opResults_get, std::vector<CraqOperationResult>&opResults_error, std::vector<CraqOperationResult>&opResults_trackedSets);
-  //  void tick(std::vector<CraqOperationResult>&opResults_get);
   
   AsyncConnection::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 

@@ -326,32 +326,33 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     Timer osegServiceDurTimer;
     osegServiceDurTimer.start();
 
+    
+    
 
-    static Timer serviceTimer;
-    static uint64 serviceCount = 0;
-    static uint64 previousTime = 0;
+//     static Timer serviceTimer;
+//     static uint64 serviceCount = 0;
+//     static uint64 previousTime = 0;
+        
+//     if (serviceCount == 0)
+//     {
+//       serviceTimer.start();
+//     }
+//     else
+//     {
+//       if ((serviceCount %1000) == 0)
+//       {
+//         Duration serviceTimerDur = serviceTimer.elapsed();
+//         previousTime = serviceTimerDur.toMilliseconds();
+//       }
+//       if (((serviceCount-1) %1000) == 0)
+//       {
+//         Duration serviceTimerDur = serviceTimer.elapsed();
+//         std::cout<<"\n\nbftm debug.  Time between craqoseg service calls:   "<< ((int64)serviceTimerDur.toMilliseconds()) - ((int64)previousTime)  << "\n\n";
+//       }
+//     }
+//     ++serviceCount;
+    
 
-    
-    
-    if (serviceCount == 0)
-    {
-      serviceTimer.start();
-    }
-    else
-    {
-      if ((serviceCount %1000) == 0)
-      {
-        Duration serviceTimerDur = serviceTimer.elapsed();
-        previousTime = serviceTimerDur.toMilliseconds();
-      }
-      if (((serviceCount-1) %1000) == 0)
-      {
-        Duration serviceTimerDur = serviceTimer.elapsed();
-        std::cout<<"\n\nbftm debug.  Time between craqoseg service calls:   "<< ((int64)serviceTimerDur.toMilliseconds()) - ((int64)previousTime)  << "\n\n";
-      }
-    }
-    ++serviceCount;
-    
     
     std::vector<CraqOperationResult> getResults;
     std::vector<CraqOperationResult> trackedSetResults;
@@ -359,6 +360,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     //    iteratedWait(5, getResults,trackedSetResults);
     craqDht.tick(getResults,trackedSetResults);
 
+    Duration tickDur = osegServiceDurTimer.elapsed();
 
     updated = mFinishedMoveOrLookup;
 
@@ -373,8 +375,9 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
 
       if (iter != mInTransitOrLookup.end()) //means that the object isn't already being looked up and the object isn't already in transit
       {
-        Duration timerDur = mTimer.elapsed();
-        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+        //        Duration timerDur = mTimer.elapsed();
+        //        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, 0);
 
         //        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int)mContext->time.raw()) -  (int)(iter->second.timeAdmitted)) );
         mInTransitOrLookup.erase(iter);
@@ -388,13 +391,15 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     processCraqTrackedSetResults(trackedSetResults);
     mFinishedMoveOrLookup.clear();
 
-
     
 
     Duration osegServiceDuration = osegServiceDurTimer.elapsed();
     if (osegServiceDuration.toMilliseconds() > 1)
     {
-      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  "  \n\n";
+      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  ".  \n";
+      std::cout<<"Tick dur:                   "<< tickDur.toMilliseconds() << "\n";
+      std::cout<<"Num get results:            "<< getResults.size() << " \n";
+      std::cout<<"Num tracked set results:    "<< trackedSetResults.size() <<"  \n\n\n";
     }
     
   }

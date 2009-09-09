@@ -262,7 +262,7 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     handleMigration(obj_id);
 
-    //    std::cout<<"\n\nhandleMigration called from handleMigrate\n\n";
+
     //    handleMigration(migrate_msg.object());
 
 }
@@ -273,17 +273,6 @@ void Server::receiveMessage(Message* msg) {
         const UUID obj_id = migrate_msg->contents.object();
         mObjectMigrations[obj_id] = new CBR::Protocol::Migration::MigrationMessage( migrate_msg->contents );
         // Try to handle this migration if all the info is available
-        std::cout<<"\n\nhandleMigration called from receiveMessage \n\n";
-
-        ObjectConnectionMap::iterator findUUID = mObjects.find(obj_id);
-        if (findUUID != mObjects.end())
-        {
-          std::cout<<"\n\nin receive message: connected to this server\n\n";
-        }
-        else
-        {
-          std::cout<<"\n\nin receive message: not connected to server\n\n";
-        }
 
         handleMigration(obj_id);
     }
@@ -292,21 +281,17 @@ void Server::receiveMessage(Message* msg) {
 }
 
 void Server::handleMigration(const UUID& obj_id) {
-  std::cout<<"\n\nIn server.cpp; in handleMigration: objectIDer:   " << obj_id.toString()  << " \n\n";
-
   
     // Try to find the info in both lists -- the connection and migration information
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
     if (obj_map_it == mObjectsAwaitingMigration.end())
     {
-      std::cout<<"\n\n objects awaiting migration had to return1  \n\n";
         return;
     }
 
     ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
     if (migration_map_it == mObjectMigrations.end())
     {
-      std::cout<<"\n\n objects awaiting migration had to return2  \n\n";
         return;
     }
 
@@ -466,8 +451,6 @@ void Server::checkObjectMigrations()
 
       //      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
       mForwarder->route( MessageRouter::MIGRATES, migrate_msg , new_server_id);
-
-      std::cout<<"\n\nIn server.  Migrating object from this server "<<mContext->id<< "  to  new server: "<< new_server_id<<"\n\n";
 
       
       // Stop Forwarder from delivering via this Object's

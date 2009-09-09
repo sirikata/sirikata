@@ -1,5 +1,3 @@
-
-
 #include "asyncCraq.hpp"
 #include <iostream>
 #include <boost/bind.hpp>
@@ -26,8 +24,6 @@ AsyncCraq::~AsyncCraq()
 AsyncCraq::AsyncCraq()
 {
 }
-
-
 
 
 //void AsyncCraq::initialize(char* ipAdd, char* port)
@@ -96,248 +92,6 @@ void AsyncCraq::runTestOfConnection()
 {
   //temporarily empty.
 }
-
-
-// void AsyncCraq::runTestOfAllConnections()
-// {
-//   std::cout<<"\n\nRunning Connection Test.\n\n";
-
-//   std::vector<CraqOperationResult> tickedMessages;
-//   std::vector<std::vector<CraqOperationResult> > allTickedMessages;
-//   std::vector<CraqOperationResult> everyTickedMessage;
-
-//   std::string tmper = "12345678901234567890123456789012";
-//   CraqDataKey toSet;
-//   strncpy(toSet,tmper.c_str(), tmper.size() + 1);
-
-//   std::vector<int> setTo;
-  
-//   int numHandled;
-//   std::vector<bool> setting;
-  
-//   //populating/initializing recording vectors
-//   for (int s=0; s < mConnections.size(); ++s)
-//   {
-//     allTickedMessages.push_back(tickedMessages);
-//     setting.push_back(false);
-//   }
-
-//   //running processing loop
-//   for (int s=0; s < 50000; ++s) //number of time  iterations to go through.
-//   {
-//     for (int t=0; t < mConnections.size(); ++t)
-//     {
-//       tickedMessages.clear();
-
-//       mConnections[t].tick(tickedMessages);
-
-//       for (int u=0; u < tickedMessages.size(); ++u)
-//       {
-//         allTickedMessages[t].push_back(tickedMessages[u]);
-//         everyTickedMessage.push_back(tickedMessages[u]);
-//       }
-//     }
-    
-//     numHandled = io_service.poll(); //running poll routine.
-
-//     if (numHandled == 0)
-//     {
-//       io_service.reset();
-//     }
-
-
-//     for (int t=0; t<mConnections.size(); ++t)
-//     {
-//       if (mConnections[t].ready() == AsyncConnection::READY)
-//       {
-//         if (!setting[t])
-//         {
-//           //set a new value here.
-//           mConnections[t].set(toSet,s);
-//           setTo.push_back(s);
-//           setting[t] = true;
-//         }
-//         else
-//         {
-//           //get a new value here.
-//           mConnections[t].get(toSet);
-//           setting[t] = false;
-//         }
-//       }
-//     }
-//   }  //end of controlling for loop
-
-//   //printing results
-//   std::vector<int> failures;
-//   for (int s=0; s < mConnections.size(); ++s)
-//   {
-//     failures.push_back(0);
-//   }
-//   int totalEvents = 0;
-//   int totalFailures = 0;
-
-//   std::cout<<"\n\nThis is allTickedMessages.size:   "<<allTickedMessages.size()<<"\n\n";
-  
-//   for (int s= 0; s < allTickedMessages.size(); ++s)
-//   {
-//     totalEvents = totalEvents + allTickedMessages[s].size();
-//     std::cout<<"\n\tSuccesses in "<<s<<":   "<<allTickedMessages[s].size()<<"\n";
-//     for (int t= 0; t < allTickedMessages[s].size(); ++t)
-//     {
-//       if (! allTickedMessages[s][t].succeeded)
-//       {
-//         totalFailures = totalFailures + 1;
-//         failures[s] = failures[s] + 1;
-//       }
-//     }
-//   }
-  
-//   std::cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-//   std::cout<<"************************************\n";
-//   std::cout<<"\tThis is the number of get+set events:     "<<totalEvents<<"\n";
-//   std::cout<<"\tThis is the number of failures:           "<<totalFailures<<"\n";
-// //   for (int s= 0; s<failures.size(); ++s)
-// //   {
-// //     std::cout<<"\t\t"<<s<<"\t"<<failures[s]<<"\n";
-// //   }
-
-// //   std::cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-// //   std::cout<<"************************************\n";
-// //   std::cout<<"\n\nSET TO's\n\n";
-// //   for (int s= 0; s < setTo.size(); ++s)
-// //   {
-// //     std::cout<<s<<"   "<<setTo[s]<<"\n";
-// //   }
-
-
-// //   std::cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-// //   std::cout<<"************************************\n";
-// //   std::cout<<"\n\nREPORTS \n\n";
-
-// //   for (unsigned int t=0; t < everyTickedMessage.size(); ++t)
-// //   {
-// //     if (everyTickedMessage[t].whichOperation == CraqOperationResult::GET)
-// //     {
-// //       std::cout<<"\nGET:  ";
-// //       if (! everyTickedMessage[t].succeeded)
-// //       {
-// //         std::cout<<"FAILED \n\n";
-// //       }
-// //       else
-// //       {
-// //         std::cout<<"Succeeded.\n";
-// //         everyTickedMessage[t].objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-// //         std::cout<<"\tobj_id   "<<everyTickedMessage[t].objID<<"\n";
-// //         std::cout<<"\tservID   "<<everyTickedMessage[t].servID<<"\n\n";
-// //       }
-// //     }
-// //     else
-// //     {
-// //       std::cout<<"\nSET:  ";
-// //       if (! everyTickedMessage[t].succeeded)
-// //       {
-// //         std::cout<<"FAILED \n\n";
-// //       }
-// //       else
-// //       {
-// //         std::cout<<"Succeeded.\n";
-// //         everyTickedMessage[t].objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-// //         std::cout<<"\tobj_id   "<<everyTickedMessage[t].objID<<"\n";
-// //       }
-// //     }
-// //   }
-// //  std::cout<<"\n\n\n\n\n\n";
-  
-// }
-
-
-
-// void AsyncCraq::runTestOfConnection()
-// {
-//   std::cout<<"\n\nRunning Connection Test.\n\n";
-
-//   std::vector<CraqOperationResult> tickedMessages;
-//   std::vector<CraqOperationResult> allTickedMessages;
-    
-//   std::string tmper = "12345678901234567890123456789012";
-//   CraqDataKey toSet;
-//   strncpy(toSet,tmper.c_str(), tmper.size() + 1);
-
-//   int numHandled;
-
-//   bool setting = false;
-//   for (int s=0; s < 50000; ++s)
-//   {
-//     mConnection.tick(tickedMessages);
-        
-//     numHandled = io_service.poll();
-
-//     if (numHandled == 0)
-//     {
-//       io_service.reset();
-//     }
-//     if (tickedMessages.size() != 0)
-//     {
-//       std::cout<<"\n\n**********************\n";
-//     }
-//     for (unsigned int t=0; t < tickedMessages.size(); ++t)
-//     {
-//       if (tickedMessages[t].whichOperation == CraqOperationResult::GET)
-//       {
-//         std::cout<<"\nGET:  ";
-//         if (! tickedMessages[t].succeeded)
-//         {
-//           std::cout<<"FAILED \n\n";
-//         }
-//         else
-//         {
-//           std::cout<<"Succeeded.\n";
-//           tickedMessages[t].objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-//           std::cout<<"\tobj_id   "<<tickedMessages[t].objID<<"\n";
-//           std::cout<<"\tservID   "<<tickedMessages[t].servID<<"\n\n";
-//         }
-//       }
-//       else
-//       {
-//         std::cout<<"\nSET:  ";
-//         if (! tickedMessages[t].succeeded)
-//         {
-//           std::cout<<"FAILED \n\n";
-//         }
-//         else
-//         {
-//           std::cout<<"Succeeded.\n";
-//           tickedMessages[t].objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
-//           std::cout<<"\tobj_id   "<<tickedMessages[t].objID<<"\n";
-//         }
-//       }
-//       allTickedMessages.push_back(tickedMessages[t]);
-//     }
-    
-//     if (mConnection.ready() == AsyncConnection::READY)
-//     {
-//       std::cout<<"\n\nConnection is ready  "<<s<<"\n\n";
-      
-//       if (!setting)
-//       {
-//         //set a new value here.
-//         mConnection.set(toSet,s);
-//         setting = true;
-//       }
-//       else
-//       {
-//         //get a new value here.
-//         mConnection.get(toSet);
-//         setting = false;
-//       }
-//     }
-//   }  //end of controlling for loop
-
-//   std::cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
-//   std::cout<<"************************************\n";
-//   std::cout<<"\tThis is the number of get+set events:     "<<allTickedMessages.size()<<"\n";
-// }
-
 
 
 //assumes that we're already connected.
@@ -447,10 +201,6 @@ void AsyncCraq::processErrorResults(std::vector <CraqOperationResult> & errorRes
 }
 
 
-
-
-
-
 /*
   This function checks connection s to see if it needs a new socket or if it's ready to accept another query.
 */
@@ -523,8 +273,6 @@ void AsyncCraq::reInitializeNode(int s)
 
 
 }
-
-
 
 
 
