@@ -100,6 +100,9 @@ public:
         return mLocal;
     }
 
+    // MCB: default to true for legacy proxies. FIX ME when all converted.
+    virtual bool hasModelObject () const { return true; }
+    
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
 

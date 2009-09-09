@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- COLLADA Models
- *  ColladaSystemFactory.hpp
+/*  Sirikata Object Host -- Models Creation and Destruction system
+ *  ModelsSystem.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,25 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_FACTORY_
-#define _SIRIKATA_COLLADA_SYSTEM_FACTORY_
+#ifndef _SIRIKATA_MODELS_SYSTEM_
+#define _SIRIKATA_MODELS_SYSTEM_
 
-#include <oh/Platform.hpp>
+#include <oh/ProxyCreationListener.hpp>
 
-namespace Sirikata { namespace Models {
+namespace Sirikata {
 
-class ColladaSystem;
-
-class SIRIKATA_PLUGIN_EXPORT ColladaSystemFactory 
-    : public AutoSingleton< ColladaSystemFactory >,
-      public Factory1< ColladaSystem*, String const& >
+/**
+ * An interface for a class that is responsible for data model objects.
+ */
+class SIRIKATA_OH_EXPORT ModelsSystem
+    :   public ProxyCreationListener
 {
     public:
-        static ColladaSystemFactory& getSingleton ();
-        static void destroy ();
+
+    protected:
+        ModelsSystem () {}
+//        ModelsSystem ( ModelsSystem const& rhs );
+//        ModelsSystem& operator = ( ModelsSystem const& rhs );
+        virtual ~ModelsSystem () {}
+
+    // interface from ProxyCreationListener
+    public:
+        virtual void onCreateProxy ( ProxyObjectPtr object ) = 0;
+        virtual void onDestroyProxy ( ProxyObjectPtr object ) = 0;
+        
+    protected:
+
 };
 
-} // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_FACTORY_
+#endif // _SIRIKATA_MODELS_SYSTEM_

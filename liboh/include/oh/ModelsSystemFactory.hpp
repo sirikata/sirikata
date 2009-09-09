@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Collada Models Plugin
- *  ColladaModel.hpp
+/*  Sirikata Object Host -- Models System Factory Interface
+ *  ModelsSystemFactory.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,48 +30,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_
-#define _SIRIKATA_COLLADA_SYSTEM_
+#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
 
 #include <oh/Platform.hpp>
-#include <oh/ModelsSystem.hpp>
 #include <util/ListenerProvider.hpp>
+#include <oh/ModelsSystem.hpp>
 
-//#include <task/EventManager.hpp>
+namespace Sirikata {
 
-namespace Sirikata { namespace Models {
-
-class ColladaSystem
-    :   public ModelsSystem
+/** Class to create models subsystems.
+ *
+ */
+class SIRIKATA_OH_EXPORT ModelsSystemFactory
+    : public AutoSingleton< ModelsSystemFactory >,
+      public Factory2<  ModelsSystem*,
+                        Provider< ProxyCreationListener* > *,   // the ProxyManager
+                        String const& >                         // option string
 {
     public:
-        ColladaSystem ();
-        ~ColladaSystem ();
-
-        static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-    
-    protected:
-
-    private:
-        ColladaSystem ( ColladaSystem const& );
-        ColladaSystem& operator = ( ColladaSystem const & );
-
-        bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-
-    // interface from ProxyCreationListener
-    public:
-    protected:
-    
-    // interface from ProxyCreationListener
-    public:
-        virtual void onCreateProxy ( ProxyObjectPtr object );
-        virtual void onDestroyProxy ( ProxyObjectPtr object );
-
-    protected:
-
+        static ModelsSystemFactory& getSingleton ();
+        static void destroy ();
 };
 
-} // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_
+#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_

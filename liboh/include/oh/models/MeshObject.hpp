@@ -56,6 +56,8 @@ using Transfer::URI;
 class SIRIKATA_OH_EXPORT MeshObject
 {
     public:
+        virtual ~MeshObject ();
+
         virtual void setMesh ( URI const& rhs ) = 0;
         virtual URI const& getMesh () const = 0;
 
@@ -69,7 +71,6 @@ class SIRIKATA_OH_EXPORT MeshObject
         MeshObject ();
 //        MeshObject ( MeshObject const& rhs );
 //        MeshObject& operator = ( MeshObject const& rhs );
-        virtual ~MeshObject ();
     
     private:
     // MCB: move data members from proxy to plugin, via this route

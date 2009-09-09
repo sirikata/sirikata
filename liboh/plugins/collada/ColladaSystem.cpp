@@ -32,8 +32,8 @@
 
 #include "ColladaSystem.hpp"
 
+#include <oh/ProxyMeshObject.hpp>
 //#include <oh/SimulationFactory.hpp>
-//#include <oh/ProxyObject.hpp>
 //#include <options/Options.hpp>
 //#include <transfer/TransferManager.hpp>
 
@@ -43,20 +43,85 @@ namespace Sirikata { namespace Models {
 
 ColladaSystem::ColladaSystem ()
 {
-        
+    std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl;
+
 }
     
 ColladaSystem::~ColladaSystem ()
 {
-    std::cout << "MCB: CollataSystem::~ColladaSystem() entered" << std::endl;        
+    std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl;
+
 }
 
-ColladaSystem* ColladaSystem::create ( String const& options )
+ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
 {
-    std::cout << "MCB: CollataSystem::create( " << options << ") entered" << std::endl; throw;
-    return new ColladaSystem;
-}
+    std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl;
+    ColladaSystem* system ( new ColladaSystem );
     
+    if ( system->initialize ( proxyManager, options ) )
+        return system;
+    delete system;
+    return 0;
+}
+
+bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
+{
+    std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl;
+
+    proxyManager->addListener ( this );
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////
+// overrides from ModelsSystem
+
+
+/////////////////////////////////////////////////////////////////////
+// overrides from ProxyCreationListener
+
+void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
+{
+    std::cout << "MCB: onCreateProxy (" << proxy << ") entered" << std::endl;
+
+    std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
+    
+    if ( asMesh )
+    {
+        std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;
+
+//        ColladaMeshObject* mesh ( new ColladaMeshObject ( this ) );
+        
+        // try to supply the proxy with a data model
+        if ( ! proxy->hasModelObject () )
+        {
+            // MCB: trigger importation of mesh content
+//            asMesh->setModelObject ( mesh );  // MCB: hoist to a common base class? with overloads??
+        }
+        else
+        {
+            // some other ModelsSystem has registered already or its a legacy proxy
+            std::cout << "MCB: onCreateProxy (" << proxy << ") claims it already has a data model?" << std::endl;
+            // MCB: by listening we can peek and remap the data (usefull?)
+//            asMesh->MeshProvider::addListener ( mesh );
+        }
+    }
+    else
+    {
+        // MCB: check other types
+    }
+}
+
+void ColladaSystem::onDestroyProxy ( ProxyObjectPtr proxy )
+{
+    std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
+    
+    if ( asMesh )
+    {
+        std::cout << "MCB: onDestroyProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;
+    }
+}
+
 
 } // namespace Models
 } // namespace Sirikata

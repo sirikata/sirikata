@@ -1010,6 +1010,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBOH_SOURCE_DIR}/SimulationFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
+                  ${LIBOH_SOURCE_DIR}/ModelsSystemFactory.cpp
                   ${LIBOH_SOURCE_DIR}/models/MeshObject.cpp
                    )
 
@@ -1379,7 +1380,6 @@ SET(LIBOH_PLUGIN_COLLADAMODELS_DIR ${LIBOH_PLUGIN_DIR}/collada)
 SET(LIBOH_PLUGIN_COLLADAMODELS_SOURCES
  ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaPlugin.cpp
  ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaSystem.cpp
- ${LIBOH_PLUGIN_COLLADAMODELS_DIR}/ColladaSystemFactory.cpp
     )
 
 IF(OpenCOLLADA_FOUND)

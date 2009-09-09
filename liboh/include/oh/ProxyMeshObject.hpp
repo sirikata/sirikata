@@ -51,10 +51,14 @@ class SIRIKATA_OH_EXPORT ProxyMeshObject
     public:
         ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id );
 
+        void setModelObject ( MeshObject* model );
+//        MeshObject* getModelObject () const { return mModelObject; }
+
     protected:
     
     private:
-    // MCB: private data for proxy (mediator) operations only
+        // MCB: private data for proxy (mediator) operations only
+        std::tr1::shared_ptr< MeshObject > mModelObject;
     
     // interface from MeshObject
     public:
@@ -83,6 +87,8 @@ class SIRIKATA_OH_EXPORT ProxyMeshObject
     
     // interface from ProxyObject
     public:
+        virtual bool hasModelObject () const;
+
     protected:
 //        virtual void destroyed ();
         

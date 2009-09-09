@@ -40,9 +40,24 @@ namespace Sirikata {
 ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id )
     :   MeshObject (),
         MeshProvider (),
-        ProxyObject ( man, id )
+        ProxyObject ( man, id ),
+        mModelObject ()
 {
 
+}
+
+void ProxyMeshObject::setModelObject ( MeshObject* model )
+{
+    std::tr1::shared_ptr< MeshObject > tmp ( model );
+    
+    if ( ! hasModelObject () )
+    {
+        mModelObject = tmp;
+    }
+    else
+    {
+        std::cout << "MCB: ProxyMeshObject::setModelObject(" << model << ") attempted reset!" << std::endl;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -88,5 +103,10 @@ PhysicalParameters const& ProxyMeshObject::getPhysical () const
 /////////////////////////////////////////////////////////////////////
 // overrides from ProxyObject
 
-
+bool ProxyMeshObject::hasModelObject () const
+{
+    return mModelObject != 0;
 }
+
+
+} // namespace Sirikata

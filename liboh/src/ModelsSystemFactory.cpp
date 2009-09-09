@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- COLLADA Models
- *  ColladaSystemFactory.cpp
+/*  Sirikata Object Host -- Models System Factory
+ *  ModelsSystemFactory.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,21 +30,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ColladaSystemFactory.hpp"
+//#include <util/Platform.hpp>
+#include <oh/ModelsSystemFactory.hpp>
 
-AUTO_SINGLETON_INSTANCE(Sirikata::Models::ColladaSystemFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::ModelsSystemFactory);
 
-namespace Sirikata { namespace Models {
+namespace Sirikata {
 
-ColladaSystemFactory& ColladaSystemFactory::getSingleton ()
+ModelsSystemFactory& ModelsSystemFactory::getSingleton ()
 {
-    return AutoSingleton< ColladaSystemFactory >::getSingleton ();
+    return AutoSingleton< ModelsSystemFactory >::getSingleton ();
 }
 
-void ColladaSystemFactory::destroy ()
+void ModelsSystemFactory::destroy ()
 {
-	AutoSingleton< ColladaSystemFactory >::destroy ();
+	AutoSingleton< ModelsSystemFactory >::destroy ();
 }
 
-} // namespace Models
 } // namespace Sirikata

@@ -32,20 +32,21 @@
 
 #include "ColladaPlugin.hpp"
 
-#include "ColladaSystemFactory.hpp"
+#include <oh/ModelsSystemFactory.hpp>
+
 #include "ColladaSystem.hpp"
 
 static int core_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init ()
 {
-//    using namespace Sirikata;
+    using namespace Sirikata;
     using namespace Sirikata::Models;
 
     if ( core_plugin_refcount == 0 )
-        ColladaSystemFactory::getSingleton ().registerConstructor
-            ( name (), &ColladaSystem::create, true );
-
+        ModelsSystemFactory::getSingleton ().registerConstructor
+            ( "colladamodels", &Models::ColladaSystem::create, true );
+    
     ++core_plugin_refcount;
 }
 
@@ -62,9 +63,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy ()
 {
-//    using namespace Sirikata;
-    using namespace Sirikata::Models;
-
+    using namespace Sirikata;
+    
     if ( core_plugin_refcount > 0 )
     {
         --core_plugin_refcount;
@@ -72,7 +72,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
         assert ( core_plugin_refcount == 0 );
 
         if ( core_plugin_refcount == 0 )
-            ColladaSystemFactory::getSingleton ().unregisterConstructor ( name () );
+            ModelsSystemFactory::getSingleton ().unregisterConstructor ( name (), true );
     }
 }
 
