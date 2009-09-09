@@ -17,7 +17,7 @@ class ENetNetwork :public Network{
         double mRecvWeight;
         BufferSizeStats(){mSendSize=mRecvSize=0;mSendWeight=mRecvWeight=0.0;}
     };
-    std::tr1::unordered_map<Address4,BufferSizeStats > mBufferSizes;
+    std::tr1::unordered_map<Address4,BufferSizeStats,Address4::Hasher > mBufferSizes;
     typedef std::tr1::unordered_map<Address4,Chunk*,Address4::Hasher> PeerFrontMap;
     PeerFrontMap mPeerFront;
     typedef std::tr1::unordered_map<Address4,std::vector<Chunk>,Address4::Hasher> PeerInitMap;
