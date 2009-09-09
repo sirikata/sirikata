@@ -36,7 +36,7 @@ class ClusterSimSettings:
         self.loc = 'oracle'
         self.blocksize = 200
         self.additional_server_pool = additional_svr_pool
-        self.cseg = 'client'
+        self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
 
         self.loglevels = {
