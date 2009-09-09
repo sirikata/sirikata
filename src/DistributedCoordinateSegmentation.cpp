@@ -100,8 +100,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   /* enet_address_set_host (& address, "x.x.x.x"); */
 
   address.host = ENET_HOST_ANY;
-  /* Bind the server to port 1234. */
-  address.port = 1234;
+  address.port = atoi( GetOption("cseg-service-enet-port")->as<String>().c_str() );
 
   server = enet_host_create (& address /* the address to bind the server host to */,
 			     254      /* allow up to 254 clients and/or outgoing connections */,
@@ -113,7 +112,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
       exit (EXIT_FAILURE);
     }  
   
-  mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(),2234)));
+  mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
 
   startAccepting();
 }
@@ -121,7 +120,8 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
     mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
-  //delete all the SegmentedRegion objects created with 'new'
+    //delete all the SegmentedRegion objects created with 'new'
+    mTopLevelRegion.destroy();
 }
 
 ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos)  {
@@ -270,6 +270,10 @@ void DistributedCoordinateSegmentation::service() {
      return;
   }
 
+  if ( !GetOption("random-splits-merges")->as<bool>() ) {
+    return;
+  }
+
   uint16_t availableSvrIndex = 65535;
   ServerID availableServer;
   for (int i=0; i<mAvailableServers.size(); i++) {
@@ -279,11 +283,15 @@ void DistributedCoordinateSegmentation::service() {
       break;
     }
   }
+  
 
-  static int duration =30;
+  /* Do splits and merges every 15 seconds, except the first time, when its done
+     30 seconds after startup.
+   */
+  static int duration = 30;
   if (availableSvrIndex !=65535 && t - mLastUpdateTime > Duration::seconds(duration)) {
-    mLastUpdateTime = t;duration = 15;
-    
+    mLastUpdateTime = t;
+    duration = 15;    
 
     SegmentedRegion* randomLeaf = mTopLevelRegion.getRandomLeaf();
 
@@ -355,8 +363,7 @@ void DistributedCoordinateSegmentation::service() {
       std::cout << randomLeaf->mServer << " : " << randomLeaf->mLeftChild->mBoundingBox << "\n";
       std::cout << availableServer << " : " << randomLeaf->mRightChild->mBoundingBox << "\n";
 
-      mAvailableServers[availableSvrIndex].mAvailable = false;
-    
+      mAvailableServers[availableSvrIndex].mAvailable = false;    
 
       std::vector<Listener::SegmentationInfo> segInfoVector;
       Listener::SegmentationInfo segInfo, segInfo2;

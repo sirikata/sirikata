@@ -71,8 +71,8 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
   ENetEvent event;
 
   // Connect to CSEG server
-  enet_address_set_host (&address, "indus");
-  address.port = 1234;
+  enet_address_set_host (&address, GetOption("cseg-service-host")->as<String>().c_str() );
+  address.port = atoi( GetOption("cseg-service-enet-port")->as<String>().c_str() );
 
   // Initiate the connection, allocating one channel.
   peer = enet_host_connect (client, &address, 1);
@@ -363,7 +363,8 @@ void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
     
   tcp::resolver resolver(io_service);
  
-  tcp::resolver::query query(tcp::v4(),"indus", "2234");
+  tcp::resolver::query query(tcp::v4(),GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
 
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
  
@@ -388,9 +389,8 @@ void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
       boost::array<uint8, 1048576> buf;
       boost::system::error_code error;
       
-      size_t len = socket.read_some(boost::asio::buffer(buf), error);
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
       
-      printf("received %d bytes\n", len);
       if (dataReceived == NULL) {
 	dataReceived = (uint8*) malloc (len);	
       }

@@ -1170,8 +1170,9 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     if (delta>Duration::seconds(0.0f)) {
                         ++numSamples;
                         latency+=delta;
+                        printf("%f %f\n", (dat._receive_end_time-Time::null()).toSeconds(), delta.toSeconds() );
                     }else if (delta<Duration::seconds(0.0f)){
-                        printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.toSeconds(),0.,(dat._send_end_time-dat._send_start_time).toSeconds(),(dat._receive_start_time-dat._send_start_time).toSeconds(),(dat._receive_end_time-dat._send_start_time).toSeconds(),dat.mSize, (dat._send_start_time-Time::null()).toSeconds(),(dat._send_end_time-Time::null()).toSeconds(),(dat._receive_start_time-Time::null()).toSeconds(),(dat._receive_end_time-Time::null()).toSeconds());
+                        //printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.toSeconds(),0.,(dat._send_end_time-dat._send_start_time).toSeconds(),(dat._receive_start_time-dat._send_start_time).toSeconds(),(dat._receive_end_time-dat._send_start_time).toSeconds(),dat.mSize, (dat._send_start_time-Time::null()).toSeconds(),(dat._send_end_time-Time::null()).toSeconds(),(dat._receive_start_time-Time::null()).toSeconds(),(dat._receive_end_time-Time::null()).toSeconds());
                     }
                 }else{
                     ++numUnfinished;

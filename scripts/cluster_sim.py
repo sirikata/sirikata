@@ -13,7 +13,7 @@ CBR_WRAPPER = "./cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:
-    def __init__(self, x, y, num_object_hosts):
+    def __init__(self, x, y, num_object_hosts, additional_svr_pool):
         self.num_oh = num_object_hosts
         self.layout_x = x
         self.layout_y = y
@@ -35,6 +35,9 @@ class ClusterSimSettings:
         self.valgrind = False
         self.loc = 'oracle'
         self.blocksize = 200
+        self.additional_server_pool = additional_svr_pool
+        self.cseg = 'client'
+        self.cseg_service_host = 'indus'
 
         self.loglevels = {
             "prox" : "warn",
@@ -48,12 +51,12 @@ class ClusterSimSettings:
         return "<<" + str(-half_extents[0]) + "," + str(-half_extents[1]) + "," + str(-half_extents[2]) + ">,<" + str(half_extents[0]) + "," + str(half_extents[1]) + "," + str(half_extents[2]) + ">>"
 
 class ClusterSim:
-    def __init__(self, config, x, y, num_object_hosts):
+    def __init__(self, config, x, y, num_object_hosts, additional_server_pool):
         self.config = config
-        self.settings = ClusterSimSettings(x, y, num_object_hosts)
+        self.settings = ClusterSimSettings(x, y, num_object_hosts, additional_server_pool)
 
     def num_servers(self):
-        return (self.settings.layout_x * self.settings.layout_y) + self.settings.num_oh
+        return (self.settings.layout_x * self.settings.layout_y+self.settings.additional_server_pool) + self.settings.num_oh
 
     def ip_file(self):
         return "serverip-" + str(self.settings.layout_x) + '-' + str(self.settings.layout_y) + '.txt'
@@ -107,13 +110,21 @@ class ClusterSim:
                 fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
                 port += 2
                 server_index += 1
+
+        server_index = 0;
+        for i in range(0,self.settings.additional_server_pool):
+          fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
+          port+=2
+          server_index = (server_index+1) % (self.settings.layout_x * self.settings.layout_y)
+
+
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
 
     def run_instances(self):
         # Construct the list of binaries to be run
         binaries = []
-        for x in range(0, self.settings.layout_x * self.settings.layout_y):
+        for x in range(0, self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool):
             binaries.append("cbr");
         for x in range(0, self.settings.num_oh):
             binaries.append("oh");
@@ -152,7 +163,9 @@ class ClusterSim:
         cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
         cmd += "--loc=" + self.settings.loc + " "
-
+        cmd += "--cseg=" + self.settings.cseg + " " 
+        cmd += "--cseg-service-host=" + self.settings.cseg_service_host + " "
+ 
         if len(self.settings.loglevels) > 0:
             cmd += "\""
             cmd += "--moduleloglevel="
@@ -175,9 +188,9 @@ class ClusterSim:
 
     def run_analysis(self):
         # Run analysis
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms'])
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms'])
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true'])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + (self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool) ])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + (self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool) ])
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + (self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool)])
 
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_send.dat'])
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_receive.dat'])
@@ -198,7 +211,7 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cluster_sim = ClusterSim(cc, 2, 2, 1)
+    cluster_sim = ClusterSim(cc, 2, 2, 1, 10)
 
     if len(sys.argv) < 2:
         cluster_sim.run()
