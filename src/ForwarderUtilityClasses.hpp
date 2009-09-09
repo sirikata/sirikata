@@ -35,7 +35,9 @@ namespace CBR
   struct OutgoingMessage {
     OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest)
       : data(_data), dest(_dest) {}
-  
+    size_t size()const{
+        return data.size();
+    }
     Network::Chunk data;
     ServerID dest;
   };

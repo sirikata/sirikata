@@ -157,9 +157,18 @@ private:
 /** Base class for an object that can route messages to their destination. */
 class MessageRouter {
 public:
+    enum SERVICES{
+        PROXS,
+        MIGRATES,
+        LOCS,
+        CSEGS,
+        OBJECT_MESSAGESS,
+        NUM_SERVICES
+    };
+
     virtual ~MessageRouter() {}
 
-    virtual void route(Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
+    virtual void route(SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
     virtual void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward) = 0;
 };
 

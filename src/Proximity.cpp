@@ -120,7 +120,7 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
         msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
-        mContext->router->route(msg, sid);
+        mContext->router->route(MessageRouter::PROXS, msg, sid);
     }
 }
 
@@ -325,7 +325,7 @@ void Proximity::service() {
 
         PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
 
-        mContext->router->route(result_msg, sid);
+        mContext->router->route(MessageRouter::PROXS, result_msg, sid);
     }
 
     // Output QueryEvents for objects

@@ -41,6 +41,7 @@ public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
+    virtual bool canAddMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service();
 

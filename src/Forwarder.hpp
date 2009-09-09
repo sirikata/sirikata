@@ -11,7 +11,8 @@
 
 #include "ForwarderUtilityClasses.hpp"
 #include "ObjectMessageQueue.hpp"
-
+#include "Queue.hpp"
+#include "FairQueue.hpp"
 
 namespace CBR
 {
@@ -28,13 +29,42 @@ namespace CBR
   class Proximity;
   class ObjectConnection;
 
+
+class ForwarderQueue{
+public:
+    class CanSendPredicate{
+        ServerMessageQueue* mServerMessageQueue;
+    public:
+        CanSendPredicate(ServerMessageQueue* s){
+            mServerMessageQueue=s;
+        }
+        bool operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg);
+    };
+    Queue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
+    FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >mSendQueue;
+    ForwarderQueue(ServerMessageQueue*smq, uint32 size):mSendQueue(CanSendPredicate(smq)){
+        for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
+            mSendQueue.addQueue(mQueues[i]=new Queue<OutgoingMessage*>(size),(MessageRouter::SERVICES)i,1.0);
+        }
+    }
+    FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >*operator->(){
+        return &mSendQueue;
+    }
+    const FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >*operator->()const{
+        return &mSendQueue;
+    }
+    ~ForwarderQueue (){
+        for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
+            delete mQueues[i];
+        }
+    }
+};
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
   {
     private:
     //Unique to forwarder
       std::deque<SelfMessage> mSelfMessages; //will be used in route.
-      std::deque<OutgoingMessage> mOutgoingMessages; //will be used in route.
-
+      ForwarderQueue *mOutgoingMessages;
 
       SpaceContext* mContext;
 
@@ -87,7 +117,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // for either servers or objects.  The second form will simply automatically do the destination
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-      void route(Message* msg, const ServerID& dest_server, bool is_forward = false);
+      void route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
       void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false);
   private:
       // This version is provided if you already know which server the message should be sent to

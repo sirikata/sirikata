@@ -113,7 +113,7 @@ void AlwaysLocationUpdatePolicy::service() {
         ServerID sid = it->first;
         BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id);
         msg->contents = it->second;
-        mLocService->context()->router->route(msg, sid);
+        mLocService->context()->router->route(MessageRouter::LOCS, msg, sid);
     }
 
     // Object subscriptions

@@ -24,13 +24,18 @@
 namespace CBR
 {
 
+bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg) {
+    return mServerMessageQueue->canAddMessage(msg->dest,msg->data);
+}
 
   /*
     Constructor for Forwarder
 
   */
 Forwarder::Forwarder(SpaceContext* ctx)
- : mContext(ctx),
+ : 
+   mOutgoingMessages(NULL),
+   mContext(ctx),
    mCSeg(NULL),
    mOSeg(NULL),
    mLocationService(NULL),
@@ -71,6 +76,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mLocationService = locService;
   mObjectMessageQueue = omq;
   mServerMessageQueue =smq;
+  mOutgoingMessages=new ForwarderQueue(smq,16384);
   mLoadMonitor = lm;
   mProximity = prox;
 }
@@ -129,8 +135,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
       }
     }
   }
-
-
 void Forwarder::service()
 {
     Time t = mContext->time;
@@ -154,16 +158,21 @@ void Forwarder::service()
       self_messages.pop_front();
     }
 
-    std::deque<OutgoingMessage> outgoing_messages;
-    while(!mOutgoingMessages.empty())
+    while(true)
     {
-        OutgoingMessage& next_msg = mOutgoingMessages.front();
-        bool send_success = mServerMessageQueue->addMessage(next_msg.dest, next_msg.data);
-        if (!send_success)
-            outgoing_messages.push_back(next_msg);
-        mOutgoingMessages.pop_front();
+        uint64 size=1<<30;
+        MessageRouter::SERVICES svc;
+        OutgoingMessage* next_msg = (*mOutgoingMessages)->front(&size,&svc);
+        if (!next_msg)
+            break;
+        bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
+        if (!send_success){
+            fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
+            break;
+        }
+        uint64 b=1<<30;
+        delete (*mOutgoingMessages)->pop(&b);
     }
-    mOutgoingMessages.swap(outgoing_messages);
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
 
@@ -231,7 +240,7 @@ void Forwarder::service()
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  void Forwarder::route(Message* msg, const ServerID& dest_server, bool is_forward)
+  void Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
   {
     uint32 offset = 0;
     Network::Chunk msg_serialized;
@@ -256,7 +265,7 @@ void Forwarder::service()
     else
     {
       mContext->trace->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-      mOutgoingMessages.push_back( OutgoingMessage(msg_serialized, dest_server) );
+      (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
     }
     delete msg;
   }
@@ -469,7 +478,7 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
 {
   // Wrap it up in one of our ObjectMessages and ship it.
   ObjectMessage* obj_msg = new ObjectMessage(mContext->id, *msg);  //turns the cbr::prot::message into just an object message.
-  route(obj_msg, dest_serv, is_forward);
+  route(MessageRouter::OBJECT_MESSAGESS,obj_msg, dest_serv, is_forward);
   delete msg;
 }
 

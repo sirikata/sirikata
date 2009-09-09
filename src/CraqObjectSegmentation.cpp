@@ -208,7 +208,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           //means that we populate the
           printf("\n\nbftm: debug inside of tick of craqObjectSeg: adding messages to push back to forwarder.  \n\n");
 
-          mContext->router->route(trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
+          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);
 
           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
         }

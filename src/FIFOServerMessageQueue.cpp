@@ -21,7 +21,20 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
    mLastReceiveEndTime(mContext->time)
 {
 }
-
+bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer,const Network::Chunk&msg){
+    // If its just coming back here, skip routing and just push the payload onto the receive queue
+    if (mContext->id == destinationServer) {
+        return true;
+    }
+    uint32 offset = 0;
+    Network::Chunk with_header;
+    ServerMessageHeader server_header(mContext->id, destinationServer);
+    offset = server_header.serialize(with_header, offset);
+    offset += msg.size();
+    size_t size=mQueue.size(destinationServer);
+    size_t msize=mQueue.maxSize(destinationServer);
+    return size+offset<=msize;
+}
 bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id == destinationServer) {
