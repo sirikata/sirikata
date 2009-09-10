@@ -206,7 +206,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     bool parse_success = contents.ParseFromString(msg.payload());
     assert(parse_success);
 
-    for(uint32 idx = 0; idx < contents.addition_size(); idx++) {
+    for(int32 idx = 0; idx < contents.addition_size(); idx++) {
         CBR::Protocol::Prox::IObjectAddition addition = contents.addition(idx);
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
@@ -231,7 +231,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             // FIXME do something on failure
         }
     }
-    for(uint32 idx = 0; idx < contents.removal_size(); idx++) {
+    for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::IObjectRemoval removal = contents.removal(idx);
 
         mContext->trace->prox(

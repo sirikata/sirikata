@@ -233,8 +233,7 @@ void DistributedCoordinateSegmentation::service() {
 	     ServerRegionResponseMessage responseMessage;
 	     BoundingBoxList bboxList = serverRegion(message->serverID);
 
-	     int i=0;
-	     for (i=0; i<bboxList.size(); i++) {
+	     for (uint32 i=0; i<bboxList.size(); i++) {
 	       BoundingBox3f bbox = bboxList[i];
 	       responseMessage.bboxList[i].serialize(bbox);
 	     }
@@ -277,7 +276,7 @@ void DistributedCoordinateSegmentation::service() {
 
   uint16_t availableSvrIndex = 65535;
   ServerID availableServer;
-  for (int i=0; i<mAvailableServers.size(); i++) {
+  for (uint32 i=0; i<mAvailableServers.size(); i++) {
     if (mAvailableServers[i].mAvailable == true) {
       availableSvrIndex = i;
       availableServer = mAvailableServers[i].mServer;
@@ -320,7 +319,7 @@ void DistributedCoordinateSegmentation::service() {
       parent->mServer = leftChild->mServer;
       parent->mRightChild = parent->mLeftChild = NULL;
 
-      for (int i=0; i<mAvailableServers.size(); i++) {
+      for (uint32 i=0; i<mAvailableServers.size(); i++) {
 	if (mAvailableServers[i].mServer == rightChild->mServer) {
 	  mAvailableServers[i].mAvailable = true;
 	  break;

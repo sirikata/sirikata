@@ -54,7 +54,10 @@ T clamp(T val, T minval, T maxval) {
 
 
 CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
-  : CoordinateSegmentation(ctx), mAvailableServersCount(0), mRegion(region), mBSPTreeValid(true)
+  : CoordinateSegmentation(ctx),
+    mRegion(region),
+    mBSPTreeValid(true),
+    mAvailableServersCount(0)
 {
   mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
@@ -131,7 +134,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 
   downloadUpdatedBSPTree();
 }
-  
+
 CoordinateSegmentationClient::~CoordinateSegmentationClient() {
    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
@@ -147,16 +150,16 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   if ( mBSPTreeValid) {
     Vector3f searchVec = pos;
     BoundingBox3f region = mTopLevelRegion.mBoundingBox;
-    
+
     int i=0;
     (searchVec.z < region.min().z) ? searchVec.z = region.min().z : (i=0);
     (searchVec.x < region.min().x) ? searchVec.x = region.min().x : (i=0);
     (searchVec.y < region.min().y) ? searchVec.y = region.min().y : (i=0);
-    
+
     (searchVec.z > region.max().z) ? searchVec.z = region.max().z : (i=0);
     (searchVec.x > region.max().x) ? searchVec.x = region.max().x : (i=0);
     (searchVec.y > region.max().y) ? searchVec.y = region.max().y : (i=0);
-    
+
     ServerID svrID =  mTopLevelRegion.lookup(searchVec);
     assert(svrID != 1000000);
 
@@ -230,7 +233,7 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
       enet_packet_destroy (event.packet);
     }
   }
-  
+
   mServerRegionCache[server] = boundingBoxList;
 
   return boundingBoxList;
@@ -242,7 +245,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
   }
 
   downloadUpdatedBSPTree();
-  
+
 
   RegionRequestMessage requestMessage;
 
@@ -274,7 +277,7 @@ BoundingBox3f CoordinateSegmentationClient::region()  {
   return BoundingBox3f();
 }
 
-uint32 CoordinateSegmentationClient::numServers()  { 
+uint32 CoordinateSegmentationClient::numServers()  {
   if (mAvailableServersCount > 0) return mAvailableServersCount;
 
   NumServersRequestMessage requestMessage;
@@ -360,14 +363,14 @@ void CoordinateSegmentationClient::migrationHint( std::vector<ServerLoadInfo>& s
 
 void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
   boost::asio::io_service io_service;
-    
+
   tcp::resolver resolver(io_service);
- 
+
   tcp::resolver::query query(tcp::v4(),GetOption("cseg-service-host")->as<String>(),
 			               GetOption("cseg-service-tcp-port")->as<String>());
 
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
- 
+
   tcp::resolver::iterator end;
 
 
@@ -381,24 +384,24 @@ void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
   if (error)
     throw boost::system::system_error(error);
 
- 
+
   uint8* dataReceived = NULL;
   uint32 bytesReceived = 0;
   for (;;)
     {
       boost::array<uint8, 1048576> buf;
       boost::system::error_code error;
-      
-      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
-      
+
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);
+
       if (dataReceived == NULL) {
-	dataReceived = (uint8*) malloc (len);	
+	dataReceived = (uint8*) malloc (len);
       }
       else if (len > 0){
 	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
       }
       memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-      
+
       bytesReceived += len;
       if (error == boost::asio::error::eof)
         break; // Connection closed cleanly by peer.
@@ -408,11 +411,11 @@ void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
 
   uint32 nodeCount;
   memcpy(&nodeCount, dataReceived, sizeof(uint32));
-  SerializedBSPTree serializedBSPTree(nodeCount);  
+  SerializedBSPTree serializedBSPTree(nodeCount);
   printf("nodecount=%d\n" ,serializedBSPTree.mNodeCount );
   memcpy(serializedBSPTree.mSegmentedRegions, dataReceived + 4, bytesReceived-4);
   serializedBSPTree.deserializeBSPTree(&mTopLevelRegion, 0, &serializedBSPTree);
-    
+
   mBSPTreeValid = true;
   if (dataReceived != NULL) {
     free(dataReceived);

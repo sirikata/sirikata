@@ -176,7 +176,7 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
 void StandardLocationService::receiveMessage(Message* msg) {
     BulkLocationMessage* bulk_loc = dynamic_cast<BulkLocationMessage*>(msg);
     if (bulk_loc != NULL) {
-        for(uint32 idx = 0; idx < bulk_loc->contents.update_size(); idx++) {
+        for(int32 idx = 0; idx < bulk_loc->contents.update_size(); idx++) {
             CBR::Protocol::Loc::LocationUpdate update = bulk_loc->contents.update(idx);
 
             // Its possible we'll get an out of date update. We only use this update

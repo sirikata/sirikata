@@ -159,7 +159,7 @@ void Proximity::receiveMessage(Message* msg) {
         Time t = prox_result_msg->contents.t();
 
         if (prox_result_msg->contents.addition_size() > 0) {
-            for(uint32 idx = 0; idx < prox_result_msg->contents.addition_size(); idx++) {
+            for(int32 idx = 0; idx < prox_result_msg->contents.addition_size(); idx++) {
                 CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg->contents.addition(idx);
                 mLocService->addReplicaObject(
                     t,
@@ -171,7 +171,7 @@ void Proximity::receiveMessage(Message* msg) {
         }
 
         if (prox_result_msg->contents.removal_size() > 0) {
-            for(uint32 idx = 0; idx < prox_result_msg->contents.removal_size(); idx++) {
+            for(int32 idx = 0; idx < prox_result_msg->contents.removal_size(); idx++) {
                 CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg->contents.removal(idx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
