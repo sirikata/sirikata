@@ -90,13 +90,12 @@ class ClusterSim:
 
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
-        subprocess.call(['rm -f sync*'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f serverip*'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f *.ps'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f *.dat'], 0, None, None, None, None, None, False, True)
 
     def clean_remote_data(self):
-        clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm sync*; rm serverip*;"
+        clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm serverip*;"
         ClusterRun(self.config, clean_cmd)
 
     def generate_ip_file(self):
@@ -163,9 +162,9 @@ class ClusterSim:
         cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
         cmd += "--loc=" + self.settings.loc + " "
-        cmd += "--cseg=" + self.settings.cseg + " " 
+        cmd += "--cseg=" + self.settings.cseg + " "
         cmd += "--cseg-service-host=" + self.settings.cseg_service_host + " "
- 
+
         if len(self.settings.loglevels) > 0:
             cmd += "\""
             cmd += "--moduleloglevel="
@@ -183,8 +182,7 @@ class ClusterSim:
     def retrieve_data(self):
         # Copy the trace and sync data back here
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
-        trace_oh_file_pattern = "remote:" + self.scripts_dir() + "trace_oh-%(node)04d.txt"
-        ClusterSCP(self.config, [trace_file_pattern, trace_oh_file_pattern, "."])
+        ClusterSCP(self.config, [trace_file_pattern, "."])
 
     def run_analysis(self):
         # Run analysis
