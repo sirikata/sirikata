@@ -375,9 +375,6 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         break;
       case MESSAGE_TYPE_MIGRATE:
           {
-            //            MigrateMessage* tmpMig = dynamic_cast<MigrateMesage*>(msg);
-            //            MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
-            //            std::cout<<"\n\nbftm debug: got a message_type migrate id:  "<< migrate_msg->contents.object().toString() <<"\n\n";
             dispatchMessage(msg);
           }
           break;

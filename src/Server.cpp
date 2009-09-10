@@ -389,76 +389,81 @@ void Server::checkObjectMigrations()
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++)
   {
     const UUID& obj_id = it->first;
-    ObjectConnection* obj_conn = it->second;
 
-    Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-    ServerID new_server_id = lookup(obj_pos);
-
-
-    if (new_server_id != mContext->id)
+    if (mOSeg->clearToMigrate(obj_id)) //needs to check whether migration to this server has finished before can begin migrating to another server.
     {
-      // FIXME While we're working on the transition to a separate object host
-      // we do 2 things when we detect a server boundary crossing:
-      // 1. Generate a message which is sent to the object host telling it to
-      //    transition to the new server
-      // 2. Generate the migrate message which contains the current state of
-      //    the object which will be reconstituted on the other space server.
+    
+      ObjectConnection* obj_conn = it->second;
+
+      Vector3f obj_pos = mLocationService->currentPosition(obj_id);
+      ServerID new_server_id = lookup(obj_pos);
 
 
-      // Part 1
-      CBR::Protocol::Session::Container session_msg;
-      CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
-      init_migration_msg.set_new_server( (uint64)new_server_id );
-      CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = createObjectMessage(
-          mContext->id,
-          UUID::null(), OBJECT_PORT_SESSION,
-          obj_id, OBJECT_PORT_SESSION,
-          serializePBJMessage(session_msg)
-      );
-      obj_conn->send(init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
-      //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
-
-      // Part 2
-
-      //means that we're migrating from this server to another
-      //bftm
-      mOSeg->migrateObject(obj_id,new_server_id);
-      //says that
+      if (new_server_id != mContext->id)
+      {
+        // FIXME While we're working on the transition to a separate object host
+        // we do 2 things when we detect a server boundary crossing:
+        // 1. Generate a message which is sent to the object host telling it to
+        //    transition to the new server
+        // 2. Generate the migrate message which contains the current state of
+        //    the object which will be reconstituted on the other space server.
 
 
-      // Send out the migrate message
-      MigrateMessage* migrate_msg = new MigrateMessage(mContext->id);
-      migrate_msg->contents.set_source_server(mContext->id);
-      migrate_msg->contents.set_object(obj_id);
-      CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg->contents.mutable_loc();
-      TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
-      migrate_loc.set_t( obj_loc.updateTime() );
-      migrate_loc.set_position( obj_loc.position() );
-      migrate_loc.set_velocity( obj_loc.velocity() );
-      migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
+        // Part 1
+        CBR::Protocol::Session::Container session_msg;
+        CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
+        init_migration_msg.set_new_server( (uint64)new_server_id );
+        CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = createObjectMessage(
+                                                                                      mContext->id,
+                                                                                      UUID::null(), OBJECT_PORT_SESSION,
+                                                                                      obj_id, OBJECT_PORT_SESSION,
+                                                                                      serializePBJMessage(session_msg)
+                                                                                      );
+        obj_conn->send(init_migr_obj_msg); // Note that we can't go through the forwarder since it will stop delivering to this object connection right after this
+        //printf("Routed init migration msg to %s\n", obj_id.toString().c_str());
 
-      // FIXME we should allow components to package up state here
-      // FIXME we should generate these from some map instead of directly
-      std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id, new_server_id);
-      if (!prox_data.empty()) {
+        // Part 2
+
+        //means that we're migrating from this server to another
+        //bftm
+        mOSeg->migrateObject(obj_id,new_server_id);
+        //says that
+
+
+        // Send out the migrate message
+        MigrateMessage* migrate_msg = new MigrateMessage(mContext->id);
+        migrate_msg->contents.set_source_server(mContext->id);
+        migrate_msg->contents.set_object(obj_id);
+        CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg->contents.mutable_loc();
+        TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
+        migrate_loc.set_t( obj_loc.updateTime() );
+        migrate_loc.set_position( obj_loc.position() );
+        migrate_loc.set_velocity( obj_loc.velocity() );
+        migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
+
+        // FIXME we should allow components to package up state here
+        // FIXME we should generate these from some map instead of directly
+        std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id, new_server_id);
+        if (!prox_data.empty()) {
           CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg->contents.add_client_data();
           client_data.set_key( mProximity->migrationClientTag() );
           client_data.set_data( prox_data );
-      }
+        }
 
-      // Stop tracking the object locally
-      mLocationService->removeLocalObject(obj_id);
+        // Stop tracking the object locally
+        mLocationService->removeLocalObject(obj_id);
 
-      //      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
-      mForwarder->route( MessageRouter::MIGRATES, migrate_msg , new_server_id);
+        //      printf("\n\nbftm debug: Inside of server.cpp.  generating a migrate message.\n\n");
+        mForwarder->route( MessageRouter::MIGRATES, migrate_msg , new_server_id);
 
       
-      // Stop Forwarder from delivering via this Object's
-      // connection, destroy said connection
-      ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-      mClosingConnections.insert(migrated_conn);
-
-      migrated_objects.push_back(obj_id);
+        // Stop Forwarder from delivering via this Object's
+        // connection, destroy said connection
+        ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+        mClosingConnections.insert(migrated_conn);
+        
+        migrated_objects.push_back(obj_id);
+      }
     }
   }
 

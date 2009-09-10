@@ -24,7 +24,7 @@ namespace CBR
     uint64 timeAdmitted;
   };
 
-
+  const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
   
   
   class CraqObjectSegmentation : public ObjectSegmentation
@@ -69,10 +69,14 @@ namespace CBR
 
     virtual void receiveMessage(Message* msg);
 
+    virtual bool clearToMigrate(const UUID& obj_id);
+
+    
     OSegMigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(OSegMigrateMessageAcknowledge* msg);
     void processMigrateMessageMove(OSegMigrateMessageMove* msg);
-    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
+    //    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
+    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults, std::map<UUID,ServerID>& updated);
   };
 }
 #endif
