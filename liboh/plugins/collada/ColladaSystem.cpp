@@ -32,6 +32,8 @@
 
 #include "ColladaSystem.hpp"
 
+#include "ColladaMeshObject.hpp"
+
 #include <oh/ProxyMeshObject.hpp>
 //#include <oh/SimulationFactory.hpp>
 //#include <options/Options.hpp>
@@ -82,25 +84,25 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 
 void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
 {
-    std::cout << "MCB: onCreateProxy (" << proxy << ") entered" << std::endl;
+    std::cout << "MCB: onCreateProxy (" << proxy << ") entered for ID: " << proxy->getObjectReference () << std::endl;
 
     std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
     
     if ( asMesh )
     {
-        std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh URI: " << asMesh->getMesh () << std::endl;
-
-//        ColladaMeshObject* mesh ( new ColladaMeshObject ( this ) );
+        std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl;
+        
+        ProxyMeshObject::ModelObjectPtr mesh ( new ColladaMeshObject ( this ) );
         
         // try to supply the proxy with a data model
         if ( ! proxy->hasModelObject () )
         {
             // MCB: trigger importation of mesh content
-//            asMesh->setModelObject ( mesh );  // MCB: hoist to a common base class? with overloads??
+            asMesh->setModelObject ( mesh );  // MCB: hoist to a common base class? with overloads??
         }
         else
         {
-            // some other ModelsSystem has registered already or its a legacy proxy
+            // some other ModelsSystem has registered already or it's a legacy proxy
             std::cout << "MCB: onCreateProxy (" << proxy << ") claims it already has a data model?" << std::endl;
             // MCB: by listening we can peek and remap the data (usefull?)
 //            asMesh->MeshProvider::addListener ( mesh );

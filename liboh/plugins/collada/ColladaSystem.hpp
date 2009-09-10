@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Collada Models Plugin
- *  ColladaModel.hpp
+/*  Sirikata liboh -- Collada Models System
+ *  ColladaSystem.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -41,24 +41,24 @@
 
 namespace Sirikata { namespace Models {
 
-class ColladaSystem
+class SIRIKATA_PLUGIN_EXPORT ColladaSystem
     :   public ModelsSystem
 {
     public:
         ColladaSystem ();
-        ~ColladaSystem ();
+        virtual ~ColladaSystem ();
 
         static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
     
     protected:
 
     private:
-        ColladaSystem ( ColladaSystem const& );
-        ColladaSystem& operator = ( ColladaSystem const & );
+        ColladaSystem ( ColladaSystem const& ); // not implemented
+        ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
 
         bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
 
-    // interface from ProxyCreationListener
+    // interface from ModelsSystem
     public:
     protected:
     

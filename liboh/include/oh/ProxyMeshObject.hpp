@@ -44,21 +44,23 @@ typedef Provider< MeshListener* > MeshProvider;
 
 /** Represents any object with an attached mesh. */
 class SIRIKATA_OH_EXPORT ProxyMeshObject
-:   public MeshObject,
+:   public Models::MeshObject,
     public MeshProvider,
     public ProxyObject
 {
     public:
+        typedef std::tr1::shared_ptr< MeshObject > ModelObjectPtr;
+        
         ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id );
 
-        void setModelObject ( MeshObject* model );
-//        MeshObject* getModelObject () const { return mModelObject; }
+        void setModelObject ( ModelObjectPtr const& model );
+        ModelObjectPtr const& getModelObject () const { return mModelObject; }
 
     protected:
     
     private:
         // MCB: private data for proxy (mediator) operations only
-        std::tr1::shared_ptr< MeshObject > mModelObject;
+        ModelObjectPtr mModelObject;
     
     // interface from MeshObject
     public:

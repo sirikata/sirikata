@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- MeshObject Model Interface (Bridge Pattern)
- *  MeshObject.hpp
+/*  Sirikata liboh -- Collada Models Mesh Object
+ *  ColladaMeshObject.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,59 +30,64 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_MESH_OBJECT_HPP_
-#define _SIRIKATA_MESH_OBJECT_HPP_
+#include "ColladaMeshObject.hpp"
 
-#include <oh/Platform.hpp>
+namespace Sirikata { namespace Models {
+    
+ColladaMeshObject::ColladaMeshObject ( ColladaSystem* system )
+    :   MeshObject (),
+        mSystem ( system )
+{
 
-// MCB: move to model plugin
-//#include "transfer/URI.hpp"
-//#include "oh/MeshListener.hpp"
-
-namespace Sirikata {
-
-namespace Transfer {
-        class URI;
 }
 
-class PhysicalParameters;
+//ColladaMeshObject::ColladaMeshObject ( ColladaMeshObject const& rhs )
+//{
+//    
+//}
 
-using Transfer::URI;
+//ColladaMeshObject::ColladaMeshObject& operator = ( ColladaMeshObject const& rhs )
+//{
+//    
+//}
 
-namespace Models {
-
-/** interface to data model for mesh objects
- *  Declares the Bridge Pattern Implementor interface for proxy mesh object Abstractions.
- *  Roles are: Abstraction :: ProxyMeshObject, Implementor :: MeshObject, ConcreteImplementor :: [see liboh/plugins/collada]
- */
-class SIRIKATA_OH_EXPORT MeshObject
+ColladaMeshObject::~ColladaMeshObject ()
 {
-    public:
-        virtual ~MeshObject () {}
 
-        virtual void setMesh ( URI const& rhs ) = 0;
-        virtual URI const& getMesh () const = 0;
+}
+    
+/////////////////////////////////////////////////////////////////////
+// overrides from MeshObject
 
-        virtual void setScale ( Vector3f const& rhs ) = 0;
-        virtual Vector3f const& getScale () const = 0;
-        
-        virtual void setPhysical ( PhysicalParameters const& rhs ) = 0;
-        virtual PhysicalParameters const& getPhysical () const = 0;
+void ColladaMeshObject::setMesh ( URI const& rhs )
+{
+    mMeshURI = rhs;
+}
     
-    protected:
-        MeshObject () {}
-//        MeshObject ( MeshObject const& rhs );
-//        MeshObject& operator = ( MeshObject const& rhs );
-    
-    private:
-    // MCB: move data members from proxy to plugin, via this route
-//        URI mMeshURI;
-//        Vector3f mScale;
-//        PhysicalParameters mPhysical;
-    
-};
+URI const& ColladaMeshObject::getMesh () const
+{
+    return mMeshURI;
+}
+
+void ColladaMeshObject::setScale ( Vector3f const& rhs )
+{
+    mScale = rhs;
+}
+
+Vector3f const& ColladaMeshObject::getScale () const
+{
+    return mScale;
+}
+
+void ColladaMeshObject::setPhysical ( PhysicalParameters const& rhs )
+{
+    mPhysical = rhs;
+}
+
+PhysicalParameters const& ColladaMeshObject::getPhysical () const
+{
+    return mPhysical;
+}
 
 } // namespace Models
 } // namespace Sirikata
-
-#endif // _SIRIKATA_MESH_OBJECT_HPP_

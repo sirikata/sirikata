@@ -46,13 +46,11 @@ ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const
 
 }
 
-void ProxyMeshObject::setModelObject ( MeshObject* model )
+void ProxyMeshObject::setModelObject ( ModelObjectPtr const& model )
 {
-    std::tr1::shared_ptr< MeshObject > tmp ( model );
-    
     if ( ! hasModelObject () )
     {
-        mModelObject = tmp;
+        mModelObject = model;
     }
     else
     {
@@ -65,35 +63,35 @@ void ProxyMeshObject::setModelObject ( MeshObject* model )
 
 void ProxyMeshObject::setMesh ( URI const& mesh )
 {
-    MeshObject::setMesh ( mesh );
+    mModelObject->setMesh ( mesh );
     MeshProvider::notify ( &MeshListener::onSetMesh, mesh );
 }
 
 URI const& ProxyMeshObject::getMesh () const
 {
-    return MeshObject::getMesh ();
+    return mModelObject->getMesh ();
 }
 
 void ProxyMeshObject::setScale ( Vector3f const& scale )
 {
-    MeshObject::setScale ( scale );
+    mModelObject->setScale ( scale );
     MeshProvider::notify ( &MeshListener::onSetScale, scale );
 }
 
 Vector3f const& ProxyMeshObject::getScale () const
 {
-    return MeshObject::getScale ();
+    return mModelObject->getScale ();
 }
 
 void ProxyMeshObject::setPhysical ( PhysicalParameters const& pp )
 {
-    MeshObject::setPhysical ( pp );
+    mModelObject->setPhysical ( pp );
     MeshProvider::notify ( &MeshListener::onSetPhysical, pp );
 }
 
 PhysicalParameters const& ProxyMeshObject::getPhysical () const
 {
-    return MeshObject::getPhysical ();
+    return mModelObject->getPhysical ();
 }
 
 /////////////////////////////////////////////////////////////////////
