@@ -23,7 +23,7 @@ bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg
     fromBegin.dest_uuid = msg->dest_object();
 
     Network::Chunk chunk;
-    ObjectMessage obj_msg(mContext->id, *msg);
+    ObjectMessage obj_msg(mContext->id(), *msg);
     //obj_msg.serialize(chunk, 0);
 
     ServerProtocolMessagePair* smp = new ServerProtocolMessagePair(NULL, obj_msg, obj_msg.id());
@@ -58,7 +58,7 @@ void FIFOObjectMessageQueue::service(){
         /*bool sent_success = */mForwarder->route( new Protocol::Object::ObjectMessage(next_msg->data().contents), next_msg->dest() );
         //if (!sent_success) break;//FIXME
 
-        mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
+        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
 
         ServerProtocolMessagePair* next_msg_popped = mQueue.pop(&bytes);
         assert(next_msg_popped == next_msg);

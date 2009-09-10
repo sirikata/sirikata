@@ -33,7 +33,7 @@ bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc,c
 
   */
 Forwarder::Forwarder(SpaceContext* ctx)
- : 
+ :
    mOutgoingMessages(NULL),
    mContext(ctx),
    mCSeg(NULL),
@@ -49,8 +49,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
     //no need to initialize mSelfMessages and mOutgoingMessages.
 
     // Fill in the rest of the context
-    mContext->router = this;
-    mContext->dispatcher = this;
+    mContext->mRouter = this;
+    mContext->mDispatcher = this;
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
@@ -146,7 +146,7 @@ void Forwarder::service()
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty())
     {
-      processChunk(self_messages.front().data, mContext->id, self_messages.front().forwarded);
+        processChunk(self_messages.front().data, mContext->id(), self_messages.front().forwarded);
       self_messages.pop_front();
     }
 
@@ -171,9 +171,9 @@ void Forwarder::service()
     if (GetOption(NOISE)->as<bool>()) {
         if (GetOption(SERVER_QUEUE)->as<String>() == "fair") {
             for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-                if (sid == mContext->id) continue;
+                if (sid == mContext->id()) continue;
                 while(true) {
-                    NoiseMessage* noise_msg = new NoiseMessage(mContext->id, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+                    NoiseMessage* noise_msg = new NoiseMessage(mContext->id(), (uint32)(50 + 200*randFloat())); // FIXME control size from options?
 
                     uint32 offset = 0;
                     Network::Chunk msg_serialized;
@@ -181,7 +181,7 @@ void Forwarder::service()
 
                     bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
                     if (sent_success)
-                        mContext->trace->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
+                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
                     delete noise_msg;
                     if (!sent_success) break;
                 }
@@ -194,9 +194,9 @@ void Forwarder::service()
             uint32 nservers = mCSeg->numServers();
             while(nfail < nservers) {
                 ServerID sid = randInt<uint32>(1, nservers);
-                if (sid == mContext->id) continue;
+                if (sid == mContext->id()) continue;
 
-                NoiseMessage* noise_msg = new NoiseMessage(mContext->id, (uint32)(50 + 200*randFloat())); // FIXME control size from options?
+                NoiseMessage* noise_msg = new NoiseMessage(mContext->id(), (uint32)(50 + 200*randFloat())); // FIXME control size from options?
 
                 uint32 offset = 0;
                 Network::Chunk msg_serialized;
@@ -204,7 +204,7 @@ void Forwarder::service()
 
                 bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
                 if (sent_success)
-                    mContext->trace->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
+                    mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
                 delete noise_msg;
                 if (!sent_success) nfail++;
             }
@@ -239,24 +239,24 @@ void Forwarder::service()
     offset = msg->serialize(msg_serialized, offset);
 
 
-    if (dest_server==mContext->id)
+    if (dest_server==mContext->id())
     {
       if (!is_forward)
       {
-        mContext->trace->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-        mContext->trace->serverDatagramSent(mContext->time, mContext->time, 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
+          mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
+          mContext->trace()->serverDatagramSent(mContext->time, mContext->time, 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
       }
       else
       {
           // The more times the message goes through a forward to self loop, the more times this will record, causing an explosion
           // in trace size.  It's probably not worth recording this information...
-          //mContext->trace->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
+          //mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
       }
       mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
     }
     else
     {
-      mContext->trace->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
+        mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
       (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
     }
     delete msg;
@@ -345,12 +345,12 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
       offset = Message::deserialize(chunk,offset,&result);
 
       if (!forwarded_self_msg)
-        mContext->trace->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
+          mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
 
       deliver(result);
 
       //if (delivered)
-      //  mContext->trace->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
+      //  mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
     }while (offset<chunk.size());
   }
 
@@ -460,7 +460,7 @@ void Forwarder::receiveMessage(Message* msg) {
 void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward)
 {
   // Wrap it up in one of our ObjectMessages and ship it.
-  ObjectMessage* obj_msg = new ObjectMessage(mContext->id, *msg);  //turns the cbr::prot::message into just an object message.
+    ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
   route(MessageRouter::OBJECT_MESSAGESS,obj_msg, dest_serv, is_forward);
   delete msg;
 }

@@ -53,15 +53,15 @@ LocationService::LocationService(SpaceContext* ctx)
 {
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
 
-    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
-    mContext->dispatcher->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+    mContext->dispatcher()->registerObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 LocationService::~LocationService() {
     delete mUpdatePolicy;
 
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
-    mContext->dispatcher->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_BULK_LOCATION, this);
+    mContext->dispatcher()->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {

@@ -28,18 +28,18 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
 
 bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mContext->id == destinationServer) {
+    if (mContext->id() == destinationServer) {
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(msg);
-        csp.source = mContext->id;
+        csp.source = mContext->id();
 
         mReceiveQueue.push(csp);
         return true;
     }
-    assert(destinationServer!=mContext->id);
+    assert(destinationServer!=mContext->id());
     uint32 offset = 0;
     Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id, destinationServer);
+    ServerMessageHeader server_header(mContext->id(), destinationServer);
     offset = server_header.serialize(with_header, offset);
     with_header.insert( with_header.end(), msg.begin(), msg.end() );
     offset += msg.size();
@@ -52,13 +52,13 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
 
 bool FairServerMessageQueue::canAddMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mContext->id == destinationServer) {
+    if (mContext->id() == destinationServer) {
         return true;
     }
-    assert(destinationServer!=mContext->id);
+    assert(destinationServer!=mContext->id());
     uint32 offset = 0;
     Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id, destinationServer);
+    ServerMessageHeader server_header(mContext->id(), destinationServer);
     offset = server_header.serialize(with_header, offset);
     offset += msg.size();
 
@@ -117,7 +117,7 @@ void FairServerMessageQueue::service(){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
+        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
                                    next_msg->dest(), next_msg->data());
 
 
@@ -162,7 +162,7 @@ void FairServerMessageQueue::service(){
 
         /*
            FIXME at some point we should record this here instead of in Server.cpp
-        mContext->trace->serverDatagramReceived();
+        mContext->trace()->serverDatagramReceived();
         */
         ChunkSourcePair csp;
         csp.chunk = new Network::Chunk(next_msg->data());
@@ -215,7 +215,7 @@ void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
         float tx_weight = mServerQueues.getQueueWeight(*it);
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
         float rx_weight = mReceiveQueues.getQueueWeight(*it);
-        mContext->trace->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
+        mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     }
 }
 

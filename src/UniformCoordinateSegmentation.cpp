@@ -52,7 +52,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
    mRegion(region),
    mServersPerDim(perdim)
 {
-    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   /* Read in the file which maintains how the layout of the region
      changes at different times. */
@@ -107,7 +107,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
 }
 
 UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 }
 
 ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos)  {

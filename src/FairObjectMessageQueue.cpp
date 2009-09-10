@@ -22,8 +22,8 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
 {
     fromBegin.data = (void*)NULL;
     fromBegin.dest_uuid = msg->dest_object();
-    ObjectMessage obj_msg(mContext->id, *msg);
-    
+    ObjectMessage obj_msg(mContext->id(), *msg);
+
     ServerProtocolMessagePair* smp = new ServerProtocolMessagePair(NULL,obj_msg, obj_msg.id());
     bool success = mClientQueues.push(msg->source_object(),smp)==QueueEnum::PushSucceeded;
 
@@ -65,7 +65,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
             }
 */
         }else {
-            mContext->trace->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
+            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
 
             mClientQueues.reprioritize(objectName,1.0,.0625,0,1);
             ServerProtocolMessagePair* next_msg_popped = mClientQueues.pop(&bytes);

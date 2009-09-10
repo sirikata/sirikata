@@ -59,7 +59,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
     mBSPTreeValid(true),
     mAvailableServersCount(0)
 {
-  mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
@@ -136,7 +136,7 @@ CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, co
 }
 
 CoordinateSegmentationClient::~CoordinateSegmentationClient() {
-   mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
    enet_peer_disconnect (peer, 0);
 

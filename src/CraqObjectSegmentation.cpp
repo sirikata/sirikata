@@ -30,8 +30,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
    mCSeg (cseg)
 {
     //registering with the dispatcher.  can now receive messages addressed to it.
-    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
-    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
 
     craqDht.initialize(initArgs);
 
@@ -52,7 +52,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       {
         delete getResults[t];
       }
-      
+
     }
 
 
@@ -61,14 +61,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
     {
       convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
-      
+
       //      CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mContext->id,false,CraqDataSetGet::SET);
-      CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id(),false,CraqDataSetGet::SET);
       craqDht.set(cdSetGet);
       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
 
       mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
-      
+
     }
 
     //50 ticks to update
@@ -90,8 +90,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   CraqObjectSegmentation::~CraqObjectSegmentation()
   {
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
   }
 
 
@@ -100,7 +100,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   bool CraqObjectSegmentation::checkOwn(const UUID& obj_id)
   {
-    
+
     if (std::find(mObjects.begin(),mObjects.end(), obj_id) == mObjects.end())
     {
       //means that the object isn't hosted on this space server
@@ -110,8 +110,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     //means that the object *is* hosted on this space server
     //need to queue the result as a response.
     //    mFinishedMoveOrLookup[obj_id]= mContext->id;
-    
-    return true;  
+
+    return true;
   }
 
 
@@ -138,13 +138,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     //clear to migrate only if migrating from here and migrating to here are false.
     return (!migratingFromHere) && (!migratingToHere);
-    
+
     //
     //    return (std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) == mReceivingObjects.end());
   }
 
 
-  
+
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
   bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id)
   {
@@ -152,14 +152,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     if (iterInTransOrLookup == mInTransitOrLookup.end())
       return false;
-    
+
     if (iterInTransOrLookup->second.sID != CRAQ_OSEG_LOOKUP_SERVER_ID)
       return true;
 
     return false;
   }
-  
-  
+
+
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
@@ -168,16 +168,16 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
-      return mContext->id;
+      return mContext->id();
             //return NullServerID;
     }
 
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
     {
-      return mContext->id;
+      return mContext->id();
     }
 
-    
+
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -196,7 +196,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
 
-      mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
+      mContext->trace()->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id());
       //      mContext->trace->objectSegmentationLookupRequest(timerDur.toMilliseconds(), obj_id, mContext->id);
 
       //also need to say that the object is in transit or lookup.
@@ -211,7 +211,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     //means that we have to perform an external craq lookup
     return NullServerID;
-    
+
   }
 
   /*
@@ -219,11 +219,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   OSegMigrateMessageAcknowledge* CraqObjectSegmentation::generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to)
   {
-    OSegMigrateMessageAcknowledge* oseg_ack_msg = new OSegMigrateMessageAcknowledge(mContext->id,  mContext->id,  sID_to, sID_to,    mContext->id,obj_id);
+    OSegMigrateMessageAcknowledge* oseg_ack_msg = new OSegMigrateMessageAcknowledge(mContext->id(),  mContext->id(),  sID_to, sID_to,    mContext->id(),obj_id);
 
     return oseg_ack_msg;
   }
-
 
 
   /*
@@ -249,17 +248,17 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      CraqDataSetGet cdSetGet(cdk, mContext->id ,true,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
 
 #ifdef CRAQ_DEBUG
       std::cout<<"\n\n Received an addObject\n\n";
 #endif
-      
+
       if (std::find(mReceivingObjects.begin(),mReceivingObjects.end(),obj_id) == mReceivingObjects.end())//shouldn't need to check if it already exists, but may as well.
       {
         mReceivingObjects.push_back(obj_id);  //means that this object has been pushed to this server, but its migration isn't complete yte.
       }
-      
+
       int trackID = craqDht.set(cdSetGet);
       trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
     }
@@ -270,7 +269,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       convert_obj_id_to_dht_key(obj_id,cdk);
 
       //      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
-      CraqDataSetGet cdSetGet(cdk, mContext->id ,false,CraqDataSetGet::SET);
+      CraqDataSetGet cdSetGet(cdk, mContext->id() ,false,CraqDataSetGet::SET);
       int trackID = craqDht.set(cdSetGet);
     }
   }
@@ -285,7 +284,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
 
     //log the message.
-    mContext->trace->objectBeginMigrate(mContext->time,obj_id,mContext->id,new_server_id); //log it.
+    mContext->trace()->objectBeginMigrate(mContext->time,obj_id,mContext->id(),new_server_id); //log it.
 
     std::map<UUID,TransLookup>::const_iterator transIter = mInTransitOrLookup.find(obj_id);
 
@@ -295,7 +294,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       std::cout<<"\n\n The object was already in lookup or transit \n\n  ";
     }
 #endif
-    
+
 
     //if we do, then say that the object is in transit.
     TransLookup tmpTransLookup;
@@ -306,7 +305,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
-    
+
     //erases the local copy of obj_id
     UUID tmp_id = obj_id; //note: can probably delete this line
 
@@ -319,7 +318,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     else
     {
 
-#ifdef CRAQ_DEBUG      
+#ifdef CRAQ_DEBUG
       std::cout<<"\n\nThe object clearly wasn't registered on this server.  This is obj id:  " <<  obj_id.toString() <<  ".  This is time:   " <<mContext->time.raw() << " Oh no.   ";
 
       if (clearToMigrate(obj_id))
@@ -339,11 +338,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated)
   {
 
-#ifdef CRAQ_DEBUG    
+#ifdef CRAQ_DEBUG
     if (trackedSetResults.size() !=0)
       std::cout<<"\n\nbftm debug:  got this many trackedsetresults:   "<<trackedSetResults.size()<<"\n\n";
 #endif
-    
+
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
@@ -356,17 +355,17 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           //add to mObjects the uuid associated with trackedMessage.
           mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
 
-          
+
           //will also need to make sure that updated has the most recent copy of the location of the message.
           if(updated.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()) != updated.end())
           {
             //The serverid in update may be from a stale return from craq.  Therefore, just overwrite the updated function with our serverid (because the object should now be hosted on this space server).
-            updated[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = mContext->id;
+            updated[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = mContext->id();
           }
 
           //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
           std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
-          
+
           if (inTransLookIter != mInTransitOrLookup.end())
           {
             //means that object can now be removed from mInTransitOrLookup
@@ -388,7 +387,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
             std::cout<<"\n\nbftm debug:  Didn't realize that we were setting this object.\n\n";
           }
           //done removing from receivingObjects.
-          
+
 #ifdef CRAQ_DEBUG
           std::cout<<"\n\nbftm debug:  sending an acknowledge out from  "<<mContext->id;
           std::cout<<"  to  "<<          trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination();
@@ -398,10 +397,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
 
 
-          
-          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage],trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
 
-          
+          mContext->router()->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage],trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
+
+
           trackingMessages.erase(trackedSetResults[s]->trackedMessage);//stop tracking this message.
         }
         else
@@ -413,12 +412,12 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       //delete the tracked set result
       delete trackedSetResults[s];
-      
+
     }
   }
 
 
-  
+
 
 
 void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
@@ -433,9 +432,9 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 {
   std::vector<CraqOperationResult*> getResults;
   std::vector<CraqOperationResult*> trackedSetResults;
-  
+
   craqDht.tick(getResults,trackedSetResults);
-  
+
   for (int s=0; s < (int)getResults.size(); ++s)
   {
     allGetResults.push_back(getResults[s]);
@@ -462,7 +461,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     static uint numBetweenTicksGreaterThan3 = 0;
     static uint prevTime =0;
 
-    
+
     if (numTicks != 0)
     {
       servTimer.start();
@@ -478,13 +477,13 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 
       prevTime = thisDur.toMilliseconds();
     }
-    
+
     ++numTicks;
-    
+
     Timer osegServiceDurTimer;
     osegServiceDurTimer.start();
 
-    
+
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
@@ -498,7 +497,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       updated.swap(mFinishedMoveOrLookup);
       //updated = mFinishedMoveOrLookup;
     }
-      
+
     int sizeGetRes  = (int) getResults.size();
     int sizeTracked = (int) trackedSetResults.size();
 
@@ -507,7 +506,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
       updated[mapDataKeyToUUID[getResults[s]->idToString()]]  = getResults[s]->servID;
-      
+
       UUID tmper = mapDataKeyToUUID[getResults[s]->idToString()];
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -515,7 +514,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
-        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
 
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
@@ -532,7 +531,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 
       delete getResults[s];
     }
-    
+
     processCraqTrackedSetResults(trackedSetResults, updated);
 
     if( mFinishedMoveOrLookup.size() != 0)
@@ -633,18 +632,18 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       mFinishedMoveOrLookup[obj_id] = serv_from;
 
       //log reception of acknowled message
-      mContext->trace->objectAcknowledgeMigrate(mContext->time, obj_id,serv_from,mContext->id);
+      mContext->trace()->objectAcknowledgeMigrate(mContext->time, obj_id,serv_from,mContext->id());
     }
 
     //send a message to the server that object should now disconnect
 #ifdef CRAQ_DEBUG
     std::cout<<"\n\nAbout to generate a killconn message. at time:  "<<mContext->time.raw() << " \n\n";
 #endif
-    
-    KillObjConnMessage* killConnMsg = new KillObjConnMessage(mContext->id);
+
+    KillObjConnMessage* killConnMsg = new KillObjConnMessage(mContext->id());
     killConnMsg->contents.set_m_objid(obj_id);
-    mContext->router->route(MessageRouter::MIGRATES,killConnMsg,mContext->id);//this will route the message to the server so that this computer can disconnect from the object connection.
-  
+    mContext->router()->route(MessageRouter::MIGRATES,killConnMsg,mContext->id());//this will route the message to the server so that this computer can disconnect from the object connection.
+
   }
 
 int CraqObjectSegmentation::getOSegType()

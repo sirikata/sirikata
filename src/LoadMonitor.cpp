@@ -54,11 +54,11 @@ LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, 
    mCurrentLoadReading(0),
    mAveragedLoadReading(0)
 {
-    mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
 }
 
 LoadMonitor::~LoadMonitor() {
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
 }
 
 void LoadMonitor::addLoadReading() {
@@ -77,7 +77,7 @@ void LoadMonitor::addLoadReading() {
   mAveragedLoadReading = ALPHA * mAveragedLoadReading +
                          (1.0-ALPHA) * mCurrentLoadReading;
 
-    printf("mAveragedLoadReading at %d=%f\n", mContext->id, mAveragedLoadReading);
+  printf("mAveragedLoadReading at %d=%f\n", mContext->id(), mAveragedLoadReading);
 
 
   if (mAveragedLoadReading > THRESHOLD) {
@@ -110,12 +110,12 @@ void LoadMonitor::sendLoadReadings() {
   uint32 total_servers = mCoordinateSegmentation->numServers();
 
   for (uint32 i=1 ; i <= total_servers; i++) {
-    if (i != mContext->id && handlesAdjacentRegion(i) ) {
-      printf("%d handles adjacent region with %d\n", i, mContext->id);
+      if (i != mContext->id() && handlesAdjacentRegion(i) ) {
+          printf("%d handles adjacent region with %d\n", i, mContext->id());
 
-      LoadStatusMessage* msg = new LoadStatusMessage(mContext->id);
+          LoadStatusMessage* msg = new LoadStatusMessage(mContext->id());
       msg->contents.set_load(mAveragedLoadReading);
-      mContext->router->route(MessageRouter::CSEGS, msg, i);
+      mContext->router()->route(MessageRouter::CSEGS, msg, i);
     }
   }
 }
@@ -145,7 +145,7 @@ void LoadMonitor::service() {
 
 bool LoadMonitor::handlesAdjacentRegion(ServerID server_id) {
   BoundingBoxList otherBoundingBoxList = mCoordinateSegmentation->serverRegion(server_id);
-  BoundingBoxList myBoundingBoxList = mCoordinateSegmentation->serverRegion(mContext->id);
+  BoundingBoxList myBoundingBoxList = mCoordinateSegmentation->serverRegion(mContext->id());
 
   for (std::vector<BoundingBox3f>::iterator other_it=otherBoundingBoxList.begin();
        other_it != otherBoundingBoxList.end();

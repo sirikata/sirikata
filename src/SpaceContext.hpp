@@ -41,6 +41,7 @@ namespace CBR {
 class MessageRouter;
 class MessageDispatcher;
 class Trace;
+class Forwarder;
 
 /** SpaceContext holds a number of useful items that are effectively global
  *  for each space node and used throughout the system -- ServerID, time information,
@@ -50,31 +51,54 @@ class Trace;
 class SpaceContext {
 public:
     SpaceContext(ServerID _id, const Time& curtime, Trace* _trace)
-     : id(_id),
-       lastTime(curtime),
+     : lastTime(curtime),
        time(curtime),
-       router(NULL),
-       dispatcher(NULL),
-       trace(_trace)
+       sinceLast(Duration::seconds(0)),
+       mID(_id),
+       mRouter(NULL),
+       mDispatcher(NULL),
+       mTrace(_trace)
     {
     }
 
+    // NOTE: not atomic, should only be used from the main thread currently
     void tick(const Time& t) {
         lastTime = time;
         time = t;
         sinceLast = time - lastTime;
     }
 
-    ServerID id;
 
+    ServerID id() const {
+        return mID.read();
+    }
+
+    MessageRouter* router() const {
+        return mRouter.read();
+    }
+    MessageDispatcher* dispatcher() const {
+        return mDispatcher.read();
+    }
+
+    Trace* trace() const {
+        return mTrace.read();
+    }
+
+
+    // NOTE: these are not thread-safe, should only be used from the main thread
     Time lastTime;
     Time time;
     Duration sinceLast;
 
-    MessageRouter* router;
-    MessageDispatcher* dispatcher;
+private:
+    friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
 
-    Trace* trace;
+    Sirikata::AtomicValue<ServerID> mID;
+
+    Sirikata::AtomicValue<MessageRouter*> mRouter;
+    Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;
+
+    Sirikata::AtomicValue<Trace*> mTrace;
 }; // class SpaceContext
 
 } // namespace CBR

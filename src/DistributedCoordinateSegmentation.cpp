@@ -52,7 +52,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
  : CoordinateSegmentation(ctx),
    mLastUpdateTime(mContext->time)
 {
-  mContext->dispatcher->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
   mTopLevelRegion.mBoundingBox = region;
 
@@ -119,7 +119,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
-    mContext->dispatcher->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
 
     //delete all the SegmentedRegion objects created with 'new'
     mTopLevelRegion.destroy();

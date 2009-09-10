@@ -111,9 +111,9 @@ void AlwaysLocationUpdatePolicy::service() {
 
     for(ServerUpdateMap::iterator it = serverLocUpdates.begin(); it != serverLocUpdates.end(); it++) {
         ServerID sid = it->first;
-        BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id);
+        BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
         msg->contents = it->second;
-        mLocService->context()->router->route(MessageRouter::LOCS, msg, sid);
+        mLocService->context()->router()->route(MessageRouter::LOCS, msg, sid);
     }
 
     // Object subscriptions
@@ -129,10 +129,10 @@ void AlwaysLocationUpdatePolicy::service() {
         obj_msg->set_source_port(OBJECT_PORT_LOCATION);
         obj_msg->set_dest_object(obj_id);
         obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
-        obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id));
+        obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id()));
         obj_msg->set_payload( serializePBJMessage(it->second) );
 
-        mLocService->context()->router->route(obj_msg, false);
+        mLocService->context()->router()->route(obj_msg, false);
     }
 }
 

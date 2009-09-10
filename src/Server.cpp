@@ -43,7 +43,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
 
-    Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id);
+    Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id());
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
@@ -217,7 +217,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     // If the requested location isn't on this server, redirect
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     ServerID loc_server = mCSeg->lookup( loc.extrapolate(mContext->time).position() );
-    if (loc_server != mContext->id) {
+    if (loc_server != mContext->id()) {
         // Create and send redirect reply
         CBR::Protocol::Session::Container response_container;
         CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
@@ -225,7 +225,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         response.set_redirect(loc_server);
 
         CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-            mContext->id,
+            mContext->id(),
             UUID::null(), OBJECT_PORT_SESSION,
             obj_id, OBJECT_PORT_SESSION,
             serializePBJMessage(response_container)
@@ -247,7 +247,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
     //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mContext->id, false); //don't need to generate an acknowledge message to myself, of course
+    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
     // Register proximity query
     mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
     // Allow the forwarder to send to ship messages to this connection
@@ -259,7 +259,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
 
     CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-        mContext->id,
+        mContext->id(),
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
@@ -357,7 +357,6 @@ void Server::handleMigration(const UUID& obj_id)
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
     mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
-
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
         CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
@@ -365,7 +364,7 @@ void Server::handleMigration(const UUID& obj_id)
         // FIXME these should live in a map, how do we deal with ordering constraints?
         if (tag == "prox") {
             assert( tag == mProximity->migrationClientTag() );
-            mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id, client_data.data());
+            mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id(), client_data.data());
         }
         else {
             SILOG(space,error,"Got unknown tag for client migration data");
@@ -387,7 +386,7 @@ void Server::handleMigration(const UUID& obj_id)
     response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
 
     CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-        mContext->id,
+        mContext->id(),
         UUID::null(), OBJECT_PORT_SESSION,
         obj_id, OBJECT_PORT_SESSION,
         serializePBJMessage(response_container)
@@ -439,7 +438,7 @@ void Server::checkObjectMigrations()
       Vector3f obj_pos = mLocationService->currentPosition(obj_id);
       ServerID new_server_id = lookup(obj_pos);
 
-      if (new_server_id != mContext->id)
+      if (new_server_id != mContext->id())
       {
         // FIXME While we're working on the transition to a separate object host
         // we do 2 things when we detect a server boundary crossing:
@@ -454,7 +453,7 @@ void Server::checkObjectMigrations()
         CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
         init_migration_msg.set_new_server( (uint64)new_server_id );
         CBR::Protocol::Object::ObjectMessage* init_migr_obj_msg = createObjectMessage(
-                                                                                      mContext->id,
+            mContext->id(),
                                                                                       UUID::null(), OBJECT_PORT_SESSION,
                                                                                       obj_id, OBJECT_PORT_SESSION,
                                                                                       serializePBJMessage(session_msg)
@@ -471,8 +470,8 @@ void Server::checkObjectMigrations()
 
 
         // Send out the migrate message
-        MigrateMessage* migrate_msg = new MigrateMessage(mContext->id);
-        migrate_msg->contents.set_source_server(mContext->id);
+        MigrateMessage* migrate_msg = new MigrateMessage(mContext->id());
+        migrate_msg->contents.set_source_server(mContext->id());
         migrate_msg->contents.set_object(obj_id);
         CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg->contents.mutable_loc();
         TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
@@ -483,7 +482,7 @@ void Server::checkObjectMigrations()
 
         // FIXME we should allow components to package up state here
         // FIXME we should generate these from some map instead of directly
-        std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id, new_server_id);
+        std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id(), new_server_id);
         if (!prox_data.empty()) {
           CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg->contents.add_client_data();
           client_data.set_key( mProximity->migrationClientTag() );
