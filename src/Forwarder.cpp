@@ -96,7 +96,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
 
     mOSeg->service(updatedObjectLocations);
 
-
     //    cross-check updates against held messages.
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
     {
@@ -113,7 +112,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         mObjectsInTransit.erase(iterObjectsInTransit);
       }
 
-      
       //Now sending messages that we had saved up from oseg lookup calls.
       iterQueueMap = queueMap.find(iter->first);
       if (iterQueueMap != queueMap.end())
@@ -127,6 +125,8 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
       }
     }
   }
+
+
 void Forwarder::service()
 {
     Time t = mContext->time;

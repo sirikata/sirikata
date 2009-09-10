@@ -136,7 +136,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       craqDht.get(cdSetGet); //calling the craqDht to do a get.
 
-      
       mContext->trace->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id);
       //      mContext->trace->objectSegmentationLookupRequest(timerDur.toMilliseconds(), obj_id, mContext->id);
 
@@ -273,7 +272,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 //           std::cout<<trackedSetResults[s].trackedMessage  << "\n\n";
 //           std::cout<<"  for object:  ";
 //           std::cout<< trackingMessages[trackedSetResults[s].trackedMessage]->getObjID().toString()<<"    at time   "<< mContext->time.raw()  <<  " \n\n";
-          
+
+//          mContext->router->route(trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);//added here.
+          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);//added here.
 
           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
         }
@@ -326,9 +327,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     Timer osegServiceDurTimer;
     osegServiceDurTimer.start();
 
-    
-    
-
 //     static Timer serviceTimer;
 //     static uint64 serviceCount = 0;
 //     static uint64 previousTime = 0;
@@ -352,8 +350,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
 //     }
 //     ++serviceCount;
     
-
-    
     std::vector<CraqOperationResult> getResults;
     std::vector<CraqOperationResult> trackedSetResults;
 
@@ -363,7 +359,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     Duration tickDur = osegServiceDurTimer.elapsed();
 
     updated = mFinishedMoveOrLookup;
-
 
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -391,17 +386,14 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     processCraqTrackedSetResults(trackedSetResults);
     mFinishedMoveOrLookup.clear();
 
-    
-
-    Duration osegServiceDuration = osegServiceDurTimer.elapsed();
-    if (osegServiceDuration.toMilliseconds() > 1)
-    {
-      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  ".  \n";
-      std::cout<<"Tick dur:                   "<< tickDur.toMilliseconds() << "\n";
-      std::cout<<"Num get results:            "<< getResults.size() << " \n";
-      std::cout<<"Num tracked set results:    "<< trackedSetResults.size() <<"  \n\n\n";
-    }
-    
+//     Duration osegServiceDuration = osegServiceDurTimer.elapsed();
+//     if (osegServiceDuration.toMilliseconds() > 1)
+//     {
+//       std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  ".  \n";
+//       std::cout<<"Tick dur:                   "<< tickDur.toMilliseconds() << "\n";
+//       std::cout<<"Num get results:            "<< getResults.size() << " \n";
+//       std::cout<<"Num tracked set results:    "<< trackedSetResults.size() <<"  \n\n\n";
+//     }
   }
 
 
@@ -459,7 +451,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
     ServerID serv_from, serv_to;
     UUID obj_id;
 
-
     serv_from = msg->getServFrom();
     serv_to   = msg->getServTo();
     obj_id    = msg->getObjID();
@@ -479,7 +470,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
       //log reception of acknowled message
       mContext->trace->objectAcknowledgeMigrate(mContext->time, obj_id,serv_from,mContext->id);
     }
-
   }
 
 

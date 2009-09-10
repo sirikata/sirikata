@@ -84,6 +84,7 @@ class ClusterSim:
 
     def vis(self):
         subprocess.call([CBR_WRAPPER,
+                         '--debug',
                          '--id=1',
                          "--layout=" + self.settings.layout(),
                          "--num-oh=" + str(self.settings.num_oh),

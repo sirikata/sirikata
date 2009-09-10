@@ -127,6 +127,7 @@ void Trace::prepareShutdown() {
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
+
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -139,6 +140,7 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
 void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
+
     data.write( &ObjectLocationTag, sizeof(ObjectLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -150,6 +152,7 @@ void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, c
 void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source, bool start) {
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
+
     data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -161,6 +164,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& receiver, const UUID& obj, const TimedMotionVector3f& loc) {
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
+
     data.write( &ServerLocationTag, sizeof(ServerLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &sender, sizeof(sender) );
@@ -173,6 +177,7 @@ void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& rec
 void Trace::serverObjectEvent(const Time& t, const ServerID& source, const ServerID& dest, const UUID& obj, bool added, const TimedMotionVector3f& loc) {
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
+
     data.write( &ServerObjectEventTag, sizeof(ServerObjectEventTag) );
     data.write( &t, sizeof(t) );
     data.write( &source, sizeof(source) );
@@ -319,6 +324,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to)
   //  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID acknowledge_from, acknowledge_to)
   {
+    
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
@@ -330,7 +336,6 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&acknowledge_to,sizeof(ServerID));
 #endif
   }
-
 
 
   void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
@@ -361,22 +366,6 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&dTime, sizeof(dTime));
 #endif
   }
-
-
-//   void Trace::objectSegmentationFinalDump(const Time& t, const std::vector<UUID>&objectsHosted, const std::map<UUID,ServerID>& tmp_map, ServerID sID)
-//   {
-// #ifdef TRACE_OSEG_DUMP
-//     if (mShuttingDown) return;
-
-//     data.write(&ObjectSegmentationFinalDumpTag, sizeof(ObjectSegmentationFinalDumpTag));
-//     data.write(&t, sizeof(t));
-//     data.write(&objectsHosted, sizeof(objectsHosted));
-//     data.write(&tmp_map, sizeof(tmp_map));
-//     data.write(&sID,sizeof(sID));
-    
-// #endif    
-//   }
-    
 
 void Trace::save(const String& filename) {
     std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
