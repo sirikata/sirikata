@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Object Host Plugin
+/*  Sirikata liboh -- Object Host Plugin for COLLADA
  *  ColladaPlugin.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes

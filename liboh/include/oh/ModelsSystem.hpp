@@ -47,8 +47,8 @@ class SIRIKATA_OH_EXPORT ModelsSystem
 
     protected:
         ModelsSystem () {}
-//        ModelsSystem ( ModelsSystem const& rhs );
-//        ModelsSystem& operator = ( ModelsSystem const& rhs );
+        ModelsSystem ( ModelsSystem const& rhs ); // not implemented
+        ModelsSystem& operator = ( ModelsSystem const& rhs ); // not implemented
         virtual ~ModelsSystem () {}
 
     // interface from ProxyCreationListener
