@@ -13,10 +13,10 @@ CBR_WRAPPER = "./cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:
-    def __init__(self, x, y, num_object_hosts, additional_svr_pool):
+    def __init__(self, space_svr_pool, layout, num_object_hosts):
         self.num_oh = num_object_hosts
-        self.layout_x = x
-        self.layout_y = y
+        self.layout_x = layout[0]
+        self.layout_y = layout[1]
         self.duration = '100s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
@@ -35,13 +35,19 @@ class ClusterSimSettings:
         self.valgrind = False
         self.loc = 'oracle'
         self.blocksize = 200
-        self.additional_server_pool = additional_svr_pool
+        self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
 
         self.loglevels = {
             "prox" : "warn",
             }
+
+        # sanity checks
+        if (self.space_server_pool < self.layout_x * self.layout_y):
+            print "Space server pool not large enough for desired layout."
+            sys.exit(-1)
+
 
     def layout(self):
         return "<" + str(self.layout_x) + "," + str(self.layout_y) + ",1>"
@@ -51,18 +57,18 @@ class ClusterSimSettings:
         return "<<" + str(-half_extents[0]) + "," + str(-half_extents[1]) + "," + str(-half_extents[2]) + ">,<" + str(half_extents[0]) + "," + str(half_extents[1]) + "," + str(half_extents[2]) + ">>"
 
 class ClusterSim:
-    def __init__(self, config, x, y, num_object_hosts, additional_server_pool):
+    def __init__(self, config, settings):
         self.config = config
-        self.settings = ClusterSimSettings(x, y, num_object_hosts, additional_server_pool)
+        self.settings = settings
 
     def num_servers(self):
-        return (self.settings.layout_x * self.settings.layout_y+self.settings.additional_server_pool) + self.settings.num_oh
+        return self.settings.space_server_pool + self.settings.num_oh
 
     def max_space_servers(self):
-        return (self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool)
+        return self.settings.space_server_pool
 
     def ip_file(self):
-        return "serverip-" + str(self.settings.layout_x) + '-' + str(self.settings.layout_y) + '.txt'
+        return "serverip.txt"
 
     def scripts_dir(self):
         return self.config.code_dir + "/scripts/"
@@ -85,7 +91,7 @@ class ClusterSim:
                          "--region=" + self.settings.region(),
                          "--serverips=" + self.ip_file(),
                          "--duration=" + self.settings.duration,
-                         '--analysis.locvis=server',
+                         '--analysis.locvis=object',
                          '--analysis.locvis.seed=1',
                          "--object.static=" + self.settings.object_static,
                          "--object.simple=" + self.settings.object_simple,
@@ -108,18 +114,10 @@ class ClusterSim:
         fp = open(serveripfile,'w')
         port = self.config.port_base
         server_index = 0;
-        for i in range(0, self.settings.layout_x):
-            for j in range(0, self.settings.layout_y):
-                fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
-                port += 2
-                server_index += 1
-
-        server_index = 0;
-        for i in range(0,self.settings.additional_server_pool):
-          fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
-          port+=2
-          server_index = (server_index+1) % (self.settings.layout_x * self.settings.layout_y)
-
+        for i in range(0, self.settings.space_server_pool):
+            fp.write(self.config.deploy_nodes[server_index].node+":"+str(port)+":"+str(port+1)+'\n')
+            port += 2
+            server_index += 1
 
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
@@ -127,7 +125,7 @@ class ClusterSim:
     def run_instances(self):
         # Construct the list of binaries to be run
         binaries = []
-        for x in range(0, self.settings.layout_x * self.settings.layout_y + self.settings.additional_server_pool):
+        for x in range(0, self.settings.space_server_pool):
             binaries.append("cbr");
         for x in range(0, self.settings.num_oh):
             binaries.append("oh");
@@ -213,7 +211,8 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cluster_sim = ClusterSim(cc, 2, 2, 1, 10)
+    cs = ClusterSimSettings(14, (2,2), 1)
+    cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:
         cluster_sim.run()
