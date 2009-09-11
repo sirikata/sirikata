@@ -150,7 +150,9 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     {
         if (mObjectsAwaitingMigration.find(obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
             mObjectMigrations.find(obj_msg->source_object()) == mObjectMigrations.end())
+        {
             SILOG(cbr,warn,"Got message for unknown object: " << obj_msg->source_object().toString());
+        }
         else
             SILOG(cbr,warn,"Server got message from object after migration started: " << obj_msg->source_object().toString());
 

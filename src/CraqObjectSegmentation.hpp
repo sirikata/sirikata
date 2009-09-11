@@ -42,11 +42,13 @@ namespace CBR
     std::map<std::string, UUID > mapDataKeyToUUID;
     //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
 
-    std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
+    std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
     
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
     std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
+    std::vector<UUID> mReceivingObjects;
 
+    
     void iteratedWait(int numWaits,std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
     void basicWait(std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
 
