@@ -1,0 +1,7 @@
+package CBR.Protocol.ObjConnKill;
+
+message ObjConnKill
+{
+    required uuid   m_objid                = 1;
+}
+
