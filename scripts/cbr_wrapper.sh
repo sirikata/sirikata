@@ -78,6 +78,7 @@ if [ $want_debug -eq 1 ] ; then
   echo "run" >> $tmpfile
   if [ $want_interactive -ne 1 ] ; then
     echo "bt" >> $tmpfile
+    #echo "thread apply all bt full no registers" >> $tmpfile
     echo "quit" >> $tmpfile
   fi
   echo "$GDB $APPDIR/$APPNAME -x $tmpfile -quiet"
