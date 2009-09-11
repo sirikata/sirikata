@@ -461,36 +461,54 @@ void Server::checkObjectMigrations()
       
         // Stop Forwarder from delivering via this Object's
         // connection, destroy said connection
-        ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-        mClosingConnections.insert(migrated_conn);
+
+        //bftm change
+         ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+         mClosingConnections.insert(migrated_conn);
+         migrated_objects.push_back(obj_id);
+        //end bftm change
+
         
-        migrated_objects.push_back(obj_id);
       }
     }
   }
 
-  for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
-    ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
-    mObjects.erase(obj_map_it);
-
-  }
+  //bftm change
+   for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++){
+     ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
+     mObjects.erase(obj_map_it);
+   }
+  //end bftm change
+  
 }
+
+
+// void Server::killObjectConnection(UUID obj_id)
+// {
+//   //bftm change
+//   ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+//   mClosingConnections.insert(migrated_conn);
+//   migrated_objects.push_back(obj_id);
+//   //end bftm change
+
+
+//   //bftm change
+//   for (std::vector<UUID>::iterator it = migrated_objects.begin(); it != migrated_objects.end(); it++)
+//   {
+//     ObjectConnectionMap::iterator obj_map_it = mObjects.find(*it);
+//     mObjects.erase(obj_map_it);
+//   }
+//   //end bftm change
+
+// }
+
+
 
 ServerID Server::lookup(const Vector3f& pos)
 {
   ServerID sid = mCSeg->lookup(pos);
   return sid;
 }
-
-/*
-ServerID Server::lookup(const UUID& obj_id)
-{
-  Vector3f pos = mLocationService->currentPosition(obj_id);
-  ServerID sid = mCSeg->lookup(pos);
-  return sid;
-}
-*/
-
 
 
 

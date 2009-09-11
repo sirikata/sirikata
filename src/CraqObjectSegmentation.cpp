@@ -35,8 +35,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     craqDht.initialize(initArgs);
 
-    std::vector<CraqOperationResult> getResults;
-    std::vector<CraqOperationResult> trackedSetResults;
+    std::vector<CraqOperationResult*> getResults;
+    std::vector<CraqOperationResult*> trackedSetResults;
 
     myUniquePrefixKey = prefixID;
 
@@ -48,6 +48,12 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     {
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults, dummy);
+
+      for (int t=0; t < (int)getResults.size(); ++t)
+      {
+        delete getResults[t];
+      }
+      
     }
 
 
@@ -71,8 +77,12 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     {
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults, dummy);
-    }
 
+      for (int t=0; t < (int)getResults.size(); ++t)
+      {
+        delete getResults[t];
+      }
+    }
     mTimer.start();
   }
 
@@ -113,7 +123,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     return (std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) == mReceivingObjects.end());
   }
 
-
   
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
@@ -138,8 +147,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       indexer.append(tmper.rawHexData());
 
       CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
-      //      CraqDataSetGet cdSetGet (tmper.rawHexData(),0,false,CraqDataSetGet::GET);
-      //      mapDataKeyToUUID[tmper.rawHexData()] = tmper;
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
@@ -154,10 +161,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       TransLookup tmpTransLookup;
       //      tmpTransLookup.sID = 0;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
-      
-      tmpTransLookup.timeAdmitted = timerDur.toMilliseconds();
+      tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
+      
     }
   }
 
@@ -244,7 +251,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     TransLookup tmpTransLookup;
     tmpTransLookup.sID = new_server_id;
-    tmpTransLookup.timeAdmitted = mContext->time.raw();
+
+    Duration tmpDurer= mTimer.elapsed();
+    //    tmpTransLookup.timeAdmitted = mContext->time.raw();
+    tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
     
@@ -269,96 +279,35 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       {
         std::cout<<"\n\n clear to migrate is fine migration is being called from somewhere besides server.cpp\n\n";
       }
-      
     }
-    
   }
 
-//   //this function takes all the tracked set results 
-//   void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults, std::map<UUID,ServerID>& updated)
-//   {
-//     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
-//     {
-//       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
-//       if (trackedSetResults[s].trackedMessage != 0) //if equals zero, meant that we weren't supposed to be tracking this message.
-//       {
-//         if (trackingMessages.find(trackedSetResults[s].trackedMessage) !=  trackingMessages.end())
-//         {
-//           //means that we were tracking this message. and that we'll have to send an acknowledge
-
-          
-//           //add to mObjects the uuid associated with trackedMessage.
-//           mObjects.push_back(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
-
-          
-// //           std::cout<<"\n\nbftm debug: sending an acknowledge from "<<mContext->id<<"  to ";
-// //           std::cout<< trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination()  <<"   this is tracking message number  ";
-// //           std::cout<<trackedSetResults[s].trackedMessage  << "\n\n";
-// //           std::cout<<"  for object:  ";
-// //           std::cout<< trackingMessages[trackedSetResults[s].trackedMessage]->getObjID().toString()<<"    at time   "<< mContext->time.raw()  <<  " \n\n";
 
 
-//           //will also need to make sure that updated has the most recent copy of the location of the message.
-//           if(updated.find(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID()) != updated.end())
-//           {
-//             //The serverid in update may be from a stale return from craq.  Therefore, just overwrite the updated function with our serverid (because the object should now be hosted on this space server).
-//             updated[trackingMessages[trackedSetResults[s].trackedMessage]->getObjID()] = mContext->id;
-                        
-//           }
-
-          
-//           //delete the mInTransitOrLookup entry for this object sequence
-//           std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
-          
-//           if (inTransLookIter != mInTransitOrLookup.end())
-//           {
-//             //means that object can now be removed from mInTransitOrLookup
-//             mInTransitOrLookup.erase(inTransLookIter);
-//           }
-//           //finished deleting from mInTransitOrLookup
-          
-          
-//           mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
-
-          
-//           trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
-//         }
-//         else
-//         {
-//           std::cout<<"\n\nbftm debug:  received a tracked set that I don't have a record of an acknowledge to send.\n\n";
-//         }
-//       }      
-//     }
-//   }
-
-
-
-
-  void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults, std::map<UUID,ServerID>& updated)
+  void CraqObjectSegmentation::processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated)
   {
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
-      if (trackedSetResults[s].trackedMessage != 0) //if equals zero, meant that we weren't supposed to be tracking this message.
+      if (trackedSetResults[s]->trackedMessage != 0) //if equals zero, meant that we weren't supposed to be tracking this message.
       {
-        if (trackingMessages.find(trackedSetResults[s].trackedMessage) !=  trackingMessages.end())
+        if (trackingMessages.find(trackedSetResults[s]->trackedMessage) !=  trackingMessages.end())
         {
           //means that we were tracking this message. and that we'll have to send an acknowledge
 
           //add to mObjects the uuid associated with trackedMessage.
-          mObjects.push_back(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
+          mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
 
           
           //will also need to make sure that updated has the most recent copy of the location of the message.
-          if(updated.find(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID()) != updated.end())
+          if(updated.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()) != updated.end())
           {
             //The serverid in update may be from a stale return from craq.  Therefore, just overwrite the updated function with our serverid (because the object should now be hosted on this space server).
-            updated[trackingMessages[trackedSetResults[s].trackedMessage]->getObjID()] = mContext->id;
+            updated[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = mContext->id;
           }
 
-          
           //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
-          std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
+          std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
           
           if (inTransLookIter != mInTransitOrLookup.end())
           {
@@ -370,7 +319,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
           //remove this object from mReceivingObjects, indicating that this object can now be safely migrated.
 
-          std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), trackingMessages[trackedSetResults[s].trackedMessage]->getObjID());
+          std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
           if (recObjIter != mReceivingObjects.end())
           {
             //the object should be removed from receiving objects
@@ -383,16 +332,21 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           //done removing from receivingObjects.
           
           
-          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s].trackedMessage],trackingMessages[trackedSetResults[s].trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
+          mContext->router->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage],trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
 
           
-          trackingMessages.erase(trackedSetResults[s].trackedMessage);//stop tracking this message.
+          trackingMessages.erase(trackedSetResults[s]->trackedMessage);//stop tracking this message.
         }
         else
         {
           std::cout<<"\n\nbftm debug:  received a tracked set that I don't have a record of an acknowledge to send.\n\n";
         }
-      }      
+      }
+
+
+      //delete the tracked set result
+      delete trackedSetResults[s];
+      
     }
   }
 
@@ -400,7 +354,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   
 
 
-void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults)
+void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
 {
   for (int s=0; s < numWaits; ++s)
   {
@@ -408,10 +362,10 @@ void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperation
   }
 }
 
-void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults)
+void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
 {
-  std::vector<CraqOperationResult> getResults;
-  std::vector<CraqOperationResult> trackedSetResults;
+  std::vector<CraqOperationResult*> getResults;
+  std::vector<CraqOperationResult*> trackedSetResults;
   
   craqDht.tick(getResults,trackedSetResults);
   
@@ -435,28 +389,66 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
-    
-    std::vector<CraqOperationResult> getResults;
-    std::vector<CraqOperationResult> trackedSetResults;
+    static Timer servTimer;
+    static uint numTicks = 0;
+    static uint numTicksGreaterThanMs = 0;
+    static uint numBetweenTicksGreaterThan3 = 0;
+    static uint prevTime =0;
 
-    //    iteratedWait(5, getResults,trackedSetResults);
+    
+    if (numTicks != 0)
+    {
+      servTimer.start();
+    }
+    else
+    {
+      Duration thisDur = servTimer.elapsed();
+
+      if(thisDur.toMilliseconds() - prevTime > 3)
+      {
+        ++numBetweenTicksGreaterThan3;
+      }
+
+      prevTime = thisDur.toMilliseconds();
+    }
+    
+    ++numTicks;
+    
+    Timer osegServiceDurTimer;
+    osegServiceDurTimer.start();
+
+    
+    std::vector<CraqOperationResult*> getResults;
+    std::vector<CraqOperationResult*> trackedSetResults;
+
+    //    iteratedWait(10, getResults,trackedSetResults);
     craqDht.tick(getResults,trackedSetResults);
 
-    updated = mFinishedMoveOrLookup;
+    Duration tickDur = osegServiceDurTimer.elapsed();
+
+    if (mFinishedMoveOrLookup.size() !=0)
+    {
+      updated.swap(mFinishedMoveOrLookup);
+      //updated = mFinishedMoveOrLookup;
+    }
+      
+    int sizeGetRes  = (int) getResults.size();
+    int sizeTracked = (int) trackedSetResults.size();
+
 
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
-      updated[mapDataKeyToUUID[getResults[s].idToString()]]  = getResults[s].servID;
+      updated[mapDataKeyToUUID[getResults[s]->idToString()]]  = getResults[s]->servID;
       
-      UUID tmper = mapDataKeyToUUID[getResults[s].idToString()];
+      UUID tmper = mapDataKeyToUUID[getResults[s]->idToString()];
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
-        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s].idToString()],getResults[s].servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+        mContext->trace->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id, (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
 
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
@@ -470,11 +462,38 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult> &allGetR
       {
         std::cout<<"\n\nbftm debug:  getting results for objects that we were not looking for.  Or object lookups that have been short-circuited by a trackedSet\n\n";
       }
+
+      delete getResults[s];
     }
     
     processCraqTrackedSetResults(trackedSetResults, updated);
-    mFinishedMoveOrLookup.clear();
 
+    if( mFinishedMoveOrLookup.size() != 0)
+      mFinishedMoveOrLookup.clear();
+
+
+
+    Duration osegServiceDuration = osegServiceDurTimer.elapsed();
+    if (osegServiceDuration.toMilliseconds() > 1)
+    {
+      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  ".  \n";
+      std::cout<<"Tick dur:                   "<< tickDur.toMilliseconds() << "\n";
+      std::cout<<"Num get results:            "<< sizeGetRes << " \n";
+      std::cout<<"Num tracked set results:    "<<  sizeTracked <<"  \n";
+      std::cout<<"Num ticks here:             "<< numTicks<<"\n\n\n";
+      ++numTicksGreaterThanMs;
+    }
+
+
+    if ((numTicks %1000) == 0)
+    {
+      std::cout<<"\n\nHere are the numbers:   \n";
+      std::cout<<"\t num greater than ms:       "<< numTicksGreaterThanMs<<"\n";
+      std::cout<<"\t num between ticks:         " << numBetweenTicksGreaterThan3 << "\n";
+      std::cout<<"\t num total:                 "<< numTicks<<"\n\n\n";
+
+    }
+          
   }
 
 

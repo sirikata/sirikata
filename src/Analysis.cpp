@@ -1545,6 +1545,9 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
   {
+    double totalLatency = 0;
+    int maxLatency = 0;
+    
     if (sortedByTime)
     {
       std::vector<ObjectLookupProcessedEvent> sortedEvts;
@@ -1561,8 +1564,19 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tID Lookup:         "<<sortedEvts[s].mObjID.toString()<<"\n";
         fileOut<< "\tObject on:         "<<sortedEvts[s].mID_objectOn<<"\n";
         fileOut<< "\tTime taken:        "<<sortedEvts[s].deltaTime<<"\n";
+
+        totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
+
+        if ((int)sortedEvts[s].deltaTime > maxLatency)
+        {
+          maxLatency = (int)sortedEvts[s].deltaTime;
+        }
+        
       }
-      
+
+      fileOut<<"\n\n************************************\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/((double)sortedEvts.size())<<"\n\n";
+      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
       fileOut<<"\n\n\n\nEND\n";
     }
     else
@@ -1578,10 +1592,20 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
         fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
         fileOut<< "\tTime taken:        "<<dTimes[s]<<"\n";
+
+        totalLatency = totalLatency + (int) dTimes[s];
+
+        if ((int)dTimes[s] > maxLatency)
+        {
+          maxLatency = dTimes[s];
+        }
+        
       }
 
+      fileOut<<"\n\n************************************\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/((double)times.size())<<"\n\n";
+      fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
       fileOut<<"\n\n\n\nEND\n";
-      
     }
 
   }

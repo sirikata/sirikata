@@ -80,7 +80,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       mConnections[s].initialize(passSocket,iterator); //note maybe can pass this by reference?
     }
   }
-
+  
 }
 
 void AsyncCraq::runTestOfAllConnections()
@@ -126,6 +126,7 @@ int AsyncCraq::queueSize()
 
 int AsyncCraq::get(CraqDataSetGet dataToGet)
 {
+  
   //force this to be a set message.
   dataToGet.messageType = CraqDataSetGet::GET;
   //we got all the way through without finding a ready connection.  Need to add query to queue.
@@ -140,9 +141,7 @@ int AsyncCraq::get(CraqDataSetGet dataToGet)
   tick processes 
   tick returns all the 
 */
-//void AsyncCraq::tick(std::vector<int> &serverIDs, std::vector<CraqObjectID> &objectIds,std::vector<int>&trackedMessages)
-
-void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<CraqOperationResult>&trackedSetResults)
+void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
 {
   int numHandled = io_service.poll();
 
@@ -151,16 +150,23 @@ void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<Cr
     io_service.reset();
   }
 
-  std::vector<CraqOperationResult> tickedMessages_getResults;
-  std::vector<CraqOperationResult> tickedMessages_errorResults;
-  std::vector<CraqOperationResult> tickedMessages_trackedSetResults;
+        
+  std::vector<CraqOperationResult*> tickedMessages_getResults;
+  std::vector<CraqOperationResult*> tickedMessages_errorResults;
+  std::vector<CraqOperationResult*> tickedMessages_trackedSetResults;
   
   for (int s=0; s < (int)mConnections.size(); ++s)
   {
-    tickedMessages_getResults.clear();
-    tickedMessages_errorResults.clear();
-    tickedMessages_trackedSetResults.clear();
-    
+    if (tickedMessages_getResults.size() != 0)
+      tickedMessages_getResults.clear();
+
+    if (tickedMessages_errorResults.size() != 0)
+      tickedMessages_errorResults.clear();
+
+    if (tickedMessages_trackedSetResults.size() != 0)
+      tickedMessages_trackedSetResults.clear();
+
+
     //can optimize by setting separate tracks for 
     mConnections[s].tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
 
@@ -183,20 +189,23 @@ void AsyncCraq::tick(std::vector<CraqOperationResult>&getResults, std::vector<Cr
 /*
   errorRes is full of results that went bad from a craq connection.  In the future, we may do something more intelligent, but for now, we are just going to put the request back in mQueue
 */
-void AsyncCraq::processErrorResults(std::vector <CraqOperationResult> & errorRes)
+void AsyncCraq::processErrorResults(std::vector <CraqOperationResult*> & errorRes)
 {
   for (int s=0;s < (int)errorRes.size(); ++s)
   {
-    if (errorRes[s].whichOperation == CraqOperationResult::GET)
+    if (errorRes[s]->whichOperation == CraqOperationResult::GET)
     {
-      CraqDataSetGet cdSG(errorRes[s].objID,errorRes[s].servID,errorRes[s].tracking, CraqDataSetGet::GET);
+      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
       mQueue.push(cdSG);
     }
     else
     {
-      CraqDataSetGet cdSG(errorRes[s].objID,errorRes[s].servID,errorRes[s].tracking, CraqDataSetGet::SET);
+      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
       mQueue.push(cdSG);      
     }
+
+    delete errorRes[s];
+    
   }
 }
 
@@ -209,6 +218,13 @@ void AsyncCraq::checkConnections(int s)
   if (s >= (int)mConnections.size())
     return;
   
+
+
+  int numOperations = 0;
+
+  mConnections[s].ready();
+
+  
   if (mConnections[s].ready() == AsyncConnection::READY)
   {
     if (mQueue.size() != 0)
@@ -217,6 +233,8 @@ void AsyncCraq::checkConnections(int s)
       CraqDataSetGet cdSG = mQueue.front();
       mQueue.pop();
 
+      ++numOperations;
+      
       if (cdSG.messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
@@ -233,9 +251,11 @@ void AsyncCraq::checkConnections(int s)
   {
     //need to create a new socket for the other
     reInitializeNode(s);
+    std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
   }
-
 }
+
+
 
 
 //means that we need to connect a new socket to the service.

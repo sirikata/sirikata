@@ -206,12 +206,6 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
         return;
     }
 
-    //bftm debug
-//     if (msg->type() == MESSAGE_TYPE_MIGRATE)
-//     {
-//       MigrateMessage* tmpMig = dynamic_cast<MigrateMessage*> (msg);
-//       std::cout<<"\n\nbftm debug.  got a migrate message here.  This is object id:  " << tmpMig->contents.object().toString()   << "  \n\n";
-//     }
     
     MessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
@@ -506,7 +500,37 @@ ServerID OSegMigrateMessageAcknowledge::getMessageFrom()
 
 //end of oseg messages.
 
+//obj_conn_kill message:
 
+KillObjConnMessage::KillObjConnMessage(const ServerID& origin)
+  : Message(origin,true)
+{
+  
+}
+KillObjConnMessage::~KillObjConnMessage()
+{
+
+}
+
+KillObjConnMessage::KillObjConnMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  parsePBJMessage(contents,wire,offset);
+}
+
+
+MessageType KillObjConnMessage::type() const
+{
+  return MESSAGE_TYPE_KILL_OBJ_CONN;
+}
+
+
+uint32 KillObjConnMessage::serialize(Network::Chunk& wire, uint32 offset) {
+    offset = serializeHeader(wire, offset);
+    return serializePBJMessage(contents, wire, offset);
+}
+
+//end of obj_conn_kill message
 
 
 ServerProximityQueryMessage::ServerProximityQueryMessage(const ServerID& origin)

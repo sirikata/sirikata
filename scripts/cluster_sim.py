@@ -17,7 +17,7 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '100s'
+        self.duration = '50s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 100
@@ -30,7 +30,7 @@ class ClusterSimSettings:
         self.object_simple = 'true'
         self.object_2d = 'true'
         self.object_global = 'false'
-        self.noise = 'false'
+        self.noise = 'true'
         self.debug = True
         self.valgrind = False
         self.loc = 'oracle'
@@ -214,7 +214,8 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cs = ClusterSimSettings(14, (2,2), 1)
+#    cs = ClusterSimSettings(14, (2,2), 1)
+    cs = ClusterSimSettings(4, (2,2), 1)
     cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:

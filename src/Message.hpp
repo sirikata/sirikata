@@ -47,7 +47,7 @@
 #include "CBR_CSeg.pbj.hpp"
 #include "CBR_Session.pbj.hpp"
 #include "CBR_OSeg.pbj.hpp"
-
+#include "CBR_ObjConnKill.pbj.hpp"
 
 namespace CBR {
 
@@ -64,7 +64,9 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_SERVER_PROX_QUERY         11
 #define MESSAGE_TYPE_SERVER_PROX_RESULT        12
 #define MESSAGE_TYPE_BULK_LOCATION             13
+#define MESSAGE_TYPE_KILL_OBJ_CONN             14
 
+  
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
 
@@ -300,10 +302,23 @@ private:
 };
 
 
-
-
   //end oseg message
 
+//kill obj conn message
+class KillObjConnMessage : public Message
+{
+  CBR::Protocol::ObjConnKill::ObjConnKill contents;
+  KillObjConnMessage(const ServerID& origin);
+  ~KillObjConnMessage();
+  virtual MessageType type() const;
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+  
+private:
+  friend class Message;
+  KillObjConnMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
+
+//end kill obj conn message
 
 
 class ServerProximityQueryMessage : public Message {

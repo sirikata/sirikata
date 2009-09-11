@@ -21,7 +21,7 @@ namespace CBR
   struct TransLookup
   {
     ServerID sID;
-    uint64 timeAdmitted;
+    int timeAdmitted;
   };
 
   const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
@@ -49,8 +49,8 @@ namespace CBR
     std::vector<UUID> mReceivingObjects;
 
     
-    void iteratedWait(int numWaits,std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
-    void basicWait(std::vector<CraqOperationResult> &allGetResults,std::vector<CraqOperationResult>&allTrackedResults);
+    void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
+    void basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
     
     AsyncCraq craqDht;
@@ -78,7 +78,7 @@ namespace CBR
     void processMigrateMessageAcknowledge(OSegMigrateMessageAcknowledge* msg);
     void processMigrateMessageMove(OSegMigrateMessageMove* msg);
     //    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
-    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults, std::map<UUID,ServerID>& updated);
+    void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
   };
 }
 #endif

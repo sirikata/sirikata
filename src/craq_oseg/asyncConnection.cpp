@@ -2,7 +2,6 @@
 #include <iostream>
 #include <boost/bind.hpp>
 
-
 namespace CBR
 {
 
@@ -29,31 +28,39 @@ AsyncConnection::ConnectionState AsyncConnection::ready()
 }
 
 
-//  void tick(std::vector<int> &serverIDs,  std::vector<CraqObjectID> &objectIds,std::vector<int>&trackedMessages);  //runs through one iteration of io_service.run_once.
-//void AsyncConnection::tick(std::vector<int> &serverIDs,  std::vector<CraqObjectID> &objectIds,std::vector<int>&trackedMessages)
-  
-//void AsyncConnection::tick(std::vector<CraqOperationResult>&opResults)
-void AsyncConnection::tick(std::vector<CraqOperationResult>&opResults_get, std::vector<CraqOperationResult>&opResults_error, std::vector<CraqOperationResult>&opResults_trackedSets)
+
+void AsyncConnection::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
 {
-  opResults_get = mOperationResultVector;
-  mOperationResultVector.clear();
+  //  opResults_get = mOperationResultVector;
 
-  opResults_error = mOperationResultErrorVector;
-  mOperationResultErrorVector.clear();
+  if (mOperationResultVector.size() != 0)
+  {
+    opResults_get.swap(mOperationResultVector);
+    if (mOperationResultVector.size() != 0)
+    {
+      mOperationResultVector.clear();
+    }
+  }
 
-  opResults_trackedSets = mOperationResultTrackedSetsVector;
-  mOperationResultTrackedSetsVector.clear();
+  //  opResults_error = mOperationResultErrorVector;
+  if (mOperationResultErrorVector.size() !=0)
+  {
+    opResults_error.swap( mOperationResultErrorVector);
+    if (mOperationResultErrorVector.size() != 0)
+    {
+      mOperationResultErrorVector.clear();
+    }
+  }
 
-
-  /*
-  serverIDs = mServerIDs;
-  objectIds = mCraqObjectIDs;
-  trackedMessages = mTrackedMessages;
-
-  mServerIDs.clear();
-  mCraqObjectIDs.clear();
-  trackedMessages.clear();
-  */
+  //  opResults_trackedSets = mOperationResultTrackedSetsVector;
+  if (mOperationResultTrackedSetsVector.size() != 0)
+  {
+    opResults_trackedSets.swap(mOperationResultTrackedSetsVector);
+    if (mOperationResultTrackedSetsVector.size() != 0)
+    {
+      mOperationResultTrackedSetsVector.clear();
+    }
+  }
 }
 
 
@@ -96,6 +103,7 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
     return false;
   }
 
+  
   mTracking          =         track;
   mTrackNumber       =      trackNum;
   currentlySettingTo =   dataToSetTo;
@@ -108,7 +116,7 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
   mReady = PROCESSING;
   std::string tmpString = dataToSet;
   strncpy(currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
-  //  currentlySearchingFor = dataToSet;
+
 
 
   //creating stream buffer
@@ -139,19 +147,17 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
   }
     
   query.append(tmper);
-  //  query.append(dataToSet);
   query.append(CRAQ_TO_SET_SUFFIX);
   
   query.append(CRAQ_DATA_SET_END_LINE);
   CraqDataSetQuery dsQuery;    
   strncpy(dsQuery,query.c_str(), CRAQ_DATA_SET_SIZE);
 
-  //  std::cout<<"\n\nbftm debug inside of asyncCraq.cpp in set.  This is the query:  "<<dsQuery<<"\n\n";
-
   //creating callback for write function
   mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
                             boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
-    
+
+  
   return true;
 }
 
@@ -162,13 +168,13 @@ void AsyncConnection::write_some_handler_set(  const boost::system::error_code& 
   if (error)
   {
     //had trouble with this write.
-    std::cout<<"\n\n\nHAD LOTS OF PROBLEMS WITH THIS WRITE\n\n\n";
+    std::cout<<"\n\n\nHAD PROBLEMS IN ASYNC_CONNECTION WITH THIS WRITE\n\n\n";
     mReady = NEED_NEW_SOCKET;
 
     mSocket->close();
     delete mSocket;
     
-    CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::SET,mTracking); //false means that it didn't succeed.
+    CraqOperationResult* tmper = new CraqOperationResult (currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::SET,mTracking); //false means that it didn't succeed.
     mOperationResultErrorVector.push_back(tmper);
   }
 }
@@ -196,11 +202,11 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
 
     if (mTracking)
     {
-      //means that we need to save this
+      //means that we need to save this query
 
-      std::cout<<"\n\nbftm debug:  inside of read_handler_set of asyncConnection.cpp.  Got a request to track.\n\n";
+      //      std::cout<<"\n\nbftm debug:  inside of read_handler_set of asyncConnection.cpp.  Got a request to track.\n\n";
       
-      CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
+      CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
       mOperationResultTrackedSetsVector.push_back(tmper);
     }
     
@@ -217,11 +223,12 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     mSocket->close();
     delete mSocket;
     
-    CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::SET,mTracking); //false means that it didn't succeed.
+    CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::SET,mTracking); //false means that it didn't succeed.
     mOperationResultErrorVector.push_back(tmper);
   }
   //deletes buffer
   delete sBuff;
+    
 }
 
 
@@ -229,6 +236,8 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
 //datakey should have a null termination character.
 bool AsyncConnection::get(CraqDataKey dataToGet)
 {
+
+  
   if (mReady != READY)
   {
     return false;
@@ -264,7 +273,8 @@ bool AsyncConnection::get(CraqDataKey dataToGet)
   //sets write handler
   mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
                             boost::bind(&AsyncConnection::write_some_handler_get,this,_1,_2));
-  
+
+
   return true;
 }
 
@@ -278,7 +288,7 @@ void AsyncConnection::write_some_handler_get(  const boost::system::error_code& 
     mSocket->close();
     delete mSocket;
     
-    CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+    CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
     mOperationResultErrorVector.push_back(tmper);
     
     //    load error vector into both.
@@ -286,7 +296,6 @@ void AsyncConnection::write_some_handler_get(  const boost::system::error_code& 
     //had trouble with this write.
     std::cout<<"\n\n\nHAD LOTS OF PROBLEMS WITH WRITE in write_some_handler_get of asyncConnection.cpp\n\n\n";
   }
-  //  std::cout<<"\n\nbftm debug in asyncCraq.cpp:  Get wrote:   "<<bytes_transferred<<" bytes.\n\n";
 }
 
 
@@ -300,7 +309,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
     mSocket->close();
     delete mSocket;
     
-    CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+    CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
     mOperationResultErrorVector.push_back(tmper);
     
     std::cout<<"\n\nGot an error in read_handler_get\n\n";
@@ -322,8 +331,6 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       is >> tmpLine;
     }
 
-    //    std::cout<<"\n\nbftm debug: in read_handler_get of asyncConnection.cpp.  This is line: "<<line<<"   and its size is:  "<<line.size()<<"     and this is the currentlySearchingFor:    "<<currentlySearchingFor <<"\n\n";
-    //  std::cout<<"\n\nWill need to do some processing to ensure that I got the write line and write it back to tick\n\n";
     
     bool getResp = false;
   
@@ -348,7 +355,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
           }
         }
 
-        CraqOperationResult tmper (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
+        CraqOperationResult* tmper  = new CraqOperationResult (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
         mOperationResultVector.push_back(tmper);
       }
     }
@@ -365,7 +372,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       mSocket->close();
       delete mSocket;
     
-      CraqOperationResult tmper(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+      CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
       mOperationResultErrorVector.push_back(tmper);
     
       std::cout<<"\n\nGot an error in read_handler_get. not a get response\n\n";
@@ -379,10 +386,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       delete sBuff;
     }
   }
+  
 }
-
-
-
-
 
 }

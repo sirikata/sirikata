@@ -30,25 +30,18 @@ namespace CBR
 
 
   public:
-    //    LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,Trace* tracer,std::vector<ServerID> serverList,std::map<UUID,ServerID> objectToServerMap);
-
       LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
     virtual ~LocObjectSegmentation();
-
-    //virtual void lookup(const UUID& obj_id) const;
     virtual void lookup(const UUID& obj_id);
 
-    //virtual  Message* generateAcknowledgeMessage(const UUID& obj_id, ServerID sID_to);
-    //virtual void osegMigrateMessage(OSegMigrateMessage*);
-    //virtual void processLookupMessage(OSegLookupMessage* msg);
-      virtual void service(std::map<UUID,ServerID>& updated);
+    virtual void service(std::map<UUID,ServerID>& updated);
     virtual ServerID getHostServerID();
     virtual void receiveMessage(Message* msg);
 
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool);
-    //virtual void getMessages(std::vector<Message*> &messToSendFromOSegToForwarder, std::vector<ServerID> &destServers );
-
+    virtual bool clearToMigrate(const UUID& obj_id);
+    
   };
 }
 #endif
