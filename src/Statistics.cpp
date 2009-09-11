@@ -42,11 +42,11 @@
 
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
-#define TRACE_OSEG
+//#define TRACE_OSEG
 //#define TRACE_CSEG
-#define TRACE_MIGRATION
-#define TRACE_DATAGRAM
-#define TRACE_PACKET
+//#define TRACE_MIGRATION
+//#define TRACE_DATAGRAM
+//#define TRACE_PACKET
 
 namespace CBR {
 
@@ -324,7 +324,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to)
   //  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID acknowledge_from, acknowledge_to)
   {
-    
+
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
@@ -341,7 +341,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
 #ifdef TRACE_OSEG
-    
+
     if (mShuttingDown) return;
 
 
@@ -349,7 +349,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
     data.write(&sID_lookupTo, sizeof(sID_lookupTo));
-    
+
 #endif
 
   }
