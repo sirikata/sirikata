@@ -36,7 +36,8 @@ double bandwidth_bound(double *x, size_t dim, void *v_params) {
 #define gsl_monte_plain_integratePRINT(F0, xl, xu, dim, NCALLS, r, s, res1, err1) (gsl_monte_plain_integrate(F0, xl, xu, dim, NCALLS, r, s, res1, err1)),printf ("Integrating (%.0f %.0f)->(%.0f %.0f) to (%.0f %.0f)->(%.0f %.0f)=%lf -+ %lf\n",xl[0],xl[1],xu[0],xu[1],xl[2],xl[3],xu[2],xu[3],*res1,*err1);                
 
 namespace CBR {
-SqrIntegral::SqrIntegral() {
+SqrIntegral::SqrIntegral(bool normalize) {
+    this->normalize=normalize;
 	gsl_monte_plain_state *s = gsl_monte_plain_alloc(4);
 	gsl_rng *r = gsl_rng_alloc(gsl_rng_default);
     gsl_rng_r=r;
@@ -47,6 +48,19 @@ SqrIntegral::SqrIntegral() {
     memset(infiniteIntegral,0,sizeof(infiniteIntegral));
 }
 double SqrIntegral::integrate(double cutoff, double flatness,const Vector3d&xymin, const Vector3d&xymax, const Vector3d &uvmin, const Vector3d &uvmax, double*error){
+    if (xymin.x==xymax.x) {
+        return 0;
+    }
+    if (xymin.y==xymax.y) {
+        return 0;
+    }
+    if (uvmin.x==uvmax.x) {
+        return 0;
+    }
+    if (uvmin.y==uvmax.y) {
+        return 0;
+    }
+
     int NCALLS=256;
     sqrParams params;
     params.constant_extent_rho=cutoff;

@@ -20,7 +20,7 @@ class ClusterSimSettings:
         self.duration = '100s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
-        self.flatness = .001
+        self.flatness = 100
         self.num_objects = 100
         self.server_queue = 'fair'
         self.server_queue_length = 8192

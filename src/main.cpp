@@ -461,7 +461,7 @@ void *main_loop(void *) {
         new ServerWeightCalculator(
             server_id,
             cseg,
-            std::tr1::bind(SqrIntegral(),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
+            std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
                 std::tr1::placeholders::_1,
                 std::tr1::placeholders::_2,
                 std::tr1::placeholders::_3,
