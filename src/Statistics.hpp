@@ -37,6 +37,7 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
+#include <boost/thread.hpp>
 
 namespace CBR {
 
@@ -52,22 +53,26 @@ struct Batch {
         return (size >= max_size);
     }
 
-    std::ostream& write(std::ostream& os) {
-        for(uint32 i = 0; i < size; i++)
-            items[i].write(os);
-        return os;
+    uint32 avail() const {
+        return max_size - size;
     }
 };
 
 class BatchedBuffer {
 public:
+    BatchedBuffer();
+
     // write the specified number of bytes from the pointer to the buffer
     void write(const void* buf, uint32 nbytes);
+
+    void flush();
+
     // write the buffer to an ostream
-    void write(std::ostream& os);
+    void store(FILE* os);
 private:
     typedef Batch<uint8> ByteBatch;
-    std::vector<ByteBatch*> batches;
+    ByteBatch* filling;
+    Sirikata::ThreadSafeQueue<ByteBatch*> batches;
 };
 
 
@@ -94,7 +99,7 @@ public:
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
 
 
-    Trace();
+    Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
 
@@ -125,14 +130,21 @@ public:
 
     void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime);
-  
+
+
     void prepareShutdown();
-    void save(const String& filename);
+    void shutdown();
 
 private:
+    // Thread which flushes data to disk periodically
+    void storageThread(const String& filename);
+
     BatchedBuffer data;
     ServerIDMap* mServerIDMap;
     bool mShuttingDown;
+
+    boost::thread* mStorageThread;
+    Sirikata::AtomicValue<bool> mFinishStorage;
 }; // class Trace
 
 } // namespace CBR

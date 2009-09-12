@@ -53,7 +53,9 @@ int main(int argc, char** argv) {
     sync.start(time_server);
 
 
-    Trace* gTrace = new Trace();
+    ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
+    String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
+    Trace* gTrace = new Trace(trace_file);
 
     String filehandle = GetOption("serverips")->as<String>();
     std::ifstream ipConfigFileHandle(filehandle.c_str());
@@ -78,8 +80,6 @@ int main(int argc, char** argv) {
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
     start_time += GetOption("wait-additional")->as<Duration>();
 
-
-    ObjectHostID oh_id = GetOption("ohid")->as<ObjectHostID>();
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
@@ -124,9 +124,7 @@ int main(int argc, char** argv) {
     delete obj_factory;
     delete obj_host;
 
-    String trace_file = GetPerServerFile(STATS_OH_TRACE_FILE, oh_id);
-    if (!trace_file.empty()) gTrace->save(trace_file);
-
+    gTrace->shutdown();
     delete gTrace;
     gTrace = NULL;
 

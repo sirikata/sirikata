@@ -50,29 +50,44 @@
 
 namespace CBR {
 
+BatchedBuffer::BatchedBuffer()
+ : filling(NULL)
+{
+}
+
 // write the specified number of bytes from the pointer to the buffer
 void BatchedBuffer::write(const void* buf, uint32 nbytes) {
     const uint8* bufptr = (const uint8*)buf;
     while( nbytes > 0 ) {
-        if (batches.empty() || batches.back()->full())
-            batches.push_back( new ByteBatch() );
+        if (filling == NULL)
+            filling = new ByteBatch();
 
-        ByteBatch* batch = batches.back();
-        uint32 avail = batch->max_size - batch->size;
-        uint32 to_copy = std::min(avail, nbytes);
+        uint32 to_copy = std::min(filling->avail(), nbytes);
 
-        memcpy( &batch->items[batch->size], bufptr, to_copy);
-        batch->size += to_copy;
+        memcpy( &filling->items[filling->size], bufptr, to_copy);
+        filling->size += to_copy;
         bufptr += to_copy;
         nbytes -= to_copy;
+
+        if (filling->full())
+            flush();
     }
 }
 
+void BatchedBuffer::flush() {
+    batches.push(filling);
+    filling = NULL;
+}
+
 // write the buffer to an ostream
-void BatchedBuffer::write(std::ostream& os) {
-    for(std::vector<ByteBatch*>::iterator it = batches.begin(); it != batches.end(); it++) {
+void BatchedBuffer::store(FILE* os) {
+    std::deque<ByteBatch*> bufs;
+    batches.swap(bufs);
+
+    for(std::deque<ByteBatch*>::iterator it = bufs.begin(); it != bufs.end(); it++) {
         ByteBatch* bb = *it;
-        os.write( (const char*)&(bb->items[0]) , bb->size );
+        fwrite((void*)&(bb->items[0]), 1, bb->size, os);
+        delete bb;
     }
 }
 
@@ -110,10 +125,13 @@ static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
 }
 
 
-Trace::Trace()
+Trace::Trace(const String& filename)
  : mServerIDMap(NULL),
-   mShuttingDown(false)
+   mShuttingDown(false),
+   mStorageThread(NULL),
+   mFinishStorage(false)
 {
+    mStorageThread = new boost::thread( std::tr1::bind(&Trace::storageThread, this, filename) );
 }
 
 void Trace::setServerIDMap(ServerIDMap* sidmap) {
@@ -122,6 +140,27 @@ void Trace::setServerIDMap(ServerIDMap* sidmap) {
 
 void Trace::prepareShutdown() {
     mShuttingDown = true;
+}
+
+void Trace::shutdown() {
+    data.flush();
+    mFinishStorage = true;
+    mStorageThread->join();
+    delete mStorageThread;
+}
+
+void Trace::storageThread(const String& filename) {
+    FILE* of = fopen(filename.c_str(), "wb");
+
+    while( !mFinishStorage.read() ) {
+        data.store(of);
+        fflush(of);
+
+        usleep( Duration::seconds(1).toMicroseconds() );
+    }
+
+    fsync(fileno(of));
+    fclose(of);
 }
 
 void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc) {
@@ -366,11 +405,5 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&dTime, sizeof(dTime));
 #endif
   }
-
-void Trace::save(const String& filename) {
-    std::ofstream of(filename.c_str(), std::ios::out | std::ios::binary);
-
-    data.write(of);
-}
 
 } // namespace CBR

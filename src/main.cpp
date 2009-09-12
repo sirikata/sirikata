@@ -79,7 +79,22 @@ namespace {
 CBR::Network* gNetwork = NULL;
 CBR::Trace* gTrace = NULL;
 }
+
 void *main_loop(void *);
+
+bool is_analysis() {
+    using namespace CBR;
+
+    if (GetOption(ANALYSIS_LOC)->as<bool>() ||
+        GetOption(ANALYSIS_LOCVIS)->as<String>() != "none" ||
+        GetOption(ANALYSIS_LATENCY)->as<bool>() ||
+        GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
+        !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() )
+        return true;
+
+    return false;
+}
+
 int main(int argc, char** argv) {
     using namespace CBR;
 
@@ -93,7 +108,9 @@ int main(int argc, char** argv) {
       sync.start(time_server);
 
 
-    gTrace = new Trace();
+    ServerID server_id = GetOption("id")->as<ServerID>();
+    String trace_file = is_analysis() ? "analysis.trace" : GetPerServerFile(STATS_TRACE_FILE, server_id);
+    gTrace = new Trace(trace_file);
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "sst")
@@ -588,9 +605,7 @@ void *main_loop(void *) {
     delete gNetwork;
     gNetwork=NULL;
 
-    String trace_file = GetPerServerFile(STATS_TRACE_FILE, server_id);
-    if (!trace_file.empty()) gTrace->save(trace_file);
-
+    gTrace->shutdown();
     delete gTrace;
     gTrace = NULL;
 

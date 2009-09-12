@@ -42,6 +42,8 @@
 #include <sirikata/options/Options.hpp>
 #include <sirikata/util/TemporalValue.hpp>
 #include <sirikata/util/Extrapolation.hpp>
+#include <sirikata/util/AtomicTypes.hpp>
+#include <sirikata/util/ThreadSafeQueue.hpp>
 
 namespace CBR {
 
