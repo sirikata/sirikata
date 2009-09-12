@@ -166,38 +166,14 @@ class LatencyAnalysis {
         Time _receive_end_time;
         friend class LatencyAnalysis;
     public:
-
         PacketData();
         void addPacketSentEvent(ServerDatagramQueuedEvent*);
         void addPacketReceivedEvent(ServerDatagramReceivedEvent*);
     };
-    class SourceDestinationPair{public:
-        ServerID source;
-        ServerID destination;
-        SourceDestinationPair(const ServerID& src, const ServerID&dst) {
-            source=src;
-            destination=dst;
-        }
-        bool operator <  (const SourceDestinationPair &Pair) const{
-            if (Pair.source==source) return destination<Pair.destination;
-            return source<Pair.source;
-        }
-        bool operator ==(const SourceDestinationPair &Pair) const{
-            return Pair.source==source&&Pair.destination==destination;
-        }
-        class Hasher{
-        public:
-            size_t operator()(const SourceDestinationPair&Pair)const {
-                return std::tr1::hash<ServerID>()(Pair.source)^std::tr1::hash<ServerID>()(Pair.destination);
-            }
-        };
-    };
+
 public:
-    typedef std::tr1::unordered_multimap<SourceDestinationPair,PacketData,SourceDestinationPair::Hasher> ServerPairPacketMap;
-    ServerPairPacketMap mServerPairPacketMap;
     LatencyAnalysis(const char* opt_name, const uint32 nservers);
     ~LatencyAnalysis();
-
 
 private:
     uint32_t mNumberOfServers;
@@ -224,7 +200,7 @@ private:
   static bool compareObjectBeginMigrateEvts(ObjectBeginMigrateEvent A, ObjectBeginMigrateEvent B);
   static bool compareObjectAcknowledgeMigrateEvts(ObjectAcknowledgeMigrateEvent A, ObjectAcknowledgeMigrateEvent B);
   void convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents);
-  
+
 public:
   ObjectSegmentationAnalysis(const char* opt_name, const uint32 nservers);
 
@@ -235,7 +211,7 @@ public:
 
 
 
-  
+
 class ObjectSegmentationLookupRequestsAnalysis
 {
 private:
@@ -245,7 +221,7 @@ private:
 
   void convertToEvtsAndSort(std::vector<ObjectLookupEvent>&);
   static bool compareEvts(ObjectLookupEvent A, ObjectLookupEvent B);
-  
+
 public:
   ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime=true);
@@ -261,17 +237,14 @@ private:
   std::vector<ServerID> sID_processor;
   std::vector<ServerID> sID_objectOn;
   std::vector<uint32> dTimes;
-  
+
   void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
   static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
-  
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime = true);
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
-
-  
 
 } // namespace CBR
 

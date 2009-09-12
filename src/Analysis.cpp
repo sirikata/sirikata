@@ -247,7 +247,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
 
           evt = obj_lookupReq_evt;
-          
+
         }
         break;
       case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
@@ -263,14 +263,14 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         break;
 
 
-        
+
       default:
 
         std::cout<<"\n*****I got an unknown tag in analysis.cpp.  Value:  "<<(uint32)tag<<"\n";
         assert(false);
         break;
     }
-    
+
     return evt;
 }
 
@@ -278,7 +278,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
 
 
-  
+
 
 template<typename EventType, typename IteratorType>
 class EventIterator {
@@ -1147,74 +1147,94 @@ LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
             delete evt;
         }
     }
+
+    class LatencyStats {
+    public:
+        LatencyStats()
+         : finished(0), unfinished(0), latency(Duration::microseconds(0))
+        {}
+
+        void sample(Duration dt) {
+            latency += dt;
+            finished++;
+        }
+
+        Duration avg() const {
+            if (finished > 0)
+                return latency / (double)finished;
+            else
+                return Duration::microseconds(0);
+        }
+
+        uint32 finished;
+        uint32 unfinished;
+    private:
+        Duration latency;
+    };
+
+    struct ServerLatencyInfo {
+        ServerLatencyInfo() : to(NULL) {}
+        ~ServerLatencyInfo() { delete to; }
+
+        void init(uint32 nservers)
+        { to = new LatencyStats[nservers+1]; }
+
+        LatencyStats in;
+        LatencyStats out;
+
+        LatencyStats* to;
+    };
+
+    ServerLatencyInfo* server_latencies = new ServerLatencyInfo[nservers+1];
+    for(uint32 i = 0; i < nservers+1; i++)
+        server_latencies[i].init(nservers+1);
+
+    Time epoch(Time::null());
+
     for (std::tr1::unordered_map<uint64,PacketData>::iterator i=packetFlow.begin(),ie=packetFlow.end();i!=ie;++i) {
-        mServerPairPacketMap.insert(ServerPairPacketMap::value_type(SourceDestinationPair(i->second.source,i->second.dest ),
-                                                                    i->second));
+        PacketData data = i->second;
+
+        if (data._receive_end_time != epoch && data._send_start_time != epoch) {
+            Duration delta = data._receive_end_time-data._send_start_time;
+            if (delta>Duration::seconds(0.0f)) {
+
+                // From one to the other
+                server_latencies[data.source].to[data.dest].sample(delta);
+                // And the totals
+                server_latencies[data.source].out.sample(delta);
+                server_latencies[data.dest].in.sample(delta);
+            }else if (delta<Duration::seconds(0.0f)){
+                //printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",data.mId,delta.toSeconds(),0.,(data._send_end_time-data._send_start_time).toSeconds(),(data._receive_start_time-data._send_start_time).toSeconds(),(data._receive_end_time-data._send_start_time).toSeconds(),data.mSize, (data._send_start_time-Time::null()).toSeconds(),(data._send_end_time-Time::null()).toSeconds(),(data._receive_start_time-Time::null()).toSeconds(),(data._receive_end_time-Time::null()).toSeconds());
+            }
+        }else{
+            server_latencies[data.source].to[data.dest].unfinished++;
+            if (data._receive_end_time == epoch && data._send_start_time == epoch) {
+                printf ("Packet with uninitialized duration\n");
+            }
+        }
     }
     packetFlow.clear();
 
-    struct ServerLatencyInfo {
-        Duration in_latency;
-        size_t in_samples;
-        Duration out_latency;
-        size_t out_samples;
-    };
 
-    ServerLatencyInfo* server_latencies = new ServerLatencyInfo[nservers];
-    memset(server_latencies, 0, nservers * sizeof(ServerLatencyInfo));
-
-    Time epoch(Time::null());
     for(uint32 source_id = 1; source_id <= nservers; source_id++) {
         for(uint32 dest_id = 1; dest_id <= nservers; dest_id++) {
-            Duration latency;
-            size_t numSamples=0;
-            size_t numUnfinished=0;
-            SourceDestinationPair key(source_id,dest_id);
-            ServerPairPacketMap::iterator i=mServerPairPacketMap.find(key);
-            for (;i!=mServerPairPacketMap.end()&&i->first== key;++i) {
-                if (i->second._receive_end_time!=epoch&&i->second._send_start_time!=epoch) {
-                    PacketData dat=i->second;
-                    Duration delta=i->second._receive_end_time-i->second._send_start_time;
-                    if (delta>Duration::seconds(0.0f)) {
-                        ++numSamples;
-                        latency+=delta;
-                        printf("%f %f\n", (dat._receive_end_time-Time::null()).toSeconds(), delta.toSeconds() );
-                    }else if (delta<Duration::seconds(0.0f)){
-                        //printf ("Packet with id %ld, negative duration %f (%f %f)->(%f %f) %d (%f %f) (%f %f)\n",dat.mId,delta.toSeconds(),0.,(dat._send_end_time-dat._send_start_time).toSeconds(),(dat._receive_start_time-dat._send_start_time).toSeconds(),(dat._receive_end_time-dat._send_start_time).toSeconds(),dat.mSize, (dat._send_start_time-Time::null()).toSeconds(),(dat._send_end_time-Time::null()).toSeconds(),(dat._receive_start_time-Time::null()).toSeconds(),(dat._receive_end_time-Time::null()).toSeconds());
-                    }
-                }else{
-                    ++numUnfinished;
-                    if (i->second._receive_end_time==epoch&&i->second._send_start_time==epoch) {
-                        printf ("Packet with uninitialized duration\n");
-                    }
-                }
-            }
-
-            server_latencies[source_id].out_latency += latency;
-            server_latencies[source_id].out_samples += numSamples;
-            server_latencies[dest_id].in_latency += latency;
-            server_latencies[dest_id].in_samples += numSamples;
-
-            if (numSamples)
-                latency/=(double)numSamples;
-            std::cout << "Server "<<source_id<<" to "<<dest_id<<" : "<<latency<<" ("<<numSamples<<","<<numUnfinished<<")"<<std::endl;
+            std::cout << "Server " << source_id << " to " << dest_id << " : "
+                      << server_latencies[source_id].to[dest_id].avg() << " ("
+                      << server_latencies[source_id].to[dest_id].finished << ","
+                      << server_latencies[source_id].to[dest_id].unfinished << ")" << std::endl;
         }
     }
 
     for(uint32 serv_id = 1; serv_id <= nservers; serv_id++) {
-        if (server_latencies[serv_id].in_samples)
-            std::cout << "Server "<<serv_id<<" In: "<<server_latencies[serv_id].in_latency/(double)server_latencies[serv_id].in_samples<<" ("<<server_latencies[serv_id].in_samples<<")"<<std::endl;
-        if (server_latencies[serv_id].out_samples)
-            std::cout << "Server "<<serv_id<<" Out: "<<server_latencies[serv_id].out_latency/(double)server_latencies[serv_id].out_samples<<" ("<<server_latencies[serv_id].out_samples<<")"<<std::endl;
+        std::cout << "Server " << serv_id
+                  << " In: " << server_latencies[serv_id].in.avg()
+                  << " (" << server_latencies[serv_id].in.finished << ")" << std::endl;
+
+        std::cout << "Server " << serv_id
+                  << " Out: " << server_latencies[serv_id].out.avg()
+                  << " (" << server_latencies[serv_id].out.finished << ")" << std::endl;
     }
 
-    // Sort all lists of events by time
-    /*    sort_events<DatagramEventList, ServerDatagramEventListMap>(mDatagramEventLists);
-    sort_events<PacketEventList, ServerPacketEventListMap>(mPacketEventLists);
-
-    sort_events<DatagramQueueInfoEventList, ServerDatagramQueueInfoEventListMap>(mDatagramQueueInfoEventLists);
-    sort_events<PacketQueueInfoEventList, ServerPacketQueueInfoEventListMap>(mPacketQueueInfoEventLists);
-    */
 }
 
 LatencyAnalysis::~LatencyAnalysis() {
@@ -1308,12 +1328,12 @@ LatencyAnalysis::~LatencyAnalysis() {
     return A.time < B.time;
   }
 
-  
+
   void ObjectSegmentationAnalysis::convertToEvtsAndSort(std::vector<ObjectBeginMigrateEvent> &sortedBeginMigrateEvents, std::vector<ObjectAcknowledgeMigrateEvent> &sortedAcknowledgeMigrateEvents)
   {
     //begin migrate events
     ObjectBeginMigrateEvent obme;
-  
+
     for (int s= 0; s < (int) objectBeginMigrateTimes.size(); ++s)
     {
       obme.time           =        objectBeginMigrateTimes[s];
@@ -1338,13 +1358,13 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       sortedAcknowledgeMigrateEvents.push_back(oame);
     }
-    
+
     std::sort(sortedAcknowledgeMigrateEvents.begin(), sortedAcknowledgeMigrateEvents.end(), compareObjectAcknowledgeMigrateEvts);
-    
+
   }
 
 
-  
+
 
   void ObjectSegmentationAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
   {
@@ -1352,7 +1372,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     {
       std::vector<ObjectBeginMigrateEvent>               sortedBeginMigrateEvents;
       std::vector<ObjectAcknowledgeMigrateEvent>   sortedAcknowledgeMigrateEvents;
-            
+
       convertToEvtsAndSort(sortedBeginMigrateEvents, sortedAcknowledgeMigrateEvents);
 
       fileOut<<"\n\nSize of objectMigrateTimes:               "<<sortedBeginMigrateEvents.size()<<"\n\n";
@@ -1368,7 +1388,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut << "          migrate to:   " << sortedBeginMigrateEvents[s].mMigrateTo        << "\n";
         fileOut << "\n\n";
       }
-      
+
       fileOut << "\n\n\n\n*******************Begin Migrate Acknowledge Messages*************\n\n\n";
 
       for (int s=0; s < (int) sortedAcknowledgeMigrateEvents.size(); ++s)
@@ -1426,7 +1446,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         Event* evt = Event::read(is, server_id);
         if (evt == NULL)
           break;
-        
+
         ObjectLookupEvent* obj_lookup_evt = dynamic_cast<ObjectLookupEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
@@ -1464,8 +1484,8 @@ LatencyAnalysis::~LatencyAnalysis() {
     {
 
       fileOut<<"\n\n\n\nEND\n";
-    
-    
+
+
       fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
       fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
 
@@ -1480,7 +1500,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       fileOut<<"\n\n\n\nEND\n";
     }
-    
+
   }
 
   //want to sort by times.
@@ -1488,7 +1508,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   void ObjectSegmentationLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupEvent> &sortedEvents)
   {
     ObjectLookupEvent ole;
-    
+
     for (int s= 0; s < (int) times.size(); ++s)
     {
       ole.time = times[s];
@@ -1498,21 +1518,21 @@ LatencyAnalysis::~LatencyAnalysis() {
       sortedEvents.push_back(ole);
     }
 
-    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );    
+    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
   bool ObjectSegmentationLookupRequestsAnalysis::compareEvts(ObjectLookupEvent A, ObjectLookupEvent B)
   {
     return A.time < B.time;
   }
-  
+
   ObjectSegmentationLookupRequestsAnalysis::~ObjectSegmentationLookupRequestsAnalysis()
   {
 
   }
-  
 
-  
+
+
   ///ObjectSegProcessAnalysis
   ObjectSegmentationProcessedRequestsAnalysis::ObjectSegmentationProcessedRequestsAnalysis (const char* opt_name, const uint32 nservers)
   {
@@ -1527,9 +1547,8 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt); 
+        ObjectLookupProcessedEvent* obj_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
 
-        
         if (obj_lookup_proc_evt != NULL)
         {
           times.push_back(obj_lookup_proc_evt->time);
@@ -1541,13 +1560,13 @@ LatencyAnalysis::~LatencyAnalysis() {
       }
     }
   }
-  
+
 
   void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
   {
     double totalLatency = 0;
     int maxLatency = 0;
-    
+
     if (sortedByTime)
     {
       std::vector<ObjectLookupProcessedEvent> sortedEvts;
@@ -1571,7 +1590,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           maxLatency = (int)sortedEvts[s].deltaTime;
         }
-        
+
       }
 
       fileOut<<"\n\n************************************\n";
@@ -1599,7 +1618,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           maxLatency = dTimes[s];
         }
-        
+
       }
 
       fileOut<<"\n\n************************************\n";
@@ -1613,7 +1632,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&sortedEvts)
   {
     ObjectLookupProcessedEvent olpe;
-    
+
     for (int s= 0; s < (int) times.size(); ++s)
     {
       olpe.time             = times[s];
@@ -1621,12 +1640,12 @@ LatencyAnalysis::~LatencyAnalysis() {
       olpe.mID_processor    = sID_processor[s];
       olpe.mID_objectOn     = sID_objectOn[s];
       olpe.deltaTime        = dTimes[s];
-      
+
       sortedEvts.push_back(olpe);
     }
 
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
-    
+
   }
 
 
@@ -1634,17 +1653,13 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
     return A.time < B.time;
   }
-  
 
 
-  
+
+
   ObjectSegmentationProcessedRequestsAnalysis::~ObjectSegmentationProcessedRequestsAnalysis ()
   {
   }
 
 
-
-
-  
-  
 } // namespace CBR
