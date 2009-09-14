@@ -44,7 +44,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mLoadMonitor(NULL),
    mProximity(NULL),
    mLastSampleTime(Time::null()),
-   mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() )
+   mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
+   mProfiler("Forwarder Loop")
 {
     //no need to initialize mSelfMessages and mOutgoingMessages.
 
@@ -55,11 +56,23 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
+
+    mProfiler.addStage("Load Monitor");
+    mProfiler.addStage("OSeg");
+    mProfiler.addStage("Self Messages");
+    mProfiler.addStage("Outgoing Messages");
+    mProfiler.addStage("Noise");
+    mProfiler.addStage("Object Message Queue");
+    mProfiler.addStage("Server Message Queue");
+    mProfiler.addStage("Server Message Queue Receive");
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
+    if (GetOption(PROFILE)->as<bool>())
+        mProfiler.report();
+
     this->unregisterMessageRecipient(MESSAGE_TYPE_OBJECT, this);
   }
 
@@ -137,10 +150,10 @@ void Forwarder::service()
           mLastSampleTime = t;
     }
 
-    mLoadMonitor->service();
+    mProfiler.startIteration();
 
-    tickOSeg(t);//updates oseg
-
+    mLoadMonitor->service();  mProfiler.finishedStage();
+    tickOSeg(t);  mProfiler.finishedStage();
 
     std::deque<SelfMessage> self_messages;
     self_messages.swap( mSelfMessages );
@@ -149,6 +162,7 @@ void Forwarder::service()
         processChunk(self_messages.front().data, mContext->id(), self_messages.front().forwarded);
       self_messages.pop_front();
     }
+    mProfiler.finishedStage();
 
     while(true)
     {
@@ -165,6 +179,8 @@ void Forwarder::service()
         uint64 b=1<<30;
         delete (*mOutgoingMessages)->pop(&b);
     }
+    mProfiler.finishedStage();
+
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
 
@@ -210,10 +226,11 @@ void Forwarder::service()
             }
         }
     }
+    mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    mObjectMessageQueue->service();
-    mServerMessageQueue->service();
+    mObjectMessageQueue->service(); mProfiler.finishedStage();
+    mServerMessageQueue->service(); mProfiler.finishedStage();
 
 
     Sirikata::Network::Chunk *c=NULL;
@@ -223,6 +240,7 @@ void Forwarder::service()
         processChunk(*c, source_server, false);
         delete c;
     }
+    mProfiler.finishedStage();
   }
 
 
@@ -309,7 +327,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     if (send_success)
     {
       //      mOSeg->lookup(beginMess.dest_uuid);
-      ServerID lookupID = mOSeg->lookup(beginMess.dest_uuid); 
+      ServerID lookupID = mOSeg->lookup(beginMess.dest_uuid);
 
       if (lookupID == NullServerID)
       {

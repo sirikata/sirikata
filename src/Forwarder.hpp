@@ -14,6 +14,8 @@
 #include "Queue.hpp"
 #include "FairQueue.hpp"
 
+#include "TimeProfiler.hpp"
+
 namespace CBR
 {
   class Object;
@@ -93,6 +95,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
       typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
       ObjectConnectionMap mObjectConnections;
+
+      TimeProfiler mProfiler;
 
     //Private Functions
       void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);

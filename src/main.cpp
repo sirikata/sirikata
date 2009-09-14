@@ -603,6 +603,7 @@ void *main_loop(void *) {
     delete cseg;
     delete loc_service;
     delete obj_factory;
+    delete forwarder;
 
     delete gNetwork;
     gNetwork=NULL;

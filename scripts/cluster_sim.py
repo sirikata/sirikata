@@ -33,6 +33,7 @@ class ClusterSimSettings:
         self.noise = 'true'
         self.debug = True
         self.valgrind = False
+        self.profile = False
         self.loc = 'oracle'
         self.blocksize = 200
         self.space_server_pool = space_svr_pool
@@ -143,6 +144,8 @@ class ClusterSim:
             cmd += "--debug "
         if (self.settings.valgrind):
             cmd += "--valgrind "
+        if (self.settings.profile):
+            cmd += "--profile=true "
         cmd += "--id=%(node)d "
         cmd += "--ohid=%(node)d "
         cmd += "\"--layout=" + self.settings.layout() + "\" "
