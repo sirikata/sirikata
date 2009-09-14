@@ -50,11 +50,12 @@ class Forwarder;
  */
 class SpaceContext {
 public:
-    SpaceContext(ServerID _id, const Time& curtime, Trace* _trace)
+    SpaceContext(ServerID _id, const Time& epoch, const Time& curtime, Trace* _trace)
      : lastTime(curtime),
        time(curtime),
        sinceLast(Duration::seconds(0)),
        mID(_id),
+       mEpoch(epoch),
        mRouter(NULL),
        mDispatcher(NULL),
        mTrace(_trace)
@@ -71,6 +72,19 @@ public:
 
     ServerID id() const {
         return mID.read();
+    }
+
+    Time epoch() const {
+        return mEpoch.read();
+    }
+    Duration sinceEpoch(const Time& rawtime) const {
+        return rawtime - mEpoch.read();
+    }
+    Time simTime(const Duration& sinceStart) const {
+        return Time::null() + sinceStart;
+    }
+    Time simTime(const Time& rawTime) const {
+        return simTime( sinceEpoch(rawTime) );
     }
 
     MessageRouter* router() const {
@@ -94,6 +108,8 @@ private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
 
     Sirikata::AtomicValue<ServerID> mID;
+
+    Sirikata::AtomicValue<Time> mEpoch;
 
     Sirikata::AtomicValue<MessageRouter*> mRouter;
     Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;

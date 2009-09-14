@@ -40,7 +40,12 @@
 namespace CBR {
 
 /* Implementation of LocationServiceCache which serves Prox libraries;
- * works by listening for updates from our LocationService.
+ * works by listening for updates from our LocationService.  Note that
+ * CBR should only be using the LocationServiceListener methods in normal
+ * operation -- all other threads are to be used by libprox classes and
+ * will only be accessed in the proximity thread. Therefore, most of the
+ * work happens in the proximity thread, with the callbacks just storing
+ * information to be picked up in the next iteration.
  */
 class CBRLocationServiceCache : public Prox::LocationServiceCache<ProxSimulationTraits>, public LocationServiceListener {
 public:
@@ -72,13 +77,23 @@ public:
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+
+    // Sends updates to listeners.  This should be called from the same thread that listeners are
+    // running in, i.e. not the main thread.
+    void serviceListeners();
 private:
-    // These do the actual work for the LocationServiceListener methods.  Local versions always
-    // call these, replica versions only call them if replica tracking is on
+    // These generate and queue up updates from the main thread
     void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
     void objectRemoved(const UUID& uuid);
     void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     void boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
+
+    // These do the actual work for the LocationServiceListener methods.  Local versions always
+    // call these, replica versions only call them if replica tracking is on
+    void processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void processObjectRemoved(const UUID& uuid);
+    void processLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+    void processBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 
     CBRLocationServiceCache();
 
@@ -87,6 +102,9 @@ private:
     typedef std::set<LocationUpdateListener*> ListenerSet;
     ListenerSet mListeners;
 
+    // Object data is only accessed in the prox thread (by libprox
+    // and by this class when updates are passed by the main thread).
+    // Therefore, this data does *NOT* need to be locked for access.
     struct ObjectData {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
@@ -95,6 +113,25 @@ private:
     typedef std::map<UUID, ObjectData> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
+
+
+    // The following are the structs to hold information for, and lists of,
+    // updates that occurred but have not been dispatched yet. This is where
+    // data is passed from the main thread to the prox thread.
+    struct ObjectUpdateData {
+        enum UpdateType {
+            Addition,
+            Removal,
+            Location,
+            Bounds
+        };
+
+        UpdateType type;
+        UUID object;
+        TimedMotionVector3f loc;
+        BoundingSphere3f bounds;
+    };
+    Sirikata::ThreadSafeQueue<ObjectUpdateData> mObjectUpdates;
 };
 
 } // namespace CBR

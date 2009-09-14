@@ -157,7 +157,10 @@ private:
             SubscriberSet* object_subscribers = obj_sub_it->second;
 
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+                if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
+                assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
                 SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
+                if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
                 assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
                 if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
@@ -180,7 +183,10 @@ private:
             SubscriberSet* object_subscribers = obj_sub_it->second;
 
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+                if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
+                assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
                 SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
+                if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
                 assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
                 if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
@@ -224,6 +230,7 @@ private:
                     delete sub_info;
                     to_delete.push_back(sid);
                 }
+
             }
 
             for(typename std::list<SubscriberType>::iterator it = to_delete.begin(); it != to_delete.end(); it++)

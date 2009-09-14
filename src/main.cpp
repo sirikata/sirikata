@@ -172,7 +172,7 @@ void *main_loop(void *) {
     ServerID server_id = GetOption("id")->as<ServerID>();
 
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
-    SpaceContext* space_context = new SpaceContext(server_id, init_space_ctx_time, gTrace);
+    SpaceContext* space_context = new SpaceContext(server_id, start_time, init_space_ctx_time, gTrace);
 
     Forwarder* forwarder = new Forwarder(space_context);
 
@@ -484,7 +484,7 @@ void *main_loop(void *) {
         new ServerWeightCalculator(
             server_id,
             cseg,
-            
+
             std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
                            std::tr1::placeholders::_1,
                            std::tr1::placeholders::_2,
@@ -540,7 +540,7 @@ void *main_loop(void *) {
     // FIXME we have a special case for the distributed cseg server, this should be
     // turned into a separate binary
     if (cseg_type == "distributed") {
-      while( true ) { 
+      while( true ) {
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
 
         space_context->tick(tbegin + elapsed);
@@ -592,11 +592,13 @@ void *main_loop(void *) {
 
     gTrace->prepareShutdown();
 
+    prox->shutdown();
+
     delete server;
     delete sq;
     delete prox;
     delete server_id_map;
-    if (weight_calc != NULL) 
+    if (weight_calc != NULL)
       delete weight_calc;
     delete cseg;
     delete loc_service;

@@ -41,17 +41,137 @@
 
 namespace CBR {
 
+static SolidAngle NoUpdateSolidAngle = SolidAngle(0.f);
+
+struct ProximityInputEvent {
+    enum Type {
+        UpdateObjectQuery,
+        RemoveObjectQuery,
+        UpdateServerQuery,
+        RemoveServerQuery,
+    };
+
+    Type type;
+
+    UUID object;
+    ServerID server;
+
+    TimedMotionVector3f loc;
+    BoundingSphere3f bounds;
+    SolidAngle angle;
+
+    static ProximityInputEvent UpdateObjectQueryEvent(const UUID& obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {
+        ProximityInputEvent evt;
+        evt.type = UpdateObjectQuery;
+        evt.object = obj;
+        evt.loc = loc;
+        evt.bounds = bounds;
+        evt.angle = angle;
+        return evt;
+    }
+
+    static ProximityInputEvent RemoveObjectQueryEvent(const UUID& obj) {
+        ProximityInputEvent evt;
+        evt.type = RemoveObjectQuery;
+        evt.object = obj;
+        return evt;
+    }
+
+    static ProximityInputEvent UpdateServerQueryEvent(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {
+        ProximityInputEvent evt;
+        evt.type = UpdateServerQuery;
+        evt.server = server;
+        evt.loc = loc;
+        evt.bounds = bounds;
+        evt.angle = angle;
+        return evt;
+    }
+
+    static ProximityInputEvent RemoveServerQueryEvent(const ServerID& server) {
+        ProximityInputEvent evt;
+        evt.type = RemoveServerQuery;
+        evt.server = server;
+        return evt;
+    }
+};
+
+
+struct ProximityOutputEvent {
+    enum Type {
+        AddObjectLocSubscription,
+        RemoveObjectLocSubscription,
+        RemoveAllObjectLocSubscription,
+        AddServerLocSubscription,
+        RemoveServerLocSubscription,
+        RemoveAllServerLocSubscription,
+    };
+
+    Type type;
+
+    UUID object;
+    ServerID server;
+
+    UUID observed;
+
+
+    static ProximityOutputEvent AddObjectLocSubscriptionEvent(const UUID& object, const UUID& observed) {
+        ProximityOutputEvent evt;
+        evt.type = AddObjectLocSubscription;
+        evt.object = object;
+        evt.observed = observed;
+        return evt;
+    }
+    static ProximityOutputEvent RemoveObjectLocSubscriptionEvent(const UUID& object, const UUID& observed) {
+        ProximityOutputEvent evt;
+        evt.type = RemoveObjectLocSubscription;
+        evt.object = object;
+        evt.observed = observed;
+        return evt;
+    }
+    static ProximityOutputEvent RemoveAllObjectLocSubscriptionEvent(const UUID& object) {
+        ProximityOutputEvent evt;
+        evt.type = RemoveAllObjectLocSubscription;
+        evt.object = object;
+        return evt;
+    }
+
+    static ProximityOutputEvent AddServerLocSubscriptionEvent(const ServerID& server, const UUID& observed) {
+        ProximityOutputEvent evt;
+        evt.type = AddServerLocSubscription;
+        evt.server = server;
+        evt.observed = observed;
+        return evt;
+    }
+    static ProximityOutputEvent RemoveServerLocSubscriptionEvent(const ServerID& server, const UUID& observed) {
+        ProximityOutputEvent evt;
+        evt.type = RemoveServerLocSubscription;
+        evt.server = server;
+        evt.observed = observed;
+        return evt;
+    }
+    static ProximityOutputEvent RemoveAllServerLocSubscriptionEvent(const ServerID& server) {
+        ProximityOutputEvent evt;
+        evt.type = RemoveAllServerLocSubscription;
+        evt.server = server;
+        return evt;
+    }
+};
+
+
+
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
  : mContext(ctx),
    mLocService(locservice),
    mCSeg(NULL),
+   mMinObjectQueryAngle(SolidAngle::Max),
+   mProxThread(NULL),
+   mShutdownProxThread(false),
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
    mObjectQueries(),
    mGlobalLocCache(NULL),
-   mObjectQueryHandler(NULL),
-   mMinObjectQueryAngle(SolidAngle::Max)
+   mObjectQueryHandler(NULL)
 {
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(locservice, false);
@@ -67,27 +187,24 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+
+    // Start the processing thread
+    mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
 
 Proximity::~Proximity() {
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
 
-    // Objects
-    while(!mObjectQueries.empty())
-        removeQuery( mObjectQueries.begin()->first );
-
     delete mObjectQueryHandler;
     delete mGlobalLocCache;
-
-    // Servers
-    while(!mServerQueries.empty())
-        removeQuery( mServerQueries.begin()->first );
 
     delete mServerQueryHandler;
     delete mLocalLocCache;
 }
 
+
+// MAIN Thread Methods: The following should only be called from the main thread.
 
 void Proximity::initialize(CoordinateSegmentation* cseg) {
     mCSeg = cseg;
@@ -95,6 +212,12 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
     mCSeg->addListener(this);
 
     sendQueryRequests();
+}
+
+void Proximity::shutdown() {
+    // Shut down the main processing thread
+    mShutdownProxThread = true;
+    mProxThread->join(); // FIXME this should probably be a timed_join
 }
 
 void Proximity::sendQueryRequests() {
@@ -186,12 +309,11 @@ std::string Proximity::migrationClientTag() {
 }
 
 std::string Proximity::generateMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(obj);
-    if (it == mObjectQueries.end()) // no query registered, return nothing
+    ObjectQueryAngleMap::iterator it = mObjectQueryAngles.find(obj);
+    if (it == mObjectQueryAngles.end()) // no query registered, return nothing
         return std::string();
     else {
-        Query* query = it->second;
-        SolidAngle query_angle = query->angle();
+        SolidAngle query_angle = it->second;
         removeQuery(obj);
 
         CBR::Protocol::Prox::ObjectMigrationData migr_data;
@@ -211,43 +333,23 @@ void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, Se
 
 
 void Proximity::updateQuery(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& sa) {
-    ServerQueryMap::iterator it = mServerQueries.find(sid);
-
-    if (it == mServerQueries.end()) {
-        PROXLOG(debug,"Add server query from " << sid << ", min angle " << sa.asFloat());
-
-        Query* q = mServerQueryHandler->registerQuery(loc, bounds, sa);
-        mServerQueries[sid] = q;
-    }
-    else {
-        PROXLOG(debug,"Update server query from " << sid << ", min angle " << sa.asFloat());
-
-        Query* q = it->second;
-        q->position(loc);
-        q->bounds(bounds);
-        q->angle(sa);
-    }
+    mInputEvents.push(ProximityInputEvent::UpdateServerQueryEvent(sid, loc, bounds, sa));
 }
 
 void Proximity::removeQuery(ServerID sid) {
-    PROXLOG(debug,"Remove server query from " << sid);
-
-    ServerQueryMap::iterator it = mServerQueries.find(sid);
-    if (it == mServerQueries.end()) return;
-
-    Query* q = it->second;
-    mServerQueries.erase(it);
-    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
-
-    // Remove all location update subscriptions for this server
-    mLocService->unsubscribe(sid);
+    mInputEvents.push(ProximityInputEvent::RemoveServerQueryEvent(sid));
 }
 
-
 void Proximity::addQuery(UUID obj, SolidAngle sa) {
-    assert( mObjectQueries.find(obj) == mObjectQueries.end() );
-    Query* q = mObjectQueryHandler->registerQuery(mLocalLocCache->location(obj), mLocalLocCache->bounds(obj), sa);
-    mObjectQueries[obj] = q;
+    updateQuery(obj, mLocService->location(obj), mLocService->bounds(obj), sa);
+}
+
+void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa) {
+    // Update the main thread's record
+    mObjectQueryAngles[obj] = sa;
+
+    // Update the prox thread
+    mInputEvents.push(ProximityInputEvent::UpdateObjectQueryEvent(obj, loc, bounds, sa));
 
     // Update min query angle, and update remote queries if necessary
     if (sa < mMinObjectQueryAngle) {
@@ -258,118 +360,64 @@ void Proximity::addQuery(UUID obj, SolidAngle sa) {
 }
 
 void Proximity::removeQuery(UUID obj) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(obj);
-    if (it == mObjectQueries.end()) return;
+    // Update the main thread's record
+    SolidAngle sa = mObjectQueryAngles[obj];
+    mObjectQueryAngles.erase(obj);
 
-    Query* q = it->second;
-    SolidAngle sa = q->angle();
-    mObjectQueries.erase(it);
-    delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+    // Update the prox thread
+    mInputEvents.push(ProximityInputEvent::RemoveObjectQueryEvent(obj));
 
     // Update min query angle, and update remote queries if necessary
     if (sa == mMinObjectQueryAngle) {
-        for(ObjectQueryMap::iterator it = mObjectQueries.begin(); it != mObjectQueries.end(); it++)
-            if (it->second->angle() < mMinObjectQueryAngle) mMinObjectQueryAngle = it->second->angle();
         PROXLOG(debug,"Query removal initiated server query request.");
+        SolidAngle minangle(SolidAngle::Max);
+        for(ObjectQueryAngleMap::iterator it = mObjectQueryAngles.begin(); it != mObjectQueryAngles.end(); it++)
+            if (it->second < minangle) minangle = it->second;
+        mMinObjectQueryAngle = minangle;
         sendQueryRequests();
     }
-
-    // Remove all location update subscriptions for this object/query
-    mLocService->unsubscribe(obj);
 }
 
 void Proximity::service() {
-/*
-    if ( ((uint32)(t-Time(0)).seconds()) - ((uint32)(mLastTime-Time(0)).seconds()) > 0)
-        printf("Objects: %d, Queries: %d -- Objects: %d, Queries: %d\n", mServerQueryHandler->numObjects(), mServerQueryHandler->numQueries(), mObjectQueryHandler->numObjects(), mObjectQueryHandler->numQueries());
-*/
-    Time t = mContext->time;
-    mServerQueryHandler->tick(t);
-    mObjectQueryHandler->tick(t);
+    // Get and handle output events
+    std::deque<ProximityOutputEvent> output_events;
+    mOutputEvents.swap(output_events);
+    for(std::deque<ProximityOutputEvent>::iterator it = output_events.begin(); it != output_events.end(); it++)
+        handleOutputEvent(*it);
 
-    typedef std::deque<QueryEvent> QueryEventList;
+    // Get and ship server results
+    std::deque<ProxResultServerPair> server_results;
+    mServerResults.swap(server_results);
+    for(std::deque<ProxResultServerPair>::iterator it = server_results.begin(); it != server_results.end(); it++)
+        mContext->router()->route(MessageRouter::PROXS, it->msg, it->dest);
 
-    // Output query events for servers
-    for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
-        ServerID sid = query_it->first;
-        Query* query = query_it->second;
+    // Get and ship object results
+    std::deque<CBR::Protocol::Object::ObjectMessage*> obj_results;
+    mObjectResults.swap(obj_results);
+    for(std::deque<CBR::Protocol::Object::ObjectMessage*>::iterator it = obj_results.begin(); it != obj_results.end(); it++)
+        mContext->router()->route(*it, false);
+}
 
-        QueryEventList evts;
-        query->popEvents(evts);
-
-        if (evts.empty()) continue;
-
-        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id());
-        result_msg->contents.set_t(t);
-        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added) {
-                mLocService->subscribe(sid, evt_it->id());
-
-                CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
-                addition.set_object( evt_it->id() );
-
-                TimedMotionVector3f loc = mLocalLocCache->location(evt_it->id());
-                CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
-                msg_loc.set_t(loc.updateTime());
-                msg_loc.set_position(loc.position());
-                msg_loc.set_velocity(loc.velocity());
-
-                addition.set_bounds( mLocalLocCache->bounds(evt_it->id()) );
-            }
-            else {
-                mLocService->unsubscribe(sid, evt_it->id());
-                CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
-                removal.set_object( evt_it->id() );
-            }
-        }
-
-        PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
-
-        mContext->router()->route(MessageRouter::PROXS, result_msg, sid);
-    }
-
-    // Output QueryEvents for objects
-    for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
-        UUID query_id = query_it->first;
-        Query* query = query_it->second;
-
-        QueryEventList evts;
-        query->popEvents(evts);
-
-        CBR::Protocol::Prox::ProximityResults prox_results;
-        prox_results.set_t(mContext->time);
-        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added) {
-                mLocService->subscribe(query_id, evt_it->id());
-
-                CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-                addition.set_object( evt_it->id() );
-
-                CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
-                TimedMotionVector3f loc = mLocService->location(evt_it->id());
-                motion.set_t(loc.updateTime());
-                motion.set_position(loc.position());
-                motion.set_velocity(loc.velocity());
-
-                addition.set_bounds( mLocService->bounds(evt_it->id()) );
-            }
-            else {
-                mLocService->unsubscribe(query_id, evt_it->id());
-
-                CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-                removal.set_object( evt_it->id() );
-            }
-        }
-
-        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-        obj_msg->set_source_object(UUID::null());
-        obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
-        obj_msg->set_dest_object(query_id);
-        obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
-        obj_msg->set_unique(GenerateUniqueID(mContext->id()));
-        obj_msg->set_payload( serializePBJMessage(prox_results) );
-
-        mContext->router()->route(obj_msg, false);
+void Proximity::handleOutputEvent(const ProximityOutputEvent& evt) {
+    switch(evt.type) {
+      case ProximityOutputEvent::AddObjectLocSubscription:
+        mLocService->subscribe(evt.object, evt.observed);
+        break;
+      case ProximityOutputEvent::RemoveObjectLocSubscription:
+        mLocService->unsubscribe(evt.object, evt.observed);
+        break;
+      case ProximityOutputEvent::RemoveAllObjectLocSubscription:
+        mLocService->unsubscribe(evt.object);
+        break;
+      case ProximityOutputEvent::AddServerLocSubscription:
+        mLocService->subscribe(evt.server, evt.observed);
+        break;
+      case ProximityOutputEvent::RemoveServerLocSubscription:
+        mLocService->unsubscribe(evt.server, evt.observed);
+        break;
+      case ProximityOutputEvent::RemoveAllServerLocSubscription:
+        mLocService->unsubscribe(evt.server);
+        break;
     }
 }
 
@@ -387,18 +435,10 @@ void Proximity::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& lo
 void Proximity::localObjectRemoved(const UUID& uuid) {
 }
 void Proximity::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(uuid);
-    if (it == mObjectQueries.end()) return;
-
-    Query* query = it->second;
-    query->position(newval);
+    updateQuery(uuid, newval, mLocService->bounds(uuid), NoUpdateSolidAngle);
 }
 void Proximity::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    ObjectQueryMap::iterator it = mObjectQueries.find(uuid);
-    if (it == mObjectQueries.end()) return;
-
-    Query* query = it->second;
-    query->bounds(newval);
+    updateQuery(uuid, mLocService->location(uuid), newval, NoUpdateSolidAngle);
 }
 void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
 }
@@ -410,6 +450,201 @@ void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& n
 }
 
 void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
+}
+
+
+// PROX Thread: Everything after this should only be called from within the prox thread.
+
+// The main loop for the prox processing thread
+void Proximity::proxThreadMain() {
+    while( !mShutdownProxThread ) {
+        Time tstart = Timer::now();
+
+        Time simT = mContext->simTime(tstart);
+
+        // Service input events
+        std::deque<ProximityInputEvent> inputEvents;
+        mInputEvents.swap(inputEvents);
+        for(std::deque<ProximityInputEvent>::iterator it = inputEvents.begin(); it != inputEvents.end(); it++)
+            handleInputEvent( *it );
+
+        // Service location caches
+        mLocalLocCache->serviceListeners();
+        mGlobalLocCache->serviceListeners();
+
+        // Service query handlers
+        mServerQueryHandler->tick(simT);
+        mObjectQueryHandler->tick(simT);
+
+        generateServerQueryEvents(simT);
+        generateObjectQueryEvents();
+
+        Time tend = Timer::now();
+
+#define MIN_ITERATION_TIME Duration::milliseconds((int64)100)
+        Duration since_start = tend - tstart;
+        if (since_start < MIN_ITERATION_TIME)
+            usleep( (MIN_ITERATION_TIME - since_start).toMicroseconds() );
+    }
+}
+
+void Proximity::generateServerQueryEvents(const Time& t) {
+    typedef std::deque<QueryEvent> QueryEventList;
+
+    for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
+        ServerID sid = query_it->first;
+        Query* query = query_it->second;
+
+        QueryEventList evts;
+        query->popEvents(evts);
+
+        if (evts.empty()) continue;
+
+        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id());
+        result_msg->contents.set_t(t);
+        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
+            if (evt_it->type() == QueryEvent::Added) {
+                mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt_it->id()) );
+
+                CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
+                addition.set_object( evt_it->id() );
+
+                TimedMotionVector3f loc = mLocalLocCache->location(evt_it->id());
+                CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                msg_loc.set_t(loc.updateTime());
+                msg_loc.set_position(loc.position());
+                msg_loc.set_velocity(loc.velocity());
+
+                addition.set_bounds( mLocalLocCache->bounds(evt_it->id()) );
+            }
+            else {
+                mOutputEvents.push( ProximityOutputEvent::RemoveServerLocSubscriptionEvent(sid, evt_it->id()) );
+                CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
+                removal.set_object( evt_it->id() );
+            }
+        }
+
+        PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
+
+        mServerResults.push( ProxResultServerPair(sid, result_msg) );
+    }
+}
+
+void Proximity::generateObjectQueryEvents() {
+    typedef std::deque<QueryEvent> QueryEventList;
+
+    for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
+        UUID query_id = query_it->first;
+        Query* query = query_it->second;
+
+        QueryEventList evts;
+        query->popEvents(evts);
+
+        CBR::Protocol::Prox::ProximityResults prox_results;
+        prox_results.set_t(mContext->time);
+        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
+            if (evt_it->type() == QueryEvent::Added) {
+                mOutputEvents.push( ProximityOutputEvent::AddObjectLocSubscriptionEvent(query_id, evt_it->id()) );
+
+                CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
+                addition.set_object( evt_it->id() );
+
+                CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                TimedMotionVector3f loc = mGlobalLocCache->location(evt_it->id());
+                motion.set_t(loc.updateTime());
+                motion.set_position(loc.position());
+                motion.set_velocity(loc.velocity());
+
+                addition.set_bounds( mGlobalLocCache->bounds(evt_it->id()) );
+            }
+            else {
+                mOutputEvents.push( ProximityOutputEvent::RemoveObjectLocSubscriptionEvent(query_id, evt_it->id()) );
+
+                CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
+                removal.set_object( evt_it->id() );
+            }
+        }
+
+        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+        obj_msg->set_source_object(UUID::null());
+        obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
+        obj_msg->set_dest_object(query_id);
+        obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
+        obj_msg->set_unique(GenerateUniqueID(mContext->id()));
+        obj_msg->set_payload( serializePBJMessage(prox_results) );
+
+        mObjectResults.push(obj_msg);
+    }
+}
+
+
+
+// Prox Thread Event Handling
+void Proximity::handleInputEvent(const ProximityInputEvent& evt) {
+    switch(evt.type) {
+      case ProximityInputEvent::UpdateServerQuery:
+          {
+              ServerQueryMap::iterator it = mServerQueries.find(evt.server);
+              if (it == mServerQueries.end()) {
+                  PROXLOG(debug,"Add server query from " << evt.server << ", min angle " << evt.angle.asFloat());
+
+                  Query* q = mServerQueryHandler->registerQuery(evt.loc, evt.bounds, evt.angle);
+                  mServerQueries[evt.server] = q;
+              }
+              else {
+                  PROXLOG(debug,"Update server query from " << evt.server << ", min angle " << evt.angle.asFloat());
+
+                  Query* q = it->second;
+                  q->position(evt.loc);
+                  q->bounds(evt.bounds);
+                  q->angle(evt.angle);
+              }
+          }
+          break;
+      case ProximityInputEvent::RemoveServerQuery:
+          {
+              PROXLOG(debug,"Remove server query from " << evt.server);
+
+              ServerQueryMap::iterator it = mServerQueries.find(evt.server);
+              if (it == mServerQueries.end()) return;
+
+              Query* q = it->second;
+              mServerQueries.erase(it);
+              delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+
+              mOutputEvents.push( ProximityOutputEvent::RemoveAllServerLocSubscriptionEvent(evt.server) );
+          }
+          break;
+      case ProximityInputEvent::UpdateObjectQuery:
+          {
+              ObjectQueryMap::iterator it = mObjectQueries.find(evt.object);
+
+              if (it == mObjectQueries.end()) {
+                  Query* q = mObjectQueryHandler->registerQuery(evt.loc, evt.bounds, evt.angle);
+                  mObjectQueries[evt.object] = q;
+              }
+              else {
+                  Query* query = it->second;
+                  query->position(evt.loc);
+                  query->bounds(evt.bounds);
+                  if (evt.angle != NoUpdateSolidAngle)
+                      query->angle(evt.angle);
+              }
+          }
+          break;
+      case ProximityInputEvent::RemoveObjectQuery:
+          {
+              ObjectQueryMap::iterator it = mObjectQueries.find(evt.object);
+              if (it == mObjectQueries.end()) return;
+
+              Query* q = it->second;
+              mObjectQueries.erase(it);
+              delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
+
+              mOutputEvents.push( ProximityOutputEvent::RemoveAllObjectLocSubscriptionEvent(evt.object) );
+          }
+          break;
+    }
 }
 
 } // namespace CBR
