@@ -383,27 +383,23 @@ void *main_loop(void *) {
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
-        
+
         //end bftm additional object message log file creation.
-        
+
         exit(0);
     }
 
 
 
 
-    
+
     //Create OSeg
     std::string oseg_type=GetOption(OSEG)->as<String>();
 
-    std::cout<<"\n\nThis is oseg_type:  "<<oseg_type<<"\n\n";
-    
     ObjectSegmentation* oseg;
-    
+
     if (oseg_type == OSEG_OPTION_LOC)
     {
-      std::cout<<"\n\nPerforming loc_oseg\n\n";
-      
       //using loc approach
       std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
@@ -422,8 +418,6 @@ void *main_loop(void *) {
 
     if (oseg_type == OSEG_OPTION_CRAQ)
     {
-      std::cout<<"\n\nPerforming craq_oseg\n\n";
-      
       //using craq approach
       std::vector<UUID> initServObjVec;
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
