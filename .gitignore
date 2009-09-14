@@ -7,6 +7,7 @@ build/cmake/cmake_install.cmake
 
 # build products
 build/cmake/cbr
+build/cmake/oh
 
 # config files
 build/cmake/serverip*
@@ -38,3 +39,5 @@ dependencies
 
 # script by-products
 *.pyc
+scripts/changes.patch
+scripts/commits.patch
