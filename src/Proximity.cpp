@@ -164,6 +164,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mLocService(locservice),
    mCSeg(NULL),
    mMinObjectQueryAngle(SolidAngle::Max),
+   mNeedServerQueryUpdate(false),
    mProxThread(NULL),
    mShutdownProxThread(false),
    mServerQueries(),
@@ -211,7 +212,7 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
 
     mCSeg->addListener(this);
 
-    sendQueryRequests();
+    mNeedServerQueryUpdate = true;
 }
 
 void Proximity::shutdown() {
@@ -355,7 +356,7 @@ void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const Boun
     if (sa < mMinObjectQueryAngle) {
         mMinObjectQueryAngle = sa;
         PROXLOG(debug,"Query addition initiated server query request.");
-        sendQueryRequests();
+        mNeedServerQueryUpdate = true;
     }
 }
 
@@ -373,12 +374,25 @@ void Proximity::removeQuery(UUID obj) {
         SolidAngle minangle(SolidAngle::Max);
         for(ObjectQueryAngleMap::iterator it = mObjectQueryAngles.begin(); it != mObjectQueryAngles.end(); it++)
             if (it->second < minangle) minangle = it->second;
-        mMinObjectQueryAngle = minangle;
-        sendQueryRequests();
+
+        // NOTE: Even if this condition is satisfied, we could only be increasing
+        // the minimum angle, so we don't *strictly* need to update the query.
+        // Some buffer timing might be in order here to avoid excessive updates
+        // while still getting the benefit from reducing the query angle.
+        if (minangle != mMinObjectQueryAngle) {
+            mMinObjectQueryAngle = minangle;
+            mNeedServerQueryUpdate = true;
+        }
     }
 }
 
 void Proximity::service() {
+    // Update server-to-server angles if necessary
+    if (mNeedServerQueryUpdate) {
+        sendQueryRequests();
+        mNeedServerQueryUpdate = false;
+    }
+
     // Get and handle output events
     std::deque<ProximityOutputEvent> output_events;
     mOutputEvents.swap(output_events);

@@ -141,7 +141,9 @@ private:
     // This tracks the minimum object query size, which is used
     // as the angle for queries to other servers.
     SolidAngle mMinObjectQueryAngle;
-
+    // And this indicates whether we need to send new requests
+    // out to other servers
+    bool mNeedServerQueryUpdate;
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
