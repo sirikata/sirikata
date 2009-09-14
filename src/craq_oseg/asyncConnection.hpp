@@ -6,6 +6,8 @@
 #include "asyncUtil.hpp"
 
 
+//#define ASYNC_CONNECTION_DEBUG
+
 namespace CBR
 {
 

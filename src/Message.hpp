@@ -307,6 +307,7 @@ private:
 //kill obj conn message
 class KillObjConnMessage : public Message
 {
+public:
   CBR::Protocol::ObjConnKill::ObjConnKill contents;
   KillObjConnMessage(const ServerID& origin);
   ~KillObjConnMessage();

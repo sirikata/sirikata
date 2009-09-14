@@ -37,13 +37,18 @@ LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmen
     return true;
   }
 
+  int LocObjectSegmentation::getOSegType()
+  {
+    return LOC_OSEG;
+  }
+  
 
   /*
     Lookup server id based on check with location service and mcseg.
   */
   //  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
   //  void LocObjectSegmentation::lookup(const UUID& obj_id) const
-  void LocObjectSegmentation::lookup(const UUID& obj_id)
+  ServerID LocObjectSegmentation::lookup(const UUID& obj_id)
   {
       if (mLocationService->contains(obj_id)) {
           Vector3f pos = mLocationService->currentPosition(obj_id);
@@ -68,6 +73,8 @@ LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmen
 
     //    return sid;
                //    return;
+
+      return NullServerID;
   }
 
 

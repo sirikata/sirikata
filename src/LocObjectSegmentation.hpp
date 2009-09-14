@@ -32,7 +32,7 @@ namespace CBR
   public:
       LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
     virtual ~LocObjectSegmentation();
-    virtual void lookup(const UUID& obj_id);
+    virtual ServerID lookup(const UUID& obj_id);
 
     virtual void service(std::map<UUID,ServerID>& updated);
     virtual ServerID getHostServerID();
@@ -41,6 +41,8 @@ namespace CBR
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool);
     virtual bool clearToMigrate(const UUID& obj_id);
+
+    virtual int getOSegType();
     
   };
 }

@@ -89,8 +89,9 @@ void AsyncConnection::connect_handler(const boost::system::error_code& error)
     return;
   }
 
+#ifdef ASYNC_CONNECTION_DEBUG
   std::cout<<"\n\nbftm debug: asyncConnection: connected\n\n";
-  
+#endif
   mReady = READY;
 }
 
@@ -108,10 +109,12 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
   mTrackNumber       =      trackNum;
   currentlySettingTo =   dataToSetTo;
 
+#ifdef ASYNC_CONNECTION_DEBUG
   if (track)
   {
     std::cout<<"\n\nbftm debug: In set of asyncConnection.cpp.  Got a positive tracking.\n\n";
   }
+#endif
   
   mReady = PROCESSING;
   std::string tmpString = dataToSet;
@@ -204,7 +207,7 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     {
       //means that we need to save this query
 
-      //      std::cout<<"\n\nbftm debug:  inside of read_handler_set of asyncConnection.cpp.  Got a request to track.\n\n";
+
       
       CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
       mOperationResultTrackedSetsVector.push_back(tmper);

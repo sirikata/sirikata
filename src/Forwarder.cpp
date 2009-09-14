@@ -267,11 +267,16 @@ void Forwarder::service()
   {
     UUID dest_obj = msg->dest_object();
 
-    //    ServerID dest_server_id = lookup(dest_obj);
-    mOSeg->lookup(dest_obj);
+    ServerID dest_server_id = mOSeg->lookup(dest_obj);
+
+    if (dest_server_id != NullServerID)
+    {
+      //means that we instantly knew what the location of the object is, and we can route instantly!
+      route(msg, dest_server_id,false);
+      return;
+    }
 
     //add message to objects in transit.
-    //      if (mObjectsInTransit[dest_obj] == null)
     if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
     {
       //no messages have been queued for mObjectsInTransit
@@ -301,9 +306,13 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     ObjMessQBeginSend beginMess;
     bool send_success = mObjectMessageQueue->beginSend(obj_msg, beginMess);
 
-    if (send_success) {
-        mOSeg->lookup(beginMess.dest_uuid);
+    if (send_success)
+    {
+      //      mOSeg->lookup(beginMess.dest_uuid);
+      ServerID lookupID = mOSeg->lookup(beginMess.dest_uuid); 
 
+      if (lookupID == NullServerID)
+      {
         if (queueMap.find(beginMess.dest_uuid) == queueMap.end())
         {
             //nothing is in queueMap
@@ -315,24 +324,15 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         {
             queueMap[beginMess.dest_uuid].push_back(beginMess);
         }
+      }
+      else
+      {
+        mObjectMessageQueue->endSend(beginMess,lookupID);
+      }
     }
 
     return send_success;
 }
-
-  //ewen changes.
-// void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward)
-// {
-//     UUID dest_obj = msg->dest_object();
-//     ServerID dest_server_id = mOSeg->lookup(dest_obj);
-//     route(msg, dest_server_id, is_forward);
-// }
-
-
-// void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward) {
-//     if (dest_serv == OBJECT_IN_TRANSIT)
-
-
 
 
   void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
@@ -398,6 +398,11 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           dispatchMessage(msg);
         }
         break;
+      case MESSAGE_TYPE_KILL_OBJ_CONN:
+        {
+          dispatchMessage(msg);
+        }
+        break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
           {
               dispatchMessage(msg);
@@ -449,20 +454,6 @@ void Forwarder::receiveMessage(Message* msg) {
     delete msg;
 }
 
-
-
-//   void Forwarder::forward(Message* msg, const UUID& dest_obj)
-//   {
-//     conn->deliver(obj_msg->contents, mContext->time);
-//   }
-//   else
-//   {
-//     CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
-//     route(obj_msg_cpy, true);
-//   }
-
-//   delete msg;
-// }
 
 
 

@@ -69,15 +69,17 @@ private:
     // Performs actual migration after all the necessary information is available.
     void handleMigration(const UUID& obj_id);
 
+    //finally deletes any object connections to obj_id
+    void killObjectConnection(const UUID& obj_id);
 
-      SpaceContext* mContext;
+    SpaceContext* mContext;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
 
-      ObjectHostConnectionManager* mObjectHostConnectionManager;
+    ObjectHostConnectionManager* mObjectHostConnectionManager;
 
     typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
 
@@ -90,6 +92,9 @@ private:
     typedef std::set<ObjectConnection*> ObjectConnectionSet;
     ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages
 
+    ObjectConnectionMap mMigratingConnections;//bftm add
+
+    
       TimeProfiler mProfiler;
 }; // class Server
 

@@ -76,9 +76,15 @@
 
 #define NOISE               "noise"
 
-#define LOC                 "loc"
+#define LOC                        "loc"
 
-#define PROFILE                 "profile"
+#define PROFILE                    "profile"
+
+#define OSEG                       "oseg"
+#define OSEG_OPTION_CRAQ           "oseg_craq"
+#define OSEG_OPTION_LOC            "oseg_loc"
+#define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
+
 
 namespace CBR {
 

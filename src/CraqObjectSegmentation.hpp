@@ -15,6 +15,9 @@
 #include <string.h>
 #include <vector>
 
+
+//#define DEBUG_CRAQ
+
 namespace CBR
 {
 
@@ -33,7 +36,6 @@ namespace CBR
     CoordinateSegmentation* mCSeg; //will be used in lookup call
 
     //debugging:
-    uint64 numTicks;
 
     Timer mTimer;
 
@@ -46,7 +48,7 @@ namespace CBR
     
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
     std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
-    std::vector<UUID> mReceivingObjects;
+    std::vector<UUID> mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
 
     
     void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
@@ -58,13 +60,16 @@ namespace CBR
 
     std::vector <UUID> mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
     bool checkOwn(const UUID& obj_id);
+    bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
 
+    std::vector<UUID> vectorObjectsInMigration ;
+    
   public:
       CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
 
 
     virtual ~CraqObjectSegmentation();
-    virtual void lookup(const UUID& obj_id);
+    virtual ServerID lookup(const UUID& obj_id);
     virtual void service(std::map<UUID,ServerID>& updated);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID idServerAckTo, bool);
@@ -73,12 +78,19 @@ namespace CBR
 
     virtual bool clearToMigrate(const UUID& obj_id);
 
+
+    virtual int getOSegType();
     
     OSegMigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(OSegMigrateMessageAcknowledge* msg);
     void processMigrateMessageMove(OSegMigrateMessageMove* msg);
     //    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
     void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
+
+
+    
+
+    
   };
 }
 #endif

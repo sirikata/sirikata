@@ -106,6 +106,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_OSEG_MIGRATE_MOVE:
         msg = new OSegMigrateMessageMove(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_KILL_OBJ_CONN:
+        msg = new KillObjConnMessage(wire,offset,_id);
+        break;
       case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
         msg = new OSegMigrateMessageAcknowledge(wire,offset,_id);
         break;
@@ -505,7 +508,7 @@ ServerID OSegMigrateMessageAcknowledge::getMessageFrom()
 KillObjConnMessage::KillObjConnMessage(const ServerID& origin)
   : Message(origin,true)
 {
-  
+
 }
 KillObjConnMessage::~KillObjConnMessage()
 {

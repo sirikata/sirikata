@@ -92,7 +92,6 @@ public:
     static const uint8 ServerObjectEventTag = 14;
     static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
-  //    static const uint8 ObjectSegmentationFinalDumpTag = 17;
 
 
     Trace();

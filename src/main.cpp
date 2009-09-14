@@ -72,7 +72,6 @@
 #include "CraqObjectSegmentation.hpp"
 #include "ServerProtocolMessagePair.hpp"
 
-#define CRAQ_OBJ_SEG
 
 
 #include "ServerWeightCalculator.hpp"
@@ -374,13 +373,25 @@ void *main_loop(void *) {
     }
 
 
+
+
+    
     //Create OSeg
-#ifndef CRAQ_OBJ_SEG
+    std::string oseg_type=GetOption(OSEG)->as<String>();
 
-    std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
+    std::cout<<"\n\nThis is oseg_type:  "<<oseg_type<<"\n\n";
+    
+    ObjectSegmentation* oseg;
+    
+    if (oseg_type == OSEG_OPTION_LOC)
+    {
+      std::cout<<"\n\nPerforming loc_oseg\n\n";
+      
+      //using loc approach
+      std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
 
-    //Trying to populate objectToServerMap
-    // FIXME this needs to go away, we can't rely on the object factory being there
+      //Trying to populate objectToServerMap
+      // FIXME this needs to go away, we can't rely on the object factory being there
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
       {
         UUID obj_id = *it;
@@ -388,17 +399,15 @@ void *main_loop(void *) {
         dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
       }
 
-    //End of populating objectToServerMap
-      //      ObjectSegmentation* oseg = new ChordObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      //      ObjectSegmentation* oseg = new UniformObjectSegmentation(cseg,dummyObjectToServerMap,server_id, gTrace);
-      ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
+      //      ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
+      oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
+    }
 
-#endif  //end oracle approach
-
+    if (oseg_type == OSEG_OPTION_CRAQ)
+    {
+      std::cout<<"\n\nPerforming craq_oseg\n\n";
       
-#ifdef CRAQ_OBJ_SEG
-
-      //alternate craq approach
+      //using craq approach
       std::vector<UUID> initServObjVec;
       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
       {
@@ -419,10 +428,19 @@ void *main_loop(void *) {
      cInitArgs.port  =     "10299";
      craqArgs.push_back(cInitArgs);
 
-     ObjectSegmentation* oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs, 'H');
+     std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
+
+     if (oseg_type.size() ==0)
+     {
+       std::cout<<"\n\nERROR: Incorrect craq prefix for oseg.  String must be at least one letter long.  (And be between G and Z.)  Please try again.\n\n";
+       assert(false);
+     }
+
+     std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
+     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs, oseg_craq_prefix[0]);
 
 
-#endif      //end craq approach
+    }      //end craq approach
 
     //end create oseg
 

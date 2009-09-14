@@ -4,8 +4,13 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "Message.hpp"
-
+#include <iostream>
+#include <iomanip>
 //object segmenter h file
+
+#define LOC_OSEG   0
+#define CRAQ_OSEG  1
+
 
 namespace CBR
 {
@@ -24,19 +29,25 @@ namespace CBR
 
 
   public:
-      ObjectSegmentation(SpaceContext* ctx)
-       : mContext(ctx)
-      {
-      }
+        
+    ObjectSegmentation(SpaceContext* ctx)
+      : mContext(ctx)
+    {
+    }
 
-      virtual ~ObjectSegmentation() {}
 
-    virtual void lookup(const UUID& obj_id) = 0;
+    
+    virtual ~ObjectSegmentation() {}
+
+    virtual ServerID lookup(const UUID& obj_id) = 0;
     virtual void service(std::map<UUID,ServerID>& updated) = 0;
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id) = 0;
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool) = 0;
 
     virtual bool clearToMigrate(const UUID& obj_id) = 0; //
+
+    virtual int getOSegType() = 0;
+
     
   };
 }
