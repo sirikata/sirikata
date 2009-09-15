@@ -483,6 +483,8 @@ void *main_loop(void *) {
         assert(false);
         exit(-1);
     }
+
+
     ServerWeightCalculator* weight_calc = NULL;
     if (cseg_type != "distributed") {
       if (GetOption("gaussian")->as<bool>()) {
@@ -512,11 +514,13 @@ void *main_loop(void *) {
       }
     }
 
+    // We have all the info to initialize the forwarder now
+    forwarder->initialize(cseg, oseg, oq, sq);
+
     Proximity* prox = new Proximity(space_context, loc_service);
 
 
-    //    Server* server = new Server(server_id, loc_service, cseg, prox, oq, sq, loadMonitor, gTrace);
-    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oq, sq, loadMonitor,oseg, server_id_map);
+    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, loadMonitor, oseg, server_id_map->lookupExternal(space_context->id()));
 
       prox->initialize(cseg);
 

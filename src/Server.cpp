@@ -3,13 +3,9 @@
 #include "Proximity.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
-#include "ServerIDMap.hpp"
-#include "ServerMessageQueue.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
-#include "ObjectMessageQueue.hpp"
 #include "LoadMonitor.hpp"
-#include "ForwarderUtilityClasses.hpp"
 #include "Forwarder.hpp"
 
 #include "ObjectSegmentation.hpp"
@@ -27,7 +23,7 @@
 namespace CBR
 {
 
-Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg, ServerIDMap* sidmap)
+Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, LoadMonitor* lm, ObjectSegmentation* oseg, Address4* oh_listen_addr)
  : mContext(ctx),
    mLocationService(loc_service),
    mCSeg(cseg),
@@ -41,10 +37,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
 
-
-    mForwarder->initialize(cseg,oseg,omq,smq);    //run initialization for forwarder
-
-    Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id());
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
@@ -440,7 +432,7 @@ void Server::checkObjectMigrations()
       ObjectConnection* obj_conn = it->second;
 
       Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-      ServerID new_server_id = lookup(obj_pos);
+      ServerID new_server_id = mCSeg->lookup(obj_pos);
 
       if (new_server_id != mContext->id())
       {
@@ -556,14 +548,6 @@ void Server::killObjectConnection(const UUID& obj_id)
   if (objConMapIt != mMigratingConnections.end())
     mMigratingConnections.erase(objConMapIt);
 
-}
-
-
-
-ServerID Server::lookup(const Vector3f& pos)
-{
-  ServerID sid = mCSeg->lookup(pos);
-  return sid;
 }
 
 

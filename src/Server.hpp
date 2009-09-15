@@ -18,10 +18,6 @@ class Proximity;
 class CoordinateSegmentation;
 class ObjectSegmentation;
 
-// FIXME these are only passed to the forwarder...
-class ServerMessageQueue;
-class ObjectMessageQueue;
-
 class LoadMonitor;
 
 class ObjectConnection;
@@ -37,13 +33,10 @@ class ServerIDMap;
 class Server : public MessageRecipient
   {
   public:
-      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, ObjectSegmentation* oseg, ServerIDMap* sidmap);
+      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, LoadMonitor* lm, ObjectSegmentation* oseg, Address4* oh_listen_addr);
     ~Server();
 
       void service();
-
-    ServerID lookup(const Vector3f&);
-    ServerID lookup(const UUID&);
 
       virtual void receiveMessage(Message* msg);
 private:
