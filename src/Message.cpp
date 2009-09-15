@@ -503,6 +503,42 @@ ServerID OSegMigrateMessageAcknowledge::getMessageFrom()
 
 //end of oseg messages.
 
+//update oseg message:
+
+
+UpdateOSegMessage::UpdateOSegMessage(const ServerID &sID_sendingMessage, const ServerID &sID_objOn, const UUID &obj_id)
+  : Message(sID_sendingMessage, true)
+{
+  contents.set_servid_sending_update         (sID_sendingMessage);
+  contents.set_servid_obj_on                          (sID_objOn);
+  contents.set_m_objid                                   (obj_id);
+}
+
+MessageType UpdateOSegMessage::type() const
+{
+  return MESSAGE_TYPE_UPDATE_OSEG;
+}
+
+
+uint32 UpdateOSegMessage::serialize(Network::Chunk& wire, uint32 offset)
+{
+  offset = serializeHeader(wire, offset);
+  return serializePBJMessage(contents, wire, offset);
+}
+
+
+UpdateOSegMessage::UpdateOSegMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  parsePBJMessage(contents,wire,offset);
+}
+                    
+
+
+
+//end update oseg message
+
+
 //obj_conn_kill message:
 
 KillObjConnMessage::KillObjConnMessage(const ServerID& origin)

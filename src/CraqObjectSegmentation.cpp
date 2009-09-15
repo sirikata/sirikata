@@ -34,7 +34,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
-
+    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_UPDATE_OSEG, this);
+    
     craqDht.initialize(initArgs);
 
     std::vector<CraqOperationResult*> getResults;
@@ -94,6 +95,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   {
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
+    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_UPDATE_OSEG, this);
   }
 
 
@@ -163,6 +165,38 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
 
   /*
+    Checks to see whether have a reasonably up-to-date cache value to return to
+    
+   */
+  ServerID CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
+  {
+    ObjectCacheMap::iterator objCacheIter = mServerObjectCache.find(obj_id);
+
+    if (objCacheIter == mServerObjectCache.end()) //object not in cache map
+      return NullServerID;
+
+    uint64 timeElapsed =  (uint64) ((long int) mContext->time.raw())  - ((long int)objCacheIter->second.timeStamp);
+
+    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
+    {
+      //if the time since absorbed a cache value is less than one second
+      //and if the last cache value came from one of our personal lookups.
+      //then return the cached server id.
+      return objCacheIter->second.sID;
+    }
+
+    if (timeElapsed < 500)
+    {
+      //if received an update message less than half a second ago, then also
+      //return the cached server id.
+      return objCacheIter->second.sID;
+    }
+
+    //otherwise, just tell them that I don't really know.
+    return NullServerID;
+  }
+
+  /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
@@ -179,6 +213,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       return mContext->id();
     }
 
+    ServerID cacheReturn = satisfiesCache(obj_id);
+    if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
+    {
+      return cacheReturn;
+    }
+    
+    
 
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
@@ -347,6 +388,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     for (unsigned int s=0; s < trackedSetResults.size();  ++s)
     {
+
+      
+      
       //genrateAcknowledgeMessage(uuid,sidto);  ...we may as well hold onto the object pointer then.
       if (trackedSetResults[s]->trackedMessage != 0) //if equals zero, meant that we weren't supposed to be tracking this message.
       {
@@ -354,6 +398,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         {
           //means that we were tracking this message. and that we'll have to send an acknowledge
 
+          OSegCacheVal cacheVal;
+          cacheVal.sID          = mContext->id();
+          cacheVal.timeStamp    = mContext->time.raw();
+          cacheVal.lastLookup   = true;
+          mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = cacheVal;
+
+          
           //add to mObjects the uuid associated with trackedMessage.
           mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
 
@@ -502,7 +553,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     int sizeGetRes  = (int) getResults.size();
     int sizeTracked = (int) trackedSetResults.size();
 
-
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
@@ -511,12 +561,20 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       UUID tmper = mapDataKeyToUUID[getResults[s]->idToString()];
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
+      //put this value in the cache
+      OSegCacheVal cacheVal;
+      cacheVal.sID = getResults[s]->servID;
+      cacheVal.timeStamp = mContext->time.raw();
+      cacheVal.lastLookup = true;
+      
+      mServerObjectCache[tmper] = cacheVal;
+
+
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
         mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
-
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {
@@ -588,6 +646,14 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       correctMessage = !correctMessage;
     }
 
+    UpdateOSegMessage* update_oseg_msg = dynamic_cast <UpdateOSegMessage*>(msg);
+    if (update_oseg_msg != NULL)
+    {
+      processUpdateOSegMessage(update_oseg_msg);
+      correctMessage = !correctMessage;
+    }
+
+    
     if (! correctMessage)
     {
       printf("\n\nReceived the wrong type of message in receiveMessage of craqobjectsegmentation.cpp.  Or dynamic casting doesn't work.  Shutting down.\n\n ");
@@ -595,6 +661,18 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     }
     delete msg; //delete message here.
   }
+
+
+//
+void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_oseg_msg)
+{
+  OSegCacheVal cacheVal;
+  cacheVal.timeStamp    =  mContext->time.raw();
+  cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
+  cacheVal.lastLookup   =  false;
+
+  mServerObjectCache[update_oseg_msg->contents.m_objid()] = cacheVal;
+}
 
 
   void CraqObjectSegmentation::processMigrateMessageMove(OSegMigrateMessageMove* msg)

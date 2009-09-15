@@ -26,7 +26,6 @@ bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc,c
 
   /*
     Constructor for Forwarder
-
   */
 Forwarder::Forwarder(SpaceContext* ctx)
  :
@@ -85,11 +84,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   */
   void Forwarder::tickOSeg(const Time&t)
   {
-    //    getOSegMessages();
 
-    //bftm tmp, nothing
-    //    mOSeg -> tick(t,mOutgoingMessages);
-    //objects from
     std::map<UUID,ServerID> updatedObjectLocations;
     std::map<UUID,ServerID>::iterator iter;
     std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
@@ -262,6 +257,7 @@ void Forwarder::service()
     }
     else
     {
+      
         mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
       (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
     }
@@ -277,8 +273,17 @@ void Forwarder::service()
 
     if (dest_server_id != NullServerID)
     {
-      //means that we instantly knew what the location of the object is, and we can route instantly!
+      //means that we instantly knew what the location of the object is, and we can route immediately!
       route(msg, dest_server_id,false);
+
+      //bftm update
+      //send a message to update cache of other oseg.
+      UpdateOSegMessage* upOSegMess = new UpdateOSegMessage(mContext->id(),dest_server_id,dest_obj);
+
+      ServerID serverComeFrom = PROBLEM HERE: THIS IS NOT RIGHT GetUniqueIDServerID(msg->id()); //note, this may not really work.
+      this->route(MessageRouter::OSEG_CACHE_UPDATE, upOSegMess, serverComeFrom, false);
+      //end bftm update
+      
       return;
     }
 

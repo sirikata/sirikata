@@ -49,6 +49,7 @@
 #include "CBR_OSeg.pbj.hpp"
 #include "CBR_ObjConnKill.pbj.hpp"
 
+
 namespace CBR {
 
 typedef uint8 MessageType;
@@ -65,7 +66,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_SERVER_PROX_RESULT        12
 #define MESSAGE_TYPE_BULK_LOCATION             13
 #define MESSAGE_TYPE_KILL_OBJ_CONN             14
-
+#define MESSAGE_TYPE_UPDATE_OSEG               15
   
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
@@ -166,6 +167,7 @@ public:
         LOCS,
         CSEGS,
         OBJECT_MESSAGESS,
+        OSEG_CACHE_UPDATE,
         NUM_SERVICES
     };
 
@@ -300,6 +302,23 @@ public:
 private:
   friend class Message;
   OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
+
+
+//update oseg message
+class UpdateOSegMessage : public Message
+{
+public:
+  UpdateOSegMessage(const ServerID& sID_sendingMessage, const ServerID& sID_objOn, const UUID& obj_id);
+  virtual MessageType type() const;
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+  CBR::Protocol::OSeg::UpdateOSegMessage contents;
+
+private:
+  friend class Message;
+  UpdateOSegMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+                    
 };
 
 

@@ -63,6 +63,18 @@ namespace CBR
     bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
 
     std::vector<UUID> vectorObjectsInMigration ;
+
+    struct OSegCacheVal
+    {
+      ServerID sID;
+      uint64 timeStamp;
+      bool lastLookup;
+    };
+
+    typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
+    //    std::map<UUID,OSegCacheVal> mServerObjectCache;
+    ObjectCacheMap mServerObjectCache;
+    ServerID satisfiesCache(const UUID& obj_id);
     
   public:
       CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
@@ -86,7 +98,7 @@ namespace CBR
     void processMigrateMessageMove(OSegMigrateMessageMove* msg);
     //    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
     void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
-
+    void processUpdateOSegMessage(UpdateOSegMessage* update_oseg_msg);
 
     
 

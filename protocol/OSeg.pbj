@@ -17,3 +17,10 @@ message MigrateMessageAcknowledge
     required uint64 m_message_from         = 4; 
     required uuid   m_objid                = 5;
 }
+
+message UpdateOSegMessage
+{
+   required uint64 servid_sending_update   = 1;
+   required uint64 servid_obj_on           = 2;
+   required uuid   m_objid                 = 3;
+}
