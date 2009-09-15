@@ -465,7 +465,8 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     SILOG(input,debug,"zoom "<<value);
 
     Time now = SpaceTimeOffsetManager::getSingleton().now(camera->getProxy().getObjectReference().space());
-    Location cameraLoc = camera->getProxy().globalLocation(now);
+    Location cameraLoc = camera->getProxy().extrapolateLocation(now);
+    Location cameraGlobalLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
 
     toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
@@ -477,12 +478,12 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
         !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
         toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraLoc.getPosition(), direction(cameraLoc.getOrientation()), hitCount, distance, normal) &&
+    } else if (parent->rayTrace(cameraGlobalLoc.getPosition(), direction(cameraGlobalLoc.getOrientation()), hitCount, distance, normal) &&
                (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
         toMove *= distance*.75;
     } else if (!objects.empty()) {
         Vector3d totalPosition (averageSelectedPosition(now, objects.begin(), objects.end()));
-        toMove *= (totalPosition - cameraLoc.getPosition()).length() * .75;
+        toMove *= (totalPosition - cameraGlobalLoc.getPosition()).length() * .75;
     } else {
         toMove *= WORLD_SCALE;
     }
