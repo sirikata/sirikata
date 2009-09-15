@@ -956,10 +956,11 @@ private:
 
         // Give the browsers a chance to use this input first
         EventResponse browser_resp = WebViewManager::getSingleton().onMouseClick(mouseev);
-        if (browser_resp == EventResponse::cancel()) {
+        if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
+            mWebViewActiveButtons.erase(mouseev->mButton);
             return EventResponse::cancel();
         }
-        if (mWebViewActiveButtons.find(mouseev->mButton) != mWebViewActiveButtons.end()) {
+        if (browser_resp == EventResponse::cancel()) {
             return EventResponse::cancel();
         }
 
