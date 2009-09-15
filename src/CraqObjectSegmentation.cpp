@@ -390,14 +390,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           }
           //done removing from receivingObjects.
 
+          
 #ifdef CRAQ_DEBUG
-          std::cout<<"\n\nbftm debug:  sending an acknowledge out from  "<<mContext->id;
+          std::cout<<"\n\nbftm debug:  sending an acknowledge out from  "<<  mContext->id();
           std::cout<<"  to  "<<          trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination();
           std::cout<<"  for object  " << trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID().toString();
           std::cout<< "   at time:  " << mContext->time.raw() <<"\n\n";
 #endif
-
-
 
 
           mContext->router()->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage],trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
