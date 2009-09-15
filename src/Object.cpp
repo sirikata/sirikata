@@ -44,7 +44,7 @@ namespace CBR {
 
 float64 MaxDistUpdatePredicate::maxDist = 3.0;
 
-Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx)
+Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
    mGlobalIntroductions(false),
@@ -52,13 +52,14 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
    mBounds(bnds),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
+   mRegisterQuery(regQuery),
    mQueryAngle(queryAngle),
    mConnectedTo(0),
    mMigrating(false)
 {
 }
 
-Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
+Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
  : mID(id),
    mContext(ctx),
    mGlobalIntroductions(true),
@@ -66,6 +67,7 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
    mBounds(bnds),
    mLocation(mMotion->initial()),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
+   mRegisterQuery(regQuery),
    mQueryAngle(queryAngle),
    mConnectedTo(0),
    mMigrating(false)
@@ -102,13 +104,21 @@ void Object::connect() {
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);
 
-    mContext->objectHost->openConnection(
-        this,
-        curMotion,
-        mBounds,
-        mQueryAngle,
-        boost::bind(&Object::handleSpaceConnection, this, _1)
-    );
+    if (mRegisterQuery)
+        mContext->objectHost->openConnection(
+            this,
+            curMotion,
+            mBounds,
+            mQueryAngle,
+            boost::bind(&Object::handleSpaceConnection, this, _1)
+        );
+    else
+        mContext->objectHost->openConnection(
+            this,
+            curMotion,
+            mBounds,
+            boost::bind(&Object::handleSpaceConnection, this, _1)
+        );
 }
 
 void Object::handleSpaceConnection(ServerID sid) {

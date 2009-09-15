@@ -49,6 +49,7 @@ class ObjectFactory {
     struct ObjectInputs {
         MotionPath* motion;
         BoundingSphere3f bounds;
+        bool registerQuery;
         SolidAngle queryAngle;
     };
     typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
@@ -68,9 +69,9 @@ public:
     iterator end();
     const_iterator end() const;
 
+    // NOTE: these is only public for analysis purposes
     MotionPath* motion(const UUID& id);
     BoundingSphere3f bounds(const UUID& id);
-    SolidAngle queryAngle(const UUID& id);
 
 #ifdef OH_BUILD // These should only ever be used by the object host
     Object* object(const UUID& id);
@@ -78,6 +79,10 @@ public:
 #endif //OH_BUILD
 
 private:
+    bool registerQuery(const UUID& id);
+    SolidAngle queryAngle(const UUID& id);
+
+
     bool isActive(const UUID& id);
 
     friend class Object;

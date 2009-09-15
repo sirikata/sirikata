@@ -41,7 +41,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
 
 
-    mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm,mProximity);    //run initialization for forwarder
+    mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm);    //run initialization for forwarder
 
     Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id());
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
@@ -249,7 +249,8 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     //update our oseg to show that we know that we have this object now.
     mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
     // Register proximity query
-    mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
+    if (connect_msg.has_query_angle())
+        mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
     // Allow the forwarder to send to ship messages to this connection
     mForwarder->addObjectConnection(obj_id, conn);
 

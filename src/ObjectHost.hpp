@@ -53,6 +53,7 @@ public:
     const ObjectHostContext* context() const;
 
     void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb);
+    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb);
 
     // FIXME should not be infinite queue and should report push error
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
@@ -100,6 +101,9 @@ private:
 
 
     /** Object session initiation. */
+
+    // Private utility method that the public versions all use to initialize connection struct
+    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback cb);
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn);
@@ -168,6 +172,7 @@ private:
         struct ConnectingInfo {
             TimedMotionVector3f loc;
             BoundingSphere3f bounds;
+            bool regQuery;
             SolidAngle queryAngle;
 
             ConnectedCallback cb;

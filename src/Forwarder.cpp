@@ -1,7 +1,6 @@
 
 #include "Network.hpp"
 #include "Server.hpp"
-#include "Proximity.hpp"
 #include "CoordinateSegmentation.hpp"
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
@@ -14,8 +13,6 @@
 #include "ForwarderUtilityClasses.hpp"
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
-
-#include "Proximity.hpp"
 
 #include "ObjectConnection.hpp"
 
@@ -42,7 +39,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
    mLoadMonitor(NULL),
-   mProximity(NULL),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
@@ -79,7 +75,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Proximity* prox)
+void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm)
 {
   mCSeg = cseg;
   mOSeg = oseg;
@@ -88,7 +84,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mServerMessageQueue =smq;
   mOutgoingMessages=new ForwarderQueue(smq,16384);
   mLoadMonitor = lm;
-  mProximity = prox;
 }
 
   /*

@@ -53,9 +53,9 @@ struct MaxDistUpdatePredicate {
 class Object {
 public:
     /** Standard constructor. */
-    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx);
+    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
     /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects);
+    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects);
 
     ~Object();
 
@@ -63,19 +63,7 @@ public:
         return mID;
     }
 
-    const SolidAngle queryAngle() const {
-        return mQueryAngle;
-    }
-
     const TimedMotionVector3f location() const;
-
-    const BoundingSphere3f bounds() const {
-        return mBounds;
-    }
-
-    const ObjectSet& subscriberSet() const {
-        return mSubscribers;
-    }
 
     void tick();
 
@@ -106,6 +94,7 @@ private:
     TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
     ObjectSet mSubscribers;
+    bool mRegisterQuery;
     SolidAngle mQueryAngle;
 
     ServerID mConnectedTo;

@@ -28,7 +28,6 @@ namespace CBR
   class Network;
   class Trace;
   class LoadMonitor;
-  class Proximity;
   class ObjectConnection;
 
 
@@ -77,7 +76,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
       LoadMonitor* mLoadMonitor;
-      Proximity* mProximity;
 
 
 
@@ -113,7 +111,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm, Proximity* prox);
+      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm);
 
       void service();
 

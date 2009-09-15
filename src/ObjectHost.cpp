@@ -95,6 +95,14 @@ const ObjectHostContext* ObjectHost::context() const {
 }
 
 void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb) {
+    openConnection(obj, init_loc, init_bounds, true, init_sa, cb);
+}
+
+void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb) {
+    openConnection(obj, init_loc, init_bounds, false, SolidAngle::Max, cb);
+}
+
+void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, ConnectedCallback cb) {
     // Make sure we have this object's info stored
     ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
     if (it == mObjectInfo.end()) {
@@ -102,6 +110,7 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
     }
     mObjectInfo[obj->uuid()].connecting.loc = init_loc;
     mObjectInfo[obj->uuid()].connecting.bounds = init_bounds;
+    mObjectInfo[obj->uuid()].connecting.regQuery = regQuery;
     mObjectInfo[obj->uuid()].connecting.queryAngle = init_sa;
     mObjectInfo[obj->uuid()].connecting.cb = cb;
 
@@ -131,7 +140,8 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     loc.set_position( mObjectInfo[uuid].connecting.loc.position() );
     loc.set_velocity( mObjectInfo[uuid].connecting.loc.velocity() );
     connect_msg.set_bounds( mObjectInfo[uuid].connecting.bounds );
-    connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
+    if (mObjectInfo[uuid].connecting.regQuery)
+        connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
 
     send(
         uuid, OBJECT_PORT_SESSION,
@@ -233,7 +243,7 @@ Object* ObjectHost::randomObject () {
 }
 void ObjectHost::randomPing(const Time&t) {
     Object * a=randomObject();
-    Object * b=randomObject();    
+    Object * b=randomObject();
     ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
 }
 void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
@@ -440,12 +450,12 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
         return;
     }
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
-        
+
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
         mContext->trace->ping(ping_msg.ping(),msg->source_object(),Time::now(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1);
         //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
-        
+
         return;
     }
 
