@@ -1290,6 +1290,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectBeginMigrateMigrateFrom.push_back(obj_mig_evt->mMigrateFrom);
           objectBeginMigrateMigrateTo.push_back(obj_mig_evt->mMigrateTo);
 
+          continue;
         }
 
         ObjectAcknowledgeMigrateEvent* obj_ack_mig_evt = dynamic_cast<ObjectAcknowledgeMigrateEvent*> (evt);
@@ -1301,7 +1302,10 @@ LatencyAnalysis::~LatencyAnalysis() {
           objectAcknowledgeAcknowledgeFrom.push_back(obj_ack_mig_evt->mAcknowledgeFrom);
           objectAcknowledgeAcknowledgeTo.push_back(obj_ack_mig_evt->mAcknowledgeTo);
 
+          continue;
         }
+
+        delete evt;
       } //end while(is)
 
     }//end for
@@ -1453,7 +1457,11 @@ LatencyAnalysis::~LatencyAnalysis() {
           times.push_back(obj_lookup_evt->time);
           obj_ids.push_back(obj_lookup_evt->mObjID);
           sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+
+          continue;
         }
+
+        delete evt;
       }
     }
   }
@@ -1556,7 +1564,10 @@ LatencyAnalysis::~LatencyAnalysis() {
           sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
           dTimes.push_back(obj_lookup_proc_evt->deltaTime);
+          continue;
         }
+
+        delete evt;
       }
     }
   }

@@ -53,6 +53,7 @@
 #define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
 #define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
 #define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
+#define ANALYSIS_OSEG        "analysis.oseg"
 
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"

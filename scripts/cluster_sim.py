@@ -83,7 +83,9 @@ class ClusterSim:
         self.generate_ip_file()
         self.run_instances()
         self.retrieve_data()
-        self.run_analysis()
+        self.bandwidth_analysis()
+        self.latency_analysis()
+        self.oseg_analysis()
 
     def vis(self):
         subprocess.call([CBR_WRAPPER,
@@ -194,13 +196,9 @@ class ClusterSim:
         trace_file_pattern = "remote:" + self.scripts_dir() + "trace-%(node)04d.txt"
         ClusterSCP(self.config, [trace_file_pattern, "."])
 
-    def run_analysis(self):
-        # Run analysis
-
+    def bandwidth_analysis(self):
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
-
 
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_send.dat'])
         subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_receive.dat'])
@@ -217,6 +215,15 @@ class ClusterSim:
         subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_packet_receive.dat', 'windowed_queue_info_receive_packet.dat', 'jfi_packet_receive'])
         subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_datagram_send.dat', 'windowed_queue_info_send_datagram.dat', 'jfi_datagram_send'])
         subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive'])
+
+
+    def latency_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
+
+
+    def oseg_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
+
 
 
 if __name__ == "__main__":

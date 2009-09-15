@@ -89,7 +89,8 @@ bool is_analysis() {
         GetOption(ANALYSIS_LOCVIS)->as<String>() != "none" ||
         GetOption(ANALYSIS_LATENCY)->as<bool>() ||
         GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
-        !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() )
+        !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
+        GetOption(ANALYSIS_OSEG)->as<bool>() )
         return true;
 
     return false;
@@ -347,6 +348,9 @@ void *main_loop(void *) {
             }
         }
 
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() ) {
         //bftm additional object messages log file creation.
 
         //oseg migrates
