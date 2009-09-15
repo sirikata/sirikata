@@ -248,6 +248,13 @@ void *main_loop(void *) {
 
         exit(0);
     }
+    else if ( GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ) {
+        ObjectLatencyAnalysis la(STATS_TRACE_FILE,nservers);
+        std::ofstream histogram_data("distance_latency_histogram.csv");
+        la.printHistogramDistanceData(histogram_data,10);
+
+        exit(0);
+    }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
         BandwidthAnalysis ba(STATS_TRACE_FILE, max_space_servers);
         printf("Send rates\n");

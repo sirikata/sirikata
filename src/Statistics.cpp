@@ -47,6 +47,7 @@
 //#define TRACE_MIGRATION
 //#define TRACE_DATAGRAM
 //#define TRACE_PACKET
+#define TRACE_PING
 
 namespace CBR {
 
@@ -91,7 +92,7 @@ void BatchedBuffer::store(FILE* os) {
     }
 }
 
-
+const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
 const uint8 Trace::SubscriptionTag;
@@ -197,6 +198,21 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &receiver, sizeof(receiver) );
     data.write( &source, sizeof(source) );
     data.write( &start, sizeof(start) );
+#endif
+}
+
+
+void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance) {
+#ifdef TRACE_PING
+    if (mShuttingDown) return;
+
+    data.write( &ObjectPingTag, sizeof(ObjectPingTag) );
+    data.write( &src, sizeof(src) );
+    data.write( &sender, sizeof(sender) );
+    data.write( &dst, sizeof(dst) );
+    data.write( &receiver, sizeof(receiver) );
+    data.write( &id, sizeof(id) );
+    data.write( &distance, sizeof(distance) );
 #endif
 }
 

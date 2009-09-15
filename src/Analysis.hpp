@@ -149,7 +149,15 @@ private:
     uint32_t mNumberOfServers;
 }; // class BandwidthAnalysis
 
-
+class ObjectLatencyAnalysis {
+    std::map<double, Duration> mLatency;
+public:
+    int mNumberOfServers;
+    ObjectLatencyAnalysis(const char* opt_name, const uint32 nservers);
+    ~ObjectLatencyAnalysis();
+    void histogramDistanceData(double bucketWidth, std::map<int, Duration> &retval);
+    void printHistogramDistanceData(std::ostream&out, double bucketWidth);
+};
 
 /** Does analysis of bandwidth, e.g. checking total bandwidth in and out of a server,
  *  checking relative bandwidths when under load, etc.

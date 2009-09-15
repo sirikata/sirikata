@@ -97,6 +97,7 @@ public:
     static const uint8 ServerObjectEventTag = 14;
     static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
+    static const uint8 ObjectPingTag = 17;
 
 
     Trace(const String& filename);
@@ -120,6 +121,7 @@ public:
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
     void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
+    void ping(const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
 

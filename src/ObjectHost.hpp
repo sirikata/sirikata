@@ -56,9 +56,11 @@ public:
 
     // FIXME should not be infinite queue and should report push error
     bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-
+    void sendTestMessage(const Time&t, float idealDistance);
+    void ping(const Object *src, const UUID&dest, double distance=-0);
+    void randomPing(const Time&t);
     void tick(const Time& t);
-
+    Object* randomObject();
 private:
     struct SpaceNodeConnection;
 
@@ -179,6 +181,7 @@ private:
     };
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
+    uint64 mPingId;
 
 }; // class ObjectHost
 

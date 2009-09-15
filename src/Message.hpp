@@ -75,6 +75,7 @@ typedef uint8 MessageType;
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
 #define OBJECT_PORT_SUBSCRIPTION  4
+#define OBJECT_PORT_PING  16383
 
 template <typename scalar>
 class SplitRegion {

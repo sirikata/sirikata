@@ -40,3 +40,9 @@ message ObjectMessage {
     required uint64 unique = 5;
     optional bytes payload = 6;
 }
+
+message Ping {
+    required time ping = 7;
+    optional double distance=8;
+    optional uint64 id=9;
+}

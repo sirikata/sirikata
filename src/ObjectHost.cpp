@@ -35,7 +35,7 @@
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
 #include "ServerIDMap.hpp"
-
+#include "Random.hpp"
 #include <boost/bind.hpp>
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
@@ -80,6 +80,7 @@ ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trac
  : mContext( new ObjectHostContext(_id, curt) ),
    mServerIDMap(sidmap)
 {
+    mPingId=0;
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
     mContext->trace = trace;
@@ -212,13 +213,81 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
 
     return true;
 }
+void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
+    CBR::Protocol::Object::Ping ping_msg;
+    ping_msg.set_ping(Time::now());
+    if (distance>=0)
+        ping_msg.set_distance(distance);
+    ping_msg.set_id(mPingId++);
+    send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg));
+}
 
+Object* ObjectHost::randomObject () {
+    if (mObjectInfo.size()==0) return NULL;
+    int val=randInt(0,(int)mObjectInfo.size()-1);
+    ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
+    for (;
+         val&&i!=ie;
+         --val,++i) {}
+    return i->second.object;
+}
+void ObjectHost::randomPing(const Time&t) {
+    Object * a=randomObject();
+    Object * b=randomObject();    
+    ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+}
+void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
+    Vector3f minLocation(1.e6,1.e6,1.e6);
+    Vector3f maxLocation=minLocation;
+    ObjectInfo * corner=NULL;
+    for (ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
+         i!=ie;
+         ++i) {
+        Vector3f l=i->second.object->location().extrapolate(t).position();
+        if ((l-maxLocation).lengthSquared()>(minLocation-maxLocation).lengthSquared()) {
+            corner=&i->second;
+            minLocation=l;
+        }
+    }
+    if (!corner) return;
+    double distance=1.e30;
+    Vector3f cornerLocation=corner->object->location().extrapolate(t).position();
+    double bestDistance=1.e30;
+    ObjectInfo * destObject=NULL;
+    for (ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
+         i!=ie;
+         ++i) {
+        Vector3f l=i->second.object->location().extrapolate(t).position();
+        double curDistance=(l-cornerLocation).length();
+        if (i->second.object!=corner->object&&(destObject==NULL||fabs(curDistance-distance)<fabs(bestDistance-distance))) {
+            bestDistance=curDistance;
+            destObject=&i->second;
+        }
+    }
+    if (!destObject) return;
+    ping(corner->object,destObject->object->uuid(),bestDistance);
+}
 void ObjectHost::tick(const Time& t) {
     mContext->lastTime = mContext->time;
     mContext->time = t;
 
     mContext->objectFactory->tick();
-
+    sendTestMessage(t,400.);
+    randomPing(t);
+/*
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+    randomPing(t);
+floods the console with too much noise
+*/
     // Set up writers which are not writing yet
     for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
         SpaceNodeConnection* conn = it->second;
@@ -368,6 +437,15 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
     // As a special case, messages dealing with sessions are handled by the object host
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
+        return;
+    }
+    if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
+        
+        CBR::Protocol::Object::Ping ping_msg;
+        ping_msg.ParseFromString(msg->payload());
+        mContext->trace->ping(ping_msg.ping(),msg->source_object(),Time::now(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1);
+        //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
+        
         return;
     }
 

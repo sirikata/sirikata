@@ -96,6 +96,18 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = sevt;
           }
           break;
+      case Trace::ObjectPingTag:
+          {
+              PingEvent *pevt = new PingEvent;
+              is.read((char*)&pevt->sentTime, sizeof(pevt->sentTime));
+              is.read((char*)&pevt->source, sizeof(pevt->source));
+              is.read((char*)&pevt->time, sizeof(pevt->time));
+              is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
+              is.read((char*)&pevt->id,sizeof(pevt->id));
+              is.read((char*)&pevt->distance,sizeof(pevt->distance));
+              evt=pevt;
+          }
+        break;
       case Trace::ServerDatagramQueueInfoTag:
           {
               ServerDatagramQueueInfoEvent* pqievt = new ServerDatagramQueueInfoEvent;
@@ -1104,6 +1116,70 @@ void LatencyAnalysis::PacketData::addPacketReceivedEvent(ServerDatagramReceivedE
         _receive_end_time=sde->end_time();
     }
 }
+
+ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 nservers) {
+    mNumberOfServers = nservers;
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+
+            {
+                PingEvent* ping_evt = dynamic_cast<PingEvent*>(evt);
+                if (ping_evt != NULL) {
+                    mLatency.insert(
+                        std::map<double,Duration>::value_type(ping_evt->distance,ping_evt->end_time()-ping_evt->begin_time()));
+                }
+            }
+            delete evt;
+        }
+    }
+    
+}
+
+void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Duration> &retval){
+    int bucket=-1;
+    int bucketSamples=0;
+    for (std::map<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
+         i!=ie;++i) {
+        int curBucket=(int)floor(i->first/bucketWidth);
+        if (curBucket!=bucket) {
+            if (bucketSamples) {
+                retval.find(bucket)->second/=(double)bucketSamples;
+            }
+            bucket=curBucket;
+            bucketSamples=1;
+            retval.insert(std::map<int,Duration>::value_type(bucket,i->second));
+        }else {
+            bucketSamples++;
+            retval.find(bucket)->second+=i->second;
+        }
+    }
+    if (bucketSamples) {
+        retval.find(bucket)->second/=(double)bucketSamples;
+    }    
+}
+ObjectLatencyAnalysis::~ObjectLatencyAnalysis(){}
+void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, double bucketWidth){
+    std::map<int,Duration> histogram;
+    histogramDistanceData(bucketWidth,histogram);
+    for (std::map<int,Duration>::iterator i=histogram.begin(),ie=histogram.end();i!=ie;++i) {
+        out<<i->first*bucketWidth<<", ";
+        if(i->second.toMicroseconds()>9999) {
+            out<<i->second;
+        }else {
+            out<<i->second.toMicroseconds()<<"us";
+        }
+        out <<", ";
+        out << i->second.toMicroseconds()<<std::endl;
+    }
+}
+
+
 LatencyAnalysis::LatencyAnalysis(const char* opt_name, const uint32 nservers) {
     // read in all our data
     mNumberOfServers = nservers;

@@ -45,6 +45,18 @@ struct LocationEvent : public ObjectEvent {
 struct SubscriptionEvent : public ObjectEvent {
     bool started;
 };
+struct PingEvent : public ObjectEvent {
+    Time sentTime;
+    uint64 id;
+    double distance;
+    PingEvent():sentTime(Time::null()){}
+    virtual Time begin_time() const {
+        return sentTime;
+    }
+    virtual Time end_time() const {
+        return time;
+    }
+};
 
 
 struct ServerDatagramQueueInfoEvent : public Event {
