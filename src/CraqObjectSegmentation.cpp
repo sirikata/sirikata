@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <algorithm>
 
+
+
 namespace CBR
 {
 
@@ -538,7 +540,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       mFinishedMoveOrLookup.clear();
 
 
-#ifdef DEBUG_CRAQ
+#ifdef CRAQ_DEBUG
     Duration osegServiceDuration = osegServiceDurTimer.elapsed();
     if (osegServiceDuration.toMilliseconds() > 1)
     {
@@ -620,6 +622,11 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     obj_id    = msg->getObjID();
 
 
+#ifdef CRAQ_DEBUG
+    std::cout<<"\n\nReceived a migrate message from "<<serv_from<< " for  "<<obj_id.toString()<<" at time: "<<mContext->time.raw()<<"\n\n";
+#endif
+    
+    
 
     std::map<UUID,TransLookup>::iterator inTransIt;
 

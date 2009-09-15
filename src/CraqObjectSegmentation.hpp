@@ -16,7 +16,7 @@
 #include <vector>
 
 
-//#define DEBUG_CRAQ
+#define CRAQ_DEBUG
 
 namespace CBR
 {
