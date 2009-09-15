@@ -90,7 +90,8 @@ bool is_analysis() {
         GetOption(ANALYSIS_LATENCY)->as<bool>() ||
         GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
         !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
-        GetOption(ANALYSIS_OSEG)->as<bool>() )
+        GetOption(ANALYSIS_OSEG)->as<bool>() ||
+        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() )
         return true;
 
     return false;
