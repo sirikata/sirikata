@@ -86,6 +86,7 @@ class ClusterSim:
         self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
+        self.object_latency_analysis()
 
     def vis(self):
         subprocess.call([CBR_WRAPPER,
@@ -109,6 +110,7 @@ class ClusterSim:
         subprocess.call(['rm -f serverip*'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f *.ps'], 0, None, None, None, None, None, False, True)
         subprocess.call(['rm -f *.dat'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f distance_latency_histogram.csv'], 0, None, None, None, None, None, False, True)
 
     def clean_remote_data(self):
         clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm serverip*;"
@@ -219,6 +221,9 @@ class ClusterSim:
 
     def latency_analysis(self):
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
+
+    def object_latency_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
 
     def oseg_analysis(self):
