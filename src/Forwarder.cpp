@@ -8,7 +8,6 @@
 #include "Statistics.hpp"
 #include "Options.hpp"
 #include "ObjectMessageQueue.hpp"
-#include "LoadMonitor.hpp"
 
 #include "ForwarderUtilityClasses.hpp"
 #include "Forwarder.hpp"
@@ -35,10 +34,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mContext(ctx),
    mCSeg(NULL),
    mOSeg(NULL),
-   mLocationService(NULL),
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
-   mLoadMonitor(NULL),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
@@ -53,7 +50,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
 
-    mProfiler.addStage("Load Monitor");
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
     mProfiler.addStage("Outgoing Messages");
@@ -75,15 +71,13 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm)
+void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ObjectMessageQueue* omq, ServerMessageQueue* smq)
 {
   mCSeg = cseg;
   mOSeg = oseg;
-  mLocationService = locService;
   mObjectMessageQueue = omq;
   mServerMessageQueue =smq;
   mOutgoingMessages=new ForwarderQueue(smq,16384);
-  mLoadMonitor = lm;
 }
 
   /*
@@ -147,7 +141,6 @@ void Forwarder::service()
 
     mProfiler.startIteration();
 
-    mLoadMonitor->service();  mProfiler.finishedStage();
     tickOSeg(t);  mProfiler.finishedStage();
 
     std::deque<SelfMessage> self_messages;
@@ -479,12 +472,6 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
 }
 
 
-
-ServerID Forwarder::lookup(const Vector3f& pos)
-{
-  ServerID sid = mCSeg->lookup(pos);
-  return sid;
-}
 
 
 void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {

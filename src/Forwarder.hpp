@@ -20,14 +20,12 @@ namespace CBR
 {
   class Object;
   class ServerIDMap;
-  class LocationService;
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class ServerMessageQueue;
   class ObjectMessageQueue;
   class Network;
   class Trace;
-  class LoadMonitor;
   class ObjectConnection;
 
 
@@ -72,10 +70,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     //Shared with server
       CoordinateSegmentation* mCSeg;
       ObjectSegmentation* mOSeg;
-      LocationService* mLocationService;
       ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
-      LoadMonitor* mLoadMonitor;
 
 
 
@@ -103,15 +99,13 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // the server or object it is addressed to.
       void deliver(Message* msg);
 
-      ServerID lookup(const Vector3f&); //returns the server id that is responsible for the 3d point Vector3f
-      ServerID lookup(const UUID&); //
       void tickOSeg(const Time&t);
 
 
     public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, LocationService* locService, ObjectMessageQueue* omq, ServerMessageQueue* smq, LoadMonitor* lm);
+      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ObjectMessageQueue* omq, ServerMessageQueue* smq);
 
       void service();
 

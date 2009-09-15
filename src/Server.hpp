@@ -78,6 +78,7 @@ private:
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
+      LoadMonitor* mLoadMonitor;
 
     ObjectHostConnectionManager* mObjectHostConnectionManager;
 
@@ -94,7 +95,7 @@ private:
 
     ObjectConnectionMap mMigratingConnections;//bftm add
 
-    
+
       TimeProfiler mProfiler;
 }; // class Server
 

@@ -34,6 +34,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mProximity(prox),
    mOSeg(oseg),
    mForwarder(forwarder),
+   mLoadMonitor(lm),
    mObjectHostConnectionManager(NULL),
    mProfiler("Server Loop")
 {
@@ -41,7 +42,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
 
 
-    mForwarder->initialize(cseg,oseg,loc_service,omq,smq,lm);    //run initialization for forwarder
+    mForwarder->initialize(cseg,oseg,omq,smq);    //run initialization for forwarder
 
     Address4* oh_listen_addr = sidmap->lookupExternal(mContext->id());
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
@@ -52,6 +53,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mProfiler.addStage("Loc");
     mProfiler.addStage("Prox");
     mProfiler.addStage("Forwarder");
+    mProfiler.addStage("Load Monitor");
     mProfiler.addStage("Object Hosts");
     mProfiler.addStage("Object Migration Check");
 }
@@ -401,6 +403,7 @@ void Server::service() {
     mLocationService->service();  mProfiler.finishedStage();
     serviceProximity();           mProfiler.finishedStage();
     mForwarder->service();        mProfiler.finishedStage();
+    mLoadMonitor->service();      mProfiler.finishedStage();
     serviceObjectHostNetwork();   mProfiler.finishedStage();
     checkObjectMigrations();      mProfiler.finishedStage();
 }
