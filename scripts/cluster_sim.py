@@ -28,7 +28,7 @@ class ClusterSimSettings:
 
         self.object_factory_type = 'random'
 
-        self.object_static = 'false'
+        self.object_static = 'random'
         self.object_simple = 'true'
         self.object_2d = 'true'
         self.object_global = 'false'

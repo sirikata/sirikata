@@ -270,11 +270,6 @@ void Forwarder::service()
     UUID dest_obj = msg->dest_object();
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
 
-    if (is_forward && (forwardFrom != NullServerID))
-      std::cout<<"\n\nbftm debug: seconde\n\n";
-
-    if (is_forward)
-      std::cout<<"\n\nbftm debug: third\n\n";
     
 #ifdef  CRAQ_CACHE
     if (is_forward && (forwardFrom != NullServerID))
