@@ -59,9 +59,12 @@
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"
 
+#define OBJECT_FACTORY       "object.factory"
 #define OBJECT_STATIC        "object.static"
 #define OBJECT_SIMPLE        "object.simple"
 #define OBJECT_2D            "object.2d"
+#define OBJECT_PACK          "object.pack"
+#define OBJECT_PACK_OFFSET   "object.pack-offset"
 
 #define OBJECT_GLOBAL        "object.global"
 

@@ -59,7 +59,7 @@ public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
-    ObjectFactory(uint32 count, const BoundingBox3f& region, const Duration& duration);
+    ObjectFactory(const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
 
     void initialize(const ObjectHostContext* ctx);
@@ -79,6 +79,9 @@ public:
 #endif //OH_BUILD
 
 private:
+    void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
+    void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
+
     bool registerQuery(const UUID& id);
     SolidAngle queryAngle(const UUID& id);
 

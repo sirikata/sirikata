@@ -26,10 +26,16 @@ class ClusterSimSettings:
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
         self.object_queue_length = 8192
+
+        self.object_factory_type = 'random'
+
         self.object_static = 'false'
         self.object_simple = 'true'
         self.object_2d = 'true'
         self.object_global = 'false'
+
+        self.object_pack = '/home/meru/data/objects.pack'
+
         self.noise = 'true'
         self.debug = True
         self.valgrind = False
@@ -77,7 +83,7 @@ class ClusterSim:
         return self.config.code_dir + "/scripts/"
 
     def run(self):
-        self.config.generate_deployment(self.num_servers())
+        self.generate_deployment()
         self.clean_local_data()
         self.clean_remote_data()
         self.generate_ip_file()
@@ -89,7 +95,8 @@ class ClusterSim:
         self.object_latency_analysis()
 
     def vis(self):
-        subprocess.call([CBR_WRAPPER,
+        total_num_objects = self.settings.num_objects * self.settings.num_oh
+        args = [CBR_WRAPPER,
                          '--debug',
                          '--id=1',
                          "--layout=" + self.settings.layout(),
@@ -100,10 +107,18 @@ class ClusterSim:
                          "--duration=" + self.settings.duration,
                          '--analysis.locvis=object',
                          '--analysis.locvis.seed=1',
+                         '--object.factory=' + self.settings.object_factory_type,
+                         '--objects=' + str(total_num_objects),
                          "--object.static=" + self.settings.object_static,
                          "--object.simple=" + self.settings.object_simple,
-                         "--object.2d=" + self.settings.object_2d
-                         ])
+                         "--object.2d=" + self.settings.object_2d,
+                         "--object.pack=" + self.settings.object_pack,
+                ]
+        print args
+        subprocess.call(args)
+
+    def generate_deployment(self):
+        self.config.generate_deployment(self.num_servers())
 
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
@@ -133,11 +148,17 @@ class ClusterSim:
     def run_instances(self):
         # Construct the list of binaries to be run
         binaries = []
+        pack_offsets = []
+
         for x in range(0, self.settings.space_server_pool):
-            binaries.append("cbr");
+            binaries.append("cbr")
+            pack_offsets.append("")
         for x in range(0, self.settings.num_oh):
-            binaries.append("oh");
+            binaries.append("oh")
+            pack_offsets.append("--object.pack-offset=" + str(x*self.settings.num_objects) + " ")
+
         print binaries
+        print pack_offsets
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
         # Construct the command lines to do the actual run and dispatch them
@@ -163,21 +184,26 @@ class ClusterSim:
         cmd += "--wait-additional=6s "
         cmd += "--flatness=" + str(self.settings.flatness) + " "
         cmd += "--capexcessbandwidth=false "
-        cmd += "--objects=" + str(self.settings.num_objects) + " "
         cmd += "--server.queue=" + self.settings.server_queue + " "
         cmd += "--server.queue.length=" + str(self.settings.server_queue_length) + " "
         cmd += "--object.queue=" + self.settings.object_queue + " "
         cmd += "--object.queue.length=" + str(self.settings.object_queue_length) + " "
-        cmd += "--object.static=" + self.settings.object_static + " "
-        cmd += "--object.simple=" + self.settings.object_simple + " "
-        cmd += "--object.2d=" + self.settings.object_2d + " "
-        cmd += "--object.global=" + self.settings.object_global + " "
         cmd += "--noise=" + self.settings.noise + " "
         cmd += "--loc=" + self.settings.loc + " "
         cmd += "--cseg=" + self.settings.cseg + " "
         cmd += "--cseg-service-host=" + self.settings.cseg_service_host + " "
         cmd += "--oseg=" + self.settings.oseg + " "
         cmd += "--oseg_unique_craq_prefix=" + self.settings.oseg_unique_craq_prefix + "  "
+
+        # object factory options
+        cmd += "--object.factory=" + self.settings.object_factory_type + " "
+        cmd += "--objects=" + str(self.settings.num_objects) + " "
+        cmd += "--object.static=" + self.settings.object_static + " "
+        cmd += "--object.simple=" + self.settings.object_simple + " "
+        cmd += "--object.2d=" + self.settings.object_2d + " "
+        cmd += "--object.global=" + self.settings.object_global + " "
+        cmd += "--object.pack=" + self.settings.object_pack + " "
+        cmd += "%(packoffset)s "
 
         if len(self.settings.loglevels) > 0:
             cmd += "\""
@@ -191,7 +217,11 @@ class ClusterSim:
             cmd += "\""
         cmd += " "
 
-        ClusterDeploymentRun(self.config, cmd, { 'binary' : binaries } )
+        ClusterDeploymentRun(self.config, cmd,
+                             { 'binary' : binaries,
+                               'packoffset' : pack_offsets,
+                               }
+                             )
 
     def retrieve_data(self):
         # Copy the trace and sync data back here

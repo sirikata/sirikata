@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    ObjectFactory* obj_factory = new ObjectFactory(region, duration);
 
     Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
     ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map, init_oh_ctx_time);

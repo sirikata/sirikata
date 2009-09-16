@@ -91,9 +91,12 @@ void InitOptions() {
 
         .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
         .addOption(new OptionValue(OBJECT_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each object."))
+        .addOption(new OptionValue(OBJECT_FACTORY, "random", Sirikata::OptionValueType<String>(), "Type of objects the object factory should generate.  Options are currently random, which does everything randomly, or pack, which reads object parameters from an object pack."))
         .addOption(new OptionValue(OBJECT_STATIC, "false", Sirikata::OptionValueType<bool>(), "Whether objects should be static or mobe around."))
         .addOption(new OptionValue(OBJECT_SIMPLE, "false", Sirikata::OptionValueType<bool>(), "Simple object distribution - all the same size, useful for sanity checking queries"))
         .addOption(new OptionValue(OBJECT_2D, "false", Sirikata::OptionValueType<bool>(), "Constrain location and motion to just 2 dimensions."))
+        .addOption(new OptionValue(OBJECT_PACK, "", Sirikata::OptionValueType<String>(), "Filename of the object pack to use to generate objects."))
+        .addOption(new OptionValue(OBJECT_PACK_OFFSET, "0", Sirikata::OptionValueType<uint32>(), "Offset into the object pack to start generating objects at."))
         .addOption(new OptionValue(OBJECT_GLOBAL, "false", Sirikata::OptionValueType<bool>(), "Whether objects should be informed automatically of all other objects."))
         .addOption(new OptionValue(SERVER_QUEUE, "fair", Sirikata::OptionValueType<String>(), "The type of ServerMessageQueue to use for routing."))
         .addOption(new OptionValue(SERVER_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each server."))

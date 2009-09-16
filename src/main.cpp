@@ -143,7 +143,6 @@ void *main_loop(void *) {
     }
 
 
-    uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
@@ -178,7 +177,7 @@ void *main_loop(void *) {
 
     Forwarder* forwarder = new Forwarder(space_context);
 
-    ObjectFactory* obj_factory = new ObjectFactory(nobjects, region, duration);
+    ObjectFactory* obj_factory = new ObjectFactory(region, duration);
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
