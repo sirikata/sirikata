@@ -49,6 +49,28 @@ class NodeMonitorThread(threading.Thread):
         return self.sp.returncode
 
 
+# Performs substitution of per-node parameters.
+# command - may be either string or array of strings containing commands with substitution string
+# host - the host the command will be run on
+# user - the user to run as
+# index - the index of the node in the cluster deployment config
+# user_params - a dict of user specified substitutions
+# return value - same type and form as command (string or array), with substitutions performed
+def ClusterSubstitute(command, host, user, index=0, user_params=None):
+    # Construct substitution dictionary
+    subs = {'host' : host, 'user' : user, 'node' : index}
+    if (user_params != None):
+        for key,value in user_params.items():
+            subs[key] = value[index-1]
+
+    # Perform substituion
+    if (isinstance(command, str)):
+        return command % subs
+    elif (isinstance(command, list)):
+        return [(x % subs) for x in command]
+    return None
+
+
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
 def ClusterRun(cc, command):
@@ -58,7 +80,7 @@ def ClusterRun(cc, command):
 
     mts = []
     for node in cc.nodes:
-        node_command = command % {'host' : node.node, 'user' : node.user}
+        node_command = ClusterSubstitute(command, host=node.node, user=node.user)
         sp = subprocess.Popen(['ssh', '-Y', node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(node.str(), sp)
         mt.start()
@@ -81,14 +103,9 @@ def ClusterDeploymentRun(cc, command, user_params = None):
     mts = []
     index = 1
     for node in cc.deploy_nodes:
-        # Construct substitution dictionary
-        subs = {'host' : node.node, 'user' : node.user, 'node' : index}
-        if (user_params != None):
-            for key,value in user_params.items():
-                subs[key] = value[index-1]
-
-        node_command = command % subs
+        node_command = ClusterSubstitute(command, host=node.node, user=node.user, index=index, user_params=user_params)
         print node_command
+
         sp = subprocess.Popen(['ssh', '-Y' , node.str(), node_command], 0, None, None, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
         mt = NodeMonitorThread(str(index) + " (" + node.str() + ")", sp)
         mt.start()

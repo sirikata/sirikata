@@ -5,8 +5,7 @@ import math
 import subprocess
 import datetime
 from cluster_config import ClusterConfig
-from cluster_run import ClusterRun
-from cluster_run import ClusterDeploymentRun
+from cluster_run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
 from cluster_scp import ClusterSCP
 
 CBR_WRAPPER = "./cbr_wrapper.sh"
@@ -86,50 +85,75 @@ class ClusterSim:
     def scripts_dir(self):
         return self.config.code_dir + "/scripts/"
 
+    # x_parameters get parameters which affect x category of options
+    # Will be returned as a tuple (params, class_params) where
+    # params is an array of strings containing the parameters
+    # and class_params is a dict of class (space, oh, cseg) => ( dict of
+    #  param => function(index) ) which generates the per-node parameter
+    # to be passed.
+
+    def debug_parameters(self):
+        params = []
+        if (self.settings.debug):
+            params.append("--debug")
+        if (self.settings.valgrind):
+            params.append("--valgrind")
+        if (self.settings.profile):
+            params.append("--profile=true")
+        class_params = {}
+        return (params, class_params)
+
+    def oh_parameters(self):
+        params = [
+            '--ohid=%(node)d ',
+            '--object.factory=' + self.settings.object_factory_type,
+            '--objects=' + str(self.settings.num_objects),
+            '--object.static=' + self.settings.object_static,
+            '--object.simple=' + self.settings.object_simple,
+            '--object.2d=' + self.settings.object_2d,
+            '--object.global=' + self.settings.object_global,
+            '--object.pack=' + self.settings.object_pack,
+            '%(packoffset)s',
+            ]
+        class_params = {
+            'packoffset' : {
+                'oh' : lambda index : '--object.pack-offset=' + str(index*self.settings.num_objects)
+                }
+            }
+        return (params, class_params)
+
+
+    def vis_parameters(self):
+        params = ['%(vis)s']
+        class_params = {
+            'vis' : {
+                'vis' : lambda index : '--analysis.locvis=object --analysis.locvis.seed=1'
+                }
+            }
+        return (params, class_params)
+
+
     def run(self):
         self.generate_deployment()
         self.clean_local_data()
         self.clean_remote_data()
         self.generate_ip_file()
-        self.run_instances()
+        self.run_cluster_sim()
         self.retrieve_data()
         self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
 
-    def vis(self):
-        total_num_objects = self.settings.num_objects * self.settings.num_oh
-        args = [CBR_WRAPPER,
-                         '--debug',
-                         '--id=1',
-                         "--layout=" + self.settings.layout(),
-                         "--num-oh=" + str(self.settings.num_oh),
-                         '--max-servers=' + str(self.max_space_servers()),
-                         "--region=" + self.settings.region(),
-                         "--serverips=" + self.ip_file(),
-                         "--duration=" + self.settings.duration,
-                         '--analysis.locvis=object',
-                         '--analysis.locvis.seed=1',
-                         '--object.factory=' + self.settings.object_factory_type,
-                         '--objects=' + str(total_num_objects),
-                         "--object.static=" + self.settings.object_static,
-                         "--object.simple=" + self.settings.object_simple,
-                         "--object.2d=" + self.settings.object_2d,
-                         "--object.pack=" + self.settings.object_pack,
-                ]
-        print args
-        subprocess.call(args)
-
     def generate_deployment(self):
         self.config.generate_deployment(self.num_servers())
 
     def clean_local_data(self):
-        subprocess.call(['rm -f trace*'], 0, None, None, None, None, None, False, True)
-        subprocess.call(['rm -f serverip*'], 0, None, None, None, None, None, False, True)
-        subprocess.call(['rm -f *.ps'], 0, None, None, None, None, None, False, True)
-        subprocess.call(['rm -f *.dat'], 0, None, None, None, None, None, False, True)
-        subprocess.call(['rm -f distance_latency_histogram.csv'], 0, None, None, None, None, None, False, True)
+        subprocess.call(['rm -f trace*'], shell=True)
+        subprocess.call(['rm -f serverip*'], shell=True)
+        subprocess.call(['rm -f *.ps'], shell=True)
+        subprocess.call(['rm -f *.dat'], shell=True)
+        subprocess.call(['rm -f distance_latency_histogram.csv'], shell=True)
 
     def clean_remote_data(self):
         clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm serverip*;"
@@ -149,83 +173,128 @@ class ClusterSim:
         fp.close()
         ClusterSCP(self.config, [serveripfile, "remote:" + self.scripts_dir()])
 
-    def run_instances(self):
-        # Construct the list of binaries to be run
-        binaries = []
-        pack_offsets = []
+    def fill_parameters(self, node_params, param_dict, node_class, idx):
+        for parm,parm_map in param_dict.items():
+            if (not parm in node_params):
+                node_params[parm] = []
+            if not node_class in parm_map:
+                node_params[parm].append('')
+            else:
+                node_params[parm].append(parm_map[node_class](idx))
 
-        for x in range(0, self.settings.space_server_pool):
-            binaries.append("cbr")
-            pack_offsets.append("")
-        for x in range(0, self.settings.num_oh):
-            binaries.append("oh")
-            pack_offsets.append("--object.pack-offset=" + str(x*self.settings.num_objects) + " ")
 
-        print binaries
-        print pack_offsets
+    # instance_types: [] of tuples (type, count) - types of nodes, e.g.
+    #                 'space', 'oh', 'cseg' and how many of each should
+    #                 be deployed
+    # local: bool indicating whether this should all be run locally or remotely
+    def run_instances(self, instance_types, local):
+        # get various types of parameters, along with node-specific dict-functors
+        debug_params, debug_param_functor_dict = self.debug_parameters()
+        oh_params, oh_param_functor_dict = self.oh_parameters()
+        vis_params, vis_param_functor_dict = self.vis_parameters()
+
+        # Construct the node-specific parameter lists
+        node_params = {}
+        node_params['binary'] = []
+
+        for node_class in instance_types:
+            node_type = node_class[0]
+            node_count = node_class[1]
+
+            for x in range(0, node_count):
+                # FIXME should just map directly to binaries
+                if (node_type == 'space'):
+                    node_params['binary'].append('cbr')
+                elif (node_type == 'oh'):
+                    node_params['binary'].append('oh')
+                elif (node_type == 'vis'):
+                    node_params['binary'].append('cbr')
+                else:
+                    node_params['binary'].append('')
+                self.fill_parameters(node_params, debug_param_functor_dict, node_type, x)
+                self.fill_parameters(node_params, oh_param_functor_dict, node_type, x)
+                self.fill_parameters(node_params, vis_param_functor_dict, node_type, x)
+
+        print node_params
 
         wait_until_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z")
+
         # Construct the command lines to do the actual run and dispatch them
-        cmd = "cd " + self.scripts_dir() + "; "
-        cmd += CBR_WRAPPER + " "
-        cmd += "%(binary)s "
-        if (self.settings.debug):
-            cmd += "--debug "
-        if (self.settings.valgrind):
-            cmd += "--valgrind "
-        if (self.settings.profile):
-            cmd += "--profile=true "
-        cmd += "--id=%(node)d "
-        cmd += "--ohid=%(node)d "
-        cmd += "\"--layout=" + self.settings.layout() + "\" "
-        cmd += "--num-oh=" + str(self.settings.num_oh) + " "
-        cmd += "\"--region=" + self.settings.region() + "\" "
-        cmd += "--serverips=" + self.ip_file() + " "
-        cmd += "--duration=" + self.settings.duration + " "
-        cmd += "--send-bandwidth=" + str(self.settings.tx_bandwidth) + " "
-        cmd += "--receive-bandwidth=" + str(self.settings.rx_bandwidth) + " "
-        cmd += "--wait-until=" + "\"" + wait_until_time + "\" "
-        cmd += "--wait-additional=6s "
-        cmd += "--flatness=" + str(self.settings.flatness) + " "
-        cmd += "--capexcessbandwidth=false "
-        cmd += "--server.queue=" + self.settings.server_queue + " "
-        cmd += "--server.queue.length=" + str(self.settings.server_queue_length) + " "
-        cmd += "--object.queue=" + self.settings.object_queue + " "
-        cmd += "--object.queue.length=" + str(self.settings.object_queue_length) + " "
-        cmd += "--noise=" + self.settings.noise + " "
-        cmd += "--loc=" + self.settings.loc + " "
-        cmd += "--cseg=" + self.settings.cseg + " "
-        cmd += "--cseg-service-host=" + self.settings.cseg_service_host + " "
-        cmd += "--oseg=" + self.settings.oseg + " "
-        cmd += "--oseg_unique_craq_prefix=" + self.settings.oseg_unique_craq_prefix + "  "
+        cmd_seq = []
+        cmd_seq.extend( [
+            CBR_WRAPPER,
+            "%(binary)s",
+            ] )
+        cmd_seq.extend(debug_params)
+        cmd_seq.extend( [
+                "--id=%(node)d",
+                "--layout=" + self.settings.layout(),
+                "--num-oh=" + str(self.settings.num_oh),
+                "--region=" + self.settings.region(),
+                "--serverips=" + self.ip_file(),
+                "--duration=" + self.settings.duration,
+                "--send-bandwidth=" + str(self.settings.tx_bandwidth),
+                "--receive-bandwidth=" + str(self.settings.rx_bandwidth),
+                "--wait-until=" + wait_until_time,
+                "--wait-additional=6s",
+                "--flatness=" + str(self.settings.flatness),
+                "--capexcessbandwidth=false",
+                "--server.queue=" + self.settings.server_queue,
+                "--server.queue.length=" + str(self.settings.server_queue_length),
+                "--object.queue=" + self.settings.object_queue,
+                "--object.queue.length=" + str(self.settings.object_queue_length),
+                "--noise=" + self.settings.noise,
+                "--loc=" + self.settings.loc,
+                "--cseg=" + self.settings.cseg,
+                "--cseg-service-host=" + self.settings.cseg_service_host,
+                "--oseg=" + self.settings.oseg,
+                "--oseg_unique_craq_prefix=" + self.settings.oseg_unique_craq_prefix,
+                ])
+        cmd_seq.extend(oh_params)
+        cmd_seq.extend(vis_params)
 
-        # object factory options
-        cmd += "--object.factory=" + self.settings.object_factory_type + " "
-        cmd += "--objects=" + str(self.settings.num_objects) + " "
-        cmd += "--object.static=" + self.settings.object_static + " "
-        cmd += "--object.simple=" + self.settings.object_simple + " "
-        cmd += "--object.2d=" + self.settings.object_2d + " "
-        cmd += "--object.global=" + self.settings.object_global + " "
-        cmd += "--object.pack=" + self.settings.object_pack + " "
-        cmd += "%(packoffset)s "
-
+        # Add a param for loglevel if necessary
         if len(self.settings.loglevels) > 0:
-            cmd += "\""
-            cmd += "--moduleloglevel="
+            loglevel_cmd = "--moduleloglevel="
             mods_count = 0
             for mod,level in self.settings.loglevels.items():
                 if mods_count > 1:
-                    cmd += ","
-                cmd += mod + "=" + level
+                    loglevel_cmd += ","
+                loglevel_cmd += mod + "=" + level
                 mods_count = mods_count + 1
-            cmd += "\""
-        cmd += " "
+            cmd_seq.append(loglevel_cmd)
 
-        ClusterDeploymentRun(self.config, cmd,
-                             { 'binary' : binaries,
-                               'packoffset' : pack_offsets,
-                               }
-                             )
+        if local:
+            # FIXME do we ever need to handle multiple local runs
+            # FIXME what do we do about index? ideally it shouldn't matter, but analysis code cares about index=0
+            cmd = ClusterSubstitute(cmd_seq, host='localhost', user='xxx', index=1, user_params=node_params)
+            print cmd
+            subprocess.call(cmd)
+        else: # cluster deployment
+            # Generate the command string itself
+            #  Note: we need to quote the entire command, so we we quote each parameter with escaped quotes,
+            #        then separate with spaces, then wrap in regular quotes
+            cmd = ' '.join([ '"' + x + '"' for x in cmd_seq])
+            # FIXME this gets prepended here because I can't get all the quoting to work out with ssh properly
+            # if it is included as part of the normal process
+            cmd = 'cd ' + self.scripts_dir() + ' ; ' + cmd
+            # And deploy
+            ClusterDeploymentRun(self.config, cmd, node_params)
+
+
+    def run_cluster_sim(self):
+        instances = [
+            ('space', self.settings.space_server_pool),
+            ('oh', self.settings.num_oh)
+            ]
+        self.run_instances(instances, False)
+
+    def vis(self):
+        instances = [
+            ('vis', 1)
+            ]
+        self.run_instances(instances, True)
+
 
     def retrieve_data(self):
         # Copy the trace and sync data back here
