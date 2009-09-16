@@ -102,7 +102,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we can route messages being held in mObjectsInTransit
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          route((iterObjectsInTransit->second)[s],iter->second,false);
+          route((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward);
         }
 
         //remove the messages from the objects in transit
@@ -227,7 +227,7 @@ void Forwarder::service()
   }
 
 
-//bftm note: this is fine even after message overhaul.
+
   // Routing interface for servers.  This is used to route messages that originate from
   // a server provided service, and thus don't have a source object.  Messages may be destined
   // for either servers or objects.  The second form will simply automatically do the destination
@@ -265,42 +265,57 @@ void Forwarder::service()
   }
 
 
-  void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward)
+  void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
   {
     UUID dest_obj = msg->dest_object();
-
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
+
+    if (is_forward && (forwardFrom != NullServerID))
+      std::cout<<"\n\nbftm debug: seconde\n\n";
+
+    if (is_forward)
+      std::cout<<"\n\nbftm debug: third\n\n";
+    
+#ifdef  CRAQ_CACHE
+    if (is_forward && (forwardFrom != NullServerID))
+    {
+      //means that when we figure out which server this object is located on, we should also send an oseg update message.
+      //we need to be careful not to send multiple update messages to the same server:
+      //
+
+      std::cout<<"\n\nbftm debug: first\n\n";
+      
+      if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end())
+      {
+        if (mServersToUpdate[dest_obj].end() == std::find(mServersToUpdate[dest_obj].begin(), mServersToUpdate[dest_obj].end(), forwardFrom))
+        {
+          //don't already know that forwardFrom needs to be updated.  means that we should append the forwardFrom ServerID to a list of servers that we need to update when we know which server to send the message to.
+          mServersToUpdate[dest_obj].push_back(forwardFrom);
+
+#ifdef CRAQ_DEBUG
+          std::cout<<"\n\n bftm debug: got a server to update at time  "<<mContext->time.raw()<< " obj_id:   "<<dest_obj.toString()<<"    server to send update to:  "<<forwardFrom<<"\n\n";
+#endif
+          
+        }
+      }
+    }
+#endif
+    
 
     if (dest_server_id != NullServerID)
     {
       //means that we instantly knew what the location of the object is, and we can route immediately!
-      route(msg, dest_server_id,false);
+      route(msg, dest_server_id,is_forward);
 
-      //bftm update
-      //send a message to update cache of other oseg.
-      UpdateOSegMessage* upOSegMess = new UpdateOSegMessage(mContext->id(),dest_server_id,dest_obj);
-
-      ServerID serverComeFrom = PROBLEM HERE: THIS IS NOT RIGHT GetUniqueIDServerID(msg->id()); //note, this may not really work.
-      this->route(MessageRouter::OSEG_CACHE_UPDATE, upOSegMess, serverComeFrom, false);
-      //end bftm update
-      
       return;
     }
 
     //add message to objects in transit.
-    if (mObjectsInTransit.find(dest_obj) == mObjectsInTransit.end())
-    {
-      //no messages have been queued for mObjectsInTransit
-      //add this as the beginning of a vector of message pointers.
-      ObjectMessageList tmp;
-      tmp.push_back(msg);
-      mObjectsInTransit[dest_obj] = tmp;
-    }
-    else
-    {
-      //add message to queue of objects in transit.
-      mObjectsInTransit[dest_obj].push_back(msg);
-    }
+    MessageAndForward mAndF;
+    mAndF.mMessage = msg;
+    mAndF.mIsForward = is_forward;
+    mObjectsInTransit[dest_obj].push_back(mAndF);
+
   }
 
 //end what i think it should be replaced with
@@ -436,7 +451,6 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
   }
 
 
-
 void Forwarder::receiveMessage(Message* msg) {
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
@@ -459,24 +473,45 @@ void Forwarder::receiveMessage(Message* msg) {
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL)
         conn->send(obj_msg_cpy);
-    else
-        route(obj_msg_cpy, true);
+    else 
+      route(obj_msg_cpy, true,GetUniqueIDServerID(obj_msg->id()) );// bftm changed to allow for forwarding back messages.
+
+    //    else
+    //        route(obj_msg_cpy, true);
 
     delete msg;
 }
 
 
 
-
 void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward)
 {
+  //send out all server updates associated with an object with this message:
+  UUID obj_id =  msg->dest_object();
+
+#ifdef CRAQ_CACHE
+  if (mServersToUpdate.find(obj_id) != mServersToUpdate.end())
+  {
+    for (int s=0; s < (int) mServersToUpdate[obj_id].size(); ++s)
+    {
+      UpdateOSegMessage* up_os = new UpdateOSegMessage(mContext->id(),dest_serv,obj_id);
+      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
+
+#ifdef CRAQ_DEBUG
+      std::cout<<"\n\n Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
+      std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
+      std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
+      std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
+#endif
+    }
+  }
+#endif
+
   // Wrap it up in one of our ObjectMessages and ship it.
-    ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
+  ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
   route(MessageRouter::OBJECT_MESSAGESS,obj_msg, dest_serv, is_forward);
   delete msg;
 }
-
-
 
 
 void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {

@@ -44,9 +44,9 @@
 #define TRACE_LOCPROX
 #define TRACE_OSEG
 //#define TRACE_CSEG
-//#define TRACE_MIGRATION
-//#define TRACE_DATAGRAM
-//#define TRACE_PACKET
+#define TRACE_MIGRATION
+#define TRACE_DATAGRAM
+#define TRACE_PACKET
 #define TRACE_PING
 
 namespace CBR {
@@ -112,7 +112,7 @@ const uint8 Trace::ServerObjectEventTag;
 
 const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
-  //const uint8 Trace::ObjectSegmentationFinalDumpTag;
+
 
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {

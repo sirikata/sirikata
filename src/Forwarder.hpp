@@ -59,7 +59,7 @@ public:
     }
 };
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
-  {
+{
     private:
     //Unique to forwarder
       std::deque<SelfMessage> mSelfMessages; //will be used in route.
@@ -75,7 +75,13 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
 
 
-    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
+    struct MessageAndForward
+    {
+      bool mIsForward;
+      CBR::Protocol::Object::ObjectMessage* mMessage;
+    };
+    typedef std::vector<MessageAndForward> ObjectMessageList;
+    //    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
     std::map<UUID,ObjectMessageList> mObjectsInTransit;  //this is a map of messages's for objects that are being looked up in oseg or are in transit.
 
 
@@ -101,6 +107,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
       void tickOSeg(const Time&t);
 
+    typedef std::vector<ServerID> ListServersUpdate;
+    typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
+    ObjectServerUpdateMap mServersToUpdate;
 
     public:
       Forwarder(SpaceContext* ctx);
@@ -116,7 +125,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
       void route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
-      void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false);
+
+    //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with the stale cache value.
+      void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
   private:
       // This version is provided if you already know which server the message should be sent to
       void route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward);

@@ -38,6 +38,9 @@
 #include "QuakeMotionPath.hpp"
 #include "StaticMotionPath.hpp"
 
+#include "OSegTestMotionPath.hpp"
+
+
 #include "Options.hpp"
 #include "Statistics.hpp"
 
@@ -101,7 +104,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     bool simple = GetOption(OBJECT_SIMPLE)->as<bool>();
     bool only_2d = GetOption(OBJECT_2D)->as<bool>();
     float zfactor = (only_2d ? 0.f : 1.f);
-    bool static_objects = GetOption(OBJECT_STATIC)->as<bool>();
+    std::string motion_path_type = GetOption(OBJECT_STATIC)->as<String>();
 
     for(uint32 i = 0; i < nobjects; i++) {
         UUID id = randomUUID();
@@ -109,11 +112,14 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         ObjectInputs* inputs = new ObjectInputs;
 
         Vector3f startpos = region.min() + Vector3f(randFloat()*region_extents.x, randFloat()*region_extents.y, randFloat()*region_extents.z * zfactor);
+
         float bounds_radius = (simple ? 10.f : (randFloat()*20));
 
-        if (static_objects)
+        if (motion_path_type == "static")//static
             inputs->motion = new StaticMotionPath(start, startpos);
-        else
+        else if (motion_path_type == "drift") //drift
+            inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
+        else //random
             inputs->motion = new RandomMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
         inputs->registerQuery = (randFloat() > 0.5f);

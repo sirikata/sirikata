@@ -112,9 +112,6 @@ void Server::serviceObjectHostNetwork() {
   }
 
 
-
-
-
   // Tick closing object connections, deleting them when they are
   ObjectConnectionSet persistingConnections;
   for(ObjectConnectionSet::iterator it = mClosingConnections.begin(); it != mClosingConnections.end(); it++) {
