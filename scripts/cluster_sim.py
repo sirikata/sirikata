@@ -117,7 +117,7 @@ class ClusterSim:
             ]
         class_params = {
             'packoffset' : {
-                'oh' : lambda index : '--object.pack-offset=' + str(index*self.settings.num_objects)
+                'oh' : lambda index : ['--object.pack-offset=' + str(index*self.settings.num_objects)]
                 }
             }
         return (params, class_params)
@@ -127,7 +127,7 @@ class ClusterSim:
         params = ['%(vis)s']
         class_params = {
             'vis' : {
-                'vis' : lambda index : '--analysis.locvis=object --analysis.locvis.seed=1'
+                'vis' : lambda index : ['--analysis.locvis=object', '--analysis.locvis.seed=1']
                 }
             }
         return (params, class_params)
@@ -180,7 +180,7 @@ class ClusterSim:
             if not node_class in parm_map:
                 node_params[parm].append('')
             else:
-                node_params[parm].append(parm_map[node_class](idx))
+                node_params[parm].extend(parm_map[node_class](idx))
 
 
     # instance_types: [] of tuples (type, count) - types of nodes, e.g.
