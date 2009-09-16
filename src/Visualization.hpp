@@ -13,6 +13,7 @@ class LocationVisualization :public LocationErrorAnalysis {
     SpaceContext* mSpaceContext;
     ObjectFactory*mFactory;
     UUID mObserver;
+    static EventList* NullObservedEvents; // if we don't have an event list to use
     EventList* mObservedEvents;
     EventList::iterator mCurEvent;
     Duration mSamplingRate;

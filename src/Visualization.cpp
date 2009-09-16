@@ -223,10 +223,15 @@ LocationVisualization::LocationVisualization(const char *opt_name, const uint32 
     mSegmentationChangeIterator = mSegmentationChangeEvents.begin();
 }
 
+// When we can't find an object/server event list to display use this so we can still
+// display the object info we have
+LocationVisualization::EventList* LocationVisualization::NullObservedEvents = new LocationVisualization::EventList();
+
 void LocationVisualization::displayError(const UUID&observer, const Duration&sampling_rate) {
     std::cout << "Observer is: "  << observer.readableHexData() << "\n";
     this->mObserver=observer;
     mObservedEvents = getEventList(observer);
+    if (mObservedEvents == NULL) mObservedEvents = NullObservedEvents;
 
     displayError(sampling_rate);
 }
@@ -235,6 +240,7 @@ void LocationVisualization::displayError(const ServerID&observer, const Duration
     std::cout << "Observer is: "  << (uint32)observer << "\n";
     this->mObserver=UUID::null();
     mObservedEvents = getEventList(observer);
+    if (mObservedEvents == NULL) mObservedEvents = NullObservedEvents;
 
     displayError(sampling_rate);
 }
@@ -261,23 +267,31 @@ void LocationVisualization::displayError(const Duration&sampling_rate) {
 }
 
 void LocationVisualization::displayRandomViewerError(int seed, const Duration&sampling_rate) {
-    unsigned int which=seed;
-    which=which%mEventLists.size();
-    ObjectEventListMap::iterator iter=mEventLists.begin();
-    for (unsigned int i=0;i<which;++i,++iter) {
+    if (mEventLists.size() > 0) {
+        unsigned int which=seed;
+        which=which%mEventLists.size();
+        ObjectEventListMap::iterator iter=mEventLists.begin();
+        for (unsigned int i=0;i<which;++i,++iter) {
+        }
+        displayError(iter->first,sampling_rate);
     }
-    displayError(iter->first,sampling_rate);
-
+    else {
+        displayError(UUID::null(),sampling_rate);
+    }
 }
 
 void LocationVisualization::displayRandomServerError(int seed, const Duration&sampling_rate) {
-    unsigned int which=seed;
-    which=which%mServerEventLists.size();
-    ServerEventListMap::iterator iter=mServerEventLists.begin();
-    for (unsigned int i=0;i<which;++i,++iter) {
+    if (mServerEventLists.size() > 0) {
+        unsigned int which=seed;
+        which=which%mServerEventLists.size();
+        ServerEventListMap::iterator iter=mServerEventLists.begin();
+        for (unsigned int i=0;i<which;++i,++iter) {
+        }
+        displayError(iter->first,sampling_rate);
     }
-    displayError(iter->first,sampling_rate);
-
+    else {
+        displayError(NullServerID,sampling_rate);
+    }
 }
 
 }
