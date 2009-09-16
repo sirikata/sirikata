@@ -36,12 +36,14 @@ class ClusterSimSettings:
 
         self.object_pack = '/home/meru/data/objects.pack'
 
+        self.blocksize = 200
+        self.center = (0, 0, 0)
+
         self.noise = 'true'
         self.debug = True
         self.valgrind = False
         self.profile = False
         self.loc = 'oracle'
-        self.blocksize = 200
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
@@ -63,7 +65,9 @@ class ClusterSimSettings:
 
     def region(self):
         half_extents = [ self.blocksize * x / 2 for x in (self.layout_x, self.layout_y, 1)]
-        return "<<" + str(-half_extents[0]) + "," + str(-half_extents[1]) + "," + str(-half_extents[2]) + ">,<" + str(half_extents[0]) + "," + str(half_extents[1]) + "," + str(half_extents[2]) + ">>"
+        neg = [ -x for x in half_extents ]
+        pos = [ x for x in half_extents ]
+        return "<<%f,%f,%f>,<%f,%f,%f>>" % (neg[0]+self.center[0], neg[1]+self.center[1], neg[2]+self.center[2], pos[0]+self.center[0], pos[1]+self.center[1], pos[2]+self.center[2])
 
 class ClusterSim:
     def __init__(self, config, settings):
