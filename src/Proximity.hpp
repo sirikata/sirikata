@@ -162,6 +162,8 @@ private:
     CBRLocationServiceCache* mGlobalLocCache;
     Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
 
+    // For profiling performance of the prox thread
+    TimeProfiler mProfiler;
 
     // BOTH Threads: Thread-safe data used for exchange between threads
 
