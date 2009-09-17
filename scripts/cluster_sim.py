@@ -49,6 +49,9 @@ class ClusterSimSettings:
         self.oseg = 'oseg_loc'
         self.oseg_unique_craq_prefix = 'M'
 
+        self.vis_mode = 'object'
+        self.vis_seed = 1
+
         self.loglevels = {
             "prox" : "warn",
             }
@@ -127,7 +130,7 @@ class ClusterSim:
         params = ['%(vis)s']
         class_params = {
             'vis' : {
-                'vis' : lambda index : ['--analysis.locvis=object', '--analysis.locvis.seed=1']
+                'vis' : lambda index : ['--analysis.locvis=' + self.settings.vis_mode, '--analysis.locvis.seed=' + str(self.settings.vis_seed)]
                 }
             }
         return (params, class_params)
