@@ -14,6 +14,7 @@ class Forwarder;
 
 class LocationService;
 class Proximity;
+class MigrationMonitor;
 
 class CoordinateSegmentation;
 class ObjectSegmentation;
@@ -71,6 +72,7 @@ private:
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
+      MigrationMonitor* mMigrationMonitor;
       LoadMonitor* mLoadMonitor;
 
     ObjectHostConnectionManager* mObjectHostConnectionManager;
