@@ -56,22 +56,13 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
         bool sent_success=true;//FIXME
         /*bool sent_success = */mForwarder->route(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
-        if (!sent_success) {
+        if (!sent_success)
             break;
-/*
-            mClientQueues.deprioritize(objectName,.75,0,0,1);
-            if (++retryCount>retryMax) {
-                break;//potentially need to retry all queues to find the one that can push ok
-            }
-*/
-        }else {
-            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
 
-            mClientQueues.reprioritize(objectName,1.0,.0625,0,1);
-            ServerProtocolMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
-            assert(next_msg_popped == next_msg);
-            delete next_msg;
-        }
+        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
+        ServerProtocolMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
+        assert(next_msg_popped == next_msg);
+        delete next_msg;
     }
 
     mRemainderBytes = mClientQueues.empty() ? 0 : bytes;

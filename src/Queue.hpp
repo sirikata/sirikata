@@ -62,7 +62,7 @@ struct MethodSizeFunctor<ElementType*> {
 /** Queue with maximum bytes of storage. */
 template <typename ElementType, typename SizeFunctorType = MethodSizeFunctor<ElementType> >
 class Queue {
-    
+
     std::deque<ElementType> mElements;
     SizeFunctorType mSizeFunctor;
     uint32 mMaxSize;
@@ -83,7 +83,7 @@ public:
         mSize += msg_size;
         return QueueEnum::PushSucceeded;
     }
-    void deprioritize(){}
+
     const ElementType& front() const{
         return mElements.front();
     }

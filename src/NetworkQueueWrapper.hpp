@@ -23,7 +23,6 @@ public:
     QueueEnum::PushResult push(const ServerMessagePair *msg){
         return QueueEnum::PushExceededMaximumSize;
     }
-    void deprioritize(){}
 
     ServerMessagePair* front() {
         if (mFront == NULL) {

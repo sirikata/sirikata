@@ -123,26 +123,6 @@ public:
     }
 
 
-
-    bool deprioritize(Key server,float factor, float affine, float minval,float maxval) {
-        return changepriority(server,factor,affine,minval,maxval,true);
-    }
-    bool reprioritize(Key server,float factor, float affine, float minval,float maxval) {
-        return changepriority(server,factor,affine,minval,maxval,false);
-    }
-    bool changepriority(Key server,float factor, float affine, float minval,float maxval, bool passOnDeprioritize) {
-        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
-        if ( where == mServerQueues.end() )
-            return false;
-        float oldweight=where->second.weight;
-        oldweight*=factor;
-        oldweight+=affine;
-        if (oldweight<minval){
-            oldweight=minval;
-        }
-        this->setQueueWeight(server,oldweight);
-        return true;
-    }
     bool removeQueue(Key server) {
         typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
         bool retval=( where != mServerQueues.end() );

@@ -68,11 +68,7 @@ public:
         mSize += msg_size;
         return QueueEnum::PushSucceeded;
     }
-    void deprioritize(){
-        if (CanDropType(front())) {
-            mElements.pop_front();
-        }
-    }
+
     const ElementType& front() const{
         return mElements.front();
     }
