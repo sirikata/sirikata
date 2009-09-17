@@ -48,6 +48,8 @@
 #define TRACE_DATAGRAM
 #define TRACE_PACKET
 #define TRACE_PING
+#define TRACE_ROUND_TRIP_MIGRATION_TIME
+
 
 namespace CBR {
 
@@ -113,6 +115,8 @@ const uint8 Trace::ServerObjectEventTag;
 const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
 
+const uint8 Trace::RoundTripMigrationTimeAnalysisTag;
+  
 
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
@@ -423,5 +427,23 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
     data.write(&dTime, sizeof(dTime));
 #endif
   }
+
+
+
+void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMs)
+{
+#ifdef TRACE_ROUND_TRIP_MIGRATION_TIME  
+  if (mShuttingDown) return;
+
+  data.write(&RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag));
+  data.write(&t, sizeof(t));
+  data.write(&obj_id, sizeof(obj_id));
+  data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
+  data.write(&sID_migratingTo, sizeof(sID_migratingTo));
+  data.write(&numMs, sizeof(numMs));
+
+#endif
+}
+
 
 } // namespace CBR

@@ -259,6 +259,33 @@ public:
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
 
+
+
+
+class ObjectMigrationRoundTripAnalysis
+{
+private:
+//   std::vector<Time> times;
+//   std::vector<UUID> obj_ids;
+//   std::vector<ServerID> sIDs_migratingFrom;
+//   std::vector<ServerID> sIDs_migratingTo;
+//   std::vector<int> numMilliseconds;
+
+  std::vector< ObjectMigrationRoundTripEvent> allRoundTripEvts;
+  static bool compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+
+  
+public:
+  ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut);
+  ~ObjectMigrationRoundTripAnalysis();
+  
+};
+
+
+
+
+
 } // namespace CBR
 
 #endif //_CBR_ANALYSIS_HPP_

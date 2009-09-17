@@ -225,6 +225,19 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         }
         break;
 
+      case Trace::RoundTripMigrationTimeAnalysisTag:
+        {
+          ObjectMigrationRoundTripEvent* rdTripMig_evt = new ObjectMigrationRoundTripEvent;
+          is.read((char*)&rdTripMig_evt->time,sizeof(rdTripMig_evt->time));
+          is.read((char*)&rdTripMig_evt->obj_id,sizeof(rdTripMig_evt->obj_id));
+          is.read((char*)&rdTripMig_evt->sID_migratingFrom, sizeof(rdTripMig_evt->sID_migratingFrom));
+          is.read((char*)&rdTripMig_evt->sID_migratingTo,sizeof(rdTripMig_evt->sID_migratingTo));
+          is.read((char*)&rdTripMig_evt->numMill,sizeof(rdTripMig_evt->numMill));
+
+          evt = rdTripMig_evt;
+        }
+        break;
+        
       case Trace::ServerLocationTag:
           {
               ServerLocationEvent* levt = new ServerLocationEvent;
@@ -1645,7 +1658,6 @@ LatencyAnalysis::~LatencyAnalysis() {
           dTimes.push_back(obj_lookup_proc_evt->deltaTime);
           continue;
         }
-
         delete evt;
       }
     }
@@ -1680,7 +1692,6 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           maxLatency = (int)sortedEvts[s].deltaTime;
         }
-
       }
 
       fileOut<<"\n\n************************************\n";
@@ -1708,7 +1719,6 @@ LatencyAnalysis::~LatencyAnalysis() {
         {
           maxLatency = dTimes[s];
         }
-
       }
 
       fileOut<<"\n\n************************************\n";
@@ -1716,7 +1726,6 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
       fileOut<<"\n\n\n\nEND\n";
     }
-
   }
 
   void ObjectSegmentationProcessedRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&sortedEvts)
@@ -1733,23 +1742,86 @@ LatencyAnalysis::~LatencyAnalysis() {
 
       sortedEvts.push_back(olpe);
     }
-
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
-
   }
-
 
   bool ObjectSegmentationProcessedRequestsAnalysis::compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
   {
     return A.time < B.time;
   }
 
-
-
-
   ObjectSegmentationProcessedRequestsAnalysis::~ObjectSegmentationProcessedRequestsAnalysis ()
   {
   }
 
+  ////ObjectMigrationRoundTripAnalysis
+  ObjectMigrationRoundTripAnalysis::ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+        ObjectMigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+        
+        if (obj_rdt_evt != NULL)
+        {
+          ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
+          allRoundTripEvts.push_back(rdt_evt);
+          continue;
+        }
+        delete evt;
+      }
+    }
+  }
+
+  
+  ObjectMigrationRoundTripAnalysis::~ObjectMigrationRoundTripAnalysis()
+  {
+    //destructor
+  }
+
+  void ObjectMigrationRoundTripAnalysis::printData(std::ostream &fileOut)
+  {
+    std::sort(allRoundTripEvts.begin(), allRoundTripEvts.end(), compareEvts);
+
+    fileOut << "\n\n*******************Begin Object Migration Round Trip Analysis*************\n\n\n";
+    fileOut << "\n\n Basic statistics:   "<< allRoundTripEvts.size() <<"  \n\n";
+
+    double totalTimes = 0;
+    
+    for (int s=0; s < (int) allRoundTripEvts.size(); ++s)
+    {
+      fileOut<< "\n\n********************************\n";
+      fileOut<< "\tObject id          " << allRoundTripEvts[s].obj_id.toString() <<"\n";
+      fileOut<< "\tTime at:           " << allRoundTripEvts[s].time.raw()        <<"\n";
+      fileOut<< "\tMigrating from:    " << allRoundTripEvts[s].sID_migratingFrom <<"\n";
+      fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].sID_migratingTo   <<"\n";
+      fileOut<< "\tTime taken:        " << allRoundTripEvts[s].numMill           <<"\n";
+
+      totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
+      
+    }
+
+    double avgTime = totalTimes/((double) allRoundTripEvts.size());
+    
+    fileOut<< "\n\n Avg Migrate Time:    "<<avgTime<<"\n\n\n";
+    fileOut<< "END*******\n\n";
+  }
+
+
+
+  bool ObjectMigrationRoundTripAnalysis::compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+  {
+    return A.time < B.time;
+  }
+
+  
 
 } // namespace CBR

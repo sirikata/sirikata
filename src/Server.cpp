@@ -52,6 +52,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mProfiler.addStage("Load Monitor");
     mProfiler.addStage("Object Hosts");
     mProfiler.addStage("Migration Monitor");
+
+    mMigrationTimer.start();
+
 }
 
 Server::~Server()
@@ -105,9 +108,11 @@ void Server::serviceObjectHostNetwork() {
 
 
   //bftm add
-  for (ObjectConnectionMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
+  //  for (ObjectConnectionMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
+  for (MigConnectionsMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
   {
-    ObjectConnection* conn = it->second;
+    //    ObjectConnection* conn = it->second;
+    ObjectConnection* conn = it->second.obj_conner;
     conn->service();
   }
 
@@ -379,6 +384,7 @@ void Server::handleMigration(const UUID& obj_id)
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
     mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
+       
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
         CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
@@ -520,6 +526,7 @@ void Server::checkObjectMigrations()
             }
 
             mObjects.erase(obj_id);
+
         }
     }
 }
@@ -544,13 +551,21 @@ void Server::killObjectConnection(const UUID& obj_id)
   }
 
 
-  //  ObjectConnectionSet::iterator objConSetIt = mMigratingConnections.find(migrated_conn);
-  ObjectConnectionMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
+  //  ObjectConnectionMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
+  MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
   if (objConMapIt != mMigratingConnections.end())
+  {
+    //log the event's completion.
+    Duration currentDur = mMigrationTimer.elapsed();
+    int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
+    ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
+    
+    mContext->trace()->objectMigrationRoundTrip(mContext->time, obj_id, mContext->id(), migTo , timeTakenMs);
+          
     mMigratingConnections.erase(objConMapIt);
-
+  }
 }
 
 

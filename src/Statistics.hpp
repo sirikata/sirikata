@@ -98,8 +98,9 @@ public:
     static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
     static const uint8 ObjectPingTag = 17;
+    static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
 
-
+  
     Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
@@ -133,7 +134,9 @@ public:
     void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime);
 
+    void objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
 
+  
     void prepareShutdown();
     void shutdown();
 

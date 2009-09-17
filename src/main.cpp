@@ -395,6 +395,19 @@ void *main_loop(void *) {
         oseg_process_stream.close();
 
 
+        //completed round trip migrate times
+        String migration_round_trip_times_filename = "migration_round_trip_times_file";
+        migration_round_trip_times_filename += ".dat";
+
+        ObjectMigrationRoundTripAnalysis obj_mig_rdTripAnalysis(STATS_TRACE_FILE,max_space_servers);
+          
+        std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
+
+        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream);
+        
+        mig_rd_trip_times_stream.flush();
+        mig_rd_trip_times_stream.close();
+        
         //end bftm additional object message log file creation.
 
         exit(0);

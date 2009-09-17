@@ -172,15 +172,6 @@ struct ObjectLookupProcessedEvent: public Event
 };
 
 
-// struct SingleServerOsegFinalDumpEvent : public Event
-// {
-//   std::vector<UUID> objectsHosted;
-//   std::map<UUID,ServerID> inTransitOrLookup;
-//   ServerID sID;
-// };
-
-
-
 struct ServerLocationEvent : public Event {
     ServerID source;
     ServerID dest;
@@ -195,6 +186,15 @@ struct ServerObjectEventEvent : public Event {
     bool added;
     TimedMotionVector3f loc;
 };
+
+struct ObjectMigrationRoundTripEvent : public Event
+{
+  UUID obj_id;
+  ServerID sID_migratingFrom;
+  ServerID sID_migratingTo;
+  int numMill;
+};
+
 
 }
 

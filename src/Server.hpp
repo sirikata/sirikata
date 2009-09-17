@@ -72,8 +72,9 @@ private:
     Proximity* mProximity;
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
-      MigrationMonitor* mMigrationMonitor;
-      LoadMonitor* mLoadMonitor;
+    MigrationMonitor* mMigrationMonitor;
+    LoadMonitor* mLoadMonitor;
+
 
     ObjectHostConnectionManager* mObjectHostConnectionManager;
 
@@ -83,15 +84,25 @@ private:
     ObjectConnectionMap mObjectsAwaitingMigration;
 
     typedef std::map<UUID, CBR::Protocol::Migration::MigrationMessage*> ObjectMigrationMap;
-      ObjectMigrationMap mObjectMigrations;
+    ObjectMigrationMap mObjectMigrations;
 
     typedef std::set<ObjectConnection*> ObjectConnectionSet;
     ObjectConnectionSet mClosingConnections; // Connections that are closing but need to finish delivering some messages
 
-    ObjectConnectionMap mMigratingConnections;//bftm add
+    //std::map<UUID,ObjectConnection*>
+    struct MigratingObjectConnectionsData
+    {
+      ObjectConnection* obj_conner;
+      int milliseconds;
+      ServerID migratingTo;
+    };
+    
+    //    ObjectConnectionMap mMigratingConnections;//bftm add
+    typedef std::map<UUID,MigratingObjectConnectionsData> MigConnectionsMap;
+    MigConnectionsMap mMigratingConnections;//bftm add
+    Timer mMigrationTimer;
 
-
-      TimeProfiler mProfiler;
+    TimeProfiler mProfiler;
 }; // class Server
 
 } // namespace CBR
