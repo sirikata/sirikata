@@ -17,7 +17,7 @@ namespace CBR
   {
   public:
 
-    OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor);
+    OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor,  Vector3f driftDir);
 
   
     virtual const TimedMotionVector3f initial() const;

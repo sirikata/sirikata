@@ -447,7 +447,9 @@ void Server::checkObjectMigrations()
 
     std::set<UUID> to_migrate = mMigrationMonitor->service();
 
-    for(std::set<UUID>::iterator it = to_migrate.begin(); it != to_migrate.end(); it++) {
+
+    for(std::set<UUID>::iterator it = to_migrate.begin(); it != to_migrate.end(); it++)
+    {
         const UUID& obj_id = *it;
 
         if (mOSeg->clearToMigrate(obj_id)) //needs to check whether migration to this server has finished before can begin migrating to another server.

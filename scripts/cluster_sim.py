@@ -16,7 +16,7 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '100s'
+        self.duration = '30s'
         self.tx_bandwidth = 10000
         self.rx_bandwidth = 10000
         self.flatness = 100
@@ -28,7 +28,10 @@ class ClusterSimSettings:
 
         self.object_factory_type = 'random'
 
-        self.object_static = 'random'
+        self.object_static = 'drift'
+        self.object_drift_x = '-10'
+        self.object_drift_y = '-5'
+        self.object_drift_z = '0'
         self.object_simple = 'true'
         self.object_2d = 'true'
         self.object_global = 'false'
@@ -252,6 +255,10 @@ class ClusterSim:
                 "--cseg-service-host=" + self.settings.cseg_service_host,
                 "--oseg=" + self.settings.oseg,
                 "--oseg_unique_craq_prefix=" + self.settings.oseg_unique_craq_prefix,
+                "--object_drift_x=" + self.settings.object_drift_x,
+                "--object_drift_y=" + self.settings.object_drift_y,
+                "--object_drift_z=" + self.settings.object_drift_z,
+            
                 ])
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)
@@ -340,7 +347,8 @@ class ClusterSim:
 if __name__ == "__main__":
     cc = ClusterConfig()
 #    cs = ClusterSimSettings(14, (2,2), 1)
-    cs = ClusterSimSettings(4, (2,2), 1)
+#    cs = ClusterSimSettings(4, (2,2), 1)
+    cs = ClusterSimSettings(4, (4,1), 1)
     cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:

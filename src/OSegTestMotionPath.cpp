@@ -10,7 +10,7 @@
 namespace CBR {
 
 
-OSegTestMotionPath::OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor)
+OSegTestMotionPath::OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor, Vector3f driftDir)
   //OSegTestMotionPath::OSegTestMotionPath(const Time& start, const Time& end, const Vector3f& startpos, float32 speed, const Duration& update_period, const BoundingBox3f& region, float zfactor)
 {
   TimedMotionVector3f last_motion(start, MotionVector3f(startpos, Vector3f(0,0,0)));
@@ -25,10 +25,14 @@ OSegTestMotionPath::OSegTestMotionPath(const Time& start, const Time& end, const
     //    Vector3f dir = UniformSampleSphere( randFloat(), randFloat() ) * speed;
     //    dir.z = dir.z * zfactor;
     
-    Vector3f dir = Vector3f(.3,.3,.3);
+    //    Vector3f dir = Vector3f(.3,.3,.3);
+    //    dir = dir.normal() *  speed;
+    //    last_motion = TimedMotionVector3f(curtime, MotionVector3f(curpos, dir));
 
-    dir = dir.normal() *  speed;
+    Vector3f dir = driftDir;
+    //dir = dir.normal() *  speed;
     last_motion = TimedMotionVector3f(curtime, MotionVector3f(curpos, dir));
+    
     // last_motion is what we would like, no we have to make sure we'll stay  in range
     Vector3f nextpos = last_motion.extrapolate(curtime + update_period).position();
     Vector3f nextpos_clamped = region.clamp(nextpos);

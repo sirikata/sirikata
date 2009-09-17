@@ -100,12 +100,18 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects = GetOption("objects")->as<uint32>();
-    bool simple = GetOption(OBJECT_SIMPLE)->as<bool>();
-    bool only_2d = GetOption(OBJECT_2D)->as<bool>();
-    float zfactor = (only_2d ? 0.f : 1.f);
+    uint32 nobjects              =     GetOption("objects")->as<uint32>();
+    bool simple                  =   GetOption(OBJECT_SIMPLE)->as<bool>();
+    bool only_2d                 =       GetOption(OBJECT_2D)->as<bool>();
+    float zfactor                =                  (only_2d ? 0.f : 1.f);
     std::string motion_path_type = GetOption(OBJECT_STATIC)->as<String>();
+    float driftX                 = GetOption(OBJECT_DRIFT_X)->as<float>();
+    float driftY                 = GetOption(OBJECT_DRIFT_Y)->as<float>();
+    float driftZ                 = GetOption(OBJECT_DRIFT_Z)->as<float>();
 
+    Vector3f driftVecDir(driftX,driftY,driftZ);
+
+    
     for(uint32 i = 0; i < nobjects; i++) {
         UUID id = randomUUID();
 
@@ -118,7 +124,10 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         if (motion_path_type == "static")//static
             inputs->motion = new StaticMotionPath(start, startpos);
         else if (motion_path_type == "drift") //drift
-            inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
+        {
+          //   inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
+          inputs->motion = new OSegTestMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor, driftVecDir); // FIXME
+        }
         else //random
             inputs->motion = new RandomMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
