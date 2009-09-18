@@ -252,7 +252,7 @@ void *main_loop(void *) {
         ObjectLatencyAnalysis la(STATS_TRACE_FILE,nservers);
         std::ofstream histogram_data("distance_latency_histogram.csv");
         la.printHistogramDistanceData(histogram_data,10);
-
+        histogram_data.close();
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {

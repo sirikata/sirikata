@@ -1141,7 +1141,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
     
 }
 
-void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Duration> &retval){
+void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Average > &retval){
     int bucket=-1;
     int bucketSamples=0;
     for (std::map<double,Duration>::iterator i=mLatency.begin(),ie=mLatency.end();
@@ -1149,33 +1149,36 @@ void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<i
         int curBucket=(int)floor(i->first/bucketWidth);
         if (curBucket!=bucket) {
             if (bucketSamples) {
-                retval.find(bucket)->second/=(double)bucketSamples;
+                retval.find(bucket)->second.time/=(double)bucketSamples;
+                retval.find(bucket)->second.numSamples=(double)bucketSamples;
             }
             bucket=curBucket;
             bucketSamples=1;
-            retval.insert(std::map<int,Duration>::value_type(bucket,i->second));
+            retval.insert(std::map<int,Average>::value_type(bucket,Average(i->second)));
         }else {
             bucketSamples++;
-            retval.find(bucket)->second+=i->second;
+            retval.find(bucket)->second.time+=i->second;
         }
     }
     if (bucketSamples) {
-        retval.find(bucket)->second/=(double)bucketSamples;
+        retval.find(bucket)->second.time/=(double)bucketSamples;
+        retval.find(bucket)->second.numSamples=bucketSamples;
     }    
 }
 ObjectLatencyAnalysis::~ObjectLatencyAnalysis(){}
 void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, double bucketWidth){
-    std::map<int,Duration> histogram;
+    std::map<int,Average> histogram;
     histogramDistanceData(bucketWidth,histogram);
-    for (std::map<int,Duration>::iterator i=histogram.begin(),ie=histogram.end();i!=ie;++i) {
+    for (std::map<int,Average>::iterator i=histogram.begin(),ie=histogram.end();i!=ie;++i) {
         out<<i->first*bucketWidth<<", ";
-        if(i->second.toMicroseconds()>9999) {
-            out<<i->second;
+        if(i->second.time.toMicroseconds()>9999) {
+            out<<i->second.time;
         }else {
-            out<<i->second.toMicroseconds()<<"us";
+            out<<i->second.time.toMicroseconds()<<"us";
         }
         out <<", ";
-        out << i->second.toMicroseconds()<<std::endl;
+        out << i->second.time.toMicroseconds();
+        out << ", "<<i->second.numSamples<<'\n';
     }
 }
 

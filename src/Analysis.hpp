@@ -155,7 +155,12 @@ public:
     int mNumberOfServers;
     ObjectLatencyAnalysis(const char* opt_name, const uint32 nservers);
     ~ObjectLatencyAnalysis();
-    void histogramDistanceData(double bucketWidth, std::map<int, Duration> &retval);
+    struct Average{
+        Duration time;
+        int numSamples;
+        Average(const Duration&t) :time(t){numSamples=0;}
+    };
+    void histogramDistanceData(double bucketWidth, std::map<int, Average> &retval);
     void printHistogramDistanceData(std::ostream&out, double bucketWidth);
 };
 

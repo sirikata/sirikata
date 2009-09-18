@@ -229,16 +229,17 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
-    send(src,OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg));
+    ServerID destServer=getConnectedServer(src->uuid());
+    if (destServer!=NullServerID) {
+        send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+    }
 }
 
 Object* ObjectHost::randomObject () {
     if (mObjectInfo.size()==0) return NULL;
-    int val=randInt(0,(int)mObjectInfo.size()-1);
-    ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
-    for (;
-         val&&i!=ie;
-         --val,++i) {}
+    UUID myrand=UUID::random();
+    ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
+    if (i==mObjectInfo.end()) --i;
     return i->second.object;
 }
 void ObjectHost::randomPing(const Time&t) {
@@ -282,7 +283,7 @@ void ObjectHost::tick(const Time& t) {
     mContext->time = t;
 
     mContext->objectFactory->tick();
-    sendTestMessage(t,400.);
+    //sendTestMessage(t,400.);
     randomPing(t);
 /*
     randomPing(t);
