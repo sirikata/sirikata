@@ -90,6 +90,7 @@
 #define OSEG_OPTION_LOC            "oseg_loc"
 #define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
 
+#define PROX_MAX_PER_RESULT        "prox.max-per-result"
 
 namespace CBR {
 

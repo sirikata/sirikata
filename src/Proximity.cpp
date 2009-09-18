@@ -523,6 +523,8 @@ void Proximity::proxThreadMain() {
 void Proximity::generateServerQueryEvents(const Time& t) {
     typedef std::deque<QueryEvent> QueryEventList;
 
+    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
+
     for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
         ServerID sid = query_it->first;
         Query* query = query_it->second;
@@ -530,40 +532,47 @@ void Proximity::generateServerQueryEvents(const Time& t) {
         QueryEventList evts;
         query->popEvents(evts);
 
-        if (evts.empty()) continue;
+        while(!evts.empty()) {
+            ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id());
+            result_msg->contents.set_t(t);
+            uint32 count = 0;
+            while(count < max_count && !evts.empty()) {
+                count++;
+                const QueryEvent& evt = evts.front();
+                if (evt.type() == QueryEvent::Added) {
+                    mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt.id()) );
 
-        ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id());
-        result_msg->contents.set_t(t);
-        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added) {
-                mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt_it->id()) );
+                    CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
+                    addition.set_object( evt.id() );
 
-                CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
-                addition.set_object( evt_it->id() );
+                    TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
+                    CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                    msg_loc.set_t(loc.updateTime());
+                    msg_loc.set_position(loc.position());
+                    msg_loc.set_velocity(loc.velocity());
 
-                TimedMotionVector3f loc = mLocalLocCache->location(evt_it->id());
-                CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
-                msg_loc.set_t(loc.updateTime());
-                msg_loc.set_position(loc.position());
-                msg_loc.set_velocity(loc.velocity());
+                    addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
+                }
+                else {
+                    mOutputEvents.push( ProximityOutputEvent::RemoveServerLocSubscriptionEvent(sid, evt.id()) );
+                    CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
+                    removal.set_object( evt.id() );
+                }
 
-                addition.set_bounds( mLocalLocCache->bounds(evt_it->id()) );
+                evts.pop_front();
             }
-            else {
-                mOutputEvents.push( ProximityOutputEvent::RemoveServerLocSubscriptionEvent(sid, evt_it->id()) );
-                CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
-                removal.set_object( evt_it->id() );
-            }
+
+            PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
+
+            mServerResults.push( ProxResultServerPair(sid, result_msg) );
         }
-
-        PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
-
-        mServerResults.push( ProxResultServerPair(sid, result_msg) );
     }
 }
 
 void Proximity::generateObjectQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
+
+    uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
 
     for(ObjectQueryMap::iterator query_it = mObjectQueries.begin(); query_it != mObjectQueries.end(); query_it++) {
         UUID query_id = query_it->first;
@@ -572,40 +581,49 @@ void Proximity::generateObjectQueryEvents() {
         QueryEventList evts;
         query->popEvents(evts);
 
-        CBR::Protocol::Prox::ProximityResults prox_results;
-        prox_results.set_t(mContext->time);
-        for(QueryEventList::iterator evt_it = evts.begin(); evt_it != evts.end(); evt_it++) {
-            if (evt_it->type() == QueryEvent::Added) {
-                mOutputEvents.push( ProximityOutputEvent::AddObjectLocSubscriptionEvent(query_id, evt_it->id()) );
+        while(!evts.empty()) {
+            CBR::Protocol::Prox::ProximityResults prox_results;
+            prox_results.set_t(mContext->time);
 
-                CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-                addition.set_object( evt_it->id() );
+            uint32 count = 0;
+            while(count < max_count && !evts.empty()) {
+                count++;
+                const QueryEvent& evt = evts.front();
 
-                CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
-                TimedMotionVector3f loc = mGlobalLocCache->location(evt_it->id());
-                motion.set_t(loc.updateTime());
-                motion.set_position(loc.position());
-                motion.set_velocity(loc.velocity());
+                if (evt.type() == QueryEvent::Added) {
+                    mOutputEvents.push( ProximityOutputEvent::AddObjectLocSubscriptionEvent(query_id, evt.id()) );
 
-                addition.set_bounds( mGlobalLocCache->bounds(evt_it->id()) );
+                    CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
+                    addition.set_object( evt.id() );
+
+                    CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                    TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
+                    motion.set_t(loc.updateTime());
+                    motion.set_position(loc.position());
+                    motion.set_velocity(loc.velocity());
+
+                    addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
+                }
+                else {
+                    mOutputEvents.push( ProximityOutputEvent::RemoveObjectLocSubscriptionEvent(query_id, evt.id()) );
+
+                    CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
+                    removal.set_object( evt.id() );
+                }
+
+                evts.pop_front();
             }
-            else {
-                mOutputEvents.push( ProximityOutputEvent::RemoveObjectLocSubscriptionEvent(query_id, evt_it->id()) );
 
-                CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
-                removal.set_object( evt_it->id() );
-            }
+            CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+            obj_msg->set_source_object(UUID::null());
+            obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
+            obj_msg->set_dest_object(query_id);
+            obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
+            obj_msg->set_unique(GenerateUniqueID(mContext->id()));
+            obj_msg->set_payload( serializePBJMessage(prox_results) );
+
+            mObjectResults.push(obj_msg);
         }
-
-        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-        obj_msg->set_source_object(UUID::null());
-        obj_msg->set_source_port(OBJECT_PORT_PROXIMITY);
-        obj_msg->set_dest_object(query_id);
-        obj_msg->set_dest_port(OBJECT_PORT_PROXIMITY);
-        obj_msg->set_unique(GenerateUniqueID(mContext->id()));
-        obj_msg->set_payload( serializePBJMessage(prox_results) );
-
-        mObjectResults.push(obj_msg);
     }
 }
 

@@ -113,6 +113,7 @@ void InitOptions() {
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
         .addOption(new OptionValue(NOISE, "false", Sirikata::OptionValueType<bool>(), "If true, will generate noise packets between servers to fill buffers."))
         .addOption(new OptionValue(LOC, "oracle", Sirikata::OptionValueType<String>(), "Type of location service to run."))
+        .addOption(new OptionValue(PROX_MAX_PER_RESULT, "10", Sirikata::OptionValueType<uint32>(), "Maximum number of changes to report in each result message."))
         .addOption(new OptionValue(PROFILE, "false", Sirikata::OptionValueType<bool>(), "Whether to report profiling information."))
         .addOption(new OptionValue("random-splits-merges", "false", Sirikata::OptionValueType<bool>(), "Whether to enable random splits and merges in DistributedCoordinateSegmentation."))
         .addOption(new OptionValue("cseg-service-host", "meru00", Sirikata::OptionValueType<String>(), "Hostname of machine running the CSEG service (running with --cseg=distributed)"))
