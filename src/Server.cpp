@@ -54,7 +54,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mProfiler.addStage("Migration Monitor");
 
     mMigrationTimer.start();
-
 }
 
 Server::~Server()
@@ -521,8 +520,16 @@ void Server::checkObjectMigrations()
             }
             if(mOSeg->getOSegType() == CRAQ_OSEG)
             {
-                //end bftm change
-                mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
+              //end bftm change
+              //  mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
+              MigratingObjectConnectionsData mocd;
+              mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id);
+              Duration migrateStartDur  =                 mMigrationTimer.elapsed();
+              mocd.milliseconds         =          migrateStartDur.toMilliseconds();
+              mocd.migratingTo          =                             new_server_id;
+          
+              mMigratingConnections[obj_id] = mocd;
+                
             }
 
             mObjects.erase(obj_id);

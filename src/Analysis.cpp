@@ -237,6 +237,38 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           evt = rdTripMig_evt;
         }
         break;
+
+      case Trace::OSegTrackedSetResultAnalysisTag:
+        {
+          OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
+          is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
+          is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
+          is.read((char*)&trackedSetResults_evt->sID_migratingFrom, sizeof(trackedSetResults_evt->sID_migratingFrom));
+          is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
+          is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
+
+          evt = trackedSetResults_evt;
+        }
+
+        break;
+
+      case Trace::OSegShutdownEventTag:
+        {
+          std::cout<<"\n\nGot an oseg shutdown tag\n\n";
+          OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
+          is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
+          is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
+          is.read((char*)&shutdown_evt->numLookups, sizeof(shutdown_evt->numLookups));
+          is.read((char*)&shutdown_evt->numOnThisServer,sizeof(shutdown_evt->numOnThisServer));
+          is.read((char*)&shutdown_evt->numCacheHits, sizeof(shutdown_evt->numCacheHits));
+          is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
+          is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
+          is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
+          
+          evt = shutdown_evt;
+          
+        }
+        break;
         
       case Trace::ServerLocationTag:
           {
@@ -1815,11 +1847,134 @@ LatencyAnalysis::~LatencyAnalysis() {
     fileOut<< "END*******\n\n";
   }
 
-
-
+  
   bool ObjectMigrationRoundTripAnalysis::compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
   {
     return A.time < B.time;
+  }
+
+
+
+
+  //osegtrackedsetresultsanalysis
+  OSegTrackedSetResultsAnalysis::OSegTrackedSetResultsAnalysis(const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+        OSegTrackedSetResultsEvent* oseg_tracked_evt = dynamic_cast<OSegTrackedSetResultsEvent*> (evt);
+        
+        if (oseg_tracked_evt != NULL)
+        {
+          OSegTrackedSetResultsEvent oseg_tracked_evter = (*oseg_tracked_evt);
+          allTrackedSetResultsEvts.push_back(oseg_tracked_evter);
+          continue;
+        }
+        delete evt;
+      }
+    }    
+  }
+
+  void OSegTrackedSetResultsAnalysis::printData(std::ostream &fileOut)
+  {
+    fileOut<<"\n\n*********************************\n";
+    fileOut<<"\tNum tracked: "<<allTrackedSetResultsEvts.size()<<"\n\n\n\n";
+
+    double averager = 0;
+    
+    for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
+    {
+      fileOut<<"\n\n******************\n";
+      fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].obj_id.toString()<<"\n";
+      fileOut<<"\ttime at:     "<<allTrackedSetResultsEvts[s].time.raw()<<"\n";
+      fileOut<<"\tmig_from:    "<<allTrackedSetResultsEvts[s].sID_migratingFrom<<"\n";
+      fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].sID_migratingTo<<"\n";
+      fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].numMill<<"\n\n";
+
+      averager = averager + allTrackedSetResultsEvts[s].numMill;
+    }
+
+    if (allTrackedSetResultsEvts.size() != 0)
+    {
+      fileOut<<"\n\n\nAvg:  "<<averager/((double) allTrackedSetResultsEvts.size())<<"\n\n";
+
+    }
+
+    fileOut<<"\n\n\tEND****";
+
+    
+  }
+  OSegTrackedSetResultsAnalysis::~OSegTrackedSetResultsAnalysis()
+  {
+
+  }
+  bool OSegTrackedSetResultsAnalysis::compareEvts(OSegTrackedSetResultsEvent A, OSegTrackedSetResultsEvent B)
+  {
+    return A.time < B.time;
+  }
+  //still need to fill in above  
+
+
+
+  
+  OSegShutdownAnalysis::OSegShutdownAnalysis(const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+        OSegShutdownEvent* oseg_shutdown_evt = dynamic_cast<OSegShutdownEvent*> (evt);
+        
+        if (oseg_shutdown_evt != NULL)
+        {
+          OSegShutdownEvent oseg_shutdown_evter = (*oseg_shutdown_evt);
+          allShutdownEvts.push_back(oseg_shutdown_evter);
+          continue;
+        }
+        delete evt;
+      }
+    }    
+  }
+  OSegShutdownAnalysis::~OSegShutdownAnalysis()
+  {
+
+  }
+
+  
+  void OSegShutdownAnalysis::printData(std::ostream &fileOut)
+  {
+    fileOut << "\n\n*******************OSegShutdown Analysis*************\n\n\n";
+    fileOut << "\n\n Basic statistics:   "<< allShutdownEvts.size() <<"  \n\n";
+
+    for(int s=0; s < (int) allShutdownEvts.size(); ++s)
+    {
+      fileOut << "\n\n\n";
+      fileOut << "ServerID:            "<<allShutdownEvts[s].sID<<"\n";
+      fileOut << "\tnumLookups:        "<<allShutdownEvts[s].numLookups<<"\n";
+      fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].numOnThisServer<<"\n";
+      fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].numCacheHits<<"\n";
+      
+    }
+
+    fileOut<<"\n\n\n\n\n";
+    fileOut<<"\tEND*****";
+
+    
   }
 
   

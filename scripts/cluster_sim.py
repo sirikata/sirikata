@@ -28,7 +28,7 @@ class ClusterSimSettings:
 
         self.object_factory_type = 'random'
 
-        self.object_static = 'drift'
+        self.object_static = 'random'
         self.object_drift_x = '-10'
         self.object_drift_y = '-5'
         self.object_drift_z = '0'
@@ -44,7 +44,7 @@ class ClusterSimSettings:
         self.noise = 'true'
         self.debug = True
         self.valgrind = False
-        self.profile = False
+        self.profile = True
         self.loc = 'oracle'
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'

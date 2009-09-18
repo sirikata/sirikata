@@ -99,6 +99,8 @@ public:
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
     static const uint8 ObjectPingTag = 17;
     static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
+    static const uint8 OSegTrackedSetResultAnalysisTag   = 19;
+    static const uint8 OSegShutdownEventTag              = 20;
 
   
     Trace(const String& filename);
@@ -136,6 +138,9 @@ public:
 
     void objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
 
+  void processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
+
+  void processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
   
     void prepareShutdown();
     void shutdown();

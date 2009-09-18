@@ -265,15 +265,8 @@ public:
 class ObjectMigrationRoundTripAnalysis
 {
 private:
-//   std::vector<Time> times;
-//   std::vector<UUID> obj_ids;
-//   std::vector<ServerID> sIDs_migratingFrom;
-//   std::vector<ServerID> sIDs_migratingTo;
-//   std::vector<int> numMilliseconds;
-
   std::vector< ObjectMigrationRoundTripEvent> allRoundTripEvts;
   static bool compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
-
   
 public:
   ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
@@ -284,6 +277,29 @@ public:
 
 
 
+class OSegTrackedSetResultsAnalysis
+{
+private:
+  std::vector<OSegTrackedSetResultsEvent> allTrackedSetResultsEvts;
+  static bool compareEvts(OSegTrackedSetResultsEvent A, OSegTrackedSetResultsEvent B);
+  
+public:
+  OSegTrackedSetResultsAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut);
+  ~OSegTrackedSetResultsAnalysis();
+};
+
+
+class OSegShutdownAnalysis
+{
+private:
+  std::vector<OSegShutdownEvent> allShutdownEvts;
+  
+public:
+  OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
+  ~OSegShutdownAnalysis(); 
+  void printData(std::ostream &fileOut);
+};
 
 
 } // namespace CBR

@@ -370,7 +370,6 @@ void *main_loop(void *) {
         object_seg_stream.flush();
         object_seg_stream.close();
 
-
         //oseg lookup
         String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
         object_segmentation_lookup_filename += ".dat";
@@ -380,7 +379,6 @@ void *main_loop(void *) {
         lookupAnalysis.printData(oseg_lookup_stream);
         oseg_lookup_stream.flush();
         oseg_lookup_stream.close();
-
 
         //oseg processed lookups
         String object_segmentation_processed_filename = "object_segmentation_processed_file";
@@ -393,7 +391,6 @@ void *main_loop(void *) {
         processedAnalysis.printData(oseg_process_stream);
         oseg_process_stream.flush();
         oseg_process_stream.close();
-
 
         //completed round trip migrate times
         String migration_round_trip_times_filename = "migration_round_trip_times_file";
@@ -408,8 +405,20 @@ void *main_loop(void *) {
         mig_rd_trip_times_stream.flush();
         mig_rd_trip_times_stream.close();
         
-        //end bftm additional object message log file creation.
+        //oseg shut down
+        String oseg_shutdown_filename = "oseg_shutdown_file";
+        oseg_shutdown_filename += ".dat";
 
+        OSegShutdownAnalysis oseg_shutdown_analysis(STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream oseg_shutdown_analysis_stream (oseg_shutdown_filename.c_str());
+        oseg_shutdown_analysis.printData(oseg_shutdown_analysis_stream);
+
+        oseg_shutdown_analysis_stream.flush();
+        oseg_shutdown_analysis_stream.close();
+
+        //end bftm additional object message log file creation.
+        
         exit(0);
     }
 
@@ -623,6 +632,8 @@ void *main_loop(void *) {
     if (weight_calc != NULL)
       delete weight_calc;
     delete cseg;
+    delete oseg;
+    
     delete loc_service;
     delete obj_factory;
     delete forwarder;

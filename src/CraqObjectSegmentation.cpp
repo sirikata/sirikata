@@ -46,7 +46,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     std::map<UUID,ServerID> dummy;
     //500 ticks put here to allow lots of connections to be made
-    for (int s=0; s < 500; ++s)
+    //    for (int s=0; s < 500; ++s)
+    for (int s=0; s < 5000; ++s)
     {
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults, dummy);
@@ -58,7 +59,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     }
 
+    numCacheHits     = 0;
+    numOnThisServer  = 0;
+    numLookups       = 0;
+    numCraqLookups   = 0;
+    numTimeElapsedCacheEviction = 0;
+    numMigrationNotCompleteYet  = 0;
 
+    
     CraqDataKey obj_id_as_dht_key;
     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
@@ -75,7 +83,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     }
 
     //50 ticks to update
-    for (int s=0; s < 250; ++s)
+    for (int s=0; s < 2500; ++s)
     {
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults, dummy);
@@ -96,6 +104,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_UPDATE_OSEG, this);
+
+    std::cout<<"\n\n\nIN DESTRUCTOR \n\n";
+    mContext->trace()->processOSegShutdownEvents(mContext->time,mContext->id(), numLookups,numOnThisServer,numCacheHits, numCraqLookups, numTimeElapsedCacheEviction,    numMigrationNotCompleteYet);
   }
 
 
@@ -180,9 +191,13 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     if (objCacheIter == mServerObjectCache.end()) //object not in cache map
       return NullServerID;
 
-    uint64 timeElapsed =  (uint64) ((long int) mContext->time.raw())  - ((long int)objCacheIter->second.timeStamp);
+    uint64 timeElapsed =  (uint64) (((long int) mContext->time.raw())/1000.0)  - ((long int)objCacheIter->second.timeStamp);
 
-    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
+    ++numTimeElapsedCacheEviction;
+
+    
+    //    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
+    if ((timeElapsed < 10000)&&(objCacheIter->second.lastLookup))
     {
       //if the time since absorbed a cache value is less than one second
       //and if the last cache value came from one of our personal lookups.
@@ -190,7 +205,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       return objCacheIter->second.sID;
     }
 
-    if (timeElapsed < 500)
+    if (timeElapsed < 5000)
     {
       //if received an update message less than half a second ago, then also
       //return the cached server id.
@@ -206,15 +221,18 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
-
+    ++numLookups;
+    
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
+      ++numOnThisServer;
       return mContext->id();
             //return NullServerID;
     }
 
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
     {
+      ++numMigrationNotCompleteYet;
       return mContext->id();
     }
 
@@ -223,8 +241,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     {
 #ifdef CRAQ_DEBUG
       std::cout<<"\n\nbftm debug: cached value object id:"<< obj_id.toString()  <<"   cached value returned:  " << cacheReturn<<" \n\n";
-      return cacheReturn;
 #endif
+      
+      ++numCacheHits;
+      return cacheReturn;
+
     }
     
     UUID tmper = obj_id;
@@ -235,6 +256,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       //if object is not in transit, lookup its location in the dht.  returns -1 if object doesn't exist.
       //add the mapping of a craqData Key to a uuid.
 
+      ++numCraqLookups;
+      
       std::string indexer = "";
       indexer.append(1,myUniquePrefixKey);
       indexer.append(tmper.rawHexData());
@@ -404,7 +427,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
           OSegCacheVal cacheVal;
           cacheVal.sID          = mContext->id();
-          cacheVal.timeStamp    = mContext->time.raw();
+          cacheVal.timeStamp    = (mContext->time.raw())/1000.0;
           cacheVal.lastLookup   = true;
           mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = cacheVal;
           
@@ -539,8 +562,8 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    //    iteratedWait(10, getResults,trackedSetResults);
-    craqDht.tick(getResults,trackedSetResults);
+    iteratedWait(3, getResults,trackedSetResults);
+    //    craqDht.tick(getResults,trackedSetResults);
 
     Duration tickDur = osegServiceDurTimer.elapsed();
 
@@ -564,7 +587,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       //put this value in the cache
       OSegCacheVal cacheVal;
       cacheVal.sID = getResults[s]->servID;
-      cacheVal.timeStamp = mContext->time.raw();
+      cacheVal.timeStamp = (mContext->time.raw())/1000.0;
       cacheVal.lastLookup = true;
       
       mServerObjectCache[tmper] = cacheVal;
@@ -667,7 +690,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_oseg_msg)
 {
   OSegCacheVal cacheVal;
-  cacheVal.timeStamp    =  mContext->time.raw();
+  cacheVal.timeStamp    =  (mContext->time.raw())/1000.0;
   cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
   cacheVal.lastLookup   =  false;
 

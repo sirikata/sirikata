@@ -16,7 +16,7 @@
 #include <vector>
 
 
-#define CRAQ_DEBUG
+//#define CRAQ_DEBUG
 #define CRAQ_CACHE
 
 
@@ -43,6 +43,13 @@ namespace CBR
 
     char myUniquePrefixKey; //should just be one character long.
 
+    int numCacheHits;
+    int numOnThisServer;
+    int numLookups;
+    int numCraqLookups;
+    int numTimeElapsedCacheEviction;
+    int numMigrationNotCompleteYet;
+    
     std::map<std::string, UUID > mapDataKeyToUUID;
     //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
 

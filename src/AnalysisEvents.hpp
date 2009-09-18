@@ -195,6 +195,27 @@ struct ObjectMigrationRoundTripEvent : public Event
   int numMill;
 };
 
+struct OSegTrackedSetResultsEvent : public Event
+{
+  UUID obj_id;
+  ServerID sID_migratingFrom;
+  ServerID sID_migratingTo;
+  int numMill;
+};
+
+struct OSegShutdownEvent : public Event
+{
+  ServerID sID;
+  int numLookups;
+  int numOnThisServer;
+  int numCacheHits;
+  int numCraqLookups;
+  int numTimeElapsedCacheEviction;
+  int numMigrationNotCompleteYet;
+  
+};
+
+
 
 }
 

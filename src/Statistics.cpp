@@ -49,6 +49,8 @@
 #define TRACE_PACKET
 #define TRACE_PING
 #define TRACE_ROUND_TRIP_MIGRATION_TIME
+#define TRACE_OSEG_TRACKED_SET_RESULTS
+#define TRACE_OSEG_SHUTTING_DOWN
 
 
 namespace CBR {
@@ -116,8 +118,9 @@ const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
 
 const uint8 Trace::RoundTripMigrationTimeAnalysisTag;
+const uint8 Trace::OSegTrackedSetResultAnalysisTag;
+const uint8 Trace::OSegShutdownEventTag;
   
-
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
@@ -444,6 +447,51 @@ void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const Se
 
 #endif
 }
+
+void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
+{
+#ifdef TRACE_OSEG_TRACKED_SET_RESULTS
+
+  if (mShuttingDown) return;
+
+  data.write(&OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag));
+  data.write(&t, sizeof(t));
+  data.write(&obj_id,sizeof(obj_id));
+  data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
+  data.write(&sID_migratingTo, sizeof(sID_migratingTo));
+  data.write(&numMilliseconds, sizeof(numMilliseconds));
+
+#endif
+}
+
+void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet)
+{
+#ifdef TRACE_OSEG_SHUTTING_DOWN
+
+  std::cout<<"\n\n\nGOT INTO PROCESS  OSEG SHUTDOWN EVENT\n\n";
+  
+  std::cout<<"\n\n**********oseg shutdown:  \n";
+  std::cout<<"\tsid:                  "<<sID<<"\n";
+  std::cout<<"\tnum lookups:          "<<num_lookups<<"\n";
+  std::cout<<"\tnum_on_this_server:   "<<num_on_this_server<<"\n";
+  std::cout<<"\tnum_cache_hits:       "<<num_cache_hits<<"\n";
+  std::cout<<"\tnum_craq_lookups:     "<<num_craq_lookups<<"\n";
+  std::cout<<"***************************\n\n";
+
+  
+  data.write(&OSegShutdownEventTag, sizeof(OSegShutdownEventTag));
+  data.write(&t,sizeof(t));
+  data.write(&num_lookups,sizeof(num_lookups));
+  data.write(&num_on_this_server,sizeof(num_on_this_server));
+  data.write(&num_cache_hits,sizeof(num_cache_hits));
+  data.write(&num_craq_lookups,sizeof(num_craq_lookups));
+  data.write(&num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction));
+  data.write(&num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet));
+
+#endif
+}
+
+
 
 
 } // namespace CBR
