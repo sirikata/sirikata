@@ -144,9 +144,9 @@ void Trace::prepareShutdown() {
 }
 
 void Trace::shutdown() {
-    data.flush();
     mFinishStorage = true;
     mStorageThread->join();
+    data.flush();
     delete mStorageThread;
 }
 
