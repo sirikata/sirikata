@@ -241,6 +241,11 @@ void Forwarder::service()
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
   void Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
   {
+
+    if (is_forward)
+      std::cout<<"\n\nbftm debug: First route is_forward\n\n";
+
+    
     uint32 offset = 0;
     Network::Chunk msg_serialized;
     offset = msg->serialize(msg_serialized, offset);

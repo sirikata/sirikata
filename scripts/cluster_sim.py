@@ -28,9 +28,9 @@ class ClusterSimSettings:
 
         self.object_factory_type = 'random'
 
-        self.object_static = 'random'
+        self.object_static = 'drift'
         self.object_drift_x = '-10'
-        self.object_drift_y = '-5'
+        self.object_drift_y = '0'
         self.object_drift_z = '0'
         self.object_simple = 'true'
         self.object_2d = 'true'
