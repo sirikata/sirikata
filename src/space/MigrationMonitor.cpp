@@ -149,7 +149,11 @@ Time MigrationMonitor::computeNextEventTime(const UUID& obj, const TimedMotionVe
 
     // And choose the minimum of those times
     float32 time_to_first_hit = std::min( std::min( time_to_hit.x, time_to_hit.y ), time_to_hit.z );
-    assert(time_to_first_hit < 100000.f); // If we got here, then velocity couldn't be small enough to cause this
+    if (time_to_first_hit >= 100000.f) {
+        // Despite having non-zero velocity, this thing is moving really slowly.  Treat it the same way we treat static objects
+        return curt + Duration::seconds(100); // Effectively infinite time
+    }
+
     assert(time_to_first_hit >= 0.f); // And at least one of them *must* be positive, or something is wrong with bbox
     // And convert to seconds
     Duration to_first_hit = Duration::seconds(time_to_first_hit);
