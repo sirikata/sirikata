@@ -413,7 +413,7 @@ void Proximity::service() {
     std::deque<CBR::Protocol::Object::ObjectMessage*> obj_results;
     mObjectResults.swap(obj_results);
     for(std::deque<CBR::Protocol::Object::ObjectMessage*>::iterator it = obj_results.begin(); it != obj_results.end(); it++)
-        mContext->router()->route(*it, false);
+      mContext->router()->route(*it, false);
 }
 
 void Proximity::handleOutputEvent(const ProximityOutputEvent& evt) {

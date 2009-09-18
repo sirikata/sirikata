@@ -127,10 +127,12 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       void route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
 
     //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with the stale cache value.
-      void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
-  private:
+     void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
+  //  void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom );
+
+  //  private:
       // This version is provided if you already know which server the message should be sent to
-      void route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward);
+      void route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 

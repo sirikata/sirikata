@@ -294,9 +294,9 @@ void Forwarder::service()
       std::cout<<"\n\nbftm debug: first\n\n";
 
       
-      if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end())
+      if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end()) //if the object already exists in mServersToUpdate
       {
-        if (mServersToUpdate[dest_obj].end() == std::find(mServersToUpdate[dest_obj].begin(), mServersToUpdate[dest_obj].end(), forwardFrom))
+        if (mServersToUpdate[dest_obj].end() == std::find(mServersToUpdate[dest_obj].begin(), mServersToUpdate[dest_obj].end(), forwardFrom))  //if the server that we want to update doesn't already exist for that entry of dest_obj
         {
           //don't already know that forwardFrom needs to be updated.  means that we should append the forwardFrom ServerID to a list of servers that we need to update when we know which server to send the message to.
           mServersToUpdate[dest_obj].push_back(forwardFrom);
