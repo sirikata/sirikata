@@ -40,7 +40,7 @@ if [ ${opt_components_all} == "true" ]; then
 
   # when we're installing everything and not updating, perform basic system installation tasks
   if [ ${opt_update} == "false" ]; then
-    sudo apt-get install libtool automake1.9 autoconf patch unzip g++ cmake qt4-dev-tools qt4-qmake qt4-qtconfig freeglut-dev jgraph
+    echo formerly sudo apt-get install libtool automake1.9 autoconf patch unzip g++ cmake qt4-dev-tools qt4-qmake qt4-qtconfig freeglut-dev jgraph
   fi
 fi
 
