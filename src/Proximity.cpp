@@ -348,17 +348,19 @@ void Proximity::addQuery(UUID obj, SolidAngle sa) {
 }
 
 void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, SolidAngle sa) {
-    // Update the main thread's record
-    mObjectQueryAngles[obj] = sa;
-
     // Update the prox thread
     mInputEvents.push(ProximityInputEvent::UpdateObjectQueryEvent(obj, loc, bounds, sa));
 
-    // Update min query angle, and update remote queries if necessary
-    if (sa < mMinObjectQueryAngle) {
-        mMinObjectQueryAngle = sa;
-        PROXLOG(debug,"Query addition initiated server query request.");
-        mNeedServerQueryUpdate = true;
+    if (sa != NoUpdateSolidAngle) {
+        // Update the main thread's record
+        mObjectQueryAngles[obj] = sa;
+
+        // Update min query angle, and update remote queries if necessary
+        if (sa < mMinObjectQueryAngle) {
+            mMinObjectQueryAngle = sa;
+            PROXLOG(debug,"Query addition initiated server query request.");
+            mNeedServerQueryUpdate = true;
+        }
     }
 }
 
@@ -650,8 +652,13 @@ void Proximity::handleInputEvent(const ProximityInputEvent& evt) {
               ObjectQueryMap::iterator it = mObjectQueries.find(evt.object);
 
               if (it == mObjectQueries.end()) {
-                  Query* q = mObjectQueryHandler->registerQuery(evt.loc, evt.bounds, evt.angle);
-                  mObjectQueries[evt.object] = q;
+                  // We only add if we actually have all the necessary info, most importantly a real minimum angle.
+                  // This is necessary because we get this update for all location updates, even those for objects
+                  // which don't have subscriptions.
+                  if (evt.angle != NoUpdateSolidAngle) {
+                      Query* q = mObjectQueryHandler->registerQuery(evt.loc, evt.bounds, evt.angle);
+                      mObjectQueries[evt.object] = q;
+                  }
               }
               else {
                   Query* query = it->second;
