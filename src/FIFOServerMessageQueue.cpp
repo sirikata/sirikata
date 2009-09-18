@@ -113,7 +113,7 @@ void FIFOServerMessageQueue::service(){
 
 
     // Receive
-
+    mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
     ServerID sid;
     while( recv_bytes > 0 && (next_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
         ServerMessagePair* next_msg_popped = mReceiveQueues.pop(&recv_bytes);

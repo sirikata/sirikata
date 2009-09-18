@@ -52,110 +52,146 @@ struct AlwaysUsePredicate {
  *  (for instance, if the downstream queue couldn't handle it).
  */
 template <class Message,class Key,class TQueue,class Predicate=AlwaysUsePredicate> class FairQueue {
-public:
-    struct ServerQueueInfo {
+private:
+    typedef TQueue MessageQueue;
+
+    struct QueueInfo {
     private:
-        ServerQueueInfo():nextFinishTime(0) {
-            messageQueue=NULL;
-            weight=1.0;
+        QueueInfo()
+         : key(),
+           messageQueue(NULL),
+           weight(1.f),
+           nextFinishTime(Time::null())
+        {
         }
     public:
-        ServerQueueInfo(Key serverName, TQueue* queue, float w)
-         : messageQueue(queue),
+        QueueInfo(Key _key, TQueue* queue, float w)
+         : key(_key),
+           messageQueue(queue),
            weight(w),
-           nextFinishTime(Time::null()),
-           mKey(serverName) {}
+           nextFinishTime(Time::null())
+        {}
 
+        ~QueueInfo() {
+            delete messageQueue;
+        }
+
+        Key key;
         TQueue* messageQueue;
         float weight;
         Time nextFinishTime;
-        Key mKey;
-
-        struct FinishTimeOrder {
-            bool operator()(const ServerQueueInfo* lhs, const ServerQueueInfo* rhs) {
-                return (lhs->nextFinishTime < rhs->nextFinishTime);
-            }
-        };
     };
 
+    typedef std::map<Key, QueueInfo*> QueueInfoByKey; // NOTE: this could be unordered, but must be unique associative container
+    typedef std::multimap<Time, QueueInfo*> QueueInfoByFinishTime; // NOTE: this must be ordered multiple associative container
 
-    typedef std::map<Key, ServerQueueInfo> ServerQueueInfoMap;
-    typedef TQueue MessageQueue;
+    typedef typename QueueInfoByKey::iterator ByKeyIterator;
+    typedef typename QueueInfoByKey::const_iterator ConstByKeyIterator;
 
+    typedef typename QueueInfoByFinishTime::iterator ByTimeIterator;
+    typedef typename QueueInfoByFinishTime::const_iterator ConstByTimeIterator;
+
+    typedef std::set<Key> KeySet;
+public:
     FairQueue(const Predicate pred = Predicate())
      :mCurrentVirtualTime(Time::null()),
-      mServerQueues(),
+      mQueuesByKey(),
+      mQueuesByTime(),
+      mEmptyQueues(),
       mPredicate(pred),
       mFrontQueue(NULL)
     {
     }
 
     ~FairQueue() {
-        typename ServerQueueInfoMap::iterator it = mServerQueues.begin();
-        for(; it != mServerQueues.end(); it++) {
-            ServerQueueInfo* queue_info = &it->second;
-            delete queue_info->messageQueue;
+        while(!mQueuesByKey.empty())
+            removeQueue( mQueuesByKey.begin()->first );
+    }
+
+    void addQueue(MessageQueue *mq, Key key, float weight) {
+        QueueInfo* queue_info = new QueueInfo(key, mq, weight);
+        mQueuesByKey[key] = queue_info;
+        if (mq->empty()) {
+            mEmptyQueues.insert(key);
+        }
+        else {
+            computeNextFinishTime(queue_info);
+            mFrontQueue = NULL; // Force recomputation of front
         }
     }
 
-    void addQueue(MessageQueue *mq, Key server, float weight) {
-        //assert(mq->empty());
-
-        ServerQueueInfo queue_info (server, mq, weight);
-
-        mServerQueues.insert(std::pair<Key,ServerQueueInfo>(server, queue_info));
-    }
-    void setQueueWeight(Key server, float weight) {
-        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
-        bool retval=( where != mServerQueues.end() );
-        if (where != mServerQueues.end()) {
-            where->second.weight = weight;
+    void setQueueWeight(Key key, float weight) {
+        ConstByKeyIterator it = mQueuesByKey.find(key);
+        if (it != mQueuesByKey.end()) {
+            QueueInfo* qi = it->second;
+            qi->weight = weight;
+            // FIXME should we update the finish time here, or just wait until the next packet?
+            // Updating here requires either starting from current time or keeping track of
+            // the last dequeued time
+            //updateNextFinishTime(qi);
         }
     }
-    float getQueueWeight(Key server) const {
-        typename ServerQueueInfoMap::const_iterator where=mServerQueues.find(server);
 
-        if (where != mServerQueues.end()) {
-          return where->second.weight;
-        }
-
-        return 0;
+    float getQueueWeight(Key key) const {
+        ConstByKeyIterator it = mQueuesByKey.find(key);
+        if (it != mQueuesByKey.end())
+            return it->second->weight;
+        return 0.f;
     }
 
+    bool removeQueue(Key key) {
+        // Find the queue
+        ByKeyIterator it = mQueuesByKey.find(key);
+        bool havequeue = (it != mQueuesByKey.end());
+        if (!havequeue) return false;
 
-    bool removeQueue(Key server) {
-        typename ServerQueueInfoMap::iterator where=mServerQueues.find(server);
-        bool retval=( where != mServerQueues.end() );
-        if (retval) {
-            delete where->second.messageQueue;
-            mServerQueues.erase(where);
-        }
-        return retval;
+        QueueInfo* qi = it->second;
+
+        // Remove from the time index
+        removeFromTimeIndex(qi);
+
+        // If its the front queue, reset it
+        if (mFrontQueue == qi)
+            mFrontQueue = NULL;
+
+        // Remove from the empty queue list
+        mEmptyQueues.erase(key);
+
+        // Clean up queue and main entry
+        mQueuesByKey.erase(it);
+        delete qi;
+
+        return true;
     }
-    bool hasQueue(Key server) const{
-        return ( mServerQueues.find(server) != mServerQueues.end() );
+
+    bool hasQueue(Key key) const{
+        return ( mQueuesByKey.find(key) != mQueuesByKey.end() );
     }
-    unsigned int numQueues() const {
-        return (unsigned int)mServerQueues.size();
+
+    uint32 numQueues() const {
+        return (uint32)mQueuesByKey.size();
     }
-    QueueEnum::PushResult push(Key dest_server, Message *msg){
-        typename ServerQueueInfoMap::iterator qi_it = mServerQueues.find(dest_server);
 
-        assert( qi_it != mServerQueues.end() );
+    QueueEnum::PushResult push(Key key, Message *msg) {
+        ByKeyIterator qi_it = mQueuesByKey.find(key);
+        assert( qi_it != mQueuesByKey.end() );
 
-        ServerQueueInfo* queue_info = &qi_it->second;
+        QueueInfo* queue_info = qi_it->second;
+        bool wasEmpty = queue_info->messageQueue->empty();
 
-        // If the queue was empty then the new packet is first and its finish time needs to be computed.
-        if (queue_info->messageQueue->empty())
-            queue_info->nextFinishTime = finishTime(msg->size(), queue_info->weight);
-        return queue_info->messageQueue->push(msg);
+        QueueEnum::PushResult pushResult = queue_info->messageQueue->push(msg);
+
+        if (wasEmpty)
+            computeNextFinishTime(queue_info);
+
+        return pushResult;
     }
 
     // Returns the next message to deliver, given the number of bytes available for transmission
     // \param bytes number of bytes available; updated appropriately for intermediate null messages when returns
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allocated
-    Message* front(uint64* bytes, Key*keyAtFront) {
+    Message* front(uint64* bytes, Key* keyAtFront) {
         Message* result = NULL;
         Time vftime(Time::null());
         mFrontQueue = NULL;
@@ -163,7 +199,7 @@ public:
         nextMessage(bytes, &result, &vftime, &mFrontQueue);
         if (result != NULL) {
             assert( *bytes >= result->size() );
-            *keyAtFront = mFrontQueue->mKey;
+            *keyAtFront = mFrontQueue->key;
             return result;
         }
 
@@ -199,9 +235,10 @@ public:
 
             mFrontQueue->messageQueue->pop();
 
-            // update the next finish time if there's anything in the queue
-            if (!mFrontQueue->messageQueue->empty())
-                mFrontQueue->nextFinishTime = finishTime(mFrontQueue->messageQueue->front()->size(), mFrontQueue->weight, mFrontQueue->nextFinishTime);
+            // Remove from queue time list
+            removeFromTimeIndex(mFrontQueue);
+            // Update finish time and add back to time index if necessary
+            computeNextFinishTime(mFrontQueue, vftime);
 
             // Unmark the queue as being in front
             mFrontQueue = NULL;
@@ -211,55 +248,55 @@ public:
     }
 
     bool empty() const {
-        // FIXME we could track a count ourselves instead of checking all these queues
-        for(typename ServerQueueInfoMap::const_iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-            const ServerQueueInfo* queue_info = &it->second;
-            if (!queue_info->messageQueue->empty())
-                return false;
-        }
-        return true;
+        // Queues won't be in mQueuesByTime unless they have something in them
+        return mQueuesByTime.empty();
     }
 
     // Returns the total amount of space that can be allocated for the destination
-    uint32 maxSize(Key dest) const {
-        typename ServerQueueInfoMap::const_iterator it = mServerQueues.find(dest);
-        if (it == mServerQueues.end()) return 0;
-        return it->second.messageQueue->maxSize();
+    uint32 maxSize(Key key) const {
+        // FIXME we could go through fewer using the ByTime index
+        ConstByKeyIterator it = mQueuesByKey.find(key);
+        if (it == mQueuesByKey.end()) return 0;
+        return it->second->messageQueue->maxSize();
     }
 
     // Returns the total amount of space currently used for the destination
-    uint32 size(Key dest) const {
-        typename ServerQueueInfoMap::const_iterator it = mServerQueues.find(dest);
-        if (it == mServerQueues.end()) return 0;
-        return it->second.messageQueue->size();
+    uint32 size(Key key) const {
+        ConstByKeyIterator it = mQueuesByKey.find(key);
+        if (it == mQueuesByKey.end()) return 0;
+        return it->second->messageQueue->size();
     }
 
+    // FIXME This shouldn't exist, but is needed to handle queues which get
+    // data pushed to them without going through this class. Currently this
+    // is only caused by NetworkQueueWrapper and should be fixed.
+    void service() {
+        // FIXME It sucks that we have to do this, but we need to iterate through queues we think
+        // are empty and double check them.  NetworkQueueWrapper doesn't behave properly (pushes
+        // occur without our knowledge), so we have no choice here.
+        KeySet empty_keys;
+        empty_keys.swap(mEmptyQueues);
+        for(typename KeySet::iterator it = empty_keys.begin(); it != empty_keys.end(); it++) {
+            Key key = *it;
+            computeNextFinishTime( mQueuesByKey.find(key)->second );
+        }
+        empty_keys.clear();
+    }
 protected:
 
     // Retrieves the next message to deliver, along with its virtual finish time, given the number of bytes available
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
-    void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, ServerQueueInfo** min_queue_info_out) {
-        // Create a list of queues, sorted by nextFinishTime.  FIXME we should probably track this instead of regenerating it every time
-        std::vector<ServerQueueInfo*> queues_by_finish_time;
-        queues_by_finish_time.reserve(mServerQueues.size());
-        for(typename ServerQueueInfoMap::iterator it = mServerQueues.begin(); it != mServerQueues.end(); it++) {
-            ServerQueueInfo* queue_info = &it->second;
-            if (queue_info->messageQueue->empty()) continue;
-            queues_by_finish_time.push_back(queue_info);
-        }
-
-        // If this list ends up empty then there are no enqueued messages
-        if (queues_by_finish_time.empty()) {
+    void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
+        // If there's nothing in the queue, there is no next message
+        if (mQueuesByTime.empty()) {
             *result_out = NULL;
             return;
         }
 
-        std::sort(queues_by_finish_time.begin(), queues_by_finish_time.end(), typename ServerQueueInfo::FinishTimeOrder());
-
         // Loop through until we find one that has data and can be handled.
-        for(uint32 i = 0; i < queues_by_finish_time.size(); i++) {
-            ServerQueueInfo* min_queue_info = queues_by_finish_time[i];
+        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
+            QueueInfo* min_queue_info = it->second;
 
             // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
             // would violate the ordering.
@@ -270,7 +307,7 @@ protected:
 
             // Now give the user a chance to veto this packet.  If they can use it, set output and return.
             // Otherwise just continue trying the rest of the options.
-            if (mPredicate(min_queue_info->mKey, min_queue_info->messageQueue->front())) {
+            if (mPredicate(min_queue_info->key, min_queue_info->messageQueue->front())) {
                 *min_queue_info_out = min_queue_info;
                 *vftime_out = min_queue_info->nextFinishTime;
                 *result_out = min_queue_info->messageQueue->front();
@@ -281,6 +318,37 @@ protected:
         // If we get here then we've tried everything and nothing has satisfied our constraints. Give up.
         *result_out = NULL;
         return;
+    }
+
+    // Finds and removes this queue from the time index (mQueuesByTime).
+    void removeFromTimeIndex(QueueInfo* qi) {
+        std::pair<ByTimeIterator, ByTimeIterator> eq_range = mQueuesByTime.equal_range(qi->nextFinishTime);
+        ByTimeIterator start_q = eq_range.first;
+        ByTimeIterator end_q = eq_range.second;
+
+        for(ByTimeIterator it = start_q; it != end_q; it++) {
+            if (it->second == qi) {
+                mQueuesByTime.erase(it);
+                return;
+            }
+        }
+    }
+
+    // Computes the next finish time for this queue and, if it has one, inserts it into the time index
+    void computeNextFinishTime(QueueInfo* qi, const Time& last_finish_time) {
+        if ( qi->messageQueue->empty() ) {
+            mEmptyQueues.insert(qi->key);
+            return;
+        }
+
+        qi->nextFinishTime = finishTime( qi->messageQueue->front()->size(), qi->weight, last_finish_time);
+        mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
+        // In case it was an empty queue, remove it
+        mEmptyQueues.erase(qi->key);
+    }
+
+    void computeNextFinishTime(QueueInfo* qi) {
+        computeNextFinishTime(qi, mCurrentVirtualTime);
     }
 
     /** Finish time for a packet that was inserted into a non-empty queue, i.e. based on the previous packet's
@@ -295,19 +363,19 @@ protected:
 
     /** Finish time for a packet inserted into an empty queue, i.e. based on the most recent virtual time. */
     Time finishTime(uint32 size, float weight) const {
-        float queue_frac = weight;
-        Duration transmitTime = queue_frac == 0 ? Duration::seconds((float)1000) : Duration::seconds( size / queue_frac );
-        if (transmitTime == Duration::zero()) transmitTime = Duration::microseconds(1); // just make sure we take *some* time
-
-        return mCurrentVirtualTime + transmitTime;
+        return finishTime(size, weight, mCurrentVirtualTime);
     }
 
 protected:
     uint32 mRate;
     Time mCurrentVirtualTime;
-    ServerQueueInfoMap mServerQueues;
+    // FIXME if I could get the templates to work, using multi_index_container instead of 2 containers would be preferable
+    QueueInfoByKey mQueuesByKey;
+    QueueInfoByFinishTime mQueuesByTime;
+    KeySet mEmptyQueues; // FIXME everything but NetworkQueueWrapper works without tracking these, it only requires
+                         // it because "pushing" to the NetworkQueue doesn't go through this FairQueue
     Predicate mPredicate;
-    ServerQueueInfo* mFrontQueue; // The queue we've marked as the one containing the front item
+    QueueInfo* mFrontQueue; // Queue holding the front item
 }; // class FairQueue
 
 } // namespace CBR
