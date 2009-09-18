@@ -100,6 +100,9 @@ int main(int argc, char** argv) {
         }
     }
 
+    TimeProfiler whole_profiler("Whole Main Loop");
+    whole_profiler.addStage("Loop");
+
     ///////////Go go go!! start of simulation/////////////////////
 
     Time tbegin = Time::null();
@@ -108,6 +111,8 @@ int main(int argc, char** argv) {
     {
         while( true )
         {
+            whole_profiler.startIteration();
+
             Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
             if (elapsed > duration)
                 break;
@@ -115,7 +120,13 @@ int main(int argc, char** argv) {
             Time curt = tbegin + elapsed;
 
             obj_host->tick(curt);
+
+            whole_profiler.finishedStage();
         }
+    }
+
+    if (GetOption(PROFILE)->as<bool>()) {
+        whole_profiler.report();
     }
 
     gTrace->prepareShutdown();

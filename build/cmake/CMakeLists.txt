@@ -284,6 +284,7 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/SolidAngle.cpp
   ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
+  ${CBR_SOURCE_DIR}/TimeProfiler.cpp
   ${CBR_SOURCE_DIR}/Timer.cpp
   ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
