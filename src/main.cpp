@@ -417,6 +417,20 @@ void *main_loop(void *) {
         oseg_shutdown_analysis_stream.flush();
         oseg_shutdown_analysis_stream.close();
 
+        
+        //oseg tracked set results analysis
+        String oseg_tracked_set_results_filename = "oseg_tracked_set_results_file";
+        oseg_tracked_set_results_filename += ".dat";
+
+        OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
+        
+        std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
+        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream);
+
+        oseg_tracked_set_results_analysis_stream.flush();
+        oseg_tracked_set_results_analysis_stream.close();
+        
+        
         //end bftm additional object message log file creation.
         
         exit(0);

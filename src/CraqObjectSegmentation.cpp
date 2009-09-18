@@ -331,8 +331,15 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         mReceivingObjects.push_back(obj_id);  //means that this object has been pushed to this server, but its migration isn't complete yte.
       }
 
+
+      TrackedSetResultsData tsrd;
+      tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
+      tsrd.dur       = mTimer.elapsed();
+      
       int trackID = craqDht.set(cdSetGet);
-      trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
+      //      trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
+      trackingMessages[trackID] = tsrd;
+      
     }
     else
     {
@@ -429,20 +436,20 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           cacheVal.sID          = mContext->id();
           cacheVal.timeStamp    = (mContext->time.raw())/1000.0;
           cacheVal.lastLookup   = true;
-          mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = cacheVal;
+          mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID()] = cacheVal;
           
           //add to mObjects the uuid associated with trackedMessage.
-          mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
+          mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID());
 
           //will also need to make sure that updated has the most recent copy of the location of the message.
-          if(updated.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()) != updated.end())
+          if(updated.find(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID()) != updated.end())
           {
             //The serverid in update may be from a stale return from craq.  Therefore, just overwrite the updated function with our serverid (because the object should now be hosted on this space server).
-            updated[trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID()] = mContext->id();
+            updated[trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID()] = mContext->id();
           }
 
           //delete the mInTransitOrLookup entry for this object sequence because now we know where it is.
-          std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
+          std::map<UUID,TransLookup>::iterator inTransLookIter = mInTransitOrLookup.find(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID());
 
           if (inTransLookIter != mInTransitOrLookup.end())
           {
@@ -453,7 +460,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
 
           //remove this object from mReceivingObjects, indicating that this object can now be safely migrated from this server to another if need be.
-          std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID());
+          std::vector<UUID>::iterator recObjIter = std::find(mReceivingObjects.begin(), mReceivingObjects.end(), trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID());
           if (recObjIter != mReceivingObjects.end())
           {
             //the object should be removed from receiving objects
@@ -468,13 +475,19 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
           
 #ifdef CRAQ_DEBUG
           std::cout<<"\n\nbftm debug:  sending an acknowledge out from  "<<  mContext->id();
-          std::cout<<"  to  "<<          trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination();
-          std::cout<<"  for object  " << trackingMessages[trackedSetResults[s]->trackedMessage]->getObjID().toString();
+          std::cout<<"  to  "<<          trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getMessageDestination();
+          std::cout<<"  for object  " << trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID().toString();
           std::cout<< "   at time:  " << mContext->time.raw() <<"\n\n";
 #endif
 
-          mContext->router()->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage],trackingMessages[trackedSetResults[s]->trackedMessage]->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
+          Duration procTrackedSetRes = mTimer.elapsed();
+          int durMs = procTrackedSetRes.toMilliseconds() - trackingMessages[trackedSetResults[s]->trackedMessage].dur.toMilliseconds();
+          
+          mContext->trace()->processOSegTrackedSetResults(mContext->time, trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID(), mContext->id(), durMs);
+          
+          mContext->router()->route(MessageRouter::MIGRATES,trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg,trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getMessageDestination(),false);//send an acknowledge message to space server that formerly hosted object.
 
+            
 
           trackingMessages.erase(trackedSetResults[s]->trackedMessage);//stop tracking this message.
         }
@@ -694,11 +707,11 @@ void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_
   cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
   cacheVal.lastLookup   =  false;
 
-#ifdef CRAQ_DEBUG
+  //#ifdef CRAQ_DEBUG
   std::cout<<"\n\n got a processUpdateOSegMessage time received  "<< mContext->time.raw()<<"\n";
   std::cout<<"\ttime stamped:  "<<cacheVal.timeStamp <<" \n ";
   std::cout<<"\tsID "  <<cacheVal.sID   <<"\n\n";
-#endif
+  //#endif
   
   mServerObjectCache[update_oseg_msg->contents.m_objid()] = cacheVal;
 }

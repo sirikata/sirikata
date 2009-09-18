@@ -433,7 +433,8 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 
 
 
-void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMs)
+
+void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
 {
 #ifdef TRACE_ROUND_TRIP_MIGRATION_TIME  
   if (mShuttingDown) return;
@@ -443,12 +444,12 @@ void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const Se
   data.write(&obj_id, sizeof(obj_id));
   data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
   data.write(&sID_migratingTo, sizeof(sID_migratingTo));
-  data.write(&numMs, sizeof(numMs));
+  data.write(&numMilliseconds, sizeof(numMilliseconds));
 
 #endif
 }
 
-void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
+void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds)
 {
 #ifdef TRACE_OSEG_TRACKED_SET_RESULTS
 
@@ -457,7 +458,6 @@ void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, cons
   data.write(&OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag));
   data.write(&t, sizeof(t));
   data.write(&obj_id,sizeof(obj_id));
-  data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
   data.write(&sID_migratingTo, sizeof(sID_migratingTo));
   data.write(&numMilliseconds, sizeof(numMilliseconds));
 

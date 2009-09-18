@@ -198,7 +198,6 @@ struct ObjectMigrationRoundTripEvent : public Event
 struct OSegTrackedSetResultsEvent : public Event
 {
   UUID obj_id;
-  ServerID sID_migratingFrom;
   ServerID sID_migratingTo;
   int numMill;
 };

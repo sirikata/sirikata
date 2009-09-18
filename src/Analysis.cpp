@@ -243,7 +243,6 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           OSegTrackedSetResultsEvent* trackedSetResults_evt = new OSegTrackedSetResultsEvent;
           is.read((char*)&trackedSetResults_evt->time, sizeof(trackedSetResults_evt->time));
           is.read((char*)&trackedSetResults_evt->obj_id, sizeof(trackedSetResults_evt->obj_id));
-          is.read((char*)&trackedSetResults_evt->sID_migratingFrom, sizeof(trackedSetResults_evt->sID_migratingFrom));
           is.read((char*)&trackedSetResults_evt->sID_migratingTo, sizeof(trackedSetResults_evt->sID_migratingTo));
           is.read((char*)&trackedSetResults_evt->numMill, sizeof(trackedSetResults_evt->numMill));
 
@@ -1895,7 +1894,6 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<<"\n\n******************\n";
       fileOut<<"\tobj_id:      "<<allTrackedSetResultsEvts[s].obj_id.toString()<<"\n";
       fileOut<<"\ttime at:     "<<allTrackedSetResultsEvts[s].time.raw()<<"\n";
-      fileOut<<"\tmig_from:    "<<allTrackedSetResultsEvts[s].sID_migratingFrom<<"\n";
       fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].sID_migratingTo<<"\n";
       fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].numMill<<"\n\n";
 
@@ -1968,6 +1966,9 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut << "\tnumLookups:        "<<allShutdownEvts[s].numLookups<<"\n";
       fileOut << "\tnumOnThisServer:   "<<allShutdownEvts[s].numOnThisServer<<"\n";
       fileOut << "\tnumCacheHits:      "<<allShutdownEvts[s].numCacheHits<<"\n";
+      fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].numCraqLookups<<"\n";
+      fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].numTimeElapsedCacheEviction  << "\n";
+      fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].numMigrationNotCompleteYet   << "\n";
       
     }
 

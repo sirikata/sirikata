@@ -56,7 +56,17 @@ namespace CBR
     std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
     
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
-    std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
+
+    struct TrackedSetResultsData
+    {
+      OSegMigrateMessageAcknowledge* migAckMsg;
+      Duration dur;
+    };
+    
+    //std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
+    typedef std::map<int, TrackedSetResultsData> TrackedMessageMap;
+    TrackedMessageMap trackingMessages;
+    
     std::vector<UUID> mReceivingObjects; //this is a vector of objects that have been pushed to this server, but whose migration isn't complete yet, becase we don't have an ack from CRAQ that they've been stored yet.
 
     

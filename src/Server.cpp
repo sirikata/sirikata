@@ -319,7 +319,8 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 }
 
-void Server::receiveMessage(Message* msg) {
+void Server::receiveMessage(Message* msg)
+{
     MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
     if (migrate_msg != NULL) {
         const UUID obj_id = migrate_msg->contents.object();
@@ -334,7 +335,6 @@ void Server::receiveMessage(Message* msg) {
     {
       const UUID obj_id = kill_obj_conn_msg->contents.m_objid();
       killObjectConnection(obj_id);
-
     }
 
     delete msg;
