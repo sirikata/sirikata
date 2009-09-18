@@ -159,6 +159,8 @@ void Trace::storageThread(const String& filename) {
 
         usleep( Duration::seconds(1).toMicroseconds() );
     }
+    data.store(of);
+    fflush(of);
 
     fsync(fileno(of));
     fclose(of);
