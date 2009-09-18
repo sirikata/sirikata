@@ -197,7 +197,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     
     //    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
-    if ((timeElapsed < 10000)&&(objCacheIter->second.lastLookup))
+    if ((timeElapsed < 8000)&&(objCacheIter->second.lastLookup))
     {
       //if the time since absorbed a cache value is less than one second
       //and if the last cache value came from one of our personal lookups.
@@ -707,11 +707,11 @@ void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_
   cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
   cacheVal.lastLookup   =  false;
 
-  //#ifdef CRAQ_DEBUG
+#ifdef CRAQ_DEBUG
   std::cout<<"\n\n got a processUpdateOSegMessage time received  "<< mContext->time.raw()<<"\n";
   std::cout<<"\ttime stamped:  "<<cacheVal.timeStamp <<" \n ";
   std::cout<<"\tsID "  <<cacheVal.sID   <<"\n\n";
-  //#endif
+#endif
   
   mServerObjectCache[update_oseg_msg->contents.m_objid()] = cacheVal;
 }
@@ -741,12 +741,6 @@ void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_
     obj_id    = msg->getObjID();
 
 
-#ifdef CRAQ_DEBUG
-    std::cout<<"\n\nReceived a migrate message from "<<serv_from<< " for  "<<obj_id.toString()<<" at time: "<<mContext->time.raw()<<"\n\n";
-#endif
-    
-    
-
     std::map<UUID,TransLookup>::iterator inTransIt;
 
     inTransIt = mInTransitOrLookup.find(obj_id);
@@ -762,9 +756,6 @@ void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_
     }
 
     //send a message to the server that object should now disconnect
-#ifdef CRAQ_DEBUG
-    std::cout<<"\n\nAbout to generate a killconn message. at time:  "<<mContext->time.raw() << " \n\n";
-#endif
 
     KillObjConnMessage* killConnMsg = new KillObjConnMessage(mContext->id());
     killConnMsg->contents.set_m_objid(obj_id);

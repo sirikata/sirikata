@@ -102,12 +102,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we can route messages being held in mObjectsInTransit
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-
-          if (iterObjectsInTransit->second[s].mIsForward)
-          {
-            std::cout<<"\n\nbftm debug: this is where we're sending a forward.  \n\n";
-          }
-          
           route((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward);
         }
 
@@ -242,10 +236,6 @@ void Forwarder::service()
   void Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
   {
 
-    if (is_forward)
-      std::cout<<"\n\nbftm debug: First route is_forward\n\n";
-
-    
     uint32 offset = 0;
     Network::Chunk msg_serialized;
     offset = msg->serialize(msg_serialized, offset);
@@ -281,13 +271,6 @@ void Forwarder::service()
     UUID dest_obj = msg->dest_object();
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
 
-    if (is_forward)
-    {
-      std::cout<<"\n\nbftm debug got a positive forward.  This is server id to forward to:   "<< forwardFrom << "\n\n";
-    }
-
-
-
     
     //#ifdef  CRAQ_CACHE
     if (is_forward && (forwardFrom != NullServerID))
@@ -295,9 +278,6 @@ void Forwarder::service()
       //means that when we figure out which server this object is located on, we should also send an oseg update message.
       //we need to be careful not to send multiple update messages to the same server:
       //
-
-      std::cout<<"\n\nbftm debug: first\n\n";
-
       
       if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end()) //if the object already exists in mServersToUpdate
       {
@@ -306,11 +286,16 @@ void Forwarder::service()
           //don't already know that forwardFrom needs to be updated.  means that we should append the forwardFrom ServerID to a list of servers that we need to update when we know which server to send the message to.
           mServersToUpdate[dest_obj].push_back(forwardFrom);
 
-          //#ifdef CRAQ_DEBUG
+#ifdef CRAQ_DEBUG
           std::cout<<"\n\n bftm debug: got a server to update at time  "<<mContext->time.raw()<< " obj_id:   "<<dest_obj.toString()<<"    server to send update to:  "<<forwardFrom<<"\n\n";
-          //#endif
+#endif
           
         }
+      }
+      else
+      {
+        //the object doesn't already exist in mServersToUpdate: put it in mServersToUpdate
+        mServersToUpdate[dest_obj].push_back(forwardFrom);
       }
     }
     //#endif
@@ -330,10 +315,6 @@ void Forwarder::service()
     mAndF.mMessage = msg;
     mAndF.mIsForward = is_forward;
 
-    if (is_forward)
-    {
-      std::cout<<"\n\nbftm debug: put in a true is_forward\n\n";
-    }
     
     mObjectsInTransit[dest_obj].push_back(mAndF);
 
@@ -450,6 +431,11 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           dispatchMessage(msg);
         }
         break;
+      case MESSAGE_TYPE_UPDATE_OSEG:
+        {
+          dispatchMessage(msg);
+        }
+        break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
           {
               dispatchMessage(msg);
@@ -496,7 +482,6 @@ void Forwarder::receiveMessage(Message* msg) {
         conn->send(obj_msg_cpy);
     else
     {
-      std::cout<<"\n\n bftm debug:  Forwarding a message \n\n";
       route(obj_msg_cpy, true,GetUniqueIDServerID(obj_msg->id()) );// bftm changed to allow for forwarding back messages.
     }
 
@@ -513,11 +498,6 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
   //send out all server updates associated with an object with this message:
   UUID obj_id =  msg->dest_object();
 
-  if (is_forward)
-  {
-    std::cout<<"\n\nbftm debug.  sending a forward to " << dest_serv<<"\nThis is size of mServersToUpdate:  "<<mServersToUpdate.size() <<"\n\n";
-
-  }
       
   //#ifdef CRAQ_CACHE
   if (mServersToUpdate.find(obj_id) != mServersToUpdate.end())
@@ -525,13 +505,16 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
     for (int s=0; s < (int) mServersToUpdate[obj_id].size(); ++s)
     {
       UpdateOSegMessage* up_os = new UpdateOSegMessage(mContext->id(),dest_serv,obj_id);
-      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
+      //      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
 
-
+#ifdef CRAQ_DEBUG
       std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
       std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
       std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
+#endif
+      
+      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
 
     }
   }

@@ -112,6 +112,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
         msg = new OSegMigrateMessageAcknowledge(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_UPDATE_OSEG:
+        msg = new UpdateOSegMessage(wire,offset,_id);
+        break;
       case MESSAGE_TYPE_NOISE:
         msg = new NoiseMessage(wire,offset,_id);
         break;
@@ -519,6 +522,10 @@ MessageType UpdateOSegMessage::type() const
   return MESSAGE_TYPE_UPDATE_OSEG;
 }
 
+UpdateOSegMessage::~UpdateOSegMessage()
+{
+}
+
 
 uint32 UpdateOSegMessage::serialize(Network::Chunk& wire, uint32 offset)
 {
@@ -564,7 +571,8 @@ MessageType KillObjConnMessage::type() const
 }
 
 
-uint32 KillObjConnMessage::serialize(Network::Chunk& wire, uint32 offset) {
+uint32 KillObjConnMessage::serialize(Network::Chunk& wire, uint32 offset)
+{
     offset = serializeHeader(wire, offset);
     return serializePBJMessage(contents, wire, offset);
 }

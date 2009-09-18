@@ -314,7 +314,8 @@ public:
   UpdateOSegMessage(const ServerID& sID_sendingMessage, const ServerID& sID_objOn, const UUID& obj_id);
   virtual MessageType type() const;
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
+  ~UpdateOSegMessage();
+  
   CBR::Protocol::OSeg::UpdateOSegMessage contents;
 
 private:

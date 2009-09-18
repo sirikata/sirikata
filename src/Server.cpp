@@ -547,23 +547,33 @@ void Server::killObjectConnection(const UUID& obj_id)
     return;
   }
   //the rest assumes that we are dealing with a non-dummy implementation.
+  //(For example, a craq implementation.)
 
-
+  
   //bftm change
-  ObjectConnectionMap::iterator obj_map_it = mObjects.find(obj_id);
-  if (obj_map_it != mObjects.end())
-  {
-    ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-    mClosingConnections.insert(migrated_conn);
-  }
+//   ObjectConnectionMap::iterator obj_map_it = mObjects.find(obj_id);
+//   if (obj_map_it != mObjects.end())
+//   {
+//     ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+//     std::cout<<"\n\nbftm debug: in server.cpp, removing object connection for obj_id: "<<obj_id.toString()<<"\n\n";
+//     mClosingConnections.insert(migrated_conn);
+//  }
+  //shouldn't need this
 
-
-
-  //  ObjectConnectionMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
+  
   MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
   if (objConMapIt != mMigratingConnections.end())
   {
+
+    //begin bftm change
+    //    std::cout<<"\n\nbftm debug in server.cpp, rem objconn\n\n";
+
+    ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+    //    std::cout<<"\n\nbftm debug: in server.cpp, removing object connection for obj_id: "<<obj_id.toString()<<"\n\n";
+    mClosingConnections.insert(migrated_conn);
+    //end bftm change
+    
     //log the event's completion.
     Duration currentDur = mMigrationTimer.elapsed();
     int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
