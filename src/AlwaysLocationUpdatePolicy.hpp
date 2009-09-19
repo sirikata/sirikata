@@ -34,6 +34,7 @@
 #define _ALWAYS_LOCATION_UPDATE_POLICY_HPP_
 
 #include "LocationService.hpp"
+#include "Options.hpp"
 
 namespace CBR {
 
@@ -66,6 +67,9 @@ public:
     virtual void service();
 
 private:
+    bool trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu);
+    bool trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu);
+
     struct UpdateInfo {
         TimedMotionVector3f location;
         BoundingSphere3f bounds;
@@ -73,6 +77,8 @@ private:
 
     template<typename SubscriberType>
     struct SubscriberIndex {
+        AlwaysLocationUpdatePolicy* parent;
+
         typedef std::set<UUID> UUIDSet;
         typedef std::set<SubscriberType> SubscriberSet;
 
@@ -88,6 +94,10 @@ private:
         typedef std::map<UUID, SubscriberSet*> ObjectSubscribersMap;
         ObjectSubscribersMap mObjectSubscribers;
 
+        SubscriberIndex(AlwaysLocationUpdatePolicy* p)
+         : parent(p)
+        {
+        }
 
         ~SubscriberIndex() {
             for(typename SubscriberMap::iterator sub_it = mSubscriptions.begin(); sub_it != mSubscriptions.end(); sub_it++)
@@ -201,7 +211,9 @@ private:
             }
         }
 
-        void service(std::map<SubscriberType,CBR::Protocol::Loc::BulkLocationUpdate>& updates) {
+        void service() {
+            uint32 max_updates = GetOption(LOC_MAX_PER_RESULT)->as<uint32>();
+
             std::list<SubscriberType> to_delete;
 
             for(typename SubscriberMap::iterator server_it = mSubscriptions.begin(); server_it != mSubscriptions.end(); server_it++) {
@@ -210,6 +222,8 @@ private:
 
                 CBR::Protocol::Loc::BulkLocationUpdate bulk_update;
 
+                bool send_failed = false;
+                std::map<UUID, UpdateInfo>::iterator last_shipped = sub_info->outstandingUpdates.begin();
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
                     CBR::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
@@ -219,18 +233,34 @@ private:
                     location.set_velocity(up_it->second.location.velocity());
                     update.set_bounds(up_it->second.bounds);
 
-                }
-                if (bulk_update.update_size() > 0) {
-                    updates[sid] = bulk_update;
+                    // If we hit the limit for this update, try to send it out
+                    if (bulk_update.update_size() > (int32)max_updates) {
+                        bool sent = parent->trySend(sid, bulk_update);
+                        if (!sent) {
+                            send_failed = true;
+                            break;
+                        }
+                        else {
+                            bulk_update = CBR::Protocol::Loc::BulkLocationUpdate(); // clear it out
+                            last_shipped = up_it;
+                        }
+                    }
                 }
 
-                sub_info->outstandingUpdates.clear();
+                // Try to send the last few if necessary/possible
+                if (!send_failed && bulk_update.update_size() > 0) {
+                    bool sent = parent->trySend(sid, bulk_update);
+                    if (sent)
+                        last_shipped = sub_info->outstandingUpdates.end();
+                }
 
-                if (sub_info->subscribedTo.empty()) {
+                // Finally clear out any entries successfully sent out
+                sub_info->outstandingUpdates.erase( sub_info->outstandingUpdates.begin(), last_shipped);
+
+                if (sub_info->subscribedTo.empty() && sub_info->outstandingUpdates.empty()) {
                     delete sub_info;
                     to_delete.push_back(sid);
                 }
-
             }
 
             for(typename std::list<SubscriberType>::iterator it = to_delete.begin(); it != to_delete.end(); it++)

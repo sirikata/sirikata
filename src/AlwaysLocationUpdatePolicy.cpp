@@ -36,7 +36,9 @@
 namespace CBR {
 
 AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(LocationService* locservice)
- : LocationUpdatePolicy(locservice)
+ : LocationUpdatePolicy(locservice),
+   mServerSubscriptions(this),
+   mObjectSubscriptions(this)
 {
 }
 
@@ -104,36 +106,28 @@ void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const Bo
 }
 
 void AlwaysLocationUpdatePolicy::service() {
-    // Server subscriptions
-    typedef std::map<ServerID, CBR::Protocol::Loc::BulkLocationUpdate> ServerUpdateMap;
-    ServerUpdateMap serverLocUpdates;
-    mServerSubscriptions.service(serverLocUpdates);
+    mServerSubscriptions.service();
+    mObjectSubscriptions.service();
+}
 
-    for(ServerUpdateMap::iterator it = serverLocUpdates.begin(); it != serverLocUpdates.end(); it++) {
-        ServerID sid = it->first;
-        BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
-        msg->contents = it->second;
-        mLocService->context()->router()->route(MessageRouter::LOCS, msg, sid);
-    }
+bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    obj_msg->set_source_object(UUID::null());
+    obj_msg->set_source_port(OBJECT_PORT_LOCATION);
+    obj_msg->set_dest_object(dest);
+    obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
+    obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id()));
+    obj_msg->set_payload( serializePBJMessage(blu) );
 
-    // Object subscriptions
-    typedef std::map<UUID, CBR::Protocol::Loc::BulkLocationUpdate> ObjectUpdateMap;
-    ObjectUpdateMap objectLocUpdates;
-    mObjectSubscriptions.service(objectLocUpdates);
+    mLocService->context()->router()->route(obj_msg, false);
+    return true; // FIXME
+}
 
-    for(ObjectUpdateMap::iterator it = objectLocUpdates.begin(); it != objectLocUpdates.end(); it++) {
-        UUID obj_id = it->first;
-
-        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-        obj_msg->set_source_object(UUID::null());
-        obj_msg->set_source_port(OBJECT_PORT_LOCATION);
-        obj_msg->set_dest_object(obj_id);
-        obj_msg->set_dest_port(OBJECT_PORT_LOCATION);
-        obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id()));
-        obj_msg->set_payload( serializePBJMessage(it->second) );
-
-        mLocService->context()->router()->route(obj_msg, false);
-    }
+bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
+    BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
+    msg->contents = blu;
+    mLocService->context()->router()->route(MessageRouter::LOCS, msg, dest);
+    return true; // FIXME
 }
 
 } // namespace CBR

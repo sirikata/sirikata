@@ -83,6 +83,7 @@
 #define NOISE               "noise"
 
 #define LOC                        "loc"
+#define LOC_MAX_PER_RESULT         "loc.max-per-result"
 
 #define PROFILE                    "profile"
 
