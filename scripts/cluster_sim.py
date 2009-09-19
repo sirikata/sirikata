@@ -49,7 +49,7 @@ class ClusterSimSettings:
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
-        self.oseg = 'oseg_loc'
+        self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'H'
 
         self.vis_mode = 'object'
