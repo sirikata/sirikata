@@ -77,8 +77,10 @@ public:
 
     QueueEnum::PushResult push(const ElementType &msg){
         uint32 msg_size = mSizeFunctor(msg);
-        if (mSize + msg_size > mMaxSize)
+        if (mSize + msg_size > mMaxSize) {
+            if (msg_size > mMaxSize) SILOG(queue,fatal,"Tried to push element larger than maximum queue size: " << msg_size << " > " << mMaxSize);
             return QueueEnum::PushExceededMaximumSize;
+        }
         mElements.push_back(msg);
         mSize += msg_size;
         return QueueEnum::PushSucceeded;
