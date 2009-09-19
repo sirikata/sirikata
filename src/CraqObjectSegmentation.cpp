@@ -67,6 +67,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     numMigrationNotCompleteYet  = 0;
 
     
+    /*
     CraqDataKey obj_id_as_dht_key;
     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
@@ -79,7 +80,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
 
       mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
-
     }
 
     //50 ticks to update
@@ -93,6 +93,8 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         delete getResults[t];
       }
     }
+    */
+    
     mTimer.start();
   }
 
@@ -350,6 +352,15 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
       //      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
       CraqDataSetGet cdSetGet(cdk, mContext->id() ,false,CraqDataSetGet::SET);
       int trackID = craqDht.set(cdSetGet);
+
+
+      if (std::find(mObjects.begin(), mObjects.end(), obj_id) == mObjects.end())
+        //      if (mObjects.find(obj_id) == mObjects.end())
+      {
+        mObjects.push_back(obj_id);
+        std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n\n";
+        
+      }
     }
   }
 
@@ -575,7 +586,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    iteratedWait(3, getResults,trackedSetResults);
+    iteratedWait(4, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults);
 
     Duration tickDur = osegServiceDurTimer.elapsed();

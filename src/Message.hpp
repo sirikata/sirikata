@@ -67,6 +67,8 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_BULK_LOCATION             13
 #define MESSAGE_TYPE_KILL_OBJ_CONN             14
 #define MESSAGE_TYPE_UPDATE_OSEG               15
+#define MESSAGE_TYPE_FORWARDED                 16 
+
   
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
@@ -343,6 +345,11 @@ private:
 };
 
 //end kill obj conn message
+
+//forwarded message
+//class 
+
+//end 
 
 
 class ServerProximityQueryMessage : public Message {

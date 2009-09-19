@@ -16,9 +16,9 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '200s'
-        self.tx_bandwidth = 10000
-        self.rx_bandwidth = 10000
+        self.duration = '50s'
+        self.tx_bandwidth = 1000000
+        self.rx_bandwidth = 1000000
         self.flatness = 100
         self.num_objects = 100
         self.server_queue = 'fair'
@@ -49,7 +49,7 @@ class ClusterSimSettings:
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
-        self.oseg = 'oseg_craq'
+        self.oseg = 'oseg_loc'
         self.oseg_unique_craq_prefix = 'H'
 
         self.vis_mode = 'object'
