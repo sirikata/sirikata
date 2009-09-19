@@ -20,7 +20,7 @@ class ClusterSimSettings:
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 100
-        self.num_objects = 100
+        self.num_objects = 10000
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
@@ -28,7 +28,7 @@ class ClusterSimSettings:
 
         self.object_factory_type = 'random'
 
-        self.object_static = 'drift'
+        self.object_static = 'random'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
         self.object_drift_z = '0'

@@ -55,7 +55,10 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mProfiler.addStage("Noise");
     mProfiler.addStage("Object Message Queue");
     mProfiler.addStage("Server Message Queue");
+    mProfiler.addStage("OSegII");
     mProfiler.addStage("Server Message Queue Receive");
+
+
 }
 
   //Don't need to do anything special for destructor
@@ -75,7 +78,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mCSeg = cseg;
   mOSeg = oseg;
   mObjectMessageQueue = omq;
-  mServerMessageQueue =smq;
+  mServerMessageQueue = smq;
   mOutgoingMessages=new ForwarderQueue(smq,16384);
 }
 
@@ -230,7 +233,8 @@ void Forwarder::service()
     mObjectMessageQueue->service(); mProfiler.finishedStage();
     mServerMessageQueue->service(); mProfiler.finishedStage();
 
-
+    tickOSeg(t);  mProfiler.finishedStage();
+    
     Sirikata::Network::Chunk *c=NULL;
     ServerID source_server;
     while(mServerMessageQueue->receive(&c, &source_server))
