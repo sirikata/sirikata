@@ -63,6 +63,7 @@
 #define OBJECT_STATIC        "object.static"
 #define OBJECT_SIMPLE        "object.simple"
 #define OBJECT_2D            "object.2d"
+#define OBJECT_QUERY_FRAC    "object.query-frac"
 #define OBJECT_PACK          "object.pack"
 #define OBJECT_PACK_OFFSET   "object.pack-offset"
 

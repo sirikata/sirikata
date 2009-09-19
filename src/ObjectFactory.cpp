@@ -109,9 +109,11 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     float driftY                 = GetOption(OBJECT_DRIFT_Y)->as<float>();
     float driftZ                 = GetOption(OBJECT_DRIFT_Z)->as<float>();
 
+    float percent_queriers       = GetOption(OBJECT_QUERY_FRAC)->as<float>();
+
     Vector3f driftVecDir(driftX,driftY,driftZ);
 
-    
+
     for(uint32 i = 0; i < nobjects; i++) {
         UUID id = randomUUID();
 
@@ -131,7 +133,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         else //random
             inputs->motion = new RandomMotionPath(start, end, startpos, 3, Duration::milliseconds((int64)1000), region, zfactor); // FIXME
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
-        inputs->registerQuery = (randFloat() > 0.5f);
+        inputs->registerQuery = (randFloat() <= percent_queriers);
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
 
         mObjectIDs.insert(id);
