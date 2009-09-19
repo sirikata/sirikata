@@ -102,7 +102,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we can route messages being held in mObjectsInTransit
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
-          route((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward);
+            routeObjectMessageToServer((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward,MessageRouter::OSEG_TO_OBJECT_MESSAGESS);
         }
 
         //remove the messages from the objects in transit
@@ -305,7 +305,7 @@ void Forwarder::service()
     if (dest_server_id != NullServerID)
     {
       //means that we instantly knew what the location of the object is, and we can route immediately!
-      route(msg, dest_server_id,is_forward);
+        routeObjectMessageToServer(msg, dest_server_id,is_forward,MessageRouter::SERVER_TO_OBJECT_MESSAGESS);
 
       return;
     }
@@ -493,7 +493,7 @@ void Forwarder::receiveMessage(Message* msg) {
 
 
 
-void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward)
+void Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward, MessageRouter::SERVICES svc)
 {
   //send out all server updates associated with an object with this message:
   UUID obj_id =  msg->dest_object();
@@ -522,7 +522,7 @@ void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_s
 
   // Wrap it up in one of our ObjectMessages and ship it.
   ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
-  route(MessageRouter::OBJECT_MESSAGESS,obj_msg, dest_serv, is_forward);
+  route(svc,obj_msg, dest_serv, is_forward);
   delete msg;
 }
 

@@ -168,6 +168,8 @@ public:
         MIGRATES,
         LOCS,
         CSEGS,
+        SERVER_TO_OBJECT_MESSAGESS,
+        OSEG_TO_OBJECT_MESSAGESS,
         OBJECT_MESSAGESS,
         OSEG_CACHE_UPDATE,
         NUM_SERVICES

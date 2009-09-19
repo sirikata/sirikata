@@ -55,7 +55,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
     unsigned int retryMax=mClientQueues.numQueues(),retryCount=0;
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
         bool sent_success=true;//FIXME
-        /*bool sent_success = */mForwarder->route(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
+        /*bool sent_success = */mForwarder->routeObjectMessageToServer(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
         if (!sent_success)
             break;
 
