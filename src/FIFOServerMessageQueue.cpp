@@ -33,7 +33,11 @@ bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer,const Netw
     offset += msg.size();
     size_t size=mQueue.size(destinationServer);
     size_t msize=mQueue.maxSize(destinationServer);
-    return size+offset<=msize;
+    if (size + offset > msize) {
+        if (offset > msize) SILOG(queue,fatal,"Checked push message that's too large on to FIFOServerMessageQueue: " << offset << " > " << msize);
+        return false;
+    }
+    return true;
 }
 bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue

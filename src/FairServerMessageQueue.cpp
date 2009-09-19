@@ -65,6 +65,9 @@ bool FairServerMessageQueue::canAddMessage(ServerID destinationServer,const Netw
     size_t size = mServerQueues.size(destinationServer);
     size_t maxsize = mServerQueues.maxSize(destinationServer);
     if (size+offset<=maxsize) return true;
+
+    if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FairServerMessageQueue: " << offset << " > " << maxsize);
+
     return false;
 }
 
