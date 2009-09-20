@@ -143,7 +143,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     if (mObjectInfo[uuid].connecting.regQuery)
         connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
 
-    send(
+    send(mContext->time,
         uuid, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(session_msg),
@@ -177,6 +177,7 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
     connect_msg.set_type(CBR::Protocol::Session::Connect::Migration);
     connect_msg.set_object(obj_id);
     send(
+        mContext->time,
         obj_id, OBJECT_PORT_SESSION,
         UUID::null(), OBJECT_PORT_SESSION,
         serializePBJMessage(session_msg),
@@ -198,12 +199,12 @@ ServerID ObjectHost::getConnectedServer(const UUID& obj_id, bool allow_connectin
     return dest_server;
 }
 
-bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+bool ObjectHost::send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     // FIXME getConnectedServer during migrations?
-    return send(src->uuid(), src_port, dest, dest_port, payload, getConnectedServer(src->uuid()));
+    return send(t,src->uuid(), src_port, dest, dest_port, payload, getConnectedServer(src->uuid()));
 }
 
-bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
+bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server) {
     if (dest_server == NullServerID) {
         OH_LOG(error,"Tried to send message when not connected.");
         return false;
@@ -218,6 +219,7 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
 
     // FIXME would be nice not to have to do this alloc/dealloc
     CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
+    mContext->trace->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
     conn->queue.push( serializeObjectHostMessage(*obj_msg) );
     delete obj_msg;
 
@@ -225,13 +227,14 @@ bool ObjectHost::send(const UUID& src, const uint16 src_port, const UUID& dest, 
 }
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     CBR::Protocol::Object::Ping ping_msg;
-    ping_msg.set_ping(Time::now());
+    Time t=Time::now();
+    ping_msg.set_ping(t);
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
     ServerID destServer=getConnectedServer(src->uuid());
     if (destServer!=NullServerID) {
-        send(src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
+        send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
 }
 
@@ -446,6 +449,7 @@ void ObjectHost::handleConnectionRead(const boost::system::error_code& err, Spac
 
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg) {
     // As a special case, messages dealing with sessions are handled by the object host
+    mContext->trace->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
         return;
@@ -454,7 +458,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
 
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        mContext->trace->ping(ping_msg.ping(),msg->source_object(),Time::now(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1);
+        mContext->trace->ping(ping_msg.ping(),msg->source_object(),Time::now(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
 
         return;

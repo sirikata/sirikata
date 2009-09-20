@@ -1,0 +1,6 @@
+package CBR.Protocol;
+message Header {
+        optional uint16 source_port=2;
+        optional uint16 dest_port=4;
+        optional uint64 id=5;
+}

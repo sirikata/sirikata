@@ -33,6 +33,7 @@
 #include "Statistics.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
+#include "CBR_Header.pbj.hpp"
 #include <iostream>
 
 #include "ServerNetworkImpl.hpp"
@@ -40,17 +41,18 @@
 #include "ServerIDMap.hpp"
 
 
-#define TRACE_OBJECT
-#define TRACE_LOCPROX
-#define TRACE_OSEG
+//#define TRACE_OBJECT
+//#define TRACE_LOCPROX
+//#define TRACE_OSEG
 //#define TRACE_CSEG
-#define TRACE_MIGRATION
+//#define TRACE_MIGRATION
 #define TRACE_DATAGRAM
 #define TRACE_PACKET
 #define TRACE_PING
-#define TRACE_ROUND_TRIP_MIGRATION_TIME
-#define TRACE_OSEG_TRACKED_SET_RESULTS
-#define TRACE_OSEG_SHUTTING_DOWN
+#define TRACE_MESSAGE
+//#define TRACE_ROUND_TRIP_MIGRATION_TIME
+//#define TRACE_OSEG_TRACKED_SET_RESULTS
+//#define TRACE_OSEG_SHUTTING_DOWN
 
 
 namespace CBR {
@@ -95,7 +97,7 @@ void BatchedBuffer::store(FILE* os) {
         delete bb;
     }
 }
-
+const uint8 Trace::MessageTimestampTag;
 const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
 const uint8 Trace::ObjectLocationTag;
@@ -209,9 +211,35 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 #endif
 }
+bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
+#ifdef TRACE_MESSAGE
+    CBR::Protocol::Header hdr;
+    
+    if (data.size()&&hdr.ParseFromArray(&data[0],data.size())&&hdr.has_id()) {
+        timestampMessage(t,
+                         hdr.id(),
+                         SPACE_OUTGOING_MESSAGE,
+                         hdr.has_source_port()?hdr.source_port():0,
+                         hdr.has_dest_port()?hdr.dest_port():0);
+    }else return false;
+#endif
+    return true;
+}
+void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, unsigned short srcprt, unsigned short dstprt, unsigned char msg_type) {
+#ifdef TRACE_MESSAGE
+    if (mShuttingDown) return;
 
+    data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
+    data.write( &sent, sizeof(sent) );
+    data.write( &uid, sizeof(uid) );
+    data.write( &path, sizeof(path) );
+    data.write( &srcprt, sizeof(srcprt) );
+    data.write( &dstprt, sizeof(dstprt) );
+    data.write( &msg_type, sizeof(msg_type) );
+#endif
+}
 
-void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance) {
+void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID& receiver, uint64 id, double distance, uint64 uid) {
 #ifdef TRACE_PING
     if (mShuttingDown) return;
 
@@ -222,6 +250,7 @@ void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID&
     data.write( &receiver, sizeof(receiver) );
     data.write( &id, sizeof(id) );
     data.write( &distance, sizeof(distance) );
+    data.write( &uid, sizeof(uid) );
 #endif
 }
 

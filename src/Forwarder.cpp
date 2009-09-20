@@ -154,6 +154,10 @@ void Forwarder::service()
         OutgoingMessage* next_msg = (*mOutgoingMessages)->front(&size,&svc);
         if (!next_msg)
             break;
+        if (!mContext->trace()->timestampMessage(t,Trace::SPACE_OUTGOING_MESSAGE,next_msg->data)) {
+            fprintf (stderr, "shouldn't reach here: trace problem\n");
+        }
+
         bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
         if (!send_success){
             fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
@@ -177,10 +181,13 @@ void Forwarder::service()
                     uint32 offset = 0;
                     Network::Chunk msg_serialized;
                     offset = noise_msg->serialize(msg_serialized, offset);
-
                     bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
-                    if (sent_success)
+                    if (sent_success) {
+                        mContext->trace()->timestampMessage(t,noise_msg->id(),Trace::CREATED,0,0,MESSAGE_TYPE_NOISE);
+                        mContext->trace()->timestampMessage(Time::now(),Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
+                            ;
                         mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
+                    }
                     delete noise_msg;
                     if (!sent_success) break;
                 }
@@ -202,8 +209,12 @@ void Forwarder::service()
                 offset = noise_msg->serialize(msg_serialized, offset);
 
                 bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
-                if (sent_success)
+                if (sent_success) {
+                    mContext->trace()->timestampMessage(t,noise_msg->id(),Trace::CREATED,0,0,MESSAGE_TYPE_NOISE);
+                    mContext->trace()->timestampMessage(Time::now(),Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
+                        ;
                     mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
+                }
                 delete noise_msg;
                 if (!sent_success) nfail++;
             }
@@ -322,7 +333,14 @@ void Forwarder::service()
 
 //end what i think it should be replaced with
 
-
+void Forwarder::dispatchMessage(Message*msg) const {
+    mContext->trace()->timestampMessage(mContext->time,msg->id(),Trace::DISPATCHED,0,0,msg->type());
+    MessageDispatcher::dispatchMessage(msg);
+}
+void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
+    mContext->trace()->timestampMessage(mContext->time,msg.unique(),Trace::DISPATCHED,0,0);
+    MessageDispatcher::dispatchMessage(msg);
+}
 bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg) {
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
@@ -371,7 +389,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     do
     {
       offset = Message::deserialize(chunk,offset,&result);
-
+      mContext->trace()->timestampMessage(mContext->time,result->id(),Trace::FORWARDED,0,0,result->type());
       if (!forwarded_self_msg)
           mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
 
@@ -396,7 +414,9 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           break;
       case MESSAGE_TYPE_NOISE:
           {
+              
               NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
+              mContext->trace()->timestampMessage(Time::now(),noise_msg->id(),Trace::DESTROYED,0,0,MESSAGE_TYPE_NOISE);
               assert(noise_msg != NULL);
               delete noise_msg;
           }

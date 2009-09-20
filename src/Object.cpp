@@ -157,6 +157,7 @@ void Object::checkPositionUpdate() {
         requested_loc.set_position(mLocation.position());
         requested_loc.set_velocity(mLocation.velocity());
         bool success = mContext->objectHost->send(
+            t,
             this, OBJECT_PORT_LOCATION,
             UUID::null(), OBJECT_PORT_LOCATION,
             serializePBJMessage(container)
@@ -234,6 +235,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
 
             bool success = mContext->objectHost->send(
+                mContext->time,
                 this, OBJECT_PORT_SUBSCRIPTION,
                 addition.object(), OBJECT_PORT_SUBSCRIPTION,
                 serializePBJMessage(subs)
@@ -257,6 +259,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
 
             bool success = mContext->objectHost->send(
+                mContext->time,
                 this, OBJECT_PORT_SUBSCRIPTION,
                 removal.object(), OBJECT_PORT_SUBSCRIPTION,
                 serializePBJMessage(subs)

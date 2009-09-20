@@ -105,6 +105,19 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               is.read((char*)&pevt->receiver, sizeof(pevt->receiver));
               is.read((char*)&pevt->id,sizeof(pevt->id));
               is.read((char*)&pevt->distance,sizeof(pevt->distance));
+              is.read((char*)&pevt->uid,sizeof(pevt->uid));
+              evt=pevt;
+          }
+        break;
+      case Trace::MessageTimestampTag:
+          {
+              MessageTimestampEvent *pevt = new MessageTimestampEvent;
+              is.read((char*)&pevt->time, sizeof(pevt->time));
+              is.read((char*)&pevt->uid, sizeof(pevt->uid));
+              is.read((char*)&pevt->path, sizeof(pevt->path));
+              is.read((char*)&pevt->srcport, sizeof(pevt->srcport));
+              is.read((char*)&pevt->dstport,sizeof(pevt->dstport));
+              is.read((char*)&pevt->msg_type,sizeof(pevt->msg_type));
               evt=pevt;
           }
         break;

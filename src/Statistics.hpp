@@ -37,6 +37,7 @@
 #include "MotionVector.hpp"
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
+#include "Message.hpp"
 #include <boost/thread.hpp>
 
 namespace CBR {
@@ -101,12 +102,24 @@ public:
     static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
     static const uint8 OSegTrackedSetResultAnalysisTag   = 19;
     static const uint8 OSegShutdownEventTag              = 20;
+    static const uint8 MessageTimestampTag = 21;
 
-  
+    enum MessagePath {
+        CREATED,
+        SPACE_OUTGOING_MESSAGE,
+        SPACE_SERVER_MESSAGE_QUEUE,
+        SELF_LOOP,
+        FORWARDED,
+        DISPATCHED,
+        DELIVERED,
+        DESTROYED
+    };
+    
     Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
-
+    bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
+    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, uint16 optionalMessageSourcePort=0, uint16 optionalMessageDestPort=0, MessageType optionalMessageType= MESSAGE_TYPE_UNPROCESSED_PACKET);
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void subscription(const Time& t, const UUID& receiver, const UUID& source, bool start);
@@ -124,7 +137,8 @@ public:
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
     void packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
-    void ping(const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance);
+    
+    void ping(const Time&sent, const UUID&src, const Time&recv, const UUID& dst, uint64 id, double distance, uint64 uniquePacketId);
     void packetSent(const Time& t, const Address4& dest, uint32 size);
     void packetReceived(const Time& t, const Address4& src, uint32 size);
 

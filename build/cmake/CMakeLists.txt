@@ -302,6 +302,7 @@ QT4_WRAP_CPP(CBR_MOC_SOURCES ${CBR_MOC_HEADERS})
 # FIXME we should jsut change ADD_PBJ_TARGET to take full paths
 SET(CBR_PROTOCOLS
   ObjectMessage.pbj
+  Header.pbj
   ServerMessage.pbj
   Loc.pbj
   Prox.pbj

@@ -56,7 +56,7 @@ public:
     void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb);
 
     // FIXME should not be infinite queue and should report push error
-    bool send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    bool send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
     void sendTestMessage(const Time&t, float idealDistance);
     void ping(const Object *src, const UUID&dest, double distance=-0);
     void randomPing(const Time&t);
@@ -73,7 +73,7 @@ private:
     // The allow_connecting parameter allows you to use a connection over which the object is still opening
     // a connection.  This is safe since it can only be used by this class (since this is private), so it will
     // only be used to deal with session management.
-    bool send(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server);
+    bool send(const Time&t, const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server);
 
 
     // Starting point for handling of all messages from the server -- either handled as a special case, such as

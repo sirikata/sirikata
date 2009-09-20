@@ -110,6 +110,9 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate;
+protected:
+    virtual void dispatchMessage(Message* msg) const;
+    virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
     public:
       Forwarder(SpaceContext* ctx);

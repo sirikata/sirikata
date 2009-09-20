@@ -68,7 +68,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_KILL_OBJ_CONN             14
 #define MESSAGE_TYPE_UPDATE_OSEG               15
 #define MESSAGE_TYPE_FORWARDED                 16 
-
+#define MESSAGE_TYPE_UNPROCESSED_PACKET        255
   
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
@@ -150,8 +150,8 @@ public:
     void registerObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
     void unregisterObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
 protected:
-    void dispatchMessage(Message* msg) const;
-    void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
+    virtual void dispatchMessage(Message* msg) const;
+    virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
 private:
     typedef std::map<MessageType, MessageRecipient*> MessageRecipientMap;

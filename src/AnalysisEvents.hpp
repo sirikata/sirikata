@@ -1,7 +1,7 @@
 
 #ifndef __CBR_ANALYSIS_EVENTS_HPP__
 #define __CBR_ANALYSIS_EVENTS_HPP__
-
+#include "Statistics.hpp"
 
 namespace CBR {
 struct Event {
@@ -47,7 +47,10 @@ struct SubscriptionEvent : public ObjectEvent {
 };
 struct PingEvent : public ObjectEvent {
     Time sentTime;
+    //ping count
     uint64 id;
+    //unique id for all packets across the board
+    uint64 uid;
     double distance;
     PingEvent():sentTime(Time::null()){}
     virtual Time begin_time() const {
@@ -56,6 +59,17 @@ struct PingEvent : public ObjectEvent {
     virtual Time end_time() const {
         return time;
     }
+};
+
+
+struct MessageTimestampEvent : public ObjectEvent {
+    //unique id for all packets across the board
+    uint64 uid;
+    Trace::MessagePath path;
+    unsigned short srcport;
+    unsigned short dstport;
+    unsigned char msg_type;
+   
 };
 
 
