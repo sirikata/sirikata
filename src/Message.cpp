@@ -212,7 +212,7 @@ void MessageDispatcher::dispatchMessage(Message* msg) const {
         return;
     }
 
-    
+
     MessageRecipient* recipient = it->second;
     recipient->receiveMessage(msg);
 }
@@ -265,6 +265,7 @@ ObjectMessage::ObjectMessage(const ServerID& origin,
     contents.set_source_port(src_port);
     contents.set_dest_object(dest);
     contents.set_dest_port(dest_port);
+    contents.set_unique(id());
     contents.set_payload(&payload[0], payload.size());
 }
 
@@ -539,7 +540,7 @@ UpdateOSegMessage::UpdateOSegMessage(const Network::Chunk& wire, uint32& offset,
 {
   parsePBJMessage(contents,wire,offset);
 }
-                    
+
 
 
 
