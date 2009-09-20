@@ -155,7 +155,11 @@ void Forwarder::service()
         if (!next_msg)
             break;
         if (!mContext->trace()->timestampMessage(t,Trace::SPACE_OUTGOING_MESSAGE,next_msg->data)) {
-            fprintf (stderr, "shouldn't reach here: trace problem\n");
+            static bool warned=false;
+            if (!warned) {
+                fprintf (stderr, "shouldn't reach here: trace problem\nPacket has no id\n");
+                warned=true;
+            }
         }
 
         bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
