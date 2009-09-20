@@ -307,6 +307,32 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
     // Verify the requested position is on this server
 
+    //bftm added
+    //in case the object was already slated to be migrated, but its connection had not yet been killed (ie had not received a killconn object, we need to delete our note to self to delete this object connection:
+
+    ObjectConnection* oConn = mForwarder->getObjectConnection(obj_id);
+    if (oConn != NULL)
+    {
+      //means that we had an object which migrated from this server to another server (we kept the connection open).  And then the object migrated back to this server (before we received a kill obj connection message.  Means we do not have to actually create a new connection for this object, rather, we can just delete the reference to kill this object connection.
+
+
+      MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
+      if (objConMapIt != mMigratingConnections.end())
+        mMigratingConnections.erase(objConMapIt);
+
+      mObjects[obj_id] = oConn;
+
+      //delete this in case it had been queued.
+      ObjectMigrationMap::iterator objMigMapIt = mObjectMigrations.find(obj_id);
+      if (objMigMapIt != mObjectMigrations.end())
+        mObjectMigrations.erase(objMigMapIt);
+      //do not need to do the remaining steps.
+      return;
+      
+    }
+    //end bftm added
+
+    
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
     mObjectsAwaitingMigration[obj_id] = conn;
@@ -346,12 +372,14 @@ void Server::handleMigration(const UUID& obj_id)
 {
 
     // Try to find the info in both lists -- the connection and migration information
+
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
     if (obj_map_it == mObjectsAwaitingMigration.end())
     {
         return;
     }
 
+    
     ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
     if (migration_map_it == mObjectMigrations.end())
     {
