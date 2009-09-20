@@ -327,6 +327,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read( (char* )&obj_lookupProc_evt->mID_processor, sizeof(obj_lookupProc_evt->mID_processor) );
           is.read( (char* )&obj_lookupProc_evt->mID_objectOn, sizeof(obj_lookupProc_evt->mID_objectOn) );
           is.read( (char* )&obj_lookupProc_evt->deltaTime, sizeof(obj_lookupProc_evt->deltaTime) );
+          is.read( (char* )&obj_lookupProc_evt->stillInQueue, sizeof(obj_lookupProc_evt->stillInQueue) );
           evt = obj_lookupProc_evt;
         }
         break;
@@ -1806,6 +1807,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           sID_processor.push_back(obj_lookup_proc_evt->mID_processor);
           sID_objectOn.push_back(obj_lookup_proc_evt->mID_objectOn);
           dTimes.push_back(obj_lookup_proc_evt->deltaTime);
+          stillInQueues.push_back(obj_lookup_proc_evt->stillInQueue);
           continue;
         }
         delete evt;
@@ -1830,11 +1832,12 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) sortedEvts.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sortedEvts[s].mID_processor<<"\n";
-        fileOut<< "\tTime at:           "<<sortedEvts[s].time.raw()<<"\n";
-        fileOut<< "\tID Lookup:         "<<sortedEvts[s].mObjID.toString()<<"\n";
-        fileOut<< "\tObject on:         "<<sortedEvts[s].mID_objectOn<<"\n";
-        fileOut<< "\tTime taken:        "<<sortedEvts[s].deltaTime<<"\n";
+        fileOut<< "\tRegistered from:           "<<sortedEvts[s].mID_processor<<"\n";
+        fileOut<< "\tTime at:                   "<<sortedEvts[s].time.raw()<<"\n";
+        fileOut<< "\tID Lookup:                 "<<sortedEvts[s].mObjID.toString()<<"\n";
+        fileOut<< "\tObject on:                 "<<sortedEvts[s].mID_objectOn<<"\n";
+        fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
+        fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
 
         totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
 
@@ -1857,11 +1860,12 @@ LatencyAnalysis::~LatencyAnalysis() {
       for (int s= 0; s < (int) times.size(); ++s)
       {
         fileOut<< "\n\n********************************\n";
-        fileOut<< "\tRegistered from:   "<<sID_processor[s]<<"\n";
-        fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
-        fileOut<< "\tID Lookup:         "<<obj_ids[s].toString()<<"\n";
-        fileOut<< "\tObject on:         "<<sID_objectOn[s]<<"\n";
-        fileOut<< "\tTime taken:        "<<dTimes[s]<<"\n";
+        fileOut<< "\tRegistered from:            "<<sID_processor[s]<<"\n";
+        fileOut<< "\tTime at:                    "<<times[s].raw()<<"\n";
+        fileOut<< "\tID Lookup:                  "<<obj_ids[s].toString()<<"\n";
+        fileOut<< "\tObject on:                  "<<sID_objectOn[s]<<"\n";
+        fileOut<< "\tObjects still in queue:     "<<stillInQueues[s]<<"\n";
+        fileOut<< "\tTime taken:                 "<<dTimes[s]<<"\n";
 
         totalLatency = totalLatency + (int) dTimes[s];
 
@@ -1889,7 +1893,8 @@ LatencyAnalysis::~LatencyAnalysis() {
       olpe.mID_processor    = sID_processor[s];
       olpe.mID_objectOn     = sID_objectOn[s];
       olpe.deltaTime        = dTimes[s];
-
+      olpe.stillInQueue      = stillInQueues[s];
+        
       sortedEvts.push_back(olpe);
     }
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );

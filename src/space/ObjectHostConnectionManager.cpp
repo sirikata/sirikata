@@ -85,6 +85,7 @@ void ObjectHostConnectionManager::service() {
 void ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
     ObjectHostConnectionMap::iterator conn_it = mConnections.find(conn_id);
     if (conn_it == mConnections.end()) {
+
         SPACE_LOG(error,"Tried to send to unconnected object host.");
         return;
     }

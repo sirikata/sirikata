@@ -340,7 +340,8 @@ private:
   std::vector<ServerID> sID_processor;
   std::vector<ServerID> sID_objectOn;
   std::vector<uint32> dTimes;
-
+  std::vector<uint32> stillInQueues;
+  
   void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
   static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
 public:

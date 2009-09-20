@@ -105,7 +105,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       // the server or object it is addressed to.
       void deliver(Message* msg);
 
-      void tickOSeg(const Time&t);
+  //      void tickOSeg(const Time&t);
 
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
@@ -121,6 +121,8 @@ protected:
 
       void service();
 
+      void tickOSeg(const Time&t);
+  
 
       // Routing interface for servers.  This is used to route messages that originate from
       // a server provided service, and thus don't have a source object.  Messages may be destined

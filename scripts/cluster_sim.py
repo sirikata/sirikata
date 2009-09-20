@@ -20,7 +20,7 @@ class ClusterSimSettings:
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 100
-        self.num_objects = 10000
+        self.num_objects = 200
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
@@ -346,9 +346,15 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
+
+    cs = ClusterSimSettings(8, (8,1), 1)
+#    cs = ClusterSimSettings(4, (2,2), 1)
 #    cs = ClusterSimSettings(14, (2,2), 1)
 #    cs = ClusterSimSettings(4, (2,2), 1)
-    cs = ClusterSimSettings(4, (4,1), 1)
+#    cs = ClusterSimSettings(4, (4,1), 1)
+#    cs = ClusterSimSettings(16, (4,4), 1)
+
+
     cluster_sim = ClusterSim(cc, cs)
 
     if len(sys.argv) < 2:

@@ -183,6 +183,7 @@ struct ObjectLookupProcessedEvent: public Event
   UUID mObjID;
   ServerID mID_processor, mID_objectOn;
   uint32 deltaTime;
+  uint32 stillInQueue;
 };
 
 

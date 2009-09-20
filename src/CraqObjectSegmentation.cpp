@@ -67,7 +67,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     numMigrationNotCompleteYet  = 0;
 
     
-    /*
+
     CraqDataKey obj_id_as_dht_key;
     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
@@ -81,9 +81,9 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
     }
-
+    
     //50 ticks to update
-    for (int s=0; s < 2500; ++s)
+    for (int s=0; s < 3000; ++s)
     {
       craqDht.tick(getResults,trackedSetResults);
       processCraqTrackedSetResults(trackedSetResults, dummy);
@@ -93,7 +93,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         delete getResults[t];
       }
     }
-    */
+
     
     mTimer.start();
   }
@@ -621,7 +621,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
-        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)));
+        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDht.queueSize()  );
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {
