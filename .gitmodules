@@ -7,3 +7,6 @@
 [submodule "externals/awesomium"]
 	path = externals/awesomium
 	url = git://github.com/pathorn/awesomium.git
+[submodule "externals/cxxtest"]
+	path = externals/cxxtest
+	url = git://github.com/danielrh/cxxtest.git
