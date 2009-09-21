@@ -1,13 +1,4 @@
 /* -*- c -*-
-   ----------------------------------------------------------------
-
-   Notice that the following BSD-style license applies to this one
-   file (valgrind.h) only.  The rest of Valgrind is licensed under the
-   terms of the GNU General Public License, version 2, unless
-   otherwise indicated.  See the COPYING file in the source
-   distribution for details.
-
-   ----------------------------------------------------------------
 
    This file is part of Valgrind, a dynamic binary instrumentation
    framework.
@@ -45,14 +36,6 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-   ----------------------------------------------------------------
-
-   Notice that the above BSD-style license applies to this one file
-   (valgrind.h) only.  The entire rest of Valgrind is licensed under
-   the terms of the GNU General Public License, version 2.  See the
-   COPYING file in the source distribution for details.
-
-   ---------------------------------------------------------------- 
 */
 
 
