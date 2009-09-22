@@ -6,7 +6,7 @@
 namespace CBR {
 struct Event {
     static Event* read(std::istream& is, const ServerID& trace_server_id);
-  
+
     Event()
      : time(Time::null())
     {}
@@ -61,6 +61,9 @@ struct PingEvent : public ObjectEvent {
     }
 };
 
+struct GeneratedLocationEvent : public ObjectEvent {
+    TimedMotionVector3f loc;
+};
 
 struct MessageTimestampEvent : public ObjectEvent {
     //unique id for all packets across the board
@@ -69,7 +72,7 @@ struct MessageTimestampEvent : public ObjectEvent {
     unsigned short srcport;
     unsigned short dstport;
     unsigned char msg_type;
-   
+
 };
 
 
@@ -226,7 +229,7 @@ struct OSegShutdownEvent : public Event
   int numCraqLookups;
   int numTimeElapsedCacheEviction;
   int numMigrationNotCompleteYet;
-  
+
 };
 
 
@@ -234,4 +237,3 @@ struct OSegShutdownEvent : public Event
 }
 
 #endif
-

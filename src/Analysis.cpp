@@ -86,6 +86,16 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
               evt = levt;
           }
           break;
+      case Trace::ObjectGeneratedLocationTag:
+          {
+              GeneratedLocationEvent* levt = new GeneratedLocationEvent;
+              is.read( (char*)&levt->time, sizeof(levt->time) );
+              levt->receiver = UUID::null();
+              is.read( (char*)&levt->source, sizeof(levt->source) );
+              is.read( (char*)&levt->loc, sizeof(levt->loc) );
+              evt = levt;
+          }
+          break;
       case Trace::SubscriptionTag:
           {
               SubscriptionEvent* sevt = new SubscriptionEvent;
@@ -276,12 +286,12 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           is.read((char*)&shutdown_evt->numCraqLookups, sizeof(shutdown_evt->numCraqLookups));
           is.read((char*)&shutdown_evt->numTimeElapsedCacheEviction, sizeof(shutdown_evt->numTimeElapsedCacheEviction));
           is.read((char*)&shutdown_evt->numMigrationNotCompleteYet, sizeof(shutdown_evt->numMigrationNotCompleteYet));
-          
+
           evt = shutdown_evt;
-          
+
         }
         break;
-        
+
       case Trace::ServerLocationTag:
           {
               ServerLocationEvent* levt = new ServerLocationEvent;
@@ -1302,7 +1312,7 @@ ObjectLatencyAnalysis::ObjectLatencyAnalysis(const char*opt_name, const uint32 n
             delete evt;
         }
     }
-    
+
 }
 
 void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<int, Average > &retval){
@@ -1327,7 +1337,7 @@ void ObjectLatencyAnalysis::histogramDistanceData(double bucketWidth, std::map<i
     if (bucketSamples) {
         retval.find(bucket)->second.time/=(double)bucketSamples;
         retval.find(bucket)->second.numSamples=bucketSamples;
-    }    
+    }
 }
 ObjectLatencyAnalysis::~ObjectLatencyAnalysis(){}
 void ObjectLatencyAnalysis::printHistogramDistanceData(std::ostream&out, double bucketWidth){
@@ -1924,7 +1934,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           break;
 
         ObjectMigrationRoundTripEvent* obj_rdt_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
-        
+
         if (obj_rdt_evt != NULL)
         {
           ObjectMigrationRoundTripEvent rdt_evt = (*obj_rdt_evt);
@@ -1936,7 +1946,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  
+
   ObjectMigrationRoundTripAnalysis::~ObjectMigrationRoundTripAnalysis()
   {
     //destructor
@@ -1950,7 +1960,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     fileOut << "\n\n Basic statistics:   "<< allRoundTripEvts.size() <<"  \n\n";
 
     double totalTimes = 0;
-    
+
     for (int s=0; s < (int) allRoundTripEvts.size(); ++s)
     {
       fileOut<< "\n\n********************************\n";
@@ -1961,16 +1971,16 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<< "\tTime taken:        " << allRoundTripEvts[s].numMill           <<"\n";
 
       totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
-      
+
     }
 
     double avgTime = totalTimes/((double) allRoundTripEvts.size());
-    
+
     fileOut<< "\n\n Avg Migrate Time:    "<<avgTime<<"\n\n\n";
     fileOut<< "END*******\n\n";
   }
 
-  
+
   bool ObjectMigrationRoundTripAnalysis::compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
   {
     return A.time < B.time;
@@ -1994,7 +2004,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           break;
 
         OSegTrackedSetResultsEvent* oseg_tracked_evt = dynamic_cast<OSegTrackedSetResultsEvent*> (evt);
-        
+
         if (oseg_tracked_evt != NULL)
         {
           OSegTrackedSetResultsEvent oseg_tracked_evter = (*oseg_tracked_evt);
@@ -2003,7 +2013,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         }
         delete evt;
       }
-    }    
+    }
   }
 
   void OSegTrackedSetResultsAnalysis::printData(std::ostream &fileOut)
@@ -2012,7 +2022,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     fileOut<<"\tNum tracked: "<<allTrackedSetResultsEvts.size()<<"\n\n\n\n";
 
     double averager = 0;
-    
+
     for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
     {
       fileOut<<"\n\n******************\n";
@@ -2032,7 +2042,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
     fileOut<<"\n\n\tEND****";
 
-    
+
   }
   OSegTrackedSetResultsAnalysis::~OSegTrackedSetResultsAnalysis()
   {
@@ -2042,11 +2052,11 @@ LatencyAnalysis::~LatencyAnalysis() {
   {
     return A.time < B.time;
   }
-  //still need to fill in above  
+  //still need to fill in above
 
 
 
-  
+
   OSegShutdownAnalysis::OSegShutdownAnalysis(const char* opt_name, const uint32 nservers)
   {
     for(uint32 server_id = 1; server_id <= nservers; server_id++)
@@ -2061,7 +2071,7 @@ LatencyAnalysis::~LatencyAnalysis() {
           break;
 
         OSegShutdownEvent* oseg_shutdown_evt = dynamic_cast<OSegShutdownEvent*> (evt);
-        
+
         if (oseg_shutdown_evt != NULL)
         {
           OSegShutdownEvent oseg_shutdown_evter = (*oseg_shutdown_evt);
@@ -2070,14 +2080,14 @@ LatencyAnalysis::~LatencyAnalysis() {
         }
         delete evt;
       }
-    }    
+    }
   }
   OSegShutdownAnalysis::~OSegShutdownAnalysis()
   {
 
   }
 
-  
+
   void OSegShutdownAnalysis::printData(std::ostream &fileOut)
   {
     fileOut << "\n\n*******************OSegShutdown Analysis*************\n\n\n";
@@ -2093,15 +2103,15 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut << "\tnumCraqLookups:    "<<allShutdownEvts[s].numCraqLookups<<"\n";
       fileOut << "\tnumTimeElapsedCacheEviction:   "<<allShutdownEvts[s].numTimeElapsedCacheEviction  << "\n";
       fileOut << "\tnumMigrationNotCompleteYet:    "<<allShutdownEvts[s].numMigrationNotCompleteYet   << "\n";
-      
+
     }
 
     fileOut<<"\n\n\n\n\n";
     fileOut<<"\tEND*****";
 
-    
+
   }
 
-  
+
 
 } // namespace CBR

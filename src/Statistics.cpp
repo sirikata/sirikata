@@ -123,7 +123,9 @@ const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
 const uint8 Trace::RoundTripMigrationTimeAnalysisTag;
 const uint8 Trace::OSegTrackedSetResultAnalysisTag;
 const uint8 Trace::OSegShutdownEventTag;
-  
+
+const uint8 Trace::ObjectGeneratedLocationTag;
+
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
@@ -189,6 +191,17 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
 #endif
 }
 
+void Trace::objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc) {
+#ifdef TRACE_OBJECT
+    if (mShuttingDown) return;
+
+    data.write( &ObjectGeneratedLocationTag, sizeof(ObjectGeneratedLocationTag) );
+    data.write( &t, sizeof(t) );
+    data.write( &source, sizeof(source) );
+    data.write( &loc, sizeof(loc) );
+#endif
+}
+
 void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc) {
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
@@ -215,7 +228,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
 #ifdef TRACE_MESSAGE
     CBR::Protocol::Header hdr;
-    
+
     if (data.size()&&hdr.ParseFromArray(&data[0],data.size())&&hdr.has_id()) {
         timestampMessage(t,
                          hdr.id(),
@@ -467,7 +480,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 
 void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
 {
-#ifdef TRACE_ROUND_TRIP_MIGRATION_TIME  
+#ifdef TRACE_ROUND_TRIP_MIGRATION_TIME
   if (mShuttingDown) return;
 
   data.write(&RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag));
@@ -500,7 +513,7 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
 #ifdef TRACE_OSEG_SHUTTING_DOWN
 
   std::cout<<"\n\n\nGOT INTO PROCESS  OSEG SHUTDOWN EVENT\n\n";
-  
+
   std::cout<<"\n\n**********oseg shutdown:  \n";
   std::cout<<"\tsid:                              "<<sID<<"\n";
   std::cout<<"\tnum lookups:                      "<<num_lookups<<"\n";
@@ -510,7 +523,7 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   std::cout<<"\tnum_migration_not_complete_yet:   "<< num_migration_not_complete_yet<<"\n\n";
   std::cout<<"***************************\n\n";
 
-  
+
   data.write(&OSegShutdownEventTag, sizeof(OSegShutdownEventTag));
   data.write(&t,sizeof(t));
   data.write(&num_lookups,sizeof(num_lookups));

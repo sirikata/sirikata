@@ -163,6 +163,7 @@ void Object::checkPositionUpdate() {
             serializePBJMessage(container)
         );
         // XXX FIXME do something on failure
+        mContext->trace->objectGenLoc(t, mID, mLocation);
     }
 }
 
