@@ -88,6 +88,8 @@ bool is_analysis() {
     if (GetOption(ANALYSIS_LOC)->as<bool>() ||
         GetOption(ANALYSIS_LOCVIS)->as<String>() != "none" ||
         GetOption(ANALYSIS_LATENCY)->as<bool>() ||
+        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
+        GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ||
         GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
         !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
         GetOption(ANALYSIS_OSEG)->as<bool>() ||
@@ -253,6 +255,13 @@ void *main_loop(void *) {
         std::ofstream histogram_data("distance_latency_histogram.csv");
         la.printHistogramDistanceData(histogram_data,10);
         histogram_data.close();
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ) {
+        uint32 unservers=nservers;
+        MessageLatencyAnalysis::Filters filter(&unservers,//filter by created @ object host
+                       &unservers);//filter by destroyed @ object host
+        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,filter);
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {

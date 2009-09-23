@@ -82,6 +82,7 @@ void InitOptions() {
         .addOption(new OptionValue(ANALYSIS_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Do a latency analysis instead of a normal run"))
 
         .addOption(new OptionValue(ANALYSIS_OBJECT_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Do a object distance latency analysis instead of a normal run"))
+        .addOption(new OptionValue(ANALYSIS_MESSAGE_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Do a message stage latency analysis instead of a normal run"))
 
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH, "", Sirikata::OptionValueType<String>(), "Do a windowed bandwidth analysis of the specified type: datagram, packet"))
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_WINDOW, "1000ms", Sirikata::OptionValueType<Duration>(), "Size of the window in windowed bandwidth analysis"))

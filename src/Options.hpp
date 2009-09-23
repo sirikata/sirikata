@@ -51,6 +51,7 @@
 #define ANALYSIS_BANDWIDTH   "analysis.bandwidth"
 #define ANALYSIS_LATENCY   "analysis.latency"
 #define ANALYSIS_OBJECT_LATENCY   "analysis.object.latency"
+#define ANALYSIS_MESSAGE_LATENCY   "analysis.message.latency"
 #define ANALYSIS_WINDOWED_BANDWIDTH          "analysis.windowed-bandwidth"
 #define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
 #define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"

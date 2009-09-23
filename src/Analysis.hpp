@@ -164,6 +164,77 @@ public:
     void printHistogramDistanceData(std::ostream&out, double bucketWidth);
 };
 
+class MessageLatencyAnalysis {public:
+    class DTime:public Time {
+    public:
+        bool isNull() const {
+            const Time * t=this;
+            return *t==Time::null();
+        }
+        uint32 mServerId;
+        DTime():Time(Time::null()) {mServerId=0;}
+        DTime(const Time&t):Time(t){mServerId=0;}
+    };
+    class Average {
+    public:
+        Duration average;
+        unsigned int numSamples;
+        double variance;
+        Average(): average(Duration()){
+            variance=0;
+            numSamples=0;
+        }
+        void addAverageSample(Duration t){
+            average+=t;
+            ++numSamples;
+        }
+        void averageOut(){ 
+            if (numSamples) {
+                average=average/(double)numSamples;
+            }
+        }
+        void addVarianceSample(Duration t) {
+            Duration diff=(t-average);
+            variance+=(diff.toSeconds()*diff.toSeconds()/(double)numSamples);
+        }
+    };
+    class PacketData {public:
+        uint64 mId;
+        unsigned char mType;
+        unsigned char mSrcPort;        
+        unsigned short mDstPort;
+        DTime mStamps[Trace::NUM_PATHS][2];
+        PacketData();
+    };
+    class Filters {
+    public:
+        const uint32*mFilterByCreationServer;
+        const uint32*mFilterByDestructionServer;
+        const uint32*mFilterByForwardingServer;
+        const uint32 *mFilterByDeliveryServer;
+        Filters(const uint32*filterByCreationServer=NULL,const uint32 *filterByDestructionServer=NULL, const uint32*filterByForwardingServer=NULL, const uint32 *filterByDeliveryServer=NULL) {
+            mFilterByCreationServer=filterByCreationServer;
+            mFilterByDestructionServer=filterByDestructionServer;
+            mFilterByForwardingServer=filterByForwardingServer;
+            mFilterByDeliveryServer=filterByDeliveryServer;
+        }
+        bool verify(const uint32*server,const PacketData &pd, Trace::MessagePath path) const{
+            if (server==NULL) return true;
+            return pd.mStamps[*server][0].mServerId==*server;
+        }
+        bool operator() (const PacketData&pd)const{
+            return verify(mFilterByCreationServer,pd,Trace::CREATED)&&
+                verify(mFilterByDestructionServer,pd,Trace::DESTROYED)&&
+                verify(mFilterByForwardingServer,pd,Trace::FORWARDED)&&
+                verify(mFilterByDeliveryServer,pd,Trace::DELIVERED);
+        }
+    };
+    MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters f);
+    ~MessageLatencyAnalysis();
+    Filters mFilter;
+    uint32_t mNumberOfServers;
+};
+
 /** Does analysis of bandwidth, e.g. checking total bandwidth in and out of a server,
  *  checking relative bandwidths when under load, etc.
  */

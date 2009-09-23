@@ -1143,7 +1143,113 @@ void BandwidthAnalysis::windowedPacketReceiveQueueInfo(const ServerID& sender, c
     );
 }
 
+MessageLatencyAnalysis::PacketData::PacketData(){
+    mId=0;
+    mType=255;
+    mSrcPort=0;
+    mDstPort=0;
+    
+}
+#define PACKETSTAGE(x) case Trace::x: return #x
+const char* getPacketStageName (uint32 path) {
+    switch (path) {
+        PACKETSTAGE(CREATED);
+        PACKETSTAGE(SPACE_OUTGOING_MESSAGE);
+        PACKETSTAGE(SPACE_SERVER_MESSAGE_QUEUE);
+        PACKETSTAGE(SELF_LOOP);
+        PACKETSTAGE(FORWARDED);
+        PACKETSTAGE(DISPATCHED);
+        PACKETSTAGE(DELIVERED);
+        PACKETSTAGE(DESTROYED);
+      default:
+        return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
+    }
 
+}
+MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter):mFilter(filter) {
+    // read in all our data
+    mNumberOfServers = nservers;
+    std::tr1::unordered_map<uint64,PacketData> packetFlow;
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+
+
+            {
+                MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
+                if (tevt != NULL) {
+                    MessageLatencyAnalysis::PacketData*pd=&packetFlow[tevt->uid];
+                    if (pd->mStamps[tevt->path][0]==Time::null()) {
+                        pd->mStamps[tevt->path][0]=tevt->begin_time();
+                        pd->mStamps[tevt->path][0].mServerId=server_id;
+                    }else {
+                        if (pd->mStamps[tevt->path][0]!=Time::null()) {
+                            printf ("Too many samples for phase %d\n",tevt->path);
+                        }
+                        pd->mStamps[tevt->path][1]=tevt->end_time();
+                        pd->mStamps[tevt->path][1].mServerId=server_id;
+                    }
+                    if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
+                    if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
+                    if (tevt->dstport!=0) pd->mDstPort=tevt->dstport;
+                }
+            }
+            delete evt;
+        }
+    }
+    Average results[Trace::NUM_PATHS][2];
+    
+    for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+         iter!=ie;
+         ++iter) {
+        if (mFilter(iter->second)) {
+            for (int doVariance=0;doVariance<2;++doVariance) {
+                Time currentTime=iter->second.mStamps[Trace::CREATED][0];
+                for (int i=1;i<Trace::NUM_PATHS;++i){
+                    for (int j=0;j<2;++j) {
+                        if (!iter->second.mStamps[i][j].isNull()) {
+                            Duration diff=iter->second.mStamps[i][j]-currentTime;
+                            if (!doVariance) {
+                                results[i][j].addAverageSample(diff);
+                            }else {
+                                results[i][j].addVarianceSample(diff);
+                            }
+                            if(currentTime==iter->second.mStamps[Trace::CREATED][0]) {
+                                if (!doVariance) {
+                                    results[i][j].addAverageSample(diff);
+                                }else {
+                                    results[i][j].addVarianceSample(diff);
+                                }                              
+                            }
+                            currentTime=iter->second.mStamps[i][j];
+                        }
+                    }
+                }
+                for (int i=0;i<Trace::NUM_PATHS;++i){
+                    for (int j=0;j<2;++j) {
+                        results[i][j].averageOut();
+                    }
+                }
+            }
+        }
+        
+    }
+    for (int i=0;i<Trace::NUM_PATHS;++i) {
+        const char* lastStage=getPacketStageName(0);
+        for (int j=1;j<2;++j) {
+            if (results[i][j].numSamples) {
+                const char* currentStage=getPacketStageName(i);
+                std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<results[i][j].average<<" stddev "<<sqrt(results[i][j].variance)<<std::endl;
+
+            }
+        }
+    }
+}
 LatencyAnalysis::PacketData::PacketData()
  :_send_start_time(Time::null()),
   _send_end_time(Time::null()),

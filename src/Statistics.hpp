@@ -112,7 +112,8 @@ public:
         FORWARDED,
         DISPATCHED,
         DELIVERED,
-        DESTROYED
+        DESTROYED,
+        NUM_PATHS
     };
     
     Trace(const String& filename);
