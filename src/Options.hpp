@@ -56,6 +56,7 @@
 #define ANALYSIS_WINDOWED_BANDWIDTH_WINDOW   "analysis.windowed-bandwidth.window"
 #define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
 #define ANALYSIS_OSEG        "analysis.oseg"
+#define ANALYSIS_LOC_LATENCY "analysis.loc.latency"
 
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"
@@ -108,6 +109,8 @@ void InitOptions();
 void ParseOptions(int argc, char** argv);
 OptionValue* GetOption(const char* name);
 
+
+String GetPerServerString(const String& orig, const ServerID& sid);
 /** Get an option which is a filename and modify it to be server specific. */
 String GetPerServerFile(const char* opt_name, const ServerID& sid);
 String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid);

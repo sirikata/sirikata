@@ -89,6 +89,8 @@ void InitOptions() {
 
         .addOption(new OptionValue(ANALYSIS_OSEG, "false", Sirikata::OptionValueType<bool>(), "Run OSEG analyses - migrates, lookups, processed lookups"))
 
+        .addOption(new OptionValue(ANALYSIS_LOC_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Run location latency analysis - latency of location updates"))
+
         .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
         .addOption(new OptionValue(OBJECT_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each object."))
 
@@ -141,9 +143,8 @@ OptionValue* GetOption(const char* name) {
     return options->referenceOption(name);
 }
 
-String GetPerServerFile(const char* opt_name, const ServerID& sid) {
-    String orig = GetOption(opt_name)->as<String>();
-
+// FIXME method naming
+String GetPerServerString(const String& orig, const ServerID& sid) {
     int32 dot_pos = orig.rfind(".");
     String prefix = orig.substr(0, dot_pos);
     String ext = orig.substr(dot_pos+1);
@@ -152,6 +153,11 @@ String GetPerServerFile(const char* opt_name, const ServerID& sid) {
     sprintf(buffer, "%s-%04d.%s", prefix.c_str(), (uint32)sid, ext.c_str());
 
     return buffer;
+}
+
+String GetPerServerFile(const char* opt_name, const ServerID& sid) {
+    String orig = GetOption(opt_name)->as<String>();
+    return GetPerServerString(orig, sid);
 }
 
 String GetPerServerFile(const char* opt_name, const ObjectHostID& ohid) {

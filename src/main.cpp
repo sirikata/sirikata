@@ -95,7 +95,8 @@ bool is_analysis() {
         GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ||
         !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
         GetOption(ANALYSIS_OSEG)->as<bool>() ||
-        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() )
+        GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
+        GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() )
         return true;
 
     return false;
@@ -276,14 +277,14 @@ void *main_loop(void *) {
         migration_round_trip_times_filename += ".dat";
 
         ObjectMigrationRoundTripAnalysis obj_mig_rdTripAnalysis(STATS_TRACE_FILE,max_space_servers);
-          
+
         std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
 
         obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream);
-        
+
         mig_rd_trip_times_stream.flush();
         mig_rd_trip_times_stream.close();
-        
+
         //oseg shut down
         String oseg_shutdown_filename = "oseg_shutdown_file";
         oseg_shutdown_filename += ".dat";
@@ -296,22 +297,22 @@ void *main_loop(void *) {
         oseg_shutdown_analysis_stream.flush();
         oseg_shutdown_analysis_stream.close();
 
-        
+
         //oseg tracked set results analysis
         String oseg_tracked_set_results_filename = "oseg_tracked_set_results_file";
         oseg_tracked_set_results_filename += ".dat";
 
         OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
-        
+
         std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
         oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream);
 
         oseg_tracked_set_results_analysis_stream.flush();
         oseg_tracked_set_results_analysis_stream.close();
-        
-        
+
+
         //end bftm additional object message log file creation.
-        
+
         exit(0);
     }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
@@ -343,7 +344,7 @@ void *main_loop(void *) {
         MessageLatencyAnalysis::Filters filter(&ping_port,&unservers,//filter by created @ object host
                        &unservers);//filter by destroyed @ object host
         MessageLatencyAnalysis::Filters nilfilter;
-        MessageLatencyAnalysis::Filters pingfilter(&ping_port);       
+        MessageLatencyAnalysis::Filters pingfilter(&ping_port);
         MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,pingfilter);
         exit(0);
     }
@@ -449,8 +450,88 @@ void *main_loop(void *) {
 
         exit(0);
     }
+    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() ) {
+        //bftm additional object messages log file creation.
+
+        //oseg migrates
+        String object_segmentation_filename = "object_segmentation_file";
+        object_segmentation_filename += ".dat";
+
+        ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, max_space_servers);
+        std::ofstream object_seg_stream (object_segmentation_filename.c_str());
+        osegAnalysis.printData(object_seg_stream);
+        object_seg_stream.flush();
+        object_seg_stream.close();
+
+        //oseg lookup
+        String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
+        object_segmentation_lookup_filename += ".dat";
+
+        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,max_space_servers);
+        std::ofstream oseg_lookup_stream(object_segmentation_lookup_filename.c_str());
+        lookupAnalysis.printData(oseg_lookup_stream);
+        oseg_lookup_stream.flush();
+        oseg_lookup_stream.close();
+
+        //oseg processed lookups
+        String object_segmentation_processed_filename = "object_segmentation_processed_file";
+        object_segmentation_processed_filename += ".dat";
 
 
+        ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,max_space_servers);
+        std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
+
+        processedAnalysis.printData(oseg_process_stream);
+        oseg_process_stream.flush();
+        oseg_process_stream.close();
+
+        //completed round trip migrate times
+        String migration_round_trip_times_filename = "migration_round_trip_times_file";
+        migration_round_trip_times_filename += ".dat";
+
+        ObjectMigrationRoundTripAnalysis obj_mig_rdTripAnalysis(STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
+
+        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream);
+
+        mig_rd_trip_times_stream.flush();
+        mig_rd_trip_times_stream.close();
+
+        //oseg shut down
+        String oseg_shutdown_filename = "oseg_shutdown_file";
+        oseg_shutdown_filename += ".dat";
+
+        OSegShutdownAnalysis oseg_shutdown_analysis(STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream oseg_shutdown_analysis_stream (oseg_shutdown_filename.c_str());
+        oseg_shutdown_analysis.printData(oseg_shutdown_analysis_stream);
+
+        oseg_shutdown_analysis_stream.flush();
+        oseg_shutdown_analysis_stream.close();
+
+
+        //oseg tracked set results analysis
+        String oseg_tracked_set_results_filename = "oseg_tracked_set_results_file";
+        oseg_tracked_set_results_filename += ".dat";
+
+        OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
+        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream);
+
+        oseg_tracked_set_results_analysis_stream.flush();
+        oseg_tracked_set_results_analysis_stream.close();
+
+
+        //end bftm additional object message log file creation.
+
+        exit(0);
+    }
+    else if ( GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ) {
+        LocationLatencyAnalysis(STATS_TRACE_FILE, nservers);
+        exit(0);
+    }
 
 
 
@@ -481,7 +562,7 @@ void *main_loop(void *) {
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
-      
+
      std::vector<CraqInitializeArgs> craqArgsGet;
      CraqInitializeArgs cInitArgs1;
 
@@ -495,9 +576,9 @@ void *main_loop(void *) {
      cInitArgs2.port  =     "10298";
      craqArgsSet.push_back(cInitArgs2);
 
-     
 
-     
+
+
      std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
 
      if (oseg_type.size() ==0)
@@ -639,15 +720,15 @@ void *main_loop(void *) {
         space_context->tick(curt); profiler.finishedStage();
 
         forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-        
+
         gNetwork->service(curt); profiler.finishedStage();
 
         forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-        
+
         cseg->service(); profiler.finishedStage();
 
         forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-        
+
         server->service(); profiler.finishedStage();
 
         whole_profiler.finishedStage();
@@ -670,7 +751,7 @@ void *main_loop(void *) {
       delete weight_calc;
     delete cseg;
     delete oseg;
-    
+
     delete loc_service;
     delete obj_factory;
     delete forwarder;

@@ -358,12 +358,12 @@ class ObjectMigrationRoundTripAnalysis
 private:
   std::vector< ObjectMigrationRoundTripEvent> allRoundTripEvts;
   static bool compareEvts (ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
-  
+
 public:
   ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut);
   ~ObjectMigrationRoundTripAnalysis();
-  
+
 };
 
 
@@ -373,7 +373,7 @@ class OSegTrackedSetResultsAnalysis
 private:
   std::vector<OSegTrackedSetResultsEvent> allTrackedSetResultsEvts;
   static bool compareEvts(OSegTrackedSetResultsEvent A, OSegTrackedSetResultsEvent B);
-  
+
 public:
   OSegTrackedSetResultsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut);
@@ -385,13 +385,18 @@ class OSegShutdownAnalysis
 {
 private:
   std::vector<OSegShutdownEvent> allShutdownEvts;
-  
+
 public:
   OSegShutdownAnalysis(const char* opt_name, const uint32 nservers);
-  ~OSegShutdownAnalysis(); 
+  ~OSegShutdownAnalysis();
   void printData(std::ostream &fileOut);
 };
 
+
+/** Computes distance vs. latency of location updates for objects hosted on the same
+ *  object host (but possibly connected to different space servers).
+ */
+void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers);
 
 } // namespace CBR
 

@@ -159,6 +159,7 @@ class ClusterSim:
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
+        self.loc_latency_analysis()
 
     def generate_deployment(self):
         self.config.generate_deployment(self.num_servers())
@@ -350,6 +351,9 @@ class ClusterSim:
 
     def oseg_analysis(self):
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
+
+    def loc_latency_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
 
 
 

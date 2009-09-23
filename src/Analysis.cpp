@@ -1159,7 +1159,7 @@ MessageLatencyAnalysis::PacketData::PacketData(){
     mType=255;
     mSrcPort=0;
     mDstPort=0;
-    
+
 }
 #define PACKETSTAGE(x) case Trace::x: return #x
 const char* getPacketStageName (uint32 path) {
@@ -1223,10 +1223,10 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
     }
     std::map<PathPair,Average> results;
     for (int doVariance=0;doVariance<2;++doVariance) {
-        
+
         for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
              iter!=ie;
-             ++iter) {                  
+             ++iter) {
             if (mFilter(iter->second)&&iter->second.mStamps.size()) {
                 std::sort(iter->second.mStamps.begin(),iter->second.mStamps.end());
                 for (size_t i=1;i<iter->second.mStamps.size();++i) {
@@ -1239,7 +1239,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                     }
                 }
             }
-        }  
+        }
         if (!doVariance)
         for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
              resiter!=resiterend;
@@ -1247,7 +1247,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             resiter->second.averageOut();
 
         }
-        
+
     }
     for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
          resiter!=resiterend;
@@ -1257,7 +1257,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             const char* currentStage=getPacketStageName(resiter->first.second);
             std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<std::endl;
             lastStage=currentStage;
-            
+
         }
     }
 }
@@ -2113,5 +2113,128 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
+
+
+/** A motion path reconstructed from an event stream. */
+class TraceEventMotionPath {
+public:
+    TraceEventMotionPath()
+     : dirty(false)
+    {}
+
+    void add(GeneratedLocationEvent* evt) {
+        dirty = true;
+        events.push_back(evt);
+    }
+
+    MotionVector3f at(const Time& t) {
+        if (events.empty() || t < events[0]->time)
+            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
+
+        if (dirty) {
+            std::sort(events.begin(), events.end(), EventTimeComparator());
+            dirty = false;
+        }
+
+        uint32 i = 0;
+        while(i+1 < events.size() && t < events[i+1]->time )
+            i++;
+
+        return events[i]->loc.extrapolate(t);
+    }
+private:
+    bool dirty;
+    std::vector<GeneratedLocationEvent*> events;
+};
+
+void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String loc_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(loc_file.c_str(), std::ios::in);
+
+        typedef std::vector<Event*> EventList;
+        typedef std::map<UUID, EventList*> EventListMap;
+        // Source Object -> List of Location Events
+        EventListMap locEvents;
+        // Object -> Motion path
+        typedef std::map<UUID, TraceEventMotionPath*> MotionPathMap;
+        MotionPathMap paths;
+
+        // Extract all loc and gen loc events
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+
+            GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(evt);
+            LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(evt);
+
+            UUID source = UUID::null();
+            if (gen_loc_evt != NULL) source = gen_loc_evt->source;
+            if (loc_evt != NULL) source = loc_evt->source;
+
+            if (gen_loc_evt || loc_evt) {
+                if (locEvents.find(source) == locEvents.end())
+                    locEvents[source] = new EventList();
+                locEvents[source]->push_back(evt);
+
+                if (gen_loc_evt) {
+                    if (paths.find(source) == paths.end())
+                        paths[source] = new TraceEventMotionPath();
+                    paths[source]->add(gen_loc_evt);
+                }
+
+                continue;
+            }
+            else {
+                delete evt;
+            }
+        }
+
+
+        String llfile = GetPerServerString("loc_latency.txt", server_id);
+        std::ofstream os(llfile.c_str(), std::ios::out);
+
+        for(EventListMap::iterator it = locEvents.begin(); it != locEvents.end(); it++) {
+            UUID objid = it->first;
+            EventList* evt_list = it->second;
+
+            // Sort all sets
+            std::sort(evt_list->begin(), evt_list->end(), EventTimeComparator());
+
+            for(EventList::iterator gen_loc_it = evt_list->begin(); gen_loc_it != evt_list->end(); gen_loc_it++) {
+                GeneratedLocationEvent* gen_loc_evt = dynamic_cast<GeneratedLocationEvent*>(*gen_loc_it);
+                if (gen_loc_evt == NULL) continue;
+
+                //os << objid.toString() << " " << (gen_loc_evt->loc.updateTime()-Time::null()).toSeconds() << " " << gen_loc_evt->loc.position() << std::endl;
+                for(EventList::iterator loc_it = gen_loc_it; loc_it != evt_list->end(); loc_it++) {
+                    LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(*loc_it);
+                    if (loc_evt == NULL) continue;
+
+                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( loc_evt->time );
+                    MotionVector3f source_loc = paths[loc_evt->source]->at( loc_evt->time );//loc_evt->loc.extrapolate( loc_evt->time );
+                    Duration latency = loc_evt->time - gen_loc_evt->time;
+
+                    // Since we don't capture initial setup locations, we need to handle the case when the first update
+                    // is after this
+                    if ( (receiver_loc.position() == Vector3f(0,0,0) && receiver_loc.position() == Vector3f(0,0,0)) )
+                        continue;
+
+                    // Make sure the updates match, because we loop over all loc updates after this and we might pass the
+                    // next gen_loc_evt but we can't stop looking because the latencies might be very high
+                    if ( (loc_evt->loc.updateTime() != gen_loc_evt->loc.updateTime()) ||
+                        (loc_evt->loc.position() != gen_loc_evt->loc.position()) ||
+                        (loc_evt->loc.velocity() != gen_loc_evt->loc.velocity()) )
+                        continue;
+
+                    os << (source_loc.position() - receiver_loc.position()).length() << " " << latency.toSeconds() << std::endl;
+                }
+            }
+        }
+
+        os.close();
+
+    }
+}
 
 } // namespace CBR

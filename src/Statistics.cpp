@@ -55,7 +55,6 @@
 #define TRACE_OSEG_SHUTTING_DOWN
 
 
-
 namespace CBR {
 
 BatchedBuffer::BatchedBuffer()
