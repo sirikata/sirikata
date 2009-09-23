@@ -226,14 +226,12 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 }
 bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
 #ifdef TRACE_MESSAGE
-    CBR::Protocol::Header hdr;
-
-    if (data.size()&&hdr.ParseFromArray(&data[0],data.size())&&hdr.has_id()) {
-        timestampMessage(t,
-                         hdr.id(),
-                         SPACE_OUTGOING_MESSAGE,
-                         hdr.has_source_port()?hdr.source_port():0,
-                         hdr.has_dest_port()?hdr.dest_port():0);
+    uint32 offset=0;
+    Message*result=NULL;
+    offset = Message::deserialize(data,offset,&result);
+    ObjectMessage *om=dynamic_cast<ObjectMessage*>(result);
+    if (om) {
+        timestampMessage(t,om->contents.unique(),path,om->contents.source_port(),om->contents.dest_port(),result->type());
     }else return false;
 #endif
     return true;

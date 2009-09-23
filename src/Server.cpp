@@ -134,6 +134,8 @@ void Server::serviceObjectHostNetwork() {
 }
 
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
+    Trace * tr=mContext->trace();
+    tr->timestampMessage(mContext->time,obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port());
     // Before admitting a message, we need to do some sanity checks.  Also, some types of messages get
     // exceptions for bootstrapping purposes (namely session messages to the space).
 

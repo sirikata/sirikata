@@ -1172,6 +1172,7 @@ const char* getPacketStageName (uint32 path) {
         PACKETSTAGE(DISPATCHED);
         PACKETSTAGE(DELIVERED);
         PACKETSTAGE(DESTROYED);
+        PACKETSTAGE(HANDLE_OBJECT_HOST_MESSAGE);
       default:
         return "Unknown Stage, add to Analysis.cpp:getPacketStageName";
     }
