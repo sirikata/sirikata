@@ -1189,10 +1189,12 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                         pd->mStamps[tevt->path][0].mServerId=server_id;
                     }else {
                         if (pd->mStamps[tevt->path][0]!=Time::null()) {
-                            printf ("Too many samples for phase %d\n",tevt->path);
+                            printf ("Too many samples for phase %s\n",getPacketStageName(tevt->path));
                         }
-                        pd->mStamps[tevt->path][1]=tevt->end_time();
-                        pd->mStamps[tevt->path][1].mServerId=server_id;
+                        if (Time(pd->mStamps[tevt->path][1])<tevt->end_time()) {
+                            pd->mStamps[tevt->path][1]=tevt->end_time();
+                            pd->mStamps[tevt->path][1].mServerId=server_id;
+                        }
                     }
                     if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
                     if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
@@ -1239,12 +1241,13 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
         }
         
     }
-    for (int i=0;i<Trace::NUM_PATHS;++i) {
-        const char* lastStage=getPacketStageName(0);
+    const char* lastStage=getPacketStageName(0);
+    for (int i=1;i<Trace::NUM_PATHS;++i) {
         for (int j=1;j<2;++j) {
             if (results[i][j].numSamples) {
                 const char* currentStage=getPacketStageName(i);
-                std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<results[i][j].average<<" stddev "<<sqrt(results[i][j].variance)<<std::endl;
+                std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<results[i][j].average<<"s stddev "<<sqrt(results[i][j].variance)<<std::endl;
+                lastStage=currentStage;
 
             }
         }

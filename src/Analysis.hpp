@@ -177,15 +177,18 @@ class MessageLatencyAnalysis {public:
     };
     class Average {
     public:
-        Duration average;
+        double average;
         unsigned int numSamples;
         double variance;
-        Average(): average(Duration()){
+        Average(): average(0){
             variance=0;
             numSamples=0;
         }
         void addAverageSample(Duration t){
-            average+=t;
+            double st=t.toSeconds();
+            st=fabs(st);
+            average+=st;
+
             ++numSamples;
         }
         void averageOut(){ 
@@ -194,8 +197,8 @@ class MessageLatencyAnalysis {public:
             }
         }
         void addVarianceSample(Duration t) {
-            Duration diff=(t-average);
-            variance+=(diff.toSeconds()*diff.toSeconds()/(double)numSamples);
+            double diff=(t.toSeconds()-average);
+            variance+=diff*diff/(double)numSamples;
         }
     };
     class PacketData {public:
@@ -212,7 +215,9 @@ class MessageLatencyAnalysis {public:
         const uint32*mFilterByDestructionServer;
         const uint32*mFilterByForwardingServer;
         const uint32 *mFilterByDeliveryServer;
-        Filters(const uint32*filterByCreationServer=NULL,const uint32 *filterByDestructionServer=NULL, const uint32*filterByForwardingServer=NULL, const uint32 *filterByDeliveryServer=NULL) {
+        const uint16 *mDestPort;
+        Filters(uint16 *destPort=NULL, const uint32*filterByCreationServer=NULL,const uint32 *filterByDestructionServer=NULL, const uint32*filterByForwardingServer=NULL, const uint32 *filterByDeliveryServer=NULL) {
+            mDestPort=destPort;
             mFilterByCreationServer=filterByCreationServer;
             mFilterByDestructionServer=filterByDestructionServer;
             mFilterByForwardingServer=filterByForwardingServer;
@@ -223,7 +228,8 @@ class MessageLatencyAnalysis {public:
             return pd.mStamps[*server][0].mServerId==*server;
         }
         bool operator() (const PacketData&pd)const{
-            return verify(mFilterByCreationServer,pd,Trace::CREATED)&&
+            return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
+                verify(mFilterByCreationServer,pd,Trace::CREATED)&&
                 verify(mFilterByDestructionServer,pd,Trace::DESTROYED)&&
                 verify(mFilterByForwardingServer,pd,Trace::FORWARDED)&&
                 verify(mFilterByDeliveryServer,pd,Trace::DELIVERED);

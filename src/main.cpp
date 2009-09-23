@@ -258,10 +258,13 @@ void *main_loop(void *) {
         exit(0);
     }
     else if ( GetOption(ANALYSIS_MESSAGE_LATENCY)->as<bool>() ) {
+        uint16 ping_port=OBJECT_PORT_PING;
         uint32 unservers=nservers;
-        MessageLatencyAnalysis::Filters filter(&unservers,//filter by created @ object host
+        MessageLatencyAnalysis::Filters filter(&ping_port,&unservers,//filter by created @ object host
                        &unservers);//filter by destroyed @ object host
-        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,filter);
+        MessageLatencyAnalysis::Filters nilfilter;
+        MessageLatencyAnalysis::Filters pingfilter(&ping_port);       
+        MessageLatencyAnalysis la(STATS_TRACE_FILE,nservers,pingfilter);
         exit(0);
     }
     else if ( GetOption(ANALYSIS_BANDWIDTH)->as<bool>() ) {
