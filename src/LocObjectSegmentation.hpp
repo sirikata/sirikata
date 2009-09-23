@@ -41,6 +41,7 @@ namespace CBR
 
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID ourID, bool);
+    virtual void newObjectAdd(const UUID& obj_id);
     virtual bool clearToMigrate(const UUID& obj_id);
 
     virtual int getOSegType();

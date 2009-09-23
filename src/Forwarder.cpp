@@ -464,6 +464,11 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           dispatchMessage(msg);
         }
         break;
+      case MESSAGE_TYPE_OSEG_ADDED_OBJECT:
+        {
+          dispatchMessage(msg);
+        }
+        break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
           {
               dispatchMessage(msg);

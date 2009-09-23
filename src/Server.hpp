@@ -57,6 +57,7 @@ private:
     void handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& msg);
     // Handle Connect message from object
     void handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
+    void handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg);
     // Handle Migrate message from object
     void handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& migrate_msg);
 
@@ -66,6 +67,8 @@ private:
     //finally deletes any object connections to obj_id
     void killObjectConnection(const UUID& obj_id);
 
+    void finishAddObject(const UUID& obj_id);
+    
     SpaceContext* mContext;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
@@ -102,6 +105,16 @@ private:
     MigConnectionsMap mMigratingConnections;//bftm add
     Timer mMigrationTimer;
 
+    struct StoredConnection
+    {
+      ObjectHostConnectionManager::ConnectionID    conn_id;
+      CBR::Protocol::Session::Connect             conn_msg;
+    };
+
+    typedef std::map<UUID, StoredConnection> StoredConnectionMap;
+    StoredConnectionMap  mStoredConnectionData;
+
+    
     TimeProfiler mProfiler;
 }; // class Server
 

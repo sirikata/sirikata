@@ -115,6 +115,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
       case MESSAGE_TYPE_UPDATE_OSEG:
         msg = new UpdateOSegMessage(wire,offset,_id);
         break;
+      case MESSAGE_TYPE_OSEG_ADDED_OBJECT:
+        msg = new  OSegAddMessage(wire,offset,_id);
+        break;
       case MESSAGE_TYPE_NOISE:
         msg = new NoiseMessage(wire,offset,_id);
         break;
@@ -545,6 +548,37 @@ UpdateOSegMessage::UpdateOSegMessage(const Network::Chunk& wire, uint32& offset,
 
 
 //end update oseg message
+
+
+OSegAddMessage::OSegAddMessage(const ServerID& origin, const UUID& obj_id)
+  : Message(origin,true)
+{
+  contents.set_m_objid(obj_id);
+}
+
+OSegAddMessage::~OSegAddMessage()
+{
+
+}
+
+MessageType OSegAddMessage::type() const
+{
+  return MESSAGE_TYPE_OSEG_ADDED_OBJECT;
+}
+
+uint32 OSegAddMessage::serialize(Network::Chunk& wire, uint32 offset)
+{
+  offset = serializeHeader(wire, offset);
+  return serializePBJMessage(contents, wire, offset);
+}
+
+
+
+OSegAddMessage::OSegAddMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
+  : Message(_id)
+{
+  parsePBJMessage(contents,wire,offset);
+}
 
 
 //obj_conn_kill message:

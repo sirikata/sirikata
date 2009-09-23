@@ -209,14 +209,13 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     if (mTracking)
     {
       //means that we need to save this query
-
-
-      //      std::cout<<"\nbftm debug.  Wrote value for "<<currentlySearchingFor<<".  This is line:  "<<line <<"\n";
-      
+      std::cout<<"\nbftm debug.  Wrote value for "<<currentlySearchingFor<<".  This is line:  "<<line <<"\n";
       
       CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
       mOperationResultTrackedSetsVector.push_back(tmper);
     }
+
+    std::cout<<"\n\nSTORED object:  "<<currentlySearchingFor<<".  On to the next one.\n\n";
     
     mReady  = READY;
   }
@@ -245,8 +244,6 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
 //datakey should have a null termination character.
 bool AsyncConnection::get(CraqDataKey dataToGet)
 {
-
-  
   if (mReady != READY)
   {
     return false;
@@ -396,19 +393,21 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
       else
       {
         //    mOperationResultErrorVector();
-        std::cout<<"\n\nbftm debug: ERROR in asyncConnection.cpp under read_handler_get\n\n";
-        std::cout<<"This is line:    "<<line<<"\n\n";
+        std::cout<<"\n\nbftm debug: ERROR in asyncConnection.cpp under read_handler_get ";
+        std::cout<<"This is line:    "<<line<<" while looking for:  "<<  currentlySearchingFor<<"\n\n";
 
         mReady = NEED_NEW_SOCKET;
 
         mSocket->close();
         delete mSocket;
     
-        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
-        mOperationResultErrorVector.push_back(tmper);
-    
-        std::cout<<"\n\nGot an error in read_handler_get. not a get response\n\n";
-
+        //        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+        //        mOperationResultErrorVector.push_back(tmper);
+        //bftm modified
+        
+        CraqOperationResult* tmper = new CraqOperationResult(0,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
+        mOperationResultVector.push_back(tmper);
+        
         delete sBuff;
       }
     }

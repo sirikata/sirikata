@@ -481,27 +481,6 @@ void *main_loop(void *) {
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
-//       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
-//       {
-//         UUID obj_id = *it;
-        
-//         if (loc_service == NULL)
-//         {
-//           std::cout<<"\n\nNULL loc service!!!\n\n";
-//           assert (false);
-//         }
-        
-//         Vector3f start_pos = loc_service->currentPosition(obj_id);
-
-//         if (cseg->lookup(start_pos) == server_id)
-//         {
-//           initServObjVec.push_back(obj_id);
-//           std::cout<<obj_id.toString()<<"\n";
-//         }
-//       }
-
-
-     std::cout<<"\n\n\nGOT TO MAIN LOOP.  BFTM DEBUG\n\n";
       
      std::vector<CraqInitializeArgs> craqArgsGet;
      CraqInitializeArgs cInitArgs1;
@@ -509,7 +488,6 @@ void *main_loop(void *) {
      cInitArgs1.ipAdd = "localhost";
      cInitArgs1.port  =     "10299";
      craqArgsGet.push_back(cInitArgs1);
-
 
      std::vector<CraqInitializeArgs> craqArgsSet;
      CraqInitializeArgs cInitArgs2;
@@ -529,7 +507,6 @@ void *main_loop(void *) {
      }
 
      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
-     //     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs, oseg_craq_prefix[0]);
      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
 
     }      //end craq approach

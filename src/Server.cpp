@@ -38,6 +38,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 {
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
       mForwarder->registerMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
+      mForwarder->registerMessageRecipient(MESSAGE_TYPE_OSEG_ADDED_OBJECT, this);
 
       mMigrationMonitor = new MigrationMonitor(mLocationService, mCSeg);
 
@@ -65,7 +66,8 @@ Server::~Server()
 
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
-
+    mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_ADDED_OBJECT, this);
+    
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
@@ -194,7 +196,13 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     // Connect or migrate messages
     if (session_msg.has_connect()) {
         if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
-            handleConnect(oh_conn_id, msg, session_msg.connect());
+        {
+            if (mOSeg->getOSegType() == LOC_OSEG)
+              handleConnect(oh_conn_id, msg, session_msg.connect());
+
+            if(mOSeg->getOSegType() == CRAQ_OSEG)
+              handleConnect2(oh_conn_id, msg, session_msg.connect());
+        }
         else if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Migration)
         {
             handleMigrate(oh_conn_id, msg, session_msg.connect());
@@ -213,6 +221,9 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     UUID obj_id = container.source_object();
     assert( getObjectConnection(obj_id) == NULL );
 
+    std::cout<<"\n\nbftm debug: received a handleconnect message\n\n";
+
+    
     // If the requested location isn't on this server, redirect
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     Vector3f curpos = loc.extrapolate(mContext->time).position();
@@ -265,14 +276,19 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
 
+    //update our oseg to show that we know that we have this object now.
+    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
+
+        
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
     mObjects[obj_id] = conn;
 
+
+
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
-    //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
+    
 
     
     // Register proximity query
@@ -295,6 +311,135 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     conn->send( obj_response );
 }
+
+
+
+
+
+// Handle Connect message from object
+void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
+    UUID obj_id = container.source_object();
+    assert( getObjectConnection(obj_id) == NULL );
+
+    // If the requested location isn't on this server, redirect
+    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
+    Vector3f curpos = loc.extrapolate(mContext->time).position();
+    bool in_server_region = mMigrationMonitor->onThisServer(curpos);
+    ServerID loc_server = mCSeg->lookup(curpos);
+
+    if(loc_server == NullServerID || (loc_server == mContext->id() && !in_server_region)) {
+        // Either CSeg says no server handles the specified region or
+        // that we should, but it doesn't actually land in our region
+        // (i.e. things were probably clamped invalidly)
+
+        // Create and send redirect reply
+        CBR::Protocol::Session::Container response_container;
+        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        response.set_response( CBR::Protocol::Session::ConnectResponse::Error );
+
+        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+            mContext->id(),
+            UUID::null(), OBJECT_PORT_SESSION,
+            obj_id, OBJECT_PORT_SESSION,
+            serializePBJMessage(response_container)
+        );
+
+
+        std::cout<<"\n\nbftm debug:  obj_id for we don't really handle:  "<<obj_id.toString()<<"\n\n";
+        
+        // Sent directly via object host connection manager because we don't have an ObjectConnection
+        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
+        return;
+    }
+
+    if (loc_server != mContext->id()) {
+        // Since we passed the previous test, this just means they tried to connect
+        // to the wrong server => redirect
+
+        // Create and send redirect reply
+        CBR::Protocol::Session::Container response_container;
+        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        response.set_response( CBR::Protocol::Session::ConnectResponse::Redirect );
+        response.set_redirect(loc_server);
+
+        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+            mContext->id(),
+            UUID::null(), OBJECT_PORT_SESSION,
+            obj_id, OBJECT_PORT_SESSION,
+            serializePBJMessage(response_container)
+        );
+
+        std::cout<<"\n\nbftm debug:  obj_id tried to connect to wrong server:  "<<obj_id.toString()<<"\n\n";
+        
+        // Sent directly via object host connection manager because we don't have an ObjectConnection
+        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
+        return;
+    }
+
+    // FIXME sanity check the new connection
+    // -- authentication
+    // -- verify object may connect, i.e. not already in system (e.g. check oseg)
+
+    //update our oseg to show that we know that we have this object now.
+    //    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
+    mOSeg->newObjectAdd(obj_id);
+    StoredConnection sc;
+    sc.conn_id = oh_conn_id;
+    sc.conn_msg = connect_msg;
+    
+    
+    mStoredConnectionData[obj_id] = sc;
+
+}
+
+void Server::finishAddObject(const UUID& obj_id)
+{
+  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
+  
+  if (mStoredConnectionData.find(obj_id) != mStoredConnectionData.end())
+  {
+    StoredConnection sc = mStoredConnectionData[obj_id];
+
+    TimedMotionVector3f loc( sc.conn_msg.loc().t(), MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
+
+    
+    // Create and store the connection
+    ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
+    mObjects[obj_id] = conn;
+
+    // Add object as local object to LocationService
+    mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds());
+    
+    // Register proximity query
+    if (sc.conn_msg.has_query_angle())
+        mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()));
+    // Allow the forwarder to send to ship messages to this connection
+    mForwarder->addObjectConnection(obj_id, conn);
+
+    // Send reply back indicating that the connection was successful
+    CBR::Protocol::Session::Container response_container;
+    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+
+    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        obj_id, OBJECT_PORT_SESSION,
+        serializePBJMessage(response_container)
+    );
+    conn->send( obj_response );
+  }
+}
+
+
+
+
+
+
+
+
+
+
 
 // Handle Migrate message from object
 //this is called by the receiving server.
@@ -365,8 +510,18 @@ void Server::receiveMessage(Message* msg)
       killObjectConnection(obj_id);
     }
 
+    OSegAddMessage* oseg_add_msg = dynamic_cast<OSegAddMessage*>(msg);
+    if (oseg_add_msg != NULL)
+    {
+      std::cout<<"\n\nbftm debug message:  received an oseg add message \n\n";
+      const UUID obj_id = oseg_add_msg->contents.m_objid();
+      finishAddObject(obj_id);
+    }
+    
     delete msg;
 }
+
+
 
 
 //handleMigration to this server.

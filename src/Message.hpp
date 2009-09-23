@@ -67,8 +67,11 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_BULK_LOCATION             13
 #define MESSAGE_TYPE_KILL_OBJ_CONN             14
 #define MESSAGE_TYPE_UPDATE_OSEG               15
-#define MESSAGE_TYPE_FORWARDED                 16 
+#define MESSAGE_TYPE_FORWARDED                 16
+#define MESSAGE_TYPE_OSEG_ADDED_OBJECT         17
 #define MESSAGE_TYPE_UNPROCESSED_PACKET        255
+
+
   
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
@@ -347,6 +350,23 @@ private:
 };
 
 //end kill obj conn message
+
+
+class OSegAddMessage : public Message
+{
+public:
+  CBR::Protocol::OSeg::AddedObjectMessage contents;
+
+  OSegAddMessage(const ServerID& origin, const UUID& obj_id);
+  ~OSegAddMessage();
+  virtual MessageType type() const;
+  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+  
+private:
+  friend class Message;
+  OSegAddMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
+
 
 //forwarded message
 //class 

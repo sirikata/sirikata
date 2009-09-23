@@ -55,28 +55,7 @@ namespace CBR
 
 
     std::map<UUID,ServerID> dummy;
-    //500 ticks put here to allow lots of connections to be made
-    //    for (int s=0; s < 500; ++s)
-//     for (int s=0; s < 2000; ++s)
-//     {
-//       craqDhtGet.tick(getResults1,trackedSetResults1);
-//       processCraqTrackedSetResults(trackedSetResults1, dummy);
 
-//       for (int t=0; t < (int)getResults1.size(); ++t)
-//       {
-//         delete getResults1[t];
-//       }
-
-      
-//       craqDhtSet.tick(getResults2,trackedSetResults2);
-//       processCraqTrackedSetResults(trackedSetResults2, dummy);
-
-//       for (int t=0; t < (int)getResults2.size(); ++t)
-//       {
-//         delete getResults2[t];
-//       }
-      
-//     }
 
     iteratedWait(2000, getResults1, trackedSetResults1);
     processCraqTrackedSetResults(trackedSetResults2, dummy);
@@ -94,42 +73,6 @@ namespace CBR
     numMigrationNotCompleteYet  = 0;
     numAlreadyLookingUp         = 0;
     
-
-//     CraqDataKey obj_id_as_dht_key;
-//     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
-//     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
-//     {
-//       convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
-
-//       CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id(),false,CraqDataSetGet::SET);
-//       craqDht.set(cdSetGet);
-//       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
-
-//       mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
-//     }
-
-    
-    
-    //50 ticks to update
-//     for (int s=0; s < 2000; ++s)
-//     {
-//       craqDhtGet.tick(getResults1,trackedSetResults1);
-//       processCraqTrackedSetResults(trackedSetResults1, dummy);
-
-//       for (int t=0; t < (int)getResults1.size(); ++t)
-//       {
-//         delete getResults1[t];
-//       }
-
-//       craqDhtSet.tick(getResults2,trackedSetResults2);
-//       processCraqTrackedSetResults(trackedSetResults2, dummy);
-
-//       for (int t=0; t < (int)getResults2.size(); ++t)
-//       {
-//         delete getResults2[t];
-//       }
-      
-//     }
 
     mTimer.start();
   }
@@ -196,9 +139,6 @@ namespace CBR
 
     //clear to migrate only if migrating from here and migrating to here are false.
     return (!migratingFromHere) && (!migratingToHere);
-
-    //
-    //    return (std::find(mReceivingObjects.begin(), mReceivingObjects.end(), obj_id) == mReceivingObjects.end());
   }
 
 
@@ -259,6 +199,37 @@ namespace CBR
     return NullServerID;
   }
 
+  void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
+  {
+    CraqDataKey cdk;
+    convert_obj_id_to_dht_key(obj_id,cdk);
+
+    CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
+
+#ifdef CRAQ_DEBUG
+      std::cout<<"\n\n Received a new addObject\n\n";
+#endif
+
+          
+    TrackedSetResultsDataAdded tsrda;
+    tsrda.msgAdded = generateAddedMessage(obj_id);
+    tsrda.dur       = mTimer.elapsed();
+      
+
+    int trackID = craqDhtSet.set(cdSetGet);
+    trackedAddMessages[trackID] = tsrda;
+    
+    return;
+  }
+
+
+  OSegAddMessage* CraqObjectSegmentation::generateAddedMessage(const UUID& obj_id)
+  {
+    OSegAddMessage* oadd = new OSegAddMessage(mContext->id(), obj_id);
+    return oadd;
+  }
+  
+  
   /*
     After insuring that the object isn't in transit, the lookup should querry the dht.
   */
@@ -266,6 +237,12 @@ namespace CBR
   {
 
     ++numLookups;
+
+    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"at time:  "<<mContext->time.raw() << "\n\n";
+    
+#ifdef CRAQ_DEBUG
+    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"\n\n";
+#endif
     
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
@@ -283,6 +260,7 @@ namespace CBR
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
+      
 #ifdef CRAQ_DEBUG
       std::cout<<"\n\nbftm debug: cached value object id:"<< obj_id.toString()  <<"   cached value returned:  " << cacheReturn<<" \n\n";
 #endif
@@ -386,9 +364,8 @@ namespace CBR
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
       tsrd.dur       = mTimer.elapsed();
       
-      //      int trackID = craqDht.set(cdSetGet);
+
       int trackID = craqDhtSet.set(cdSetGet);
-      //      trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
       trackingMessages[trackID] = tsrd;
       
     }
@@ -405,7 +382,9 @@ namespace CBR
       if (std::find(mObjects.begin(), mObjects.end(), obj_id) == mObjects.end())
       {
         mObjects.push_back(obj_id);
+#ifdef CRAQ_DEBUG
         std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n";
+#endif
       }
 
     }
@@ -550,6 +529,10 @@ namespace CBR
 
           trackingMessages.erase(trackedSetResults[s]->trackedMessage);//stop tracking this message.
         }
+        else if (trackedAddMessages.find(trackedSetResults[s]->trackedMessage) != trackedAddMessages.end())
+        {
+          mContext->router()->route(MessageRouter::MIGRATES, trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded,mContext->id(),false);
+        }
         else
         {
           std::cout<<"\n\nbftm debug:  received a tracked set that I don't have a record of an acknowledge to send.\n\n";
@@ -622,35 +605,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   {
 
     checkNotFoundData();
-    
-    static Timer servTimer;
-    static uint numTicks = 0;
-    static uint numTicksGreaterThanMs = 0;
-    static uint numBetweenTicksGreaterThan3 = 0;
-    static uint prevTime =0;
-
-
-    if (numTicks != 0)
-    {
-      servTimer.start();
-    }
-    else
-    {
-      Duration thisDur = servTimer.elapsed();
-
-      if(thisDur.toMilliseconds() - prevTime > 3)
-      {
-        ++numBetweenTicksGreaterThan3;
-      }
-
-      prevTime = thisDur.toMilliseconds();
-    }
-
-    ++numTicks;
-
-    Timer osegServiceDurTimer;
-    osegServiceDurTimer.start();
-
 
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
@@ -658,7 +612,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     iteratedWait(6, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults);
 
-    Duration tickDur = osegServiceDurTimer.elapsed();
 
     if (mFinishedMoveOrLookup.size() !=0)
     {
@@ -669,11 +622,19 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     int sizeGetRes  = (int) getResults.size();
     int sizeTracked = (int) trackedSetResults.size();
 
+#ifdef CRAQ_DEBUG
     if (sizeGetRes != 0)
     {
       std::cout<<"\n\nGot a bunch of responses" <<sizeGetRes <<"\n\n";
       std::cout<<"\n\nNum remaining in queue get:  "<<craqDhtGet.queueSize()<<"     set:  " << craqDhtSet.queueSize()<<"    time:  "<< mContext->time.raw() <<"\n\n";
     }
+
+    if (sizeTracked != 0)
+    {
+      std::cout<<"\n\nGot a bunch of set responses:  "<<sizeTracked<<"\n\n";
+      std::cout<<"\n\nNum remaining in queue get:  "<<craqDhtGet.queueSize()<<"     set:  " << craqDhtSet.queueSize()<<"    time:  "<< mContext->time.raw() <<"\n\n";
+    }
+#endif
 
     
     //run through all the get results first.
@@ -727,27 +688,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
-
-#ifdef CRAQ_DEBUG
-    Duration osegServiceDuration = osegServiceDurTimer.elapsed();
-    if (osegServiceDuration.toMilliseconds() > 1)
-    {
-      std::cout<<"\n\n CraqObjectSegmentation.service took more than 1 ms. "  <<  osegServiceDuration.toMilliseconds() <<  ".  \n";
-      std::cout<<"Tick dur:                   "<< tickDur.toMilliseconds() << "\n";
-      std::cout<<"Num get results:            "<< sizeGetRes << " \n";
-      std::cout<<"Num tracked set results:    "<<  sizeTracked <<"  \n";
-      std::cout<<"Num ticks here:             "<< numTicks<<"\n\n\n";
-      ++numTicksGreaterThanMs;
-    }
-
-    if ((numTicks %1000) == 0)
-    {
-      std::cout<<"\n\nHere are the numbers:   \n";
-      std::cout<<"\t num greater than ms:       "<< numTicksGreaterThanMs<<"\n";
-      std::cout<<"\t num between ticks:         " << numBetweenTicksGreaterThan3 << "\n";
-      std::cout<<"\t num total:                 "<< numTicks<<"\n\n\n";
-    }
-#endif
   }
 
 
@@ -869,6 +809,10 @@ void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
 {
   //turn the id into a uuid and then push it onto the end of  mNfData queue.
 
+#ifdef CRAQ_DEBUG
+  std::cout<<"\n\nI'm pushing into notFoundFunction\n\n";
+#endif
+  
   if (mapDataKeyToUUID.find(nf->idToString()) == mapDataKeyToUUID.end())
     return; //means that we really have no record of this objects' even having been requested.
 
@@ -897,6 +841,8 @@ void CraqObjectSegmentation::checkNotFoundData()
   while (queueDataOldEnough)
   {
     nfd = mNfData.front();
+    queueDataOldEnough = false;
+    
     if ((tmpDur.toMilliseconds() - nfd->dur.toMilliseconds()) > 500) //we wait 500 ms.
     {
       queueDataOldEnough = true;
@@ -911,9 +857,9 @@ void CraqObjectSegmentation::checkNotFoundData()
 
       mNfData.pop(); //remove the item from the queue.
 
-
-      std::cout<<"\n\nbftm debug  I'm releasing one; obj_id:  "<<nfd->obj_id.toString()<<"\n";
-      
+#ifdef CRAQ_DEBUG
+      std::cout<<"\n\nbftm debug.  I'm releasing an object that wasn't found with obj_id  "<<nfd->obj_id.toString()<<"\n";
+#endif
       delete nfd; //memory managment
     }
 

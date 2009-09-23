@@ -125,4 +125,9 @@ namespace CBR
     return;
   }
 
+  void LocObjectSegmentation::newObjectAdd(const UUID& obj_id)
+  {
+    return;
+  }
+
 }

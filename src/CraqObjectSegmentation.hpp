@@ -85,7 +85,7 @@ namespace CBR
     NfDataQ mNfData;
     void checkNotFoundData();
     
-    
+    //for lookups and sets
     AsyncCraq craqDhtGet;
     AsyncCraq craqDhtSet;
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
@@ -93,9 +93,9 @@ namespace CBR
     std::vector <UUID> mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
     bool checkOwn(const UUID& obj_id);
     bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
-
     std::vector<UUID> vectorObjectsInMigration ;
 
+    //for oseg cacing
     struct OSegCacheVal
     {
       ServerID sID;
@@ -104,9 +104,21 @@ namespace CBR
     };
 
     typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
-    //    std::map<UUID,OSegCacheVal> mServerObjectCache;
     ObjectCacheMap mServerObjectCache;
     ServerID satisfiesCache(const UUID& obj_id);
+    //end caching
+
+
+    //for message addition.
+    struct TrackedSetResultsDataAdded
+    {
+      OSegAddMessage* msgAdded;
+      Duration dur;
+    };
+    typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
+    TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
+    OSegAddMessage* generateAddedMessage(const UUID& obj_id);
+    
     
   public:
     //      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
@@ -124,6 +136,8 @@ namespace CBR
 
     virtual bool clearToMigrate(const UUID& obj_id);
 
+    virtual void newObjectAdd(const UUID& obj_id);
+    
 
     virtual int getOSegType();
     

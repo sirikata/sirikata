@@ -24,3 +24,9 @@ message UpdateOSegMessage
    required uint64 servid_obj_on           = 2;
    required uuid   m_objid                 = 3;
 }
+
+
+message AddedObjectMessage
+{
+   required uuid m_objid                   = 1;
+}

@@ -16,11 +16,11 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '30s'
-        self.tx_bandwidth = 10000
-        self.rx_bandwidth = 10000
+        self.duration = '35s'
+        self.tx_bandwidth = 1000000
+        self.rx_bandwidth = 1000000
         self.flatness = 100
-        self.num_objects = 100
+        self.num_objects = 1000
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
@@ -45,7 +45,7 @@ class ClusterSimSettings:
         self.debug = True
         self.valgrind = False
         self.profile = True
-        self.loc = 'oracle'
+        self.loc = 'standard'
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'

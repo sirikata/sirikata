@@ -41,15 +41,15 @@
 #include "ServerIDMap.hpp"
 
 
-//#define TRACE_OBJECT
-//#define TRACE_LOCPROX
+#define TRACE_OBJECT
+#define TRACE_LOCPROX
 #define TRACE_OSEG
 //#define TRACE_CSEG
 #define TRACE_MIGRATION
 #define TRACE_DATAGRAM
 #define TRACE_PACKET
-#define TRACE_PING
-#define TRACE_MESSAGE
+//#define TRACE_PING
+//#define TRACE_MESSAGE
 #define TRACE_ROUND_TRIP_MIGRATION_TIME
 #define TRACE_OSEG_TRACKED_SET_RESULTS
 #define TRACE_OSEG_SHUTTING_DOWN
