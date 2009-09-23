@@ -67,12 +67,12 @@ Server::~Server()
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
     mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_ADDED_OBJECT, this);
-    
+
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
-        
+
         // Stop any proximity queries for this object
         mProximity->removeQuery(obj_id);
 
@@ -225,7 +225,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     std::cout<<"\n\nbftm debug: received a handleconnect message\n\n";
 
-    
+
     // If the requested location isn't on this server, redirect
     TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
     Vector3f curpos = loc.extrapolate(mContext->time).position();
@@ -281,7 +281,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     //update our oseg to show that we know that we have this object now.
     mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
 
-        
+
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
     mObjects[obj_id] = conn;
@@ -290,9 +290,9 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
 
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
-    
 
-    
+
+
     // Register proximity query
     if (connect_msg.has_query_angle())
         mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
@@ -345,7 +345,7 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
             obj_id, OBJECT_PORT_SESSION,
             serializePBJMessage(response_container)
         );
-        
+
         // Sent directly via object host connection manager because we don't have an ObjectConnection
         mObjectHostConnectionManager->send( oh_conn_id, obj_response );
         return;
@@ -368,7 +368,7 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
             serializePBJMessage(response_container)
         );
 
-        
+
         // Sent directly via object host connection manager because we don't have an ObjectConnection
         mObjectHostConnectionManager->send( oh_conn_id, obj_response );
         return;
@@ -384,7 +384,7 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
-        
+
     mStoredConnectionData[obj_id] = sc;
 
 }
@@ -392,21 +392,21 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
 void Server::finishAddObject(const UUID& obj_id)
 {
   //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
-  
+
   if (mStoredConnectionData.find(obj_id) != mStoredConnectionData.end())
   {
     StoredConnection sc = mStoredConnectionData[obj_id];
 
     TimedMotionVector3f loc( sc.conn_msg.loc().t(), MotionVector3f(sc.conn_msg.loc().position(), sc.conn_msg.loc().velocity()) );
 
-    
+
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
 
     // Add object as local object to LocationService
     mLocationService->addLocalObject(obj_id, loc, sc.conn_msg.bounds());
-    
+
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
         mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()));
@@ -445,7 +445,7 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
     // Verify the requested position is on this server
-    
+
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
     mObjectsAwaitingMigration[obj_id] = conn;
@@ -483,7 +483,7 @@ void Server::receiveMessage(Message* msg)
       const UUID obj_id = oseg_add_msg->contents.m_objid();
       finishAddObject(obj_id);
     }
-    
+
     delete msg;
 }
 
@@ -498,7 +498,7 @@ void Server::handleMigration(const UUID& obj_id)
       processAlreadyMigrating(obj_id);
       return;
     }
-  
+
     // Try to find the info in both lists -- the connection and migration information
 
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
@@ -507,7 +507,7 @@ void Server::handleMigration(const UUID& obj_id)
         return;
     }
 
-    
+
     ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
     if (migration_map_it == mObjectMigrations.end())
     {
@@ -540,7 +540,7 @@ void Server::handleMigration(const UUID& obj_id)
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
     mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
-       
+
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
         CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
@@ -680,7 +680,7 @@ void Server::checkObjectMigrations()
               //end bftm change
               //  mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
               MigratingObjectConnectionsData mocd;
-              
+
               mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id, mocd.uniqueConnId);
               Duration migrateStartDur  =                 mMigrationTimer.elapsed();
               mocd.milliseconds         =          migrateStartDur.toMilliseconds();
@@ -688,13 +688,13 @@ void Server::checkObjectMigrations()
               mocd.loc                  =        mLocationService->location(obj_id);
               mocd.bnds                 =          mLocationService->bounds(obj_id);
               mocd.serviceConnection    =                                      true;
-              
+
               mMigratingConnections[obj_id] = mocd;
             }
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
-            
+
             mObjects.erase(obj_id);
 
         }
@@ -707,7 +707,7 @@ void Server::checkObjectMigrations()
   This function migrates an object to this server that was in the process of migrating away from this server (except the killconn message hasn't come yet.
 
   Assumes that checks that the object was in migration have occurred
-  
+
 */
 void Server::processAlreadyMigrating(const UUID& obj_id)
 {
@@ -718,14 +718,14 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         return;
     }
 
-    
+
     ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
     if (migration_map_it == mObjectMigrations.end())
     {
         return;
     }
 
-    
+
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
     CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
@@ -751,7 +751,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
 
 
-       
+
     // Handle any data packed into the migration message for space components
     for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
         CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
@@ -774,7 +774,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
  //change the boolean value associated with object so that you know not to keep servicing the connection associated with this object in mMigratingConnections
    mMigratingConnections[obj_id].serviceConnection = false;
 
-  
+
     // Allow the forwarder to deliver to this connection
     mForwarder->addObjectConnection(obj_id, obj_conn);
 
@@ -796,7 +796,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
         serializePBJMessage(response_container)
     );
     obj_conn->send( obj_response );
-  
+
 }
 
 
@@ -821,8 +821,8 @@ void Server::killObjectConnection(const UUID& obj_id)
   //the rest assumes that we are dealing with a non-dummy implementation.
   //(For example, a craq implementation.)
 
-  
-  
+
+
   MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
   if (objConMapIt != mMigratingConnections.end())
@@ -846,7 +846,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
     mContext->trace()->objectMigrationRoundTrip(mContext->time, obj_id, mContext->id(), migTo , timeTakenMs);
-          
+
     mMigratingConnections.erase(objConMapIt);
   }
 }

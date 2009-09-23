@@ -64,20 +64,13 @@ static UUID packUUID(const uint64 packid) {
 }
 
 ObjectFactory::ObjectFactory(const BoundingBox3f& region, const Duration& duration)
- : mContext(NULL)
+ : mContext(NULL),
+   mLocalIDSource(0)
 {
-    String type = GetOption(OBJECT_FACTORY)->as<String>();
-
-    if (type == "random") {
-        generateRandomObjects(region, duration);
-    }
-    else if (type == "pack") {
-        generatePackObjects(region, duration);
-    }
-    else {
-        SILOG(objectfactory,error,"Unknown object factory type: " << type);
-        assert(false);
-    }
+    // Note: we do random second in order make sure they get later connect times
+    generatePackObjects(region, duration);
+    generateRandomObjects(region, duration);
+    setConnectTimes();
 }
 
 ObjectFactory::~ObjectFactory() {
@@ -100,7 +93,8 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects              =     GetOption("objects")->as<uint32>();
+    uint32 nobjects              = GetOption(OBJECT_NUM_RANDOM)->as<uint32>();
+    if (nobjects == 0) return;
     bool simple                  =   GetOption(OBJECT_SIMPLE)->as<bool>();
     bool only_2d                 =       GetOption(OBJECT_2D)->as<bool>();
     float zfactor                =                  (only_2d ? 0.f : 1.f);
@@ -123,6 +117,8 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
 
         float bounds_radius = (simple ? 10.f : (randFloat()*20));
 
+        inputs->localID = mLocalIDSource++;
+
         if (motion_path_type == "static")//static
             inputs->motion = new StaticMotionPath(start, startpos);
         else if (motion_path_type == "drift") //drift
@@ -135,6 +131,7 @@ void ObjectFactory::generateRandomObjects(const BoundingBox3f& region, const Dur
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
         inputs->registerQuery = (randFloat() <= percent_queriers);
         inputs->queryAngle = SolidAngle(SolidAngle::Max / 900.f); // FIXME how to set this? variability by objects?
+        inputs->connectAt = Duration::seconds(0.f);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
@@ -160,7 +157,8 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
     Time end = start + duration;
     Vector3f region_extents = region.extents();
 
-    uint32 nobjects = GetOption("objects")->as<uint32>();
+    uint32 nobjects = GetOption(OBJECT_NUM_PACK)->as<uint32>();
+    if (nobjects == 0) return;
     String pack_filename = GetOption(OBJECT_PACK)->as<String>();
 
     FILE* pack_file = fopen(pack_filename.c_str(), "rb");
@@ -202,16 +200,27 @@ void ObjectFactory::generatePackObjects(const BoundingBox3f& region, const Durat
         Vector3f startpos((float)x, (float)y, (float)z);
         float bounds_radius = (float)rad;
 
+        inputs->localID = mLocalIDSource++;
         inputs->motion = new StaticMotionPath(start, startpos);
         inputs->bounds = BoundingSphere3f( Vector3f(0, 0, 0), bounds_radius );
         inputs->registerQuery = false;
         inputs->queryAngle = SolidAngle::Max;
+        inputs->connectAt = Duration::seconds(0.f);
 
         mObjectIDs.insert(id);
         mInputs[id] = inputs;
     }
 
     fclose(pack_file);
+}
+
+void ObjectFactory::setConnectTimes() {
+    Duration total_duration = GetOption(OBJECT_CONNECT_PHASE)->as<Duration>();
+
+    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+        ObjectInputs* inputs = it->second;
+        inputs->connectAt = total_duration * ((float)inputs->localID/(float)mLocalIDSource);
+    }
 }
 
 void ObjectFactory::initialize(const ObjectHostContext* ctx) {
@@ -291,9 +300,8 @@ void ObjectFactory::tick() {
             continue;
         }
 
-        // Inactive objects get checked to see if they have moved into this server region
-        if (true) { // FIXME always start connection on first tick, should have some starting time or something
-            // The object has moved into the region, so start its connection process
+        // Inactive objects are checked to see if they are ready to connect
+        if (mInputs[*it]->connectAt <= (t - Time::null())) {
             Object* obj = object(*it);
             obj->connect();
         }

@@ -60,7 +60,9 @@
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"
 
-#define OBJECT_FACTORY       "object.factory"
+#define OBJECT_NUM_RANDOM    "object.num.random"
+#define OBJECT_NUM_PACK      "object.num.pack"
+#define OBJECT_CONNECT_PHASE "object.connect"
 #define OBJECT_STATIC        "object.static"
 #define OBJECT_SIMPLE        "object.simple"
 #define OBJECT_2D            "object.2d"

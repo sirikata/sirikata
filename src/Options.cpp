@@ -50,7 +50,6 @@ void InitOptions() {
 
         .addOption(new OptionValue("id", "1", Sirikata::OptionValueType<ServerID>(), "Server ID for this server"))
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
-        .addOption(new OptionValue("objects", "100", Sirikata::OptionValueType<uint32>(), "Number of objects to simulate"))
         .addOption(new OptionValue("region", "<<-100,-100,-100>,<100,100,100>>", Sirikata::OptionValueType<BoundingBox3f>(), "Simulation region"))
         .addOption(new OptionValue("layout", "<2,1,1>", Sirikata::OptionValueType<Vector3ui32>(), "Layout of servers in uniform grid - ixjxk servers"))
         .addOption(new OptionValue("max-servers", "0", Sirikata::OptionValueType<uint32>(), "Maximum number of servers available for the simulation; if set to 0, use the number of servers specified in the layout option"))
@@ -93,7 +92,9 @@ void InitOptions() {
         .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
         .addOption(new OptionValue(OBJECT_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each object."))
 
-        .addOption(new OptionValue(OBJECT_FACTORY, "random", Sirikata::OptionValueType<String>(), "Type of objects the object factory should generate.  Options are currently random, which does everything randomly, or pack, which reads object parameters from an object pack."))
+        .addOption(new OptionValue(OBJECT_NUM_RANDOM, "100", Sirikata::OptionValueType<uint32>(), "Number of random objects to generate."))
+        .addOption(new OptionValue(OBJECT_NUM_PACK, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))
+        .addOption(new OptionValue(OBJECT_CONNECT_PHASE, "0s", Sirikata::OptionValueType<Duration>(), "Length of time to initiate connections over. Connection requests will be uniformly distributed."))
         .addOption(new OptionValue(OBJECT_STATIC, "random", Sirikata::OptionValueType<String>(), "Whether objects should be static (static) or move randomly (randome) or drift in one direction (drift)."))
       .addOption(new OptionValue(OBJECT_DRIFT_X, "0",Sirikata::OptionValueType<float>(), "If select drift for motion path (under OBJECT_STATIC), then this is the x component of all objects' drifts"))
       .addOption(new OptionValue(OBJECT_DRIFT_Y, "0",Sirikata::OptionValueType<float>(), "If select drift for motion path (under OBJECT_STATIC), then this is the y component of all objects' drifts"))

@@ -252,6 +252,7 @@ void ObjectHost::randomPing(const Time&t) {
   
     Object * a=randomObject();
     Object * b=randomObject();
+    if (a == NULL || b == NULL) return;
     ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
 }
 void ObjectHost::sendTestMessage(const Time&t, float idealDistance){

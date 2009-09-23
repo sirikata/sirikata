@@ -13,21 +13,23 @@ CBR_WRAPPER = "./cbr_wrapper.sh"
 # User parameters
 class ClusterSimSettings:
     def __init__(self, space_svr_pool, layout, num_object_hosts):
-        self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
         self.duration = '55s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 100
-        self.num_objects = 1000
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
         self.object_queue_length = 8192
 
-        self.object_factory_type = 'random'
+        # OH: basic oh settings
+        self.num_oh = num_object_hosts
+        self.object_connect_phase = '0s'
 
+        # OH: random object generation settings
+        self.num_random_objects = 100
         self.object_static = 'random'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
@@ -36,7 +38,10 @@ class ClusterSimSettings:
         self.object_2d = 'true'
         self.object_global = 'false'
 
+        # OH: pack object generation settings
+        self.num_pack_objects = 0
         self.object_pack = '/home/meru/data/objects.pack'
+
 
         self.blocksize = 200
         self.center = (0, 0, 0)
@@ -109,21 +114,25 @@ class ClusterSim:
         class_params = {}
         return (params, class_params)
 
+    def oh_objects_per_server(self):
+        return self.settings.num_random_objects + self.settings.num_pack_objects
+
     def oh_parameters(self):
         params = [
             '--ohid=%(node)d ',
-            '--object.factory=' + self.settings.object_factory_type,
-            '--objects=' + str(self.settings.num_objects),
+            '--object.connect=' + self.settings.object_connect_phase,
+            '--object.num.random=' + str(self.settings.num_random_objects),
             '--object.static=' + self.settings.object_static,
             '--object.simple=' + self.settings.object_simple,
             '--object.2d=' + self.settings.object_2d,
             '--object.global=' + self.settings.object_global,
+            '--object.num.pack=' + str(self.settings.num_pack_objects),
             '--object.pack=' + self.settings.object_pack,
             '%(packoffset)s',
             ]
         class_params = {
             'packoffset' : {
-                'oh' : lambda index : ['--object.pack-offset=' + str(index*self.settings.num_objects)]
+                'oh' : lambda index : ['--object.pack-offset=' + str(index*self.oh_objects_per_server())]
                 }
             }
         return (params, class_params)
@@ -258,7 +267,7 @@ class ClusterSim:
                 "--object_drift_x=" + self.settings.object_drift_x,
                 "--object_drift_y=" + self.settings.object_drift_y,
                 "--object_drift_z=" + self.settings.object_drift_z,
-            
+
                 ])
         cmd_seq.extend(oh_params)
         cmd_seq.extend(vis_params)

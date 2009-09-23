@@ -47,10 +47,12 @@ class ObjectHostContext;
 class ObjectFactory {
     typedef std::set<UUID> ObjectIDSet;
     struct ObjectInputs {
+        uint32 localID;
         MotionPath* motion;
         BoundingSphere3f bounds;
         bool registerQuery;
         SolidAngle queryAngle;
+        Duration connectAt;
     };
     typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
     typedef std::map<UUID, Object*> ObjectMap;
@@ -81,6 +83,8 @@ public:
 private:
     void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
+    // Generates connection initiation times for all objects *after* they have been created
+    void setConnectTimes();
 
     bool registerQuery(const UUID& id);
     SolidAngle queryAngle(const UUID& id);
@@ -92,6 +96,7 @@ private:
     void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
 
     const ObjectHostContext* mContext;
+    uint32 mLocalIDSource;
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;
     ObjectMap mObjects;

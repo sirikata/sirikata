@@ -65,7 +65,6 @@ int main(int argc, char** argv) {
 
     MaxDistUpdatePredicate::maxDist = GetOption(MAX_EXTRAPOLATOR_DIST)->as<float64>();
 
-    uint32 nobjects = GetOption("objects")->as<uint32>();
     BoundingBox3f region = GetOption("region")->as<BoundingBox3f>();
     Vector3ui32 layout = GetOption("layout")->as<Vector3ui32>();
 
