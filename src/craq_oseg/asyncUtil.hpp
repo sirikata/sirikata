@@ -4,6 +4,7 @@
 #include <string>
 
 
+
 namespace CBR
 {
 
@@ -37,7 +38,7 @@ const char CRAQ_DATA_TO_SET_SIZE[]      = " 12";
 const int  CRAQ_DATA_TO_SET_SIZE_SIZE   =     3; //There are 3 digits in the above.
 const int  CRAQ_SERVER_SIZE             =    10;
 const int  CRAQ_TO_SET_SUFFIX_SIZE      =     2;
-const char CRAQ_TO_SET_SUFFIX[]         =  "YY";
+const char CRAQ_TO_SET_SUFFIX[]         =  "ND";
 const int  CRAQ_DATA_VALUE_SIZE         =    12;
 typedef char CraqDataValue [CRAQ_DATA_VALUE_SIZE];
 
@@ -52,6 +53,8 @@ const int CRAQ_DATA_SET_SIZE       = CRAQ_DATA_SET_PREFIX_SIZE + CRAQ_DATA_KEY_S
 
 typedef char CraqDataSetQuery[CRAQ_DATA_SET_SIZE];  //this is what actually goes out to the router.
 
+
+const char CRAQ_NOT_FOUND_RESP[] = "NOT_FOUND";
 
 
 const int CRAQ_DATA_GET_RESP_SIZE         = 52;
@@ -98,7 +101,8 @@ struct CraqDataSetGet
   CraqDataSetGet(CraqDataKey dKey,int dKeyValue,bool tMessage,TypeMessage message_type);
 };
 
-}
+
+}//end namespace
 
 #endif
 

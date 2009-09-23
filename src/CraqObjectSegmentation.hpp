@@ -49,6 +49,7 @@ namespace CBR
     int numCraqLookups;
     int numTimeElapsedCacheEviction;
     int numMigrationNotCompleteYet;
+    int numAlreadyLookingUp;
     
     std::map<std::string, UUID > mapDataKeyToUUID;
     //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
@@ -73,8 +74,20 @@ namespace CBR
     void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
     void basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
+    void notFoundFunction(CraqOperationResult* nf); //this function tells us what to do with all the ids that just weren't found in craq.
+
+    struct NotFoundData
+    {
+      Duration dur;
+      UUID obj_id;
+    };
+    typedef std::queue<NotFoundData*> NfDataQ;
+    NfDataQ mNfData;
+    void checkNotFoundData();
     
-    AsyncCraq craqDht;
+    
+    AsyncCraq craqDhtGet;
+    AsyncCraq craqDhtSet;
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
     std::vector <UUID> mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
@@ -96,8 +109,10 @@ namespace CBR
     ServerID satisfiesCache(const UUID& obj_id);
     
   public:
-      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
+    //      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
+    CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID);
 
+    
 
     virtual ~CraqObjectSegmentation();
     virtual ServerID lookup(const UUID& obj_id);

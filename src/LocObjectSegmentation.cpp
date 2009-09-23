@@ -13,13 +13,13 @@ namespace CBR
   /*
     Constructor
   */
-  //  LocObjectSegmentation::LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service)
-  //  LocObjectSegmentation::LocObjectSegmentation(CoordinateSegmentation* cseg, LocationService* loc_service,std::vector<ServID> serverList,std::map<UUID,ServID> objectToServerMap)
-LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap)
+  //LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap)
+  LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap, Forwarder* fder)
  : ObjectSegmentation(ctx),
    mCSeg (cseg),
    mLocationService(loc_service),
-   mObjectToServerMap(objectToServerMap)
+   mObjectToServerMap(objectToServerMap),
+   mForwarder(fder)
   {
 
   }
@@ -46,10 +46,14 @@ LocObjectSegmentation::LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmen
   /*
     Lookup server id based on check with location service and mcseg.
   */
-  //  ServerID LocObjectSegmentation::lookup(const UUID& obj_id) const
-  //  void LocObjectSegmentation::lookup(const UUID& obj_id) const
   ServerID LocObjectSegmentation::lookup(const UUID& obj_id)
   {
+    if (mForwarder->getObjectConnection(obj_id) != NULL)
+    {
+      return mContext->id();
+    }
+
+    
       if (mLocationService->contains(obj_id)) {
           Vector3f pos = mLocationService->currentPosition(obj_id);
           ServerID sid = mCSeg->lookup(pos);

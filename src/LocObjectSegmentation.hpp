@@ -28,9 +28,10 @@ namespace CBR
     LocationService* mLocationService; //will be used in lookup call
     std::map<UUID,ServerID> mObjectToServerMap;  //initialized with this
 
+    Forwarder* mForwarder; //bftm delete this
 
   public:
-      LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap);
+      LocObjectSegmentation(SpaceContext* ctx, CoordinateSegmentation* cseg, LocationService* loc_service,std::map<UUID,ServerID> objectToServerMap, Forwarder* fder);
     virtual ~LocObjectSegmentation();
     virtual ServerID lookup(const UUID& obj_id);
 

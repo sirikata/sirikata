@@ -24,39 +24,66 @@
 namespace CBR
 {
 
+  
   /*
     Basic constructor
   */
-CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char prefixID)
+  CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID)
  : ObjectSegmentation(ctx),
    mCSeg (cseg)
 {
+  
     //registering with the dispatcher.  can now receive messages addressed to it.
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_MOVE,this);
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE,this);
     mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_UPDATE_OSEG, this);
+
+
+    //    craqDht.initialize(initArgs);
     
-    craqDht.initialize(initArgs);
+    craqDhtGet.initialize(getInitArgs);
+    craqDhtSet.initialize(setInitArgs);
+    
+    std::vector<CraqOperationResult*> getResults1;
+    std::vector<CraqOperationResult*> trackedSetResults1;
 
-    std::vector<CraqOperationResult*> getResults;
-    std::vector<CraqOperationResult*> trackedSetResults;
+    std::vector<CraqOperationResult*> getResults2;
+    std::vector<CraqOperationResult*> trackedSetResults2;
 
+    
     myUniquePrefixKey = prefixID;
 
 
     std::map<UUID,ServerID> dummy;
     //500 ticks put here to allow lots of connections to be made
     //    for (int s=0; s < 500; ++s)
-    for (int s=0; s < 5000; ++s)
+//     for (int s=0; s < 2000; ++s)
+//     {
+//       craqDhtGet.tick(getResults1,trackedSetResults1);
+//       processCraqTrackedSetResults(trackedSetResults1, dummy);
+
+//       for (int t=0; t < (int)getResults1.size(); ++t)
+//       {
+//         delete getResults1[t];
+//       }
+
+      
+//       craqDhtSet.tick(getResults2,trackedSetResults2);
+//       processCraqTrackedSetResults(trackedSetResults2, dummy);
+
+//       for (int t=0; t < (int)getResults2.size(); ++t)
+//       {
+//         delete getResults2[t];
+//       }
+      
+//     }
+
+    iteratedWait(2000, getResults1, trackedSetResults1);
+    processCraqTrackedSetResults(trackedSetResults2, dummy);
+    
+    for (int t=0; t < (int)getResults1.size(); ++t)
     {
-      craqDht.tick(getResults,trackedSetResults);
-      processCraqTrackedSetResults(trackedSetResults, dummy);
-
-      for (int t=0; t < (int)getResults.size(); ++t)
-      {
-        delete getResults[t];
-      }
-
+      delete getResults1[t];
     }
 
     numCacheHits     = 0;
@@ -65,36 +92,45 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
     numCraqLookups   = 0;
     numTimeElapsedCacheEviction = 0;
     numMigrationNotCompleteYet  = 0;
-
+    numAlreadyLookingUp         = 0;
     
 
-    CraqDataKey obj_id_as_dht_key;
-    //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
-    for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
-    {
-      convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
+//     CraqDataKey obj_id_as_dht_key;
+//     //start loading the objects that are in vectorOfObjectsInitializedOnThisServer into the dht.
+//     for (int s=0;s < (int)vectorOfObjectsInitializedOnThisServer.size(); ++s)
+//     {
+//       convert_obj_id_to_dht_key(vectorOfObjectsInitializedOnThisServer[s],obj_id_as_dht_key);
 
-      //      CraqDataSetGet cdSetGet(vectorOfObjectsInitializedOnThisServer[s].rawHexData(), mContext->id,false,CraqDataSetGet::SET);
-      CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id(),false,CraqDataSetGet::SET);
-      craqDht.set(cdSetGet);
-      printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
+//       CraqDataSetGet cdSetGet(obj_id_as_dht_key, mContext->id(),false,CraqDataSetGet::SET);
+//       craqDht.set(cdSetGet);
+//       printf("\nObject %i of %i\n",s+1,(int)(vectorOfObjectsInitializedOnThisServer.size()) );
 
-      mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
-    }
+//       mObjects.push_back(vectorOfObjectsInitializedOnThisServer[s]);        //also need to load those objects into local object storage.
+//     }
+
+    
     
     //50 ticks to update
-    for (int s=0; s < 3000; ++s)
-    {
-      craqDht.tick(getResults,trackedSetResults);
-      processCraqTrackedSetResults(trackedSetResults, dummy);
+//     for (int s=0; s < 2000; ++s)
+//     {
+//       craqDhtGet.tick(getResults1,trackedSetResults1);
+//       processCraqTrackedSetResults(trackedSetResults1, dummy);
 
-      for (int t=0; t < (int)getResults.size(); ++t)
-      {
-        delete getResults[t];
-      }
-    }
+//       for (int t=0; t < (int)getResults1.size(); ++t)
+//       {
+//         delete getResults1[t];
+//       }
 
-    
+//       craqDhtSet.tick(getResults2,trackedSetResults2);
+//       processCraqTrackedSetResults(trackedSetResults2, dummy);
+
+//       for (int t=0; t < (int)getResults2.size(); ++t)
+//       {
+//         delete getResults2[t];
+//       }
+      
+//     }
+
     mTimer.start();
   }
 
@@ -109,6 +145,11 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
     std::cout<<"\n\n\nIN DESTRUCTOR \n\n";
     mContext->trace()->processOSegShutdownEvents(mContext->time,mContext->id(), numLookups,numOnThisServer,numCacheHits, numCraqLookups, numTimeElapsedCacheEviction,    numMigrationNotCompleteYet);
+
+    printf("\n\nREMAINING IN QUEUE GET:  %i     SET:  %i\n\n", (int) craqDhtGet.queueSize(),(int) craqDhtSet.queueSize());
+    fflush(stdout);
+    printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
+    fflush(stdout);
   }
 
 
@@ -223,13 +264,14 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
+
     ++numLookups;
     
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
       ++numOnThisServer;
       return mContext->id();
-            //return NullServerID;
+
     }
 
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
@@ -268,8 +310,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       mapDataKeyToUUID[indexer] = tmper; //changed here.
 
-      craqDht.get(cdSetGet); //calling the craqDht to do a get.
+      //      craqDht.get(cdSetGet); //calling the craqDht to do a get.
+      craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
 
+      
       mContext->trace()->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id());
       //      mContext->trace->objectSegmentationLookupRequest(timerDur.toMilliseconds(), obj_id, mContext->id);
 
@@ -282,7 +326,12 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
     }
-
+    else
+    {
+      ++numAlreadyLookingUp;
+    }
+    
+    
     //means that we have to perform an external craq lookup
     return NullServerID;
 
@@ -333,37 +382,36 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* ctx, CoordinateSeg
         mReceivingObjects.push_back(obj_id);  //means that this object has been pushed to this server, but its migration isn't complete yte.
       }
 
-
       TrackedSetResultsData tsrd;
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
       tsrd.dur       = mTimer.elapsed();
       
-      int trackID = craqDht.set(cdSetGet);
+      //      int trackID = craqDht.set(cdSetGet);
+      int trackID = craqDhtSet.set(cdSetGet);
       //      trackingMessages[trackID] = generateAcknowledgeMessage(obj_id, idServerAckTo);
       trackingMessages[trackID] = tsrd;
       
     }
     else
     {
-
       CraqDataKey cdk;
       convert_obj_id_to_dht_key(obj_id,cdk);
 
-      //      CraqDataSetGet cdSetGet(obj_id.rawHexData(), mContext->id ,false,CraqDataSetGet::SET);
       CraqDataSetGet cdSetGet(cdk, mContext->id() ,false,CraqDataSetGet::SET);
-      int trackID = craqDht.set(cdSetGet);
+      //      int trackID = craqDht.set(cdSetGet);
+      int trackID = craqDhtSet.set(cdSetGet);
 
-
+      
       if (std::find(mObjects.begin(), mObjects.end(), obj_id) == mObjects.end())
-        //      if (mObjects.find(obj_id) == mObjects.end())
       {
         mObjects.push_back(obj_id);
-        std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n\n";
-        
+        std::cout<<"\n\nAdding object:  "<<obj_id.toString()<<"\n";
       }
+
     }
   }
 
+  
 
   /*
     If we get a message to move an object that our server holds, then we add the object's id to mInTransit.
@@ -532,7 +580,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   std::vector<CraqOperationResult*> getResults;
   std::vector<CraqOperationResult*> trackedSetResults;
 
-  craqDht.tick(getResults,trackedSetResults);
+  craqDhtGet.tick(getResults,trackedSetResults);
 
   for (int s=0; s < (int)getResults.size(); ++s)
   {
@@ -543,6 +591,24 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   {
     allTrackedResults.push_back(trackedSetResults[s]);
   }
+
+
+  std::vector<CraqOperationResult*> getResults2;
+  std::vector<CraqOperationResult*> trackedSetResults2;
+
+  craqDhtSet.tick(getResults2,trackedSetResults2);
+
+  for (int s=0; s < (int)getResults2.size(); ++s)
+  {
+    allGetResults.push_back(getResults2[s]);
+  }
+
+  for (int s= 0; s < (int)trackedSetResults2.size(); ++s)
+  {
+    allTrackedResults.push_back(trackedSetResults2[s]);
+  }
+
+  
 }
 
 
@@ -554,6 +620,9 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
+
+    checkNotFoundData();
+    
     static Timer servTimer;
     static uint numTicks = 0;
     static uint numTicksGreaterThanMs = 0;
@@ -586,7 +655,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    iteratedWait(4, getResults,trackedSetResults);
+    iteratedWait(6, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults);
 
     Duration tickDur = osegServiceDurTimer.elapsed();
@@ -600,9 +669,24 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     int sizeGetRes  = (int) getResults.size();
     int sizeTracked = (int) trackedSetResults.size();
 
+    if (sizeGetRes != 0)
+    {
+      std::cout<<"\n\nGot a bunch of responses" <<sizeGetRes <<"\n\n";
+      std::cout<<"\n\nNum remaining in queue get:  "<<craqDhtGet.queueSize()<<"     set:  " << craqDhtSet.queueSize()<<"    time:  "<< mContext->time.raw() <<"\n\n";
+    }
+
+    
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
     {
+      if (getResults[s]->servID == NullServerID)
+      {
+        notFoundFunction(getResults[s]);
+        delete getResults[s];
+        continue;
+      }
+
+      
       updated[mapDataKeyToUUID[getResults[s]->idToString()]]  = getResults[s]->servID;
 
       UUID tmper = mapDataKeyToUUID[getResults[s]->idToString()];
@@ -621,7 +705,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
-        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDht.queueSize()  );
+        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDhtGet.queueSize()  );
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {
@@ -780,6 +864,62 @@ int CraqObjectSegmentation::getOSegType()
 }
 
 
+//this function tells us what to do with all the ids that just weren't found in craq.
+void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
+{
+  //turn the id into a uuid and then push it onto the end of  mNfData queue.
+
+  if (mapDataKeyToUUID.find(nf->idToString()) == mapDataKeyToUUID.end())
+    return; //means that we really have no record of this objects' even having been requested.
+
+
+  NotFoundData* nfd = new NotFoundData();
+  nfd->obj_id =  mapDataKeyToUUID[nf->idToString()];
+  nfd->dur    =  mTimer.elapsed();
+  mNfData.push(nfd);
+}
+
+
+//this function tells us if there are any ids that have waited long enough for it to be safe to query for the again.
+void CraqObjectSegmentation::checkNotFoundData()
+{
+  //look at the first element of the queue.  if the time hasn't been sufficiently long, return.  if the time has been sufficiently long, then go ahead and directly request asyncCraq to perform another lookup.
+
+  if (mNfData.size() == 0)
+    return;
+  
+  Duration tmpDur = mTimer.elapsed();
+
+
+  bool queueDataOldEnough = true;
+  NotFoundData* nfd;
+  
+  while (queueDataOldEnough)
+  {
+    nfd = mNfData.front();
+    if ((tmpDur.toMilliseconds() - nfd->dur.toMilliseconds()) > 500) //we wait 500 ms.
+    {
+      queueDataOldEnough = true;
+
+      //perform a direct craq get call
+      std::string indexer = "";
+      indexer.append(1,myUniquePrefixKey);
+      indexer.append(nfd->obj_id.rawHexData());
+
+      CraqDataSetGet cdSetGet (indexer,0,false,CraqDataSetGet::GET); //bftm modified
+      craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.    
+
+      mNfData.pop(); //remove the item from the queue.
+
+
+      std::cout<<"\n\nbftm debug  I'm releasing one; obj_id:  "<<nfd->obj_id.toString()<<"\n";
+      
+      delete nfd; //memory managment
+    }
+
+    queueDataOldEnough = queueDataOldEnough && (mNfData.size() > 0);  //don't keep going if you're out of objects.
+  }
+}
 
 
 }//namespace CBR

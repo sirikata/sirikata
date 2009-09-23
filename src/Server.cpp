@@ -273,6 +273,8 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
     mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
     //update our oseg to show that we know that we have this object now.
     mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
+
+    
     // Register proximity query
     if (connect_msg.has_query_angle())
         mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));

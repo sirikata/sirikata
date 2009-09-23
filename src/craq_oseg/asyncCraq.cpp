@@ -8,9 +8,9 @@
 #include "asyncConnection.hpp"
 
 
-
 namespace CBR
 {
+
 
 //nothing to destroy
 AsyncCraq::~AsyncCraq()
@@ -69,9 +69,14 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       percentageConnectionsServed = ((double)s)/((double) CRAQ_NUM_CONNECTIONS);
       whichRouterServing = (int)(percentageConnectionsServed*((double)ipAddPort.size()));
 
+      //      whichRouterServing = 0; //bftm debug
+
+      
       if (whichRouterServing  != whichRouterServingPrevious)
       {
         boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
+      
+        
         iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
         whichRouterServingPrevious = whichRouterServing;
@@ -283,6 +288,8 @@ void AsyncCraq::reInitializeNode(int s)
     double percentageConnectionsServed = ((double)s)/((double) CRAQ_NUM_CONNECTIONS);
     int whichRouterServing = (int)(percentageConnectionsServed*((double)mIpAddPort.size()));
 
+    //    whichRouterServing = 0; //bftm debug
+    
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[whichRouterServing].ipAdd.c_str(), mIpAddPort[whichRouterServing].port.c_str());
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
@@ -292,9 +299,8 @@ void AsyncCraq::reInitializeNode(int s)
 }
 
 
+
 }
-
-
 
 
 

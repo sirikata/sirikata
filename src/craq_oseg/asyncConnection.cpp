@@ -2,9 +2,9 @@
 #include <iostream>
 #include <boost/bind.hpp>
 
+
 namespace CBR
 {
-
 
 AsyncConnection::AsyncConnection()
 {
@@ -156,6 +156,9 @@ bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, i
   CraqDataSetQuery dsQuery;    
   strncpy(dsQuery,query.c_str(), CRAQ_DATA_SET_SIZE);
 
+  //  std::cout<<"\nbftm debug:  this is the set query:  "<<dsQuery<<"\n";
+
+  
   //creating callback for write function
   mSocket->async_write_some(boost::asio::buffer(dsQuery,CRAQ_DATA_SET_SIZE -2),
                             boost::bind(&AsyncConnection::write_some_handler_set,this,_1,_2));
@@ -171,7 +174,7 @@ void AsyncConnection::write_some_handler_set(  const boost::system::error_code& 
   if (error)
   {
     //had trouble with this write.
-    std::cout<<"\n\n\nHAD PROBLEMS IN ASYNC_CONNECTION WITH THIS WRITE\n\n\n";
+    std::cout<<"\nHAD PROBLEMS IN ASYNC_CONNECTION WITH THIS WRITE\n";
     mReady = NEED_NEW_SOCKET;
 
     mSocket->close();
@@ -208,6 +211,8 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
       //means that we need to save this query
 
 
+      //      std::cout<<"\nbftm debug.  Wrote value for "<<currentlySearchingFor<<".  This is line:  "<<line <<"\n";
+      
       
       CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
       mOperationResultTrackedSetsVector.push_back(tmper);
@@ -218,8 +223,9 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
   else
   {
     //something besides stored was returned...indicates an error.
-    std::cout<<"\n\nbftm debug: There was an error in asyncConnection.cpp under read_handler_set:\n\n";
-    std::cout<<"\n\nThis is line:   "<<line<<"\n\n";
+    std::cout<<"\n\nbftm debug: There was an error in asyncConnection.cpp under read_handler_set:  ";
+    std::cout<<"This is line:   "<<line<<" ";
+    std::cout<<"The error was for object with id:   "<<currentlySearchingFor<<"\n\n";
 
     mReady = NEED_NEW_SOCKET;
 
@@ -257,10 +263,13 @@ bool AsyncConnection::get(CraqDataKey dataToGet)
   
   boost::asio::streambuf * sBuff = new boost::asio::streambuf;
 
+  const boost::regex reg ("(ND\r\n|ERROR\r\n)");  //read until error or get a response back.  (Note: ND is the suffix attached to set values so that we know how long to read.
+
   //sets read handler
   boost::asio::async_read_until((*mSocket),
                                 (*sBuff),
-                                boost::regex("YY\r\n"),
+                                //                                boost::regex("ND\r\n"),
+                                reg,
                                 boost::bind(&AsyncConnection::read_handler_get,this,_1,_2,sBuff));
 
   //crafts query
@@ -272,6 +281,9 @@ bool AsyncConnection::get(CraqDataKey dataToGet)
   CraqDataKeyQuery dkQuery;
   strncpy(dkQuery,query.c_str(), CRAQ_DATA_KEY_QUERY_SIZE);
 
+
+  //  std::cout<<"\nThis is get query:  "<<dkQuery<<"\n";
+  
 
   //sets write handler
   mSocket->async_write_some(boost::asio::buffer(dkQuery,CRAQ_DATA_KEY_QUERY_SIZE-1),
@@ -337,7 +349,7 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
     
     bool getResp = false;
   
-    if (((int)line.size()) >= CRAQ_GET_RESP_SIZE)
+    if (((int)line.size()) >= CRAQ_GET_RESP_SIZE) //if long enough to be a get response.
     {
       getResp = true;
       
@@ -358,29 +370,47 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
           }
         }
 
+        //bftm mod
+
         CraqOperationResult* tmper  = new CraqOperationResult (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
         mOperationResultVector.push_back(tmper);
-      }
+      } //added here.
     }
     
     
     if (!getResp)
     {
-      //    mOperationResultErrorVector();
-      std::cout<<"\n\nbftm debug: ERROR in asyncConnection.cpp under read_handler_get\n\n";
-      std::cout<<"This is line:    "<<line<<"\n\n";
 
-      mReady = NEED_NEW_SOCKET;
+      if (line.find(CRAQ_NOT_FOUND_RESP) != std::string::npos)
+      {
+        mReady = READY;
+        std::cout<<"\n\nUnknown!  "<<"line:  "<<line<<"  Will try again later to find object:  " << currentlySearchingFor  <<"\n\n";
 
-      mSocket->close();
-      delete mSocket;
+        //        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+        //        mOperationResultErrorVector.push_back(tmper);
+
+        CraqOperationResult* tmper = new CraqOperationResult(0,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::GET,mTracking); //false means that it didn't succeed...but we're just saying that the index was at 0
+        mOperationResultVector.push_back(tmper);
+        delete sBuff;
+      }
+      else
+      {
+        //    mOperationResultErrorVector();
+        std::cout<<"\n\nbftm debug: ERROR in asyncConnection.cpp under read_handler_get\n\n";
+        std::cout<<"This is line:    "<<line<<"\n\n";
+
+        mReady = NEED_NEW_SOCKET;
+
+        mSocket->close();
+        delete mSocket;
     
-      CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
-      mOperationResultErrorVector.push_back(tmper);
+        CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+        mOperationResultErrorVector.push_back(tmper);
     
-      std::cout<<"\n\nGot an error in read_handler_get. not a get response\n\n";
+        std::cout<<"\n\nGot an error in read_handler_get. not a get response\n\n";
 
-      delete sBuff;
+        delete sBuff;
+      }
     }
     else
     {
@@ -392,4 +422,4 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
   
 }
 
-}
+}//namespace

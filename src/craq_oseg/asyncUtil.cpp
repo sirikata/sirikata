@@ -3,7 +3,6 @@
 
 namespace CBR
 {
-
   CraqOperationResult::CraqOperationResult(int sID,CraqDataKey obj_id, int tm, bool suc, GetOrSet gos, bool track_or_not)
   {
     servID = sID;
@@ -39,5 +38,5 @@ namespace CBR
     messageType     =   message_type;
   }
 
+}//namespace
 
-}

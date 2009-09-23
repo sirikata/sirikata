@@ -57,7 +57,6 @@ private:
   void read_handler_get ( const boost::system::error_code& error, std::size_t bytes_transferred, boost::asio::streambuf* sBuff);
 };
 
-
-}
+}//end namespace
   
 #endif

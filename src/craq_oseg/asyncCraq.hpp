@@ -11,10 +11,8 @@
 #define __ASYNC_CRAQ_CLASS_H__
 
 
-
 namespace CBR
 {
-
 
 
 class AsyncCraq
@@ -64,7 +62,9 @@ private:
   
 };
 
-}
+}//namespece
+  
+
 #endif
 
 

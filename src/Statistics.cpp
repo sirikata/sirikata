@@ -43,16 +43,17 @@
 
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
-//#define TRACE_OSEG
+#define TRACE_OSEG
 //#define TRACE_CSEG
-//#define TRACE_MIGRATION
+#define TRACE_MIGRATION
 #define TRACE_DATAGRAM
 #define TRACE_PACKET
 #define TRACE_PING
-//#define TRACE_MESSAGE
-//#define TRACE_ROUND_TRIP_MIGRATION_TIME
-//#define TRACE_OSEG_TRACKED_SET_RESULTS
-//#define TRACE_OSEG_SHUTTING_DOWN
+#define TRACE_MESSAGE
+#define TRACE_ROUND_TRIP_MIGRATION_TIME
+#define TRACE_OSEG_TRACKED_SET_RESULTS
+#define TRACE_OSEG_SHUTTING_DOWN
+
 
 
 namespace CBR {
@@ -501,11 +502,12 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   std::cout<<"\n\n\nGOT INTO PROCESS  OSEG SHUTDOWN EVENT\n\n";
   
   std::cout<<"\n\n**********oseg shutdown:  \n";
-  std::cout<<"\tsid:                  "<<sID<<"\n";
-  std::cout<<"\tnum lookups:          "<<num_lookups<<"\n";
-  std::cout<<"\tnum_on_this_server:   "<<num_on_this_server<<"\n";
-  std::cout<<"\tnum_cache_hits:       "<<num_cache_hits<<"\n";
-  std::cout<<"\tnum_craq_lookups:     "<<num_craq_lookups<<"\n";
+  std::cout<<"\tsid:                              "<<sID<<"\n";
+  std::cout<<"\tnum lookups:                      "<<num_lookups<<"\n";
+  std::cout<<"\tnum_on_this_server:               "<<num_on_this_server<<"\n";
+  std::cout<<"\tnum_cache_hits:                   "<<num_cache_hits<<"\n";
+  std::cout<<"\tnum_craq_lookups:                 "<<num_craq_lookups<<"\n";
+  std::cout<<"\tnum_migration_not_complete_yet:   "<< num_migration_not_complete_yet<<"\n\n";
   std::cout<<"***************************\n\n";
 
   

@@ -80,6 +80,8 @@ CBR::Network* gNetwork = NULL;
 CBR::Trace* gTrace = NULL;
 }
 
+
+
 void *main_loop(void *);
 
 bool is_analysis() {
@@ -472,32 +474,52 @@ void *main_loop(void *) {
       }
 
       //      ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
-      oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
+      oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap,forwarder);
     }
 
     if (oseg_type == OSEG_OPTION_CRAQ)
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
-      for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
-      {
-        UUID obj_id = *it;
-        Vector3f start_pos = loc_service->currentPosition(obj_id);
+//       for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
+//       {
+//         UUID obj_id = *it;
+        
+//         if (loc_service == NULL)
+//         {
+//           std::cout<<"\n\nNULL loc service!!!\n\n";
+//           assert (false);
+//         }
+        
+//         Vector3f start_pos = loc_service->currentPosition(obj_id);
 
-        if (cseg->lookup(start_pos) == server_id)
-        {
-          initServObjVec.push_back(obj_id);
-          std::cout<<obj_id.toString()<<"\n";
-        }
-      }
+//         if (cseg->lookup(start_pos) == server_id)
+//         {
+//           initServObjVec.push_back(obj_id);
+//           std::cout<<obj_id.toString()<<"\n";
+//         }
+//       }
 
-     std::vector<CraqInitializeArgs> craqArgs;
-     CraqInitializeArgs cInitArgs;
 
-     cInitArgs.ipAdd = "localhost";
-     cInitArgs.port  =     "10299";
-     craqArgs.push_back(cInitArgs);
+     std::cout<<"\n\n\nGOT TO MAIN LOOP.  BFTM DEBUG\n\n";
+      
+     std::vector<CraqInitializeArgs> craqArgsGet;
+     CraqInitializeArgs cInitArgs1;
 
+     cInitArgs1.ipAdd = "localhost";
+     cInitArgs1.port  =     "10299";
+     craqArgsGet.push_back(cInitArgs1);
+
+
+     std::vector<CraqInitializeArgs> craqArgsSet;
+     CraqInitializeArgs cInitArgs2;
+     cInitArgs2.ipAdd = "localhost";
+     cInitArgs2.port  =     "10298";
+     craqArgsSet.push_back(cInitArgs2);
+
+     
+
+     
      std::string oseg_craq_prefix=GetOption(OSEG_UNIQUE_CRAQ_PREFIX)->as<String>();
 
      if (oseg_type.size() ==0)
@@ -507,8 +529,8 @@ void *main_loop(void *) {
      }
 
      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
-     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs, oseg_craq_prefix[0]);
-
+     //     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgs, oseg_craq_prefix[0]);
+     oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
 
     }      //end craq approach
 
@@ -615,8 +637,11 @@ void *main_loop(void *) {
 
     TimeProfiler profiler("Main Loop");
     profiler.addStage("Context Update");
+    profiler.addStage("External OSeg I");
     profiler.addStage("Network Service");
+    profiler.addStage("External OSeg II");
     profiler.addStage("CSeg Service");
+    profiler.addStage("External OSeg III");
     profiler.addStage("Server Service");
 
     while( true ) {
@@ -635,8 +660,17 @@ void *main_loop(void *) {
         profiler.startIteration();
 
         space_context->tick(curt); profiler.finishedStage();
+
+        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
+        
         gNetwork->service(curt); profiler.finishedStage();
+
+        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
+        
         cseg->service(); profiler.finishedStage();
+
+        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
+        
         server->service(); profiler.finishedStage();
 
         whole_profiler.finishedStage();
