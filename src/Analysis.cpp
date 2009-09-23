@@ -1166,6 +1166,23 @@ const char* getPacketStageName (uint32 path) {
     }
 
 }
+class PathPair {
+public:
+    Trace::MessagePath first;
+    Trace::MessagePath second;
+    PathPair(const Trace::MessagePath &first,
+              const Trace::MessagePath &second) {
+        this->first=first;
+        this->second=second;
+    }
+    bool operator < (const PathPair&other) const{
+        if (first==other.first) return second<other.second;
+        return first<other.first;
+    }
+    bool operator ==(const PathPair&other) const{
+        return first==other.first&&second==other.second;
+    }
+};
 MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint32 nservers, Filters filter):mFilter(filter) {
     // read in all our data
     mNumberOfServers = nservers;
@@ -1184,18 +1201,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
                 MessageTimestampEvent* tevt = dynamic_cast<MessageTimestampEvent*>(evt);
                 if (tevt != NULL) {
                     MessageLatencyAnalysis::PacketData*pd=&packetFlow[tevt->uid];
-                    if (pd->mStamps[tevt->path][0]==Time::null()) {
-                        pd->mStamps[tevt->path][0]=tevt->begin_time();
-                        pd->mStamps[tevt->path][0].mServerId=server_id;
-                    }else {
-                        if (pd->mStamps[tevt->path][0]!=Time::null()) {
-                            printf ("Too many samples for phase %s\n",getPacketStageName(tevt->path));
-                        }
-                        if (Time(pd->mStamps[tevt->path][1])<tevt->end_time()) {
-                            pd->mStamps[tevt->path][1]=tevt->end_time();
-                            pd->mStamps[tevt->path][1].mServerId=server_id;
-                        }
-                    }
+                    pd->mStamps.push_back(DTime(tevt->begin_time(),tevt->path));
                     if (tevt->msg_type!=255) pd->mType=tevt->msg_type;
                     if (tevt->srcport!=0) pd->mSrcPort=tevt->srcport;
                     if (tevt->dstport!=0) pd->mDstPort=tevt->dstport;
@@ -1204,52 +1210,43 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
             delete evt;
         }
     }
-    Average results[Trace::NUM_PATHS][2];
-    
-    for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
-         iter!=ie;
-         ++iter) {
-        if (mFilter(iter->second)) {
-            for (int doVariance=0;doVariance<2;++doVariance) {
-                Time currentTime=iter->second.mStamps[Trace::CREATED][0];
-                for (int i=1;i<Trace::NUM_PATHS;++i){
-                    for (int j=0;j<2;++j) {
-                        if (!iter->second.mStamps[i][j].isNull()) {
-                            Duration diff=iter->second.mStamps[i][j]-currentTime;
-                            if (!doVariance) {
-                                results[i][j].addAverageSample(diff);
-                            }else {
-                                results[i][j].addVarianceSample(diff);
-                            }
-                            if(currentTime==iter->second.mStamps[Trace::CREATED][0]) {
-                                if (!doVariance) {
-                                    results[i][j].addAverageSample(diff);
-                                }else {
-                                    results[i][j].addVarianceSample(diff);
-                                }                              
-                            }
-                            currentTime=iter->second.mStamps[i][j];
-                        }
-                    }
-                }
-                for (int i=0;i<Trace::NUM_PATHS;++i){
-                    for (int j=0;j<2;++j) {
-                        results[i][j].averageOut();
+    std::map<PathPair,Average> results;
+    for (int doVariance=0;doVariance<2;++doVariance) {
+        
+        for (std::tr1::unordered_map<uint64,PacketData>::iterator iter=packetFlow.begin(),ie=packetFlow.end();
+             iter!=ie;
+             ++iter) {                  
+            if (mFilter(iter->second)&&iter->second.mStamps.size()) {
+                std::sort(iter->second.mStamps.begin(),iter->second.mStamps.end());
+                for (size_t i=1;i<iter->second.mStamps.size();++i) {
+                    Duration diff=iter->second.mStamps[i]-iter->second.mStamps[i-1];
+                    Average *avg=&results[PathPair(iter->second.mStamps[i-1].mPath,iter->second.mStamps[i].mPath)];
+                    if (!doVariance) {
+                        avg->addAverageSample(diff);
+                    }else {
+                        avg->addVarianceSample(diff);
                     }
                 }
             }
+        }  
+        if (!doVariance)
+        for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
+             resiter!=resiterend;
+             ++resiter) {
+            resiter->second.averageOut();
+
         }
         
     }
-    const char* lastStage=getPacketStageName(0);
-    for (int i=1;i<Trace::NUM_PATHS;++i) {
-        for (int j=1;j<2;++j) {
-            if (results[i][j].numSamples) {
-                const char* currentStage=getPacketStageName(i);
-                std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<results[i][j].average<<"s stddev "<<sqrt(results[i][j].variance)<<std::endl;
-                lastStage=currentStage;
-
-            }
+    for (std::map<PathPair,Average>::iterator resiter=results.begin(),resiterend=results.end();
+         resiter!=resiterend;
+         ++resiter) {
+        if (resiter->second.numSamples) {
+            const char* lastStage=getPacketStageName(resiter->first.first);
+            const char* currentStage=getPacketStageName(resiter->first.second);
+            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<std::endl;
+            lastStage=currentStage;
+            
         }
     }
 }

@@ -227,7 +227,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
 }
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     CBR::Protocol::Object::Ping ping_msg;
-    Time t=Time::now();
+    Time t=mContext->time;
     ping_msg.set_ping(t);
     if (distance>=0)
         ping_msg.set_distance(distance);
@@ -458,7 +458,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
 
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        mContext->trace->ping(ping_msg.ping(),msg->source_object(),Time::now(),msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+        mContext->trace->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
 
         return;

@@ -188,7 +188,7 @@ void Forwarder::service()
                     bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
                     if (sent_success) {
                         mContext->trace()->timestampMessage(t,noise_msg->id(),Trace::CREATED,0,0,MESSAGE_TYPE_NOISE);
-                        mContext->trace()->timestampMessage(Time::now(),Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
+                        mContext->trace()->timestampMessage(mContext->time,Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
                             ;
                         mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
                     }
@@ -215,7 +215,7 @@ void Forwarder::service()
                 bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
                 if (sent_success) {
                     mContext->trace()->timestampMessage(t,noise_msg->id(),Trace::CREATED,0,0,MESSAGE_TYPE_NOISE);
-                    mContext->trace()->timestampMessage(Time::now(),Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
+                    mContext->trace()->timestampMessage(mContext->time,Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
                         ;
                     mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
                 }
@@ -420,7 +420,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           {
               
               NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
-              mContext->trace()->timestampMessage(Time::now(),noise_msg->id(),Trace::DESTROYED,0,0,MESSAGE_TYPE_NOISE);
+              mContext->trace()->timestampMessage(mContext->time,noise_msg->id(),Trace::DESTROYED,0,0,MESSAGE_TYPE_NOISE);
               assert(noise_msg != NULL);
               delete noise_msg;
           }

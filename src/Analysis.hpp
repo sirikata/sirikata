@@ -167,13 +167,20 @@ public:
 class MessageLatencyAnalysis {public:
     class DTime:public Time {
     public:
+        Trace::MessagePath mPath;
         bool isNull() const {
             const Time * t=this;
             return *t==Time::null();
         }
         uint32 mServerId;
-        DTime():Time(Time::null()) {mServerId=0;}
-        DTime(const Time&t):Time(t){mServerId=0;}
+        DTime():Time(Time::null()) {mServerId=0;mPath=Trace::NUM_PATHS;}
+        DTime(const Time&t, Trace::MessagePath path):Time(t){mServerId=0;mPath=path;}
+        bool operator < (const Time&other)const {
+            return *static_cast<const Time*>(this)<other;
+        }
+        bool operator == (const Time&other)const {
+            return *static_cast<const Time*>(this)==other;
+        }
     };
     class Average {
     public:
@@ -206,7 +213,7 @@ class MessageLatencyAnalysis {public:
         unsigned char mType;
         unsigned char mSrcPort;        
         unsigned short mDstPort;
-        DTime mStamps[Trace::NUM_PATHS][2];
+        std::vector<DTime> mStamps;
         PacketData();
     };
     class Filters {
@@ -225,7 +232,13 @@ class MessageLatencyAnalysis {public:
         }
         bool verify(const uint32*server,const PacketData &pd, Trace::MessagePath path) const{
             if (server==NULL) return true;
-            return pd.mStamps[*server][0].mServerId==*server;
+            for (std::vector<DTime>::const_iterator i=pd.mStamps.begin(),ie=pd.mStamps.end();i!=ie;++i) {
+                
+                if (i->mPath==path)
+                    return i->mServerId==*server;
+            }
+            return false;
+            
         }
         bool operator() (const PacketData&pd)const{
             return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
