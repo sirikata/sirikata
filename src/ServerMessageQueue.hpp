@@ -59,6 +59,8 @@ public:
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
     virtual bool canSend(const ServerProtocolMessagePair&msg){
+        if (msg.dest()==mContext->id())
+            return true;
         static Network::Chunk throwaway1(1);
         static Network::Chunk throwaway4(4);
         static Network::Chunk throwaway16(16);

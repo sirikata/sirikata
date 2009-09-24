@@ -75,14 +75,16 @@ ObjectFactory::ObjectFactory(const BoundingBox3f& region, const Duration& durati
 
 ObjectFactory::~ObjectFactory() {
 #ifdef OH_BUILD // should only need to clean these up on object host
-    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
+    for(ObjectMap::iterator it = mObjects.begin(); it != mObjects.end();) {
         Object* obj = it->second;
+        ++it;
         delete obj;
     }
 #endif //OH_BUILD
 
-    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end(); it++) {
+    for(ObjectInputsMap::iterator it = mInputs.begin(); it != mInputs.end();) {
         ObjectInputs* inputs = it->second;
+        ++it;
         delete inputs->motion;
         delete inputs;
     }
