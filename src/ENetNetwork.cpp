@@ -52,14 +52,14 @@ void ENetNetwork::start(){
 }
 
     // Checks if this chunk, when passed to send, would be successfully pushed.
-bool ENetNetwork::canSend(const Address4&addy,const Chunk&dat, bool reliable, bool ordered, int priority){
+bool ENetNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool ordered, int priority){
     if (mPeerInit.find(addy)!=mPeerInit.end()) {
         return true;
     }
     size_t totalSize=0;
     PeerMap::iterator where=mSendPeers.find(addy);
     if (where!=mSendPeers.end()) {
-        totalSize=enet_peer_send_buffer_size(where->second)+dat.size();
+        totalSize=enet_peer_send_buffer_size(where->second)+size;
         if (totalSize<=mSendBufferSize) {
             return true;
         }
@@ -228,7 +228,7 @@ void ENetNetwork::service(const Time& t){
 
     senditer=mSendPeers.begin();
     recviter=mRecvPeers.begin();
-    
+
     for (size_t i=0,ie=sendBufferSizes.size();i!=ie;++i) {
         senditer=mSendPeers.find(sendBufferSizes[i].first);
         if (senditer!=mSendPeers.end()) {

@@ -53,7 +53,7 @@ public:
     virtual void start() = 0;
 
     // Checks if this chunk, when passed to send, would be successfully pushed.
-    virtual bool canSend(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
+    virtual bool canSend(const Address4&,uint32 size, bool reliable, bool ordered, int priority)=0;
     virtual bool send(const Address4&,const Chunk&, bool reliable, bool ordered, int priority)=0;
 
     virtual void listen (const Address4&)=0;

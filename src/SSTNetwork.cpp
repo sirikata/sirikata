@@ -13,8 +13,8 @@ SSTNetwork::~SSTNetwork() {
     delete mImpl;
 }
 
-bool SSTNetwork::canSend(const Address4& addy, const Network::Chunk& toSend, bool reliable, bool ordered, int priority) {
-    return mImpl->canSend(addy, toSend, reliable, ordered, priority);
+bool SSTNetwork::canSend(const Address4& addy, uint32 size, bool reliable, bool ordered, int priority) {
+    return mImpl->canSend(addy, size, reliable, ordered, priority);
 }
 
 bool SSTNetwork::send(const Address4& addy, const Network::Chunk& toSend, bool reliable, bool ordered, int priority) {

@@ -88,7 +88,7 @@ bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
     Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
 
     assert(addy != NULL);
-    return mNetwork->canSend(*addy,next_msg->data(),false,true,1);
+    return mNetwork->canSend(*addy,next_msg->data().size(),false,true,1);
 }
 
 void FairServerMessageQueue::service(){
