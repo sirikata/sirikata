@@ -209,13 +209,13 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
     if (mTracking)
     {
       //means that we need to save this query
-      std::cout<<"\nbftm debug.  Wrote value for "<<currentlySearchingFor<<".  This is line:  "<<line <<"\n";
+      //      std::cout<<"\nbftm debug.  Wrote value for "<<currentlySearchingFor<<".  This is line:  "<<line <<"\n";
       
       CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,true,CraqOperationResult::SET, mTracking);      
       mOperationResultTrackedSetsVector.push_back(tmper);
     }
 
-    std::cout<<"\n\nSTORED object:  "<<currentlySearchingFor<<".  On to the next one.\n\n";
+    //    std::cout<<"\n\nSTORED object:  "<<currentlySearchingFor<<".  On to the next one.\n\n";
     
     mReady  = READY;
   }

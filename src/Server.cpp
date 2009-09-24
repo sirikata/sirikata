@@ -345,12 +345,6 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
             obj_id, OBJECT_PORT_SESSION,
             serializePBJMessage(response_container)
         );
-
-        if (loc_server == NullServerID)
-          std::cout<<"loc_server Because loc_server is 0\n\n";
-
-        
-        std::cout<<"\n\nbftm debug:  obj_id for we don't really handle:  "<<obj_id.toString()<<"\n\n";
         
         // Sent directly via object host connection manager because we don't have an ObjectConnection
         mObjectHostConnectionManager->send( oh_conn_id, obj_response );
@@ -374,7 +368,6 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
             serializePBJMessage(response_container)
         );
 
-        std::cout<<"\n\nbftm debug:  obj_id tried to connect to wrong server:  "<<obj_id.toString()<<"\n\n";
         
         // Sent directly via object host connection manager because we don't have an ObjectConnection
         mObjectHostConnectionManager->send( oh_conn_id, obj_response );
@@ -398,7 +391,7 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
 
 void Server::finishAddObject(const UUID& obj_id)
 {
-  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
+  //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->time.raw()<<"\n\n";
   
   if (mStoredConnectionData.find(obj_id) != mStoredConnectionData.end())
   {
@@ -486,7 +479,7 @@ void Server::receiveMessage(Message* msg)
     OSegAddMessage* oseg_add_msg = dynamic_cast<OSegAddMessage*>(msg);
     if (oseg_add_msg != NULL)
     {
-      std::cout<<"\n\nbftm debug message:  received an oseg add message \n\n";
+      //      std::cout<<"\n\nbftm debug message:  received an oseg add message \n\n";
       const UUID obj_id = oseg_add_msg->contents.m_objid();
       finishAddObject(obj_id);
     }

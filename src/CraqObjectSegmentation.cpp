@@ -93,6 +93,9 @@ namespace CBR
     fflush(stdout);
     printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
     fflush(stdout);
+    printf("\n\nSIZE OF CACHE:   %i \n\n", (int) mServerObjectCache.size()),
+    fflush(stdout);
+    
   }
 
 
