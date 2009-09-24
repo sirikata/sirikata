@@ -225,7 +225,7 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    mObjectMessageQueue->service(); mProfiler.finishedStage();
+    //mObjectMessageQueue->service(); mProfiler.finishedStage();
     mServerMessageQueue->service(); mProfiler.finishedStage();
 
     tickOSeg(t);  mProfiler.finishedStage();
