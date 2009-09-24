@@ -30,6 +30,7 @@ protected:
 
         
         mp->data().serialize(s,0);                             
+        printf ("Front is %d bytes\n",s.size());
         const_cast<FairObjectMessageQueue<TQueue>*>(this)->mFront= new OutgoingMessage(s,mp->dest());
     }
 public:

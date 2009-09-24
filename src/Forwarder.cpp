@@ -150,7 +150,7 @@ void Forwarder::service()
       self_messages.pop_front();
     }
     mProfiler.finishedStage();
-
+    (*mOutgoingMessages)->service(); mProfiler.finishedStage();
     while(true)
     {
         uint64 size=1<<30;
@@ -225,7 +225,7 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    //mObjectMessageQueue->service(); mProfiler.finishedStage();
+    
     mServerMessageQueue->service(); mProfiler.finishedStage();
 
     tickOSeg(t);  mProfiler.finishedStage();

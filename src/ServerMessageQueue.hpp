@@ -120,7 +120,9 @@ public:
         }
         if (v!=(uint32)(1<<r)) ++r;
         if (r>=15) r=14;
-        return canAddMessage(msg.dest(),*examples[r]);
+        bool retval=canAddMessage(msg.dest(),*examples[r]);
+        printf ("Can Add %d really(%d) %d\n",msg.size(),(int)examples[r]->size(),(int)retval);
+        return retval;
     }
 protected:
     SpaceContext* mContext;
