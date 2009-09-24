@@ -16,11 +16,11 @@ class ClusterSimSettings:
         self.num_oh = num_object_hosts
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '35s'
+        self.duration = '55s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 100
-        self.num_objects = 1000
+        self.num_objects = 100
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
@@ -49,7 +49,7 @@ class ClusterSimSettings:
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
-        self.oseg = 'oseg_craq'
+        self.oseg = 'oseg_loc'
         self.oseg_unique_craq_prefix = 'H'
 
         self.vis_mode = 'object'
@@ -242,7 +242,7 @@ class ClusterSim:
                 "--send-bandwidth=" + str(self.settings.tx_bandwidth),
                 "--receive-bandwidth=" + str(self.settings.rx_bandwidth),
                 "--wait-until=" + wait_until_time,
-                "--wait-additional=6s",
+                "--wait-additional=80s",
                 "--flatness=" + str(self.settings.flatness),
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
@@ -346,9 +346,9 @@ class ClusterSim:
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-    cs = ClusterSimSettings(4, (2,2), 1)
-#    cs = ClusterSimSettings(8, (8,1), 1)
+    cs = ClusterSimSettings(8, (4,2), 1)
 #    cs = ClusterSimSettings(4, (2,2), 1)
+#    cs = ClusterSimSettings(8, (8,1), 1)
 #    cs = ClusterSimSettings(8, (8,1), 1)
 #    cs = ClusterSimSettings(14, (2,2), 1)
 #    cs = ClusterSimSettings(4, (2,2), 1)

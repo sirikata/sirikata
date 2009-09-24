@@ -35,6 +35,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mOSeg(NULL),
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
+   mUniqueConnIDs(0),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
@@ -561,20 +562,46 @@ void Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
 
 void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn) {
-    mObjectConnections[dest_obj] = conn;
-    mObjectMessageQueue->registerClient(dest_obj, 1); // FIXME weight?
+  UniqueObjConn uoc;
+  uoc.id = mUniqueConnIDs;
+  uoc.conn = conn;
+  ++mUniqueConnIDs;
+  
+  
+  //    mObjectConnections[dest_obj] = conn;
+  mObjectConnections[dest_obj] = uoc;
+  mObjectMessageQueue->registerClient(dest_obj, 1); // FIXME weight?
 }
 
 ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
     mObjectMessageQueue->unregisterClient(dest_obj);
-    ObjectConnection* conn = mObjectConnections[dest_obj];
+    //    ObjectConnection* conn = mObjectConnections[dest_obj];
+    UniqueObjConn uoc = mObjectConnections[dest_obj];
+    ObjectConnection* conn = uoc.conn;
     mObjectConnections.erase(dest_obj);
     return conn;
 }
 
 ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj) {
     ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
-    return (it == mObjectConnections.end()) ? NULL : it->second;
+    //    return (it == mObjectConnections.end()) ? NULL : it->second;
+    return (it == mObjectConnections.end()) ? NULL : it->second.conn;
 }
+
+
+ObjectConnection* Forwarder::getObjectConnection(const UUID& dest_obj, uint64& ider )
+{
+    ObjectConnectionMap::iterator it = mObjectConnections.find(dest_obj);
+    //    return (it == mObjectConnections.end()) ? NULL : it->second;
+    if (it == mObjectConnections.end())
+    {
+      ider = 0;
+      return NULL;
+    }
+    ider = it->second.id;
+    return it->second.conn;
+}
+
+
 
 } //end namespace

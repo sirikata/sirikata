@@ -72,7 +72,7 @@ Server::~Server()
 
     for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
         UUID obj_id = it->first;
-
+        
         // Stop any proximity queries for this object
         mProximity->removeQuery(obj_id);
 
@@ -109,12 +109,14 @@ void Server::serviceObjectHostNetwork() {
 
 
   //bftm add
-  //  for (ObjectConnectionMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
+
   for (MigConnectionsMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
   {
-    //    ObjectConnection* conn = it->second;
-    ObjectConnection* conn = it->second.obj_conner;
-    conn->service();
+    if (it->second.serviceConnection) //the connections this isn't true for are associated with objects that have already migrated back to this server and are serviced above, in mObjects
+    {
+      ObjectConnection* conn = it->second.obj_conner;
+      conn->service();
+    }
   }
 
 
@@ -344,7 +346,10 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
             serializePBJMessage(response_container)
         );
 
+        if (loc_server == NullServerID)
+          std::cout<<"loc_server Because loc_server is 0\n\n";
 
+        
         std::cout<<"\n\nbftm debug:  obj_id for we don't really handle:  "<<obj_id.toString()<<"\n\n";
         
         // Sent directly via object host connection manager because we don't have an ObjectConnection
@@ -386,8 +391,7 @@ void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
-    
-    
+        
     mStoredConnectionData[obj_id] = sc;
 
 }
@@ -429,16 +433,11 @@ void Server::finishAddObject(const UUID& obj_id)
     );
     conn->send( obj_response );
   }
+  else
+  {
+    std::cout<<"\n\nNO stored connection data for obj:  "<<obj_id.toString()<<"   at time:  "<<mContext->time.raw()<<"\n\n";
+  }
 }
-
-
-
-
-
-
-
-
-
 
 
 // Handle Migrate message from object
@@ -453,32 +452,6 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
     // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
     // Verify the requested position is on this server
-
-    //bftm added
-    //in case the object was already slated to be migrated, but its connection had not yet been killed (ie had not received a killconn object, we need to delete our note to self to delete this object connection:
-
-    ObjectConnection* oConn = mForwarder->getObjectConnection(obj_id);
-    if (oConn != NULL)
-    {
-      //means that we had an object which migrated from this server to another server (we kept the connection open).  And then the object migrated back to this server (before we received a kill obj connection message.  Means we do not have to actually create a new connection for this object, rather, we can just delete the reference to kill this object connection.
-
-
-      MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
-      if (objConMapIt != mMigratingConnections.end())
-        mMigratingConnections.erase(objConMapIt);
-
-      mObjects[obj_id] = oConn;
-
-      //delete this in case it had been queued.
-      ObjectMigrationMap::iterator objMigMapIt = mObjectMigrations.find(obj_id);
-      if (objMigMapIt != mObjectMigrations.end())
-        mObjectMigrations.erase(objMigMapIt);
-      //do not need to do the remaining steps.
-      return;
-      
-    }
-    //end bftm added
-
     
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
@@ -527,7 +500,12 @@ void Server::receiveMessage(Message* msg)
 //handleMigration to this server.
 void Server::handleMigration(const UUID& obj_id)
 {
-
+    if (checkAlreadyMigrating(obj_id))
+    {
+      processAlreadyMigrating(obj_id);
+      return;
+    }
+  
     // Try to find the info in both lists -- the connection and migration information
 
     ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
@@ -542,6 +520,7 @@ void Server::handleMigration(const UUID& obj_id)
     {
         return;
     }
+
 
 
     // Get the data from the two maps
@@ -689,7 +668,7 @@ void Server::checkObjectMigrations()
             }
 
             // Stop tracking the object locally
-            mLocationService->removeLocalObject(obj_id);
+            //            mLocationService->removeLocalObject(obj_id);
 
             mForwarder->route( MessageRouter::MIGRATES, migrate_msg , new_server_id);
 
@@ -708,19 +687,134 @@ void Server::checkObjectMigrations()
               //end bftm change
               //  mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
               MigratingObjectConnectionsData mocd;
-              mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id);
+              
+              mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id, mocd.uniqueConnId);
               Duration migrateStartDur  =                 mMigrationTimer.elapsed();
               mocd.milliseconds         =          migrateStartDur.toMilliseconds();
               mocd.migratingTo          =                             new_server_id;
-          
+              mocd.loc                  =        mLocationService->location(obj_id);
+              mocd.bnds                 =          mLocationService->bounds(obj_id);
+              mocd.serviceConnection    =                                      true;
+              
               mMigratingConnections[obj_id] = mocd;
-                
             }
 
+            // Stop tracking the object locally
+            mLocationService->removeLocalObject(obj_id);
+            
             mObjects.erase(obj_id);
 
         }
     }
+}
+
+
+
+/*
+  This function migrates an object to this server that was in the process of migrating away from this server (except the killconn message hasn't come yet.
+
+  Assumes that checks that the object was in migration have occurred
+  
+*/
+void Server::processAlreadyMigrating(const UUID& obj_id)
+{
+
+    ObjectConnectionMap::iterator obj_map_it = mObjectsAwaitingMigration.find(obj_id);
+    if (obj_map_it == mObjectsAwaitingMigration.end())
+    {
+        return;
+    }
+
+    
+    ObjectMigrationMap::iterator migration_map_it = mObjectMigrations.find(obj_id);
+    if (migration_map_it == mObjectMigrations.end())
+    {
+        return;
+    }
+
+    
+    // Get the data from the two maps
+    ObjectConnection* obj_conn = obj_map_it->second;
+    CBR::Protocol::Migration::MigrationMessage* migrate_msg = migration_map_it->second;
+
+
+    // Extract the migration message data
+    TimedMotionVector3f obj_loc(
+        migrate_msg->loc().t(),
+        MotionVector3f( migrate_msg->loc().position(), migrate_msg->loc().velocity() )
+    );
+    BoundingSphere3f obj_bounds( migrate_msg->bounds() );
+
+
+    // Move from list waiting for migration message to active objects
+    mObjects[obj_id] = obj_conn;
+
+
+    // Update LOC to indicate we have this object locally
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_bounds);
+
+    //update our oseg to show that we know that we have this object now.
+    ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
+    mOSeg->addObject(obj_id, idOSegAckTo, true);//true states to send an ack message to idOSegAckTo
+
+
+       
+    // Handle any data packed into the migration message for space components
+    for(int32 i = 0; i < migrate_msg->client_data_size(); i++) {
+        CBR::Protocol::Migration::MigrationClientData client_data = migrate_msg->client_data(i);
+        std::string tag = client_data.key();
+        // FIXME these should live in a map, how do we deal with ordering constraints?
+        if (tag == "prox") {
+            assert( tag == mProximity->migrationClientTag() );
+            mProximity->receiveMigrationData(obj_id, /* FIXME */NullServerID, mContext->id(), client_data.data());
+        }
+        else {
+            SILOG(space,error,"Got unknown tag for client migration data");
+        }
+    }
+
+
+    //remove the forwarding connection that already exists for that object
+    ObjectConnection* migrated_conn_old = mForwarder->removeObjectConnection(obj_id);
+    mClosingConnections.insert(migrated_conn_old);
+
+ //change the boolean value associated with object so that you know not to keep servicing the connection associated with this object in mMigratingConnections
+   mMigratingConnections[obj_id].serviceConnection = false;
+
+  
+    // Allow the forwarder to deliver to this connection
+    mForwarder->addObjectConnection(obj_id, obj_conn);
+
+
+    // Clean out the two records from the migration maps
+    mObjectsAwaitingMigration.erase(obj_map_it);
+    mObjectMigrations.erase(migration_map_it);
+
+
+    // Send reply back indicating that the migration was successful
+    CBR::Protocol::Session::Container response_container;
+    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
+
+    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        obj_id, OBJECT_PORT_SESSION,
+        serializePBJMessage(response_container)
+    );
+    obj_conn->send( obj_response );
+  
+}
+
+
+//returns true if the object associated with obj_id is in the process of migrating from this server
+//returns false otherwise.
+bool Server::checkAlreadyMigrating(const UUID& obj_id)
+{
+  if (mMigratingConnections.find(obj_id) != mMigratingConnections.end())
+    return true; //it is already migrating
+
+  return false;  //it isn't.
 }
 
 
@@ -735,35 +829,29 @@ void Server::killObjectConnection(const UUID& obj_id)
   //(For example, a craq implementation.)
 
   
-  //bftm change
-//   ObjectConnectionMap::iterator obj_map_it = mObjects.find(obj_id);
-//   if (obj_map_it != mObjects.end())
-//   {
-//     ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-//     std::cout<<"\n\nbftm debug: in server.cpp, removing object connection for obj_id: "<<obj_id.toString()<<"\n\n";
-//     mClosingConnections.insert(migrated_conn);
-//  }
-  //shouldn't need this
-
   
   MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
   if (objConMapIt != mMigratingConnections.end())
   {
+    uint64 connIDer;
+    mForwarder->getObjectConnection(obj_id,connIDer);
 
-    //begin bftm change
-    //    std::cout<<"\n\nbftm debug in server.cpp, rem objconn\n\n";
+    if (connIDer == objConMapIt->second.uniqueConnId)
+    {
+      //means that the object did not undergo an intermediate migrate.  Should go ahead and remove this connection from forwarder
+      ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
+      mClosingConnections.insert(migrated_conn);
+    }
+    else
+    {
+      std::cout<<"\n\nObject:  "<<obj_id.toString()<<"  has already re-migrated\n\n";
+    }
 
-    ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-    //    std::cout<<"\n\nbftm debug: in server.cpp, removing object connection for obj_id: "<<obj_id.toString()<<"\n\n";
-    mClosingConnections.insert(migrated_conn);
-    //end bftm change
-    
     //log the event's completion.
     Duration currentDur = mMigrationTimer.elapsed();
     int timeTakenMs = currentDur.toMilliseconds() - mMigratingConnections[obj_id].milliseconds;
     ServerID migTo  = mMigratingConnections[obj_id].migratingTo;
-    
     mContext->trace()->objectMigrationRoundTrip(mContext->time, obj_id, mContext->id(), migTo , timeTakenMs);
           
     mMigratingConnections.erase(objConMapIt);

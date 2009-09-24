@@ -73,7 +73,8 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
 
-
+      uint64 mUniqueConnIDs;
+  
 
     struct MessageAndForward
     {
@@ -90,26 +91,39 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 
 
 
-      Time mLastSampleTime;
-      Duration mSampleRate;
+    Time mLastSampleTime;
+    Duration mSampleRate;
 
-      typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
-      ObjectConnectionMap mObjectConnections;
 
-      TimeProfiler mProfiler;
+    struct UniqueObjConn
+    {
+      uint64 id;
+      ObjectConnection* conn;
+    };
+
+  
+  //    typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
+  //    ObjectConnectionMap mObjectConnections;
+
+    typedef std::map<UUID, UniqueObjConn> ObjectConnectionMap;
+    ObjectConnectionMap mObjectConnections;
+
+  
+    TimeProfiler mProfiler;
 
     //Private Functions
-      void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
+    void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
 
-      // Delivery interface.  This should be used to deliver received messages to the correct location -
-      // the server or object it is addressed to.
-      void deliver(Message* msg);
+    // Delivery interface.  This should be used to deliver received messages to the correct location -
+    // the server or object it is addressed to.
+    void deliver(Message* msg);
 
-  //      void tickOSeg(const Time&t);
-
+  
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate;
+
+  
 protected:
     virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
@@ -146,6 +160,7 @@ protected:
       void addObjectConnection(const UUID& dest_obj, ObjectConnection* conn);
       ObjectConnection* removeObjectConnection(const UUID& dest_obj);
       ObjectConnection* getObjectConnection(const UUID& dest_obj);
+      ObjectConnection* getObjectConnection(const UUID& dest_obj, uint64& uniqueconnid );
   };//end class Forwarder
 
 } //end namespace CBR

@@ -110,10 +110,25 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
 void StandardLocationService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
-    assert( mLocations.find(uuid) != mLocations.end() );
-    assert( mLocations[uuid].local == true );
-    mLocations.erase(uuid);
 
+  if (!(mLocations.find(uuid)!= mLocations.end()))
+  {
+    printf("\n\nDoes not meet first condition for object:  %s\n\n", uuid.toString().c_str());
+    fflush(stdout);
+  }
+  if (! ( mLocations[uuid].local == true ))
+  {
+    printf("\n\nDoes not meet second condition for object:  %s\n\n", uuid.toString().c_str());
+    fflush(stdout);
+  }
+  
+  assert( mLocations.find(uuid) != mLocations.end() );
+  assert( mLocations[uuid].local == true );
+  mLocations.erase(uuid);
+
+
+
+    
     // Remove from the list of local objects
     mContext->trace()->serverObjectEvent(mContext->time, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid);

@@ -226,6 +226,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     return true;
 }
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
+  
     CBR::Protocol::Object::Ping ping_msg;
     Time t=mContext->time;
     ping_msg.set_ping(t);
@@ -246,6 +247,9 @@ Object* ObjectHost::randomObject () {
     return i->second.object;
 }
 void ObjectHost::randomPing(const Time&t) {
+
+
+  
     Object * a=randomObject();
     Object * b=randomObject();
     ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
@@ -287,7 +291,9 @@ void ObjectHost::tick(const Time& t) {
 
     mContext->objectFactory->tick();
     //sendTestMessage(t,400.);
-    randomPing(t);
+    //bftm debug
+    //    randomPing(t);
+    //end bftm debug
 /*
     randomPing(t);
     randomPing(t);

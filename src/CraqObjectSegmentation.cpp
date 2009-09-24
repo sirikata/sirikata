@@ -235,13 +235,12 @@ namespace CBR
   */
   ServerID CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
-
     ++numLookups;
 
-    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"at time:  "<<mContext->time.raw() << "\n\n";
+
     
 #ifdef CRAQ_DEBUG
-    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"\n\n";
+    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"at time:  "<<mContext->time.raw() << "\n\n";
 #endif
     
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.

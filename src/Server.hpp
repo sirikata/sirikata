@@ -68,6 +68,9 @@ private:
     void killObjectConnection(const UUID& obj_id);
 
     void finishAddObject(const UUID& obj_id);
+
+    bool checkAlreadyMigrating(const UUID& obj_id);
+    void processAlreadyMigrating(const UUID& obj_id);
     
     SpaceContext* mContext;
     LocationService* mLocationService;
@@ -98,6 +101,10 @@ private:
       ObjectConnection* obj_conner;
       int milliseconds;
       ServerID migratingTo;
+      TimedMotionVector3f loc;
+      BoundingSphere3f bnds;
+      uint64 uniqueConnId;
+      bool serviceConnection;
     };
     
     //    ObjectConnectionMap mMigratingConnections;//bftm add
