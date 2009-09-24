@@ -191,9 +191,6 @@ void Forwarder::service()
                     offset = noise_msg->serialize(msg_serialized, offset);
                     bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
                     if (sent_success) {
-                        mContext->trace()->timestampMessage(t,noise_msg->id(),Trace::CREATED,0,0,MESSAGE_TYPE_NOISE);
-                        mContext->trace()->timestampMessage(mContext->time,Trace::SPACE_OUTGOING_MESSAGE,msg_serialized)
-                            ;
                         mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
                     }
                     delete noise_msg;
@@ -340,7 +337,10 @@ void Forwarder::service()
 //end what i think it should be replaced with
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    mContext->trace()->timestampMessage(mContext->time,msg->id(),Trace::DISPATCHED,0,0,msg->type());
+    ObjectMessage *om=dynamic_cast<ObjectMessage*>(msg);
+    if (om) {
+        mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::DISPATCHED,om->contents.source_port(),om->contents.dest_port(),msg->type());
+    }
     MessageDispatcher::dispatchMessage(msg);
 }
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
