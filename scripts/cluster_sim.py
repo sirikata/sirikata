@@ -12,7 +12,9 @@ CBR_WRAPPER = "./cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:
-    def __init__(self, space_svr_pool, layout, num_object_hosts):
+    def __init__(self, config, space_svr_pool, layout, num_object_hosts):
+        self.config = config
+
         self.layout_x = layout[0]
         self.layout_y = layout[1]
         self.duration = '55s'
@@ -55,7 +57,7 @@ class ClusterSimSettings:
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
         self.oseg = 'oseg_craq'
-        self.oseg_unique_craq_prefix = 'H'
+        self.oseg_unique_craq_prefix = 'H' # NOTE: this is really a default, you should set unique = x in your .cluster
 
         self.vis_mode = 'object'
         self.vis_seed = 1
@@ -78,6 +80,13 @@ class ClusterSimSettings:
         neg = [ -x for x in half_extents ]
         pos = [ x for x in half_extents ]
         return "<<%f,%f,%f>,<%f,%f,%f>>" % (neg[0]+self.center[0], neg[1]+self.center[1], neg[2]+self.center[2], pos[0]+self.center[0], pos[1]+self.center[1], pos[2]+self.center[2])
+
+    def unique(self):
+        if (self.config.unique == None):
+            print 'Using the default CRAQ prefix.  You should set unique in your .cluster file.'
+            return self.oseg_unique_craq_prefix
+        return self.config.unique
+
 
 class ClusterSim:
     def __init__(self, config, settings):
@@ -264,7 +273,7 @@ class ClusterSim:
                 "--cseg=" + self.settings.cseg,
                 "--cseg-service-host=" + self.settings.cseg_service_host,
                 "--oseg=" + self.settings.oseg,
-                "--oseg_unique_craq_prefix=" + self.settings.oseg_unique_craq_prefix,
+                "--oseg_unique_craq_prefix=" + self.settings.unique(),
                 "--object_drift_x=" + self.settings.object_drift_x,
                 "--object_drift_y=" + self.settings.object_drift_y,
                 "--object_drift_z=" + self.settings.object_drift_z,
@@ -360,7 +369,7 @@ class ClusterSim:
 if __name__ == "__main__":
     cc = ClusterConfig()
 #    cs = ClusterSimSettings(3, (3,1), 1)
-    cs = ClusterSimSettings(4, (2,2), 1)
+    cs = ClusterSimSettings(cc, 4, (2,2), 1)
 #    cs = ClusterSimSettings(8, (8,1), 1)
 #    cs = ClusterSimSettings(8, (8,1), 1)
 #    cs = ClusterSimSettings(14, (2,2), 1)

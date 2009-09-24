@@ -23,11 +23,15 @@ class ClusterNode:
 
 class ClusterConfig:
     def __init__(self):
-        default_path = os.path.expanduser("~/.cluster")
+        #default values
         self.nodes = []
         self.deploy_nodes = []
         self.code_dir = "cbr"
         self.port_base = 6666
+        self.unique = None
+
+        # parse default config or generate a default config
+        default_path = os.path.expanduser("~/.cluster")
         if (os.path.exists(default_path)):
             self.parse(default_path)
         else: # just setup some default nodes that make sense for us
@@ -76,6 +80,11 @@ class ClusterConfig:
                 self.code_dir = opt_value.strip()
             elif (opt_name == "port"):
                 self.port_base = int(opt_value)
+            elif (opt_name == "unique"):
+                opt_value = opt_value.strip()
+                self.unique = opt_value[0]
+                if (len(opt_value) > 1):
+                    print 'Warning: unique string instead of character, using first char: "' + opt_value + '=> "' + self.unique
         fp.close()
         return
 
