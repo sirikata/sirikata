@@ -12,21 +12,56 @@ protected:
     /** Predicate for FairQueue which checks if the network will be able to send the message. */
     struct HasDestServerCanSendPredicate {
     public:
-        HasDestServerCanSendPredicate(FairObjectMessageQueue<TQueue>* _fq) : fq(_fq) {}
-        bool operator()(const UUID& key, const typename TQueue::Type msg) const {
-            return msg->dest() != NullServerID;
-            // && fq->canSend(msg);
-        }
+        HasDestServerCanSendPredicate(ServerMessageQueue* _fq) : fq(_fq) {}
+        bool operator()(const UUID& key, const typename TQueue::Type msg) const;
     private:
-        FairObjectMessageQueue<TQueue>* fq;
+        ServerMessageQueue* fq;
     };
 
     FairQueue<ServerProtocolMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
     uint32 mRate;
     uint32 mRemainderBytes;
-public:
+    OutgoingMessage*mFront;
+    void getFront() const {
+        uint64 bytes;
+        UUID keyfront;
+        ServerProtocolMessagePair *mp =const_cast<FairObjectMessageQueue<TQueue>*>(this)->mClientQueues.front(&bytes,&keyfront);
+        Network::Chunk s;
 
-    FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second);
+        
+        mp->data().serialize(s,0);                             
+        const_cast<FairObjectMessageQueue<TQueue>*>(this)->mFront= new OutgoingMessage(s,mp->dest());
+    }
+public:
+    typedef OutgoingMessage*ElementType;
+    ElementType& front() {
+        if (mFront) {return mFront;}
+        getFront();
+        return mFront;
+    }
+    OutgoingMessage* pop() {
+        if (mFront) {return mFront;}
+        getFront();
+        uint64 bytes;
+        mClientQueues.pop(&bytes);
+        OutgoingMessage*front=mFront;
+        mFront=NULL;
+        return front;
+    }
+    const ElementType& front()const {
+        if (mFront) {return mFront;}
+        getFront();
+        return mFront;
+    }
+    QueueEnum::PushResult push(const ElementType&msg) {
+        
+        NOT_IMPLEMENTED();
+        return QueueEnum::PushExceededMaximumSize;
+    }
+    bool empty()const {
+        return mClientQueues.empty();
+    }
+    FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second, ServerMessageQueue *smq);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);

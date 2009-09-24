@@ -21,6 +21,45 @@ public:
 
     virtual void registerClient(const UUID& oid,float weight=1);
     virtual void unregisterClient(const UUID& oid);
+    typedef OutgoingMessage*ElementType;
+    ElementType mFront;
+    void getFront() const {
+        uint64 bytes;
+        ServerProtocolMessagePair *mp =const_cast<FIFOObjectMessageQueue*>(this)->mQueue.front(&bytes);
+        Network::Chunk s;
+
+        
+        mp->data().serialize(s,0);                             
+        const_cast<FIFOObjectMessageQueue*>(this)->mFront= new OutgoingMessage(s,mp->dest());
+    }
+
+    ElementType& front() {
+        if (mFront) {return mFront;}
+        getFront();
+        return mFront;
+    }
+    OutgoingMessage* pop() {
+        if (mFront) {return mFront;}
+        getFront();
+        uint64 bytes;
+        mQueue.pop(&bytes);
+        OutgoingMessage*front=mFront;
+        mFront=NULL;
+        return front;
+    }
+    const ElementType& front()const {
+        if (mFront) {return mFront;}
+        getFront();
+        return mFront;
+    }
+    bool empty()const {
+        return mQueue.empty();
+    }    
+    QueueEnum::PushResult push(const ElementType&msg) {
+        
+        NOT_IMPLEMENTED();
+        return QueueEnum::PushExceededMaximumSize;
+    }
 private:
     FIFOQueue<ServerProtocolMessagePair,UUID> mQueue;
     uint32 mRate;

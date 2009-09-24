@@ -15,6 +15,7 @@ FIFOObjectMessageQueue::FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm,
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
+    mFront=NULL;
 }
 
 bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend & fromBegin)

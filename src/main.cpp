@@ -601,11 +601,11 @@ void *main_loop(void *) {
     if (object_queue_type == "fifo")
         oq = new FIFOObjectMessageQueue(space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<ServerProtocolMessagePair*> > (space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<Queue<ServerProtocolMessagePair*> > (space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>(),sq);
     else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<ServerProtocolMessagePair*> > (space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<LossyQueue<ServerProtocolMessagePair*> > (space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>(),sq);
     else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<ServerProtocolMessagePair*,ServerID > >(space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>());
+        oq = new FairObjectMessageQueue<PartiallyOrderedList<ServerProtocolMessagePair*,ServerID > >(space_context, forwarder, GetOption(SEND_BANDWIDTH)->as<uint32>(),sq);
     else {
         assert(false);
         exit(-1);

@@ -3,7 +3,8 @@
 
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
-
+#include "ForwarderUtilityClasses.hpp"
+#include "AbstractQueue.hpp"
 namespace CBR{
 class Forwarder;
 
@@ -16,7 +17,7 @@ struct ObjMessQBeginSend
 
 
 
-class ObjectMessageQueue {
+class ObjectMessageQueue:public AbstractQueue<OutgoingMessage*> {
 public:
     ObjectMessageQueue(SpaceContext* ctx, Forwarder*sm)
      : mContext(ctx),
@@ -24,6 +25,10 @@ public:
     {}
 
     virtual ~ObjectMessageQueue(){}
+    virtual OutgoingMessage *&front()=0;
+    virtual OutgoingMessage * pop()=0;
+    virtual bool empty()const=0;
+
 
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& ) = 0;
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id) = 0;

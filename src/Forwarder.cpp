@@ -79,8 +79,8 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mCSeg = cseg;
   mOSeg = oseg;
   mObjectMessageQueue = omq;
-  mServerMessageQueue = smq;
-  mOutgoingMessages=new ForwarderQueue(smq,16384);
+  mServerMessageQueue =smq;
+  mOutgoingMessages=new ForwarderQueue(smq,omq,16384);
 }
 
   /*

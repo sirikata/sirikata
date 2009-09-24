@@ -34,15 +34,9 @@
 #define _CBR_QUEUE_HPP_
 
 #include "Utility.hpp"
-
+#include "AbstractQueue.hpp"
 namespace CBR {
 
-namespace QueueEnum {
-    enum PushResult {
-        PushSucceeded,
-        PushExceededMaximumSize
-    };
-};
 
 /** Functor to retrieve the size of an object via a size() method. */
 template<typename ElementType>
@@ -61,7 +55,7 @@ struct MethodSizeFunctor<ElementType*> {
 
 /** Queue with maximum bytes of storage. */
 template <typename ElementType, typename SizeFunctorType = MethodSizeFunctor<ElementType> >
-class Queue {
+class Queue : public AbstractQueue<ElementType> {
 
     std::deque<ElementType> mElements;
     SizeFunctorType mSizeFunctor;

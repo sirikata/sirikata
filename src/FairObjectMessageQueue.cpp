@@ -10,12 +10,18 @@
 #include "Forwarder.hpp"
 #include "ServerProtocolMessagePair.hpp"
 namespace CBR{
-template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second)
+
+template <class TQueue> bool FairObjectMessageQueue<TQueue> ::HasDestServerCanSendPredicate::operator()(const UUID& key, const typename TQueue::Type msg) const {
+            return msg->dest() != NullServerID && fq->canSend(*msg);
+        }
+
+template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second,ServerMessageQueue*smq)
  : ObjectMessageQueue(ctx, sm),
-   mClientQueues( HasDestServerCanSendPredicate(this) ),
+   mClientQueues( HasDestServerCanSendPredicate(smq) ),
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
+    mFront=NULL;
 }
 
 template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend &fromBegin)
@@ -41,8 +47,15 @@ template <class Queue> void FairObjectMessageQueue<Queue>::endSend(const ObjMess
     ((ServerMessagePair*)fromBegin.data)->dest(dest_server_id);
 }
 
+/*
+template <class Queue> OutgoingMessage*& FairObjectMessageQueue<Queue>::front() {
+    return mClientQueues.front();
+}
+template <class Queue> OutgoingMessage FairObjectMessageQueue<Queue>::front()const {
+    return mClientQueues.front();
+}
 
-
+*/
 
 
 template <class Queue> void FairObjectMessageQueue<Queue>::service(){

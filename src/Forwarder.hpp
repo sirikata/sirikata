@@ -39,22 +39,28 @@ public:
         }
         bool operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg);
     };
-    Queue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
-    FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >mSendQueue;
-    ForwarderQueue(ServerMessageQueue*smq, uint32 size):mSendQueue(CanSendPredicate(smq)){
+    AbstractQueue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
+    FairQueue<OutgoingMessage,MessageRouter::SERVICES,AbstractQueue<OutgoingMessage*>,CanSendPredicate >mSendQueue;
+    ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<OutgoingMessage*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
         for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-            mSendQueue.addQueue(mQueues[i]=new Queue<OutgoingMessage*>(size),(MessageRouter::SERVICES)i,1.0);
+            if (i==MessageRouter::OBJECT_MESSAGESS) {
+                mSendQueue.addQueue(mQueues[i]=omq,(MessageRouter::SERVICES)i,1.0);
+            }else{
+                mSendQueue.addQueue(mQueues[i]=new Queue<OutgoingMessage*>(size),(MessageRouter::SERVICES)i,1.0);
+            }
         }
     }
-    FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >*operator->(){
+    FairQueue<OutgoingMessage,MessageRouter::SERVICES,AbstractQueue<OutgoingMessage*>,CanSendPredicate >*operator->(){
         return &mSendQueue;
     }
-    const FairQueue<OutgoingMessage,MessageRouter::SERVICES,Queue<OutgoingMessage*>,CanSendPredicate >*operator->()const{
+    const FairQueue<OutgoingMessage,MessageRouter::SERVICES,AbstractQueue<OutgoingMessage*>,CanSendPredicate >*operator->()const{
         return &mSendQueue;
     }
     ~ForwarderQueue (){
         for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-            delete mQueues[i];
+            if (i!=MessageRouter::OBJECT_MESSAGESS) {
+                delete mQueues[i];
+            }
         }
     }
 };
