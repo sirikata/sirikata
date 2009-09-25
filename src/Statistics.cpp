@@ -46,8 +46,8 @@
 //#define TRACE_OSEG
 //#define TRACE_CSEG
 //#define TRACE_MIGRATION
-//#define TRACE_DATAGRAM
-//#define TRACE_PACKET
+#define TRACE_DATAGRAM
+#define TRACE_PACKET
 #define TRACE_PING
 #define TRACE_MESSAGE
 #define TRACE_ROUND_TRIP_MIGRATION_TIME
