@@ -11,11 +11,12 @@ namespace CBR {
 
 FIFOObjectMessageQueue::FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second)
  : ObjectMessageQueue(ctx, sm),
+   mFrontInput(NULL),
+   mFrontOutput(NULL),
    mQueue(GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>() * 32), // FIXME * numObjects?
    mRate(bytes_per_second),
    mRemainderBytes(0)
 {
-    mFront=NULL;
 }
 
 bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend & fromBegin)
