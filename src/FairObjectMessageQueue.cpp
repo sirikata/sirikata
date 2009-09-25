@@ -19,9 +19,10 @@ template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(Spa
  : ObjectMessageQueue(ctx, sm),
    mClientQueues( HasDestServerCanSendPredicate(smq) ),
    mRate(bytes_per_second),
-   mRemainderBytes(0)
+   mRemainderBytes(0),
+   mFrontInput(NULL),
+   mFrontOutput(NULL)
 {
-    mFront=NULL;
 }
 
 template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend &fromBegin)

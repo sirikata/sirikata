@@ -61,6 +61,8 @@ private:
          : key(),
            messageQueue(NULL),
            weight(1.f),
+           nextFinishMessage(NULL),
+           nextFinishStartTime(Time::null()),
            nextFinishTime(Time::null())
         {
         }
@@ -69,6 +71,8 @@ private:
          : key(_key),
            messageQueue(queue),
            weight(w),
+           nextFinishMessage(NULL),
+           nextFinishStartTime(Time::null()),
            nextFinishTime(Time::null())
         {}
 
@@ -79,6 +83,8 @@ private:
         Key key;
         TQueue* messageQueue;
         float weight;
+        Message* nextFinishMessage; // Need to verify this matches when we pop it off
+        Time nextFinishStartTime; // The time the next message to finish started at, used to recompute if front() changed
         Time nextFinishTime;
     };
 
@@ -295,24 +301,55 @@ protected:
         }
 
         // Loop through until we find one that has data and can be handled.
-        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
-            QueueInfo* min_queue_info = it->second;
+        bool restart_search = true;
+        while(restart_search) {
+            restart_search = false;
 
-            // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
-            // would violate the ordering.
-            if (*bytes < min_queue_info->messageQueue->front()->size()) {
-                *result_out = NULL;
-                return;
+            for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
+                QueueInfo* min_queue_info = it->second;
+
+                // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
+                // strict queue semantics, e.g. the FairQueue itself
+                Message* min_queue_front = min_queue_info->messageQueue->front();
+                if (min_queue_front != min_queue_info->nextFinishMessage) {
+                    // We need to:
+                    // 1. Recompute the finish time based on the new message
+                    // 2. Fix up the ByTimeIndex
+                    // 3. Restart the search for the best option, being careful not to screw up iterators
+
+                    // Remove from queue time list, note that this will fubar the iterators
+                    removeFromTimeIndex(min_queue_info);
+
+                    // It's possible nothing can be serviced anymore because predicates all turned false.
+                    // In this case, we can't .
+
+                    // Recompute finish time, using the start time from the last element we thought would finish next
+                    // This will also add back to the ByTimeIndex, again, fubaring iterators
+                    computeNextFinishTime(min_queue_info, min_queue_info->nextFinishStartTime);
+
+                    // And now we can restart the search
+                    it = mQueuesByTime.begin(); // Get a fresh, clean iterator
+                    restart_search = true;
+                    break;
+                }
+
+                // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
+                // would violate the ordering.
+                if (*bytes < min_queue_front->size()) {
+                    *result_out = NULL;
+                    return;
+                }
+
+                // Now give the user a chance to veto this packet.  If they can use it, set output and return.
+                // Otherwise just continue trying the rest of the options.
+                if (mPredicate(min_queue_info->key, min_queue_front)) {
+                    *min_queue_info_out = min_queue_info;
+                    *vftime_out = min_queue_info->nextFinishTime;
+                    *result_out = min_queue_front;
+                    return;
+                }
             }
 
-            // Now give the user a chance to veto this packet.  If they can use it, set output and return.
-            // Otherwise just continue trying the rest of the options.
-            if (mPredicate(min_queue_info->key, min_queue_info->messageQueue->front())) {
-                *min_queue_info_out = min_queue_info;
-                *vftime_out = min_queue_info->nextFinishTime;
-                *result_out = min_queue_info->messageQueue->front();
-                return;
-            }
         }
 
         // If we get here then we've tried everything and nothing has satisfied our constraints. Give up.
@@ -341,7 +378,19 @@ protected:
             return;
         }
 
-        qi->nextFinishTime = finishTime( qi->messageQueue->front()->size(), qi->weight, last_finish_time);
+        // If we don't restrict to strict queues, front() may return NULL even though the queue is not empty.
+        // For example, if the input queue is a FairQueue itself, nothing may be able to send due to the
+        // canSend predicate.
+        Message* front_msg = qi->messageQueue->front();
+        if ( front_msg == NULL ) {
+            mEmptyQueues.insert(qi->key);
+            return;
+        }
+
+        qi->nextFinishMessage = front_msg;
+        qi->nextFinishTime = finishTime( front_msg->size(), qi->weight, last_finish_time);
+        qi->nextFinishStartTime = last_finish_time;
+
         mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
         // In case it was an empty queue, remove it
         mEmptyQueues.erase(qi->key);
