@@ -1905,7 +1905,7 @@ LatencyAnalysis::~LatencyAnalysis() {
       olpe.mID_objectOn     = sID_objectOn[s];
       olpe.deltaTime        = dTimes[s];
       olpe.stillInQueue      = stillInQueues[s];
-        
+
       sortedEvts.push_back(olpe);
     }
     std::sort(sortedEvts.begin(),sortedEvts.end(), compareEvts );
@@ -2129,17 +2129,21 @@ public:
     }
 
     MotionVector3f at(const Time& t) {
-        if (events.empty() || t < events[0]->time)
-            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
-
         if (dirty) {
-            std::sort(events.begin(), events.end(), EventTimeComparator());
+            if (!events.empty())
+                std::sort(events.begin(), events.end(), EventTimeComparator());
             dirty = false;
         }
 
+        if (events.empty() || t < events[0]->loc.time())
+            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
+
         uint32 i = 0;
-        while(i+1 < events.size() && t < events[i+1]->time )
+        while(i+1 < events.size() && t >= events[i+1]->loc.time() )
             i++;
+
+        if (i >= events.size())
+            return MotionVector3f(Vector3f(0,0,0), Vector3f(0,0,0));
 
         return events[i]->loc.extrapolate(t);
     }
@@ -2212,13 +2216,15 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(*loc_it);
                     if (loc_evt == NULL) continue;
 
-                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( loc_evt->time );
-                    MotionVector3f source_loc = paths[loc_evt->source]->at( loc_evt->time );//loc_evt->loc.extrapolate( loc_evt->time );
+                    MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time );
+                    MotionVector3f source_loc = loc_evt->loc.extrapolate( gen_loc_evt->time );
+
                     Duration latency = loc_evt->time - gen_loc_evt->time;
 
                     // Since we don't capture initial setup locations, we need to handle the case when the first update
                     // is after this
-                    if ( (receiver_loc.position() == Vector3f(0,0,0) && receiver_loc.position() == Vector3f(0,0,0)) )
+                    if ( (receiver_loc.position() == Vector3f(0,0,0) && receiver_loc.position() == Vector3f(0,0,0)) ||
+                        (source_loc.position() == Vector3f(0,0,0) && source_loc.position() == Vector3f(0,0,0)) )
                         continue;
 
                     // Make sure the updates match, because we loop over all loc updates after this and we might pass the
