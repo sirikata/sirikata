@@ -262,6 +262,9 @@ void ObjectHost::randomPing(const Time&t) {
     Object * a=randomObject();
     Object * b=randomObject();
     if (a == NULL || b == NULL) return;
+    if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
+        mObjectInfo[b->uuid()].connectedTo == NullServerID)
+        return;
     ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
 }
 void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
@@ -303,9 +306,7 @@ void ObjectHost::tick(const Time& t) {
 
     mContext->objectFactory->tick(); mProfiler.finishedStage();
     //sendTestMessage(t,400.);
-    //bftm debug
-    //    randomPing(t);
-    //end bftm debug
+    randomPing(t);
 /*
     randomPing(t);
     randomPing(t);
