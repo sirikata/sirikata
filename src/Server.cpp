@@ -162,10 +162,13 @@ void Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
     // 3. If we don't have a connection for the source object, we can't do anything with it.
     // The object could be migrating and we get outdated packets.  Currently this can
     // happen because we need to maintain the connection long enough to deliver the init migration
-    // message.  Currently we just discard these messages, but we may need to account for this.
+    // message.  Therefore, we check if its in the currently migrating connections as well as active
+    // connections and allow messages through.
     // NOTE that we check connecting objects as well since we need to get past this point to deliver
     // Session messages.
-    bool source_connected = mObjects.find(obj_msg->source_object()) != mObjects.end(); // FIXME migrating objects?
+    bool source_connected =
+        mObjects.find(obj_msg->source_object()) != mObjects.end() ||
+        mMigratingConnections.find(obj_msg->source_object()) != mMigratingConnections.end();
     if (!source_connected)
     {
         if (mObjectsAwaitingMigration.find(obj_msg->source_object()) == mObjectsAwaitingMigration.end() &&
