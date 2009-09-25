@@ -77,8 +77,8 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 }
 
 
-ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& curt)
- : mContext( new ObjectHostContext(_id, curt) ),
+ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& epoch, const Time& curt)
+ : mContext( new ObjectHostContext(_id, epoch, curt) ),
    mServerIDMap(sidmap),
    mProfiler("Object Host Loop")
 {

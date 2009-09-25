@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     ObjectFactory* obj_factory = new ObjectFactory(region, duration);
 
     Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
-    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map, init_oh_ctx_time);
+    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map, start_time, init_oh_ctx_time);
 
     obj_factory->initialize(obj_host->context());
 

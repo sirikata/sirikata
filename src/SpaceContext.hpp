@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
+#include "Timer.hpp"
 
 namespace CBR {
 
@@ -85,6 +86,10 @@ public:
     }
     Time simTime(const Time& rawTime) const {
         return simTime( sinceEpoch(rawTime) );
+    }
+    // WARNING: The evaluates Timer::now, which shouldn't be done too often
+    Time simTime() const {
+        return simTime( Timer::now() );
     }
 
     MessageRouter* router() const {

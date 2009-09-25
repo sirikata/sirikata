@@ -35,6 +35,7 @@
 
 #include "Utility.hpp"
 #include "Message.hpp"
+#include "Timer.hpp"
 
 namespace CBR {
 
@@ -46,15 +47,35 @@ typedef uint64 ObjectHostID;
 
 class ObjectHostContext {
 public:
-    ObjectHostContext(ObjectHostID _id, const Time& curtime)
+    ObjectHostContext(ObjectHostID _id, const Time& epoch, const Time& curtime)
      : id(_id),
        objectHost(NULL),
        objectFactory(NULL),
        lastTime(curtime),
        time(curtime),
-       trace(NULL)
+       trace(NULL),
+       mEpoch(epoch)
     {
     }
+
+
+    Time epoch() const {
+        return mEpoch.read();
+    }
+    Duration sinceEpoch(const Time& rawtime) const {
+        return rawtime - mEpoch.read();
+    }
+    Time simTime(const Duration& sinceStart) const {
+        return Time::null() + sinceStart;
+    }
+    Time simTime(const Time& rawTime) const {
+        return simTime( sinceEpoch(rawTime) );
+    }
+    // WARNING: The evaluates Timer::now, which shouldn't be done too often
+    Time simTime() const {
+        return simTime( Timer::now() );
+    }
+
 
     ObjectHostID id;
     ObjectHost* objectHost;
@@ -62,6 +83,8 @@ public:
     Time lastTime;
     Time time;
     Trace* trace;
+private:
+    Sirikata::AtomicValue<Time> mEpoch;
 }; // class ObjectHostContext
 
 } // namespace CBR
