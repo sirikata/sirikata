@@ -2216,6 +2216,14 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     LocationEvent* loc_evt = dynamic_cast<LocationEvent*>(*loc_it);
                     if (loc_evt == NULL) continue;
 
+                    // Make sure the updates match, because we loop over all loc updates after this and we might pass the
+                    // next gen_loc_evt but we can't stop looking because the latencies might be very high
+                    if ( (loc_evt->loc.updateTime() != gen_loc_evt->loc.updateTime()) ||
+                        (loc_evt->loc.position() != gen_loc_evt->loc.position()) ||
+                        (loc_evt->loc.velocity() != gen_loc_evt->loc.velocity()) )
+                        continue;
+
+
                     MotionVector3f receiver_loc = paths[loc_evt->receiver]->at( gen_loc_evt->time );
                     MotionVector3f source_loc = loc_evt->loc.extrapolate( gen_loc_evt->time );
 
@@ -2225,13 +2233,6 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
                     // is after this
                     if ( (receiver_loc.position() == Vector3f(0,0,0) && receiver_loc.position() == Vector3f(0,0,0)) ||
                         (source_loc.position() == Vector3f(0,0,0) && source_loc.position() == Vector3f(0,0,0)) )
-                        continue;
-
-                    // Make sure the updates match, because we loop over all loc updates after this and we might pass the
-                    // next gen_loc_evt but we can't stop looking because the latencies might be very high
-                    if ( (loc_evt->loc.updateTime() != gen_loc_evt->loc.updateTime()) ||
-                        (loc_evt->loc.position() != gen_loc_evt->loc.position()) ||
-                        (loc_evt->loc.velocity() != gen_loc_evt->loc.velocity()) )
                         continue;
 
                     os << (source_loc.position() - receiver_loc.position()).length() << " " << latency.toSeconds() << std::endl;
