@@ -36,6 +36,7 @@
 #include "ObjectFactory.hpp"
 #include "ServerIDMap.hpp"
 #include "Random.hpp"
+#include "Options.hpp"
 #include <boost/bind.hpp>
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
@@ -78,15 +79,23 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 
 ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& curt)
  : mContext( new ObjectHostContext(_id, curt) ),
-   mServerIDMap(sidmap)
+   mServerIDMap(sidmap),
+   mProfiler("Object Host Loop")
 {
     mPingId=0;
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
     mContext->trace = trace;
+
+    mProfiler.addStage("Object Factory Tick");
+    mProfiler.addStage("Start Connections Writing");
+    mProfiler.addStage("IOService");
 }
 
 ObjectHost::~ObjectHost() {
+    if (GetOption(PROFILE)->as<bool>())
+        mProfiler.report();
+
     delete mContext;
 }
 
@@ -226,7 +235,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     return true;
 }
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
-  
+
     CBR::Protocol::Object::Ping ping_msg;
     Time t=mContext->time;
     ping_msg.set_ping(t);
@@ -249,7 +258,7 @@ Object* ObjectHost::randomObject () {
 void ObjectHost::randomPing(const Time&t) {
 
 
-  
+
     Object * a=randomObject();
     Object * b=randomObject();
     if (a == NULL || b == NULL) return;
@@ -287,10 +296,12 @@ void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
     ping(corner->object,destObject->object->uuid(),bestDistance);
 }
 void ObjectHost::tick(const Time& t) {
+    mProfiler.startIteration();
+
     mContext->lastTime = mContext->time;
     mContext->time = t;
 
-    mContext->objectFactory->tick();
+    mContext->objectFactory->tick(); mProfiler.finishedStage();
     //sendTestMessage(t,400.);
     //bftm debug
     //    randomPing(t);
@@ -314,11 +325,11 @@ floods the console with too much noise
         SpaceNodeConnection* conn = it->second;
         startWriting(conn);
     }
+    mProfiler.finishedStage();
 
     // Service the IOService.
     // This will allow both the readers and writers to make progress.
-    mIOService.poll();
-
+    mIOService.poll(); mProfiler.finishedStage();
     //if (mOutgoingQueue.size() > 1000)
     //    SILOG(oh,warn,"[OH] Warning: outgoing queue size > 1000: " << mOutgoingQueue.size());
 }

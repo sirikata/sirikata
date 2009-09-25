@@ -34,6 +34,7 @@
 #define _CBR_OBJECT_HOST_HPP_
 
 #include "ObjectHostContext.hpp"
+#include "TimeProfiler.hpp"
 #include <boost/asio.hpp>
 
 namespace CBR {
@@ -187,6 +188,8 @@ private:
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
     uint64 mPingId;
+
+    TimeProfiler mProfiler;
 
 }; // class ObjectHost
 
