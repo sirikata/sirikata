@@ -109,7 +109,7 @@ public:
 
     virtual MessageType type() const = 0;
     UniqueMessageID id() const;
-
+    uint32 headerSize()const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
     static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
 protected:
@@ -202,7 +202,7 @@ public:
 
     virtual MessageType type() const;
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-
+    size_t size()const;
     CBR::Protocol::Object::ObjectMessage contents;
 private:
     friend class Message;

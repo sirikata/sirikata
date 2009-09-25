@@ -12,7 +12,7 @@
 namespace CBR{
 
 template <class TQueue> bool FairObjectMessageQueue<TQueue> ::HasDestServerCanSendPredicate::operator()(const UUID& key, const typename TQueue::Type msg) const {
-            return msg->dest() != NullServerID && fq->canSend(*msg);
+            return msg->dest() != NullServerID && fq->canSend(msg);
         }
 
 template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second,ServerMessageQueue*smq)

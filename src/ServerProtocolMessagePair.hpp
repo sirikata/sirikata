@@ -12,7 +12,7 @@ public:
     ServerProtocolMessagePair(ObjectMessage&msg):mPair(0,msg),mID(0){}
     ServerProtocolMessagePair(const ServerID&sid, const ObjectMessage&data,UniqueMessageID id):mPair(sid,data),mID(id){}
     unsigned int size()const {
-        return mPair.second.contents.ByteSize();
+        return mPair.second.size();
     }
     bool empty() const {
         return size()==0;

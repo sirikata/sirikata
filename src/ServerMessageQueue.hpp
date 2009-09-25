@@ -58,7 +58,7 @@ public:
     virtual void reportQueueInfo(const Time& t) const = 0;
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
-    virtual bool canSend(const ServerProtocolMessagePair&msg){
+    virtual bool canSend(const ServerProtocolMessagePair*msg)=0;/*{
         if (msg.dest()==mContext->id())
             return true;
         static Network::Chunk throwaway1(1);
@@ -125,7 +125,7 @@ public:
         bool retval=canAddMessage(msg.dest(),*examples[r]);
         printf ("Can Add %d really(%d) %d\n",msg.size(),(int)examples[r]->size(),(int)retval);
         return retval;
-    }
+    }*/
 protected:
     SpaceContext* mContext;
     Network* mNetwork;

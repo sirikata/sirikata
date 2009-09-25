@@ -143,6 +143,9 @@ uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message**
     return offset;
 }
 
+uint32 Message::headerSize()const {
+    return sizeof(MessageType) + sizeof(uint64);
+}
 uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
     if (wire.size() < offset + sizeof(MessageType) + sizeof(uint64) )
         wire.resize( offset + sizeof(MessageType) + sizeof(uint64) );
@@ -257,7 +260,9 @@ void parsePBJMessage(PBJMessageType& contents, const Network::Chunk& wire, uint3
 }
 
 
-
+size_t ObjectMessage::size()const {
+    return contents.ByteSize()+headerSize();
+}
 ObjectMessage::ObjectMessage(const ServerID& origin,
     const UUID& src, const uint32 src_port,
     const UUID& dest, const uint32 dest_port,

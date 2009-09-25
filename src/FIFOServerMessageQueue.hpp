@@ -34,6 +34,7 @@ public:
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
     virtual bool canAddMessage(ServerID destinationServer,const Network::Chunk&msg);
+    bool canSend(const ServerProtocolMessagePair* next_msg);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service();
 

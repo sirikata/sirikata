@@ -21,6 +21,16 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
    mLastReceiveEndTime(mContext->time)
 {
 }
+
+bool FIFOServerMessageQueue::canSend(const ServerProtocolMessagePair*msg) {
+    if (msg->dest()==mContext->id()) return true;
+    Address4* addy = mServerIDMap->lookupInternal(msg->dest());
+
+    assert(addy != NULL);
+    return mNetwork->canSend(*addy,msg->size(),false,true,1);
+    
+}
+
 bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {

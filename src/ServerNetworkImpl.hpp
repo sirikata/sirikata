@@ -53,7 +53,9 @@ public:
     const ServerID& destServer() const {
         return mDestServer;
     }
-
+    size_t serializedSize() const {
+        return 2*sizeof(ServerID);
+    }
     // Serialize this header into the network chunk, starting at the given offset.
     // Returns the ending offset of the header.
     uint32 serialize(Network::Chunk& wire, uint32 offset) {

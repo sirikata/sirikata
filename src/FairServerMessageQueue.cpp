@@ -83,8 +83,20 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
     *chunk_out = NULL;
     return false;
 }
+bool FairServerMessageQueue::canSend(const ServerProtocolMessagePair*msg) {
+    if (msg->dest()==mContext->id()) return true;
+    Network::Chunk with_header;
+    
+    ServerMessageHeader server_header(mContext->id(),msg->dest());
 
+    Address4* addy = mServerIDMap->lookupInternal(msg->dest());
+
+    assert(addy != NULL);
+    return mNetwork->canSend(*addy,server_header.serializedSize()+msg->size(),false,true,1);
+    
+}
 bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
+    if (next_msg->dest()==mContext->id()) return true;
     Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
 
     assert(addy != NULL);

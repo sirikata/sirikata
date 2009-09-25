@@ -54,7 +54,7 @@ protected:
     float getServerWeight(ServerID);
 
     virtual void aggregateLocationMessages() { }
-
+    bool canSend(const ServerProtocolMessagePair* next_msg);
     // Checks if sending the given message would be successful.
     bool canSend(const ServerMessagePair* next_msg);
 };
