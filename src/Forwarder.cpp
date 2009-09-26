@@ -274,7 +274,8 @@ void Forwarder::service()
         QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
         success = (push_result == QueueEnum::PushSucceeded);
     }
-    delete msg;
+    if (success)
+        delete msg;
     return success;
   }
 

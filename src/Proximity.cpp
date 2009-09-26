@@ -165,7 +165,6 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mLocService(locservice),
    mCSeg(NULL),
    mMinObjectQueryAngle(SolidAngle::Max),
-   mNeedServerQueryUpdate(false),
    mProxThread(NULL),
    mShutdownProxThread(false),
    mServerQueries(),
@@ -213,14 +212,20 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
     mCSeg = cseg;
 
     mCSeg->addListener(this);
-
-    mNeedServerQueryUpdate = true;
 }
 
 void Proximity::shutdown() {
     // Shut down the main processing thread
     mShutdownProxThread = true;
     mProxThread->join(); // FIXME this should probably be a timed_join
+}
+
+void Proximity::addAllServersForUpdate() {
+    // FIXME this assumes that ServerIDs are simple sequence of IDs
+    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
+        if (sid == mContext->id()) continue;
+        mNeedServerQueryUpdate.insert(sid);
+    }
 }
 
 void Proximity::sendQueryRequests() {
@@ -234,10 +239,10 @@ void Proximity::sendQueryRequests() {
 
     BoundingSphere3f bounds = bbox.toBoundingSphere();
 
-    // FIXME this assumes that ServerIDs are simple sequence of IDs
-    for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-        if (sid == mContext->id()) continue;
-
+    std::set<ServerID> sub_servers;
+    sub_servers.swap(mNeedServerQueryUpdate);
+    for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
+        ServerID sid = *it;
         ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mContext->id());
         msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
@@ -246,7 +251,9 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
         msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
-        mContext->router()->route(MessageRouter::PROXS, msg, sid);
+        bool sent = mContext->router()->route(MessageRouter::PROXS, msg, sid);
+        if (!sent)
+            mNeedServerQueryUpdate.insert(sid);
     }
 }
 
@@ -359,7 +366,7 @@ void Proximity::updateQuery(UUID obj, const TimedMotionVector3f& loc, const Boun
         if (sa < mMinObjectQueryAngle) {
             mMinObjectQueryAngle = sa;
             PROXLOG(debug,"Query addition initiated server query request.");
-            mNeedServerQueryUpdate = true;
+            addAllServersForUpdate();
         }
     }
 }
@@ -385,17 +392,14 @@ void Proximity::removeQuery(UUID obj) {
         // while still getting the benefit from reducing the query angle.
         if (minangle != mMinObjectQueryAngle) {
             mMinObjectQueryAngle = minangle;
-            mNeedServerQueryUpdate = true;
+            addAllServersForUpdate();
         }
     }
 }
 
 void Proximity::service() {
     // Update server-to-server angles if necessary
-    if (mNeedServerQueryUpdate) {
-        sendQueryRequests();
-        mNeedServerQueryUpdate = false;
-    }
+    sendQueryRequests();
 
     // Get and handle output events
     std::deque<ProximityOutputEvent> output_events;
@@ -404,16 +408,30 @@ void Proximity::service() {
         handleOutputEvent(*it);
 
     // Get and ship server results
-    std::deque<ProxResultServerPair> server_results;
-    mServerResults.swap(server_results);
-    for(std::deque<ProxResultServerPair>::iterator it = server_results.begin(); it != server_results.end(); it++)
-        mContext->router()->route(MessageRouter::PROXS, it->msg, it->dest);
+    std::deque<ProxResultServerPair> server_results_copy;
+    mServerResults.swap(server_results_copy);
+    mServerResultsToSend.insert(mServerResultsToSend.end(), server_results_copy.begin(), server_results_copy.end());
+
+    bool server_sent = true;
+    while(server_sent && !mServerResultsToSend.empty()) {
+        ProxResultServerPair& msg_front = mServerResultsToSend.front();
+        server_sent = mContext->router()->route(MessageRouter::PROXS, msg_front.msg, msg_front.dest);
+        if (server_sent)
+            mServerResultsToSend.pop_front();
+    }
 
     // Get and ship object results
-    std::deque<CBR::Protocol::Object::ObjectMessage*> obj_results;
-    mObjectResults.swap(obj_results);
-    for(std::deque<CBR::Protocol::Object::ObjectMessage*>::iterator it = obj_results.begin(); it != obj_results.end(); it++)
-      mContext->router()->route(*it, false);
+    std::deque<CBR::Protocol::Object::ObjectMessage*> object_results_copy;
+    mObjectResults.swap(object_results_copy);
+    mObjectResultsToSend.insert(mObjectResultsToSend.end(), object_results_copy.begin(), object_results_copy.end());
+
+    bool object_sent = true;
+    while(object_sent && !mObjectResultsToSend.empty()) {
+        CBR::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
+        object_sent = mContext->router()->route(msg_front, false);
+        if (object_sent)
+            mObjectResultsToSend.pop_front();
+    }
 }
 
 void Proximity::handleOutputEvent(const ProximityOutputEvent& evt) {
