@@ -45,7 +45,9 @@ namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid)
  : server(sid),
-   is_writing(false)
+   is_writing(false),
+   write_stream(&write_buf),
+   read_next_size(0)
 {
     socket = new boost::asio::ip::tcp::socket(ios);
     connecting = false;
@@ -229,7 +231,9 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     // FIXME would be nice not to have to do this alloc/dealloc
     CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
-    conn->queue.push( serializeObjectHostMessage(*obj_msg) );
+    std::string* serialized = serializeObjectHostMessage(*obj_msg);
+    conn->write_stream << *serialized;
+    delete serialized;
     delete obj_msg;
 
     return true;
@@ -321,6 +325,7 @@ void ObjectHost::tick(const Time& t) {
     randomPing(t);
 floods the console with too much noise
 */
+
     // Set up writers which are not writing yet
     for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
         SpaceNodeConnection* conn = it->second;
@@ -422,43 +427,39 @@ void ObjectHost::startReading(SpaceNodeConnection* conn) {
         conn->read_buf,
         boost::asio::transfer_at_least(1), // NOTE: This is important, defaults to transfer_all...
         boost::bind( &ObjectHost::handleConnectionRead, this,
-            boost::asio::placeholders::error, conn
+            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, conn
         )
     );
 }
 
-void ObjectHost::handleConnectionRead(const boost::system::error_code& err, SpaceNodeConnection* conn) {
+void ObjectHost::handleConnectionRead(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn) {
     if (err) {
         // FIXME some kind of error, need to handle this
         OH_LOG(error,"Error in connection read:" << err << " = " << err.message());
         return;
     }
 
-    // dump data
-    uint32 buf_size = conn->read_buf.size();
-    char* buf = new char[buf_size];
-    std::istream is (&conn->read_buf);
-    is.read(buf, buf_size);
-
-    conn->read_avail += std::string(buf, buf_size);
-
-    delete buf;
+    std::istream read_stream(&conn->read_buf);
 
     // try to extract messages
-    while( conn->read_avail.size() > sizeof(uint32) ) {
-        uint32* msg_size_ptr = (uint32*)&(conn->read_avail[0]);
-        uint32 msg_size = *msg_size_ptr;
-        if (conn->read_avail.size() < sizeof(uint32) + msg_size)
-            break; // No more full messages
+    while( true ) {
+        if (conn->read_next_size == 0 && conn->read_buf.size() > sizeof(uint32))
+            read_stream.read((char*)&conn->read_next_size, sizeof(uint32));
 
-        std::string real_payload = conn->read_avail.substr(sizeof(uint32), msg_size);
-        conn->read_avail = conn->read_avail.substr(sizeof(uint32) + msg_size);
+        if (conn->read_next_size == 0 || conn->read_buf.size() < conn->read_next_size)
+            break;
+
+        std::string real_payload;
+        real_payload.resize(conn->read_next_size);
+        read_stream.read(&real_payload[0], conn->read_next_size);
 
         CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
         bool parse_success = obj_msg->ParseFromString(real_payload);
         assert(parse_success == true);
 
         handleServerMessage( conn, obj_msg );
+
+        conn->read_next_size = 0;
     }
 
     // continue reading
@@ -550,16 +551,8 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
 // Start async writing for this connection if it has data to be sent
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
-    if (!conn->queue.empty() && !conn->is_writing) {
+    if (!conn->is_writing && conn->write_buf.size() > 0) {
         conn->is_writing = true;
-        // Get more data into the buffer
-        std::ostream write_stream(&conn->write_buf);
-        while(!conn->queue.empty()) {
-            std::string* data = conn->queue.front();
-            conn->queue.pop();
-            write_stream.write( data->c_str(), data->size() );
-            delete data;
-        }
 
         // And start the write
         OH_LOG(insane,"Starting write of " << conn->write_buf.size() << " bytes");
@@ -567,13 +560,13 @@ void ObjectHost::startWriting(SpaceNodeConnection* conn) {
             *(conn->socket),
             conn->write_buf,
             boost::bind( &ObjectHost::handleConnectionWrite, this,
-                boost::asio::placeholders::error, conn)
+                boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, conn)
         );
     }
 }
 
 // Handle the async writing callback for this connection
-void ObjectHost::handleConnectionWrite(const boost::system::error_code& err, SpaceNodeConnection* conn) {
+void ObjectHost::handleConnectionWrite(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn) {
     conn->is_writing = false;
 
     if (err) {
@@ -581,6 +574,8 @@ void ObjectHost::handleConnectionWrite(const boost::system::error_code& err, Spa
         OH_LOG(error,"Error in connection write\n");
         return;
     }
+
+    OH_LOG(insane,"Wrote " << bytes_transferred << ", " << conn->write_buf.size() << " left");
 
     startWriting(conn);
 }

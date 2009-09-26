@@ -125,14 +125,12 @@ private:
     // Start async reading for this connection
     void startReading(SpaceNodeConnection* conn);
     // Handle async reading callbacks for this connection
-    void handleConnectionRead(const boost::system::error_code& err, SpaceNodeConnection* conn);
+    void handleConnectionRead(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn);
 
     // Start async writing for this connection if it has data to be sent
     void startWriting(SpaceNodeConnection* conn);
     // Handle the async writing callback for this connection
-    void handleConnectionWrite(const boost::system::error_code& err, SpaceNodeConnection* conn);
-
-
+    void handleConnectionWrite(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn);
 
 
 
@@ -154,10 +152,11 @@ private:
         std::queue<std::string*> queue;
         bool connecting;
         bool is_writing;
+        boost::asio::streambuf write_buf;
+        std::ostream write_stream;
 
         boost::asio::streambuf read_buf;
-        std::string read_avail;
-        boost::asio::streambuf write_buf;
+        uint32 read_next_size;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;
