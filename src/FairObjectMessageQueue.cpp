@@ -60,6 +60,7 @@ template <class Queue> OutgoingMessage FairObjectMessageQueue<Queue>::front()con
 
 
 template <class Queue> void FairObjectMessageQueue<Queue>::service(){
+    /** NOTE THAT THIS CODE IS NO LONGER USED, IT SHOULD BE CLEANED OUT.
     aggregateLocationMessages();
 
     uint64 bytes = mRate * mContext->sinceLast.toSeconds() + mRemainderBytes;
@@ -69,7 +70,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
     unsigned int retryMax=mClientQueues.numQueues(),retryCount=0;
     while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
         bool sent_success=true;//FIXME
-        /*bool sent_success = */mForwarder->routeObjectMessageToServer(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
+        bool sent_success = mForwarder->routeObjectMessageToServer(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
         if (!sent_success)
             break;
 
@@ -80,6 +81,7 @@ template <class Queue> void FairObjectMessageQueue<Queue>::service(){
     }
 
     mRemainderBytes = mClientQueues.empty() ? 0 : bytes;
+ */
 }
 
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const UUID& sid, float weight) {

@@ -73,7 +73,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_UNPROCESSED_PACKET        255
 
 
-  
+
 // List of well known server ports, which should replace message types
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
 
@@ -182,9 +182,11 @@ public:
 
     virtual ~MessageRouter() {}
 
-    virtual void route(SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
+    __attribute__ ((warn_unused_result))
+    virtual bool route(SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
   //virtual void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward) = 0;
-  virtual void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
+    __attribute__ ((warn_unused_result))
+  virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
 
 };
 
@@ -339,13 +341,13 @@ public:
   virtual MessageType type() const;
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
   ~UpdateOSegMessage();
-  
+
   CBR::Protocol::OSeg::UpdateOSegMessage contents;
 
 private:
   friend class Message;
   UpdateOSegMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-                    
+
 };
 
 
@@ -360,7 +362,7 @@ public:
   ~KillObjConnMessage();
   virtual MessageType type() const;
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-  
+
 private:
   friend class Message;
   KillObjConnMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
@@ -378,7 +380,7 @@ public:
   ~OSegAddMessage();
   virtual MessageType type() const;
   virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
-  
+
 private:
   friend class Message;
   OSegAddMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
@@ -386,9 +388,9 @@ private:
 
 
 //forwarded message
-//class 
+//class
 
-//end 
+//end
 
 
 class ServerProximityQueryMessage : public Message {

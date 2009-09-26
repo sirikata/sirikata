@@ -106,6 +106,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we can route messages being held in mObjectsInTransit
         for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
         {
+            // FIXME what if this fails?
             routeObjectMessageToServer((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward,MessageRouter::OSEG_TO_OBJECT_MESSAGESS);
         }
 
@@ -216,11 +217,11 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    
+
     mServerMessageQueue->service(); mProfiler.finishedStage();
 
     tickOSeg(t);  mProfiler.finishedStage();
-    
+
     Sirikata::Network::Chunk *c=NULL;
     ServerID source_server;
     while(mServerMessageQueue->receive(&c, &source_server))
@@ -238,8 +239,10 @@ void Forwarder::service()
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  void Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
+  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
   {
+
+      bool success = false;
 
     uint32 offset = 0;
     Network::Chunk msg_serialized;
@@ -259,31 +262,36 @@ void Forwarder::service()
           // in trace size.  It's probably not worth recording this information...
           //mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
       }
+      // FIXME this should be limited in size so we can actually provide pushback to other servers when we can't route to ourselves/
+      // connected objects fast enough
       mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
+      success = true;
     }
     else
     {
-      
+
         mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-      (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
+        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
+        success = (push_result == QueueEnum::PushSucceeded);
     }
     delete msg;
+    return success;
   }
 
 
-  void Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
+  bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
   {
     UUID dest_obj = msg->dest_object();
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
 
-    
+
     //#ifdef  CRAQ_CACHE
     if (is_forward && (forwardFrom != NullServerID))
     {
       //means that when we figure out which server this object is located on, we should also send an oseg update message.
       //we need to be careful not to send multiple update messages to the same server:
       //
-      
+
       if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end()) //if the object already exists in mServersToUpdate
       {
         if (mServersToUpdate[dest_obj].end() == std::find(mServersToUpdate[dest_obj].begin(), mServersToUpdate[dest_obj].end(), forwardFrom))  //if the server that we want to update doesn't already exist for that entry of dest_obj
@@ -294,7 +302,7 @@ void Forwarder::service()
 #ifdef CRAQ_DEBUG
           std::cout<<"\n\n bftm debug: got a server to update at time  "<<mContext->time.raw()<< " obj_id:   "<<dest_obj.toString()<<"    server to send update to:  "<<forwardFrom<<"\n\n";
 #endif
-          
+
         }
       }
       else
@@ -305,24 +313,24 @@ void Forwarder::service()
     }
     //#endif
 
-    
+
 
     if (dest_server_id != NullServerID)
     {
       //means that we instantly knew what the location of the object is, and we can route immediately!
-        routeObjectMessageToServer(msg, dest_server_id,is_forward,MessageRouter::SERVER_TO_OBJECT_MESSAGESS);
-
-      return;
+        return routeObjectMessageToServer(msg, dest_server_id,is_forward,MessageRouter::SERVER_TO_OBJECT_MESSAGESS);
     }
 
+    // FIXME we need to handle this delay somewhere else. We can't just queue up an arbitrarily large number of messages
+    // waiting for oseg lookups...
     //add message to objects in transit.
     MessageAndForward mAndF;
     mAndF.mMessage = msg;
     mAndF.mIsForward = is_forward;
 
-    
-    mObjectsInTransit[dest_obj].push_back(mAndF);
 
+    mObjectsInTransit[dest_obj].push_back(mAndF);
+    return true;
   }
 
 //end what i think it should be replaced with
@@ -414,7 +422,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
           break;
       case MESSAGE_TYPE_NOISE:
           {
-              
+
               NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
               assert(noise_msg != NULL);
               delete noise_msg;
@@ -502,10 +510,15 @@ void Forwarder::receiveMessage(Message* msg) {
     // FIXME having to make this copy is nasty
     CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
     ObjectConnection* conn = getObjectConnection(dest);
-    if (conn != NULL)
+    if (conn != NULL) {
+        // This should probably have control via push back as well, i.e. should return bool and we should care what
+        // happens
         conn->send(obj_msg_cpy);
+    }
     else
     {
+        // FIXME we need to check the result here. There needs to be a way to push back, which is probably trickiest here
+        // since it would have to filter all the way back to where the original server to server message was decoded
       route(obj_msg_cpy, true,GetUniqueIDServerID(obj_msg->id()) );// bftm changed to allow for forwarding back messages.
     }
 
@@ -517,12 +530,12 @@ void Forwarder::receiveMessage(Message* msg) {
 
 
 
-void Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward, MessageRouter::SERVICES svc)
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward, MessageRouter::SERVICES svc)
 {
   //send out all server updates associated with an object with this message:
   UUID obj_id =  msg->dest_object();
 
-      
+
   //#ifdef CRAQ_CACHE
   if (mServersToUpdate.find(obj_id) != mServersToUpdate.end())
   {
@@ -537,7 +550,8 @@ void Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
 #endif
-      
+
+      // FIXME what if this fails to get sent out?
       route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
 
     }
@@ -546,8 +560,7 @@ void Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
   // Wrap it up in one of our ObjectMessages and ship it.
   ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
-  route(svc,obj_msg, dest_serv, is_forward);
-  delete msg;
+  return route(svc,obj_msg, dest_serv, is_forward);
 }
 
 
@@ -556,8 +569,8 @@ void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn
   uoc.id = mUniqueConnIDs;
   uoc.conn = conn;
   ++mUniqueConnIDs;
-  
-  
+
+
   //    mObjectConnections[dest_obj] = conn;
   mObjectConnections[dest_obj] = uoc;
   mObjectMessageQueue->registerClient(dest_obj, 1); // FIXME weight?

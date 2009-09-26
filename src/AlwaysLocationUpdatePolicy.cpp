@@ -119,15 +119,13 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
     obj_msg->set_unique(GenerateUniqueID(mLocService->context()->id()));
     obj_msg->set_payload( serializePBJMessage(blu) );
 
-    mLocService->context()->router()->route(obj_msg, false);
-    return true; // FIXME
+    return mLocService->context()->router()->route(obj_msg, false);
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
     BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
     msg->contents = blu;
-    mLocService->context()->router()->route(MessageRouter::LOCS, msg, dest);
-    return true; // FIXME
+    return mLocService->context()->router()->route(MessageRouter::LOCS, msg, dest);
 }
 
 } // namespace CBR

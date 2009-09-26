@@ -80,7 +80,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ServerMessageQueue* mServerMessageQueue;
 
       uint64 mUniqueConnIDs;
-  
+
 
     struct MessageAndForward
     {
@@ -107,14 +107,14 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       ObjectConnection* conn;
     };
 
-  
+
   //    typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
   //    ObjectConnectionMap mObjectConnections;
 
     typedef std::map<UUID, UniqueObjConn> ObjectConnectionMap;
     ObjectConnectionMap mObjectConnections;
 
-  
+
     TimeProfiler mProfiler;
 
     //Private Functions
@@ -124,12 +124,12 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     // the server or object it is addressed to.
     void deliver(Message* msg);
 
-  
+
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate;
 
-  
+
 protected:
     virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
@@ -142,22 +142,26 @@ protected:
       void service();
 
       void tickOSeg(const Time&t);
-  
+
 
       // Routing interface for servers.  This is used to route messages that originate from
       // a server provided service, and thus don't have a source object.  Messages may be destined
       // for either servers or objects.  The second form will simply automatically do the destination
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-      void route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
+    __attribute__ ((warn_unused_result))
+      bool route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
 
-    //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with the stale cache value.
-     void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
+    //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with
+    //the stale cache value.
+    __attribute__ ((warn_unused_result))
+     bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
   //  void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom );
 
   //  private:
       // This version is provided if you already know which server the message should be sent to
-    void routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, MessageRouter::SERVICES from_another_object=MessageRouter::OBJECT_MESSAGESS);
+    __attribute__ ((warn_unused_result))
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, MessageRouter::SERVICES from_another_object=MessageRouter::OBJECT_MESSAGESS);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 
