@@ -70,6 +70,10 @@ void FIFOObjectMessageQueue::service(){
     mRemainderBytes = mQueue.empty() ? 0 : bytes;
 }
 
+
+bool FIFOObjectMessageQueue::hasClient(const UUID&) const {
+    return true;
+}
 void FIFOObjectMessageQueue::registerClient(const UUID& sid, float weight) {
 }
 

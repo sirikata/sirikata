@@ -18,7 +18,7 @@ public:
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
 
     virtual void service();
-
+    virtual bool hasClient(const UUID&) const;
     virtual void registerClient(const UUID& oid,float weight=1);
     virtual void unregisterClient(const UUID& oid);
 

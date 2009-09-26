@@ -178,48 +178,36 @@ void Forwarder::service()
 
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
-
+    std::string noiseChunk;
     if (GetOption(NOISE)->as<bool>()) {
-        if (GetOption(SERVER_QUEUE)->as<String>() == "fair") {
-            for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
-                if (sid == mContext->id()) continue;
-                while(true) {
-                    NoiseMessage* noise_msg = new NoiseMessage(mContext->id(), (uint32)(50 + 200*randFloat())); // FIXME control size from options?
-
-                    uint32 offset = 0;
-                    Network::Chunk msg_serialized;
-                    offset = noise_msg->serialize(msg_serialized, offset);
-                    bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
-                    if (sent_success) {
-                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
-                    }
-                    delete noise_msg;
-                    if (!sent_success) break;
-                }
+        static UUID key=UUID::random();            
+        for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
+            if (sid == mContext->id()) continue;
+            memcpy(&key,&sid,sizeof(sid));
+            if (!mObjectMessageQueue->hasClient(key)) {
+                mObjectMessageQueue->registerClient(key,1.0e-6);
             }
-        }
-        else {
-            // For FIFO we generate for random servers because they all
-            // share a single internal queue.
-            uint32 nfail = 0;
-            uint32 nservers = mCSeg->numServers();
-            while(nfail < nservers) {
-                ServerID sid = randInt<uint32>(1, nservers);
-                if (sid == mContext->id()) continue;
+            bool send_success;
+            do {
+                Protocol::Object::ObjectMessage* noise_msg = new Protocol::Object::ObjectMessage;
+                noiseChunk.resize(50 + 200*randFloat());
+                noise_msg->set_payload(noiseChunk);
+                noise_msg->set_source_port(OBJECT_PORT_NOISE);
+                noise_msg->set_dest_port(OBJECT_PORT_NOISE);
 
-                NoiseMessage* noise_msg = new NoiseMessage(mContext->id(), (uint32)(50 + 200*randFloat())); // FIXME control size from options?
-
-                uint32 offset = 0;
-                Network::Chunk msg_serialized;
-                offset = noise_msg->serialize(msg_serialized, offset);
-
-                bool sent_success = mServerMessageQueue->addMessage(sid, msg_serialized);
-                if (sent_success) {
-                    mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), offset);
+                noise_msg->set_source_object(key);
+                noise_msg->set_dest_object(key);///bizzzzogus
+                uint64 test=(1<<30);
+                test<<=30;
+                noise_msg->set_unique(test+rand()%1000000000);
+                
+                ObjMessQBeginSend beginMess;
+                send_success=mObjectMessageQueue->beginSend(noise_msg,beginMess);
+                if(send_success) {
+                    mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->unique(), 0);
+                    mObjectMessageQueue->endSend(beginMess,sid);
                 }
-                delete noise_msg;
-                if (!sent_success) nfail++;
-            }
+            }while (send_success);
         }
     }
     mProfiler.finishedStage();
@@ -379,7 +367,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
       }
       else
       {
-        mObjectMessageQueue->endSend(beginMess,lookupID);
+          mObjectMessageQueue->endSend(beginMess,lookupID);
       }
     }
 

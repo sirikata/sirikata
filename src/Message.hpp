@@ -69,6 +69,7 @@ typedef uint8 MessageType;
 #define MESSAGE_TYPE_UPDATE_OSEG               15
 #define MESSAGE_TYPE_FORWARDED                 16
 #define MESSAGE_TYPE_OSEG_ADDED_OBJECT         17
+#define MESSAGE_TYPE_OBJECT_NOISE              18
 #define MESSAGE_TYPE_UNPROCESSED_PACKET        255
 
 
@@ -81,7 +82,8 @@ typedef uint8 MessageType;
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
 #define OBJECT_PORT_SUBSCRIPTION  4
-#define OBJECT_PORT_PING  16383
+#define OBJECT_PORT_NOISE 253
+#define OBJECT_PORT_PING  254
 
 template <typename scalar>
 class SplitRegion {
@@ -209,6 +211,21 @@ private:
     ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 }; // class ObjectMessage
 
+
+class ObjectNoiseMessage : public ObjectMessage {
+public:
+    ObjectNoiseMessage(const ServerID& origin,
+        const UUID& src, const uint32 src_port,
+        const UUID& dest, const uint32 dest_port,
+        const Network::Chunk& payload);
+
+    ObjectNoiseMessage(const ServerID& origin, unsigned int size);
+
+    virtual MessageType type() const;
+private:
+    friend class Message;
+    ObjectNoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+};
 
 class NoiseMessage : public Message {
 public:

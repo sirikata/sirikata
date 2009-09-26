@@ -108,7 +108,7 @@ public:
 
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
-
+    virtual bool hasClient(const UUID &oid) const;
 
     virtual void service();
 
