@@ -11,13 +11,12 @@ namespace CBR{
 class FIFOObjectMessageQueue:public ObjectMessageQueue {
 public:
 
-    FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second);
+    FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm);
     virtual ~FIFOObjectMessageQueue(){}
 
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
 
-    virtual void service();
     virtual bool hasClient(const UUID&) const;
     virtual void registerClient(const UUID& oid,float weight=1);
     virtual void unregisterClient(const UUID& oid);
@@ -98,14 +97,11 @@ public:
         return mQueue.empty();
     }
     QueueEnum::PushResult push(const ElementType&msg) {
-
         NOT_IMPLEMENTED();
         return QueueEnum::PushExceededMaximumSize;
     }
 private:
     FIFOQueue<ServerProtocolMessagePair,UUID> mQueue;
-    uint32 mRate;
-    uint32 mRemainderBytes;
 };
 }
 #endif

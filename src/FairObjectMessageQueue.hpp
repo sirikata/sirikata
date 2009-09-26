@@ -19,8 +19,6 @@ protected:
     };
 
     FairQueue<ServerProtocolMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
-    uint32 mRate;
-    uint32 mRemainderBytes;
 
     // Gross, but we need it to handle const-ness for front()
     FairObjectMessageQueue<TQueue>* unconstThis() const {
@@ -94,14 +92,13 @@ public:
         return result;
     }
     QueueEnum::PushResult push(const ElementType&msg) {
-
         NOT_IMPLEMENTED();
         return QueueEnum::PushExceededMaximumSize;
     }
     bool empty()const {
         return mClientQueues.empty();
     }
-    FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second, ServerMessageQueue *smq);
+    FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, ServerMessageQueue* smq);
 
     virtual void registerClient(const UUID& oid,float weight);
     virtual void unregisterClient(const UUID& oid);
@@ -109,9 +106,6 @@ public:
     virtual bool beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend& );
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
     virtual bool hasClient(const UUID &oid) const;
-
-    virtual void service();
-
 protected:
     virtual void aggregateLocationMessages() { }
 

@@ -15,11 +15,9 @@ template <class TQueue> bool FairObjectMessageQueue<TQueue> ::HasDestServerCanSe
             return msg->dest() != NullServerID && fq->canSend(msg);
         }
 
-template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, uint32 bytes_per_second,ServerMessageQueue*smq)
+template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(SpaceContext* ctx, Forwarder* sm, ServerMessageQueue*smq)
  : ObjectMessageQueue(ctx, sm),
    mClientQueues( HasDestServerCanSendPredicate(smq) ),
-   mRate(bytes_per_second),
-   mRemainderBytes(0),
    mFrontInput(NULL),
    mFrontOutput(NULL)
 {
@@ -46,42 +44,6 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
 template <class Queue> void FairObjectMessageQueue<Queue>::endSend(const ObjMessQBeginSend& fromBegin, ServerID dest_server_id)
 {
     ((ServerMessagePair*)fromBegin.data)->dest(dest_server_id);
-}
-
-/*
-template <class Queue> OutgoingMessage*& FairObjectMessageQueue<Queue>::front() {
-    return mClientQueues.front();
-}
-template <class Queue> OutgoingMessage FairObjectMessageQueue<Queue>::front()const {
-    return mClientQueues.front();
-}
-
-*/
-
-
-template <class Queue> void FairObjectMessageQueue<Queue>::service(){
-    /** NOTE THAT THIS CODE IS NO LONGER USED, IT SHOULD BE CLEANED OUT.
-    aggregateLocationMessages();
-
-    uint64 bytes = mRate * mContext->sinceLast.toSeconds() + mRemainderBytes;
-
-    ServerProtocolMessagePair* next_msg = NULL;
-    UUID objectName;
-    unsigned int retryMax=mClientQueues.numQueues(),retryCount=0;
-    while( bytes > 0 && (next_msg = mClientQueues.front(&bytes,&objectName)) != NULL ) {
-        bool sent_success=true;//FIXME
-        bool sent_success = mForwarder->routeObjectMessageToServer(new Protocol::Object::ObjectMessage(next_msg->data().contents),next_msg->dest());
-        if (!sent_success)
-            break;
-
-        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest(), next_msg->id(), next_msg->size());
-        ServerProtocolMessagePair* next_msg_popped = mClientQueues.pop(&bytes);
-        assert(next_msg_popped == next_msg);
-        delete next_msg;
-    }
-
-    mRemainderBytes = mClientQueues.empty() ? 0 : bytes;
- */
 }
 
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const UUID& sid, float weight) {
