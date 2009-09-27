@@ -668,8 +668,7 @@ void Server::checkObjectMigrations()
             // Stop tracking the object locally
             //            mLocationService->removeLocalObject(obj_id);
 
-            mForwarder->route( MessageRouter::MIGRATES, migrate_msg , new_server_id);
-
+            mMigrateMessages.push(MigrateMessageBundle(migrate_msg, new_server_id));
 
             // Stop Forwarder from delivering via this Object's
             // connection, destroy said connection
@@ -703,6 +702,14 @@ void Server::checkObjectMigrations()
             mObjects.erase(obj_id);
 
         }
+    }
+
+    // Try sending any outstanding migrate messages
+    while(!mMigrateMessages.empty()) {
+        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front().msg, mMigrateMessages.front().dest);
+        if (!sent)
+            break;
+        mMigrateMessages.pop();
     }
 }
 

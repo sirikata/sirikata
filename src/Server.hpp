@@ -71,7 +71,7 @@ private:
 
     bool checkAlreadyMigrating(const UUID& obj_id);
     void processAlreadyMigrating(const UUID& obj_id);
-    
+
     SpaceContext* mContext;
     LocationService* mLocationService;
     CoordinateSegmentation* mCSeg;
@@ -106,7 +106,20 @@ private:
       uint64 uniqueConnId;
       bool serviceConnection;
     };
-    
+
+
+      struct MigrateMessageBundle {
+          MigrateMessageBundle(MigrateMessage* _m, ServerID d)
+           : msg(_m), dest(d)
+          {}
+
+          MigrateMessage* msg;
+          ServerID dest;
+      };
+      typedef std::queue<MigrateMessageBundle> MigrateMessageQueue;
+      // Outstanding MigrateMessages, which get objects to other servers.
+      MigrateMessageQueue mMigrateMessages;
+
     //    ObjectConnectionMap mMigratingConnections;//bftm add
     typedef std::map<UUID,MigratingObjectConnectionsData> MigConnectionsMap;
     MigConnectionsMap mMigratingConnections;//bftm add
@@ -121,7 +134,7 @@ private:
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
 
-    
+
     TimeProfiler mProfiler;
 }; // class Server
 
