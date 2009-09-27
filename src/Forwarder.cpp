@@ -53,8 +53,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
     mProfiler.addStage("Outgoing Messages");
+    mProfiler.addStage("Forwarder Queue => Server Message Queue");
     mProfiler.addStage("Noise");
-    mProfiler.addStage("Object Message Queue");
     mProfiler.addStage("Server Message Queue");
     mProfiler.addStage("OSegII");
     mProfiler.addStage("Server Message Queue Receive");
@@ -181,7 +181,7 @@ void Forwarder::service()
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
     std::string noiseChunk;
     if (GetOption(NOISE)->as<bool>()) {
-        static UUID key=UUID::random();            
+        static UUID key=UUID::random();
         static UUID zerodkey=key;
         ServerID nilo=0;
         memcpy(&zerodkey,&nilo,sizeof(nilo));
@@ -204,7 +204,7 @@ void Forwarder::service()
                 uint64 test=(1<<30);
                 test<<=30;
                 noise_msg->set_unique(test+rand()%1000000000);
-                
+
                 ObjMessQBeginSend beginMess;
                 send_success=mObjectMessageQueue->beginSend(noise_msg,beginMess);
                 if(send_success) {
