@@ -181,6 +181,9 @@ void Forwarder::service()
     std::string noiseChunk;
     if (GetOption(NOISE)->as<bool>()) {
         static UUID key=UUID::random();            
+        static UUID zerodkey=key;
+        ServerID nilo=0;
+        memcpy(&zerodkey,&nilo,sizeof(nilo));
         for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
             if (sid == mContext->id()) continue;
             memcpy(&key,&sid,sizeof(sid));
@@ -195,8 +198,8 @@ void Forwarder::service()
                 noise_msg->set_source_port(OBJECT_PORT_NOISE);
                 noise_msg->set_dest_port(OBJECT_PORT_NOISE);
 
-                noise_msg->set_source_object(key);
-                noise_msg->set_dest_object(key);///bizzzzogus
+                noise_msg->set_source_object(UUID::null());
+                noise_msg->set_dest_object(UUID::null());///bizzzzogus
                 uint64 test=(1<<30);
                 test<<=30;
                 noise_msg->set_unique(test+rand()%1000000000);
