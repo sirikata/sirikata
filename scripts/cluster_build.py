@@ -128,10 +128,10 @@ class ClusterBuild:
         return self.build()
 
 
-    def build(self):
+    def build(self, build_type):
         cd_code_cmd = self.cd_to_code()
         cd_build_cmd = self.cd_to_build()
-        build_cmd = "cmake . && make -j2"
+        build_cmd = "cmake -DCMAKE_BUILD_TYPE=%s . && make -j2" % (build_type)
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, build_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
@@ -233,7 +233,11 @@ if __name__ == "__main__":
             cur_arg_idx += 1
             retval = cluster_build.patch_build_enet(patch_file)
         elif cmd == 'build':
-            retval = cluster_build.build()
+            build_type = 'Debug'
+            if (sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo']):
+                build_type = sys.argv[cur_arg_idx]
+                cur_arg_idx += 1
+            retval = cluster_build.build(build_type)
         elif cmd == 'patch':
             patch_file = sys.argv[cur_arg_idx]
             cur_arg_idx += 1
