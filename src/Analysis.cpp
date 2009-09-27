@@ -274,9 +274,18 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
 
         break;
 
+      case Trace::OSegCacheResponseTag:
+        {
+          OSegCacheResponseEvent* cachedResponse_evt = new OSegCacheResponseEvent;
+          is.read((char*)&cachedResponse_evt->time,sizeof(cachedResponse_evt->time));
+          is.read((char*)&cachedResponse_evt->cacheResponseID, sizeof(cachedResponse_evt->cacheResponseID));
+          is.read((char*)&cachedResponse_evt->obj_id, sizeof(cachedResponse_evt->obj_id));
+          evt = cachedResponse_evt;
+        }
+        break;
+        
       case Trace::OSegShutdownEventTag:
         {
-          std::cout<<"\n\nGot an oseg shutdown tag\n\n";
           OSegShutdownEvent* shutdown_evt = new OSegShutdownEvent;
           is.read((char*)&shutdown_evt->time, sizeof(shutdown_evt->time));
           is.read((char*)&shutdown_evt->sID, sizeof(shutdown_evt->sID));
@@ -1827,10 +1836,13 @@ LatencyAnalysis::~LatencyAnalysis() {
   }
 
 
-  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime)
+  //processAfter is in seconds
+  void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
   {
+    double processAfterInMicro = processAfter* 1000000; //convert seconds of processAfter to microseconds for comparison to time.raw().
     double totalLatency = 0;
     int maxLatency = 0;
+    double numCountedLatency  = 0;
 
     if (sortedByTime)
     {
@@ -1850,17 +1862,22 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tObjects still in queues:   "<<sortedEvts[s].stillInQueue<<"\n";
         fileOut<< "\tTime taken:                "<<sortedEvts[s].deltaTime<<"\n";
 
-        totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
-
-        if ((int)sortedEvts[s].deltaTime > maxLatency)
+        if (sortedEvts[s].time.raw() > processAfterInMicro)
         {
-          maxLatency = (int)sortedEvts[s].deltaTime;
+          ++numCountedLatency;
+          totalLatency = totalLatency + (int)sortedEvts[s].deltaTime;
+
+          if ((int)sortedEvts[s].deltaTime > maxLatency)
+          {
+            maxLatency = (int)sortedEvts[s].deltaTime;
+          }
         }
       }
 
       fileOut<<"\n\n************************************\n";
-      fileOut<<"\tAvg latency:  "<< totalLatency/((double)sortedEvts.size())<<"\n\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
       fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
       fileOut<<"\n\n\n\nEND\n";
     }
     else
@@ -1878,17 +1895,25 @@ LatencyAnalysis::~LatencyAnalysis() {
         fileOut<< "\tObjects still in queue:     "<<stillInQueues[s]<<"\n";
         fileOut<< "\tTime taken:                 "<<dTimes[s]<<"\n";
 
-        totalLatency = totalLatency + (int) dTimes[s];
 
-        if ((int)dTimes[s] > maxLatency)
+        if (times[s].raw() > processAfterInMicro)
         {
-          maxLatency = dTimes[s];
+          ++numCountedLatency;
+          totalLatency = totalLatency + (int) dTimes[s];
+
+          if ((int)dTimes[s] > maxLatency)
+          {
+            maxLatency = dTimes[s];
+          }
         }
       }
 
+
+
       fileOut<<"\n\n************************************\n";
-      fileOut<<"\tAvg latency:  "<< totalLatency/((double)times.size())<<"\n\n";
+      fileOut<<"\tAvg latency:  "<< totalLatency/(numCountedLatency)<<"\n\n";
       fileOut<<"\tMax latency:  "<< maxLatency<<"\n\n";
+      fileOut<<"\tCounted:      "<< numCountedLatency<<"\n\n";
       fileOut<<"\n\n\n\nEND\n";
     }
   }
@@ -1953,14 +1978,18 @@ LatencyAnalysis::~LatencyAnalysis() {
     //destructor
   }
 
-  void ObjectMigrationRoundTripAnalysis::printData(std::ostream &fileOut)
+  //processedAfter is in seconds
+  void ObjectMigrationRoundTripAnalysis::printData(std::ostream &fileOut, int processedAfter)
   {
+    double processedAfterInMicro = processedAfter*1000000; //convert to microseconds
+    
     std::sort(allRoundTripEvts.begin(), allRoundTripEvts.end(), compareEvts);
 
     fileOut << "\n\n*******************Begin Object Migration Round Trip Analysis*************\n\n\n";
     fileOut << "\n\n Basic statistics:   "<< allRoundTripEvts.size() <<"  \n\n";
 
-    double totalTimes = 0;
+    double totalTimes         =  0;
+    double numProcessedAfter  =  0;
 
     for (int s=0; s < (int) allRoundTripEvts.size(); ++s)
     {
@@ -1971,13 +2000,19 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<< "\tMigrating to:      " << allRoundTripEvts[s].sID_migratingTo   <<"\n";
       fileOut<< "\tTime taken:        " << allRoundTripEvts[s].numMill           <<"\n";
 
-      totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
+      if (allRoundTripEvts[s].time.raw() > processedAfterInMicro)
+      {
+        totalTimes = totalTimes + ((double) allRoundTripEvts[s].numMill);
+        ++numProcessedAfter;
+      }
 
     }
 
-    double avgTime = totalTimes/((double) allRoundTripEvts.size());
+    //    double avgTime = totalTimes/((double) allRoundTripEvts.size());
+    double avgTime = totalTimes/((double) numProcessedAfter);
 
-    fileOut<< "\n\n Avg Migrate Time:    "<<avgTime<<"\n\n\n";
+    fileOut<< "\n\n Avg Migrate Time:    "<<avgTime<<"\n";
+    fileOut<< "Num processed after:      "<<numProcessedAfter<<"\n\n";
     fileOut<< "END*******\n\n";
   }
 
@@ -2017,13 +2052,18 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  void OSegTrackedSetResultsAnalysis::printData(std::ostream &fileOut)
+  void OSegTrackedSetResultsAnalysis::printData(std::ostream &fileOut, int processAfter)
   {
+
+    double processedAfterInMicro = processAfter*1000000;
+
+    
     fileOut<<"\n\n*********************************\n";
     fileOut<<"\tNum tracked: "<<allTrackedSetResultsEvts.size()<<"\n\n\n\n";
 
     double averager = 0;
-
+    double numProcessedAfter = 0;
+    
     for(int s=0;s < (int) allTrackedSetResultsEvts.size(); ++s)
     {
       fileOut<<"\n\n******************\n";
@@ -2032,17 +2072,21 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<<"\tmig_to:      "<<allTrackedSetResultsEvts[s].sID_migratingTo<<"\n";
       fileOut<<"\tnum ms:      "<<allTrackedSetResultsEvts[s].numMill<<"\n\n";
 
-      averager = averager + allTrackedSetResultsEvts[s].numMill;
+
+      if (allTrackedSetResultsEvts[s].time.raw() > processedAfterInMicro)
+      {
+        ++numProcessedAfter;
+        averager = averager + allTrackedSetResultsEvts[s].numMill;
+      }
     }
 
     if (allTrackedSetResultsEvts.size() != 0)
     {
-      fileOut<<"\n\n\nAvg:  "<<averager/((double) allTrackedSetResultsEvts.size())<<"\n\n";
-
+      fileOut<<"\n\n\nAvg:  "<<averager/(numProcessedAfter)<<"\n";
+      fileOut<<"num proc:   "<< numProcessedAfter<<"\n\n";
     }
 
     fileOut<<"\n\n\tEND****";
-
 
   }
   OSegTrackedSetResultsAnalysis::~OSegTrackedSetResultsAnalysis()
@@ -2113,6 +2157,283 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   }
 
+
+
+OSegCacheResponseAnalysis::OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers)
+{
+  for(uint32 server_id = 1; server_id <= nservers; server_id++)
+  {
+    String loc_file = GetPerServerFile(opt_name, server_id);
+    std::ifstream is(loc_file.c_str(), std::ios::in);
+
+    while(is)
+    {
+      Event* evt = Event::read(is, server_id);
+      if (evt == NULL)
+        break;
+
+      OSegCacheResponseEvent* oseg_cache_evt = dynamic_cast<OSegCacheResponseEvent*> (evt);
+
+      if (oseg_cache_evt != NULL)
+      {
+        OSegCacheResponseEvent oseg_cache_evter = (*oseg_cache_evt);
+        allCacheResponseEvts.push_back(oseg_cache_evter);
+        continue;
+      }
+      delete evt;
+    }
+  }
+}
+
+
+OSegCacheResponseAnalysis::~OSegCacheResponseAnalysis()
+{
+
+}
+
+
+void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfter)
+{
+
+  double numProcessedAfter     = processAfter * 1000000;
+  double numCacheRespCataloged =                      0;
+  
+  std::sort(allCacheResponseEvts.begin(), allCacheResponseEvts.end(), compareEvts);
+  
+  fileOut << "\n\n*******************OSegCache Analysis*************\n\n\n";
+  fileOut << "\n\n Basic statistics:   "<< allCacheResponseEvts.size() <<"  \n\n";
+
+
+  for (int s=0; s < (int)allCacheResponseEvts.size(); ++s)
+  {
+    fileOut << "\n\n\n";
+    fileOut << "Time:            "<<allCacheResponseEvts[s].time.raw()<<"\n";
+    fileOut << "\tobj_id:        "<<allCacheResponseEvts[s].obj_id.toString()<<"\n";
+    fileOut << "\tserver_id:     "<<allCacheResponseEvts[s].cacheResponseID<<"\n";
+
+    if (allCacheResponseEvts[s].time.raw() > numProcessedAfter)
+    {
+      ++numCacheRespCataloged;
+    }
+    
+  }
+
+  fileOut<<"\n\n\n\n\n";
+  fileOut<<"Numcache responses:  "<<numCacheRespCataloged<<"\n\n";
+  fileOut<<"\tEND*****";
+}
+
+bool OSegCacheResponseAnalysis::compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B)
+{
+
+
+  return A.time < B.time;
+}
+
+
+//oseg cache error analysis
+
+
+OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint32 nservers)
+{
+  for(uint32 server_id = 1; server_id <= nservers; server_id++)
+  {
+    String loc_file = GetPerServerFile(opt_name, server_id);
+    std::ifstream is(loc_file.c_str(), std::ios::in);
+
+    while(is)
+    {
+      Event* evt = Event::read(is, server_id);
+      if (evt == NULL)
+        break;
+
+      ObjectMigrationRoundTripEvent* oseg_rd_trip_evt = dynamic_cast<ObjectMigrationRoundTripEvent*> (evt);
+      if (oseg_rd_trip_evt != NULL)
+      {
+        mMigrationVector.push_back(*oseg_rd_trip_evt);
+        continue;
+      }
+
+      ObjectLookupProcessedEvent* oseg_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
+      if (oseg_lookup_proc_evt == NULL)
+      {
+        mLookupVector.push_back(*oseg_lookup_proc_evt);
+      }
+
+      OSegCacheResponseEvent* oseg_cache_evt = dynamic_cast<OSegCacheResponseEvent*> (evt);
+      if (oseg_cache_evt != NULL)
+      {
+        mCacheResponseVector.push_back(*oseg_cache_evt);
+        continue;
+      }
+      delete evt;
+    }
+  }
+}
+
+
+bool OSegCacheErrorAnalysis::compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B)
+{
+  return A.time < B.time;
+}
+
+bool OSegCacheErrorAnalysis::compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B)
+{
+  return A.time < B.time;
+}
+
+bool OSegCacheErrorAnalysis::compareCacheResponseEvents(OSegCacheResponseEvent A, OSegCacheResponseEvent B)
+{
+  return A.time < B.time;
+}
+
+void OSegCacheErrorAnalysis::buildObjectMap()
+{
+  //sort all vectors first
+  std::sort(mMigrationVector.begin(), mMigrationVector.end(), compareRoundTripEvents);
+  std::sort(mLookupVector.begin(), mLookupVector.end(), compareLookupProcessedEvents);
+  std::sort(mCacheResponseVector.begin(), mCacheResponseVector.end(), compareCacheResponseEvents); 
+  
+  //First read through all object migrations.
+  std::vector< ObjectMigrationRoundTripEvent >::const_iterator migrationIterator;
+
+  for(migrationIterator =  mMigrationVector.begin(); migrationIterator != mMigrationVector.end(); ++migrationIterator)
+  {
+    ServerIDTimePair sidtime;
+    sidtime.sID = migrationIterator->sID_migratingTo;
+    sidtime.t   = migrationIterator->time;
+    
+    mObjLoc[migrationIterator->obj_id].push_back(sidtime);
+  }
+
+  //now, read through the lookup vector.  If an object does not exist in map, then put it in.
+
+  std::vector<ObjectLookupProcessedEvent >::const_iterator lookupIterator;
+  for (lookupIterator = mLookupVector.begin(); lookupIterator != mLookupVector.end(); ++lookupIterator)
+  {
+    ServerIDTimePair sidtime;
+    sidtime.sID = lookupIterator->mID_objectOn;
+    sidtime.t   = lookupIterator->time;
+
+    //    if (mObjLoc[lookupIterator->mObjID] == mObjLoc.end())
+    if (mObjLoc.find(lookupIterator->mObjID) == mObjLoc.end())
+    {
+      //means that we don't have any record of the object yet.
+      mObjLoc[lookupIterator->mObjID].push_back(sidtime);   
+    }
+  }
+}
+
+void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterInMicro)
+{
+  buildObjectMap(); //populates mObjLoc
+
+  //initialize results struct
+  res.missesCache  = 0;
+  res.hitsCache    = 0;
+  res.totalCache   = 0;
+  res.totalLookups = 0;
+  
+  //need to read through all the cached responses and see how many hits and misses there are.
+  //
+  std::vector< OSegCacheResponseEvent >::const_iterator  cacheResponseIterator;
+
+  for (cacheResponseIterator = mCacheResponseVector.begin(); cacheResponseIterator != mCacheResponseVector.end(); ++cacheResponseIterator)
+  {
+    OSegCacheResponseEvent os_cache_resp = (*cacheResponseIterator);
+    UUID obj_ider   = os_cache_resp.obj_id;
+    Time ter        = os_cache_resp.time;
+    ServerID sIDer  = os_cache_resp.cacheResponseID;
+
+    if (os_cache_resp.time.raw() >= processedAfterInMicro)
+    {
+      if (checkHit(obj_ider, ter, sIDer))
+      {
+        ++res.hitsCache;
+      }
+      else
+      {
+        ++res.missesCache;
+      }
+      ++res.totalCache;
+    }
+  }
+
+  //this counts the number of lookups made
+  std::vector< ObjectLookupProcessedEvent>::const_iterator lookupIter;
+  for (lookupIter = mLookupVector.begin(); lookupIter != mLookupVector.end(); ++lookupIter)
+  {
+    if (lookupIter->time.raw() >= processedAfterInMicro )
+    {
+      ++res.totalLookups;
+    }
+  }
+}
+
+
+
+bool OSegCacheErrorAnalysis::checkHit(const UUID& obj_ider, const Time& ter, const ServerID& sID)
+{
+  bool previousCorrect = true;
+
+  LocationList locList = mObjLoc[obj_ider];
+  LocationList::const_iterator locListIterator;
+  for (locListIterator = locList.begin(); locListIterator != locList.end(); ++locListIterator)
+  {
+    locListIterator->sID; //serverID
+    locListIterator->t;   //time
+    
+    if (locListIterator->t.raw() > ter.raw())  //means that we returned the value sID before the migration occured.
+    {
+
+      return previousCorrect;
+    }
+
+    previousCorrect = (locListIterator->sID == sID);
+  }
+  return previousCorrect;
+}
+
+
+//processedAfter is in seconds.
+void OSegCacheErrorAnalysis::printData(std::ostream& fileOut , int processedAfter)
+{
+  double processedAfterInMicro  =  processedAfter* 1000000;  //convert seconds to microseconds
+
+  Results res;
+  analyzeMisses(res,processedAfterInMicro);
+
+  fileOut << "\n\nOSegCacheErrorAnalysis\n" ;
+  fileOut << "\t Basic statistics: \n ";
+  fileOut << "\t\t Total Lookups:  "<< res.totalLookups<<"\n";
+  fileOut << "\t\t TotalCache:     "<< res.totalCache<<"\n";
+  fileOut << "\t\t Hits:           "<< res.hitsCache<<"\n";
+  fileOut << "\t\t Misses:         "<< res.missesCache<<"\n\n\n";
+  fileOut << "Statistics:   \n";
+  fileOut << "\tPercent of Lookups from Cache:              " << ((double)res.totalCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tPercent of Lookups Correct from Cache:      " << ((double)res.hitsCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tPercent of Lookups Incorrect from Cache:    " << ((double)res.missesCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tPercent of Lookups Cache Lookups Correct:   " << ((double)res.hitsCache)/((double)res.totalCache) <<"\n" ;
+  fileOut << "\tPercent of Lookups Cache Lookups Incorrect: " << ((double)res.missesCache)/((double)res.totalCache) <<"\n" ;
+
+  fileOut <<"\n\n\nEND****";
+  
+}
+
+//simple destructor
+OSegCacheErrorAnalysis::~OSegCacheErrorAnalysis()
+{
+
+}
+
+
+//end oseg cache error analysis
+
+
+
+
+//end oseg analysis
+  
 
 
 

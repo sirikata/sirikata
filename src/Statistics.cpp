@@ -45,14 +45,16 @@
 //#define TRACE_LOCPROX
 //#define TRACE_OSEG
 //#define TRACE_CSEG
-//#define TRACE_MIGRATION
-#define TRACE_DATAGRAM
-#define TRACE_PACKET
-#define TRACE_PING
-#define TRACE_MESSAGE
+
+#define TRACE_MIGRATION
+//#define TRACE_DATAGRAM
+//#define TRACE_PACKET
+//#define TRACE_PING
+//#define TRACE_MESSAGE
 #define TRACE_ROUND_TRIP_MIGRATION_TIME
 #define TRACE_OSEG_TRACKED_SET_RESULTS
 #define TRACE_OSEG_SHUTTING_DOWN
+#define TRACE_OSEG_CACHE_RESPONSE
 
 
 namespace CBR {
@@ -124,7 +126,7 @@ const uint8 Trace::OSegTrackedSetResultAnalysisTag;
 const uint8 Trace::OSegShutdownEventTag;
 
 const uint8 Trace::ObjectGeneratedLocationTag;
-
+const uint8 Trace::OSegCacheResponseTag;
 
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
@@ -533,6 +535,18 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
 #endif
 }
 
+
+void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj_id)
+{
+#ifdef TRACE_OSEG_CACHE_RESPONSE
+  if (mShuttingDown) return;
+
+  data.write(&OSegCacheResponseTag, sizeof(OSegCacheResponseTag));
+  data.write(&sID, sizeof(sID));
+  data.write(&obj_id,sizeof(obj_id));
+  
+#endif
+}
 
 
 

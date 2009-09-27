@@ -346,7 +346,7 @@ private:
   static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
 public:
   ObjectSegmentationProcessedRequestsAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut, bool sortByTime = true);
+  void printData(std::ostream &fileOut, bool sortByTime = true, int processedAfter =0);
   ~ObjectSegmentationProcessedRequestsAnalysis();
 };
 
@@ -361,7 +361,7 @@ private:
 
 public:
   ObjectMigrationRoundTripAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut);
+  void printData(std::ostream &fileOut, int processedAfter= 0);
   ~ObjectMigrationRoundTripAnalysis();
 
 };
@@ -376,7 +376,7 @@ private:
 
 public:
   OSegTrackedSetResultsAnalysis(const char* opt_name, const uint32 nservers);
-  void printData(std::ostream &fileOut);
+  void printData(std::ostream &fileOut, int processedAfter = 0);
   ~OSegTrackedSetResultsAnalysis();
 };
 
@@ -391,6 +391,81 @@ public:
   ~OSegShutdownAnalysis();
   void printData(std::ostream &fileOut);
 };
+
+class OSegCacheResponseAnalysis
+{
+private:
+  std::vector<OSegCacheResponseEvent> allCacheResponseEvts;
+  static bool compareEvts(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+  
+public:
+  OSegCacheResponseAnalysis(const char* opt_name, const uint32 nservers);
+  ~OSegCacheResponseAnalysis();
+  void printData(std::ostream &fileOut, int processAfter =0);
+};
+
+
+
+class OSegCacheErrorAnalysis
+{
+
+public: 
+
+  struct ServerIDTimePair
+  {
+    ServerID sID;
+    Time t;
+
+    ServerIDTimePair()
+      : t(Time::null())
+    {
+    }      
+    
+  };
+
+  
+  struct Results
+  {
+    int missesCache;
+    int hitsCache;
+    int totalCache;
+    int totalLookups;
+  };
+
+  
+private:  
+  
+  typedef std::vector<ServerIDTimePair> LocationList;
+  typedef std::map<UUID, LocationList>  ObjectLocationMap;
+
+  ObjectLocationMap mObjLoc;
+
+  std::vector< ObjectMigrationRoundTripEvent > mMigrationVector; //round trip event
+  std::vector< ObjectLookupProcessedEvent >       mLookupVector; //lookup proc'd
+  std::vector< OSegCacheResponseEvent >    mCacheResponseVector;
+  
+  //basic strategy: load all migration events.
+  //write all migrate times in for each object.
+  //load all lookup events....augment map with their lookups.  (If receive a lookup before we have any migrations, we can know that these values are real.)
+
+  bool checkHit(const UUID& obj_ider, const Time& ter, const ServerID& sID);
+  void analyzeMisses(Results& res, double processedAfterInMicro);
+  void buildObjectMap();
+
+  static bool compareCacheResponseEvents(OSegCacheResponseEvent A, OSegCacheResponseEvent B);
+  static bool compareLookupProcessedEvents(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
+  static bool compareRoundTripEvents(ObjectMigrationRoundTripEvent A, ObjectMigrationRoundTripEvent B);
+  
+
+  void analyzeMisses(Results& res);
+  
+public:
+  OSegCacheErrorAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream& fileOut, int processAfter = 0);
+  ~OSegCacheErrorAnalysis();
+};
+
+
 
 
 /** Computes distance vs. latency of location updates for objects hosted on the same

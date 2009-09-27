@@ -188,6 +188,8 @@ namespace CBR
       //if the time since absorbed a cache value is less than one second
       //and if the last cache value came from one of our personal lookups.
       //then return the cached server id.
+
+      mContext->trace()->osegCacheResponse(mContext->time,objCacheIter->second.sID,obj_id);
       return objCacheIter->second.sID;
     }
 
@@ -195,6 +197,7 @@ namespace CBR
     {
       //if received an update message less than half a second ago, then also
       //return the cached server id.
+      mContext->trace()->osegCacheResponse(mContext->time,objCacheIter->second.sID,obj_id);
       return objCacheIter->second.sID;
     }
 

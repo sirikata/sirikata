@@ -232,6 +232,12 @@ struct OSegShutdownEvent : public Event
 
 };
 
+struct OSegCacheResponseEvent : public Event
+{
+  ServerID cacheResponseID;
+  UUID obj_id;
+};
+
 
 
 }

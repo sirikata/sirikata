@@ -104,7 +104,9 @@ public:
     static const uint8 OSegShutdownEventTag              = 20;
     static const uint8 MessageTimestampTag = 21;
     static const uint8 ObjectGeneratedLocationTag = 22;
-
+    static const uint8 OSegCacheResponseTag = 23;
+  
+  
     enum MessagePath {
         CREATED,
         SPACE_OUTGOING_MESSAGE,
@@ -160,6 +162,8 @@ public:
 
   void processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
 
+  void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
+  
     void prepareShutdown();
     void shutdown();
 

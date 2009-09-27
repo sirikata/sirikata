@@ -305,12 +305,42 @@ void *main_loop(void *) {
         OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
 
         std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
-        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream);
+        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream,100);
 
         oseg_tracked_set_results_analysis_stream.flush();
         oseg_tracked_set_results_analysis_stream.close();
 
 
+        //oseg cache response analysis
+        String oseg_cache_response_filename = "oseg_cache_response_file";
+        oseg_cache_response_filename += ".dat";
+
+        OSegCacheResponseAnalysis oseg_cache_response_analysis(STATS_TRACE_FILE, max_space_servers);
+
+        std::ofstream oseg_cached_response_analysis_stream(oseg_cache_response_filename.c_str());
+
+        oseg_cache_response_analysis.printData(oseg_cached_response_analysis_stream,100);
+
+        oseg_cached_response_analysis_stream.flush();
+        oseg_cached_response_analysis_stream.close();
+
+        //end cache response analysis
+
+        //cached error analysis
+        String oseg_cached_response_error_filename = "oseg_cached_response_error_file";
+        oseg_cached_response_error_filename += ".dat";
+
+        OSegCacheErrorAnalysis oseg_cached_error_response (STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream oseg_cached_error_response_stream(oseg_cached_response_error_filename.c_str());
+        oseg_cached_error_response.printData(oseg_cached_error_response_stream,100);
+
+        oseg_cached_error_response_stream.flush();
+        oseg_cached_error_response_stream.close();
+        
+        //end cached error analysis
+
+        
         //end bftm additional object message log file creation.
 
         exit(0);
@@ -481,7 +511,7 @@ void *main_loop(void *) {
         ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,max_space_servers);
         std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
 
-        processedAnalysis.printData(oseg_process_stream);
+        processedAnalysis.printData(oseg_process_stream, true, 100);
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
@@ -493,7 +523,7 @@ void *main_loop(void *) {
 
         std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
 
-        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream);
+        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream,100);
 
         mig_rd_trip_times_stream.flush();
         mig_rd_trip_times_stream.close();
