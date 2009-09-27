@@ -198,7 +198,7 @@ void Forwarder::service()
                 noise_msg->set_source_port(OBJECT_PORT_NOISE);
                 noise_msg->set_dest_port(OBJECT_PORT_NOISE);
 
-                noise_msg->set_source_object(UUID::null());
+                noise_msg->set_source_object(key);
                 noise_msg->set_dest_object(UUID::null());///bizzzzogus
                 uint64 test=(1<<30);
                 test<<=30;
