@@ -1,7 +1,9 @@
 #include "oh/Platform.hpp"
 #include "oh/SpaceConnection.hpp"
 #include "oh/HostedObject.hpp"
+#include "oh/ObjectHost.hpp"
 #include "oh/SpaceTimeOffsetManager.hpp"
+#include "network/IOServiceFactory.hpp"
 #include "MonoDefs.hpp"
 #include "MonoDomain.hpp"
 #include "MonoContext.hpp"
@@ -92,8 +94,35 @@ static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoOb
     }
     return MonoContext::getSingleton().getDomain().Boolean(true).object();
 }
+class ContextPush {
+    MonoContextData mMonoContextData;
+public:
+    ContextPush() {
+        MonoContext::getSingleton().push();
+    }
+    ~ContextPush() {
+        MonoContext::getSingleton().pop();
+    }
+};
+static void CallDelegate(const std::tr1::weak_ptr<HostedObject>&weak_ho, const Mono::Domain &domain, const Mono::Delegate&delegate) {
+    std::tr1::shared_ptr<HostedObject> ho(weak_ho.lock());
+    ContextPush cp;
+    if (ho) {
+        MonoContext::getSingleton().setVWObject(&*ho,domain);
+        delegate.invoke();
+    }
+}
+static void Mono_Context_AsyncWait(MonoObject*callback, MonoObject*duration){
+    std::tr1::weak_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
+    Sirikata::Network::IOServiceFactory::dispatchServiceMessage(MonoContext::getSingleton().getVWObject()->getObjectHost()->getSpaceIO(),
+                                             Mono::Object(duration).unboxDuration(),
+                                             std::tr1::bind(&CallDelegate,ho,MonoContext::getSingleton().getDomain(), Mono::Delegate(Mono::Object(callback))));
+}
+
+
+
 static MonoObject* Mono_Context_CallFunctionWithTimeout(MonoObject *message, MonoObject*callback, MonoObject*duration){
-    return InternalMono_Context_CallFunction(message,callback,Mono::Object(duration).unboxTime()-Time::epoch());
+    return InternalMono_Context_CallFunction(message,callback,Mono::Object(duration).unboxDuration());
 }
 static MonoObject* Mono_Context_CallFunction(MonoObject *message, MonoObject*callback){
     return InternalMono_Context_CallFunction(message,callback,Sirikata::Duration::seconds(4.0));
@@ -180,6 +209,7 @@ InitHostedObjectExports () {
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunction", (void*)Mono_Context_CallFunction);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iCallFunctionWithTimeout", (void*)Mono_Context_CallFunction);
+    mono_add_internal_call ("Sirikata.Runtime.HostedObject::iAsyncWait", (void*)Mono_Context_AsyncWait);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iTickPeriod", (void*)Mono_Context_TickDelay);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetTime", (void*)Mono_Context_GetTime);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iGetTimeByteArray", (void*)Mono_Context_GetTimeByteArray);

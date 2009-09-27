@@ -96,6 +96,9 @@ public struct Time {
         mUpperWord=(uint)microsecond;
 
     }
+    public TimeClass toClass() {
+        return new TimeClass(mLowerWord,mUpperWord);
+    }
     public Time(TimeClass otherclass) {
         mUpperWord=0;
         mLowerWord=0;

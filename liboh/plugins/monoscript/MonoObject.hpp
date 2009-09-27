@@ -271,8 +271,11 @@ public:
     /** "Unbox" a Mono SpaceObjectReference into a C++ SpaceObjectReference */
     Sirikata::SpaceObjectReference unboxSpaceObjectReference() const;
 
-    /** "Unbox" a Mono DateTime into a C++ Time */
+    /** "Unbox" a Mono Sirikata.Runtime.TimeClass into a C++ Time */
     Sirikata::Time unboxTime() const;
+
+    /** "Unbox" a Mono Sirikata.Runtime.TimeClass into a C++ Duration */
+    Sirikata::Duration unboxDuration() const;
 
     /** Marhsal this object to a buffer.  Note that this will marshal the entire object
      *  tree starting from this object, i.e. external references are only used if you

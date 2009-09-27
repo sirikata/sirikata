@@ -298,6 +298,7 @@ int main ( int argc,const char**argv ) {
     destroyTransferManager(tm);
     delete eventManager;
     delete workQueue;
+    Network::IOServiceFactory::destroyIOService(ioServ);
 
     for(SimList::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
@@ -306,7 +307,6 @@ int main ( int argc,const char**argv ) {
     plugins.gc();
     SimulationFactory::destroy();
 
-    Network::IOServiceFactory::destroyIOService(ioServ);
     delete spaceMap;
 
     delete []myargv;

@@ -751,17 +751,20 @@ Sirikata::ResourceID Object::unboxResourceID() const {
 }
 */
 
-Sirikata::Time Object::unboxTime() const {
+Sirikata::Duration Object::unboxDuration() const {
     MonoObject* obj = mGCObject->object();
     checkNullReference(obj);
-
     // FIXME assert class = Time
-
-    // FIXME stopgap solution to value type mono_runtime_invoke memory leak
-    // problem - call a static method on a utility class instead
-    static Class RuntimeUtility = Domain::root().getAssembly("Sirikata.Runtime").getClass("Sirikata.Runtime", "HostedObject");
-    return RawTime( RuntimeUtility.send("TimeTicks", *this).unboxInt64() );
-    //return Time( getProperty("Ticks").unboxInt64() );
+    Sirikata::uint32 lower=getField("mLowerWord").unboxUInt32();
+    Sirikata::uint32 upper=getField("mUpperWord").unboxUInt32();
+    Sirikata::uint64 ticks=upper;
+    ticks*=65536;
+    ticks*=65536;
+    ticks+=lower;
+    return Sirikata::Duration::microseconds(ticks);    
+}
+Sirikata::Time Object::unboxTime() const {
+    return Sirikata::Time::epoch()+unboxDuration();
 }
 
 

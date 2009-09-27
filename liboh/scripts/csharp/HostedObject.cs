@@ -4,6 +4,7 @@ namespace Sirikata.Runtime {
 
 
 public delegate bool FunctionReturnCallback(byte[] header,byte[] body);
+public delegate bool TimeoutCallback();
 
 public class HostedObject{
     
@@ -18,10 +19,10 @@ public class HostedObject{
     internal static extern bool iCallFunction(byte[]message,FunctionReturnCallback callback);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern bool iCallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, System.DateTime t);
+    internal static extern bool iCallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, Sirikata.Runtime.TimeClass t);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
-    internal static extern void iTickPeriod(System.DateTime t);
+    internal static extern void iTickPeriod(Sirikata.Runtime.TimeClass t);
 
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iGetTime(Guid spaceid,  Sirikata.Runtime.TimeClass retval);
@@ -35,17 +36,24 @@ public class HostedObject{
     [MethodImplAttribute(MethodImplOptions.InternalCall)]
     internal static extern void iGetLocalTime( Sirikata.Runtime.TimeClass retval);
 
+    [MethodImplAttribute(MethodImplOptions.InternalCall)]
+    internal static extern void iAsyncWait(TimeoutCallback callback, Sirikata.Runtime.TimeClass t);
 
     internal static long TimeTicks(Sirikata.Runtime.Time t) {
         return t.microseconds();
     }
-    public static  void TickPeriod(System.DateTime t){
-        iTickPeriod(t);
+    public static  void TickPeriod(Sirikata.Runtime.Time t){
+        iTickPeriod(t.toClass());
     }
-    public static bool CallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, System.DateTime t) {
+    public static bool AsyncWait(TimeoutCallback callback, Sirikata.Runtime.Time t) {
+        if (callback==null) return false;
+        iAsyncWait(callback,t.toClass());
+        return true;
+    }
+    public static bool CallFunctionWithTimeout(byte[]message,FunctionReturnCallback callback, Sirikata.Runtime.Time t) {
         if (message==null||callback==null||message.Length==0)
             return false;
-        return iCallFunctionWithTimeout(message,callback,t);
+        return iCallFunctionWithTimeout(message,callback,t.toClass());
     }
     public static bool CallFunction(byte[]message,FunctionReturnCallback callback) {
         if (message==null||callback==null||message.Length==0)
