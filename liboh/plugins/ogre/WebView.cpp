@@ -1005,43 +1005,9 @@ void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, cons
 	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
-
-	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
-	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
-
-	uint8* destBuffer = static_cast<uint8*>(pixelBox.data);
-
-    int srcOffset = 0;
-    for (int row = rect.top(); row < rect.bottom(); row++) {
-        int destOffset = row*texPitch + rect.left()*texDepth;
-        for (int col = rect.left(); col < rect.right(); col++) {
-            // srcBuffer is BGRA.
-            uint8 b = srcBuffer[srcOffset+0];
-            uint8 g = srcBuffer[srcOffset+1];
-            uint8 r = srcBuffer[srcOffset+2];
-            uint8 a = srcBuffer[srcOffset+3];
-            if (texDepth == 1 || texDepth == 2) {
-                int src = b;
-                src += g;
-                src += r;
-                src /= 3;
-                destBuffer[destOffset++] = (uint8)src;
-                if (texDepth == 2) {
-                    destBuffer[destOffset++] = a;
-                }
-            }
-            if (texDepth == 3 || texDepth == 4) {
-                destBuffer[destOffset++] = b;
-                destBuffer[destOffset++] = g;
-                destBuffer[destOffset++] = r;
-                if (texDepth == 4) {
-                    destBuffer[destOffset++] = a;
-                }
-            }
-            srcOffset += 4;
-        }
-    }
-	pixelBuffer->unlock();
+    pixelBuffer->blitFromMemory(
+        Ogre::PixelBox(rect.width(), rect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
+        Ogre::Box(rect.left(), rect.top(), rect.right(), rect.bottom()));
 
 	if(isWebViewTransparent && !usingMask && ignoringTrans)
 	{
