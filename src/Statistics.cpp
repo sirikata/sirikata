@@ -41,9 +41,9 @@
 #include "ServerIDMap.hpp"
 
 
-#define TRACE_OBJECT
+//#define TRACE_OBJECT
 //#define TRACE_LOCPROX
-//#define TRACE_OSEG
+#define TRACE_OSEG
 //#define TRACE_CSEG
 
 #define TRACE_MIGRATION
@@ -55,6 +55,7 @@
 #define TRACE_OSEG_TRACKED_SET_RESULTS
 #define TRACE_OSEG_SHUTTING_DOWN
 #define TRACE_OSEG_CACHE_RESPONSE
+#define TRACE_OSEG_NOT_ON_SERVER_LOOKUP
 
 
 namespace CBR {
@@ -118,16 +119,18 @@ const uint8 Trace::ObjectAcknowledgeMigrateTag;
 const uint8 Trace::ServerLocationTag;
 const uint8 Trace::ServerObjectEventTag;
 
-const uint8 Trace::ObjectSegmentationLookupRequestAnalysisTag;
+const uint8 Trace::ObjectSegmentationCraqLookupRequestAnalysisTag;
 const uint8 Trace::ObjectSegmentationProcessedRequestAnalysisTag;
 
 const uint8 Trace::RoundTripMigrationTimeAnalysisTag;
 const uint8 Trace::OSegTrackedSetResultAnalysisTag;
 const uint8 Trace::OSegShutdownEventTag;
-
 const uint8 Trace::ObjectGeneratedLocationTag;
 const uint8 Trace::OSegCacheResponseTag;
+const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
 
+
+  
 static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
     uint64 offset = 0;
     offset += sizeof(ServerMessageHeader);
@@ -444,14 +447,14 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
 
-  void Trace::objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
+  void Trace::objectSegmentationCraqLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
 #ifdef TRACE_OSEG
 
     if (mShuttingDown) return;
 
 
-    data.write(&ObjectSegmentationLookupRequestAnalysisTag, sizeof(ObjectSegmentationLookupRequestAnalysisTag));
+    data.write(&ObjectSegmentationCraqLookupRequestAnalysisTag, sizeof(ObjectSegmentationCraqLookupRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
     data.write(&sID_lookupTo, sizeof(sID_lookupTo));
@@ -542,12 +545,29 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
   if (mShuttingDown) return;
 
   data.write(&OSegCacheResponseTag, sizeof(OSegCacheResponseTag));
+  data.write(&t, sizeof(t));
   data.write(&sID, sizeof(sID));
   data.write(&obj_id,sizeof(obj_id));
   
 #endif
 }
 
+
+void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookerupper)
+{
+#ifdef TRACE_OSEG_NOT_ON_SERVER_LOOKUP
+  
+
+  if (mShuttingDown) return;
+
+  
+  data.write(&OSegLookupNotOnServerAnalysisTag, sizeof (OSegLookupNotOnServerAnalysisTag));
+  data.write(&t, sizeof(t));
+  data.write(&obj_id, sizeof(obj_id));
+  data.write(&sID_lookerupper, sizeof(sID_lookerupper));
+  
+#endif
+}
 
 
 } // namespace CBR

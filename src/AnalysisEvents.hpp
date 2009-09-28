@@ -175,7 +175,14 @@ struct ObjectAcknowledgeMigrateEvent : public Event
   ServerID mAcknowledgeFrom, mAcknowledgeTo;
 };
 
-struct ObjectLookupEvent: public Event
+struct ObjectCraqLookupEvent: public Event
+{
+  UUID mObjID;
+  ServerID mID_lookup;
+};
+
+
+struct ObjectLookupNotOnServerEvent: public Event
 {
   UUID mObjID;
   ServerID mID_lookup;

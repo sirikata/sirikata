@@ -96,7 +96,7 @@ public:
     static const uint8 ObjectAcknowledgeMigrateTag = 12;
     static const uint8 ServerLocationTag = 13;
     static const uint8 ServerObjectEventTag = 14;
-    static const uint8 ObjectSegmentationLookupRequestAnalysisTag = 15;
+    static const uint8 ObjectSegmentationCraqLookupRequestAnalysisTag = 15;
     static const uint8 ObjectSegmentationProcessedRequestAnalysisTag = 16;
     static const uint8 ObjectPingTag = 17;
     static const uint8 RoundTripMigrationTimeAnalysisTag = 18;
@@ -105,7 +105,7 @@ public:
     static const uint8 MessageTimestampTag = 21;
     static const uint8 ObjectGeneratedLocationTag = 22;
     static const uint8 OSegCacheResponseTag = 23;
-  
+    static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
   
     enum MessagePath {
         CREATED,
@@ -153,7 +153,10 @@ public:
     void objectBeginMigrate(const Time& t, const UUID& ojb_id, const ServerID migrate_from, const ServerID migrate_to);
     void objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to);
 
-    void objectSegmentationLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    void objectSegmentationCraqLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+    void objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
+
+  
     void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 stillInQueue);
 
     void objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);

@@ -237,114 +237,6 @@ void *main_loop(void *) {
         printf("Total error: %f\n", (float)lea.globalAverageError( Duration::milliseconds((int64)10), obj_factory));
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() ) {
-        //bftm additional object messages log file creation.
-
-        //oseg migrates
-        String object_segmentation_filename = "object_segmentation_file";
-        object_segmentation_filename += ".dat";
-
-        ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, max_space_servers);
-        std::ofstream object_seg_stream (object_segmentation_filename.c_str());
-        osegAnalysis.printData(object_seg_stream);
-        object_seg_stream.flush();
-        object_seg_stream.close();
-
-        //oseg lookup
-        String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
-        object_segmentation_lookup_filename += ".dat";
-
-        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,max_space_servers);
-        std::ofstream oseg_lookup_stream(object_segmentation_lookup_filename.c_str());
-        lookupAnalysis.printData(oseg_lookup_stream);
-        oseg_lookup_stream.flush();
-        oseg_lookup_stream.close();
-
-        //oseg processed lookups
-        String object_segmentation_processed_filename = "object_segmentation_processed_file";
-        object_segmentation_processed_filename += ".dat";
-
-
-        ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,max_space_servers);
-        std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
-
-        processedAnalysis.printData(oseg_process_stream);
-        oseg_process_stream.flush();
-        oseg_process_stream.close();
-
-        //completed round trip migrate times
-        String migration_round_trip_times_filename = "migration_round_trip_times_file";
-        migration_round_trip_times_filename += ".dat";
-
-        ObjectMigrationRoundTripAnalysis obj_mig_rdTripAnalysis(STATS_TRACE_FILE,max_space_servers);
-
-        std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
-
-        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream);
-
-        mig_rd_trip_times_stream.flush();
-        mig_rd_trip_times_stream.close();
-
-        //oseg shut down
-        String oseg_shutdown_filename = "oseg_shutdown_file";
-        oseg_shutdown_filename += ".dat";
-
-        OSegShutdownAnalysis oseg_shutdown_analysis(STATS_TRACE_FILE,max_space_servers);
-
-        std::ofstream oseg_shutdown_analysis_stream (oseg_shutdown_filename.c_str());
-        oseg_shutdown_analysis.printData(oseg_shutdown_analysis_stream);
-
-        oseg_shutdown_analysis_stream.flush();
-        oseg_shutdown_analysis_stream.close();
-
-
-        //oseg tracked set results analysis
-        String oseg_tracked_set_results_filename = "oseg_tracked_set_results_file";
-        oseg_tracked_set_results_filename += ".dat";
-
-        OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
-
-        std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
-        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream,100);
-
-        oseg_tracked_set_results_analysis_stream.flush();
-        oseg_tracked_set_results_analysis_stream.close();
-
-
-        //oseg cache response analysis
-        String oseg_cache_response_filename = "oseg_cache_response_file";
-        oseg_cache_response_filename += ".dat";
-
-        OSegCacheResponseAnalysis oseg_cache_response_analysis(STATS_TRACE_FILE, max_space_servers);
-
-        std::ofstream oseg_cached_response_analysis_stream(oseg_cache_response_filename.c_str());
-
-        oseg_cache_response_analysis.printData(oseg_cached_response_analysis_stream,100);
-
-        oseg_cached_response_analysis_stream.flush();
-        oseg_cached_response_analysis_stream.close();
-
-        //end cache response analysis
-
-        //cached error analysis
-        String oseg_cached_response_error_filename = "oseg_cached_response_error_file";
-        oseg_cached_response_error_filename += ".dat";
-
-        OSegCacheErrorAnalysis oseg_cached_error_response (STATS_TRACE_FILE,max_space_servers);
-
-        std::ofstream oseg_cached_error_response_stream(oseg_cached_response_error_filename.c_str());
-        oseg_cached_error_response.printData(oseg_cached_error_response_stream,100);
-
-        oseg_cached_error_response_stream.flush();
-        oseg_cached_error_response_stream.close();
-        
-        //end cached error analysis
-
-        
-        //end bftm additional object message log file creation.
-
-        exit(0);
-    }
     else if ( GetOption(ANALYSIS_LOCVIS)->as<String>() != "none") {
         String vistype = GetOption(ANALYSIS_LOCVIS)->as<String>();
         LocationVisualization lea(STATS_TRACE_FILE, nservers, space_context, obj_factory,cseg);
@@ -482,9 +374,11 @@ void *main_loop(void *) {
     }
     else if ( GetOption(ANALYSIS_OSEG)->as<bool>() ) {
         //bftm additional object messages log file creation.
+      int osegProcessedAfterSeconds = 100;
 
+      
         //oseg migrates
-        String object_segmentation_filename = "object_segmentation_file";
+        String object_segmentation_filename = "oseg_object_segmentation_file";
         object_segmentation_filename += ".dat";
 
         ObjectSegmentationAnalysis osegAnalysis (STATS_TRACE_FILE, max_space_servers);
@@ -493,37 +387,50 @@ void *main_loop(void *) {
         object_seg_stream.flush();
         object_seg_stream.close();
 
-        //oseg lookup
-        String object_segmentation_lookup_filename = "object_segmentation_lookup_file";
-        object_segmentation_lookup_filename += ".dat";
+        //oseg craq lookups
+        String object_segmentation_craq_lookup_filename = "oseg_object_segmentation_craq_lookup_file";
+        object_segmentation_craq_lookup_filename += ".dat";
 
-        ObjectSegmentationLookupRequestsAnalysis lookupAnalysis(STATS_TRACE_FILE,max_space_servers);
-        std::ofstream oseg_lookup_stream(object_segmentation_lookup_filename.c_str());
-        lookupAnalysis.printData(oseg_lookup_stream);
-        oseg_lookup_stream.flush();
-        oseg_lookup_stream.close();
+        ObjectSegmentationCraqLookupRequestsAnalysis craqLookupAnalysis(STATS_TRACE_FILE,max_space_servers);
+        std::ofstream oseg_craq_lookup_stream(object_segmentation_craq_lookup_filename.c_str());
+        craqLookupAnalysis.printData(oseg_craq_lookup_stream);
+        oseg_craq_lookup_stream.flush();
+        oseg_craq_lookup_stream.close();
 
+
+        //oseg not on server lookups
+        String object_segmentation_lookup_not_on_server_filename = "oseg_object_segmentation_lookup_not_on_server_file";
+        object_segmentation_lookup_not_on_server_filename += ".dat";
+
+        ObjectSegmentationLookupNotOnServerRequestsAnalysis lookupNotOnServerAnalysis(STATS_TRACE_FILE,max_space_servers);
+        std::ofstream oseg_lookup_not_on_server_stream(object_segmentation_lookup_not_on_server_filename.c_str());
+        lookupNotOnServerAnalysis.printData(oseg_lookup_not_on_server_stream);
+        oseg_lookup_not_on_server_stream.flush();
+        oseg_lookup_not_on_server_stream.close();
+
+        
         //oseg processed lookups
-        String object_segmentation_processed_filename = "object_segmentation_processed_file";
+        String object_segmentation_processed_filename = "oseg_object_segmentation_processed_file";
         object_segmentation_processed_filename += ".dat";
 
 
         ObjectSegmentationProcessedRequestsAnalysis processedAnalysis(STATS_TRACE_FILE,max_space_servers);
         std::ofstream oseg_process_stream(object_segmentation_processed_filename.c_str());
 
-        processedAnalysis.printData(oseg_process_stream, true, 100);
+        processedAnalysis.printData(oseg_process_stream, true, osegProcessedAfterSeconds);
         oseg_process_stream.flush();
         oseg_process_stream.close();
 
         //completed round trip migrate times
-        String migration_round_trip_times_filename = "migration_round_trip_times_file";
+        std::cout<<"\n\n\nGot into here2\n\n";
+        String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";
         migration_round_trip_times_filename += ".dat";
 
         ObjectMigrationRoundTripAnalysis obj_mig_rdTripAnalysis(STATS_TRACE_FILE,max_space_servers);
 
         std::ofstream mig_rd_trip_times_stream(migration_round_trip_times_filename.c_str());
 
-        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream,100);
+        obj_mig_rdTripAnalysis.printData(mig_rd_trip_times_stream, osegProcessedAfterSeconds);
 
         mig_rd_trip_times_stream.flush();
         mig_rd_trip_times_stream.close();
@@ -548,12 +455,42 @@ void *main_loop(void *) {
         OSegTrackedSetResultsAnalysis oseg_tracked_set_res_analysis(STATS_TRACE_FILE,max_space_servers);
 
         std::ofstream oseg_tracked_set_results_analysis_stream (oseg_tracked_set_results_filename.c_str());
-        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream);
+        oseg_tracked_set_res_analysis.printData(oseg_tracked_set_results_analysis_stream,osegProcessedAfterSeconds);
 
         oseg_tracked_set_results_analysis_stream.flush();
         oseg_tracked_set_results_analysis_stream.close();
 
 
+        //oseg cache response analysis
+        String oseg_cache_response_filename = "oseg_cache_response_file";
+        oseg_cache_response_filename += ".dat";
+
+        OSegCacheResponseAnalysis oseg_cache_response_analysis(STATS_TRACE_FILE, max_space_servers);
+
+        std::ofstream oseg_cached_response_analysis_stream(oseg_cache_response_filename.c_str());
+
+        oseg_cache_response_analysis.printData(oseg_cached_response_analysis_stream,osegProcessedAfterSeconds);
+
+        oseg_cached_response_analysis_stream.flush();
+        oseg_cached_response_analysis_stream.close();
+
+        //end cache response analysis
+
+        //cached error analysis
+        String oseg_cached_response_error_filename = "oseg_cached_response_error_file";
+        oseg_cached_response_error_filename += ".dat";
+
+        OSegCacheErrorAnalysis oseg_cached_error_response (STATS_TRACE_FILE,max_space_servers);
+
+        std::ofstream oseg_cached_error_response_stream(oseg_cached_response_error_filename.c_str());
+        oseg_cached_error_response.printData(oseg_cached_error_response_stream,osegProcessedAfterSeconds);
+
+        oseg_cached_error_response_stream.flush();
+        oseg_cached_error_response_stream.close();
+        
+        //end cached error analysis
+
+        
         //end bftm additional object message log file creation.
 
         exit(0);

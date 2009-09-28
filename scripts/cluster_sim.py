@@ -56,7 +56,7 @@ class ClusterSimSettings:
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
-        self.oseg = 'oseg_craq'
+        self.oseg = 'oseg_loc'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
 
         self.vis_mode = 'object'

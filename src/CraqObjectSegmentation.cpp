@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
+#include "CraqCache.hpp"
 
 
 
@@ -93,8 +94,8 @@ namespace CBR
     fflush(stdout);
     printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
     fflush(stdout);
-    printf("\n\nSIZE OF CACHE:   %i \n\n", (int) mServerObjectCache.size()),
-    fflush(stdout);
+    //    printf("\n\nSIZE OF CACHE:   %i \n\n", (int) mServerObjectCache.size()),
+    //    fflush(stdout);
     
   }
 
@@ -115,6 +116,7 @@ namespace CBR
     //need to queue the result as a response.
     //    mFinishedMoveOrLookup[obj_id]= mContext->id;
 
+    
     return true;
   }
 
@@ -165,62 +167,71 @@ namespace CBR
     Checks to see whether have a reasonably up-to-date cache value to return to
     
    */
+//   ServerID CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
+//   {
+
+// #ifndef CRAQ_CACHE
+//     return NullServerID;
+// #endif
+    
+//     ObjectCacheMap::iterator objCacheIter = mServerObjectCache.find(obj_id);
+
+//     if (objCacheIter == mServerObjectCache.end()) //object not in cache map
+//       return NullServerID;
+
+//     uint64 timeElapsed =  (uint64) (((long int) mContext->time.raw())/1000.0)  - ((long int)objCacheIter->second.timeStamp);
+
+//     ++numTimeElapsedCacheEviction;
+
+    
+    
+//     //    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
+//     if ((timeElapsed < 8000)&&(objCacheIter->second.lastLookup))
+//     {
+//       //if the time since absorbed a cache value is less than one second
+//       //and if the last cache value came from one of our personal lookups.
+//       //then return the cached server id.
+//       return objCacheIter->second.sID;
+//     }
+
+//     if (timeElapsed < 5000)
+//     {
+//       //if received an update message less than half a second ago, then also
+//       //return the cached server id.
+//       return objCacheIter->second.sID;
+//     }
+
+//     //otherwise, just tell them that I don't really know.
+//     return NullServerID;
+//   }
+
+
   ServerID CraqObjectSegmentation::satisfiesCache(const UUID& obj_id)
   {
 
 #ifndef CRAQ_CACHE
     return NullServerID;
 #endif
+
+    return mCraqCache.get(obj_id);
     
-    ObjectCacheMap::iterator objCacheIter = mServerObjectCache.find(obj_id);
-
-    if (objCacheIter == mServerObjectCache.end()) //object not in cache map
-      return NullServerID;
-
-    uint64 timeElapsed =  (uint64) (((long int) mContext->time.raw())/1000.0)  - ((long int)objCacheIter->second.timeStamp);
-
-    ++numTimeElapsedCacheEviction;
-
-    
-    //    if ((timeElapsed < 1000)&&(objCacheIter->second.lastLookup))
-    if ((timeElapsed < 8000)&&(objCacheIter->second.lastLookup))
-    {
-      //if the time since absorbed a cache value is less than one second
-      //and if the last cache value came from one of our personal lookups.
-      //then return the cached server id.
-
-      mContext->trace()->osegCacheResponse(mContext->time,objCacheIter->second.sID,obj_id);
-      return objCacheIter->second.sID;
-    }
-
-    if (timeElapsed < 5000)
-    {
-      //if received an update message less than half a second ago, then also
-      //return the cached server id.
-      mContext->trace()->osegCacheResponse(mContext->time,objCacheIter->second.sID,obj_id);
-      return objCacheIter->second.sID;
-    }
-
-    //otherwise, just tell them that I don't really know.
-    return NullServerID;
   }
 
+  
+
+
+  
+  
   void CraqObjectSegmentation::newObjectAdd(const UUID& obj_id)
   {
     CraqDataKey cdk;
     convert_obj_id_to_dht_key(obj_id,cdk);
 
     CraqDataSetGet cdSetGet(cdk, mContext->id() ,true,CraqDataSetGet::SET);
-
-#ifdef CRAQ_DEBUG
-      std::cout<<"\n\n Received a new addObject\n\n";
-#endif
-
           
     TrackedSetResultsDataAdded tsrda;
     tsrda.msgAdded = generateAddedMessage(obj_id);
     tsrda.dur       = mTimer.elapsed();
-      
 
     int trackID = craqDhtSet.set(cdSetGet);
     trackedAddMessages[trackID] = tsrda;
@@ -243,36 +254,29 @@ namespace CBR
   {
     ++numLookups;
 
-
-    
-#ifdef CRAQ_DEBUG
-    std::cout<<"\n\nLooking for obj_id:  "<<obj_id.toString()<<"at time:  "<<mContext->time.raw() << "\n\n";
-#endif
-    
     if (checkOwn(obj_id))  //this call just checks through to see whether the object is on this space server.
     {
       ++numOnThisServer;
       return mContext->id();
-
     }
 
+
+    mContext->trace()->objectSegmentationLookupNotOnServerRequest(mContext->time, obj_id, mContext->id()); //log the request.
+
+    
     if (checkMigratingFromNotCompleteYet(obj_id))//this call just checks to see whether the object is migrating from this server to another server.  If it is, but hasn't yet received an ack message to disconnect the object connection.
     {
       ++numMigrationNotCompleteYet;
       return mContext->id();
     }
 
+    
     ServerID cacheReturn = satisfiesCache(obj_id);
     if ((cacheReturn != NullServerID) && (cacheReturn != mContext->id())) //have to perform second check to prevent accidentally infinitely re-routing to this server when the object doesn't reside here: if the object resided here, then one of the first two conditions would have triggered.
     {
-      
-#ifdef CRAQ_DEBUG
-      std::cout<<"\n\nbftm debug: cached value object id:"<< obj_id.toString()  <<"   cached value returned:  " << cacheReturn<<" \n\n";
-#endif
-      
+      mContext->trace()->osegCacheResponse(mContext->time,cacheReturn,obj_id);
       ++numCacheHits;
       return cacheReturn;
-
     }
     
     UUID tmper = obj_id;
@@ -297,8 +301,8 @@ namespace CBR
       craqDhtGet.get(cdSetGet); //calling the craqDht to do a get.
 
       
-      mContext->trace()->objectSegmentationLookupRequest(mContext->time, obj_id, mContext->id());
-      //      mContext->trace->objectSegmentationLookupRequest(timerDur.toMilliseconds(), obj_id, mContext->id);
+      mContext->trace()->objectSegmentationCraqLookupRequest(mContext->time, obj_id, mContext->id());
+
 
       //also need to say that the object is in transit or lookup.
 
@@ -475,11 +479,14 @@ namespace CBR
         {
           //means that we were tracking this message. and that we'll have to send an acknowledge
 
-          OSegCacheVal cacheVal;
-          cacheVal.sID          = mContext->id();
-          cacheVal.timeStamp    = (mContext->time.raw())/1000.0;
-          cacheVal.lastLookup   = true;
-          mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID()] = cacheVal;
+          //          OSegCacheVal cacheVal;
+          //          cacheVal.sID          = mContext->id();
+          //          cacheVal.timeStamp    = (mContext->time.raw())/1000.0;
+          //          cacheVal.lastLookup   = true;
+          //          mServerObjectCache[trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID()] = cacheVal;
+
+          mCraqCache.insert(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID(), mContext->id());
+
           
           //add to mObjects the uuid associated with trackedMessage.
           mObjects.push_back(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID());
@@ -536,6 +543,9 @@ namespace CBR
         }
         else if (trackedAddMessages.find(trackedSetResults[s]->trackedMessage) != trackedAddMessages.end())
         {
+          //means that we just finished adding first object
+          //bftm single line-change
+          mObjects.push_back(trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded->contents.m_objid() );//need to add obj_id
           mContext->router()->route(MessageRouter::MIGRATES, trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded,mContext->id(),false);
         }
         else
@@ -659,14 +669,18 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       //put this value in the cache
-      OSegCacheVal cacheVal;
-      cacheVal.sID = getResults[s]->servID;
-      cacheVal.timeStamp = (mContext->time.raw())/1000.0;
-      cacheVal.lastLookup = true;
+//       OSegCacheVal cacheVal;
+//       cacheVal.sID = getResults[s]->servID;
+//       cacheVal.timeStamp = (mContext->time.raw())/1000.0;
+//       cacheVal.lastLookup = true;
       
-      mServerObjectCache[tmper] = cacheVal;
+//       mServerObjectCache[tmper] = cacheVal;
+
+      mCraqCache.insert(tmper, getResults[s]->servID);
 
 
+
+      
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
         //log message stating that object was processed.
@@ -742,18 +756,21 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //
 void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_oseg_msg)
 {
-  OSegCacheVal cacheVal;
-  cacheVal.timeStamp    =  (mContext->time.raw())/1000.0;
-  cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
-  cacheVal.lastLookup   =  false;
+//   OSegCacheVal cacheVal;
+//   cacheVal.timeStamp    =  (mContext->time.raw())/1000.0;
+//   cacheVal.sID          =  update_oseg_msg->contents.servid_obj_on();
+//   cacheVal.lastLookup   =  false;
 
-#ifdef CRAQ_DEBUG
-  std::cout<<"\n\n got a processUpdateOSegMessage time received  "<< mContext->time.raw()<<"\n";
-  std::cout<<"\ttime stamped:  "<<cacheVal.timeStamp <<" \n ";
-  std::cout<<"\tsID "  <<cacheVal.sID   <<"\n\n";
-#endif
+// #ifdef CRAQ_DEBUG
+//   std::cout<<"\n\n got a processUpdateOSegMessage time received  "<< mContext->time.raw()<<"\n";
+//   std::cout<<"\ttime stamped:  "<<cacheVal.timeStamp <<" \n ";
+//   std::cout<<"\tsID "  <<cacheVal.sID   <<"\n\n";
+// #endif
+
+
   
-  mServerObjectCache[update_oseg_msg->contents.m_objid()] = cacheVal;
+  //  mServerObjectCache[update_oseg_msg->contents.m_objid()] = cacheVal;
+  mCraqCache.insert(update_oseg_msg->contents.m_objid(), update_oseg_msg->contents.servid_obj_on());
 }
 
 

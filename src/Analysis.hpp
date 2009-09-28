@@ -283,8 +283,10 @@ private:
 }; // class BandwidthAnalysis
 
 
+  //all of oseg analyses
 
-
+  static const int OSEG_SECOND_TO_RAW_CONVERSION_FACTOR = 1000000;
+  
 class ObjectSegmentationAnalysis
 {
 
@@ -315,21 +317,40 @@ public:
 
 
 
-class ObjectSegmentationLookupRequestsAnalysis
+class ObjectSegmentationCraqLookupRequestsAnalysis
 {
 private:
   std::vector<Time> times;
   std::vector<UUID> obj_ids;
   std::vector<ServerID> sID_lookup;
 
-  void convertToEvtsAndSort(std::vector<ObjectLookupEvent>&);
-  static bool compareEvts(ObjectLookupEvent A, ObjectLookupEvent B);
+  void convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent>&);
+  static bool compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B);
 
 public:
-  ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
+  ObjectSegmentationCraqLookupRequestsAnalysis(const char* opt_name, const uint32 nservers);
   void printData(std::ostream &fileOut, bool sortByTime=true);
-  ~ObjectSegmentationLookupRequestsAnalysis();
+  ~ObjectSegmentationCraqLookupRequestsAnalysis();
 };
+
+
+
+class ObjectSegmentationLookupNotOnServerRequestsAnalysis
+{
+private:
+  std::vector<Time> times;
+  std::vector<UUID> obj_ids;
+  std::vector<ServerID> sID_lookup;
+
+  void convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent>&);
+  static bool compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B);
+
+public:
+  ObjectSegmentationLookupNotOnServerRequestsAnalysis(const char* opt_name, const uint32 nservers);
+  void printData(std::ostream &fileOut, bool sortByTime=true);
+  ~ObjectSegmentationLookupNotOnServerRequestsAnalysis();
+};
+
 
 
 class ObjectSegmentationProcessedRequestsAnalysis
@@ -406,6 +427,9 @@ public:
 
 
 
+
+
+
 class OSegCacheErrorAnalysis
 {
 
@@ -440,10 +464,11 @@ private:
 
   ObjectLocationMap mObjLoc;
 
-  std::vector< ObjectMigrationRoundTripEvent > mMigrationVector; //round trip event
-  std::vector< ObjectLookupProcessedEvent >       mLookupVector; //lookup proc'd
-  std::vector< OSegCacheResponseEvent >    mCacheResponseVector;
-  
+  std::vector< ObjectMigrationRoundTripEvent >                mMigrationVector; //round trip event
+  std::vector< ObjectLookupProcessedEvent >                      mLookupVector; //lookup proc'd
+  std::vector< OSegCacheResponseEvent >                   mCacheResponseVector;
+  std::vector< ObjectLookupNotOnServerEvent >   mObjectLookupNotOnServerVector;
+
   //basic strategy: load all migration events.
   //write all migrate times in for each object.
   //load all lookup events....augment map with their lookups.  (If receive a lookup before we have any migrations, we can know that these values are real.)

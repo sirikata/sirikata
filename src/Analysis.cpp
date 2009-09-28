@@ -327,17 +327,28 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
           }
           break;
 
-      case Trace::ObjectSegmentationLookupRequestAnalysisTag:
+      case Trace::ObjectSegmentationCraqLookupRequestAnalysisTag:
         {
-          ObjectLookupEvent* obj_lookupReq_evt = new ObjectLookupEvent;
+          ObjectCraqLookupEvent* obj_lookupReq_evt = new ObjectCraqLookupEvent;
           is.read( (char*)&obj_lookupReq_evt->time, sizeof(obj_lookupReq_evt->time)  );
           is.read( (char*)&obj_lookupReq_evt->mObjID,sizeof(obj_lookupReq_evt->mObjID)  );
           is.read( (char*)&obj_lookupReq_evt->mID_lookup, sizeof(obj_lookupReq_evt->mID_lookup) );
 
           evt = obj_lookupReq_evt;
-
         }
         break;
+
+      case Trace::OSegLookupNotOnServerAnalysisTag:
+        {
+          ObjectLookupNotOnServerEvent* obj_lookup_not_on_server_evt = new ObjectLookupNotOnServerEvent;
+          is.read( (char*)&obj_lookup_not_on_server_evt->time, sizeof(obj_lookup_not_on_server_evt->time)  );
+          is.read( (char*)&obj_lookup_not_on_server_evt->mObjID,sizeof(obj_lookup_not_on_server_evt->mObjID)  );
+          is.read( (char*)&obj_lookup_not_on_server_evt->mID_lookup, sizeof(obj_lookup_not_on_server_evt->mID_lookup) );
+          
+          evt = obj_lookup_not_on_server_evt;
+        }
+        break;
+        
       case Trace::ObjectSegmentationProcessedRequestAnalysisTag:
         {
           ObjectLookupProcessedEvent* obj_lookupProc_evt = new ObjectLookupProcessedEvent;
@@ -1700,8 +1711,8 @@ LatencyAnalysis::~LatencyAnalysis() {
 
 
 
-  ////ObjectSegLookupReqAnalysis
-  ObjectSegmentationLookupRequestsAnalysis::ObjectSegmentationLookupRequestsAnalysis(const char* opt_name, const uint32 nservers)
+  ////ObjectSegCraqLookupReqAnalysis
+  ObjectSegmentationCraqLookupRequestsAnalysis::ObjectSegmentationCraqLookupRequestsAnalysis(const char* opt_name, const uint32 nservers)
   {
     for(uint32 server_id = 1; server_id <= nservers; server_id++)
     {
@@ -1714,7 +1725,7 @@ LatencyAnalysis::~LatencyAnalysis() {
         if (evt == NULL)
           break;
 
-        ObjectLookupEvent* obj_lookup_evt = dynamic_cast<ObjectLookupEvent*> (evt);
+        ObjectCraqLookupEvent* obj_lookup_evt = dynamic_cast<ObjectCraqLookupEvent*> (evt);
         if (obj_lookup_evt != NULL)
         {
           times.push_back(obj_lookup_evt->time);
@@ -1729,15 +1740,15 @@ LatencyAnalysis::~LatencyAnalysis() {
     }
   }
 
-  void ObjectSegmentationLookupRequestsAnalysis::printData(std::ostream &fileOut, bool sortByTime)
+  void ObjectSegmentationCraqLookupRequestsAnalysis::printData(std::ostream &fileOut, bool sortByTime)
   {
 
     if (sortByTime)
     {
-      std::vector<ObjectLookupEvent> sortedEvents;
+      std::vector<ObjectCraqLookupEvent> sortedEvents;
       convertToEvtsAndSort(sortedEvents);
 
-      fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
+      fileOut << "\n\n*******************Begin Craq Lookup Requests Messages*************\n\n\n";
       fileOut << "\n\n Basic statistics:   "<< sortedEvents.size() <<"  \n\n";
 
 
@@ -1757,7 +1768,7 @@ LatencyAnalysis::~LatencyAnalysis() {
       fileOut<<"\n\n\n\nEND\n";
 
 
-      fileOut << "\n\n*******************Begin Lookup Requests Messages*************\n\n\n";
+      fileOut << "\n\n*******************Begin Craq Lookup Requests Messages*************\n\n\n";
       fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
 
 
@@ -1776,9 +1787,9 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   //want to sort by times.
   //probably a bad way to do this.  I could have just read them in correctly in the first place.
-  void ObjectSegmentationLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupEvent> &sortedEvents)
+  void ObjectSegmentationCraqLookupRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectCraqLookupEvent> &sortedEvents)
   {
-    ObjectLookupEvent ole;
+    ObjectCraqLookupEvent ole;
 
     for (int s= 0; s < (int) times.size(); ++s)
     {
@@ -1792,15 +1803,121 @@ LatencyAnalysis::~LatencyAnalysis() {
     std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
   }
 
-  bool ObjectSegmentationLookupRequestsAnalysis::compareEvts(ObjectLookupEvent A, ObjectLookupEvent B)
+  bool ObjectSegmentationCraqLookupRequestsAnalysis::compareEvts(ObjectCraqLookupEvent A, ObjectCraqLookupEvent B)
   {
     return A.time < B.time;
   }
 
-  ObjectSegmentationLookupRequestsAnalysis::~ObjectSegmentationLookupRequestsAnalysis()
+  ObjectSegmentationCraqLookupRequestsAnalysis::~ObjectSegmentationCraqLookupRequestsAnalysis()
   {
 
   }
+
+
+  //oseg lookup not on server
+
+
+  ObjectSegmentationLookupNotOnServerRequestsAnalysis::ObjectSegmentationLookupNotOnServerRequestsAnalysis(const char* opt_name, const uint32 nservers)
+  {
+    for(uint32 server_id = 1; server_id <= nservers; server_id++)
+    {
+      String loc_file = GetPerServerFile(opt_name, server_id);
+      std::ifstream is(loc_file.c_str(), std::ios::in);
+
+      while(is)
+      {
+        Event* evt = Event::read(is, server_id);
+        if (evt == NULL)
+          break;
+
+        ObjectLookupNotOnServerEvent* obj_lookup_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+        if (obj_lookup_evt != NULL)
+        {
+          times.push_back(obj_lookup_evt->time);
+          obj_ids.push_back(obj_lookup_evt->mObjID);
+          sID_lookup.push_back(obj_lookup_evt->mID_lookup);
+          continue;
+        }
+
+        delete evt;
+      }
+    }
+  }
+
+  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::printData(std::ostream &fileOut, bool sortByTime)
+  {
+
+    if (sortByTime)
+    {
+      std::vector<ObjectLookupNotOnServerEvent> sortedEvents;
+      convertToEvtsAndSort(sortedEvents);
+
+      fileOut << "\n\n*******************Begin Lookup Requests Not On Server Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< sortedEvents.size() <<"  \n\n";
+
+
+      for (int s= 0; s < (int) sortedEvents.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sortedEvents[s].mID_lookup<<"\n";
+        fileOut<< "\tTime at:           "<<sortedEvents[s].time.raw()<<"\n";
+        fileOut<< "\tObj id:            "<<sortedEvents[s].mObjID.toString()<<"\n";
+      }
+
+      fileOut<<"\n\n\n\nEND\n";
+    }
+    else
+    {
+
+      fileOut<<"\n\n\n\nEND\n";
+
+
+      fileOut << "\n\n*******************Begin Craq Lookup Requests Messages*************\n\n\n";
+      fileOut << "\n\n Basic statistics:   "<< times.size() <<"  \n\n";
+
+
+      for (int s= 0; s < (int) times.size(); ++s)
+      {
+        fileOut<< "\n\n********************************\n";
+        fileOut<< "\tRegistered from:   "<<sID_lookup[s]<<"\n";
+        fileOut<< "\tTime at:           "<<times[s].raw()<<"\n";
+        fileOut<< "\tObj id:            "<<obj_ids[s].toString()<<"\n";
+      }
+
+      fileOut<<"\n\n\n\nEND\n";
+    }
+
+  }
+
+  //want to sort by times.
+  //probably a bad way to do this.  I could have just read them in correctly in the first place.
+  void ObjectSegmentationLookupNotOnServerRequestsAnalysis::convertToEvtsAndSort(std::vector<ObjectLookupNotOnServerEvent> &sortedEvents)
+  {
+    ObjectLookupNotOnServerEvent ole;
+
+    for (int s= 0; s < (int) times.size(); ++s)
+    {
+      ole.time = times[s];
+      ole.mObjID = obj_ids[s];
+      ole.mID_lookup = sID_lookup[s];
+
+      sortedEvents.push_back(ole);
+    }
+
+    std::sort(sortedEvents.begin(),sortedEvents.end(), compareEvts );
+  }
+
+  bool ObjectSegmentationLookupNotOnServerRequestsAnalysis::compareEvts(ObjectLookupNotOnServerEvent A, ObjectLookupNotOnServerEvent B)
+  {
+    return A.time < B.time;
+  }
+
+  ObjectSegmentationLookupNotOnServerRequestsAnalysis::~ObjectSegmentationLookupNotOnServerRequestsAnalysis()
+  {
+
+  }
+
+  //end oseg lookup not on server
 
 
 
@@ -1839,7 +1956,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   //processAfter is in seconds
   void ObjectSegmentationProcessedRequestsAnalysis::printData(std::ostream &fileOut, bool sortedByTime, int processAfter)
   {
-    double processAfterInMicro = processAfter* 1000000; //convert seconds of processAfter to microseconds for comparison to time.raw().
+    double processAfterInMicro = processAfter* OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert seconds of processAfter to microseconds for comparison to time.raw().
     double totalLatency = 0;
     int maxLatency = 0;
     double numCountedLatency  = 0;
@@ -1981,7 +2098,7 @@ LatencyAnalysis::~LatencyAnalysis() {
   //processedAfter is in seconds
   void ObjectMigrationRoundTripAnalysis::printData(std::ostream &fileOut, int processedAfter)
   {
-    double processedAfterInMicro = processedAfter*1000000; //convert to microseconds
+    double processedAfterInMicro = processedAfter*OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert to microseconds
     
     std::sort(allRoundTripEvts.begin(), allRoundTripEvts.end(), compareEvts);
 
@@ -2012,7 +2129,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     double avgTime = totalTimes/((double) numProcessedAfter);
 
     fileOut<< "\n\n Avg Migrate Time:    "<<avgTime<<"\n";
-    fileOut<< "Num processed after:      "<<numProcessedAfter<<"\n\n";
+    fileOut<< "Num processed after  " << processedAfter<<" seconds:       "<<numProcessedAfter<<"\n\n";
     fileOut<< "END*******\n\n";
   }
 
@@ -2054,8 +2171,7 @@ LatencyAnalysis::~LatencyAnalysis() {
 
   void OSegTrackedSetResultsAnalysis::printData(std::ostream &fileOut, int processAfter)
   {
-
-    double processedAfterInMicro = processAfter*1000000;
+    double processedAfterInMicro = processAfter*OSEG_SECOND_TO_RAW_CONVERSION_FACTOR; //convert from seconds to microseconds
 
     
     fileOut<<"\n\n*********************************\n";
@@ -2083,7 +2199,7 @@ LatencyAnalysis::~LatencyAnalysis() {
     if (allTrackedSetResultsEvts.size() != 0)
     {
       fileOut<<"\n\n\nAvg:  "<<averager/(numProcessedAfter)<<"\n";
-      fileOut<<"num proc:   "<< numProcessedAfter<<"\n\n";
+      fileOut<<"num proc after "<< processAfter << "seconds:   "<< numProcessedAfter<<"\n\n";
     }
 
     fileOut<<"\n\n\tEND****";
@@ -2194,8 +2310,7 @@ OSegCacheResponseAnalysis::~OSegCacheResponseAnalysis()
 
 void OSegCacheResponseAnalysis::printData(std::ostream &fileOut, int processAfter)
 {
-
-  double numProcessedAfter     = processAfter * 1000000;
+  double numProcessedAfter     = processAfter * OSEG_SECOND_TO_RAW_CONVERSION_FACTOR;
   double numCacheRespCataloged =                      0;
   
   std::sort(allCacheResponseEvts.begin(), allCacheResponseEvts.end(), compareEvts);
@@ -2255,9 +2370,10 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
       }
 
       ObjectLookupProcessedEvent* oseg_lookup_proc_evt = dynamic_cast<ObjectLookupProcessedEvent*> (evt);
-      if (oseg_lookup_proc_evt == NULL)
+      if (oseg_lookup_proc_evt != NULL)
       {
         mLookupVector.push_back(*oseg_lookup_proc_evt);
+        continue;
       }
 
       OSegCacheResponseEvent* oseg_cache_evt = dynamic_cast<OSegCacheResponseEvent*> (evt);
@@ -2266,6 +2382,14 @@ OSegCacheErrorAnalysis::OSegCacheErrorAnalysis(const char* opt_name, const uint3
         mCacheResponseVector.push_back(*oseg_cache_evt);
         continue;
       }
+
+      ObjectLookupNotOnServerEvent* oseg_lookup_not_on_server_evt = dynamic_cast<ObjectLookupNotOnServerEvent*> (evt);
+      if (oseg_lookup_not_on_server_evt != NULL)
+      {
+        mObjectLookupNotOnServerVector.push_back(*oseg_lookup_not_on_server_evt);
+        continue;
+      }
+      
       delete evt;
     }
   }
@@ -2293,6 +2417,7 @@ void OSegCacheErrorAnalysis::buildObjectMap()
   std::sort(mMigrationVector.begin(), mMigrationVector.end(), compareRoundTripEvents);
   std::sort(mLookupVector.begin(), mLookupVector.end(), compareLookupProcessedEvents);
   std::sort(mCacheResponseVector.begin(), mCacheResponseVector.end(), compareCacheResponseEvents); 
+
   
   //First read through all object migrations.
   std::vector< ObjectMigrationRoundTripEvent >::const_iterator migrationIterator;
@@ -2305,7 +2430,7 @@ void OSegCacheErrorAnalysis::buildObjectMap()
     
     mObjLoc[migrationIterator->obj_id].push_back(sidtime);
   }
-
+  
   //now, read through the lookup vector.  If an object does not exist in map, then put it in.
 
   std::vector<ObjectLookupProcessedEvent >::const_iterator lookupIterator;
@@ -2326,8 +2451,9 @@ void OSegCacheErrorAnalysis::buildObjectMap()
 
 void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterInMicro)
 {
-  buildObjectMap(); //populates mObjLoc
 
+  buildObjectMap(); //populates mObjLoc
+  
   //initialize results struct
   res.missesCache  = 0;
   res.hitsCache    = 0;
@@ -2359,11 +2485,12 @@ void OSegCacheErrorAnalysis::analyzeMisses(Results& res, double processedAfterIn
     }
   }
 
+
   //this counts the number of lookups made
-  std::vector< ObjectLookupProcessedEvent>::const_iterator lookupIter;
-  for (lookupIter = mLookupVector.begin(); lookupIter != mLookupVector.end(); ++lookupIter)
+  std::vector< ObjectLookupNotOnServerEvent>::const_iterator lookupNotOnServerIter;
+  for (lookupNotOnServerIter =  mObjectLookupNotOnServerVector.begin();  lookupNotOnServerIter != mObjectLookupNotOnServerVector.end(); ++lookupNotOnServerIter)
   {
-    if (lookupIter->time.raw() >= processedAfterInMicro )
+    if (lookupNotOnServerIter->time.raw() >= processedAfterInMicro )
     {
       ++res.totalLookups;
     }
@@ -2398,23 +2525,25 @@ bool OSegCacheErrorAnalysis::checkHit(const UUID& obj_ider, const Time& ter, con
 //processedAfter is in seconds.
 void OSegCacheErrorAnalysis::printData(std::ostream& fileOut , int processedAfter)
 {
-  double processedAfterInMicro  =  processedAfter* 1000000;  //convert seconds to microseconds
+  double processedAfterInMicro  =  processedAfter*OSEG_SECOND_TO_RAW_CONVERSION_FACTOR;  //convert seconds to microseconds
 
   Results res;
+
   analyzeMisses(res,processedAfterInMicro);
 
   fileOut << "\n\nOSegCacheErrorAnalysis\n" ;
   fileOut << "\t Basic statistics: \n ";
+  fileOut << "\t After "<< processedAfter << " second mark\n";
   fileOut << "\t\t Total Lookups:  "<< res.totalLookups<<"\n";
   fileOut << "\t\t TotalCache:     "<< res.totalCache<<"\n";
   fileOut << "\t\t Hits:           "<< res.hitsCache<<"\n";
   fileOut << "\t\t Misses:         "<< res.missesCache<<"\n\n\n";
   fileOut << "Statistics:   \n";
-  fileOut << "\tPercent of Lookups from Cache:              " << ((double)res.totalCache)/((double)res.totalLookups) <<"\n" ;
-  fileOut << "\tPercent of Lookups Correct from Cache:      " << ((double)res.hitsCache)/((double)res.totalLookups) <<"\n" ;
-  fileOut << "\tPercent of Lookups Incorrect from Cache:    " << ((double)res.missesCache)/((double)res.totalLookups) <<"\n" ;
-  fileOut << "\tPercent of Lookups Cache Lookups Correct:   " << ((double)res.hitsCache)/((double)res.totalCache) <<"\n" ;
-  fileOut << "\tPercent of Lookups Cache Lookups Incorrect: " << ((double)res.missesCache)/((double)res.totalCache) <<"\n" ;
+  fileOut << "\tFrac of Lookups from Cache:              " << ((double)res.totalCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tFrac of Lookups Correct from Cache:      " << ((double)res.hitsCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tFrac of Lookups Incorrect from Cache:    " << ((double)res.missesCache)/((double)res.totalLookups) <<"\n" ;
+  fileOut << "\tFrac of Lookups Cache Lookups Correct:   " << ((double)res.hitsCache)/((double)res.totalCache) <<"\n" ;
+  fileOut << "\tFrac of Lookups Cache Lookups Incorrect: " << ((double)res.missesCache)/((double)res.totalCache) <<"\n" ;
 
   fileOut <<"\n\n\nEND****";
   

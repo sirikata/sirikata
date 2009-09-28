@@ -14,6 +14,7 @@
 #include "CoordinateSegmentation.hpp"
 #include <string.h>
 #include <vector>
+#include "CraqCache.hpp"
 
 
 //#define CRAQ_DEBUG
@@ -95,18 +96,6 @@ namespace CBR
     bool checkMigratingFromNotCompleteYet(const UUID& obj_id);
     std::vector<UUID> vectorObjectsInMigration ;
 
-    //for oseg cacing
-    struct OSegCacheVal
-    {
-      ServerID sID;
-      uint64 timeStamp;
-      bool lastLookup;
-    };
-
-    typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
-    ObjectCacheMap mServerObjectCache;
-    ServerID satisfiesCache(const UUID& obj_id);
-    //end caching
 
 
     //for message addition.
@@ -118,7 +107,30 @@ namespace CBR
     typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
     OSegAddMessage* generateAddedMessage(const UUID& obj_id);
+
+
     
+    //for oseg cacing
+    //    struct OSegCacheVal
+    //    {
+    //      ServerID sID;
+    //      uint64 timeStamp;
+    //      bool lastLookup;
+    //    };
+
+    //    typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
+    //    ObjectCacheMap mServerObjectCache;
+    //    ServerID satisfiesCache(const UUID& obj_id);
+    //end caching
+
+    
+    //building for the cache
+    ServerID satisfiesCache(const UUID& obj_id);
+    CraqCache mCraqCache;
+    
+    //end building for the cache
+
+
     
   public:
     //      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);

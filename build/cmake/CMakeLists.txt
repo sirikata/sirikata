@@ -225,6 +225,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
+  ${CBR_SOURCE_DIR}/CraqCache.cpp
   ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
