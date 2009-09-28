@@ -74,13 +74,18 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	  isDragging(false), isResizing(false),
           zOrderCounter(5),
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0),
-          mInputManager(inputMgr)
+     mInputManager(inputMgr),
+     baseDirectory(baseDirectory)
 {
     tooltipWebView = 0;
 #ifdef HAVE_AWESOMIUM
 	webCore = new Awesomium::WebCore(Awesomium::LOG_VERBOSE);
 	webCore->setBaseDirectory(getCurrentWorkingDirectory() + baseDirectory + "\\");
-
+#endif
+#ifdef HAVE_BERKELIUM
+    Berkelium::init();
+#endif
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	tooltipWebView = createWebView("__tooltip", 250, 50, OverlayPosition(0, 0), false, 70, TIER_FRONT);
 	tooltipWebView->hide();
 	tooltipWebView->setTransparent(false);
@@ -92,6 +97,9 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         chromeWebView->loadFile("navbar.html");
         chromeWebView->setTransparent(true);
 #endif
+        WebView *mychromeWebView = createWebView("test", 500, 400, OverlayPosition(RP_TOPRIGHT), false, 70);
+        mychromeWebView->loadURL("http://google.com/");
+        mychromeWebView->setTransparent(true);
 }
 
 WebViewManager::~WebViewManager()
@@ -102,6 +110,9 @@ WebViewManager::~WebViewManager()
 		WebView* toDelete = iter->second;
 		delete toDelete;
 	}
+#ifdef HAVE_BERKELIUM
+    Berkelium::destroy();
+#endif
 #ifdef HAVE_AWESOMIUM
 	if(webCore)
 		delete webCore;
@@ -125,6 +136,9 @@ WebViewManager* WebViewManager::getSingletonPtr()
 
 void WebViewManager::Update()
 {
+#ifdef HAVE_BERKELIUM
+    Berkelium::update();
+#endif
 #ifdef HAVE_AWESOMIUM
 	webCore->update();
 #endif
@@ -442,7 +456,7 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 	}
 
 	focusedWebView = webViewToFocus;
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	focusedWebView->webView->focus();
 #endif
 
@@ -476,7 +490,7 @@ WebView* WebViewManager::getTopWebView(int x, int y)
 void WebViewManager::deFocusAllWebViews()
 {
 	WebViewMap::iterator iter;
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
 		iter->second->webView->unfocus();
 #endif
@@ -510,7 +524,7 @@ void WebViewManager::setDefaultViewport(Ogre::Viewport* newViewport)
 
 void WebViewManager::onResizeTooltip(WebView* WebView, const Awesomium::JSArguments& args)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
     if(args.size() != 2 || !args[0].isInteger() || !args[1].isInteger())
 		return;
 
@@ -574,21 +588,25 @@ void WebViewManager::navigate(NavigationAction action) {
     if (focusedNonChromeWebView == NULL)
         return;
 
-#ifdef HAVE_AWESOMIUM
     switch(action) {
+#ifdef HAVE_AWESOMIUM
       case NavigateBack:
         focusedNonChromeWebView->webView->goToHistoryOffset(-1);
         break;
       case NavigateForward:
         focusedNonChromeWebView->webView->goToHistoryOffset(1);
         break;
+#endif
+#if (!defined(WIN32) && !defined(__APPLE__) && defined(HAVE_AWESOMIUM))
       case NavigateRefresh:
-// Until we recompile Awesomium on Mac and Windows:
-#if !defined(WIN32) && !defined(__APPLE__)
         focusedNonChromeWebView->webView->refresh();
-#else
+#elif defined(HAVE_AWESOMIUM)
+      case NavigateRefresh:
         SILOG(ogre,error,"FIXME: refresh() is disabled...");
         focusedNonChromeWebView->webView->goToHistoryOffset(0);
+#elif defined(HAVE_BERKELIUM)
+      case NavigateRefresh:
+        focusedNonChromeWebView->webView->refresh();
 #endif
         break;
       case NavigateHome:
@@ -598,7 +616,6 @@ void WebViewManager::navigate(NavigationAction action) {
         SILOG(ogre,error,"Unknown navigation action from navigate(action).");
         break;
     }
-#endif //HAVE_AWESOMIUM
 }
 
 
@@ -654,7 +671,7 @@ static void NavigateCommandDispatcher(const String& str) {
 
 
 void WebViewManager::navigate(NavigationAction action, const String& arg) {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
     switch (action) {
       case NavigateGo:
         if (focusedNonChromeWebView)
@@ -979,16 +996,22 @@ static unsigned int InputKeyToAwesomiumKey(SDL_scancode scancode, bool& numpad)
 static int InputModifiersToAwesomiumModifiers(Modifier modifiers, bool numpad) {
     int awemods = 0;
 #ifdef HAVE_AWESOMIUM
+    using namespace Awesomium;
+#endif
+#ifdef HAVE_BERKELIUM
+    using namespace Berkelium;
+#endif
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
     if (modifiers &Input::MOD_SHIFT)
-        awemods |= Awesomium::SHIFT_MOD;
+        awemods |= SHIFT_MOD;
     if (modifiers &Input::MOD_CTRL)
-        awemods |= Awesomium::CONTROL_MOD;
+        awemods |= CONTROL_MOD;
     if (modifiers &Input::MOD_ALT)
-        awemods |= Awesomium::ALT_MOD;
+        awemods |= ALT_MOD;
     if (modifiers &Input::MOD_GUI)
-        awemods |= Awesomium::META_MOD;
+        awemods |= META_MOD;
     if (numpad)
-        awemods |= Awesomium::KEYPAD_KEY;
+        awemods |= KEYPAD_KEY;
 #endif
     return awemods;
 }

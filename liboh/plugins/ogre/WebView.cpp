@@ -122,6 +122,9 @@ WebView::~WebView()
 	if(webView)
 		webView->destroy();
 #endif
+#ifdef HAVE_BERKELIUM
+    delete webView;
+#endif
 	if(overlay)
 		delete overlay;
 
@@ -152,6 +155,11 @@ void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& pro
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 {
+#ifdef HAVE_BERKELIUM
+    webView = Berkelium::Window::create();
+    webView->setDelegate(this);
+    webView->resize(viewWidth, viewHeight);
+#endif
 #ifdef HAVE_AWESOMIUM
 	webView = Awesomium::WebCore::Get().createWebView(viewWidth, viewHeight, false, asyncRender, maxAsyncRenderRate);
 	webView->setListener(this);
@@ -187,7 +195,7 @@ void WebView::createMaterial()
 
 
 	// Create the texture
-#if defined(HAVE_AWESOMIUM) || !defined(__APPLE__)
+#if defined(HAVE_BERKELIUM) || defined(HAVE_AWESOMIUM) || !defined(__APPLE__)
 	TexturePtr texture = TextureManager::getSingleton().createManual(
 		viewName + "Texture", ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
@@ -237,7 +245,6 @@ void WebView::loadResource(Resource* resource)
 
 void WebView::update()
 {
-#ifdef HAVE_AWESOMIUM
 	if(maxUpdatePS)
 		if(timer.getMilliseconds() - lastUpdateTime < 1000 / maxUpdatePS)
 			return;
@@ -251,6 +258,7 @@ void WebView::update()
 	else
 		baseTexUnit->setAlphaOperation(LBX_SOURCE1, LBS_MANUAL, LBS_CURRENT, fadeValue * opacity);
 
+#ifdef HAVE_AWESOMIUM
 	if(!webView->isDirty())
 		return;
 
@@ -272,9 +280,9 @@ void WebView::update()
 	}
 
 	pixelBuffer->unlock();
+#endif
 
 	lastUpdateTime = timer.getMilliseconds();
-#endif
 }
 
 void WebView::updateFade()
@@ -321,6 +329,8 @@ void WebView::loadURL(const std::string& url)
 {
 #ifdef HAVE_AWESOMIUM
 	webView->loadURL(url);
+#elif defined(HAVE_BERKELIUM)
+    webView->navigateTo(url);
 #endif
 }
 
@@ -328,6 +338,16 @@ void WebView::loadFile(const std::string& file)
 {
 #ifdef HAVE_AWESOMIUM
 	webView->loadFile(file);
+#elif defined(HAVE_BERKELIUM)
+    std::string url = file;
+    if (file.length() == 0) {
+        url = "about:blank";
+    } else if (file[0]=='/') {
+        url = "file://"+file;
+    } else {
+        url = "file://"+WebViewManager::getSingleton().getBaseDir()+"/"+file;
+    }
+    webView->navigateTo(url);
 #endif
 }
 
@@ -335,19 +355,26 @@ void WebView::loadHTML(const std::string& html)
 {
 #ifdef HAVE_AWESOMIUM
 	webView->loadHTML(html);
+#elif defined(HAVE_BERKELIUM)
+    webView->navigateTo("data:text/html;charset=utf-8,"+html);
 #endif
 }
 
-void WebView::evaluateJS(const std::string& javascript)
+void WebView::evaluateJS(const std::string& utf8js)
 {
 #ifdef HAVE_AWESOMIUM
 	webView->executeJavascript(javascript);
+#elif defined(HAVE_BERKELIUM)
+	wchar_t *outchars = new wchar_t[utf8js.size()+1];
+	size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
+	std::wstring widestr(outchars, len);
+    webView->executeJavascript(widestr);
 #endif
 }
 
 void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) // ||defined(HAVE_BERKELIUM)
 	std::string resultScript;
 	char paramName[15];
 	unsigned int i, count;
@@ -375,7 +402,7 @@ void WebView::evaluateJS(const std::string& javascript, const Awesomium::JSArgum
 		}
 	}
 
-	webView->executeJavascript(resultScript);
+	evaluateJS(resultScript);
 #endif
 }
 
@@ -650,7 +677,7 @@ void WebView::focus()
 {
 	if(overlay)
 		WebViewManager::getSingleton().focusWebView(0, 0, this);
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	else
 		webView->focus();
 #endif
@@ -737,44 +764,58 @@ void WebView::getDerivedUV(Ogre::Real& u1, Ogre::Real& v1, Ogre::Real& u2, Ogre:
 
 void WebView::injectMouseMove(int xPos, int yPos)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
 	webView->injectMouseMove(xPos, yPos);
+#elif defined(HAVE_BERKELIUM)
+	webView->mouseMoved(xPos, yPos);
 #endif
 }
 
 void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
 	webView->injectMouseWheelXY(relScrollX, relScrollY);
+#elif defined(HAVE_BERKELIUM)
+	webView->mouseWheel(relScrollX, relScrollY);
 #endif
 }
 
 void WebView::injectMouseDown(int xPos, int yPos)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
 	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
+#elif defined(HAVE_BERKELIUM)
+	webView->mouseButton(0, true);
 #endif
 }
 
 void WebView::injectMouseUp(int xPos, int yPos)
 {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
 	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
+#elif defined(HAVE_BERKELIUM)
+	webView->mouseButton(0, false);
 #endif
 }
 
 void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancode) {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)
 	webView->injectKeyEvent(press, modifiers, vk_code, scancode);
+#elif defined(HAVE_BERKELIUM)
+	webView->keyEvent(press, modifiers, vk_code, scancode);
 #endif
 }
 
 void WebView::injectTextEvent(std::string utf8) {
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	wchar_t *outchars = new wchar_t[utf8.size()+1];
 	size_t len = mbstowcs(outchars, utf8.c_str(), utf8.size());
 	std::wstring widestr(outchars, len);
+#if defined(HAVE_AWESOMIUM)
 	webView->injectTextEvent(widestr);
+#elif defined(HAVE_BERKELIUM)
+	webView->textEvent(widestr);
+#endif
 #endif
 }
 
@@ -824,7 +865,7 @@ void WebView::resize(int width, int height)
 	}
 
 	overlay->resize(viewWidth, viewHeight);
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	webView->resize(viewWidth, viewHeight);
 #endif
 
@@ -941,6 +982,88 @@ void WebView::onRequestDrag(WebView *caller, const Awesomium::JSArguments &args)
 {
 	WebViewManager::getSingleton().handleRequestDrag(this);
 }
+
+
+
+
+
+
+///////// Berkelium Callbacks...
+void WebView::onAddressBarChanged(Berkelium::Window*, const std::string&) {
+    SILOG(ogre,debug,"onAddressBarChanged");
+}
+void WebView::onStartLoading(Berkelium::Window*, const std::string&) {
+    SILOG(ogre,debug,"onStartLoading");
+}
+void WebView::onLoad(Berkelium::Window*) {
+    SILOG(ogre,debug,"onLoad");
+}
+void WebView::onLoadError(Berkelium::Window*, const std::string&) {
+    SILOG(ogre,debug,"onLoadError");
+}
+void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, const Berkelium::Rect&rect) {
+	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
+
+	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
+	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
+	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
+
+	uint8* destBuffer = static_cast<uint8*>(pixelBox.data);
+
+    int srcOffset = 0;
+    for (int row = rect.top(); row < rect.bottom(); row++) {
+        int destOffset = (row* texWidth)*texPitch*texDepth;
+        for (int col = rect.left(); col < rect.right(); col++) {
+            // srcBuffer is BGRA.
+            uint8 b = srcBuffer[srcOffset+0];
+            uint8 g = srcBuffer[srcOffset+1];
+            uint8 r = srcBuffer[srcOffset+2];
+            uint8 a = srcBuffer[srcOffset+3];
+            if (texDepth == 1 || texDepth == 2) {
+                int src = b;
+                src += g;
+                src += r;
+                src /= 3;
+                destBuffer[destOffset++] = (uint8)src;
+                if (texDepth == 2) {
+                    destBuffer[destOffset++] = a;
+                }
+            }
+            if (texDepth == 3 || texDepth == 4) {
+                destBuffer[destOffset++] = b;
+                destBuffer[destOffset++] = g;
+                destBuffer[destOffset++] = r;
+                if (texDepth == 4) {
+                    destBuffer[destOffset++] = a;
+                }
+            }
+            srcOffset += texPitch*texDepth;
+        }
+    }
+
+	if(isWebViewTransparent && !usingMask && ignoringTrans)
+	{
+		for(int row = 0; row < texHeight; row++)
+			for(int col = 0; col < texWidth; col++)
+				alphaCache[row * alphaCachePitch + col] = destBuffer[row * texPitch + col * 4 + 3];
+	}
+
+	pixelBuffer->unlock();
+}
+void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
+    SILOG(ogre,debug,"onBeforeUnload");
+}
+void WebView::onCancelUnload(Berkelium::Window*) {
+    SILOG(ogre,debug,"onCancelUnload");
+}
+void WebView::onCrashed(Berkelium::Window*) {
+    SILOG(ogre,debug,"onCrashed");
+}
+void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*) {
+    SILOG(ogre,debug,"onCreatedWindow");
+}
+
+
 
 
 }

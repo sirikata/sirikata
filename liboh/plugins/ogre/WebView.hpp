@@ -40,17 +40,15 @@
 #include <oh/WebViewListener.hpp>
 #include <oh/ProxyWebViewObject.hpp>
 
-#ifndef HAVE_AWESOMIUM
+#if !defined(HAVE_AWESOMIUM)
 namespace Awesomium {
-
-class WebViewListener {
-};
-class WebView {
-};
 struct JSValue;
 struct JSDelegate;
 typedef int FutureJSValue;
-
+#if !defined(HAVE_BERKELIUM)
+class WebViewListener {};
+class WebView {};
+#endif
 }
 #endif
 
@@ -65,7 +63,15 @@ namespace Graphics {
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
-	class WebView : public Ogre::ManualResourceLoader, public Awesomium::WebViewListener, public Sirikata::WebViewListener, public Sirikata::ProxyObjectListener
+	class WebView
+        : public Ogre::ManualResourceLoader,
+#ifdef HAVE_BERKELIUM
+          public Berkelium::WindowDelegate,
+#else
+          public Awesomium::WebViewListener,
+#endif
+          public Sirikata::WebViewListener,
+          public Sirikata::ProxyObjectListener
 	{
 	public:
 
@@ -370,7 +376,11 @@ namespace Graphics {
 		void resize(int width, int height);
 
 	protected:
+#ifdef HAVE_BERKELIUM
+		Berkelium::Window* webView;
+#else
 		Awesomium::WebView* webView;
+#endif
 		std::string viewName;
 		unsigned short viewWidth;
 		unsigned short viewHeight;
@@ -442,6 +452,18 @@ namespace Graphics {
 		void onChangeKeyboardFocus(bool isFocused);
 
 		void onRequestDrag(WebView* caller, const Awesomium::JSArguments& args);
+
+
+        void onAddressBarChanged(Berkelium::Window*, const std::string&);
+        void onStartLoading(Berkelium::Window*, const std::string&);
+        void onLoad(Berkelium::Window*);
+        void onLoadError(Berkelium::Window*, const std::string&);
+        void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&);
+        void onBeforeUnload(Berkelium::Window*, bool*);
+        void onCancelUnload(Berkelium::Window*);
+        void onCrashed(Berkelium::Window*);
+        void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
+
 	};
 
 }
