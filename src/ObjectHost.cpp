@@ -231,9 +231,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     // FIXME would be nice not to have to do this alloc/dealloc
     CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
-    std::string* serialized = serializeObjectHostMessage(*obj_msg);
-    conn->write_stream.write(serialized->c_str(), serialized->size());
-    delete serialized;
+    conn->queue.push( serializeObjectHostMessage(*obj_msg) );
     delete obj_msg;
 
     return true;
@@ -553,6 +551,14 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
     if (!conn->is_writing && conn->write_buf.size() > 0) {
         conn->is_writing = true;
+
+        // Push stuff onto the stream
+        while(!conn->queue.empty()) {
+            std::string* msg = conn->queue.front();
+            conn->write_stream.write(&((*msg)[0]), msg->size());
+            conn->queue.pop();
+            delete msg;
+        }
 
         // And start the write
         OH_LOG(insane,"Starting write of " << conn->write_buf.size() << " bytes");
