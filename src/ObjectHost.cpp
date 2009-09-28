@@ -232,7 +232,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
     std::string* serialized = serializeObjectHostMessage(*obj_msg);
-    conn->write_stream << *serialized;
+    conn->write_stream.write(serialized->c_str(), serialized->size());
     delete serialized;
     delete obj_msg;
 
