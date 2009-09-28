@@ -17,10 +17,10 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '250s'
+        self.duration = '50s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
-        self.flatness = 100
+        self.flatness = 500
         self.server_queue = 'fair'
         self.server_queue_length = 8192
         self.object_queue = 'fairfifo'
@@ -31,7 +31,7 @@ class ClusterSimSettings:
         self.object_connect_phase = '0s'
 
         # OH: random object generation settings
-        self.num_random_objects = 2000
+        self.num_random_objects = 100
         self.object_static = 'random'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
@@ -56,7 +56,7 @@ class ClusterSimSettings:
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
         self.cseg_service_host = 'indus'
-        self.oseg = 'oseg_loc'
+        self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
 
         self.vis_mode = 'object'

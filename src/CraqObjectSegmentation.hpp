@@ -31,7 +31,7 @@ namespace CBR
   };
 
   const ServerID CRAQ_OSEG_LOOKUP_SERVER_ID = NullServerID;
-  
+  static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
   
   class CraqObjectSegmentation : public ObjectSegmentation
   {
@@ -44,6 +44,7 @@ namespace CBR
 
     char myUniquePrefixKey; //should just be one character long.
 
+    //for logging
     int numCacheHits;
     int numOnThisServer;
     int numLookups;
@@ -51,12 +52,10 @@ namespace CBR
     int numTimeElapsedCacheEviction;
     int numMigrationNotCompleteYet;
     int numAlreadyLookingUp;
+    //dnd for loggin.
     
     std::map<std::string, UUID > mapDataKeyToUUID;
-    //    std::map<UUID,ServerID> mInTransitOrLookup;//These are the objects that are in transit.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
-
     std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we
-    
     std::map<UUID,ServerID> mFinishedMoveOrLookup;
 
     struct TrackedSetResultsData
@@ -64,8 +63,7 @@ namespace CBR
       OSegMigrateMessageAcknowledge* migAckMsg;
       Duration dur;
     };
-    
-    //std::map<int,OSegMigrateMessageAcknowledge*> trackingMessages;
+
     typedef std::map<int, TrackedSetResultsData> TrackedMessageMap;
     TrackedMessageMap trackingMessages;
     
@@ -75,6 +73,8 @@ namespace CBR
     void iteratedWait(int numWaits,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
     void basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
+
+    //what to do when craq can't find the object
     void notFoundFunction(CraqOperationResult* nf); //this function tells us what to do with all the ids that just weren't found in craq.
 
     struct NotFoundData
@@ -85,6 +85,8 @@ namespace CBR
     typedef std::queue<NotFoundData*> NfDataQ;
     NfDataQ mNfData;
     void checkNotFoundData();
+    //end what to do when craq can't find the object
+
     
     //for lookups and sets
     AsyncCraq craqDhtGet;
@@ -98,7 +100,7 @@ namespace CBR
 
 
 
-    //for message addition.
+    //for message addition. when add an object, send a message to the server that you can now finish adding it to forwarder, loc services, etc.
     struct TrackedSetResultsDataAdded
     {
       OSegAddMessage* msgAdded;
@@ -107,33 +109,38 @@ namespace CBR
     typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
     OSegAddMessage* generateAddedMessage(const UUID& obj_id);
-
+    //end message addition.
 
     
     //for oseg cacing
-    //    struct OSegCacheVal
-    //    {
-    //      ServerID sID;
-    //      uint64 timeStamp;
-    //      bool lastLookup;
-    //    };
+//     struct OSegCacheVal
+//     {
+//       ServerID sID;
+//       uint64 timeStamp;
+//       bool lastLookup;
+//     };
 
-    //    typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
-    //    ObjectCacheMap mServerObjectCache;
-    //    ServerID satisfiesCache(const UUID& obj_id);
+//     typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
+//     ObjectCacheMap mServerObjectCache;
+//     ServerID satisfiesCache(const UUID& obj_id);
     //end caching
 
     
     //building for the cache
     ServerID satisfiesCache(const UUID& obj_id);
     CraqCache mCraqCache;
-    
     //end building for the cache
 
 
+    //redundant message vectors in case a send fails.
+    void checkReSends();
+    std::vector<OSegAddMessage*> reTryAddedMessage;
+    std::vector<OSegMigrateMessageAcknowledge*> reTryMigAckMessage;
+    std::vector<KillObjConnMessage*> reTryKillConnMessage;
+    //end redundant message vectors in case a send fails
+
     
   public:
-    //      CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> initArgs, char);
     CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID);
 
     
@@ -143,25 +150,16 @@ namespace CBR
     virtual void service(std::map<UUID,ServerID>& updated);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID idServerAckTo, bool);
-
     virtual void receiveMessage(Message* msg);
-
     virtual bool clearToMigrate(const UUID& obj_id);
-
-    virtual void newObjectAdd(const UUID& obj_id);
-    
-
+    virtual void newObjectAdd(const UUID& obj_id);  
     virtual int getOSegType();
     
     OSegMigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
     void processMigrateMessageAcknowledge(OSegMigrateMessageAcknowledge* msg);
     void processMigrateMessageMove(OSegMigrateMessageMove* msg);
-    //    void processCraqTrackedSetResults(std::vector<CraqOperationResult> &trackedSetResults);
     void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
     void processUpdateOSegMessage(UpdateOSegMessage* update_oseg_msg);
-
-    
-
     
   };
 }
