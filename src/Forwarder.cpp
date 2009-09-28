@@ -80,7 +80,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mOSeg = oseg;
   mObjectMessageQueue = omq;
   mServerMessageQueue =smq;
-  mOutgoingMessages=new ForwarderQueue(smq,omq,16384);
+  mOutgoingMessages=new ForwarderQueue(smq,omq,4096);
 }
 
   /*
@@ -189,7 +189,7 @@ void Forwarder::service()
             if (sid == mContext->id()) continue;
             memcpy(&key,&sid,sizeof(sid));
             if (!mObjectMessageQueue->hasClient(key)) {
-                mObjectMessageQueue->registerClient(key,1.0e-6);
+                mObjectMessageQueue->registerClient(key,.1);
             }
             bool send_success;
             do {
