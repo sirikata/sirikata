@@ -4,7 +4,7 @@ namespace Sirikata.Runtime {
 
 
 public delegate bool FunctionReturnCallback(byte[] header,byte[] body);
-public delegate bool TimeoutCallback();
+public delegate void TimeoutCallback();
 
 public class HostedObject{
     
@@ -42,8 +42,25 @@ public class HostedObject{
     internal static long TimeTicks(Sirikata.Runtime.Time t) {
         return t.microseconds();
     }
-    public static  void TickPeriod(Sirikata.Runtime.Time t){
-        iTickPeriod(t.toClass());
+    public static  void SetupTickFunction(TimeoutCallback tc, Sirikata.Runtime.Time t){
+        
+        long us=t.microseconds();
+        TimeoutCallback wrapped_tc=null;
+        long estLocalTime=GetLocalTime().microseconds()+us*2;
+        wrapped_tc=new TimeoutCallback(delegate(){
+                try {
+                    tc();
+                }finally {
+                    long delta=estLocalTime-GetLocalTime().microseconds();
+                    estLocalTime+=us;
+                    if (delta>0) {
+                        iAsyncWait(wrapped_tc,new TimeClass((ulong)delta));
+                    }else {
+                        iAsyncWait(wrapped_tc,new TimeClass());
+                    }
+                }
+            });
+        iAsyncWait(wrapped_tc,t.toClass());    
     }
     public static bool AsyncWait(TimeoutCallback callback, Sirikata.Runtime.Time t) {
         if (callback==null) return false;

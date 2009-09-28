@@ -109,7 +109,11 @@ static void CallDelegate(const std::tr1::weak_ptr<HostedObject>&weak_ho, const M
     ContextPush cp;
     if (ho) {
         MonoContext::getSingleton().setVWObject(&*ho,domain);
-        delegate.invoke();
+        try {
+            delegate.invoke();
+        } catch (Mono::Exception&e) {
+            SILOG(mono,debug,"AsyncWait Callback raised exception: "<<e);
+        }
     }
 }
 static void Mono_Context_AsyncWait(MonoObject*callback, MonoObject*duration){

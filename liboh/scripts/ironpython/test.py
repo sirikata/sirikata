@@ -17,6 +17,7 @@ DEBUG_OUTPUT=False
 class exampleclass:
     def __init__(self):
         self.val=0
+        HostedObject.SetupTickFunction(self.tick,Sirikata.Runtime.Time(2000000))
     def func(self,otherval):
         self.val+=otherval
         print self.val
@@ -153,7 +154,6 @@ class exampleclass:
 
     def processMessage(self,header,body):
         print "Got a message"
-    def tick(self,tim):
-        x=str(tim)
-        print "Current time is "+x;
+    def tick(self):
+        print "tick";
         #HostedObject.SendMessage(tuple(Byte(ord(c)) for c in x));# this seems to get into hosted object...but fails due to bad encoding
