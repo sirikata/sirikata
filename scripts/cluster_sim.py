@@ -17,7 +17,7 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '50s'
+        self.duration = '250s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 500
