@@ -159,16 +159,21 @@ class ClusterSim:
 
     def run(self):
         self.generate_deployment()
+
         self.clean_local_data()
         self.clean_remote_data()
         self.generate_ip_file()
         self.run_cluster_sim()
         self.retrieve_data()
+
         self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
+
         self.loc_latency_analysis()
+        self.prox_dump_analysis()
+
 
     def generate_deployment(self):
         self.config.generate_deployment(self.num_servers())
@@ -364,18 +369,21 @@ class ClusterSim:
     def loc_latency_analysis(self):
         subprocess.call([CBR_WRAPPER, '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
 
+    def prox_dump_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
+
 
 
 if __name__ == "__main__":
     cc = ClusterConfig()
-#    cs = ClusterSimSettings(3, (3,1), 1)
-    cs = ClusterSimSettings(cc, 4, (2,2), 1)
-#    cs = ClusterSimSettings(8, (8,1), 1)
-#    cs = ClusterSimSettings(8, (8,1), 1)
-#    cs = ClusterSimSettings(14, (2,2), 1)
-#    cs = ClusterSimSettings(4, (2,2), 1)
-#    cs = ClusterSimSettings(4, (4,1), 1)
-#    cs = ClusterSimSettings(16, (4,4), 1)
+#    cs = ClusterSimSettings(cc, 3, (3,1), 1)
+#    cs = ClusterSimSettings(cc, 4, (2,2), 1)
+    cs = ClusterSimSettings(cc, 8, (8,1), 1)
+#    cs = ClusterSimSettings(cc, 8, (8,1), 1)
+#    cs = ClusterSimSettings(cc, 14, (2,2), 1)
+#    cs = ClusterSimSettings(cc, 4, (2,2), 1)
+#    cs = ClusterSimSettings(cc, 4, (4,1), 1)
+#    cs = ClusterSimSettings(cc, 16, (4,4), 1)
 
 
     cluster_sim = ClusterSim(cc, cs)

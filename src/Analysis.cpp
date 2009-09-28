@@ -2695,4 +2695,45 @@ void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers) {
     }
 }
 
+void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const String& outfilename) {
+    typedef std::vector<ProximityEvent*> ProxEventList;
+    ProxEventList prox_events;
+
+    // Get all prox events for all servers
+    for(uint32 server_id = 1; server_id <= nservers; server_id++) {
+        String prox_file = GetPerServerFile(opt_name, server_id);
+        std::ifstream is(prox_file.c_str(), std::ios::in);
+
+        while(is) {
+            Event* evt = Event::read(is, server_id);
+            if (evt == NULL)
+                break;
+
+            ProximityEvent* prox_evt = dynamic_cast<ProximityEvent*>(evt);
+            if (prox_evt != NULL)
+                prox_events.push_back(prox_evt);
+            else
+                delete evt;
+        }
+    }
+
+    // Sort by event time
+    std::sort(prox_events.begin(), prox_events.end(), EventTimeComparator());
+
+    // And dump them
+    std::ofstream os(outfilename.c_str(), std::ios::out);
+    for(ProxEventList::iterator it = prox_events.begin(); it != prox_events.end(); it++) {
+        ProximityEvent* evt = *it;
+        const char* dir = evt->entered ? " in " : " out ";
+        os << (evt->time-Time::null()).toMicroseconds()
+           << evt->source.toString() << " "
+           << evt->receiver.toString()
+           << dir
+           << evt->loc.position() << " "
+           << evt->loc.velocity() << " "
+           << (evt->loc.time()-Time::null()).toMicroseconds()
+           << std::endl;
+    }
+}
+
 } // namespace CBR

@@ -198,7 +198,7 @@ class MessageLatencyAnalysis {public:
 
             ++numSamples;
         }
-        void averageOut(){ 
+        void averageOut(){
             if (numSamples) {
                 average=average/(double)numSamples;
             }
@@ -211,7 +211,7 @@ class MessageLatencyAnalysis {public:
     class PacketData {public:
         uint64 mId;
         unsigned char mType;
-        unsigned char mSrcPort;        
+        unsigned char mSrcPort;
         unsigned short mDstPort;
         std::vector<DTime> mStamps;
         PacketData();
@@ -233,12 +233,12 @@ class MessageLatencyAnalysis {public:
         bool verify(const uint32*server,const PacketData &pd, Trace::MessagePath path) const{
             if (server==NULL) return true;
             for (std::vector<DTime>::const_iterator i=pd.mStamps.begin(),ie=pd.mStamps.end();i!=ie;++i) {
-                
+
                 if (i->mPath==path)
                     return i->mServerId==*server;
             }
             return false;
-            
+
         }
         bool operator() (const PacketData&pd)const{
             return (mDestPort==NULL||pd.mDstPort==*mDestPort)&&
@@ -362,7 +362,7 @@ private:
   std::vector<ServerID> sID_objectOn;
   std::vector<uint32> dTimes;
   std::vector<uint32> stillInQueues;
-  
+
   void convertToEvtsAndSort(std::vector<ObjectLookupProcessedEvent>&);
   static bool compareEvts(ObjectLookupProcessedEvent A, ObjectLookupProcessedEvent B);
 public:
@@ -497,6 +497,11 @@ public:
  *  object host (but possibly connected to different space servers).
  */
 void LocationLatencyAnalysis(const char* opt_name, const uint32 nservers);
+
+/** Dump proximity results to a text file for external analysis.  You probably only
+ *  want to use this if you have somehow limited the proximity results.
+ */
+void ProximityDumpAnalysis(const char* opt_name, const uint32 nservers, const String& outfilename);
 
 } // namespace CBR
 

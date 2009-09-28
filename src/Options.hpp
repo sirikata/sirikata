@@ -57,6 +57,7 @@
 #define ANALYSIS_WINDOWED_BANDWIDTH_RATE     "analysis.windowed-bandwidth.rate"
 #define ANALYSIS_OSEG        "analysis.oseg"
 #define ANALYSIS_LOC_LATENCY "analysis.loc.latency"
+#define ANALYSIS_PROX_DUMP "analysis.prox.dump"
 
 #define OBJECT_QUEUE         "object.queue"
 #define OBJECT_QUEUE_LENGTH  "object.queue.length"

@@ -96,7 +96,8 @@ bool is_analysis() {
         !GetOption(ANALYSIS_WINDOWED_BANDWIDTH)->as<String>().empty() ||
         GetOption(ANALYSIS_OSEG)->as<bool>() ||
         GetOption(ANALYSIS_OBJECT_LATENCY)->as<bool>() ||
-        GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() )
+        GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ||
+        !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty())
         return true;
 
     return false;
@@ -497,6 +498,10 @@ void *main_loop(void *) {
     }
     else if ( GetOption(ANALYSIS_LOC_LATENCY)->as<bool>() ) {
         LocationLatencyAnalysis(STATS_TRACE_FILE, nservers);
+        exit(0);
+    }
+    else if ( !GetOption(ANALYSIS_PROX_DUMP)->as<String>().empty() ) {
+        ProximityDumpAnalysis(STATS_TRACE_FILE, nservers, GetOption(ANALYSIS_PROX_DUMP)->as<String>());
         exit(0);
     }
 
