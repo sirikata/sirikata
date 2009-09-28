@@ -85,7 +85,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 #ifdef HAVE_BERKELIUM
     Berkelium::init();
 #endif
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
+#if defined(HAVE_AWESOMIUM)
 	tooltipWebView = createWebView("__tooltip", 250, 50, OverlayPosition(0, 0), false, 70, TIER_FRONT);
 	tooltipWebView->hide();
 	tooltipWebView->setTransparent(false);
@@ -97,9 +97,14 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         chromeWebView->loadFile("navbar.html");
         chromeWebView->setTransparent(true);
 #endif
+#ifdef HAVE_BERKELIUM
         WebView *mychromeWebView = createWebView("test", 500, 400, OverlayPosition(RP_TOPRIGHT), false, 70);
-        mychromeWebView->loadURL("http://google.com/");
+        // <video> tag test
+        mychromeWebView->loadURL("http://people.xiph.org/~maikmerten/demos/bigbuckbunny-videoonly.html");
+        // flash video test
+        //mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
+#endif
 }
 
 WebViewManager::~WebViewManager()

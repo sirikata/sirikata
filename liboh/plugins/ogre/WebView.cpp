@@ -1005,6 +1005,7 @@ void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, cons
 	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
+
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
 	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
 
@@ -1012,7 +1013,7 @@ void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, cons
 
     int srcOffset = 0;
     for (int row = rect.top(); row < rect.bottom(); row++) {
-        int destOffset = (row* texWidth)*texPitch*texDepth;
+        int destOffset = row*texPitch + rect.left()*texDepth;
         for (int col = rect.left(); col < rect.right(); col++) {
             // srcBuffer is BGRA.
             uint8 b = srcBuffer[srcOffset+0];
@@ -1037,18 +1038,21 @@ void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, cons
                     destBuffer[destOffset++] = a;
                 }
             }
-            srcOffset += texPitch*texDepth;
+            srcOffset += 4;
         }
     }
+	pixelBuffer->unlock();
 
 	if(isWebViewTransparent && !usingMask && ignoringTrans)
 	{
-		for(int row = 0; row < texHeight; row++)
-			for(int col = 0; col < texWidth; col++)
-				alphaCache[row * alphaCachePitch + col] = destBuffer[row * texPitch + col * 4 + 3];
+        int top = rect.top();
+        int left = rect.left();
+        for(int row = 0; row < rect.height(); row++) {
+            for(int col = 0; col < rect.width(); col++) {
+                alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * rect.width() + col)*4 + 3];
+            }
+        }
 	}
-
-	pixelBuffer->unlock();
 }
 void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
     SILOG(ogre,debug,"onBeforeUnload");
