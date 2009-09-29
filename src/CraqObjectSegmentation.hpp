@@ -53,6 +53,9 @@ namespace CBR
     int numMigrationNotCompleteYet;
     int numAlreadyLookingUp;
     int numServices;
+    int numLookingUpDebug;
+    Timer mServiceTimer;
+    Duration lastTimerDur;
     //end for loggin.
     
     std::map<std::string, UUID > mapDataKeyToUUID;
