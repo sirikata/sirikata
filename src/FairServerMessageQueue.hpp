@@ -41,7 +41,7 @@ public:
     FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
-    virtual bool canAddMessage(ServerID destinationServer,const Network::Chunk&msg);
+    virtual bool canAddMessage(ServerID destinationServer, uint32 payload_size);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service();
 
@@ -54,9 +54,6 @@ protected:
     float getServerWeight(ServerID);
 
     virtual void aggregateLocationMessages() { }
-    bool canSend(const ServerProtocolMessagePair* next_msg);
-    // Checks if sending the given message would be successful.
-    bool canSend(const ServerMessagePair* next_msg);
 };
 }
 #endif

@@ -53,7 +53,7 @@ public:
     const ServerID& destServer() const {
         return mDestServer;
     }
-    size_t serializedSize() const {
+    static size_t serializedSize() {
         return 2*sizeof(ServerID);
     }
     // Serialize this header into the network chunk, starting at the given offset.

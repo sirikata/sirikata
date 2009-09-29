@@ -22,33 +22,24 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
 {
 }
 
-bool FIFOServerMessageQueue::canSend(const ServerProtocolMessagePair*msg) {
-    if (msg->dest()==mContext->id()) return true;
-    Address4* addy = mServerIDMap->lookupInternal(msg->dest());
-
-    assert(addy != NULL);
-    return mNetwork->canSend(*addy,msg->size(),false,true,1);
-    
-}
-
-bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer,const Network::Chunk&msg){
+bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer, uint32 payload_size){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {
         return true;
     }
-    uint32 offset = 0;
-    Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id(), destinationServer);
-    offset = server_header.serialize(with_header, offset);
-    offset += msg.size();
-    size_t size=mQueue.size(destinationServer);
-    size_t msize=mQueue.maxSize(destinationServer);
-    if (size + offset > msize) {
-        if (offset > msize) SILOG(queue,fatal,"Checked push message that's too large on to FIFOServerMessageQueue: " << offset << " > " << msize);
-        return false;
-    }
-    return true;
+    assert(destinationServer!=mContext->id());
+
+    uint32 offset = ServerMessageHeader::serializedSize() + payload_size;
+
+    size_t size = mQueue.size(destinationServer);
+    size_t maxsize = mQueue.maxSize(destinationServer);
+    if (size+offset<=maxsize) return true;
+
+    if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FairServerMessageQueue: " << offset << " > " << maxsize);
+
+    return false;
 }
+
 bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {

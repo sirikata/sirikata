@@ -50,17 +50,13 @@ bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network
     return success;
 }
 
-bool FairServerMessageQueue::canAddMessage(ServerID destinationServer,const Network::Chunk&msg){
+bool FairServerMessageQueue::canAddMessage(ServerID destinationServer, uint32 payload_size) {
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {
         return true;
     }
     assert(destinationServer!=mContext->id());
-    uint32 offset = 0;
-    Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id(), destinationServer);
-    offset = server_header.serialize(with_header, offset);
-    offset += msg.size();
+    uint32 offset = ServerMessageHeader::serializedSize() + payload_size;
 
     size_t size = mServerQueues.size(destinationServer);
     size_t maxsize = mServerQueues.maxSize(destinationServer);
@@ -82,25 +78,6 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 
     *chunk_out = NULL;
     return false;
-}
-bool FairServerMessageQueue::canSend(const ServerProtocolMessagePair*msg) {
-    if (msg->dest()==mContext->id()) return true;
-    Network::Chunk with_header;
-    
-    ServerMessageHeader server_header(mContext->id(),msg->dest());
-
-    Address4* addy = mServerIDMap->lookupInternal(msg->dest());
-
-    assert(addy != NULL);
-    return mNetwork->canSend(*addy,server_header.serializedSize()+msg->size(),false,true,1);
-    
-}
-bool FairServerMessageQueue::canSend(const ServerMessagePair* next_msg) {
-    if (next_msg->dest()==mContext->id()) return true;
-    Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
-
-    assert(addy != NULL);
-    return mNetwork->canSend(*addy,next_msg->data().size(),false,true,1);
 }
 
 void FairServerMessageQueue::service(){

@@ -9,7 +9,6 @@
 
 namespace CBR {
 class FIFOServerMessageQueue:public ServerMessageQueue {
-
     FIFOQueue<ServerMessagePair, ServerID> mQueue;
     // It seems weird that we're using a FairQueue, but we do so to split bandwidth evenly.
     // Doing round robin would be an alternative.
@@ -33,8 +32,7 @@ public:
     FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg);
-    virtual bool canAddMessage(ServerID destinationServer,const Network::Chunk&msg);
-    bool canSend(const ServerProtocolMessagePair* next_msg);
+    virtual bool canAddMessage(ServerID destinationServer, uint32 payload_size);
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
     virtual void service();
 
