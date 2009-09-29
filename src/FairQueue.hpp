@@ -358,12 +358,6 @@ protected:
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
-        // If there's nothing in the queue, there is no next message
-        if (mQueuesByTime.empty()) {
-            *result_out = NULL;
-            return;
-        }
-
         // Verify front elements haven't changed out from under us
         if (DoubleCheckFront) {
             checkInputFront(true);
@@ -379,6 +373,13 @@ protected:
             SILOG(fairqueue,fatal,"[FAIRQUEUE] Input queue marked as empty not really empty, front is not NULL.");
         }
 #endif
+
+        // If there's nothing in the queue, there is no next message
+        if (mQueuesByTime.empty()) {
+            *result_out = NULL;
+            return;
+        }
+
 
         // Loop through until we find one that has data and can be handled.
         for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
