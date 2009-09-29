@@ -154,7 +154,6 @@ private:
         bool connecting;
         bool is_writing;
         boost::asio::streambuf write_buf;
-        std::ostream write_stream;
 
         boost::asio::streambuf read_buf;
         uint32 read_next_size;

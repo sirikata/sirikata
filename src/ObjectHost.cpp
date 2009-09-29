@@ -46,7 +46,6 @@ namespace CBR {
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid)
  : server(sid),
    is_writing(false),
-   write_stream(&write_buf),
    read_next_size(0)
 {
     socket = new boost::asio::ip::tcp::socket(ios);
@@ -261,7 +260,7 @@ Object* ObjectHost::randomObject () {
 Object* ObjectHost::randomObject (ServerID whichServer) {
     if (mObjectInfo.size()==0) return NULL;
     for (int i=0;i<100;++i) {
-        UUID myrand=UUID::random();    
+        UUID myrand=UUID::random();
         ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
         if (i==mObjectInfo.end()) --i;
         if (i->second.connectedTo==whichServer)
@@ -563,12 +562,16 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
 // Start async writing for this connection if it has data to be sent
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
-    // Push stuff onto the stream
-    while(!conn->queue.empty()) {
-        std::string* msg = conn->queue.front();
-        conn->write_stream.write(&((*msg)[0]), msg->size());
-        conn->queue.pop();
-        delete msg;
+    // Push stuff onto the stream, if we're not still in the middle of an async_write
+    if (!conn->is_writing && !conn->queue.empty()) {
+        std::ostream write_stream(&conn->write_buf);
+        while(!conn->queue.empty()) {
+            std::string* msg = conn->queue.front();
+            write_stream.write(&((*msg)[0]), msg->size());
+            conn->queue.pop();
+            delete msg;
+        }
+        write_stream.flush();
     }
 
     if (!conn->is_writing && conn->write_buf.size() > 0) {

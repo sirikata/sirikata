@@ -187,13 +187,16 @@ void ObjectHostConnectionManager::handleConnectionRead(const boost::system::erro
 void ObjectHostConnectionManager::startWriting(ObjectHostConnection* conn) {
     if (!conn->queue.empty() && !conn->is_writing) {
         conn->is_writing = true;
-        // Get more data into the buffer
-        std::ostream write_stream(&conn->write_buf);
-        while(!conn->queue.empty()) {
-            std::string* data = conn->queue.front();
-            conn->queue.pop();
-            write_stream.write( data->c_str(), data->size() );
-            delete data;
+        {
+            // Get more data into the buffer
+            std::ostream write_stream(&conn->write_buf);
+            while(!conn->queue.empty()) {
+                std::string* data = conn->queue.front();
+                conn->queue.pop();
+                write_stream.write( data->c_str(), data->size() );
+                delete data;
+            }
+            write_stream.flush();
         }
         // And start the write
         boost::asio::async_write(
