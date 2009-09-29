@@ -183,7 +183,8 @@ public:
         assert( qi_it != mQueuesByKey.end() );
 
         QueueInfo* queue_info = qi_it->second;
-        bool wasEmpty = queue_info->messageQueue->empty();
+        bool wasEmpty = queue_info->messageQueue->empty() ||
+            queue_info->nextFinishMessage == NULL;
 
         QueueEnum::PushResult pushResult = queue_info->messageQueue->push(msg);
 
@@ -428,6 +429,7 @@ protected:
     // Computes the next finish time for this queue and, if it has one, inserts it into the time index
     void computeNextFinishTime(QueueInfo* qi, const Time& last_finish_time) {
         if ( qi->messageQueue->empty() ) {
+            qi->nextFinishMessage = NULL;
             mEmptyQueues.insert(qi->key);
             return;
         }
@@ -437,6 +439,7 @@ protected:
         // canSend predicate.
         Message* front_msg = qi->messageQueue->front();
         if ( front_msg == NULL ) {
+            qi->nextFinishMessage = NULL;
             mEmptyQueues.insert(qi->key);
             return;
         }
