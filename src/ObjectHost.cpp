@@ -549,16 +549,16 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
 // Start async writing for this connection if it has data to be sent
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
+    // Push stuff onto the stream
+    while(!conn->queue.empty()) {
+        std::string* msg = conn->queue.front();
+        conn->write_stream.write(&((*msg)[0]), msg->size());
+        conn->queue.pop();
+        delete msg;
+    }
+
     if (!conn->is_writing && conn->write_buf.size() > 0) {
         conn->is_writing = true;
-
-        // Push stuff onto the stream
-        while(!conn->queue.empty()) {
-            std::string* msg = conn->queue.front();
-            conn->write_stream.write(&((*msg)[0]), msg->size());
-            conn->queue.pop();
-            delete msg;
-        }
 
         // And start the write
         OH_LOG(insane,"Starting write of " << conn->write_buf.size() << " bytes");
