@@ -88,6 +88,8 @@ void InitOptions() {
         .addOption(new OptionValue(ANALYSIS_WINDOWED_BANDWIDTH_RATE, "10ms", Sirikata::OptionValueType<Duration>(), "Frequency of samples in windowed bandwidth analysis, i.e. how much to slide the window by"))
 
         .addOption(new OptionValue(ANALYSIS_OSEG, "false", Sirikata::OptionValueType<bool>(), "Run OSEG analyses - migrates, lookups, processed lookups"))
+      .addOption(new OptionValue(OSEG_ANALYZE_AFTER,"0", Sirikata::OptionValueType<int>(),"Only run the oseg analysis after this many seconds of the run have elapsed."))
+      
 
         .addOption(new OptionValue(ANALYSIS_LOC_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Run location latency analysis - latency of location updates"))
 

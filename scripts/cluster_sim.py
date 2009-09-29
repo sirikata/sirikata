@@ -58,6 +58,7 @@ class ClusterSimSettings:
         self.cseg_service_host = 'indus'
         self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
+        self.oseg_analyze_after = '100' #Will perform oseg analysis after this many seconds of the run.
 
         self.vis_mode = 'object'
         self.vis_seed = 1
@@ -282,6 +283,7 @@ class ClusterSim:
                 "--object_drift_x=" + self.settings.object_drift_x,
                 "--object_drift_y=" + self.settings.object_drift_y,
                 "--object_drift_z=" + self.settings.object_drift_z,
+                "--oseg_analyze_after=" + self.settings.oseg_analyze_after,
 
                 ])
         cmd_seq.extend(oh_params)

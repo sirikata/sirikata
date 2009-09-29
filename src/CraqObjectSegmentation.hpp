@@ -52,7 +52,8 @@ namespace CBR
     int numTimeElapsedCacheEviction;
     int numMigrationNotCompleteYet;
     int numAlreadyLookingUp;
-    //dnd for loggin.
+    int numServices;
+    //end for loggin.
     
     std::map<std::string, UUID > mapDataKeyToUUID;
     std::map<UUID,TransLookup> mInTransitOrLookup;//These are the objects that are in transit from this server to another.  When we receive an acknowledge message from the oseg that these objects are being sent to, then we remove that object's id from being in transit, then we

@@ -99,6 +99,8 @@
 #define OBJECT_DRIFT_X             "object_drift_x"
 #define OBJECT_DRIFT_Y             "object_drift_y"
 #define OBJECT_DRIFT_Z             "object_drift_z"
+#define OSEG_ANALYZE_AFTER         "oseg_analyze_after"
+
 
 
 #define PROX_MAX_PER_RESULT        "prox.max-per-result"

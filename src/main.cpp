@@ -373,10 +373,11 @@ void *main_loop(void *) {
 
         exit(0);
     }
-    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() ) {
-        //bftm additional object messages log file creation.
-      int osegProcessedAfterSeconds = 100;
-
+    else if ( GetOption(ANALYSIS_OSEG)->as<bool>() )
+    {
+      //bftm additional object messages log file creation.
+      int osegProcessedAfterSeconds = GetOption(OSEG_ANALYZE_AFTER)->as<int>();
+        
       
         //oseg migrates
         String object_segmentation_filename = "oseg_object_segmentation_file";

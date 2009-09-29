@@ -73,7 +73,7 @@ namespace CBR
     numTimeElapsedCacheEviction = 0;
     numMigrationNotCompleteYet  = 0;
     numAlreadyLookingUp         = 0;
-    
+    numServices                 = 0;
 
     mTimer.start();
   }
@@ -264,7 +264,8 @@ namespace CBR
       Duration timerDur = mTimer.elapsed();
       TransLookup tmpTransLookup;
       tmpTransLookup.sID = CRAQ_OSEG_LOOKUP_SERVER_ID;  //means that we're performing a lookup, rather than a migrate.
-      tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
+      //      tmpTransLookup.timeAdmitted = (int)timerDur.toMilliseconds();
+      tmpTransLookup.timeAdmitted = numServices;
 
       mInTransitOrLookup[tmper] = tmpTransLookup; //just says that we are performing a lookup on the object
     }
@@ -328,7 +329,6 @@ namespace CBR
       tsrd.migAckMsg = generateAcknowledgeMessage(obj_id,idServerAckTo);
       tsrd.dur       = mTimer.elapsed();
       
-
       int trackID = craqDhtSet.set(cdSetGet);
       trackingMessages[trackID] = tsrd;
       
@@ -383,7 +383,8 @@ namespace CBR
 
     Duration tmpDurer= mTimer.elapsed();
     //    tmpTransLookup.timeAdmitted = mContext->time.raw();
-    tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
+    //    tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
+    tmpTransLookup.timeAdmitted = numServices;
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
 
@@ -583,7 +584,8 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
-
+    ++numServices;
+    
     checkNotFoundData(); //determines what to do with all the lookups that returned that the object wasn't found
     checkReSends(); //tries to re-send all the messages that failed
     
@@ -621,7 +623,9 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       {
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
-        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDhtGet.queueSize()  );
+        //        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDhtGet.queueSize()  );
+        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (numServices - ((int)(iter->second.timeAdmitted))), (uint32) craqDhtGet.queueSize()  ); 
+        //debug trace
 
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {
@@ -847,6 +851,9 @@ void CraqObjectSegmentation::checkNotFoundData()
 
   if (mNfData.size() == 0)
     return;
+
+  std::cout<<"\n\nGOT NOT FOUND\n\n";
+
   
   Duration tmpDur = mTimer.elapsed();
 
