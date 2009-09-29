@@ -223,9 +223,7 @@ Event* Event::read(std::istream& is, const ServerID& trace_server_id) {
         {
           ObjectBeginMigrateEvent* objBegMig_evt = new ObjectBeginMigrateEvent;
           is.read( (char*)&objBegMig_evt->time, sizeof(objBegMig_evt->time) );
-
           is.read((char*) & objBegMig_evt->mObjID, sizeof(objBegMig_evt->mObjID));
-
           is.read((char*) & objBegMig_evt->mMigrateFrom, sizeof(objBegMig_evt->mMigrateFrom));
           is.read((char*) & objBegMig_evt->mMigrateTo, sizeof(objBegMig_evt->mMigrateTo));
 
