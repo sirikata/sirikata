@@ -49,9 +49,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mProfiler.addStage("Loc");
     mProfiler.addStage("Prox");
+    mProfiler.addStage("Object Hosts");
     mProfiler.addStage("Forwarder");
     mProfiler.addStage("Load Monitor");
-    mProfiler.addStage("Object Hosts");
     mProfiler.addStage("Migration Monitor");
 
     mMigrationTimer.start();
@@ -589,10 +589,12 @@ void Server::service() {
     mLocationService->service();  mProfiler.finishedStage();
     serviceProximity();           mProfiler.finishedStage();
 
-
     //FOrwarder analysis
     Time start_time_forwarder = Time::now();
-    
+
+    // Note, object hosts must be serviced before Forwarder so they can
+    // push object messages on the queue before noise is generated
+    serviceObjectHostNetwork();   mProfiler.finishedStage();
     mForwarder->service();        mProfiler.finishedStage();
 
 
@@ -609,14 +611,13 @@ void Server::service() {
       }
     }
 
-    
+
 
     mLoadMonitor->service();      mProfiler.finishedStage();
 
-    
 
     Time start_time = Time::now();
-      
+
     serviceObjectHostNetwork();   mProfiler.finishedStage();
 
     if (mContext->simTime().raw()/1000 > 100000)
@@ -632,9 +633,7 @@ void Server::service() {
       }
     }
 
-    
-    
-    
+
     checkObjectMigrations();      mProfiler.finishedStage();
 }
 

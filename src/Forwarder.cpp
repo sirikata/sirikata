@@ -52,9 +52,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
 
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
+    mProfiler.addStage("Noise");
     mProfiler.addStage("Outgoing Messages");
     mProfiler.addStage("Forwarder Queue => Server Message Queue");
-    mProfiler.addStage("Noise");
     mProfiler.addStage("Server Message Queue");
     mProfiler.addStage("OSegII");
     mProfiler.addStage("Server Message Queue Receive");
@@ -80,7 +80,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   mOSeg = oseg;
   mObjectMessageQueue = omq;
   mServerMessageQueue =smq;
-  mOutgoingMessages=new ForwarderQueue(smq,omq,4096);
+  mOutgoingMessages=new ForwarderQueue(smq,omq,16384);
 }
 
   /*
@@ -151,31 +151,6 @@ void Forwarder::service()
       self_messages.pop_front();
     }
     mProfiler.finishedStage();
-    (*mOutgoingMessages)->service(); mProfiler.finishedStage();
-    while(true)
-    {
-        uint64 size=1<<30;
-        MessageRouter::SERVICES svc;
-        OutgoingMessage* next_msg = (*mOutgoingMessages)->front(&size,&svc);
-        if (!next_msg)
-            break;
-        if (!mContext->trace()->timestampMessage(t,Trace::SPACE_OUTGOING_MESSAGE,next_msg->data)) {
-            static bool warned=false;
-            if (!warned) {
-                fprintf (stderr, "shouldn't reach here: trace problem\nPacket has no id\n");
-                warned=true;
-            }
-        }
-
-        bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
-        if (!send_success){
-            fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
-            break;
-        }
-        uint64 b=1<<30;
-        delete (*mOutgoingMessages)->pop(&b);
-    }
-    mProfiler.finishedStage();
 
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
@@ -217,7 +192,32 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
+    (*mOutgoingMessages)->service(); mProfiler.finishedStage();
+    while(true)
+    {
+        uint64 size=1<<30;
+        MessageRouter::SERVICES svc;
+        OutgoingMessage* next_msg = (*mOutgoingMessages)->front(&size,&svc);
+        if (!next_msg)
+            break;
+        if (!mContext->trace()->timestampMessage(t,Trace::SPACE_OUTGOING_MESSAGE,next_msg->data)) {
+            static bool warned=false;
+            if (!warned) {
+                fprintf (stderr, "shouldn't reach here: trace problem\nPacket has no id\n");
+                warned=true;
+            }
+        }
+        bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
+        if (!send_success){
+            fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
+            break;
+        }
+        uint64 b=1<<30;
+        delete (*mOutgoingMessages)->pop(&b);
+    }
+    mProfiler.finishedStage();
 
+    // Try to push things from the server message queues down to the network
     mServerMessageQueue->service(); mProfiler.finishedStage();
 
     tickOSeg(t);  mProfiler.finishedStage();
