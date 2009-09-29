@@ -17,7 +17,7 @@ class ClusterSimSettings:
 
         self.layout_x = layout[0]
         self.layout_y = layout[1]
-        self.duration = '250s'
+        self.duration = '150s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
         self.flatness = 500
@@ -31,7 +31,7 @@ class ClusterSimSettings:
         self.object_connect_phase = '0s'
 
         # OH: random object generation settings
-        self.num_random_objects = 2000
+        self.num_random_objects = 1750
         self.object_static = 'random'
         self.object_drift_x = '-10'
         self.object_drift_y = '0'
@@ -267,7 +267,7 @@ class ClusterSim:
                 "--send-bandwidth=" + str(self.settings.tx_bandwidth),
                 "--receive-bandwidth=" + str(self.settings.rx_bandwidth),
                 "--wait-until=" + wait_until_time,
-                "--wait-additional=80s",
+                "--wait-additional=10s",
                 "--flatness=" + str(self.settings.flatness),
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
