@@ -117,13 +117,8 @@ public:
     void addQueue(MessageQueue *mq, Key key, float weight) {
         QueueInfo* queue_info = new QueueInfo(key, mq, weight);
         mQueuesByKey[key] = queue_info;
-        if (mq->empty()) {
-            mEmptyQueues.insert(key);
-        }
-        else {
-            computeNextFinishTime(queue_info);
-            mFrontQueue = NULL; // Force recomputation of front
-        }
+        computeNextFinishTime(queue_info);
+        mFrontQueue = NULL; // Force recomputation of front
     }
 
     void setQueueWeight(Key key, float weight) {
@@ -359,8 +354,8 @@ protected:
             ByKeyIterator by_key_it = mQueuesByKey.find(*it);
             QueueInfo* qi = by_key_it->second;
 
-            if (qi->messageQueue->front() != NULL)
-                return false;
+            if (qi->messageQueue->empty() || qi->messageQueue->front() == NULL)
+                continue;
         }
         return true;
     }
