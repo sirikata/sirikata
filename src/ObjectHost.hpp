@@ -63,6 +63,7 @@ public:
     void randomPing(const Time&t);
     void tick(const Time& t);
     Object* randomObject();
+    Object* randomObject(ServerID whichServer);
 private:
     struct SpaceNodeConnection;
 

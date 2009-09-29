@@ -257,17 +257,31 @@ Object* ObjectHost::randomObject () {
     if (i==mObjectInfo.end()) --i;
     return i->second.object;
 }
+
+Object* ObjectHost::randomObject (ServerID whichServer) {
+    if (mObjectInfo.size()==0) return NULL;
+    for (int i=0;i<100;++i) {
+        UUID myrand=UUID::random();    
+        ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
+        if (i==mObjectInfo.end()) --i;
+        if (i->second.connectedTo==whichServer)
+            return i->second.object;
+    }
+    return NULL;
+}
 void ObjectHost::randomPing(const Time&t) {
 
 
 
-    Object * a=randomObject();
-    Object * b=randomObject();
-    if (a == NULL || b == NULL) return;
-    if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
-        mObjectInfo[b->uuid()].connectedTo == NullServerID)
-        return;
-    ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+    Object * a=randomObject(1);
+    if (a) {
+        Object * b=randomObject();
+        if (a == NULL || b == NULL) return;
+        if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
+            mObjectInfo[b->uuid()].connectedTo == NullServerID)
+            return;
+        ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
+    }
 }
 void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
     Vector3f minLocation(1.e6,1.e6,1.e6);
