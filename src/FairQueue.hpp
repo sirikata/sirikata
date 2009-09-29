@@ -340,6 +340,20 @@ protected:
         return (invalid_front_keys.empty());
     }
 
+    /** Verifies that queues we think are empty (or can't release an element) really are empty.  Returns true
+     *  if all are actually empty, false otherwise.
+     */
+    bool verifyEmpties() {
+        for(typename KeySet::iterator it = mEmptyQueues.begin(); it != mEmptyQueues.end(); it++) {
+            ByKeyIterator by_key_it = mQueuesByKey.find(*it);
+            QueueInfo* qi = by_key_it->second;
+
+            if (qi->messageQueue->front() != NULL)
+                return false;
+        }
+        return true;
+    }
+
     // Retrieves the next message to deliver, along with its virtual finish time, given the number of bytes available
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
@@ -359,6 +373,10 @@ protected:
             bool valid = verifyInputFront();
             if (!valid)
                 SILOG(fairqueue,fatal,"[FAIRQUEUE] Invalid front elements on queue marked DoubleCheckFront=false.");
+        }
+
+        if (!verifyEmpties()) {
+            SILOG(fairqueue,fatal,"[FAIRQUEUE] Input queue marked as empty not really empty, front is not NULL.");
         }
 #endif
 
