@@ -51,7 +51,7 @@ struct AlwaysUsePredicate {
  *  against a Predicate to give the user a chance to block certain queues from being used
  *  (for instance, if the downstream queue couldn't handle it).
  */
-template <class Message,class Key,class TQueue,class Predicate=AlwaysUsePredicate> class FairQueue {
+template <class Message,class Key,class TQueue,class Predicate=AlwaysUsePredicate,bool DoubleCheckFront=false> class FairQueue {
 private:
     typedef TQueue MessageQueue;
 
@@ -290,6 +290,56 @@ public:
     }
 protected:
 
+    /** Verifies that all inputs, ensuring their front elements are what we expect.  Doesn't modify
+     *  any data, only returns whether this assumption is valid.
+     *  Returns true if the the front of the input queues were all valid, false if any were invalid.
+     */
+    bool verifyInputFront() {
+        // This is the same as updating inputs, it just doesn't do any real updating
+        return checkInputFront(false);
+    }
+
+    /** Checks all input queues to ensure that their front items are the same as the ones used
+     *  to calculate virtual finish times, and recalculates them if they are incorrect.
+     *  Returns true if the the front of the input queues were all valid, false if any were invalid.
+     */
+    bool checkInputFront(bool update) {
+        /** First scan through and get a list of elements that need to be updated.  This avoids duplicate work
+         *  when rearranging elements as well as guaranteeing no broken iterators.
+         */
+        QueueInfoByKey invalid_front_keys;
+        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
+            QueueInfo* queue_info = it->second;
+
+            // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
+            // strict queue semantics, e.g. the FairQueue itself
+            Message* queue_front = queue_info->messageQueue->front();
+            if (queue_front != queue_info->nextFinishMessage) {
+                invalid_front_keys[queue_info->key] = queue_info;
+            }
+        }
+
+        if (!update)
+            return (invalid_front_keys.empty());
+
+        for(ByKeyIterator it = invalid_front_keys.begin(); it != invalid_front_keys.end(); it++) {
+            QueueInfo* queue_info = it->second;
+
+            // We need to:
+            // 1. Recompute the finish time based on the new message
+            // 2. Fix up the ByTimeIndex
+
+            // Remove from queue time list, note that this will fubar the iterators
+            removeFromTimeIndex(queue_info);
+
+            // Recompute finish time, using the start time from the last element we thought would finish next
+            // This will also add back to the ByTimeIndex, again, fubaring iterators
+            computeNextFinishTime(queue_info, queue_info->nextFinishStartTime);
+        }
+
+        return (invalid_front_keys.empty());
+    }
+
     // Retrieves the next message to deliver, along with its virtual finish time, given the number of bytes available
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
@@ -300,56 +350,41 @@ protected:
             return;
         }
 
+        // Verify front elements haven't changed out from under us
+        if (DoubleCheckFront) {
+            checkInputFront(true);
+        }
+#if SIRIKATA_DEBUG
+        else {
+            bool valid = verifyInputFront();
+            if (!valid)
+                SILOG(fairqueue,fatal,"[FAIRQUEUE] Invalid front elements on queue marked DoubleCheckFront=false.");
+        }
+#endif
+
         // Loop through until we find one that has data and can be handled.
-        bool restart_search = true;
-        while(restart_search) {
-            restart_search = false;
+        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
+            QueueInfo* min_queue_info = it->second;
 
-            for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
-                QueueInfo* min_queue_info = it->second;
+            // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
+            // strict queue semantics, e.g. the FairQueue itself
+            Message* min_queue_front = min_queue_info->messageQueue->front();
 
-                // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
-                // strict queue semantics, e.g. the FairQueue itself
-                Message* min_queue_front = min_queue_info->messageQueue->front();
-                if (min_queue_front != min_queue_info->nextFinishMessage) {
-                    // We need to:
-                    // 1. Recompute the finish time based on the new message
-                    // 2. Fix up the ByTimeIndex
-                    // 3. Restart the search for the best option, being careful not to screw up iterators
-
-                    // Remove from queue time list, note that this will fubar the iterators
-                    removeFromTimeIndex(min_queue_info);
-
-                    // It's possible nothing can be serviced anymore because predicates all turned false.
-                    // In this case, we can't .
-
-                    // Recompute finish time, using the start time from the last element we thought would finish next
-                    // This will also add back to the ByTimeIndex, again, fubaring iterators
-                    computeNextFinishTime(min_queue_info, min_queue_info->nextFinishStartTime);
-
-                    // And now we can restart the search
-                    it = mQueuesByTime.begin(); // Get a fresh, clean iterator
-                    restart_search = true;
-                    break;
-                }
-
-                // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
-                // would violate the ordering.
-                if (*bytes < min_queue_front->size()) {
-                    *result_out = NULL;
-                    return;
-                }
-
-                // Now give the user a chance to veto this packet.  If they can use it, set output and return.
-                // Otherwise just continue trying the rest of the options.
-                if (mPredicate(min_queue_info->key, min_queue_front)) {
-                    *min_queue_info_out = min_queue_info;
-                    *vftime_out = min_queue_info->nextFinishTime;
-                    *result_out = min_queue_front;
-                    return;
-                }
+            // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
+            // would violate the ordering.
+            if (*bytes < min_queue_front->size()) {
+                *result_out = NULL;
+                return;
             }
 
+            // Now give the user a chance to veto this packet.  If they can use it, set output and return.
+            // Otherwise just continue trying the rest of the options.
+            if (mPredicate(min_queue_info->key, min_queue_front)) {
+                *min_queue_info_out = min_queue_info;
+                *vftime_out = min_queue_info->nextFinishTime;
+                *result_out = min_queue_front;
+                return;
+            }
         }
 
         // If we get here then we've tried everything and nothing has satisfied our constraints. Give up.

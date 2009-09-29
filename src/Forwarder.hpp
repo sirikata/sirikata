@@ -40,9 +40,7 @@ public:
         bool operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg);
     };
     AbstractQueue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
-
-  //    typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate, true> OutgoingFairQueue;
-  typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate> OutgoingFairQueue;
+    typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate, true> OutgoingFairQueue;
     OutgoingFairQueue mSendQueue;
 
     ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<OutgoingMessage*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
@@ -58,7 +56,6 @@ public:
         return &mSendQueue;
     }
     const OutgoingFairQueue* operator->()const{
-
         return &mSendQueue;
     }
     ~ForwarderQueue (){
