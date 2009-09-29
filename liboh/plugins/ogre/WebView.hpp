@@ -51,6 +51,11 @@ class WebView {};
 #endif
 }
 #endif
+#ifndef HAVE_BERKELIUM
+namespace Berkelium {
+struct Rect {};
+}
+#endif
 
 namespace Sirikata {
 namespace Graphics {
@@ -453,17 +458,15 @@ namespace Graphics {
 
 		void onRequestDrag(WebView* caller, const Awesomium::JSArguments& args);
 
-
         void onAddressBarChanged(Berkelium::Window*, const std::string&);
         void onStartLoading(Berkelium::Window*, const std::string&);
         void onLoad(Berkelium::Window*);
         void onLoadError(Berkelium::Window*, const std::string&);
-        void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&);
+        void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&, int x, int y, const Berkelium::Rect&);
         void onBeforeUnload(Berkelium::Window*, bool*);
         void onCancelUnload(Berkelium::Window*);
         void onCrashed(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
-
 	};
 
 }

@@ -1001,16 +1001,37 @@ void WebView::onLoad(Berkelium::Window*) {
 void WebView::onLoadError(Berkelium::Window*, const std::string&) {
     SILOG(ogre,debug,"onLoadError");
 }
-void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, const Berkelium::Rect&rect) {
-	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
+void WebView::onPaint(Berkelium::Window*win,
+                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
+                      int dx, int dy, const Berkelium::Rect&clipRect) {
+#ifdef HAVE_BERKELIUM
+    TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
 
-	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
+    HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
+
+    if (dx || dy) {
+            SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
+        Berkelium::Rect scrollRect = clipRect;
+        scrollRect.mLeft += dx;
+        scrollRect.mTop += dy;
+
+        scrollRect = scrollRect.intersect(clipRect);
+
+        if (scrollRect.width() && scrollRect.height()) {
+            SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
+            pixelBuffer->blit(
+                pixelBuffer,
+                Ogre::Box(scrollRect.left()-dx, scrollRect.top()-dy, scrollRect.right()-dx, scrollRect.bottom()-dy),
+                Ogre::Box(scrollRect.left(), scrollRect.top(), scrollRect.right(), scrollRect.bottom()));
+        }
+    }
+
     pixelBuffer->blitFromMemory(
         Ogre::PixelBox(rect.width(), rect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
         Ogre::Box(rect.left(), rect.top(), rect.right(), rect.bottom()));
 
-	if(isWebViewTransparent && !usingMask && ignoringTrans)
-	{
+    if(isWebViewTransparent && !usingMask && ignoringTrans)
+    {
         int top = rect.top();
         int left = rect.left();
         for(int row = 0; row < rect.height(); row++) {
@@ -1018,7 +1039,8 @@ void WebView::onPaint(Berkelium::Window*win, const unsigned char*srcBuffer, cons
                 alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * rect.width() + col)*4 + 3];
             }
         }
-	}
+      }
+#endif
 }
 void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
     SILOG(ogre,debug,"onBeforeUnload");

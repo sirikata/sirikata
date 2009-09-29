@@ -98,11 +98,16 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         chromeWebView->setTransparent(true);
 #endif
 #ifdef HAVE_BERKELIUM
-        WebView *mychromeWebView = createWebView("test", 500, 400, OverlayPosition(RP_TOPRIGHT), false, 70);
+        // flash test
+        WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
+        mychromeWebView->loadURL("http://yahoo.com/");
+
         // <video> tag test
+        mychromeWebView = createWebView("videotag", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
         mychromeWebView->loadURL("http://people.xiph.org/~maikmerten/demos/bigbuckbunny-videoonly.html");
         // flash video test
-        //mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
+        mychromeWebView = createWebView("youtube", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
+        mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 #endif
 }
