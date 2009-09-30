@@ -1,5 +1,5 @@
-#ifndef ___CBR_CRAQ_CACHE_HPP___
-#define ___CBR_CRAQ_CACHE_HPP___
+#ifndef ___CBR_CRAQ_CACHE_GOOD_HPP___
+#define ___CBR_CRAQ_CACHE_GOOD_HPP___
 
 
 
@@ -13,40 +13,42 @@
 #include "ServerNetwork.hpp"
 #include "Timer.hpp"
 
+
+
 namespace CBR
 {
   static const int LARGEST_CRAQ_CACHE_SIZE =  3000; //what is the most number of objects that we can have in the craq cache before we start deleting them
-  static const int NUM_CRAQ_CACHE_REMOVE   =   10; //how many should delete at a time when we get to our limit.
+  static const int NUM_CRAQ_CACHE_REMOVE   =   25; //how many should delete at a time when we get to our limit.
 
   static const int MAXIMUM_CRAQ_AGE        = 8800; //maximum age is 8.8 seconds
 
-  
-  struct IDAge
-  {
-    UUID id;
-    int age;
-  };
 
-  bool compareIDAge(const IDAge& a, const IDAge& b);
-  static bool compareFindIDAge(const IDAge& a, const UUID& uid);
-  static bool compareEvts(IDAge A, IDAge B);
+  struct CraqCacheRecord
+  {
+    UUID obj_id;
+    int age;
+    ServerID sID;
+  };
   
-  class CraqCache
+  
+  class CraqCacheGood
   {
   private:
-    typedef std::map<UUID,ServerID> ServIDMap;
-    ServIDMap mMap;
-    typedef std::list < IDAge > AgeList;
-    AgeList mAgeList;
+    typedef std::map<UUID,CraqCacheRecord*> IDRecordMap;
+    IDRecordMap idRecMap;
 
-    Timer mTimer;
-
-    void maintain();
+    typedef std::multimap<int,CraqCacheRecord*> TimeRecordMap;
+    TimeRecordMap timeRecMap;
 
     
+    Timer mTimer;
+    void maintain();
+    bool satisfiesCacheAgeCondition(int inAge);
+    
+    
   public:
-    CraqCache();
-    ~CraqCache();
+    CraqCacheGood();
+    ~CraqCacheGood();
     
     void insert(const UUID& uuid, const ServerID& sID);
     ServerID get(const UUID& uuid);

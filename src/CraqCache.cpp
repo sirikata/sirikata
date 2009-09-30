@@ -74,7 +74,7 @@ namespace CBR
     inserter.age = (int)dur.toMilliseconds();
     mAgeList.push_back(inserter);    
 
-    maintain();
+    //maintain();
   }
 
 

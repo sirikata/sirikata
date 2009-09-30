@@ -18,7 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
-#include "CraqCache.hpp"
+#include "CraqCacheGood.hpp"
 
 
 
@@ -621,9 +621,20 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       }
     }
 
-    
+    Duration iterWaitDurBegin = mTimer.elapsed();
     iteratedWait(6, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults); //if instead want to just tick forward a single time instant
+    Duration iterWaitDurEnd = mTimer.elapsed();
+    if (currentishDur.toMilliseconds() > 100000)
+    {
+      if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 3)
+      {
+        std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"\n\n";
+      }
+    }
+
+
+    int numGetResults = (int) getResults.size();
 
     numLookingUpDebug = numLookingUpDebug - ((int)getResults.size());
     
@@ -632,6 +643,8 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     {
       updated.swap(mFinishedMoveOrLookup);
     }
+
+    Duration processDur = mTimer.elapsed();
     
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -640,6 +653,9 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       {
         notFoundFunction(getResults[s]);
         delete getResults[s];
+
+        std::cout<<"\n\nThis shouldn't have really been called\n\n";
+        assert(false);
         continue;
       }
       
@@ -649,7 +665,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       //put the value in the cache
-      mCraqCache.insert(tmper, getResults[s]->servID);
+      //      mCraqCache.insert(tmper, getResults[s]->servID);
       
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
@@ -677,8 +693,34 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       delete getResults[s];
     }
 
+
+    Duration processDurEnd = mTimer.elapsed();
+    if (currentishDur.toMilliseconds() > 100000)
+    {
+      int processtime =processDurEnd.toMilliseconds() - processDur.toMilliseconds();
+
+      if (processtime > 3)
+      {
+        std::cout<<"\n\nHUGEPROC  "<<processtime<<"    Number processed: "<< numGetResults <<"\n\n";
+      }
+    }
+
+
+    Duration processTrackedBegin = mTimer.elapsed();
     processCraqTrackedSetResults(trackedSetResults, updated);
 
+    Duration processTrackedEnd = mTimer.elapsed();
+    if (currentishDur.toMilliseconds() > 100000)
+    {
+      int trackedtime = processTrackedEnd.toMilliseconds() - processTrackedBegin.toMilliseconds();
+
+      if (trackedtime > 3)
+      {
+        std::cout<<"\n\nHUGETRACKED  "<<trackedtime<<"\n\n";
+      }
+    }
+
+    
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
@@ -863,9 +905,9 @@ void CraqObjectSegmentation::checkReSends()
     reReTryKillConnMessage.swap(reTryKillConnMessage);
 
 
-    Duration checkResendDur = checkResendTimer.elapsed();
+    Duration checkResendDur = checkSendTimer.elapsed();
 
-    Dur tmpDur = mTimer.elapsed();
+    Duration tmpDur = mTimer.elapsed();
 
     if (tmpDur.toMilliseconds() > 100000)
     {

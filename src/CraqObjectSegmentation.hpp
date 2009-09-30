@@ -14,7 +14,7 @@
 #include "CoordinateSegmentation.hpp"
 #include <string.h>
 #include <vector>
-#include "CraqCache.hpp"
+#include "CraqCacheGood.hpp"
 
 
 //#define CRAQ_DEBUG
@@ -132,7 +132,7 @@ namespace CBR
     
     //building for the cache
     ServerID satisfiesCache(const UUID& obj_id);
-    CraqCache mCraqCache;
+    CraqCacheGood mCraqCache;
     //end building for the cache
 
 

@@ -41,7 +41,8 @@ public:
     };
     AbstractQueue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
 
-    typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate, true> OutgoingFairQueue;
+  //    typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate, true> OutgoingFairQueue;
+  typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate> OutgoingFairQueue;
     OutgoingFairQueue mSendQueue;
 
     ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<OutgoingMessage*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
