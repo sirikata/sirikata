@@ -588,9 +588,53 @@ void Server::service() {
 
     mLocationService->service();  mProfiler.finishedStage();
     serviceProximity();           mProfiler.finishedStage();
+
+
+    //FOrwarder analysis
+    Time start_time_forwarder = Time::now();
+    
     mForwarder->service();        mProfiler.finishedStage();
+
+
+    if (mContext->simTime().raw()/1000 > 100000)
+    {
+      Duration tmpDur = Time::now() - start_time_forwarder;
+      if (tmpDur.toMilliseconds() > 50)
+      {
+        printf("\n\nHUGEFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+      }
+      else
+      {
+        printf("\n\nTINYFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+      }
+    }
+
+    
+
     mLoadMonitor->service();      mProfiler.finishedStage();
+
+    
+
+    Time start_time = Time::now();
+      
     serviceObjectHostNetwork();   mProfiler.finishedStage();
+
+    if (mContext->simTime().raw()/1000 > 100000)
+    {
+      Duration tmpDur = Time::now() - start_time;
+      if (tmpDur.toMilliseconds() > 50)
+      {
+        printf("\n\nHUGEOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+      }
+      else
+      {
+        printf("\n\nTINYOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+      }
+    }
+
+    
+    
+    
     checkObjectMigrations();      mProfiler.finishedStage();
 }
 
