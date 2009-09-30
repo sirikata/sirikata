@@ -338,7 +338,8 @@ void ObjectHost::tick(const Time& t) {
 
     mContext->objectFactory->tick(); mProfiler.finishedStage();
     //sendTestMessage(t,400.);
-    randomPing(t);
+    if (rand()<(RAND_MAX/100.))
+        randomPing(t);
 /*
     randomPing(t);
     randomPing(t);
