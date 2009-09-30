@@ -263,19 +263,6 @@ void parsePBJMessage(PBJMessageType& contents, const Network::Chunk& wire, uint3
 size_t ObjectMessage::size()const {
     return contents.ByteSize()+headerSize();
 }
-ObjectMessage::ObjectMessage(const ServerID& origin,
-    const UUID& src, const uint32 src_port,
-    const UUID& dest, const uint32 dest_port,
-    const Network::Chunk& payload)
- : Message(origin, true)
-{
-    contents.set_source_object(src);
-    contents.set_source_port(src_port);
-    contents.set_dest_object(dest);
-    contents.set_dest_port(dest_port);
-    contents.set_unique(id());
-    contents.set_payload(&payload[0], payload.size());
-}
 
 ObjectMessage::ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src)
  : Message(origin, true),
@@ -299,22 +286,6 @@ uint32 ObjectMessage::serialize(Network::Chunk& wire, uint32 offset) {
 }
 
 
-ObjectNoiseMessage::ObjectNoiseMessage(const ServerID&origin,
-                                       const UUID&src,
-                                       const uint32 src_port,
-                                       const UUID&dst,
-                                       const uint32 dst_port,
-                                       const Network::Chunk&payload):ObjectMessage(origin,src,src_port,dst,dst_port,payload) {
-    
-}
-ObjectNoiseMessage::ObjectNoiseMessage(const ServerID& origin, unsigned int Size):ObjectMessage(origin,CBR::Protocol::Object::ObjectMessage()){
-    std::string payload;
-    payload.resize(Size);
-    contents.set_payload(payload);
-}
-MessageType ObjectNoiseMessage::type() const{
-    return MESSAGE_TYPE_OBJECT_NOISE;
-}
 NoiseMessage::NoiseMessage(const ServerID& origin, uint32 noise_sz)
  : Message(origin, true),
    mNoiseSize(noise_sz)

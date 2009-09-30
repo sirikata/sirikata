@@ -197,11 +197,6 @@ public:
 
 class ObjectMessage : public Message {
 public:
-    ObjectMessage(const ServerID& origin,
-        const UUID& src, const uint32 src_port,
-        const UUID& dest, const uint32 dest_port,
-        const Network::Chunk& payload);
-
     ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src);
 
     virtual MessageType type() const;
@@ -213,21 +208,6 @@ private:
     ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
 }; // class ObjectMessage
 
-
-class ObjectNoiseMessage : public ObjectMessage {
-public:
-    ObjectNoiseMessage(const ServerID& origin,
-        const UUID& src, const uint32 src_port,
-        const UUID& dest, const uint32 dest_port,
-        const Network::Chunk& payload);
-
-    ObjectNoiseMessage(const ServerID& origin, unsigned int size);
-
-    virtual MessageType type() const;
-private:
-    friend class Message;
-    ObjectNoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-};
 
 class NoiseMessage : public Message {
 public:
