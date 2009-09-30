@@ -561,6 +561,7 @@ void *main_loop(void *) {
      }
 
      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
+     std::cout<<"\n\nAre any of my changes happening?\n\n";
      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
 
     }      //end craq approach

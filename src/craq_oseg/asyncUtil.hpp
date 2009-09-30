@@ -97,8 +97,8 @@ struct CraqDataSetGet
   int trackingID;
   enum TypeMessage {GET,SET};
   TypeMessage messageType;
-  CraqDataSetGet(std::string dKey,int dKeyValue,bool tMessage,TypeMessage message_type);
-  CraqDataSetGet(CraqDataKey dKey,int dKeyValue,bool tMessage,TypeMessage message_type);
+  CraqDataSetGet(const std::string& dKey, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
+  CraqDataSetGet(const CraqDataKey& dKey, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type);
 };
 
 

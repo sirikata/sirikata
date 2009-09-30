@@ -20,7 +20,7 @@ namespace CBR
   }
 
   
-  CraqDataSetGet::CraqDataSetGet(std::string query,int dKeyValue,bool tMessage,TypeMessage message_type)
+  CraqDataSetGet::CraqDataSetGet(const std::string& query, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type)
   {
     dataKeyValue   =      dKeyValue;
     trackMessage   =       tMessage;
@@ -29,7 +29,7 @@ namespace CBR
   }
 
 
-  CraqDataSetGet::CraqDataSetGet(CraqDataKey dKey,int dKeyValue,bool tMessage,TypeMessage message_type)
+  CraqDataSetGet::CraqDataSetGet(const CraqDataKey& dKey, const int& dKeyValue, const bool& tMessage, const TypeMessage& message_type)
   {
     memcpy (dataKey,dKey,CRAQ_DATA_KEY_SIZE);
     //  dataKey         =           dKey;

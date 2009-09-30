@@ -548,68 +548,21 @@ void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperation
 
 void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
 {
-  //  Duration basicWaitTickBegin = mTimer.elapsed();
-  
   std::vector<CraqOperationResult*> getResults;
   std::vector<CraqOperationResult*> trackedSetResults;
-
   
   craqDhtGet.tick(getResults,trackedSetResults);
 
-  
-//   if (basicWaitTickBegin.toMilliseconds() > 100000)
-//   {
-//     Duration basicWaitTickEnd = mTimer.elapsed();
-
-//     int processTickTime = basicWaitTickEnd.toMilliseconds() - basicWaitTickBegin.toMilliseconds();
-
-//     if (processTickTime > 1)
-//     {
-//       //      printf("\n\n HUGETICK %i\n\n", processTickTime);
-//     }
-    
-//   }
-  
-
-//  Duration basicWaitSwitchVectors = mTimer.elapsed();
-  
-  for (int s=0; s < (int)getResults.size(); ++s)
-  {
-    allGetResults.push_back(getResults[s]);
-  }
-
-  for (int s= 0; s < (int)trackedSetResults.size(); ++s)
-  {
-    allTrackedResults.push_back(trackedSetResults[s]);
-  }
+  allGetResults.insert(allGetResults.end(), getResults.begin(), getResults.end());
+  allTrackedResults.insert(allTrackedResults.end(), trackedSetResults.begin(), trackedSetResults.end());
 
   std::vector<CraqOperationResult*> getResults2;
   std::vector<CraqOperationResult*> trackedSetResults2;
 
   craqDhtSet.tick(getResults2,trackedSetResults2);
 
-  for (int s=0; s < (int)getResults2.size(); ++s)
-  {
-    allGetResults.push_back(getResults2[s]);
-  }
-  for (int s= 0; s < (int)trackedSetResults2.size(); ++s)
-  {
-    allTrackedResults.push_back(trackedSetResults2[s]);
-  }
-
-//   if (basicWaitSwitchVectors.toMilliseconds() > 100000)
-//   {
-//     Duration basicWaitSwitchVectorsEnd = mTimer.elapsed();
-//     int switchVectorsProcTime = basicWaitSwitchVectorsEnd.toMilliseconds() - basicWaitSwitchVectors.toMilliseconds();
-//     if (switchVectorsProcTime > 1)
-//     {
-//       //      printf("\n\n HUGESWITCH %i \n\n", switchVectorsProcTime);
-//     }
-    
-//   }
-  
-
-  
+  allGetResults.insert(allGetResults.end(), getResults2.begin(), getResults2.end());
+  allTrackedResults.insert(allTrackedResults.end(),trackedSetResults2.begin(), trackedSetResults2.end());
 }
 
   /*
@@ -631,48 +584,25 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    //    Duration currentishDur = mTimer.elapsed();
+    Duration currentishDur = mTimer.elapsed();
     
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       if (numLookingUpDebug > 0)
-//       {
-//         Duration nowDur = mServiceTimer.elapsed();
-        
-//         int delay = ((int)nowDur.toMilliseconds()) - ((int)lastTimerDur.toMilliseconds());
-//         if (delay > 50)
-//         {
-//           //          printf("\n\nGot a LARGE delay:  %i,  num in proc: %i \n\n", delay, numLookingUpDebug);
-//         }
-//         else
-//         {
-//           //          printf("\n\nGot SMALL delay:  %i, num in proc: %i\n\n", delay, numLookingUpDebug);
-//         }
-//       }
-//       if (numLookingUpDebug < 0)
-//       {
-//         //        printf("\n\nI've got big problems\n\n");
-//       }
-//     }
-
-
-    
-//    Duration iterWaitDurBegin = mTimer.elapsed();
-    iteratedWait(6, getResults,trackedSetResults);
+    Duration iterWaitDurBegin = mTimer.elapsed();
+    iteratedWait(5, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults); //if instead want to just tick forward a single time instant
 
-//     Duration iterWaitDurEnd = mTimer.elapsed();
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
-//       {
-//         //        std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"\n\n";
-//       }
-//     }
+     Duration iterWaitDurEnd = mTimer.elapsed();
+     if (currentishDur.toMilliseconds() > 100000)
+     {
+       if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
+       {
+         std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"  "<<getResults.size()<<"   "<<trackedSetResults.size() <<"\n\n";
+       }
+     }
 
 
     int numGetResults = (int) getResults.size();
-
+    int numSetResults = (int) trackedSetResults.size();
+    
     numLookingUpDebug = numLookingUpDebug - ((int)getResults.size());
     
 
@@ -761,15 +691,16 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       Duration elapsedServiceTime = Timer::now() - start_time;
-//       if (elapsedServiceTime.toMilliseconds() > 1)
-//       {
-//         //        printf("\n\nGreater than 1 ms in service of craq oseg:  %i\n\n", (int) elapsedServiceTime.toMilliseconds());
-//       }
-//       lastTimerDur = mServiceTimer.elapsed();
-//     }
+    if (currentishDur.toMilliseconds() > 100000)
+    {
+      Duration elapsedServiceTime = Timer::now() - start_time;
+      if (elapsedServiceTime.toMilliseconds() >= 3)
+      {
+        printf("\n\nGreater than 1 ms in service of craq oseg:  %i,  %i,  %i\n\n", (int) elapsedServiceTime.toMilliseconds(), numGetResults, numSetResults);
+      }
+      
+      lastTimerDur = mServiceTimer.elapsed();
+    }
     
   }
 

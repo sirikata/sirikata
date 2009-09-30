@@ -39,7 +39,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   mCurrentTrackNum = 10;
   
-  AsyncConnection tmpConn;
+  AsyncConnection* tmpConn = new AsyncConnection;
   for (int s=0; s < CRAQ_NUM_CONNECTIONS; ++s)
   {
     mConnections.push_back(tmpConn);
@@ -55,7 +55,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s].initialize(passSocket,iterator); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
     }
   }
   else
@@ -84,7 +84,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
         whichRouterServingPrevious = whichRouterServing;
       }
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s].initialize(passSocket,iterator); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
     }
   }
   
@@ -102,22 +102,23 @@ void AsyncCraq::runTestOfConnection()
 
 
 //assumes that we're already connected.
-int AsyncCraq::set(CraqDataSetGet dataToSet)
+int AsyncCraq::set(const CraqDataSetGet& dataToSet)
 {
-  //force this to be a set message.
-  dataToSet.messageType = CraqDataSetGet::SET;
-
-  if (dataToSet.trackMessage)
+  CraqDataSetGet* push_queue = new CraqDataSetGet(dataToSet.dataKey, dataToSet.dataKeyValue, dataToSet.trackMessage, CraqDataSetGet::SET );
+  push_queue->messageType = CraqDataSetGet::SET;//force this to be a set message.
+  
+  
+  if (push_queue->trackMessage)
   {
-    dataToSet.trackingID = mCurrentTrackNum;
+    push_queue->trackingID = mCurrentTrackNum;
     ++mCurrentTrackNum;
-
-    mQueue.push(dataToSet);
+    
+    mQueue.push(push_queue);
     return mCurrentTrackNum -1;
   }
   
   //we got all the way through without finding a ready connection.  Need to add query to queue.
-  mQueue.push(dataToSet);
+  mQueue.push(push_queue);
   return 0;
 }
 
@@ -131,13 +132,14 @@ int AsyncCraq::queueSize()
 }
 
 
-int AsyncCraq::get(CraqDataSetGet dataToGet)
+int AsyncCraq::get(const CraqDataSetGet& dataToGet)
 {
+  CraqDataSetGet* push_queue = new CraqDataSetGet(dataToGet.dataKey, dataToGet.dataKeyValue, dataToGet.trackMessage, CraqDataSetGet::GET);
   
   //force this to be a set message.
-  dataToGet.messageType = CraqDataSetGet::GET;
+  //dataToGet.messageType = CraqDataSetGet::GET;
   //we got all the way through without finding a ready connection.  Need to add query to queue.
-  mQueue.push(dataToGet);
+  mQueue.push(push_queue);
   
   return 0;
 }
@@ -151,7 +153,7 @@ int AsyncCraq::get(CraqDataSetGet dataToGet)
 void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
 {
 
-  //  Duration tickBeginDur = mTimer.elapsed();
+  Duration tickBeginDur = mTimer.elapsed();
 
   
   int numHandled = io_service.poll();
@@ -162,18 +164,15 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
   }
 
 
-//   if (tickBeginDur.toMilliseconds() > 100000)
-//   {
-//     Duration tickEndDur = mTimer.elapsed();
-
-//     int procPollDur = tickEndDur.toMilliseconds() - tickBeginDur.toMilliseconds();
-
-//     if (procPollDur > 1)
-//     {
-//       printf("\n\nHUGEPOLL  %i\n\n", procPollDur);
-//     }
-
-//   }
+  if (tickBeginDur.toMilliseconds() > 100000)
+  {
+    Duration tickEndDur = mTimer.elapsed();
+    int procPollDur = tickEndDur.toMilliseconds() - tickBeginDur.toMilliseconds();
+    if (procPollDur > 1)
+    {
+      printf("\n\nHUGEPOLL  %i\n\n", procPollDur);
+    }
+  }
 
   
         
@@ -193,36 +192,23 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
       tickedMessages_trackedSetResults.clear();
 
 
-    //    Duration innerTickDurBegin = mTimer.elapsed();
+    mConnections[s]->tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
     
-    //can optimize by setting separate tracks for 
-    mConnections[s].tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
-
-//     if (innerTickDurBegin.toMilliseconds() > 100000)
-//     {
-//       Duration innerTickDurEnd = mTimer.elapsed();
-//       int innerTickProcTime = innerTickDurEnd.toMilliseconds() - innerTickDurBegin.toMilliseconds();
-
-//       if (innerTickProcTime > 1)
-//       {
-//         printf("\n\nHUGEINNER  %i", innerTickProcTime);
-//       }
-      
-//     }
-
+    getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
+    trackedSetResults.insert(trackedSetResults.end(), tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
     
-    for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
-    {
-      getResults.push_back(tickedMessages_getResults[t]);
-    }
-    for (int t= 0; t < (int) tickedMessages_trackedSetResults.size(); ++t)
-    {
-      trackedSetResults.push_back(tickedMessages_trackedSetResults[t]);
-    }
-
     processErrorResults(tickedMessages_errorResults);
     
     checkConnections(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
+  }
+
+
+  if (tickBeginDur.toMilliseconds() > 100000)
+  {
+    Duration tickEnder = mTimer.elapsed();
+    int tickTime = tickEnder.toMilliseconds() - tickBeginDur.toMilliseconds();
+    if(tickTime > 2)
+      printf("\n\nHUGECRAQ %i, %i, %i \n\n", tickTime, (int) getResults.size(), (int)trackedSetResults.size());
   }
 }
 
@@ -232,38 +218,23 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
 */
 void AsyncCraq::processErrorResults(std::vector <CraqOperationResult*> & errorRes)
 {
-
-  //  Duration procErrorResBegin = mTimer.elapsed();
-  
   for (int s=0;s < (int)errorRes.size(); ++s)
   {
     if (errorRes[s]->whichOperation == CraqOperationResult::GET)
     {
-      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
-      mQueue.push(cdSG);
+      CraqDataSetGet* push_queue = new CraqDataSetGet (errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
+      //      mQueue.push(cdSG);
+      mQueue.push(push_queue);
     }
     else
     {
-      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
-      mQueue.push(cdSG);      
+      CraqDataSetGet* push_queue = new CraqDataSetGet(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
+      mQueue.push(push_queue);      
     }
 
     delete errorRes[s];
     
   }
-
-
-//   if (procErrorResBegin.toMilliseconds() > 100000)
-//   {
-//     Duration procErrorResEnd = mTimer.elapsed();
-//     int procTime = procErrorResEnd.toMilliseconds() - procErrorResBegin.toMilliseconds();
-
-//     if (procTime > 1)
-//     {
-//       printf("\n\nHUGEERRORRESP %i  \n\n", procTime);
-//     }
-//   }
-  
 }
 
 
@@ -278,55 +249,41 @@ void AsyncCraq::checkConnections(int s)
   if (s >= (int)mConnections.size())
     return;
   
-
-
   int numOperations = 0;
 
-  mConnections[s].ready();
+  mConnections[s]->ready();
 
   
-  if (mConnections[s].ready() == AsyncConnection::READY)
+  if (mConnections[s]->ready() == AsyncConnection::READY)
   {
     if (mQueue.size() != 0)
     {
       //need to put in another
-      CraqDataSetGet cdSG = mQueue.front();
+      CraqDataSetGet* cdSG = mQueue.front();
       mQueue.pop();
 
       ++numOperations;
       
-      if (cdSG.messageType == CraqDataSetGet::GET)
+      if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
-        mConnections[s].get(cdSG.dataKey);
+        mConnections[s]->get(cdSG->dataKey);
       }
-      else if (cdSG.messageType == CraqDataSetGet::SET)
+      else if (cdSG->messageType == CraqDataSetGet::SET)
       {
         //performing a set in connections.
-        mConnections[s].set(cdSG.dataKey, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID);
+        mConnections[s]->set(cdSG->dataKey, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID);
       }
+
+      delete cdSG;
     }
   }
-  else if (mConnections[s].ready() == AsyncConnection::NEED_NEW_SOCKET)
+  else if (mConnections[s]->ready() == AsyncConnection::NEED_NEW_SOCKET)
   {
     //need to create a new socket for the other
     reInitializeNode(s);
     std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
   }
-
-
-//   if (checkConnBeginDur.toMilliseconds() > 100000)
-//   {
-//     Duration checkConnEndDur = mTimer.elapsed();
-
-//     int procConn = checkConnEndDur.toMilliseconds() - checkConnBeginDur.toMilliseconds();
-
-//     if (procConn > 1)
-//     {
-//       printf("\n\nHUGECHECKCONN  %i\n\n", procConn);
-//     }
-//   }
-  
 }
 
 
@@ -347,7 +304,7 @@ void AsyncCraq::reInitializeNode(int s)
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s].initialize(passSocket,iterator); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
   }
   else
   {
@@ -363,7 +320,7 @@ void AsyncCraq::reInitializeNode(int s)
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s].initialize(passSocket,iterator); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
   }
 }
 

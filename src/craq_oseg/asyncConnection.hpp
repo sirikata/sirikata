@@ -26,8 +26,8 @@ public:
   AsyncConnection::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
 
-  bool set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
-  bool get(CraqDataKey dataToGet);
+  bool set(CraqDataKey& dataToSet, int&  dataToSetTo, bool& track, int& trackNum);
+  bool get(CraqDataKey& dataToGet);
   
   ~AsyncConnection();
   AsyncConnection();

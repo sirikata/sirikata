@@ -95,7 +95,7 @@ void AsyncConnection::connect_handler(const boost::system::error_code& error)
   mReady = READY;
 }
 
-bool AsyncConnection::set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum)
+bool AsyncConnection::set(CraqDataKey& dataToSet, int& dataToSetTo, bool& track, int& trackNum)
 {
   if (mReady != READY)
   {
@@ -205,7 +205,6 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
   //process this line.
   if (line.find("STORED") != std::string::npos)
   {
-
     if (mTracking)
     {
       //means that we need to save this query
@@ -242,7 +241,7 @@ void AsyncConnection::read_handler_set ( const boost::system::error_code& error,
 
 
 //datakey should have a null termination character.
-bool AsyncConnection::get(CraqDataKey dataToGet)
+bool AsyncConnection::get(CraqDataKey& dataToGet)
 {
   if (mReady != READY)
   {
@@ -348,29 +347,51 @@ void AsyncConnection::read_handler_get ( const boost::system::error_code& error,
   
     if (((int)line.size()) >= CRAQ_GET_RESP_SIZE) //if long enough to be a get response.
     {
-      getResp = true;
-      
-      for (int s=0; s < CRAQ_GET_RESP_SIZE; ++s)
+      //      getResp = true;
+      //should be a better way to do this  (check if first few characters are those of a get resp
+//       for (int s=0; s < CRAQ_GET_RESP_SIZE; ++s)
+//       {
+//         getResp = getResp && (CRAQ_GET_RESP[s] == line[s]);
+//       }
+
+      size_t foundHeaderPos = line.find(CRAQ_GET_RESP);
+      if (foundHeaderPos != std::string::npos)
       {
-        getResp = getResp && (CRAQ_GET_RESP[s] == line[s]);
+        if ((int) foundHeaderPos == 0)
+        {
+          getResp = true;
+        }
       }
-    
+      
       if (getResp)
       {
+        
+//         std::string value = "";
+//         for (int s=CRAQ_GET_RESP_SIZE; s < (int) bytes_transferred; ++s)
+//         {
+//           if (s-CRAQ_GET_RESP_SIZE < CRAQ_SERVER_SIZE)
+//           {
+//             value += line[s];
+//           }
+//         }
 
-        std::string value = "";
-        for (int s=CRAQ_GET_RESP_SIZE; s < (int) bytes_transferred; ++s)
+        
+        std::string value = line.substr(CRAQ_GET_RESP_SIZE, CRAQ_SERVER_SIZE);
+
+        if ((int)value.size() != CRAQ_SERVER_SIZE)
         {
-          if (s-CRAQ_GET_RESP_SIZE < CRAQ_SERVER_SIZE)
-          {
-            value += line[s];
-          }
+          //means that the string wasn't long enough.  Throw an error.
+          mReady = READY;
+          std::cout<<"\n\nLINE NOT LONG ENOUGH!  "<<"line:  "<<line<<"  Will try again later to find object:  " << currentlySearchingFor  <<"\n\n";
+          CraqOperationResult* tmper = new CraqOperationResult(currentlySettingTo,currentlySearchingFor, mTrackNumber,false,CraqOperationResult::GET,mTracking); //false means that it didn't succeed.
+          mOperationResultErrorVector.push_back(tmper);
         }
-
-        //bftm mod
-
-        CraqOperationResult* tmper  = new CraqOperationResult (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
-        mOperationResultVector.push_back(tmper);
+        else
+        {
+          //means that the line was long enough to be a response
+          CraqOperationResult* tmper  = new CraqOperationResult (std::atoi(value.c_str()),currentlySearchingFor, 0,true,CraqOperationResult::GET,mTracking);
+          mOperationResultVector.push_back(tmper);
+        }
       } //added here.
     }
     
