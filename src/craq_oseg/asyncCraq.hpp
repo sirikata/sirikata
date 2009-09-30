@@ -5,7 +5,7 @@
 #include <queue>
 #include "asyncUtil.hpp"
 #include "asyncConnection.hpp"
-
+#include "../Timer.hpp"
 
 #ifndef __ASYNC_CRAQ_CLASS_H__
 #define __ASYNC_CRAQ_CLASS_H__
@@ -35,7 +35,8 @@ public:
   void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
 
   int queueSize();
-  
+
+  Timer mTimer;
   
 private:
   

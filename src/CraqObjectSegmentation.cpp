@@ -498,7 +498,7 @@ namespace CBR
 
            if (!sent)
            {
-             printf("\n\nbftm debug: ERROR had problems sending migrate ack msg for object %s to %i \n\n", trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID().toString().c_str(), trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getMessageDestination() );
+             //             printf("\n\nbftm debug: ERROR had problems sending migrate ack msg for object %s to %i \n\n", trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getObjID().toString().c_str(), trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getMessageDestination() );
              fflush(stdout);
              reTryMigAckMessage.push_back(trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg); //will try to re-send the tracking message
            }
@@ -514,7 +514,7 @@ namespace CBR
           bool sent = mContext->router()->route(MessageRouter::MIGRATES, trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded,mContext->id(),false);
           if (!sent)
           {
-            printf("\n\nbftm debug: error here: obj: %s", trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded->contents.m_objid().toString().c_str());
+            //            printf("\n\nbftm debug: error here: obj: %s", trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded->contents.m_objid().toString().c_str());
             fflush(stdout);
             reTryAddedMessage.push_back(trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded);  //will try to re-send the add message
           }
@@ -548,11 +548,31 @@ void CraqObjectSegmentation::iteratedWait(int numWaits,std::vector<CraqOperation
 
 void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
 {
+  //  Duration basicWaitTickBegin = mTimer.elapsed();
+  
   std::vector<CraqOperationResult*> getResults;
   std::vector<CraqOperationResult*> trackedSetResults;
 
+  
   craqDhtGet.tick(getResults,trackedSetResults);
 
+  
+//   if (basicWaitTickBegin.toMilliseconds() > 100000)
+//   {
+//     Duration basicWaitTickEnd = mTimer.elapsed();
+
+//     int processTickTime = basicWaitTickEnd.toMilliseconds() - basicWaitTickBegin.toMilliseconds();
+
+//     if (processTickTime > 1)
+//     {
+//       //      printf("\n\n HUGETICK %i\n\n", processTickTime);
+//     }
+    
+//   }
+  
+
+//  Duration basicWaitSwitchVectors = mTimer.elapsed();
+  
   for (int s=0; s < (int)getResults.size(); ++s)
   {
     allGetResults.push_back(getResults[s]);
@@ -576,6 +596,20 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   {
     allTrackedResults.push_back(trackedSetResults2[s]);
   }
+
+//   if (basicWaitSwitchVectors.toMilliseconds() > 100000)
+//   {
+//     Duration basicWaitSwitchVectorsEnd = mTimer.elapsed();
+//     int switchVectorsProcTime = basicWaitSwitchVectorsEnd.toMilliseconds() - basicWaitSwitchVectors.toMilliseconds();
+//     if (switchVectorsProcTime > 1)
+//     {
+//       //      printf("\n\n HUGESWITCH %i \n\n", switchVectorsProcTime);
+//     }
+    
+//   }
+  
+
+  
 }
 
   /*
@@ -592,46 +626,49 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     ++numServices;
     
     //    checkNotFoundData(); //determines what to do with all the lookups that returned that the object wasn't found
-    checkReSends(); //tries to re-send all the messages that failed
+    //    checkReSends(); //tries to re-send all the messages that failed
     
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    Duration currentishDur = mTimer.elapsed();
+    //    Duration currentishDur = mTimer.elapsed();
     
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      if (numLookingUpDebug > 0)
-      {
-        Duration nowDur = mServiceTimer.elapsed();
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       if (numLookingUpDebug > 0)
+//       {
+//         Duration nowDur = mServiceTimer.elapsed();
         
-        int delay = ((int)nowDur.toMilliseconds()) - ((int)lastTimerDur.toMilliseconds());
-        if (delay > 50)
-        {
-          printf("\n\nGot a LARGE delay:  %i,  num in proc: %i \n\n", delay, numLookingUpDebug);
-        }
-        else
-        {
-          printf("\n\nGot SMALL delay:  %i, num in proc: %i\n\n", delay, numLookingUpDebug);
-        }
-      }
-      if (numLookingUpDebug < 0)
-      {
-        printf("\n\nI've got big problems\n\n");
-      }
-    }
+//         int delay = ((int)nowDur.toMilliseconds()) - ((int)lastTimerDur.toMilliseconds());
+//         if (delay > 50)
+//         {
+//           //          printf("\n\nGot a LARGE delay:  %i,  num in proc: %i \n\n", delay, numLookingUpDebug);
+//         }
+//         else
+//         {
+//           //          printf("\n\nGot SMALL delay:  %i, num in proc: %i\n\n", delay, numLookingUpDebug);
+//         }
+//       }
+//       if (numLookingUpDebug < 0)
+//       {
+//         //        printf("\n\nI've got big problems\n\n");
+//       }
+//     }
 
-    Duration iterWaitDurBegin = mTimer.elapsed();
+
+    
+//    Duration iterWaitDurBegin = mTimer.elapsed();
     iteratedWait(6, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults); //if instead want to just tick forward a single time instant
-    Duration iterWaitDurEnd = mTimer.elapsed();
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 3)
-      {
-        std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"\n\n";
-      }
-    }
+
+//     Duration iterWaitDurEnd = mTimer.elapsed();
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
+//       {
+//         //        std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"\n\n";
+//       }
+//     }
 
 
     int numGetResults = (int) getResults.size();
@@ -644,7 +681,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       updated.swap(mFinishedMoveOrLookup);
     }
 
-    Duration processDur = mTimer.elapsed();
+    //    Duration processDur = mTimer.elapsed();
     
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -665,7 +702,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       std::map<UUID,TransLookup>::iterator iter = mInTransitOrLookup.find(tmper);
 
       //put the value in the cache
-      //      mCraqCache.insert(tmper, getResults[s]->servID);
+      mCraqCache.insert(tmper, getResults[s]->servID);
       
       if (iter != mInTransitOrLookup.end()) //means that the object was already being looked up or in transit
       {
@@ -694,45 +731,45 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     }
 
 
-    Duration processDurEnd = mTimer.elapsed();
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      int processtime =processDurEnd.toMilliseconds() - processDur.toMilliseconds();
+//     Duration processDurEnd = mTimer.elapsed();
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       int processtime =processDurEnd.toMilliseconds() - processDur.toMilliseconds();
 
-      if (processtime > 3)
-      {
-        std::cout<<"\n\nHUGEPROC  "<<processtime<<"    Number processed: "<< numGetResults <<"\n\n";
-      }
-    }
+//       if (processtime > 1)
+//       {
+//         //        std::cout<<"\n\nHUGEPROC  "<<processtime<<"    Number processed: "<< numGetResults <<"\n\n";
+//       }
+//     }
 
 
-    Duration processTrackedBegin = mTimer.elapsed();
+//    Duration processTrackedBegin = mTimer.elapsed();
     processCraqTrackedSetResults(trackedSetResults, updated);
 
-    Duration processTrackedEnd = mTimer.elapsed();
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      int trackedtime = processTrackedEnd.toMilliseconds() - processTrackedBegin.toMilliseconds();
+//     Duration processTrackedEnd = mTimer.elapsed();
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       int trackedtime = processTrackedEnd.toMilliseconds() - processTrackedBegin.toMilliseconds();
 
-      if (trackedtime > 3)
-      {
-        std::cout<<"\n\nHUGETRACKED  "<<trackedtime<<"\n\n";
-      }
-    }
+//       if (trackedtime > 1)
+//       {
+//         //        std::cout<<"\n\nHUGETRACKED  "<<trackedtime<<"\n\n";
+//       }
+//     }
 
     
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      Duration elapsedServiceTime = Timer::now() - start_time;
-      if (elapsedServiceTime.toMilliseconds() > 1)
-      {
-        printf("\n\nGreater than 1 ms in service of craq oseg:  %i\n\n", (int) elapsedServiceTime.toMilliseconds());
-      }
-      lastTimerDur = mServiceTimer.elapsed();
-    }
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       Duration elapsedServiceTime = Timer::now() - start_time;
+//       if (elapsedServiceTime.toMilliseconds() > 1)
+//       {
+//         //        printf("\n\nGreater than 1 ms in service of craq oseg:  %i\n\n", (int) elapsedServiceTime.toMilliseconds());
+//       }
+//       lastTimerDur = mServiceTimer.elapsed();
+//     }
     
   }
 
@@ -837,7 +874,7 @@ void CraqObjectSegmentation::processUpdateOSegMessage(UpdateOSegMessage* update_
 
     if (!sent)
     {
-      printf("\n\nbftm debug: ERROR sending killconnection message for migrate for obj:  %s  to self\n\n",obj_id.toString().c_str());
+      //      printf("\n\nbftm debug: ERROR sending killconnection message for migrate for obj:  %s  to self\n\n",obj_id.toString().c_str());
       reTryKillConnMessage.push_back(killConnMsg);
     }
   }
@@ -862,7 +899,7 @@ void CraqObjectSegmentation::checkReSends()
 
       if (!sent)
       {
-        printf("\n\nbftm debug: ERROR here trying to resend add message: obj: %s", reTryAddedMessage[s]->contents.m_objid().toString().c_str());
+        //        printf("\n\nbftm debug: ERROR here trying to resend add message: obj: %s", reTryAddedMessage[s]->contents.m_objid().toString().c_str());
         fflush(stdout);
         reReTryAddedMessage.push_back(reTryAddedMessage[s]);
       }
@@ -875,7 +912,7 @@ void CraqObjectSegmentation::checkReSends()
       bool sent= mContext->router()->route(MessageRouter::MIGRATES,reTryMigAckMessage[s],reTryMigAckMessage[s]->getMessageDestination(),false);
       if (!sent)
       {
-        printf("\n\nbftm debug: ERROR here trying to resend migrate ack msg for object %s to %i \n\n", reTryMigAckMessage[s]->getObjID().toString().c_str(),reTryMigAckMessage[s]->getMessageDestination() );
+        //        printf("\n\nbftm debug: ERROR here trying to resend migrate ack msg for object %s to %i.  Size of outstanding:  %i \n\n", reTryMigAckMessage[s]->getObjID().toString().c_str(),reTryMigAckMessage[s]->getMessageDestination(), (int)reTryMigAckMessage.size() );
         fflush(stdout);
         reReTryMigAckMessage.push_back(reTryMigAckMessage[s]);
       }
@@ -888,7 +925,7 @@ void CraqObjectSegmentation::checkReSends()
 
       if (!sent)
       {
-        printf("\n\nbftm debug: ERROR here trying to resend killconnection message for migrate for obj:  %s  to self\n\n", reTryKillConnMessage[s]->contents.m_objid().toString().c_str());
+        //        printf("\n\nbftm debug: ERROR here trying to resend killconnection message for migrate for obj:  %s  to self\n\n", reTryKillConnMessage[s]->contents.m_objid().toString().c_str());
         reTryKillConnMessage.push_back(reTryKillConnMessage[s]);
       }
     }
@@ -911,9 +948,9 @@ void CraqObjectSegmentation::checkReSends()
 
     if (tmpDur.toMilliseconds() > 100000)
     {
-      if(checkResendDur.toMilliseconds() > 3)
+      if(checkResendDur.toMilliseconds() > 1)
       {
-        printf("\n\nTook a while to check resend:  %i\n\n", (int) checkResendDur.toMilliseconds());
+        //        printf("\n\nTook a while to check resend:  %i\n\n", (int) checkResendDur.toMilliseconds());
       }
     }
     

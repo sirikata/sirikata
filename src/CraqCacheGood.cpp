@@ -32,7 +32,7 @@ namespace CBR
       int numObjectsDeleted = 0;
     
       TimeRecordMap::iterator tMapIter = timeRecMap.begin();
-      for (int s=0; s < NUM_CRAQ_CACHE_REMOVE || tMapIter == timeRecMap.end(); ++s)
+      for (int s=0; (s < NUM_CRAQ_CACHE_REMOVE) && (tMapIter != timeRecMap.end()); ++s)
       {
 
         //remove the object from the map
@@ -64,7 +64,7 @@ namespace CBR
     Duration currentDur = mTimer.elapsed();
 
     IDRecordMap::iterator idRecMapIter = idRecMap.find(uuid);
-    if (idRecMapIter == idRecMap.end())
+    if (idRecMapIter != idRecMap.end())
     {
       //object already exists.  We need to update the record associated with it.
       int previousTime = idRecMapIter->second->age;

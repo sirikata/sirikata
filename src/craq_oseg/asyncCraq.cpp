@@ -6,6 +6,7 @@
 #include <boost/regex.hpp>
 #include <boost/asio.hpp>
 #include "asyncConnection.hpp"
+#include "../Timer.hpp"
 
 
 namespace CBR
@@ -23,6 +24,7 @@ AsyncCraq::~AsyncCraq()
 //nothing to initialize
 AsyncCraq::AsyncCraq()
 {
+  mTimer.start();
 }
 
 
@@ -148,6 +150,10 @@ int AsyncCraq::get(CraqDataSetGet dataToGet)
 */
 void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
 {
+
+  //  Duration tickBeginDur = mTimer.elapsed();
+
+  
   int numHandled = io_service.poll();
 
   if (numHandled == 0)
@@ -155,6 +161,21 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
     io_service.reset();
   }
 
+
+//   if (tickBeginDur.toMilliseconds() > 100000)
+//   {
+//     Duration tickEndDur = mTimer.elapsed();
+
+//     int procPollDur = tickEndDur.toMilliseconds() - tickBeginDur.toMilliseconds();
+
+//     if (procPollDur > 1)
+//     {
+//       printf("\n\nHUGEPOLL  %i\n\n", procPollDur);
+//     }
+
+//   }
+
+  
         
   std::vector<CraqOperationResult*> tickedMessages_getResults;
   std::vector<CraqOperationResult*> tickedMessages_errorResults;
@@ -172,9 +193,24 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
       tickedMessages_trackedSetResults.clear();
 
 
+    //    Duration innerTickDurBegin = mTimer.elapsed();
+    
     //can optimize by setting separate tracks for 
     mConnections[s].tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
 
+//     if (innerTickDurBegin.toMilliseconds() > 100000)
+//     {
+//       Duration innerTickDurEnd = mTimer.elapsed();
+//       int innerTickProcTime = innerTickDurEnd.toMilliseconds() - innerTickDurBegin.toMilliseconds();
+
+//       if (innerTickProcTime > 1)
+//       {
+//         printf("\n\nHUGEINNER  %i", innerTickProcTime);
+//       }
+      
+//     }
+
+    
     for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
     {
       getResults.push_back(tickedMessages_getResults[t]);
@@ -196,6 +232,9 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
 */
 void AsyncCraq::processErrorResults(std::vector <CraqOperationResult*> & errorRes)
 {
+
+  //  Duration procErrorResBegin = mTimer.elapsed();
+  
   for (int s=0;s < (int)errorRes.size(); ++s)
   {
     if (errorRes[s]->whichOperation == CraqOperationResult::GET)
@@ -212,6 +251,19 @@ void AsyncCraq::processErrorResults(std::vector <CraqOperationResult*> & errorRe
     delete errorRes[s];
     
   }
+
+
+//   if (procErrorResBegin.toMilliseconds() > 100000)
+//   {
+//     Duration procErrorResEnd = mTimer.elapsed();
+//     int procTime = procErrorResEnd.toMilliseconds() - procErrorResBegin.toMilliseconds();
+
+//     if (procTime > 1)
+//     {
+//       printf("\n\nHUGEERRORRESP %i  \n\n", procTime);
+//     }
+//   }
+  
 }
 
 
@@ -220,6 +272,9 @@ void AsyncCraq::processErrorResults(std::vector <CraqOperationResult*> & errorRe
 */
 void AsyncCraq::checkConnections(int s)
 {
+  //  Duration checkConnBeginDur = mTimer.elapsed();
+  
+  
   if (s >= (int)mConnections.size())
     return;
   
@@ -258,6 +313,20 @@ void AsyncCraq::checkConnections(int s)
     reInitializeNode(s);
     std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
   }
+
+
+//   if (checkConnBeginDur.toMilliseconds() > 100000)
+//   {
+//     Duration checkConnEndDur = mTimer.elapsed();
+
+//     int procConn = checkConnEndDur.toMilliseconds() - checkConnBeginDur.toMilliseconds();
+
+//     if (procConn > 1)
+//     {
+//       printf("\n\nHUGECHECKCONN  %i\n\n", procConn);
+//     }
+//   }
+  
 }
 
 

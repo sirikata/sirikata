@@ -601,11 +601,11 @@ void Server::service() {
       Duration tmpDur = Time::now() - start_time_forwarder;
       if (tmpDur.toMilliseconds() > 50)
       {
-        printf("\n\nHUGEFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+        //        printf("\n\nHUGEFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
       }
       else
       {
-        printf("\n\nTINYFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+        //        printf("\n\nTINYFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
       }
     }
 
@@ -624,11 +624,11 @@ void Server::service() {
       Duration tmpDur = Time::now() - start_time;
       if (tmpDur.toMilliseconds() > 50)
       {
-        printf("\n\nHUGEOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+        //        printf("\n\nHUGEOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
       }
       else
       {
-        printf("\n\nTINYOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
+        //        printf("\n\nTINYOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
       }
     }
 
