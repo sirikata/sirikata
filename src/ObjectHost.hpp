@@ -64,6 +64,8 @@ public:
     void tick(const Time& t);
     Object* randomObject();
     Object* randomObject(ServerID whichServer);
+    Object * roundRobinObject(ServerID whichServer);
+    UUID lastFuckinObject;
 private:
     struct SpaceNodeConnection;
 

@@ -83,6 +83,7 @@ ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trac
    mServerIDMap(sidmap),
    mProfiler("Object Host Loop")
 {
+    lastFuckinObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
@@ -248,7 +249,22 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
         send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
     }
 }
-
+Object*ObjectHost::roundRobinObject(ServerID whichServer) {
+    if (mObjectInfo.size()==0) return NULL;
+    UUID myrand=lastFuckinObject;
+    ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
+    if (i!=mObjectInfo.end()) ++i;
+    if (i==mObjectInfo.end()) i=mObjectInfo.begin();
+    for (int ii=0;ii<mObjectInfo.size();++ii) {
+        if (i->second.connectedTo==whichServer||whichServer==NullServerID) {
+            lastFuckinObject=i->first;
+            return i->second.object;
+        }
+        ++i;
+        if (i==mObjectInfo.end()) i=mObjectInfo.begin();
+    }
+    return NULL;
+}
 Object* ObjectHost::randomObject () {
     if (mObjectInfo.size()==0) return NULL;
     UUID myrand=UUID::random();
@@ -272,9 +288,10 @@ void ObjectHost::randomPing(const Time&t) {
 
 
 
-    Object * a=randomObject(1);
-    if (a) {
-        Object * b=randomObject();
+    Object * a=roundRobinObject(1);
+    Object * b=randomObject();
+        
+    if (a&&b) {
         if (a == NULL || b == NULL) return;
         if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
             mObjectInfo[b->uuid()].connectedTo == NullServerID)
