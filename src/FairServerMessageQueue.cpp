@@ -80,6 +80,16 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
     return false;
 }
 
+
+// This is the callback for pop() operations, which ensures we push to the network at a safe
+// time for the FairQueue.
+static void push_to_network(Network* net, Address4* addr, ServerMessagePair* expected, ServerMessagePair* msg) {
+    assert(expected == msg);
+    bool sent_success = net->send(*addr,msg->data(),false,true,1);
+    if (!sent_success)
+        SILOG(fairsmq,fatal,"Failed to push to network, even though predicate succeeded.");
+}
+
 void FairServerMessageQueue::service(){
     uint64 send_bytes = mContext->sinceLast.toSeconds() * mRate + mRemainderSendBytes;
     uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderReceiveBytes;
@@ -88,20 +98,23 @@ void FairServerMessageQueue::service(){
 
     ServerMessagePair* next_msg = NULL;
     ServerID sid;
-    bool sent_success = true;
     bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
         Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
-
         assert(addy != NULL);
-        sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
 
-        if (!sent_success) break;
-
-        save_bytes = false;
-
-        ServerMessagePair* next_msg_popped = mServerQueues.pop(&send_bytes);
+        ServerMessagePair* next_msg_popped = mServerQueues.pop(
+            &send_bytes,
+            std::tr1::bind(
+                push_to_network,
+                mNetwork,
+                addy,
+                next_msg,
+                std::tr1::placeholders::_1
+            )
+        );
         assert(next_msg_popped == next_msg);
+        save_bytes = false;
 
         uint32 packet_size = next_msg->data().size();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
@@ -116,7 +129,7 @@ void FairServerMessageQueue::service(){
         delete next_msg;
     }
 
-    if (!sent_success || mServerQueues.empty()) {
+    if (mServerQueues.empty()) {
         mRemainderSendBytes = 0;
         mLastSendEndTime = mContext->time;
     }

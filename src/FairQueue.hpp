@@ -99,6 +99,13 @@ private:
 
     typedef std::set<Key> KeySet;
 public:
+
+    // Callback passed to pop which allows you to perform operations on the popped message
+    // at the right time, before any further, new messages will be evaluated.  Use this to
+    // perform operations which may affect any upstream queues operations, e.g. things that
+    // are checked in a predicate.
+    typedef std::tr1::function<void(Message*)> PopCallback;
+
     FairQueue(const Predicate pred = Predicate())
      :mCurrentVirtualTime(Time::null()),
       mQueuesByKey(),
@@ -210,9 +217,12 @@ public:
 
     // Returns the next message to deliver, given the number of bytes available for transmission
     // \param bytes number of bytes available; updated appropriately when returns
+    // \param cb callback which is called after the item has been popped from its originating queue
+    //           but before that queue's front method is used again, providing a period when you can
+    //           perform operations which might affect that input queue's front operation.
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allotted
-    Message* pop(uint64* bytes) {
+    Message* pop(uint64* bytes, PopCallback cb = 0) {
         Message* result = NULL;
         Time vftime(Time::null());
 
@@ -222,6 +232,7 @@ public:
         else { // Otherwise, just fill in the information we need from the marked queue
             assert(!mFrontQueue->messageQueue->empty());
             result = mFrontQueue->messageQueue->front();
+            assert(result == mFrontQueue->nextFinishMessage);
             vftime = mFrontQueue->nextFinishTime;
         }
 
@@ -236,6 +247,9 @@ public:
             *bytes -= result->size();
 
             mFrontQueue->messageQueue->pop();
+
+            if (cb != 0)
+                cb(result);
 
             // Remove from queue time list
             removeFromTimeIndex(mFrontQueue);
@@ -293,6 +307,22 @@ public:
             computeNextFinishTime( mQueuesByKey.find(key)->second );
         }
         empty_keys.clear();
+
+        // Verify front elements haven't changed out from under us
+        if (DoubleCheckFront) {
+            checkInputFront(true);
+        }
+#if SIRIKATA_DEBUG
+        else {
+            bool valid = verifyInputFront();
+            if (!valid)
+                SILOG(fairqueue,fatal,"[FAIRQUEUE] service: Invalid front elements on queue marked DoubleCheckFront=false.");
+        }
+
+        if (!verifyEmpties()) {
+            SILOG(fairqueue,fatal,"[FAIRQUEUE] service: Input queue marked as empty not really empty, front is not NULL.");
+        }
+#endif
     }
 protected:
 
@@ -320,7 +350,7 @@ protected:
             // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
             // strict queue semantics, e.g. the FairQueue itself
             Message* queue_front = queue_info->messageQueue->front();
-            if (queue_front != queue_info->nextFinishMessage) {
+            if (queue_front != queue_info->nextFinishMessage || queue_front == NULL) {
                 invalid_front_keys[queue_info->key] = queue_info;
             }
         }
@@ -356,6 +386,8 @@ protected:
 
             if (qi->messageQueue->empty() || qi->messageQueue->front() == NULL)
                 continue;
+
+            return false;
         }
         return true;
     }
@@ -365,18 +397,16 @@ protected:
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
         // Verify front elements haven't changed out from under us
-        if (DoubleCheckFront) {
-            checkInputFront(true);
-        }
 #if SIRIKATA_DEBUG
-        else {
+        // These are sanity checks on the queues that should be valid if the user calls service appropriately
+        // and uses pop callbacks properly to avoid changing things out from under us.
+        if (DoubleCheckFront) {
             bool valid = verifyInputFront();
             if (!valid)
-                SILOG(fairqueue,fatal,"[FAIRQUEUE] Invalid front elements on queue marked DoubleCheckFront=false.");
-        }
+                SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Invalid front elements on queue marked DoubleCheckFront=false.");
 
-        if (!verifyEmpties()) {
-            SILOG(fairqueue,fatal,"[FAIRQUEUE] Input queue marked as empty not really empty, front is not NULL.");
+            if (!verifyEmpties())
+                SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Input queue marked as empty not really empty, front is not NULL.");
         }
 #endif
 

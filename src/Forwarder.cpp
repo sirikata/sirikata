@@ -129,6 +129,18 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   }
 
 
+/** This is a helper method which is used as a callback when popping an element off the ForwarderQueue, to
+ *  guarantee that we don't screw up the fair queue by mucking with the ServerMessageQueue after it has computed
+ *  a new front value.
+ */
+static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, OutgoingMessage* expected, OutgoingMessage* result) {
+    assert(expected == result);
+    bool send_success = smq->addMessage(result->dest, result->data);
+    if (!send_success)
+        SILOG(cbr,fatal,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
+    ctx->trace()->serverDatagramQueued(ctx->time, result->dest, result->unique, result->data.size());
+}
+
 void Forwarder::service()
 {
     Time t = mContext->time;
@@ -206,14 +218,17 @@ void Forwarder::service()
                 warned=true;
             }
         }
-        bool send_success = mServerMessageQueue->addMessage(next_msg->dest, next_msg->data);
-        if (!send_success){
-            fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
-            break;
-        }
-        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest, next_msg->unique, next_msg->data.size());
-        uint64 b=1<<30;
-        delete (*mOutgoingMessages)->pop(&b);
+
+        OutgoingMessage* pop_msg = (*mOutgoingMessages)->pop(
+            &size,
+            std::tr1::bind(push_to_smq,
+                mServerMessageQueue,
+                mContext,
+                next_msg,
+                std::tr1::placeholders::_1)
+        );
+        assert(pop_msg == next_msg);
+        delete pop_msg;
     }
     mProfiler.finishedStage();
 

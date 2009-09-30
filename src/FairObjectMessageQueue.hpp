@@ -77,7 +77,8 @@ public:
         if (mFrontInput != NULL) {
             assert(mFrontOutput != NULL);
             uint64 bytes = 10000000; // We don't care how big it is, the can send predicate will take care of it and we have unlimited bandwidth at this point
-            ServerProtocolMessagePair *mp = this->mClientQueues.pop(&bytes);
+            // note we don't need a callback since we don't do anything with this, the user needs to ensure they don't break this
+            ServerProtocolMessagePair *mp = this->mClientQueues.pop(&bytes, 0);
             assert(mp == mFrontInput);
             delete mp;
         }
