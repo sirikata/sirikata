@@ -176,7 +176,7 @@ void Forwarder::service()
             if (sid == mContext->id()) continue;
             memcpy(&key,&sid,sizeof(sid));
             if (!mObjectMessageQueue->hasClient(key)) {
-                mObjectMessageQueue->registerClient(key,.1);
+                mObjectMessageQueue->registerClient(key,1.0e-6);
             }
             bool send_success;
             do {
