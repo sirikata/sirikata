@@ -18,7 +18,7 @@ namespace CBR
 
   class Object;
 
-  
+
   typedef std::map<UUID, Object*> ObjectMap;
 
   struct SelfMessage
@@ -33,13 +33,14 @@ namespace CBR
   //std::deque<SelfMessage> mSelfMessages;
 
   struct OutgoingMessage {
-    OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest)
-      : data(_data), dest(_dest) {}
+      OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest, UniqueMessageID uniq)
+       : data(_data), dest(_dest), unique(uniq) {}
     size_t size()const{
         return data.size();
     }
     Network::Chunk data;
     ServerID dest;
+      UniqueMessageID unique;
   };
   //std::deque<OutgoingMessage> mOutgoingMessages;
 

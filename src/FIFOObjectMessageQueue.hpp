@@ -54,7 +54,7 @@ private:
 
         Network::Chunk s;
         mFrontInput->data().serialize(s,0);
-        unconstThis()->mFrontOutput = new OutgoingMessage(s, mFrontInput->dest());
+        unconstThis()->mFrontOutput = new OutgoingMessage(s, mFrontInput->dest(), mFrontInput->id());
     }
 
 public:

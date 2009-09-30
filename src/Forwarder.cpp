@@ -183,7 +183,6 @@ void Forwarder::service()
                 ObjMessQBeginSend beginMess;
                 send_success=mObjectMessageQueue->beginSend(noise_msg,beginMess);
                 if(send_success) {
-                    mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->unique(), 0);
                     mObjectMessageQueue->endSend(beginMess,sid);
                 }
             }while (send_success);
@@ -212,6 +211,7 @@ void Forwarder::service()
             fprintf(stderr,"shouldnt reach here %s\n",__FILE__);
             break;
         }
+        mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest, next_msg->unique, next_msg->data.size());
         uint64 b=1<<30;
         delete (*mOutgoingMessages)->pop(&b);
     }
@@ -251,6 +251,8 @@ void Forwarder::service()
 
     if (dest_server==mContext->id())
     {
+/* Because these are just routed out to the object host or to the appropriate service, we don't record datagram queued and sent -- they effectively don't happen since they bypass
+      any server-to-server queues.
       if (!is_forward)
       {
           mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
@@ -262,6 +264,7 @@ void Forwarder::service()
           // in trace size.  It's probably not worth recording this information...
           //mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
       }
+*/
       // FIXME this should be limited in size so we can actually provide pushback to other servers when we can't route to ourselves/
       // connected objects fast enough
       mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
@@ -269,9 +272,7 @@ void Forwarder::service()
     }
     else
     {
-
-        mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server) );
+        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server, msg->id()) );
         success = (push_result == QueueEnum::PushSucceeded);
     }
     if (success)
