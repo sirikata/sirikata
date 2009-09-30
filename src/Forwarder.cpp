@@ -190,7 +190,7 @@ void Forwarder::service()
                 noise_msg->set_dest_object(UUID::null());///bizzzzogus
                 uint64 test=(1<<30);
                 test<<=30;
-                noise_msg->set_unique(test+rand()%1000000000);
+                noise_msg->set_unique(GenerateUniqueID(mContext->id()));
 
                 ObjMessQBeginSend beginMess;
                 send_success=mObjectMessageQueue->beginSend(noise_msg,beginMess);
