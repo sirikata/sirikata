@@ -290,12 +290,21 @@ int main ( int argc,const char**argv ) {
             continue_simulation = continue_simulation && (*it)->tick();
         }
         oh->tick();
-        Network::IOServiceFactory::pollService(ioServ);
+
         curTickTime=Task::LocalTime::now();
         Duration frameSeconds=(curTickTime-lastTickTime);
         if (frameSeconds<frameTime) {
             //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
-            boost::this_thread::sleep(boost::posix_time::microseconds((frameTime-frameSeconds).toMicroseconds()));
+            
+            Network::IOServiceFactory::dispatchServiceMessage(ioServ,
+                                                              (frameTime-frameSeconds),
+                                                              std::tr1::bind(&Network::IOServiceFactory::stopService,
+                                                                             ioServ)
+                                                              );
+            Network::IOServiceFactory::runService(ioServ);
+            Network::IOServiceFactory::resetService(ioServ);
+        }else {
+            Network::IOServiceFactory::pollService(ioServ);
         }
         lastTickTime=curTickTime;
     }
