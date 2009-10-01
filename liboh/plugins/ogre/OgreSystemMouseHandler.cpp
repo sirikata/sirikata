@@ -232,6 +232,7 @@ private:
     }
     int mWhichRayObject;
     void selectObjectAction(Vector2f p, int direction) {
+        if (!mParent||!mParent->mPrimaryCamera) return;
         CameraEntity *camera = mParent->mPrimaryCamera;
         if (!camera) {
             return;
@@ -596,7 +597,7 @@ private:
 	}
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
+        if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         
@@ -611,7 +612,7 @@ private:
     void rotateAction(Vector3f about, float amount) {
         
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
+        if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
@@ -627,7 +628,7 @@ private:
     void stableRotateAction(float dir, float amount) {
         
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
+        if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
@@ -860,6 +861,7 @@ private:
     }
 
     void zoomAction(float value, Vector2f axes) {
+        if (!mParent||!mParent->mPrimaryCamera) return;
         zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
     }
 
@@ -975,7 +977,7 @@ private:
         if (!ev) {
             return EventResponse::nop();
         }
-
+        if (!mParent||!mParent->mPrimaryCamera) return EventResponse::nop();
         std::set<int>::iterator iter = mWebViewActiveButtons.find(ev->mButton);
         if (iter != mWebViewActiveButtons.end()) {
             // Give the browser a chance to use this input
@@ -1035,7 +1037,7 @@ private:
 
     /// Camera Path Utilities
     void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
-        
+        if (!mParent||!mParent->mPrimaryCamera) return;        
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
@@ -1078,7 +1080,7 @@ private:
     }
 
     void cameraPathInsert() {
-
+        if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
