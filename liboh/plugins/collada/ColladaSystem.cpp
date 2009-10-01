@@ -32,6 +32,9 @@
 
 #include "ColladaSystem.hpp"
 
+#include "ColladaErrorHandler.hpp"
+#include "ColladaDocumentImporter.hpp"
+
 #include "ColladaMeshObject.hpp"
 
 #include <oh/ProxyMeshObject.hpp>
@@ -39,11 +42,20 @@
 //#include <options/Options.hpp>
 //#include <transfer/TransferManager.hpp>
 
+// OpenCOLLADA headers
+#include "COLLADAFWRoot.h"
+#include "COLLADASaxFWLLoader.h"
+
+
 #include <iostream>
 
 namespace Sirikata { namespace Models {
 
 ColladaSystem::ColladaSystem ()
+    :   mErrorHandler ( new ColladaErrorHandler ),
+        mSaxLoader ( new COLLADASaxFWL::Loader ( mErrorHandler ) ),
+        mDocumentImporter ( new ColladaDocumentImporter ),
+        mFramework ( new COLLADAFW::Root ( mSaxLoader, mDocumentImporter ) )
 {
     std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl;
 
@@ -52,7 +64,10 @@ ColladaSystem::ColladaSystem ()
 ColladaSystem::~ColladaSystem ()
 {
     std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl;
-
+    delete mFramework;
+    delete mDocumentImporter;
+    delete mSaxLoader;
+    delete mErrorHandler;
 }
 
 ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxyManager, String const& options )

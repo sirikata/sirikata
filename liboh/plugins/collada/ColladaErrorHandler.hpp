@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Collada Models System
- *  ColladaSystem.hpp
+/*  Sirikata liboh -- COLLADA Error Handler
+ *  ColladaErrorHandler.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,71 +30,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_
-#define _SIRIKATA_COLLADA_SYSTEM_
+#ifndef _SIRIKATA_COLLADA_ERROR_HANDLER_
+#define _SIRIKATA_COLLADA_ERROR_HANDLER_
 
 #include <oh/Platform.hpp>
-#include <oh/ModelsSystem.hpp>
-#include <util/ListenerProvider.hpp>
 
-//#include <task/EventManager.hpp>
-
-namespace COLLADAFW {
-
-class Root;
-
-}
-
-namespace COLLADASaxFWL {
-
-class Loader;
-
-}
+//#include "COLLADASaxFWLIError.h"
+#include "COLLADASaxFWLIErrorHandler.h"
+//#include "COLLADASaxFWLStableHeaders.h"
 
 namespace Sirikata { namespace Models {
-
-class ColladaDocumentImporter;
-class ColladaErrorHandler;
-
-/////////////////////////////////////////////////////////////////////
-
-class SIRIKATA_PLUGIN_EXPORT ColladaSystem
-    :   public ModelsSystem
-{
-    public:
-        virtual ~ColladaSystem ();
-
-        static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-    
+	
+class SIRIKATA_PLUGIN_EXPORT ColladaErrorHandler
+    :   public COLLADASaxFWL::IErrorHandler
+{    
+    public: 
+        ColladaErrorHandler () {}
+        virtual ~ColladaErrorHandler () {}
+        
+        
     protected:
-
     private:
-        ColladaSystem (); // called by create()
-        ColladaSystem ( ColladaSystem const& ); // not implemented
-        ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
+        ColladaErrorHandler ( ColladaErrorHandler const& ); // not implemented
+        ColladaErrorHandler& operator = ( ColladaErrorHandler const & ); // not implemented
 
-        bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-
-        // things we need to integrate with OpenCollada (declared in order of initialization, do not change)
-        ColladaErrorHandler* mErrorHandler; // 1st
-        COLLADASaxFWL::Loader* mSaxLoader; // next
-        ColladaDocumentImporter* mDocumentImporter; // next
-        COLLADAFW::Root* mFramework; // last
-    
-    // interface from ModelsSystem
+    // interface from COLLADASaxFWL::IErrorHandler
     public:
+        // If this method returns true, the loader stops parsing immediately.
+        // If severity is not CRITICAL and this method returns true, the loader continues loading.
+        virtual bool handleError ( COLLADASaxFWL::IError const* error );
+
     protected:
     
-    // interface from ProxyCreationListener
-    public:
-        virtual void onCreateProxy ( ProxyObjectPtr object );
-        virtual void onDestroyProxy ( ProxyObjectPtr object );
-
-    protected:
-
 };
-
+	
 } // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_
+#endif // _SIRIKATA_COLLADA_ERROR_HANDLER_
