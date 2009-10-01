@@ -579,25 +579,25 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     ++numServices;
     
     //    checkNotFoundData(); //determines what to do with all the lookups that returned that the object wasn't found
-    //    checkReSends(); //tries to re-send all the messages that failed
+    checkReSends(); //tries to re-send all the messages that failed
     
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    Duration currentishDur = mTimer.elapsed();
-    
-    Duration iterWaitDurBegin = mTimer.elapsed();
+    //    Duration currentishDur = mTimer.elapsed();
+    //    Duration iterWaitDurBegin = mTimer.elapsed();
+
     iteratedWait(5, getResults,trackedSetResults);
     //    craqDht.tick(getResults,trackedSetResults); //if instead want to just tick forward a single time instant
 
-     Duration iterWaitDurEnd = mTimer.elapsed();
-     if (currentishDur.toMilliseconds() > 100000)
-     {
-       if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
-       {
-         std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"  "<<getResults.size()<<"   "<<trackedSetResults.size() <<"\n\n";
-       }
-     }
+//      Duration iterWaitDurEnd = mTimer.elapsed();
+//      if (currentishDur.toMilliseconds() > 100000)
+//      {
+//        if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
+//        {
+//          std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"  "<<getResults.size()<<"   "<<trackedSetResults.size() <<"\n\n";
+//        }
+//      }
 
 
     int numGetResults = (int) getResults.size();
@@ -610,8 +610,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     {
       updated.swap(mFinishedMoveOrLookup);
     }
-
-    //    Duration processDur = mTimer.elapsed();
     
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -621,7 +619,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
         notFoundFunction(getResults[s]);
         delete getResults[s];
 
-        std::cout<<"\n\nThis shouldn't have really been called\n\n";
+        std::cout<<"\n\nWe have an object that does not exist in craq system.  This shouldn't have really been called.\n\n";
         assert(false);
         continue;
       }
@@ -661,46 +659,21 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     }
 
 
-//     Duration processDurEnd = mTimer.elapsed();
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       int processtime =processDurEnd.toMilliseconds() - processDur.toMilliseconds();
-
-//       if (processtime > 1)
-//       {
-//         //        std::cout<<"\n\nHUGEPROC  "<<processtime<<"    Number processed: "<< numGetResults <<"\n\n";
-//       }
-//     }
-
-
-//    Duration processTrackedBegin = mTimer.elapsed();
     processCraqTrackedSetResults(trackedSetResults, updated);
-
-//     Duration processTrackedEnd = mTimer.elapsed();
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       int trackedtime = processTrackedEnd.toMilliseconds() - processTrackedBegin.toMilliseconds();
-
-//       if (trackedtime > 1)
-//       {
-//         //        std::cout<<"\n\nHUGETRACKED  "<<trackedtime<<"\n\n";
-//       }
-//     }
-
     
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
-    if (currentishDur.toMilliseconds() > 100000)
-    {
-      Duration elapsedServiceTime = Timer::now() - start_time;
-      if (elapsedServiceTime.toMilliseconds() >= 3)
-      {
-        printf("\n\nGreater than 1 ms in service of craq oseg:  %i,  %i,  %i\n\n", (int) elapsedServiceTime.toMilliseconds(), numGetResults, numSetResults);
-      }
+//     if (currentishDur.toMilliseconds() > 100000)
+//     {
+//       Duration elapsedServiceTime = Timer::now() - start_time;
+//       if (elapsedServiceTime.toMilliseconds() >= 3)
+//       {
+//         printf("\n\nGreater than 1 ms in service of craq oseg:  %i,  %i,  %i\n\n", (int) elapsedServiceTime.toMilliseconds(), numGetResults, numSetResults);
+//       }
       
-      lastTimerDur = mServiceTimer.elapsed();
-    }
+//       lastTimerDur = mServiceTimer.elapsed();
+//     }
     
   }
 
@@ -871,19 +844,6 @@ void CraqObjectSegmentation::checkReSends()
 
     reTryKillConnMessage.clear();
     reReTryKillConnMessage.swap(reTryKillConnMessage);
-
-
-    Duration checkResendDur = checkSendTimer.elapsed();
-
-    Duration tmpDur = mTimer.elapsed();
-
-    if (tmpDur.toMilliseconds() > 100000)
-    {
-      if(checkResendDur.toMilliseconds() > 1)
-      {
-        //        printf("\n\nTook a while to check resend:  %i\n\n", (int) checkResendDur.toMilliseconds());
-      }
-    }
     
 }
 
