@@ -25,7 +25,7 @@ public:
 
     virtual ElementType& front()=0;
 
-    virtual ElementType pop()=0;
+    virtual ElementType pop() { return ElementType(); }
 
     // XXX FIXME: This version of pop shouldn't go here, but is the stop
     // gap solution to getting layered Fair"Queue"s working together.
