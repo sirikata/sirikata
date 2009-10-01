@@ -53,6 +53,7 @@
 #include <ObjectHostBinary_Persistence.pbj.hpp>
 #include <ObjectHostBinary_Sirikata.pbj.hpp>
 #include <time.h>
+#include <boost/thread.hpp>
 namespace Sirikata {
 
 using Task::GenEventManager;
@@ -62,12 +63,14 @@ OptionValue *cdnConfigFile;
 OptionValue *floatExcept;
 OptionValue *dbFile;
 OptionValue *host;
+OptionValue *frameRate;
 InitializeGlobalOptions main_options("",
 //    simulationPlugins=new OptionValue("simulationPlugins","ogregraphics",OptionValueType<String>(),"List of plugins that handle simulation."),
     cdnConfigFile=new OptionValue("cdnConfig","cdn = ($import=cdn.txt)",OptionValueType<String>(),"CDN configuration."),
     floatExcept=new OptionValue("sigfpe","false",OptionValueType<bool>(),"Enable floating point exceptions"),
     dbFile=new OptionValue("db","scene.db",OptionValueType<String>(),"Persistence database"),
     host=new OptionValue("host","localhost",OptionValueType<String>(),"space address"),
+    frameRate=new OptionValue("framerate","60",OptionValueType<double>(),"The desired framerate at which to run the object host"),
     NULL
 );
 
@@ -155,7 +158,6 @@ int main ( int argc,const char**argv ) {
     myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
 
     using namespace Sirikata;
-
     PluginManager plugins;
     const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics", "colladamodels", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
@@ -280,12 +282,22 @@ int main ( int argc,const char**argv ) {
 			sim->forwardMessagesTo(oh);
         }
     }
+    Duration frameTime = Duration::seconds(1.0/frameRate->as<double>());
+    Task::LocalTime curTickTime(Task::LocalTime::now());
+    Task::LocalTime lastTickTime=curTickTime;
     while ( continue_simulation ) {
         for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
             continue_simulation = continue_simulation && (*it)->tick();
         }
         oh->tick();
         Network::IOServiceFactory::pollService(ioServ);
+        curTickTime=Task::LocalTime::now();
+        Duration frameSeconds=(curTickTime-lastTickTime);
+        if (frameSeconds<frameTime) {
+            //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
+            boost::this_thread::sleep(boost::posix_time::microseconds((frameTime-frameSeconds).toMicroseconds()));
+        }
+        lastTickTime=curTickTime;
     }
 	for(SimList::iterator it = sims.begin(); it != sims.end(); it++) {
 		(*it)->endForwardingMessagesTo(oh);
