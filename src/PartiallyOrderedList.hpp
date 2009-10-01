@@ -60,6 +60,8 @@ class PartiallyOrderedList {
     uint32 mSize;
 public:
     typedef ElementType Type;
+    typedef std::tr1::function<void(const ElementType&)> PopCallback;
+
     PartiallyOrderedList(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;
@@ -104,6 +106,13 @@ public:
         uint32 m_size = SizeFunctorType()(m);
         mSize -= m_size;
         return m;
+    }
+
+    ElementType pop(PopCallback cb) {
+        ElementType popped = pop();
+        if (cb != 0)
+            cb(popped);
+        return popped;
     }
 
     bool empty() const{

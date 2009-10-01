@@ -69,7 +69,7 @@ public:
         createFrontOutput();
         return mFrontOutput;
     }
-    OutgoingMessage* pop() {
+    ElementType pop(const PopCallback& cb) {
         // Might not have called front, force it here
         if (mFrontInput == NULL) {
             this->front();
@@ -79,7 +79,15 @@ public:
         if (mFrontInput != NULL) {
             assert(mFrontOutput != NULL);
             uint64 bytes = 10000000; // We don't care how big it is, the can send predicate will take care of it and we have unlimited bandwidth at this point
-            ServerProtocolMessagePair *mp = this->mQueue.pop(&bytes);
+            // The following is a bit confusing -- the callback we were given expects our output (and OutgoingMessage*) but we internally store ServerProtocolMessagePairs, so we
+            // adapt the callback, handing it the right info and having bind just dump the internal pointer that should be passed to it by just not providing a placeholder spot for it
+            ServerProtocolMessagePair *mp = this->mQueue.pop(
+                &bytes,
+                std::tr1::bind(
+                    cb,
+                    mFrontOutput
+                )
+            );
             assert(mp == mFrontInput);
             delete mp;
         }
@@ -92,6 +100,9 @@ public:
         mFrontOutput = NULL;
 
         return result;
+    }
+    ElementType pop() {
+        return pop(0);
     }
     bool empty()const {
         return mQueue.empty();

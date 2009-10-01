@@ -11,6 +11,9 @@ class NetworkQueueWrapper {
     ServerMessagePair* mFront;
     typedef Network::Chunk Chunk;
 public:
+    typedef ServerMessagePair* ElementType;
+    typedef std::tr1::function<void(const ElementType&)> PopCallback;
+
     NetworkQueueWrapper(ServerID sid, Network*net,ServerIDMap*idmap) {
         mServerID=sid;
         mNetwork=net;
@@ -62,6 +65,13 @@ public:
 
         delete c;
         return result;
+    }
+
+    ServerMessagePair* pop(const PopCallback& cb) {
+        ServerMessagePair* popped = pop();
+        if (cb != 0)
+            cb(popped);
+        return popped;
     }
 
     bool empty() const{

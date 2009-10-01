@@ -246,10 +246,9 @@ public:
             assert( *bytes >= result->size() );
             *bytes -= result->size();
 
-            mFrontQueue->messageQueue->pop();
-
-            if (cb != 0)
-                cb(result);
+            Message* popped_val = mFrontQueue->messageQueue->pop(cb);
+            assert(popped_val == mFrontQueue->nextFinishMessage);
+            assert(popped_val == result);
 
             // Remove from queue time list
             removeFromTimeIndex(mFrontQueue);
