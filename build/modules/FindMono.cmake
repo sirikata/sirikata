@@ -1,179 +1,181 @@
-# - Try to find the mono, mcs, gmcs and gacutil
+#Mono Find Script
+#FindMono.cmake
+#
+#Copyright (c) 2009, The Sirikata authors
+#All rights reserved.
+#
+#Redistribution and use in source and binary forms, with or without
+#modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright notice,
+#      this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright notice,
+#      this list of conditions and the following disclaimer in the documentation
+#      and/or other materials provided with the distribution.
+#    * Neither the name of the Sirikata nor the names of its contributors
+#      may be used to endorse or promote products derived from this software
+#      without specific prior written permission.
+#
+#THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+#ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+#ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+#(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+#ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+#(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# Searches for an Mono installation
 #
 # Defines:
 #
-# MONO_FOUND             System has Mono dev files, as well as mono, mcs, gmcs and gacutil if not MONO_ONLY_LIBRARIES_REQUIRED
-# MONO_EXECUTABLE        Where to find 'mono'
-# IKVM_EXECUTABLE        Where to find 'ikvm'
-# MCS_EXECUTABLE         Where to find 'mcs'
-# GMCS_EXECUTABLE        Where to find 'gmcs'
-# GACUTIL_EXECUTABLE     Where to find 'gacutil'
-# MONO_PKG_CONFIG_PATH   Path for pkg-config files for this mono installation, e.g. /usr/lib/pkgconfig
-# MONO_LIBRARIES         Libraries to link (without full path)
-# MONO_LIBRARY_DIRS      Directories containing the libraries (-L option)
-# MONO_LDFLAGS           All required linker flags
-# MONO_INCLUDE_DIRS      The directories containing header files (-I option)
-# MONO_CFLAGS            All required compiler flags
-# MONO_MAJOR_VERSION     The major version number of the Mono dev libraries
-# MONO_MINOR_VERSION     The minor version number of the Mono dev libraries
-# MONO_SUBMINOR_VERSION  The subminor version number of the Mono dev libraries
+#   MONO_FOUND         True if Mono was found, else false
+#   MONO_LIBRARIES     Libraries to link
+#   MONO_INCLUDE_DIRS  The directories containing the header files
+#   MONO_LDFLAGS  The flags passed to the compiler when linking
+#   MONO_CFLAGS  The flags passed to a c compiler when including mono headers
+#   MONO_MAJOR_VERSION
+#   MONO_MINOR_VERSION
+#        --Mono runnables follow--
+#   MONO_EXECUTABLE
+#   MCS_EXECUTABLE
+#   GMCS_EXECUTABLE
+#   SMCS_EXECUTABLE
+#   GACUTIL_EXECUTABLE 
 #
-# On Windows, to specify an additional directory to search, set MONO_ROOT.
-# To avoid searching for the Mono executables (mono, mcs, gmcs, gacutil), set MONO_ONLY_LIBRARIES_REQUIRED.
+# To specify an additional directory to search, set MONO_ROOT.
+# To avoid printouts set MONO_FIND_QUIETLY to TRUE.
 #
-# Copyright (c) 2007 Arno Rehn arno@arnorehn.de
-# Extended by Siddhartha Chaudhuri to include searches for Mono development files, 2008.
-#
-# Redistribution and use is allowed according to the terms of the GPL license.
-#
-# Sid notes: Can we get BSD licensing permission? Especially given that we've put in way more than the code originally had?
 #
 
-SET(MONO_LOOK_FOR_LIBRARIES FALSE)
 SET(MONO_FOUND TRUE)
-IF(MONO_ONLY_LIBRARIES_REQUIRED)
+IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
 
-  SET(MONO_LOOK_FOR_LIBRARIES TRUE)
+  FIND_PROGRAM(MONO_EXECUTABLE mono PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
+  FIND_PROGRAM(MCS_EXECUTABLE mcs PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
+  FIND_PROGRAM(SMCS_EXECUTABLE smcs PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
+  FIND_PROGRAM(GMCS_EXECUTABLE gmcs PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
+  FIND_PROGRAM(GACUTIL_EXECUTABLE gacutil PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
 ELSE()
-  # try to find custom mono installation first
+  #we should be on mac here, so look in the Mono frameworks directory
+  FIND_PROGRAM(MONO_EXECUTABLE mono PATHS /Library/Frameworks/Mono.framework/Commands/)
+  FIND_PROGRAM(MCS_EXECUTABLE mcs PATHS /Library/Frameworks/Mono.framework/Commands/)
+  FIND_PROGRAM(SMCS_EXECUTABLE smcs PATHS /Library/Frameworks/Mono.framework/Commands/)
+  FIND_PROGRAM(GMCS_EXECUTABLE gmcs PATHS /Library/Frameworks/Mono.framework/Commands/)
+  FIND_PROGRAM(GACUTIL_EXECUTABLE gacutil PATHS /Library/Frameworks/Mono.framework/Commands/)
+ENDIF()
+
+IF(WIN32)
   IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
-
-    FIND_PROGRAM(MONO_EXECUTABLE mono PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
-    FIND_PROGRAM(MCS_EXECUTABLE mcs PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
-    FIND_PROGRAM(GMCS_EXECUTABLE gmcs PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
-    FIND_PROGRAM(GACUTIL_EXECUTABLE gacutil PATHS ${MONO_ROOT}/bin NO_DEFAULT_PATH)
-  ELSE()
-  FIND_PROGRAM(MONO_EXECUTABLE mono)
-  FIND_PROGRAM(MCS_EXECUTABLE mcs)
-  FIND_PROGRAM(GMCS_EXECUTABLE gmcs)
-  FIND_PROGRAM(GACUTIL_EXECUTABLE gacutil)
-
-  ENDIF()
-
-
-  IF(WIN32)
-    IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
-      FIND_FILE(MCS_EXE mcs.exe PATHS ${MONO_ROOT}/lib/mono/1.0/)
-      IF(MCS_EXE)
-        SET(MCS_EXECUTABLE ${MONO_EXECUTABLE} ${MCS_EXE})
-      ENDIF()
-
-      FIND_FILE(GMCS_EXE gmcs.exe PATHS ${MONO_ROOT}/lib/mono/2.0/)
-      IF(GMCS_EXE)
-        SET(GMCS_EXECUTABLE ${MONO_EXECUTABLE} ${GMCS_EXE})
-      ENDIF()
-
-      FIND_FILE(GACUTIL_EXE gacutil.exe PATHS ${MONO_ROOT}/lib/mono/1.0/)
-      IF(GACUTIL_EXE)
-        SET(GACUTIL_EXECUTABLE ${MONO_EXECUTABLE} ${GACUTIL_EXE})
-      ENDIF()
-
-      FIND_FILE(IKVM_EXE ikvm.exe PATHS ${MONO_ROOT}/lib/ikvm/)
-      IF(IKVM_EXE)
-        SET(IKVM_EXECUTABLE ${MONO_EXECUTABLE} ${IKVM_EXE})
-      ENDIF()
-
-    ENDIF()
-  ELSEIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
-    SET(MONO_EXECUTABLE_DIR /Library/Frameworks/Mono.framework/Commands/mono)
-    SET(MCS_EXECUTABLE_DIR /Library/Frameworks/Mono.framework/Commands/mcs)
-    SET(GMCS_EXECUTABLE_DIR /Library/Frameworks/Mono.framework/Commands/gmcs)
-    SET(GACUTIL_EXECUTABLE_DIR /Library/Frameworks/Mono.framework/Commands/gacutil)
-    GET_FILENAME_COMPONENT(MONO_EXECUTABLE ${MONO_EXECUTABLE_DIR} ABSOLUTE)
-    GET_FILENAME_COMPONENT(MCS_EXECUTABLE ${MCS_EXECUTABLE_DIR} ABSOLUTE)
-    GET_FILENAME_COMPONENT(GMCS_EXECUTABLE ${GMCS_EXECUTABLE_DIR} ABSOLUTE)
-    GET_FILENAME_COMPONENT(GACUTIL_EXECUTABLE ${GACUTIL_EXECUTABLE_DIR} ABSOLUTE)
-  ENDIF()
-  IF(EXISTS ${MONO_EXECUTABLE})
-    IF(WIN32)
-      IF(EXISTS ${MCS_EXE} AND EXISTS ${GMCS_EXE} AND EXISTS ${GACUTIL_EXE})
-        SET(MONO_LOOK_FOR_LIBRARIES TRUE)
-      ELSE()
-        SET(MONO_FOUND FALSE)
-      ENDIF()
+    FIND_FILE(MCS_EXE mcs.exe PATHS ${MONO_ROOT}/lib/mono/1.0/)
+    IF(MCS_EXE)
+      SET(MCS_EXECUTABLE ${MONO_EXECUTABLE} ${MCS_EXE})
     ELSE()
-      IF(EXISTS ${MCS_EXECUTABLE} AND EXISTS ${GMCS_EXECUTABLE} AND EXISTS ${GACUTIL_EXECUTABLE})
-        SET(MONO_LOOK_FOR_LIBRARIES TRUE)
-      ELSE()
-        SET(MONO_FOUND FALSE)
-      ENDIF()
+      SET(MONO_FOUND FALSE)
     ENDIF()
+
+    FIND_FILE(SMCS_EXE smcs.exe PATHS ${MONO_ROOT}/lib/mono/2.1/)
+    IF(SMCS_EXE)
+      SET(SMCS_EXECUTABLE ${MONO_EXECUTABLE} ${SMCS_EXE})
+    ELSE()
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+
+    FIND_FILE(GMCS_EXE gmcs.exe PATHS ${MONO_ROOT}/lib/mono/2.0/)
+    IF(GMCS_EXE)
+      SET(GMCS_EXECUTABLE ${MONO_EXECUTABLE} ${GMCS_EXE})
+    ELSE()
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+
+    FIND_FILE(GACUTIL_EXE gacutil.exe PATHS ${MONO_ROOT}/lib/mono/1.0/)
+    IF(GACUTIL_EXE)
+      SET(GACUTIL_EXECUTABLE ${MONO_EXECUTABLE} ${GACUTIL_EXE})
+    ELSE()
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+  ENDIF()
+ENDIF()
+
+IF(WIN32)
+  IF(EXISTS ${MONO_EXECUTABLE} AND EXISTS ${MCS_EXE} AND EXISTS ${GMCS_EXE} AND EXISTS ${GACUTIL_EXE})
+    MESSAGE(STATUS "MONO found at ${MONO_EXECUTABLE}")
+  ELSE()
+    SET(MONO_FOUND FALSE)
+  ENDIF()
+ELSE()
+  IF(EXISTS ${MONO_EXECUTABLE} AND EXISTS ${MCS_EXECUTABLE} AND EXISTS ${GMCS_EXECUTABLE} AND EXISTS ${GACUTIL_EXECUTABLE})
+    MESSAGE(STATUS "MONO found at ${MONO_EXECUTABLE}")
   ELSE()
     SET(MONO_FOUND FALSE)
   ENDIF()
 ENDIF()
+
 IF(MONO_FOUND)
-      SET(MONO_MAJOR_VERSION 0)
-      SET(MONO_MINOR_VERSION 0)
-      SET(MONO_SUBMINOR_VERSION 0)
+  SET(MONO_MAJOR_VERSION 0)
+  SET(MONO_MINOR_VERSION 0)
+  SET(MONO_SUBMINOR_VERSION 0)
 
-      EXEC_PROGRAM(${MONO_EXECUTABLE} ARGS --version OUTPUT_VARIABLE MONO_STRING_VERSION)
-      STRING(REGEX MATCH "([0-9]+)(\\.([0-9]+))+" MONO_VERSION ${MONO_STRING_VERSION})
-      STRING(REPLACE "." " " MONO_VERSION ${MONO_VERSION})
-      SEPARATE_ARGUMENTS(MONO_VERSION)
-      LIST(LENGTH MONO_VERSION MONO_VERSION_LENGTH)
-      IF(MONO_VERSION_LENGTH EQUAL 4)
-          SET(MONO_MAJOR_VERSION)
-          SET(MONO_MINOR_VERSION)
-          SET(MONO_SUBMINOR_VERSION)
+  EXEC_PROGRAM(${MONO_EXECUTABLE} ARGS --version OUTPUT_VARIABLE MONO_STRING_VERSION)
+  STRING(REGEX MATCH "([0-9]+)(\\.([0-9]+))+" MONO_VERSION ${MONO_STRING_VERSION})
+  STRING(REPLACE "." " " MONO_VERSION ${MONO_VERSION})
+  SEPARATE_ARGUMENTS(MONO_VERSION)
+  LIST(LENGTH MONO_VERSION MONO_VERSION_LENGTH)
+  IF(MONO_VERSION_LENGTH EQUAL 4)
+    SET(MONO_MAJOR_VERSION)
+    SET(MONO_MINOR_VERSION)
+    SET(MONO_SUBMINOR_VERSION)
 
-          LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
-          LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
-          LIST(GET MONO_VERSION 2 MONO_SUBMINOR_VERSION)
-      ELSEIF(MONO_VERSION_LENGTH EQUAL 3)
-          SET(MONO_MAJOR_VERSION)
-          SET(MONO_MINOR_VERSION)
-          SET(MONO_SUBMINOR_VERSION)
+    LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
+    LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
+    LIST(GET MONO_VERSION 2 MONO_SUBMINOR_VERSION)
+  ELSEIF(MONO_VERSION_LENGTH EQUAL 3)
+    SET(MONO_MAJOR_VERSION)
+    SET(MONO_MINOR_VERSION)
+    SET(MONO_SUBMINOR_VERSION)
 
-          LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
-          LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
-          LIST(GET MONO_VERSION 2 MONO_SUBMINOR_VERSION)
-      ELSEIF(MONO_VERSION_LENGTH EQUAL 2)
-          SET(MONO_MAJOR_VERSION)
-          SET(MONO_MINOR_VERSION)
+    LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
+    LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
+    LIST(GET MONO_VERSION 2 MONO_SUBMINOR_VERSION)
+  ELSEIF(MONO_VERSION_LENGTH EQUAL 2)
+    SET(MONO_MAJOR_VERSION)
+    SET(MONO_MINOR_VERSION)
 
-          LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
-          LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
-      ENDIF()
-#MESSAGE("${MONO_MAJOR_VERSION} ${MONO_MINOR_VERSION} ${MONO_SUBMINOR_VERSION}")
-#      
-      IF("${MONO_MAJOR_VERSION}" STREQUAL "0")
-        SET(MONO_FOUND FALSE)
-      ENDIF()
-      IF("${MONO_MAJOR_VERSION}" STREQUAL "1")
-        SET(MONO_FOUND FALSE)
-      ENDIF()
-      IF("${MONO_MAJOR_VERSION}" STREQUAL "2")
-        IF("${MONO_MINOR_VERSION}" STREQUAL "0")
-          SET(MONO_FOUND FALSE)
-        ENDIF()
-        IF("${MONO_MINOR_VERSION}" STREQUAL "1")
-          SET(MONO_FOUND FALSE)
-        ENDIF()
-        IF("${MONO_MINOR_VERSION}" STREQUAL "2")
-          SET(MONO_FOUND FALSE)
-        ENDIF()
-        IF("${MONO_MINOR_VERSION}" STREQUAL "3")
-          SET(MONO_FOUND FALSE)
-        ENDIF()
-
-      ENDIF()
-      IF(NOT MONO_FOUND)
-        MESSAGE(STATUS "MONO VERSION ${MONO_MAJOR_VERSION}.${MONO_MINOR_VERSION}.${MONO_SUBMINOR_VERSION} too old to build protobufs")
-      ENDIF()
-
-# AND (("${MONO_MINOR_VERSION}" STREQUAL "0") OR ("${MONO_MINOR_VERSION}" STREQUAL "1") OR ("${MONO_MINOR_VERSION}" STREQUAL "2") OR ("${MONO_MINOR_VERSION}" STREQUAL "0"))))
+    LIST(GET MONO_VERSION 0 MONO_MAJOR_VERSION)
+    LIST(GET MONO_VERSION 1 MONO_MINOR_VERSION)
+  ENDIF()
+  IF("${MONO_MAJOR_VERSION}" STREQUAL "0")
+    SET(MONO_FOUND FALSE)
+  ENDIF()
+  IF("${MONO_MAJOR_VERSION}" STREQUAL "1")
+    SET(MONO_FOUND FALSE)
+  ENDIF()
+  IF("${MONO_MAJOR_VERSION}" STREQUAL "2")
+    IF("${MONO_MINOR_VERSION}" STREQUAL "0")
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+    IF("${MONO_MINOR_VERSION}" STREQUAL "1")
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+    IF("${MONO_MINOR_VERSION}" STREQUAL "2")
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+    IF("${MONO_MINOR_VERSION}" STREQUAL "3")
+      SET(MONO_FOUND FALSE)
+    ENDIF()
+  ENDIF()
+  IF(NOT MONO_FOUND)
+    MESSAGE(STATUS "Please download Mono v2.4.0 or newer (detected: v${MONO_MAJOR_VERSION}.${MONO_MINOR_VERSION}.${MONO_SUBMINOR_VERSION})")
+  ENDIF()
 ENDIF()
-IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
-  IF(WIN32)  # Windows
-
-    IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
-      SET(MONO_INCLUDE_DIRS
-          ${MONO_ROOT}/include/mono-1.0
-          ${MONO_ROOT}/include/glib-2.0
-          ${MONO_ROOT}/lib/glib-2.0/include)
+IF(MONO_FOUND)
+  IF(WIN32)
+    IF(EXISTS ${MONO_ROOT})
+      SET(MONO_INCLUDE_DIRS ${MONO_ROOT}/include/mono-1.0 ${MONO_ROOT}/lib/glib-2.0/include ${MONO_ROOT}/include/glib-2.0)
       SET(MONO_LIBRARY_DIRS ${MONO_ROOT}/lib)
-      SET(MONO_LIBRARIES mono glib-2.0 intl iconv gthread-2.0)
+      SET(MONO_LIBRARIES mono glib-2.0 gthread-2.0 intl iconv )
       SET(MONO_LDFLAGS)
       SET(MONO_CFLAGS)
       SET(MONO_MAJOR_VERSION 0)
@@ -181,26 +183,24 @@ IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
       SET(MONO_SUBMINOR_VERSION 0)
 
       SET(MONO_FOUND TRUE)
-    ELSE(MONO_ROOT AND EXISTS ${MONO_ROOT})
+    ELSE()
       SET(MONO_FOUND FALSE)
-    ENDIF(MONO_ROOT AND EXISTS ${MONO_ROOT})
+    ENDIF()
 
-  ELSE(WIN32)  # Unix
+  ELSE(WIN32)
 
-    IF(MONO_ROOT AND EXISTS ${MONO_ROOT}/lib/pkgconfig)
+    IF(EXISTS ${MONO_ROOT}/lib/pkgconfig)
       SET(ENV{PKG_CONFIG_PATH} ${MONO_ROOT}/lib/pkgconfig)
       SET(ENV{PATH} ${MONO_ROOT}/bin:$ENV{PATH})
-    ENDIF(MONO_ROOT AND EXISTS ${MONO_ROOT}/lib/pkgconfig)
+    ENDIF()
 
-    INCLUDE(FindPkgConfig)  # we don't need the pkg-config path on OS X, but we need other macros in this file
+    INCLUDE(FindPkgConfig)
 
-    IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
+    IF(APPLE)
 
-      # Replace any pkg-config found so far with the Mono-specific one.
-
-      # Save restore state
-      SET(PKG_CONFIG_FOUND_BACKUP ${PKG_CONFIG_FOUND})
-      SET(PKG_CONFIG_EXECUTABLE_BACKUP ${PKG_CONFIG_EXECUTABLE})
+      # Backup pkgconfig variables state
+      SET(PKG_CONFIG_FOUND_BAK ${PKG_CONFIG_FOUND})
+      SET(PKG_CONFIG_EXECUTABLE_BAK ${PKG_CONFIG_EXECUTABLE})
       SET(PKG_CONFIG_FOUND FALSE)
       INCLUDE(CMakeFindFrameworks)
       CMAKE_FIND_FRAMEWORKS(Mono)
@@ -211,31 +211,31 @@ IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
         SET(PKG_CONFIG_EXECUTABLE ${MONO_PKG_CONFIG})
         SET(PKG_CONFIG_FOUND TRUE)
         SET(MONO_INCLUDE_DIRS ${Mono_FRAMEWORKS}/Headers/mono-1.0
-                               ${Mono_FRAMEWORKS}/Headers/glib-2.0
-                               ${Mono_FRAMEWORKS}/Libraries/glib-2.0/include)
+                              ${Mono_FRAMEWORKS}/Headers/glib-2.0
+                              ${Mono_FRAMEWORKS}/Libraries/glib-2.0/include)
         SET(MONO_LIBRARY_DIRS ${Mono_FRAMEWORKS}/Libraries)
-        SET(MONO_LIBRARIES mono  glib-2.0 intl iconv gthread-2.0)
-        MESSAGE(STATUS "${MONO_INCLUDE_DIRS} XX ${MONO_LIBRARY_DIRS} YY ${MONO_LIBRARIES}")
-      ENDIF(Mono_FRAMEWORKS)
-
-    ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-
+        SET(MONO_LIBRARIES mono glib-2.0 intl iconv gthread-2.0)
+      ENDIF()
+    ELSE()
       SET(MONO_PKG_CONFIG ${PKG_CONFIG_EXECUTABLE})
-    ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    ENDIF()
 
 
     IF(NOT PKG_CONFIG_FOUND)
-      
-      MESSAGE(STATUS "Could not find suitable pkg-config to search for Mono")
+  
+      MESSAGE(STATUS "Could not find pkg-config to search for Mono")
       SET(MONO_FOUND FALSE)
-    ELSE(NOT PKG_CONFIG_FOUND)
+    ELSE()
+
       IF(MONO_ROOT AND EXISTS ${MONO_ROOT}/lib/pkgconfig AND NOT APPLE)
         PKG_CHECK_MODULES(MONO glib-2.0 gthread-2.0)  # will set MONO_FOUND
         PKG_CHECK_MODULES(MONO_MANA mono)  # will set MONO_MANA_FOUND
+
         IF(NOT MONO_MANA_FOUND)
            SET(MONO_FOUND FALSE)
            MESSAGE(STATUS "Found glib and gthread but could not locate mono")
         ENDIF()
+
         SET(MONO_INCLUDE_DIRS ${MONO_ROOT}/include/mono-1.0 ${MONO_INCLUDE_DIRS})
         SET(MONO_LIBRARY_DIRS ${MONO_ROOT}/lib ${MONO_LIBRARY_DIRS})
         SET(MONO_LIBRARIES ${MONO_MANA_LIBRARIES})
@@ -247,17 +247,15 @@ IF(MONO_FOUND AND MONO_LOOK_FOR_LIBRARIES)
           SET(MONO_FOUND TRUE)
         ENDIF()
       ENDIF()
-    ENDIF(NOT PKG_CONFIG_FOUND)
+    ENDIF()
 
-
-      IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-        # Restore saved state
-        SET(PKG_CONFIG_FOUND ${PKG_CONFIG_FOUND_BACKUP})
-        SET(PKG_CONFIG_EXECUTABLE ${PKG_CONFIG_EXECUTABLE_BACKUP})
-      ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    IF(APPLE)
+      # Restore saved state
+      SET(PKG_CONFIG_FOUND ${PKG_CONFIG_FOUND_BAK})
+      SET(PKG_CONFIG_EXECUTABLE ${PKG_CONFIG_EXECUTABLE_BAK})
+    ENDIF()
 
     SET(MONO_LDFLAGS ${MONO_LDFLAGS} "-rdynamic")
-
 
   ENDIF()
 
@@ -272,54 +270,38 @@ IF(MONO_EXECUTABLE AND EXISTS ${MONO_EXECUTABLE})
   IF(WIN32)
     SET(__MONO_PKG_CONFIG_PATH ${MONO_EXECUTABLE_PATH}/../lib/pkgconfig/mono.pc)
   ELSEIF(APPLE)
-    #something's funky with apple, absolute path resolution isn't getting rid of
-    #symlinks but the existence test behaves as if it does, so we manually have to
-    #adjust the path
+    #manually adjust the path to get rid of symlinks in a way that is compatible with the existence test
     GET_FILENAME_COMPONENT(__MONO_PKG_CONFIG_PATH ${MONO_EXECUTABLE_PATH} PATH)
     SET(__MONO_PKG_CONFIG_PATH ${__MONO_PKG_CONFIG_PATH}/Libraries/pkgconfig/mono.pc)
-#    SET(MONO_INCLUDE_DIRS ${__MONO_PKG_CONFIG_PATH}/Headers)
   ELSE()
     SET(__MONO_PKG_CONFIG_PATH ${MONO_EXECUTABLE_PATH}/../lib/pkgconfig/mono.pc)
   ENDIF()
 
   IF(EXISTS ${__MONO_PKG_CONFIG_PATH})
-     GET_FILENAME_COMPONENT(MONO_PKG_CONFIG_PATH ${__MONO_PKG_CONFIG_PATH} PATH)
-     GET_FILENAME_COMPONENT(MONO_PKG_CONFIG_PATH ${MONO_PKG_CONFIG_PATH} ABSOLUTE)
+    GET_FILENAME_COMPONENT(MONO_PKG_CONFIG_PATH ${__MONO_PKG_CONFIG_PATH} PATH)
+    GET_FILENAME_COMPONENT(MONO_PKG_CONFIG_PATH ${MONO_PKG_CONFIG_PATH} ABSOLUTE)
   ENDIF(EXISTS ${__MONO_PKG_CONFIG_PATH})
 ENDIF(MONO_EXECUTABLE AND EXISTS ${MONO_EXECUTABLE})
 
 IF(MONO_FOUND)
   IF(NOT MONO_FIND_QUIETLY)
-    IF(NOT MONO_ONLY_LIBRARIES_REQUIRED)
-      MESSAGE(STATUS "Found mono: ${MONO_EXECUTABLE}")
-      MESSAGE(STATUS "Found mcs: ${MCS_EXECUTABLE}")
-      MESSAGE(STATUS "Found gmcs: ${GMCS_EXECUTABLE}")
-      MESSAGE(STATUS "Found gacutil: ${GACUTIL_EXECUTABLE}")
-      IF(IKVM_EXECUTABLE)
-      MESSAGE(STATUS "Found ikvm: ${IKVM_EXECUTABLE}")
-      ENDIF()
-    ENDIF(NOT MONO_ONLY_LIBRARIES_REQUIRED)
+    MESSAGE(STATUS "Found mono interpreter: ${MONO_EXECUTABLE}")
+    MESSAGE(STATUS "mcs command: ${MCS_EXECUTABLE}")
+    MESSAGE(STATUS "smcs command: ${SMCS_EXECUTABLE}")
+    MESSAGE(STATUS "gmcs command: ${GMCS_EXECUTABLE}")
+    MESSAGE(STATUS "gacutil command: ${GACUTIL_EXECUTABLE}")
 
     IF(MONO_PKG_CONFIG_PATH)
-      MESSAGE(STATUS "Found Mono pkg-config path: ${MONO_PKG_CONFIG_PATH}")
-    ENDIF(MONO_PKG_CONFIG_PATH)
+      MESSAGE(STATUS "Mono pkg-config path: ${MONO_PKG_CONFIG_PATH}")
+    ENDIF()
 
-    IF(MONO_LIBRARY_DIRS)
-      MESSAGE(STATUS "Found Mono development files: headers at ${MONO_INCLUDE_DIRS}, libraries at ${MONO_LIBRARY_DIRS}")
-    ELSE(MONO_LIBRARY_DIRS)
-      MESSAGE(STATUS "Found Mono development files: headers at ${MONO_INCLUDE_DIRS}")
-    ENDIF(MONO_LIBRARY_DIRS)
-  ENDIF(NOT MONO_FIND_QUIETLY)
+    MESSAGE(STATUS "Mono headers at ${MONO_INCLUDE_DIRS}, libraries at ${MONO_LIBRARY_DIRS}")
+
+  ENDIF()
 ELSE(MONO_FOUND)
   IF(MONO_FIND_REQUIRED)
-    IF(MONO_ONLY_LIBRARIES_REQUIRED)
-      MESSAGE(FATAL_ERROR "Could not find Mono development files")
-    ELSE(MONO_ONLY_LIBRARIES_REQUIRED)
-      MESSAGE(FATAL_ERROR "Could not find one or more of the following: mono, mcs, gmcs, gacutil, Mono development files")
-    ENDIF(MONO_ONLY_LIBRARIES_REQUIRED)
-  ELSE(MONO_FIND_REQUIRED)
-    MESSAGE(STATUS "Could not find Mono development files! Building without scripting support.")
-  ENDIF(MONO_FIND_REQUIRED)
-ENDIF(MONO_FOUND)
-
-MARK_AS_ADVANCED(MONO_EXECUTABLE MCS_EXECUTABLE GMCS_EXECUTABLE GACUTIL_EXECUTABLE MONO_PKG_CONFIG_PATH)
+    MESSAGE(FATAL_ERROR "Could not locate suitable mono")
+  ELSE()
+    MESSAGE(STATUS "Could not find Mono development files; building without scripting support.")
+  ENDIF()
+ENDIF()
