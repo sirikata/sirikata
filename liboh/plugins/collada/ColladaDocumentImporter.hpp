@@ -76,6 +76,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         virtual bool writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData );
         virtual bool writeController ( COLLADAFW::Controller const* controller );
         virtual bool writeFormulas ( COLLADAFW::Formulas const* formulas );
+        virtual bool writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene );
     
     protected:
 

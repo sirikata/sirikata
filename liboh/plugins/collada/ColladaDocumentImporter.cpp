@@ -184,6 +184,12 @@ bool ColladaDocumentImporter::writeFormulas ( COLLADAFW::Formulas const* formula
     return true;
 }
 
+bool ColladaDocumentImporter::writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene )
+{
+    assert((std::cout << "MCB: ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered" << std::endl,true));
+    return true;
+}
+    
 
 } // namespace Models
 } // namespace Sirikata
