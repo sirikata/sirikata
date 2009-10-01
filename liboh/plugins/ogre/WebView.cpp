@@ -1016,13 +1016,27 @@ void WebView::onPaint(Berkelium::Window*win,
         scrollRect.mTop += dy;
 
         scrollRect = scrollRect.intersect(clipRect);
+        size_t width=scrollRect.width();
+        size_t height=scrollRect.height();
+        if (width && height) {
 
-        if (scrollRect.width() && scrollRect.height()) {
-            SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
-            pixelBuffer->blit(
-                pixelBuffer,
-                Ogre::Box(scrollRect.left()-dx, scrollRect.top()-dy, scrollRect.right()-dx, scrollRect.bottom()-dy),
-                Ogre::Box(scrollRect.left(), scrollRect.top(), scrollRect.right(), scrollRect.bottom()));
+            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,width,height,1,1,texture->getFormat());
+            {
+                HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();    
+                
+                SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
+                shadowBuffer->blit(
+                    pixelBuffer,
+                    Ogre::Box(scrollRect.left()-dx, scrollRect.top()-dy, scrollRect.right()-dx, scrollRect.bottom()-dy),
+                    Ogre::Box(0,0,width,height));
+                
+                pixelBuffer->blit(
+                    shadowBuffer,
+                    Ogre::Box(0,0,width,height),
+                    Ogre::Box(scrollRect.left(), scrollRect.top(), scrollRect.right(), scrollRect.bottom()));
+            }
+            Ogre::ResourcePtr shadowResource(shadow);
+            Ogre::TextureManager::getSingleton().remove(shadowResource);
         }
     }
 
