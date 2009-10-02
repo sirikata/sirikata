@@ -37,6 +37,7 @@ namespace CBR
   {
     if ((int)mMap.size()  > LARGEST_CRAQ_CACHE_SIZE)
     {
+      
       //sort list
       mAgeList.sort( compareIDAge);
 
