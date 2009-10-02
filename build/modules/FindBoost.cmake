@@ -372,7 +372,7 @@ ELSE (_boost_IN_CACHE)
     SET (_boost_COMPILER "-vc71")
   ELSEIF(MINGW)
     EXEC_PROGRAM(${CMAKE_CXX_COMPILER}
-      ARGS -dumpversion
+      ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
       OUTPUT_VARIABLE _boost_COMPILER_VERSION
       )
     STRING(REGEX REPLACE "([0-9])\\.([0-9])\\.[0-9]" "\\1\\2"
@@ -387,7 +387,7 @@ ELSE (_boost_IN_CACHE)
     ELSE ()
       # Determine which version of GCC we have.
       EXEC_PROGRAM(${CMAKE_CXX_COMPILER}
-        ARGS -dumpversion
+        ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
         OUTPUT_VARIABLE _boost_COMPILER_VERSION
         )
       STRING(REGEX REPLACE "([0-9])\\.([0-9])\\.[0-9]" "\\1\\2"
