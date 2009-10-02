@@ -46,11 +46,6 @@ template <class Queue> void FairObjectMessageQueue<Queue>::endSend(const ObjMess
     ((ServerMessagePair*)fromBegin.data)->dest(dest_server_id);
 }
 
-template <class Queue> void FairObjectMessageQueue<Queue>::service() {
-    // Service the fair queue to ensure front() will be setup properly, could be affected by oseg lookups finishing.
-    mClientQueues.service();
-}
-
 template <class Queue> void FairObjectMessageQueue<Queue>::registerClient(const UUID& sid, float weight) {
    if (!mClientQueues.hasQueue(sid)) {
        mClientQueues.addQueue(new Queue( GetOption(OBJECT_QUEUE_LENGTH)->as<uint32>()),sid,weight);

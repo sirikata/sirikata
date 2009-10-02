@@ -53,7 +53,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
     mProfiler.addStage("Noise");
-    mProfiler.addStage("Object Message Queue Service");
     mProfiler.addStage("Outgoing Messages");
     mProfiler.addStage("Forwarder Queue => Server Message Queue");
     mProfiler.addStage("Server Message Queue");
@@ -204,7 +203,6 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
 
-    mObjectMessageQueue->service(); mProfiler.finishedStage();
     (*mOutgoingMessages)->service(); mProfiler.finishedStage();
     while(true)
     {

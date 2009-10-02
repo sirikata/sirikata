@@ -38,11 +38,6 @@ public:
     virtual void registerClient(const UUID& oid, float weight=1) = 0;
     virtual void unregisterClient(const UUID& oid) = 0;
 
-    // Allow for servicing before downstream queues may get serviced and/or try to pull from this
-    // queue, allowing this to handle any updates that are external to it but may have affected
-    // its ordering.
-    virtual void service() {}
-
     // Note: only public because the templated version of FairObjectMessageQueue requires it
     class ServerMessagePair {
     private:

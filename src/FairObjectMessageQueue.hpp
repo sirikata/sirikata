@@ -18,7 +18,7 @@ protected:
         ServerMessageQueue* fq;
     };
 
-    FairQueue<ServerProtocolMessagePair,UUID,TQueue, HasDestServerCanSendPredicate, true > mClientQueues;
+    FairQueue<ServerProtocolMessagePair,UUID,TQueue, HasDestServerCanSendPredicate > mClientQueues;
 
     // Gross, but we need it to handle const-ness for front()
     FairObjectMessageQueue<TQueue>* unconstThis() const {
@@ -121,7 +121,6 @@ public:
     virtual void endSend(const ObjMessQBeginSend&, ServerID dest_server_id);
     virtual bool hasClient(const UUID &oid) const;
 
-    virtual void service();
 protected:
     virtual void aggregateLocationMessages() { }
 

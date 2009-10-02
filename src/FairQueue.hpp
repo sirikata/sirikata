@@ -98,6 +98,7 @@ private:
     typedef typename QueueInfoByFinishTime::const_iterator ConstByTimeIterator;
 
     typedef std::set<Key> KeySet;
+    typedef std::set<QueueInfo*> QueueInfoSet;
 public:
 
     // Callback passed to pop which allows you to perform operations on the popped message
@@ -231,8 +232,8 @@ public:
             nextMessage(bytes, &result, &vftime, &mFrontQueue);
         else { // Otherwise, just fill in the information we need from the marked queue
             assert(!mFrontQueue->messageQueue->empty());
-            result = mFrontQueue->messageQueue->front();
-            assert(result == mFrontQueue->nextFinishMessage);
+            result = mFrontQueue->nextFinishMessage;
+            assert(result == mFrontQueue->messageQueue->front());
             vftime = mFrontQueue->nextFinishTime;
         }
 
@@ -311,7 +312,7 @@ public:
         if (DoubleCheckFront) {
             checkInputFront(true);
         }
-#if SIRIKATA_DEBUG
+#if SIRIKATA_DEBUG & 0  // Big performance hit, only enable if necessary
         else {
             bool valid = verifyInputFront();
             if (!valid)
@@ -391,58 +392,137 @@ protected:
         return true;
     }
 
+    // Checks if the given queue is satisfactory.  Returns false if the queue would violate a constraint, and the
+    // consideration of any later queues should stop.  Otherwise it returns true.  The other outputs indicate whether
+    // the queue was actually satisfactory, i.e. if *result_out != NULL then there was the queue was truly satisfactory.
+    // Note that, despite passing in a QueueInfo*, we have additional parameters which are actually used.  This is because
+    // this method may be used when the info in a QueueInfo is out of date.
+    bool satisfies(QueueInfo* qi, uint64* bytes, QueueInfo** qiout, Message** result_out, Time* vftime_out) {
+        *result_out = NULL;
+
+        // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
+        // would violate the ordering.
+        if (*bytes < qi->nextFinishMessage->size())
+            return false;
+
+        // Now give the user a chance to veto this packet.  If they can use it, set output and return.
+        // Otherwise just continue trying the rest of the options.
+        if (mPredicate(qi->key, qi->nextFinishMessage)) {
+            *qiout = qi;
+            *vftime_out = qi->nextFinishTime;
+            *result_out = qi->nextFinishMessage;
+        }
+
+        return true;
+    }
+
     // Retrieves the next message to deliver, along with its virtual finish time, given the number of bytes available
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
-        // Verify front elements haven't changed out from under us
-#if SIRIKATA_DEBUG
+        // Only turn on if necessary, if many queues are empty, this can destroy performance, especially since
+        // recursive fair queues can cause it to be called very often.
+#if SIRIKATA_DEBUG & 0
+        if (!verifyInputFront())
+            SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Invalid front elements on queue marked DoubleCheckFront=false.");
+
         // These are sanity checks on the queues that should be valid if the user calls service appropriately
         // and uses pop callbacks properly to avoid changing things out from under us.
-        if (DoubleCheckFront) {
-            bool valid = verifyInputFront();
-            if (!valid)
-                SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Invalid front elements on queue marked DoubleCheckFront=false.");
-
-            if (!verifyEmpties())
-                SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Input queue marked as empty not really empty, front is not NULL.");
-        }
+        if (!verifyEmpties())
+            SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Input queue marked as empty not really empty, front is not NULL.");
 #endif
 
-        // If there's nothing in the queue, there is no next message
-        if (mQueuesByTime.empty()) {
-            *result_out = NULL;
-            return;
-        }
+        *result_out = NULL;
 
+        // If there's nothing in the queue, there is no next message
+        if (mQueuesByTime.empty())
+            return;
 
         // Loop through until we find one that has data and can be handled.
-        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
+        bool advance = true; // Indicates whether the loop needs to advance, set to false when an unexpected front has already advanced to the next item in order to remove the current item
+        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); advance ? it++ : it) {
+            Time min_queue_finish_time = it->first;
             QueueInfo* min_queue_info = it->second;
+
+            advance = true;
 
             // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
             // strict queue semantics, e.g. the FairQueue itself
             Message* min_queue_front = min_queue_info->messageQueue->front();
 
-            // Check that we have enough bytes to deliver.  If not stop the search and return since doing otherwise
-            // would violate the ordering.
-            if (*bytes < min_queue_front->size()) {
-                *result_out = NULL;
-                return;
+            // NOTE: We would like to assert this:
+            // assert(min_queue_front == min_queue_info->nextFinishMessage);
+            // but doing so is not safe.  During operations, a queue may have pushed downstream
+            // causing predicates to change for any number of queues, including this one.  Since
+            // we can't assume they are the same, we'll check and try to degrade gracefully.
+            if (min_queue_front != min_queue_info->nextFinishMessage) {
+                // Our solution is to recompute the information and try to work with it, despite the
+                // fact that its out of the by-time-list.  There are three possibilities:
+                // 1) The new front is NULL.  This is simple, just ignore and continue.
+                // 2) The new front will have a finish time later in the by-time-list.  We can save
+                //    this information and consider it again later when it is appropriate.
+                // 3) The new front will have a finish time earlier in the by-time-list.  In this case
+                //    we've screwed up -- we should have considered this option earlier and may even
+                //    have missed it on earlier iterations.  NOTE: We are okay with this because it
+                //    appears to be fairly rare, and requires a number of conditions to be true to
+                //    occur (observation and theory imply that it will be relatively rare).  In this
+                //    case we'll consider the option immediately, and be sure to fix up the by-time-list.
+
+                // Log to insane just for debugging purposes.
+                SILOG(fairqueue,insane,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front");
+
+                // Advance iterator to make it safe, update entry for this queue (includes fixing up empty queues)
+                advance = false;
+                it++;
+                removeFromTimeIndex(min_queue_info);
+                ByTimeIterator new_it = computeNextFinishTime(min_queue_info, min_queue_info->nextFinishStartTime);
+
+                // Case 1
+                if (min_queue_front == NULL) {
+                    // No need to reconsider, just continue with the next item.
+                    continue;
+                }
+
+                Time new_next_finish_time = min_queue_info->nextFinishTime;
+
+                if (new_next_finish_time > min_queue_finish_time) {
+                    // Case 2
+                    // Has been inserted in later, will be considered again when it is reached.
+
+                    // But since we advanced the main iterator, we need to double check that the updated version
+                    // wasn't inserted before the new main iterator -- either because the new main iterator is
+                    // past the last item, or because the jump increased the current time beyond the new time, even
+                    // though it was larger than the time we were at.
+                    // Just stepping back to the new_it is sufficient to take care of this case since it will be
+                    // considered at the next iteration.
+                    if (it == mQueuesByTime.end() || new_next_finish_time <= it->first)
+                        it = new_it;
+                }
+                else {
+                    // Case 3 -- log to debug, since this is the only case that actually causes problems
+                    SILOG(fairqueue,debug,"[FAIRQUEUE] nextMessage: Unexpected change in input queue front to earlier virtual finish time.");
+
+                    // It should have been moved earlier, check if its satisfactory
+                    bool satis = satisfies(
+                        min_queue_info, bytes,
+                        min_queue_info_out, result_out, vftime_out
+                    );
+                    if (!satis || (satis && *result_out != NULL))
+                        break;
+
+                    // And if not, just continue
+                    continue;
+                }
             }
 
-            // Now give the user a chance to veto this packet.  If they can use it, set output and return.
-            // Otherwise just continue trying the rest of the options.
-            if (mPredicate(min_queue_info->key, min_queue_front)) {
-                *min_queue_info_out = min_queue_info;
-                *vftime_out = min_queue_info->nextFinishTime;
-                *result_out = min_queue_front;
-                return;
-            }
+            bool satis = satisfies(
+                min_queue_info, bytes,
+                min_queue_info_out, result_out, vftime_out
+            );
+            if (!satis || (satis && *result_out != NULL))
+                break;
         }
 
-        // If we get here then we've tried everything and nothing has satisfied our constraints. Give up.
-        *result_out = NULL;
         return;
     }
 
@@ -461,11 +541,11 @@ protected:
     }
 
     // Computes the next finish time for this queue and, if it has one, inserts it into the time index
-    void computeNextFinishTime(QueueInfo* qi, const Time& last_finish_time) {
+    ByTimeIterator computeNextFinishTime(QueueInfo* qi, const Time& last_finish_time) {
         if ( qi->messageQueue->empty() ) {
             qi->nextFinishMessage = NULL;
             mEmptyQueues.insert(qi->key);
-            return;
+            return mQueuesByTime.end();
         }
 
         // If we don't restrict to strict queues, front() may return NULL even though the queue is not empty.
@@ -475,16 +555,18 @@ protected:
         if ( front_msg == NULL ) {
             qi->nextFinishMessage = NULL;
             mEmptyQueues.insert(qi->key);
-            return;
+            return mQueuesByTime.end();
         }
 
         qi->nextFinishMessage = front_msg;
         qi->nextFinishTime = finishTime( front_msg->size(), qi->weight, last_finish_time);
         qi->nextFinishStartTime = last_finish_time;
 
-        mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
+        ByTimeIterator new_it = mQueuesByTime.insert( typename QueueInfoByFinishTime::value_type(qi->nextFinishTime, qi) );
         // In case it was an empty queue, remove it
         mEmptyQueues.erase(qi->key);
+
+        return new_it;
     }
 
     void computeNextFinishTime(QueueInfo* qi) {
