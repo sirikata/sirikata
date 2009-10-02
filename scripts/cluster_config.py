@@ -21,6 +21,15 @@ class ClusterNode:
     def __repr__(self):
         return "<" + self.user + "@" + self.node + ":" + str(self.reuse_count) + ">"
 
+
+def remove_comment(line):
+    # FIXME this is rather simplistic, assumes # never appears, e.g., quoted
+    before, commenter, after = line.partition('#')
+    # No comment character
+    if (len(before) == len(line)):
+        return line
+    return before
+
 class ClusterConfig:
     def __init__(self):
         #default values
@@ -72,7 +81,11 @@ class ClusterConfig:
         self.nodes = []
         # line format is option = value
         for line in fp:
-            [opt_name, opt_value] = line.split('=', 1)
+            line = remove_comment(line)
+            line_split = line.split('=', 1)
+            if (len(line_split) < 2):
+                continue
+            [opt_name, opt_value] = line_split
             opt_name = opt_name.strip()
             if (opt_name == "node"):
                 self.nodes.append( ClusterNode(opt_value.strip()) )
