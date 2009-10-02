@@ -128,6 +128,9 @@ class ClusterBuild:
         return self.build()
 
     def ccache_args(self):
+        if (not self.config.ccache):
+            return ''
+
         # FIXME caching this somewhere would probably be wise...
         retcodes = ClusterRun(self.config, ClusterRunConcatCommands(["ls /usr/bin/ccache /usr/bin/g++ /usr/bin/gcc &> /dev/null"]))
         # FIXME we should do this per-node, but cluster_run doesn't support that yet for per-node runs

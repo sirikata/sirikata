@@ -30,6 +30,12 @@ def remove_comment(line):
         return line
     return before
 
+def parse_bool(opt):
+    simple_opt = opt.strip().lower()
+    if (simple_opt in ['true', 't', 'on', 'y', 'yes']):
+        return True
+    return False
+
 class ClusterConfig:
     def __init__(self):
         #default values
@@ -38,6 +44,7 @@ class ClusterConfig:
         self.code_dir = "cbr"
         self.port_base = 6666
         self.unique = None
+        self.ccache = False
 
         # parse default config or generate a default config
         default_path = os.path.expanduser("~/.cluster")
@@ -98,6 +105,8 @@ class ClusterConfig:
                 self.unique = opt_value[0]
                 if (len(opt_value) > 1):
                     print 'Warning: unique string instead of character, using first char: "' + opt_value + '=> "' + self.unique
+            elif (opt_name == 'ccache'):
+                self.ccache = parse_bool(opt_value)
         fp.close()
         return
 
