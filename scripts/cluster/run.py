@@ -17,7 +17,7 @@ import subprocess
 import threading
 import os
 import time
-from cluster_config import ClusterConfig
+from config import ClusterConfig
 
 
 class NodeMonitorThread(threading.Thread):

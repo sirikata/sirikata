@@ -4,9 +4,9 @@ import sys
 import subprocess
 import os
 import stat
-from cluster_config import ClusterConfig
-from cluster_run import ClusterRun, ClusterRunConcatCommands, ClusterRunFailed, ClusterRunSummaryCode
-from cluster_scp import ClusterSCP
+from config import ClusterConfig
+from run import ClusterRun, ClusterRunConcatCommands, ClusterRunFailed, ClusterRunSummaryCode
+from scp import ClusterSCP
 
 class ClusterBuild:
     def __init__(self, config):

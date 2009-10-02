@@ -4,9 +4,9 @@ import sys
 import math
 import subprocess
 import datetime
-from cluster_config import ClusterConfig
-from cluster_run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
-from cluster_scp import ClusterSCP
+from config import ClusterConfig
+from run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
+from scp import ClusterSCP
 
 CBR_WRAPPER = "./cbr_wrapper.sh"
 

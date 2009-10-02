@@ -17,7 +17,7 @@
 
 import sys
 import subprocess
-from cluster_config import ClusterConfig
+from config import ClusterConfig
 
 # Takes a cluster config and the source and destination filename formats
 def ClusterSCP(cc, params):
