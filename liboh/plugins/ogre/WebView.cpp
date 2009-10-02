@@ -1009,13 +1009,20 @@ void WebView::onPaint(Berkelium::Window*win,
 
     HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 
+    Berkelium::Rect pixelBufferRect;
+    pixelBufferRect.mHeight=pixelBuffer->getHeight();
+    pixelBufferRect.mWidth=pixelBuffer->getWidth();
+    pixelBufferRect.mTop=0;
+    pixelBufferRect.mLeft=0;
     if (dx || dy) {
             SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
+
         Berkelium::Rect scrollRect = clipRect;
         scrollRect.mLeft += dx;
         scrollRect.mTop += dy;
 
         scrollRect = scrollRect.intersect(clipRect);
+        scrollRect = scrollRect.intersect(pixelBufferRect);
         size_t width=scrollRect.width();
         size_t height=scrollRect.height();
         if (width && height) {
@@ -1039,18 +1046,21 @@ void WebView::onPaint(Berkelium::Window*win,
             Ogre::TextureManager::getSingleton().remove(shadowResource);
         }
     }
-
+    pixelBufferRect=pixelBufferRect.intersect(rect);
+    if (memcmp(&pixelBufferRect,&rect,sizeof(Berkelium::Rect))!=0) {
+        SILOG(ogre,error,"Incoming berkelium size mismatch ["<<pixelBufferRect.left()<<' '<<pixelBufferRect.top()<<'-'<<pixelBufferRect.right()<<' '<<pixelBufferRect.bottom()<<"] != [" <<rect.left()<<' '<<rect.top()<<'-'<<rect.right()<<' '<<rect.bottom()<<"]");
+    }
     pixelBuffer->blitFromMemory(
-        Ogre::PixelBox(rect.width(), rect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
-        Ogre::Box(rect.left(), rect.top(), rect.right(), rect.bottom()));
+        Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
+        Ogre::Box(pixelBufferRect.left(), pixelBufferRect.top(), pixelBufferRect.right(), pixelBufferRect.bottom()));
 
     if(isWebViewTransparent && !usingMask && ignoringTrans)
     {
-        int top = rect.top();
-        int left = rect.left();
-        for(int row = 0; row < rect.height(); row++) {
-            for(int col = 0; col < rect.width(); col++) {
-                alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * rect.width() + col)*4 + 3];
+        int top = pixelBufferRect.top();
+        int left = pixelBufferRect.left();
+        for(int row = 0; row < pixelBufferRect.height(); row++) {
+            for(int col = 0; col < pixelBufferRect.width(); col++) {
+                alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * pixelBufferRect.width() + col)*4 + 3];
             }
         }
       }
