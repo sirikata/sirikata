@@ -1,5 +1,5 @@
 import sys
-import server_graph
+import server
 
 #do main loop through stats file
 if (len(sys.argv) < 2):
@@ -8,8 +8,8 @@ if (len(sys.argv) < 2):
 
 dat_filename = sys.argv[1]
 
-server_avg_queued_graph = server_graph.ServerGraph()
-server_avg_weight_graph = server_graph.ServerGraph()
+server_avg_queued_graph = server.ServerGraph()
+server_avg_weight_graph = server.ServerGraph()
 
 fp = open(dat_filename, 'r')
 for line in fp:

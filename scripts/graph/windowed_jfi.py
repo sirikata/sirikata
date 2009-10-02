@@ -1,5 +1,5 @@
 import sys
-import server_graph
+import server
 
 #do main loop through stats file
 if (len(sys.argv) < 2):
@@ -48,7 +48,7 @@ if (len(data) == 0):
 
 # loop through all data, while the time step is the same, continue the JFI computatation
 # when it changes generate a new data point for the graph
-server_jfi_graph = server_graph.ServerGraph()
+server_jfi_graph = server.ServerGraph()
 
 server_jfi_graph.y_range(0, 1)
 

@@ -343,21 +343,21 @@ class ClusterSim:
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
 
-        subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_send.dat'])
-        subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_packet_receive.dat'])
-        subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_datagram_send.dat'])
-        subprocess.call(['python', './graph_windowed_bandwidth.py', 'windowed_bandwidth_datagram_receive.dat'])
+        subprocess.call(['python', './graph/windowed_bandwidth.py', 'windowed_bandwidth_packet_send.dat'])
+        subprocess.call(['python', './graph/windowed_bandwidth.py', 'windowed_bandwidth_packet_receive.dat'])
+        subprocess.call(['python', './graph/windowed_bandwidth.py', 'windowed_bandwidth_datagram_send.dat'])
+        subprocess.call(['python', './graph/windowed_bandwidth.py', 'windowed_bandwidth_datagram_receive.dat'])
 
-        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_send_packet.dat'])
-        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_receive_packet.dat'])
-        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_send_datagram.dat'])
-        subprocess.call(['python', './graph_windowed_queues.py', 'windowed_queue_info_receive_datagram.dat'])
+        subprocess.call(['python', './graph/windowed_queues.py', 'windowed_queue_info_send_packet.dat'])
+        subprocess.call(['python', './graph/windowed_queues.py', 'windowed_queue_info_receive_packet.dat'])
+        subprocess.call(['python', './graph/windowed_queues.py', 'windowed_queue_info_send_datagram.dat'])
+        subprocess.call(['python', './graph/windowed_queues.py', 'windowed_queue_info_receive_datagram.dat'])
 
 
-        subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_packet_send.dat', 'windowed_queue_info_send_packet.dat', 'jfi_packet_send'])
-        subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_packet_receive.dat', 'windowed_queue_info_receive_packet.dat', 'jfi_packet_receive'])
-        subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_datagram_send.dat', 'windowed_queue_info_send_datagram.dat', 'jfi_datagram_send'])
-        subprocess.call(['python', './graph_windowed_jfi.py', 'windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive'])
+        subprocess.call(['python', './graph/windowed_jfi.py', 'windowed_bandwidth_packet_send.dat', 'windowed_queue_info_send_packet.dat', 'jfi_packet_send'])
+        subprocess.call(['python', './graph/windowed_jfi.py', 'windowed_bandwidth_packet_receive.dat', 'windowed_queue_info_receive_packet.dat', 'jfi_packet_receive'])
+        subprocess.call(['python', './graph/windowed_jfi.py', 'windowed_bandwidth_datagram_send.dat', 'windowed_queue_info_send_datagram.dat', 'jfi_datagram_send'])
+        subprocess.call(['python', './graph/windowed_jfi.py', 'windowed_bandwidth_datagram_receive.dat', 'windowed_queue_info_receive_datagram.dat', 'jfi_datagram_receive'])
 
 
     def latency_analysis(self):

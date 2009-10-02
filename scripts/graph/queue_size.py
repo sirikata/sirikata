@@ -1,5 +1,5 @@
 import sys
-import server_graph
+import server
 
 #do main loop through stats file
 if (len(sys.argv) < 2):
@@ -8,8 +8,8 @@ if (len(sys.argv) < 2):
 
 dat_filename = sys.argv[1]
 
-send_server_graph = server_graph.ServerGraph()
-receive_server_graph = server_graph.ServerGraph()
+send_server_graph = server.ServerGraph()
+receive_server_graph = server.ServerGraph()
 
 fp = open(dat_filename, 'r')
 for line in fp:
