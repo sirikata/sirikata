@@ -8,7 +8,7 @@ from config import ClusterConfig
 from run import ClusterSubstitute,ClusterRun,ClusterDeploymentRun
 from scp import ClusterSCP
 
-CBR_WRAPPER = "./cbr_wrapper.sh"
+CBR_WRAPPER = "util/cbr_wrapper.sh"
 
 # User parameters
 class ClusterSimSettings:

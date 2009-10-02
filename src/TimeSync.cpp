@@ -112,7 +112,7 @@ void TimeSync::start(const String& server) {
         dup2(ntp_data_pipes[STDOUT], STDOUT);
 
         // Run the actual sync script
-        execlp("python","python","time_sync.py",server.c_str(),NULL);
+        execlp("python","python","util/time_sync.py",server.c_str(),NULL);
     }
     {
         mSyncedOnce = false;
