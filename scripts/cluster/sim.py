@@ -185,6 +185,8 @@ class ClusterSim:
         subprocess.call(['rm -f *.ps'], shell=True)
         subprocess.call(['rm -f *.dat'], shell=True)
         subprocess.call(['rm -f distance_latency_histogram.csv'], shell=True)
+        subprocess.call(['rm -f loc_latency*'], shell=True)
+        subprocess.call(['rm -f prox.log'], shell=True)
 
     def clean_remote_data(self):
         clean_cmd = "cd " + self.scripts_dir() + "; rm trace*; rm serverip*;"
