@@ -191,6 +191,7 @@ class ClusterSim:
     def clean_local_data(self):
         subprocess.call(['rm -f trace*'], shell=True)
         subprocess.call(['rm -f serverip*'], shell=True)
+        subprocess.call(['rm -f analysis.trace'], shell=True)
         subprocess.call(['rm -f *.ps'], shell=True)
         subprocess.call(['rm -f *.dat'], shell=True)
         subprocess.call(['rm -f distance_latency_histogram.csv'], shell=True)
