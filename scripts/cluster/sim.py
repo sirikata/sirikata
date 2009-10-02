@@ -29,6 +29,7 @@ class ClusterSimSettings:
         self.duration = '350s'
         self.tx_bandwidth = 1000000
         self.rx_bandwidth = 1000000
+        self.gaussian = False
         self.flatness = 500
         self.server_queue = 'fair'
         self.server_queue_length = 8192
@@ -280,6 +281,7 @@ class ClusterSim:
                 "--receive-bandwidth=" + str(self.settings.rx_bandwidth),
                 "--wait-until=" + wait_until_time,
                 "--wait-additional=10s",
+                '--gaussian=' + str(self.settings.gaussian),
                 "--flatness=" + str(self.settings.flatness),
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
