@@ -752,7 +752,9 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
   std::cout<<"\n\n got a processUpdateOSegMessage time received  "<< mContext->time.raw()<<"\n";
 #endif
 
-   mCraqCache.insert(update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on());
+
+  mCraqCache.insert(update_oseg_msg.m_objid(), update_oseg_msg.servid_obj_on());
+
 }
 
 
