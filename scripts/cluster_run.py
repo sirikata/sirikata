@@ -120,7 +120,8 @@ def ClusterDeploymentRun(cc, command, user_params = None):
 
 
 def ClusterRunConcatCommands(commands):
-    return " && ".join(commands)
+    filtered = [x for x in commands if len(x.strip()) > 0]
+    return " && ".join(filtered)
 
 def ClusterRunFailed(returned):
     for rec in returned:

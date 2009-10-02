@@ -175,16 +175,26 @@ class ClusterBuild:
         if (revert_ret != 0):
             return revert_ret
 
-        # then apply the patchmail file
-        if (os.stat('commits.patch')[stat.ST_SIZE] != 0):
-            patchmail_ret = self.apply_patch_mail("commits.patch")
-            if (patchmail_ret != 0):
-                return patchmail_ret;
+        # Setup all possible necessary commands, then filter out based on files
+        file_cmds = [ ('git am', 'commits.patch'),
+                      ('patch -p1 <', 'changes.patch')
+                      ]
+        to_do = [ (cmd,file) for (cmd,file) in file_cmds if os.stat(file)[stat.ST_SIZE] > 0 ]
 
-        # and finally the patch file
-        if (os.stat('changes.patch')[stat.ST_SIZE] != 0):
-            patch_ret = self.apply_patch("changes.patch")
-            return patch_ret;
+        # Copy files over
+        scp_args = [ file for (cmd,file) in to_do ]
+        scp_args.append("remote:"+self.config.code_dir+"/")
+        ClusterSCP(self.config, scp_args)
+
+        # Perform actual patching
+        cd_cmd = self.cd_to_code()
+        patch_cmds = [ (cmd + ' ' + file) for (cmd, file) in to_do ]
+
+        cmds = [cd_cmd]
+        cmds.extend(patch_cmds)
+
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands(cmds))
+        return ClusterRunSummaryCode(retcodes)
 
         return 0
 
