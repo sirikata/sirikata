@@ -20,8 +20,12 @@ scripts/trace*
 # analysis files
 build/cmake/*.dat
 build/cmake/*.ps
+scripts/analysis.trace
 scripts/*.dat
 scripts/*.ps
+scripts/distance_latency_histogram.csv
+scripts/loc_latency*.txt
+scripts/prox.log
 
 
 # moc files
