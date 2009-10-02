@@ -43,5 +43,5 @@ dependencies
 
 # script by-products
 *.pyc
-scripts/changes.patch
-scripts/commits.patch
+scripts/.changes.patch
+scripts/.commits.patch

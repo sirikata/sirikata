@@ -11,6 +11,8 @@ from scp import ClusterSCP
 class ClusterBuild:
     def __init__(self, config):
         self.config = config
+        self.patchmail_file = '.commits.patch'
+        self.patch_file = '.changes.patch'
 
     def cd_to_code(self):
         return "cd " + self.config.code_dir
@@ -157,13 +159,13 @@ class ClusterBuild:
     # generates a patchset based on changes made to tree locally
     def create_patchset(self):
         # first generate a patchmail
-        commits_patch_file = open("commits.patch", 'w')
+        commits_patch_file = open(self.patchmail_file, 'w')
         formatpatch_ret = subprocess.call(['git', 'format-patch', '--stdout', 'origin/master'], 0, None, None, commits_patch_file)
         if (formatpatch_ret != 0):
             return formatpatch_ret
 
         # then generate a diff
-        changes_patch_file = open("changes.patch", 'w')
+        changes_patch_file = open(self.patch_file, 'w')
         diff_ret = subprocess.call(['git', 'diff'], 0, None, None, changes_patch_file)
         changes_patch_file.close()
         return diff_ret
@@ -176,8 +178,8 @@ class ClusterBuild:
             return revert_ret
 
         # Setup all possible necessary commands, then filter out based on files
-        file_cmds = [ ('git am', 'commits.patch'),
-                      ('patch -p1 <', 'changes.patch')
+        file_cmds = [ ('git am', self.patchmail_file),
+                      ('patch -p1 <', self.patch_file)
                       ]
         to_do = [ (cmd,file) for (cmd,file) in file_cmds if os.stat(file)[stat.ST_SIZE] > 0 ]
 
