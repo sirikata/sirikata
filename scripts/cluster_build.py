@@ -127,12 +127,21 @@ class ClusterBuild:
 
         return self.build()
 
+    def ccache_args(self):
+        # FIXME caching this somewhere would probably be wise...
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands(["ls /usr/bin/ccache /usr/bin/g++ /usr/bin/gcc &> /dev/null"]))
+        # FIXME we should do this per-node, but cluster_run doesn't support that yet for per-node runs
+        if (ClusterRunSummaryCode(retcodes) == 0):
+            # We have all the pieces we need
+            return 'CC="/usr/bin/ccache /usr/bin/gcc" CXX="/usr/bin/ccache /usr/bin/g++"'
+        return ""
 
     def build(self, build_type):
         cd_code_cmd = self.cd_to_code()
         cd_build_cmd = self.cd_to_build()
-        build_cmd = "cmake -DCMAKE_BUILD_TYPE=%s . && make -j2" % (build_type)
-        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, build_cmd]))
+        build_cmd = "%s cmake -DCMAKE_BUILD_TYPE=%s ." % (self.ccache_args(), build_type)
+        make_cmd = "make -j2"
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_build_cmd, build_cmd, make_cmd]))
         return ClusterRunSummaryCode(retcodes)
 
     def clean(self):
@@ -234,7 +243,7 @@ if __name__ == "__main__":
             retval = cluster_build.patch_build_enet(patch_file)
         elif cmd == 'build':
             build_type = 'Debug'
-            if (sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo']):
+            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo']):
                 build_type = sys.argv[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.build(build_type)
