@@ -405,3 +405,5 @@ if __name__ == "__main__":
     else:
         if sys.argv[1] == 'vis':
             cluster_sim.vis()
+        elif sys.argv[1] == 'clean':
+            cluster_sim.clean_local_data()
