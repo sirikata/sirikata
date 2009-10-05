@@ -84,7 +84,7 @@ public:
     class Hasher{public:
         size_t operator() (const UUID&uuid) const {
             return uuid.hash();
-        } 
+        }
     };
     std::string rawData()const;
     std::string rawHexData()const;

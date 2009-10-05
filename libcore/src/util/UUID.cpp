@@ -32,9 +32,11 @@
 #include "util/Standard.hh"
 #include "UUID.hpp"
 #include "boost_uuid.hpp"
+
 BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
 namespace Sirikata {
+
 UUID::UUID(const std::string & other,HumanReadable ) {
     boost_::uuid parsed_string(other);
     mData.initialize(parsed_string.begin(),parsed_string.end());
@@ -53,10 +55,6 @@ std::string UUID::readableHexData()const{
     std::ostringstream oss;
     oss<<boost_::uuid(getArray().begin(),getArray().end());
     return oss.str();
-}
-std::ostream & operator << (std::ostream &os, const UUID& output) {
-    os<<boost_::uuid(output.getArray().begin(),output.getArray().end());
-    return os;
 }
 static char toHex(unsigned int a) {
     if (a<10)
@@ -84,4 +82,17 @@ size_t UUID::hash() const {
     memcpy(&b,mData.begin()+8,sizeof(b));
     return std::tr1::hash<uint64>()(a)^std::tr1::hash<uint64>()(b);
 }
+
+} // namespace Sirikata
+
+std::ostream& operator << (std::ostream &os, const Sirikata::UUID& output) {
+    os << boost_::uuid(output.getArray().begin(),output.getArray().end());
+    return os;
+}
+
+std::istream& operator>>(std::istream & is, Sirikata::UUID & uuid) {
+    boost_::uuid internal;
+    is >> internal;
+    uuid = Sirikata::UUID(internal);
+    return is;
 }
