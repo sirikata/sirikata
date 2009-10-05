@@ -122,10 +122,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     //Private Functions
     void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
 
-    // Delivery interface.  This should be used to deliver received messages to the correct location -
-    // the server or object it is addressed to.
-    void deliver(Message* msg);
-
 
     typedef std::vector<ServerID> ListServersUpdate;
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;

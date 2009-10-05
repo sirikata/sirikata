@@ -66,6 +66,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
     this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
+    this->registerMessageRecipient(MESSAGE_TYPE_NOISE, this);
 
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
@@ -86,6 +87,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
         mProfiler.report();
 
     this->unregisterMessageRecipient(MESSAGE_TYPE_OBJECT, this);
+    this->unregisterMessageRecipient(MESSAGE_TYPE_NOISE, this);
   }
 
   /*
@@ -441,96 +443,19 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
       if (!forwarded_self_msg)
           mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
 
-      deliver(result);
+      dispatchMessage(result);
 
       //if (delivered)
       //  mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
     }while (offset<chunk.size());
   }
 
-
-
-  // Delivery interface.  This should be used to deliver received messages to the correct location -
-  // the server or object it is addressed to.
-  void Forwarder::deliver(Message* msg)
-  {
-    switch(msg->type()) {
-      case MESSAGE_TYPE_OBJECT:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_NOISE:
-          {
-
-              NoiseMessage* noise_msg = dynamic_cast<NoiseMessage*>(msg);
-              assert(noise_msg != NULL);
-              delete noise_msg;
-          }
-        break;
-      case MESSAGE_TYPE_MIGRATE:
-          {
-            dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_CSEG_CHANGE:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_LOAD_STATUS:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_OSEG_MIGRATE_MOVE:
-        {
-          dispatchMessage(msg);
-        }
-        break;
-      case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
-        {
-          dispatchMessage(msg);
-        }
-        break;
-      case MESSAGE_TYPE_KILL_OBJ_CONN:
-        {
-          dispatchMessage(msg);
-        }
-        break;
-      case MESSAGE_TYPE_UPDATE_OSEG:
-        {
-          dispatchMessage(msg);
-        }
-        break;
-      case MESSAGE_TYPE_OSEG_ADDED_OBJECT:
-        {
-          dispatchMessage(msg);
-        }
-        break;
-      case MESSAGE_TYPE_SERVER_PROX_QUERY:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_SERVER_PROX_RESULT:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      case MESSAGE_TYPE_BULK_LOCATION:
-          {
-              dispatchMessage(msg);
-          }
-          break;
-      default:
-        assert(false);
-        break;
-    }
-  }
-
-
 void Forwarder::receiveMessage(Message* msg) {
+    if (msg->type() == MESSAGE_TYPE_NOISE) {
+        delete msg;
+        return;
+    }
+
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
     // or needs to forward them.
