@@ -214,13 +214,12 @@ public:
     NoiseMessage(const ServerID& origin, uint32 noise_sz);
 
     virtual MessageType type() const;
-
     virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+
+    CBR::Protocol::Object::Noise contents;
 private:
     friend class Message;
     NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
-
-    uint32 mNoiseSize;
 }; // class NoiseMessage
 
 class MigrateMessage : public Message {

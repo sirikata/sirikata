@@ -287,19 +287,16 @@ uint32 ObjectMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 NoiseMessage::NoiseMessage(const ServerID& origin, uint32 noise_sz)
- : Message(origin, true),
-   mNoiseSize(noise_sz)
+ : Message(origin, true)
 {
+    std::string payload(noise_sz, 'x');
+    contents.set_payload(payload);
 }
 
 NoiseMessage::NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
  : Message(_id)
 {
-    memcpy( &mNoiseSize, &wire[offset], sizeof(uint32) );
-    offset += sizeof(uint32);
-
-    // Advance offset without reading any data, by mNoiseSize bytes
-    offset += mNoiseSize;
+    parsePBJMessage(contents, wire, offset);
 }
 
 MessageType NoiseMessage::type() const {
@@ -308,16 +305,7 @@ MessageType NoiseMessage::type() const {
 
 uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
     offset = serializeHeader(wire, offset);
-
-    wire.resize( wire.size() + sizeof(uint32) );
-    memcpy( &wire[offset], &mNoiseSize, sizeof(uint32) );
-    offset += sizeof(uint32);
-
-    // Just expand by the number of bytes we want, don't bother setting them to anything
-    wire.resize( wire.size() + mNoiseSize );
-    offset += mNoiseSize;
-
-    return offset;
+    return serializePBJMessage(contents, wire, offset);
 }
 
 

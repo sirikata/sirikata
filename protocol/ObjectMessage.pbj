@@ -41,6 +41,10 @@ message ObjectMessage {
     optional bytes payload = 6;
 }
 
+message Noise {
+    required bytes payload = 1;
+}
+
 message Ping {
     required time ping = 7;
     optional double distance=8;
