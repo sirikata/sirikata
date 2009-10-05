@@ -53,7 +53,8 @@
 #include "oh/ObjectScript.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
 #include <util/KnownServices.hpp>
-
+#include "util/ThreadId.hpp"
+#include "util/PluginManager.hpp"
 namespace Sirikata {
 
 typedef SentMessageBody<RoutableMessageBody> RPCMessage;
@@ -767,9 +768,6 @@ void HostedObject::initializePythonScript() {
         args["PythonClass"]="exampleclass";
 
         mObjectScript=mgr->createObjectScript(this,args);
-        if (mObjectScript) {
-            mObjectScript->tick();
-        }
     }
 }
 
@@ -801,9 +799,32 @@ void HostedObject::initializeRestoreFromDatabase(const SpaceID&spaceID, const Ho
     msg->serializeSend();
     mObjectHost->getWorkQueue()->dequeueAll(); // don't need to wait until next frame.
 }
+namespace {
+bool myisalphanum(char c) {
+    if (c>='a'&&c<='z') return true;
+    if (c>='A'&&c<='Z') return true;
+    if (c>='0'&&c<='9') return true;
+    return false;
+}
+}
 void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args) {
     assert(!mObjectScript); // Don't want to kill a live script!
+    static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
+    assertThreadGroup(scriptId);
     mObjectHost->registerHostedObject(getSharedPtr());
+    if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
+        bool passed=true;
+        for (std::string::const_iterator i=script.begin(),ie=script.end();i!=ie;++i) {
+            if (!myisalphanum(*i)) {
+                if (*i!='-'&&*i!='_') {
+                    passed=false;
+                }
+            }
+        }
+        if (passed) {
+            mObjectHost->getScriptPluginManager()->load(DynamicLibrary::filename(script));
+        }
+    }
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
         mObjectScript = mgr->createObjectScript(this, args);
@@ -905,7 +926,6 @@ void HostedObject::tick() {
     for (SpaceDataMap::iterator iter = mSpaceData->begin(); iter != mSpaceData->end(); ++iter) {
         // send update to LOC (2) service in the space, if necessary
         iter->second.updateLocation(this);
-        // Is it useful to call every script's tick() function?
     }
 }
 

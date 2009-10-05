@@ -138,16 +138,7 @@ bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader,
     MonoContext::getSingleton().pop();
     return true;
 }
-void MonoVWObjectScript::tick(){
-    MonoContext::getSingleton().push(MonoContextData());
-    MonoContext::getSingleton().setVWObject(mParent,mDomain);
-    try {
-        Mono::Object retval=mObject.send("tick",mDomain.Time(Time::now(Duration::zero())));
-    }catch (Mono::Exception&e) {
-        SILOG(mono,debug,"Tick Exception "<<e);
-    }
-    MonoContext::getSingleton().pop();
-}
+
 void MonoVWObjectScript::processMessage(const RoutableMessageHeader&receivedHeader , MemoryReference body){
     std::string header;
     receivedHeader.SerializeToString(&header);

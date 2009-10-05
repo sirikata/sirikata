@@ -37,7 +37,7 @@ namespace Sirikata {
 template<class T, class Ftype>
 class FactoryImpl {
 
-    typedef std::map<String,Ftype> ConstructorMap;
+    typedef std::tr1::unordered_map<String,Ftype> ConstructorMap;
     ConstructorMap mConstructors;
     template <class U> static U* noop(U*) {
         return NULL;
@@ -74,6 +74,9 @@ public:
         if (isDefault)
             mConstructors[String()]=constructor;
         return true;
+    }
+    bool hasConstructor(const String&name)const {
+        return mConstructors.find(name)==mConstructors.end();
     }
     const Ftype &getConstructor(const String&name)const{
         typename ConstructorMap::const_iterator where=mConstructors.find(name);

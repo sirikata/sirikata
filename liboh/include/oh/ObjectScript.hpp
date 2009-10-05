@@ -40,8 +40,6 @@ namespace Sirikata {
 */
 class SIRIKATA_OH_EXPORT ObjectScript : public MessageService{
   public:
-    /// Called every frame. Might not be necessary if the script runs in a separate thread.
-    virtual void tick() = 0;
 
     /// RPC messages are handled specially because they are usually gathered into a single message.
     virtual bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue) = 0;

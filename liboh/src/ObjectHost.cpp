@@ -38,6 +38,7 @@
 #include <network/IOServiceFactory.hpp>
 #include <util/AtomicTypes.hpp>
 #include <util/RoutableMessageHeader.hpp>
+#include <util/PluginManager.hpp>
 #include <task/WorkQueue.hpp>
 #include "graphics/GraphicsObject.hpp"
 #include "oh/TopLevelSpaceConnection.hpp"
@@ -56,7 +57,10 @@ struct ObjectHost::AtomicInt : public AtomicValue<int> {
             delete mNext;
     }
 };
+
+
 ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ) {
+    mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
     mMessageQueue = messageQueue;
     mSpaceConnectionIO=ioServ;
@@ -81,6 +85,7 @@ ObjectHost::~ObjectHost() {
         mHostedObjects.swap(objs);
         objs.clear(); // The HostedObject destructor will attempt to delete from mHostedObjects
     }
+    delete mScriptPlugins;
 }
 
 class ObjectHost::MessageProcessor : public Task::WorkItem {

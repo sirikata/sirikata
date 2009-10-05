@@ -54,7 +54,6 @@ public:
     bool forwardMessagesTo(MessageService*);
     bool endForwardingMessagesTo(MessageService*);
     bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
-    void tick();
     void processMessage(const RoutableMessageHeader&header , MemoryReference body);
 };
 

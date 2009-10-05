@@ -39,6 +39,7 @@
 #include <network/Address.hpp>
 namespace Sirikata {
 class ProxyManager;
+class PluginManager;
 class SpaceIDMap;
 class TopLevelSpaceConnection;
 class SpaceConnection;
@@ -71,6 +72,7 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
 
     HostedObjectMap mHostedObjects;
     ServicesMap mServices;
+    PluginManager *mScriptPlugins;
 public:
 
     /** Caller is responsible for starting a thread
@@ -137,7 +139,7 @@ public:
     std::tr1::shared_ptr<TopLevelSpaceConnection> connectToSpaceAddress(const SpaceID&, const Network::Address&);
 
     void tick();
-
+    PluginManager *getScriptPluginManager(){return mScriptPlugins;}
     /** Gets an IO service corresponding to this object host.
         This can be used to schedule timeouts that are guaranteed
         to be in the correct thread. */
