@@ -109,16 +109,20 @@ public:
         return *this;
     }
 
+    /** Returns whether the point is within the bounding box, within the given epsilon. A
+     *  positive epsilon grows the bounding box, negative shrinks it.
+     *  \param point The point to test against the bounding box.
+     *  \param eps epsilon error, applied for all dimensions equally. Positive values increase
+     *             the size of the bounding box, negative values decrease it.
+     *  \returns true if the point falls within epsilon inside the bounding box, false otherwise
+     */
     bool contains(const Vector3<real>& point, real eps = BBOX_CONTAINS_EPSILON) const {
         Vector3<real> mmax = max();
+        Vector3<real> mmin = min();
         for(int i = 0; i < Vector3<real>::size; i++) {
-            if (mMin[i] > point[i] || mmax[i] < point[i]) {
-                if ( fabs(mMin[i] - point[i]) > eps &&
-                    fabs(mmax[i] - point[i]) > eps )
-                {
-                    return false;
-                }
-            }
+            if ( (point[i] - mmin[i] < -eps) ||
+                (mmax[i] - point[i] > eps) )
+                return false;
         }
         return true;
     }
