@@ -62,12 +62,16 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 
 Message::Message(const ServerID& origin)
- : mID( GenerateUniqueID(origin) )
+ : mID( GenerateUniqueID(origin) ),
+   mSource(NullServerID),
+   mDest(NullServerID)
 {
 }
 
 Message::Message(const CBR::Protocol::Server::ServerMessage& svr_msg)
- : mID(svr_msg.id())
+ : mID(svr_msg.id()),
+   mSource(svr_msg.source_server()),
+   mDest(svr_msg.dest_server())
 {
 }
 
@@ -131,6 +135,7 @@ Message* Message::deserialize(const Network::Chunk& wire) {
 
     return msg;
 }
+
 
 
 void MessageDispatcher::registerMessageRecipient(MessageType type, MessageRecipient* recipient) {
@@ -214,10 +219,6 @@ void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessa
 // Specific message types
 
 
-size_t ObjectMessage::size() const {
-    return serializedSize(contents);
-}
-
 ObjectMessage::ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src)
  : Message(origin),
    contents(src)
@@ -236,6 +237,10 @@ MessageType ObjectMessage::type() const {
 
 bool ObjectMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
+}
+
+uint32 ObjectMessage::serializedSize() const {
+    return getSerializedSize(contents);
 }
 
 
@@ -260,6 +265,11 @@ bool NoiseMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 NoiseMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
+
+
 
 
 MigrateMessage::MigrateMessage(const ServerID& origin)
@@ -279,6 +289,10 @@ MessageType MigrateMessage::type() const {
 
 bool MigrateMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
+}
+
+uint32 MigrateMessage::serializedSize() const {
+    return getSerializedSize(contents);
 }
 
 
@@ -302,6 +316,9 @@ bool CSegChangeMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 CSegChangeMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 
 LoadStatusMessage::LoadStatusMessage(const ServerID& origin)
@@ -322,6 +339,11 @@ MessageType LoadStatusMessage::type() const {
 bool LoadStatusMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
+
+uint32 LoadStatusMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
+
 
 
 
@@ -354,6 +376,12 @@ MessageType OSegMigrateMessageMove::type() const
 bool OSegMigrateMessageMove::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
+
+uint32 OSegMigrateMessageMove::serializedSize() const {
+    return getSerializedSize(contents);
+}
+
+
 
 ServerID OSegMigrateMessageMove::getServFrom()
 {
@@ -409,6 +437,11 @@ bool OSegMigrateMessageAcknowledge::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 OSegMigrateMessageAcknowledge::serializedSize() const {
+    return getSerializedSize(contents);
+}
+
+
 ServerID OSegMigrateMessageAcknowledge::getServFrom()
 {
   return contents.m_servid_from();
@@ -459,6 +492,9 @@ bool UpdateOSegMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 UpdateOSegMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 UpdateOSegMessage::UpdateOSegMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
   : Message(svr_msg)
@@ -492,6 +528,9 @@ bool OSegAddMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 OSegAddMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 
 OSegAddMessage::OSegAddMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
@@ -530,6 +569,10 @@ bool KillObjConnMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 KillObjConnMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
+
 //end of obj_conn_kill message
 
 
@@ -555,6 +598,9 @@ bool ServerProximityQueryMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 ServerProximityQueryMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 
 
@@ -580,6 +626,9 @@ bool ServerProximityResultMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 ServerProximityResultMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 
 
@@ -605,6 +654,9 @@ bool BulkLocationMessage::serialize(Network::Chunk* wire) {
     return serializeContents(wire, contents);
 }
 
+uint32 BulkLocationMessage::serializedSize() const {
+    return getSerializedSize(contents);
+}
 
 std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     // FIXME we need a small header for framing purposes

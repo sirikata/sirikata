@@ -38,18 +38,6 @@ namespace CBR
 
   //std::deque<SelfMessage> mSelfMessages;
 
-  struct OutgoingMessage {
-      OutgoingMessage(const Network::Chunk& _data, const ServerID& _dest, UniqueMessageID uniq)
-       : data(_data), dest(_dest), unique(uniq) {}
-    size_t size()const{
-        return data.size();
-    }
-    Network::Chunk data;
-    ServerID dest;
-      UniqueMessageID unique;
-  };
-  //std::deque<OutgoingMessage> mOutgoingMessages;
-
   class OSegLookupQueue {
       class ObjMessQBeginSendList : protected std::vector<ObjMessQBeginSend>{
           size_t mTotalSize;

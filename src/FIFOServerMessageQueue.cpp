@@ -1,6 +1,6 @@
 #include "Utility.hpp"
 #include "Network.hpp"
-#include "ServerNetworkImpl.hpp"
+#include "ServerNetwork.hpp"
 #include "Server.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "Message.hpp"
@@ -22,46 +22,51 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
 {
 }
 
-bool FIFOServerMessageQueue::canAddMessage(ServerID destinationServer, uint32 payload_size){
-    // If its just coming back here, skip routing and just push the payload onto the receive queue
+bool FIFOServerMessageQueue::canAddMessage(const Message* msg){
+    ServerID destinationServer = msg->destServer();
+
+    // If its just coming back here, we'll always accept it
     if (mContext->id() == destinationServer) {
         return true;
     }
     assert(destinationServer!=mContext->id());
 
-    uint32 offset = ServerMessageHeader::serializedSize() + payload_size;
+    uint32 offset = msg->serializedSize();
 
     size_t size = mQueue.size(destinationServer);
     size_t maxsize = mQueue.maxSize(destinationServer);
     if (size+offset<=maxsize) return true;
 
-    if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FairServerMessageQueue: " << offset << " > " << maxsize);
+    if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FIFOServerMessageQueue: " << offset << " > " << maxsize);
 
     return false;
 }
 
-bool FIFOServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
+bool FIFOServerMessageQueue::addMessage(Message* msg){
+    ServerID destinationServer = msg->destServer();
+
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {
         ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk(msg);
+        csp.chunk = new Network::Chunk();
+        msg->serialize(csp.chunk);
         csp.source = mContext->id();
 
         mReceiveQueue.push(csp);
+        delete msg;
+
         return true;
     }
 
-    // Otherwise, attach the header and push it to the network
-    uint32 offset = 0;
-    Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id(), destinationServer);
-    offset = server_header.serialize(with_header, offset);
-    with_header.insert( with_header.end(), msg.begin(), msg.end() );
-    offset += msg.size();
-
-    ServerMessagePair* smp = new ServerMessagePair(destinationServer,with_header);
+    // Otherwise, store for push to network
+    Network::Chunk serialized;
+    msg->serialize(&serialized);
+    ServerMessagePair* smp = new ServerMessagePair(destinationServer,serialized);
     bool success = mQueue.push(destinationServer,smp)==QueueEnum::PushSucceeded;
-    if (!success) delete smp;
+    if (success)
+        delete msg;
+    else
+        delete smp;
     return success;
 }
 
@@ -102,7 +107,8 @@ void FIFOServerMessageQueue::service(){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest(), next_msg->data());
+        // FIXME - we need to store the Message* instead of a Network::Chunk to store this information
+        //mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest(), next_msg->data());
 
         delete next_msg;
     }

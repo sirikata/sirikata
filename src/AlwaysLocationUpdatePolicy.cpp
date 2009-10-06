@@ -125,7 +125,9 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
     BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
     msg->contents = blu;
-    return mLocService->context()->router()->route(MessageRouter::LOCS, msg, dest);
+    msg->setSourceServer(mLocService->context()->id());
+    msg->setDestServer(dest);
+    return mLocService->context()->router()->route(MessageRouter::LOCS, msg);
 }
 
 } // namespace CBR

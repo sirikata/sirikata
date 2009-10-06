@@ -749,7 +749,9 @@ void Server::checkObjectMigrations()
 
     // Try sending any outstanding migrate messages
     while(!mMigrateMessages.empty()) {
-        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front().msg, mMigrateMessages.front().dest);
+        mMigrateMessages.front().msg->setSourceServer(mContext->id());
+        mMigrateMessages.front().msg->setDestServer( mMigrateMessages.front().dest );
+        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front().msg);
         if (!sent)
             break;
         mMigrateMessages.pop();

@@ -1,7 +1,8 @@
 #ifndef _NETWORK_QUEUE_WRAPPER
 #define _NETWORK_QUEUE_WRAPPER
+
 #include "Network.hpp"
-#include "ServerNetworkImpl.hpp"
+
 namespace CBR {
 class NetworkQueueWrapper {
     Network * mNetwork;
@@ -32,14 +33,10 @@ public:
             Chunk* c = mNetwork->front(mServerAddress, mMaxRecvSize);
 
             if (c != NULL) {
-                uint32 offset = 0;
-                ServerMessageHeader hdr = ServerMessageHeader::deserialize(*c, offset);
-                assert(hdr.sourceServer() == mServerID);
-                Network::Chunk payload;
-                payload.insert(payload.begin(), c->begin() + offset, c->end());
-                assert( payload.size() == c->size() - offset );
-
-                mFront = new ServerMessagePair(mServerID, payload);
+                CBR::Protocol::Server::ServerMessage msg;
+                bool parsed = parsePBJMessage(&msg, *c);
+                assert( parsed && msg.source_server() == mServerID );
+                mFront = new ServerMessagePair(mServerID, *c);
             }
         }
 

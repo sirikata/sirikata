@@ -115,7 +115,9 @@ void LoadMonitor::sendLoadReadings() {
 
           LoadStatusMessage* msg = new LoadStatusMessage(mContext->id());
       msg->contents.set_load(mAveragedLoadReading);
-      mContext->router()->route(MessageRouter::CSEGS, msg, i);
+      msg->setSourceServer(mContext->id());
+      msg->setDestServer(i);
+      mContext->router()->route(MessageRouter::CSEGS, msg);
     }
   }
 }

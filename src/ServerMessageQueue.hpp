@@ -51,11 +51,19 @@ public:
 
     virtual ~ServerMessageQueue(){}
 
-    virtual bool canAddMessage(ServerID destinationServer, uint32 payload_size)=0;
-    bool canAddMessage(ServerID destinationServer,const Network::Chunk&msg) {
-        return canAddMessage(destinationServer, (uint32)msg.size());
-    }
-    virtual bool addMessage(ServerID destinationServer,const Network::Chunk&msg)=0;
+    /** Try to add the given message to this queue.
+     *  \param msg the message to try to push onto the queue.
+     *  \returns true if the message was added, false otherwise
+     *  \note If successful, the queue takes possession of the message and ensures it is disposed of.
+     *        If unsuccessful, the message is still owned by the caller.
+     */
+    virtual bool addMessage(Message* msg)=0;
+    /** Check if a message could be pushed on the queue.  If this returns true, an immediate subsequent
+     *  call to addMessage() will always be successful.
+     *  \param msg the message to try to push onto the queue.
+     *  \returns true if the message was added, false otherwise
+     */
+    virtual bool canAddMessage(const Message* msg)=0;
 
     virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out) = 0;
     virtual void service() = 0;

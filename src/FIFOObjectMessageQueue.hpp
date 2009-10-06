@@ -32,7 +32,7 @@ private:
     // the server message queue, they are guaranteed to be the same, but in order to cache the front() result
     // we need to be able to sanity check this
     ServerProtocolMessagePair* mFrontInput; // The internal message used to generate the current front output
-    OutgoingMessage* mFrontOutput; // The outgoing message generated for the object.
+    Message* mFrontOutput; // The outgoing message generated for the object.
     void getFrontInput() const {
         uint64 bytes = 10000000; // We don't care how big it is, the can send predicate will take care of it and we have unlimited bandwidth at this point
         ServerProtocolMessagePair *mp = unconstThis()->mQueue.front(&bytes);
@@ -52,14 +52,15 @@ private:
         if (mFrontInput == NULL || mFrontOutput != NULL)
             return;
 
-        Network::Chunk s;
-        bool serialized = mFrontInput->data().serialize(&s);
-        assert(serialized);
-        unconstThis()->mFrontOutput = new OutgoingMessage(s, mFrontInput->dest(), mFrontInput->id());
+        // FIXME avoid copy here
+        ObjectMessage* new_output = new ObjectMessage( mFrontInput->data() );
+        new_output->setSourceServer( mContext->id() );
+        new_output->setDestServer( mFrontInput->dest() );
+        unconstThis()->mFrontOutput = new_output;
     }
 
 public:
-    typedef OutgoingMessage*ElementType;
+    typedef Message* ElementType;
     ElementType& front() {
         getFrontInput();
         createFrontOutput();
@@ -80,7 +81,7 @@ public:
         if (mFrontInput != NULL) {
             assert(mFrontOutput != NULL);
             uint64 bytes = 10000000; // We don't care how big it is, the can send predicate will take care of it and we have unlimited bandwidth at this point
-            // The following is a bit confusing -- the callback we were given expects our output (and OutgoingMessage*) but we internally store ServerProtocolMessagePairs, so we
+            // The following is a bit confusing -- the callback we were given expects our output (and Message*) but we internally store ServerProtocolMessagePairs, so we
             // adapt the callback, handing it the right info and having bind just dump the internal pointer that should be passed to it by just not providing a placeholder spot for it
             ServerProtocolMessagePair *mp = this->mQueue.pop(
                 &bytes,
@@ -94,7 +95,7 @@ public:
         }
 
 
-        OutgoingMessage* result = mFrontOutput;
+        Message* result = mFrontOutput;
 
         // No matter what, these should be cleared out at the end of this method
         mFrontInput = NULL;

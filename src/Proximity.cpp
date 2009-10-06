@@ -251,7 +251,9 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg->contents.set_bounds(bounds);
         msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
-        bool sent = mContext->router()->route(MessageRouter::PROXS, msg, sid);
+        msg->setSourceServer(mContext->id());
+        msg->setDestServer(sid);
+        bool sent = mContext->router()->route(MessageRouter::PROXS, msg);
         if (!sent)
             mNeedServerQueryUpdate.insert(sid);
     }
@@ -415,7 +417,9 @@ void Proximity::service() {
     bool server_sent = true;
     while(server_sent && !mServerResultsToSend.empty()) {
         ProxResultServerPair& msg_front = mServerResultsToSend.front();
-        server_sent = mContext->router()->route(MessageRouter::PROXS, msg_front.msg, msg_front.dest);
+        msg_front.msg->setSourceServer(mContext->id());
+        msg_front.msg->setDestServer(msg_front.dest);
+        server_sent = mContext->router()->route(MessageRouter::PROXS, msg_front.msg);
         if (server_sent)
             mServerResultsToSend.pop_front();
     }

@@ -20,7 +20,6 @@
 namespace CBR
 {
 
-
 void OSegLookupQueue::ObjMessQBeginSendList::push_back(const ObjMessQBeginSend&msg) {
     mTotalSize+=msg.data->data().contents.ByteSize();
 }
@@ -34,8 +33,8 @@ void OSegLookupQueue::push(UUID objid,const ObjMessQBeginSend &dat) {
 }
 
 
-bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg) {
-    return mServerMessageQueue->canAddMessage(msg->dest,msg->data);
+bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc, const Message*msg) {
+    return mServerMessageQueue->canAddMessage(msg);
 }
 
 
@@ -139,18 +138,17 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
       {
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
-            if (!route(MessageRouter::OBJECT_MESSAGESS,
-                      new ObjectMessage(iter->second,//iter->second is the dest_server_id
-                                        iterQueueMap->second[s].data->data().contents),
-                      iter->second)) {
+            ObjectMessage* obj_msg = new ObjectMessage(iter->second, iterQueueMap->second[s].data->data().contents);
+            obj_msg->setSourceServer(mContext->id());
+            obj_msg->setDestServer(iter->second);
+
+            if (!route(MessageRouter::OBJECT_MESSAGESS, obj_msg)) {
                 mContext->trace()->timestampMessage(mContext->time,
                                                     iterQueueMap->second[s].data->data().contents.unique(),
                                                     Trace::DROPPED,
                                                     iterQueueMap->second[s].data->data().contents.source_port(),
                                                     iterQueueMap->second[s].data->data().contents.dest_port(),
                                                     iterQueueMap->second[s].data->data().type());
-
-
             }
         }
         queueMap.erase(iterQueueMap);
@@ -163,12 +161,14 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
  *  guarantee that we don't screw up the fair queue by mucking with the ServerMessageQueue after it has computed
  *  a new front value.
  */
-static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, OutgoingMessage* expected, OutgoingMessage* result) {
+static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, Message* expected, Message* result) {
     assert(expected == result);
-    bool send_success = smq->addMessage(result->dest, result->data);
-    if (!send_success)
+    ctx->trace()->serverDatagramQueued(ctx->time, result->destServer(), result->id(), result->serializedSize());
+    bool send_success = smq->addMessage(result);
+    if (!send_success) {
         SILOG(cbr,fatal,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
-    ctx->trace()->serverDatagramQueued(ctx->time, result->dest, result->unique, result->data.size());
+        delete result;
+    }
 }
 
 void Forwarder::service()
@@ -238,18 +238,14 @@ void Forwarder::service()
     {
         uint64 size=1<<30;
         MessageRouter::SERVICES svc;
-        OutgoingMessage* next_msg = (*mOutgoingMessages)->front(&size,&svc);
+        Message* next_msg = (*mOutgoingMessages)->front(&size,&svc);
         if (!next_msg)
             break;
-        if (!mContext->trace()->timestampMessage(t,Trace::SPACE_OUTGOING_MESSAGE,next_msg->data)) {
-            static bool warned=false;
-            if (!warned) {
-                fprintf (stderr, "shouldn't reach here: trace problem\nPacket has no id\n");
-                warned=true;
-            }
-        }
+        ObjectMessage* om = dynamic_cast<ObjectMessage*>(next_msg);
+        if (om != NULL)
+            mContext->trace()->timestampMessage(t, om->contents.unique(), Trace::SPACE_OUTGOING_MESSAGE, om->contents.source_port(), om->contents.dest_port(), om->type());
 
-        OutgoingMessage* pop_msg = (*mOutgoingMessages)->pop(
+        Message* pop_msg = (*mOutgoingMessages)->pop(
             &size,
             std::tr1::bind(push_to_smq,
                 mServerMessageQueue,
@@ -257,8 +253,6 @@ void Forwarder::service()
                 next_msg,
                 std::tr1::placeholders::_1)
         );
-        assert(pop_msg == next_msg);
-        delete pop_msg;
     }
     mProfiler.finishedStage();
 
@@ -284,14 +278,14 @@ void Forwarder::service()
   // for either servers or objects.  The second form will simply automatically do the destination
   // server lookup.
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward)
+  bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg, bool is_forward)
   {
+      assert(msg->sourceServer() == mContext->id());
+      assert(msg->destServer() != NullServerID);
+
+      ServerID dest_server = msg->destServer();
 
       bool success = false;
-
-    Network::Chunk msg_serialized;
-    msg->serialize(&msg_serialized);
-
 
     if (dest_server==mContext->id())
     {
@@ -311,16 +305,18 @@ void Forwarder::service()
 */
       // FIXME this should be limited in size so we can actually provide pushback to other servers when we can't route to ourselves/
       // connected objects fast enough
+        Network::Chunk msg_serialized;
+        msg->serialize(&msg_serialized);
+
       mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
       success = true;
+      delete msg;
     }
     else
     {
-        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, new OutgoingMessage(msg_serialized, dest_server, msg->id()) );
+        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
     }
-    if (success)
-        delete msg;
     return success;
   }
 
@@ -405,7 +401,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     bool send_success=true;
     if (lookupID == NullServerID)
     {
-        ObjectMessage obj_msg_class(mContext->id(), *obj_msg);        
+        ObjectMessage obj_msg_class(mContext->id(), *obj_msg);
         beginMess.data=new ServerProtocolMessagePair(NULL,obj_msg_class,obj_msg_class.id());
         beginMess.dest_uuid=obj_msg->dest_object();
         queueMap[beginMess.dest_uuid].push_back(beginMess);
@@ -413,7 +409,10 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     }
     else
     {
-        send_success=route(OBJECT_MESSAGESS,new ObjectMessage(mContext->id(),*obj_msg),lookupID);
+        ObjectMessage* svr_obj_msg = new ObjectMessage(mContext->id(), *obj_msg);
+        svr_obj_msg->setSourceServer(mContext->id());
+        svr_obj_msg->setDestServer(lookupID);
+        send_success=route(OBJECT_MESSAGESS, svr_obj_msg, lookupID);
     }
     if (!send_success) {
         mContext->trace()->timestampMessage(mContext->time,
@@ -508,8 +507,10 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
 #endif
 
+      up_os->setSourceServer(mContext->id());
+      up_os->setDestServer( mServersToUpdate[obj_id][s] );
       // FIXME what if this fails to get sent out?
-      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
+      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, false);
 
     }
   }
@@ -517,7 +518,9 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
   // Wrap it up in one of our ObjectMessages and ship it.
   ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
-  return route(svc,obj_msg, dest_serv, is_forward);
+  obj_msg->setSourceServer(mContext->id());
+  obj_msg->setDestServer(dest_serv);
+  return route(svc, obj_msg, is_forward);
 }
 
 

@@ -37,18 +37,18 @@ public:
         CanSendPredicate(ServerMessageQueue* s){
             mServerMessageQueue=s;
         }
-        bool operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg);
+        bool operator() (MessageRouter::SERVICES svc, const Message* msg);
     };
-    AbstractQueue<OutgoingMessage*> *mQueues[MessageRouter::NUM_SERVICES];
-    typedef FairQueue<OutgoingMessage, MessageRouter::SERVICES, AbstractQueue<OutgoingMessage*>, CanSendPredicate, true> OutgoingFairQueue;
+    AbstractQueue<Message*> *mQueues[MessageRouter::NUM_SERVICES];
+    typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*>, CanSendPredicate, true> OutgoingFairQueue;
     OutgoingFairQueue mSendQueue;
 
-    ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<OutgoingMessage*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
+    ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<Message*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
         for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
             if (false&&i==MessageRouter::OBJECT_MESSAGESS) {
                 mSendQueue.addQueue(mQueues[i]=omq,(MessageRouter::SERVICES)i,1.0);
             }else{
-                mSendQueue.addQueue(mQueues[i]=new Queue<OutgoingMessage*>(size),(MessageRouter::SERVICES)i,1.0);
+                mSendQueue.addQueue(mQueues[i]=new Queue<Message*>(size),(MessageRouter::SERVICES)i,1.0);
             }
         }
     }
@@ -147,8 +147,8 @@ protected:
       // for either servers or objects.  The second form will simply automatically do the destination
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    __attribute__ ((warn_unused_result))
-      bool route(MessageRouter::SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false);
+    //__attribute__ ((warn_unused_result))
+    bool route(MessageRouter::SERVICES svc, Message* msg, bool is_forward = false);
 
     //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with
     //the stale cache value.

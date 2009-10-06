@@ -106,7 +106,7 @@ public:
     static const uint8 ObjectGeneratedLocationTag = 22;
     static const uint8 OSegCacheResponseTag = 23;
     static const uint8 OSegLookupNotOnServerAnalysisTag = 24;
-  
+
     enum MessagePath {
         CREATED,
         SPACE_OUTGOING_MESSAGE,
@@ -124,7 +124,7 @@ public:
     Trace(const String& filename);
 
     void setServerIDMap(ServerIDMap* sidmap);
-    bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
+    //bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
     void timestampMessage(const Time&t, uint64 packetId, MessagePath path, uint16 optionalMessageSourcePort=0, uint16 optionalMessageDestPort=0, MessageType optionalMessageType= MESSAGE_TYPE_UNPROCESSED_PACKET);
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
@@ -139,7 +139,6 @@ public:
 
     void serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight);
     void serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size);
-    void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data);
     void serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size);
     void serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size);
 
@@ -157,7 +156,7 @@ public:
     void objectSegmentationCraqLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
     void objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo);
 
-  
+
     void objectSegmentationProcessedRequest(const Time&t, const UUID& obj_id, const ServerID &sID, const ServerID & sID_processor, uint32 dTime, uint32 stillInQueue);
 
     void objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds);
@@ -167,7 +166,7 @@ public:
   void processOSegShutdownEvents(const Time &t, const ServerID& sID, const int& num_lookups, const int& num_on_this_server, const int& num_cache_hits, const int& num_craq_lookups, const int& num_time_elapsed_cache_eviction, const int& num_migration_not_complete_yet);
 
   void osegCacheResponse(const Time &t, const ServerID& sID, const UUID& obj);
-  
+
     void prepareShutdown();
     void shutdown();
 

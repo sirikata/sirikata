@@ -148,17 +148,26 @@ public:
     virtual MessageType type() const = 0;
     UniqueMessageID id() const;
 
+    ServerID sourceServer() const { return mSource; }
+    void setSourceServer(ServerID source) { mSource = source; }
+    ServerID destServer() const { return mDest; }
+    void setDestServer(ServerID dest) { mDest = dest; }
+
     virtual bool serialize(Network::Chunk* result) = 0;
     static Message* deserialize(const Network::Chunk& wire);
+
+    virtual uint32 serializedSize() const = 0;
+    uint32 size() const { return serializedSize(); }
+
 protected:
     Message(const ServerID& origin);
     Message(const CBR::Protocol::Server::ServerMessage& svr_msg);
 
     template<typename ContentsPBJType>
     void fillMessage(CBR::Protocol::Server::ServerMessage& msg, const ContentsPBJType& pbj) const {
-        msg.set_source_server( 0 ); // FIXME
+        msg.set_source_server( mSource );
         msg.set_source_port( this->type() );
-        msg.set_dest_server( 0 ); // FIXME
+        msg.set_dest_server( mDest );
         msg.set_dest_port( this->type() );
         msg.set_id(mID);
 
@@ -166,7 +175,7 @@ protected:
     }
 
     template<typename ContentsPBJType>
-    uint32 serializedSize(const ContentsPBJType& pbj) const {
+    uint32 getSerializedSize(const ContentsPBJType& pbj) const {
         // FIXME having to serialize to find out the size is ridiculous, but there doesn't seem to be
         // an easy way to factor out the cost of the payload
 
@@ -191,6 +200,8 @@ protected:
 
 private:
     UniqueMessageID mID;
+    ServerID mSource;
+    ServerID mDest;
 }; // class Message
 
 
@@ -251,8 +262,8 @@ public:
     virtual ~MessageRouter() {}
 
     __attribute__ ((warn_unused_result))
-    virtual bool route(SERVICES svc, Message* msg, const ServerID& dest_server, bool is_forward = false) = 0;
-  //virtual void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward) = 0;
+    virtual bool route(SERVICES svc, Message* msg, bool is_forward = false) = 0;
+
     __attribute__ ((warn_unused_result))
   virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
 
@@ -269,8 +280,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
-
-    size_t size()const;
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Object::ObjectMessage contents;
 private:
@@ -285,6 +295,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Object::Noise contents;
 private:
@@ -298,6 +309,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Migration::MigrationMessage contents;
 private:
@@ -311,6 +323,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::CSeg::ChangeMessage contents;
 private:
@@ -324,6 +337,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::CSeg::LoadMessage contents;
 private:
@@ -343,6 +357,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::OSeg::MigrateMessageMove contents;
 
@@ -366,6 +381,7 @@ public:
 
   virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
   CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
 
@@ -389,6 +405,7 @@ public:
   UpdateOSegMessage(const ServerID& sID_sendingMessage, const ServerID& sID_objOn, const UUID& obj_id);
   virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
   ~UpdateOSegMessage();
 
@@ -412,6 +429,7 @@ public:
   ~KillObjConnMessage();
   virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
 private:
   friend class Message;
@@ -430,6 +448,7 @@ public:
   ~OSegAddMessage();
   virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
 private:
   friend class Message;
@@ -450,6 +469,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Prox::ServerQuery contents;
 private:
@@ -465,6 +485,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Prox::ProximityResults contents;
 private:
@@ -481,6 +502,7 @@ public:
 
     virtual MessageType type() const;
     virtual bool serialize(Network::Chunk* result);
+    virtual uint32 serializedSize() const;
 
     CBR::Protocol::Loc::BulkLocationUpdate contents;
 private:

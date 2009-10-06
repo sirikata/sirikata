@@ -1,6 +1,6 @@
 #include "Network.hpp"
 #include "Server.hpp"
-#include "ServerNetworkImpl.hpp"
+#include "ServerNetwork.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "Message.hpp"
 #include "Options.hpp"
@@ -26,37 +26,16 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
 {
 }
 
-bool FairServerMessageQueue::addMessage(ServerID destinationServer,const Network::Chunk&msg){
-    // If its just coming back here, skip routing and just push the payload onto the receive queue
-    if (mContext->id() == destinationServer) {
-        ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk(msg);
-        csp.source = mContext->id();
+bool FairServerMessageQueue::canAddMessage(const Message* msg) {
+    ServerID destinationServer = msg->destServer();
 
-        mReceiveQueue.push(csp);
-        return true;
-    }
-    assert(destinationServer!=mContext->id());
-    uint32 offset = 0;
-    Network::Chunk with_header;
-    ServerMessageHeader server_header(mContext->id(), destinationServer);
-    offset = server_header.serialize(with_header, offset);
-    with_header.insert( with_header.end(), msg.begin(), msg.end() );
-    offset += msg.size();
-
-    ServerMessagePair* smp = new ServerMessagePair(destinationServer,with_header);
-    bool success = mServerQueues.push(destinationServer,smp)==QueueEnum::PushSucceeded;
-    if (!success) delete smp;
-    return success;
-}
-
-bool FairServerMessageQueue::canAddMessage(ServerID destinationServer, uint32 payload_size) {
-    // If its just coming back here, skip routing and just push the payload onto the receive queue
+    // If its just coming back here, we'll always accept it
     if (mContext->id() == destinationServer) {
         return true;
     }
     assert(destinationServer!=mContext->id());
-    uint32 offset = ServerMessageHeader::serializedSize() + payload_size;
+
+    uint32 offset = msg->serializedSize();
 
     size_t size = mServerQueues.size(destinationServer);
     size_t maxsize = mServerQueues.maxSize(destinationServer);
@@ -64,7 +43,36 @@ bool FairServerMessageQueue::canAddMessage(ServerID destinationServer, uint32 pa
 
     if (offset > maxsize) SILOG(queue,fatal,"Checked push message that's too large on to FairServerMessageQueue: " << offset << " > " << maxsize);
 
+
     return false;
+}
+
+bool FairServerMessageQueue::addMessage(Message* msg){
+    ServerID destinationServer = msg->destServer();
+
+    // If its just coming back here, skip routing and just push the payload onto the receive queue
+    if (mContext->id() == destinationServer) {
+        ChunkSourcePair csp;
+        csp.chunk = new Network::Chunk();
+        msg->serialize(csp.chunk);
+        csp.source = mContext->id();
+
+        mReceiveQueue.push(csp);
+        delete msg;
+
+        return true;
+    }
+
+    // Otherwise, store for push to network
+    Network::Chunk serialized;
+    msg->serialize(&serialized);
+    ServerMessagePair* smp = new ServerMessagePair(destinationServer,serialized);
+    bool success = mServerQueues.push(destinationServer,smp)==QueueEnum::PushSucceeded;
+    if (success)
+        delete msg;
+    else
+        delete smp;
+    return success;
 }
 
 bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {
@@ -122,8 +130,9 @@ void FairServerMessageQueue::service(){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
-                                   next_msg->dest(), next_msg->data());
+        // FIXME we need to store the Message* to get all the info we need here
+        //mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
+        //                           next_msg->dest(), next_msg->data());
 
 
         delete next_msg;

@@ -36,8 +36,6 @@
 #include "CBR_Header.pbj.hpp"
 #include <iostream>
 
-#include "ServerNetworkImpl.hpp"
-
 #include "ServerIDMap.hpp"
 
 
@@ -130,17 +128,6 @@ const uint8 Trace::OSegCacheResponseTag;
 const uint8 Trace::OSegLookupNotOnServerAnalysisTag;
 
 
-  
-static uint64 GetMessageUniqueID(const Network::Chunk& msg) {
-    uint64 offset = 0;
-    offset += sizeof(ServerMessageHeader);
-    offset += 1; // size of msg type
-
-    uint64 uid;
-    memcpy(&uid, &msg[offset], sizeof(uint64));
-    return uid;
-}
-
 
 Trace::Trace(const String& filename)
  : mServerIDMap(NULL),
@@ -229,6 +216,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
     data.write( &start, sizeof(start) );
 #endif
 }
+/*
 bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk&data){
 #ifdef TRACE_MESSAGE
     uint32 offset=0;
@@ -241,6 +229,7 @@ bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk
 #endif
     return true;
 }
+*/
 void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, unsigned short srcprt, unsigned short dstprt, unsigned char msg_type) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
@@ -321,16 +310,6 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id,
     data.write( &dest, sizeof(dest) );
     data.write( &id, sizeof(id) );
     data.write( &size, sizeof(size) );
-#endif
-}
-
-void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, const Network::Chunk& data) {
-#ifdef TRACE_DATAGRAM
-    if (mShuttingDown) return;
-    uint64 id = GetMessageUniqueID(data);
-    uint32 size = data.size();
-
-    serverDatagramSent(start_time, end_time, weight, dest, id, size);
 #endif
 }
 
@@ -548,7 +527,7 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
   data.write(&t, sizeof(t));
   data.write(&sID, sizeof(sID));
   data.write(&obj_id,sizeof(obj_id));
-  
+
 #endif
 }
 
@@ -556,16 +535,16 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
 void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookerupper)
 {
 #ifdef TRACE_OSEG_NOT_ON_SERVER_LOOKUP
-  
+
 
   if (mShuttingDown) return;
 
-  
+
   data.write(&OSegLookupNotOnServerAnalysisTag, sizeof (OSegLookupNotOnServerAnalysisTag));
   data.write(&t, sizeof(t));
   data.write(&obj_id, sizeof(obj_id));
   data.write(&sID_lookerupper, sizeof(sID_lookerupper));
-  
+
 #endif
 }
 

@@ -18,7 +18,7 @@ struct ObjMessQBeginSend
 */
 
 
-class ObjectMessageQueue:public AbstractQueue<OutgoingMessage*> {
+class ObjectMessageQueue:public AbstractQueue<Message*> {
 public:
     ObjectMessageQueue(SpaceContext* ctx, Forwarder*sm)
      : mContext(ctx),
@@ -26,8 +26,8 @@ public:
     {}
 
     virtual ~ObjectMessageQueue(){}
-    virtual OutgoingMessage *&front()=0;
-    virtual OutgoingMessage * pop()=0;
+    virtual Message *&front()=0;
+    virtual Message * pop()=0;
     virtual bool empty()const=0;
 
 
