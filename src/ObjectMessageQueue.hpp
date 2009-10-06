@@ -7,6 +7,7 @@
 #include "AbstractQueue.hpp"
 namespace CBR{
 class Forwarder;
+/*
 class ServerProtocolMessagePair;
 
 struct ObjMessQBeginSend
@@ -14,7 +15,7 @@ struct ObjMessQBeginSend
     UUID dest_uuid;
     ServerProtocolMessagePair* data;
 };
-
+*/
 
 
 class ObjectMessageQueue:public AbstractQueue<OutgoingMessage*> {

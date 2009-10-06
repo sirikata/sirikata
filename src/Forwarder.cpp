@@ -20,10 +20,26 @@
 namespace CBR
 {
 
+
+void OSegLookupQueue::ObjMessQBeginSendList::push_back(const ObjMessQBeginSend&msg) {
+    mTotalSize+=msg.data->data().contents.ByteSize();
+}
+
+void OSegLookupQueue::push(UUID objid,const ObjMessQBeginSend &dat) {
+    size_t cursize=dat.data->data().contents.ByteSize();
+    if (mPredicate(objid,cursize,mTotalSize)) {
+        mTotalSize+=cursize;
+        mObjects[objid].push_back(dat);
+    }
+}
+
+
 bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc,const OutgoingMessage*msg) {
     return mServerMessageQueue->canAddMessage(msg->dest,msg->data);
 }
 
+
+bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
   /*
     Constructor for Forwarder
   */
@@ -36,6 +52,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
    mUniqueConnIDs(0),
+   queueMap(&AlwaysPush),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
@@ -93,7 +110,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
     std::map<UUID,ServerID>::iterator iter;
     std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
-    std::map<UUID,ObjMessQBeginSendList>::iterator iterQueueMap;
+    OSegLookupQueue::ObjectMap::iterator iterQueueMap;
 
     mOSeg->service(updatedObjectLocations);
 
@@ -118,13 +135,21 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
       iterQueueMap = queueMap.find(iter->first);
       if (iterQueueMap != queueMap.end())
       {
-        //means that we have to call endSend on the message.
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
-            route(MessageRouter::OBJECT_MESSAGESS,new ObjectMessage(iter->second,
-                                                                    iterQueueMap->second[s].data->data().contents),
-                  iter->second);//iter->second is the dest_server_id
-            //mObjectMessageQueue->endSend(iterQueueMap->second[s],iter->second); 
+            if (!route(MessageRouter::OBJECT_MESSAGESS,
+                      new ObjectMessage(iter->second,//iter->second is the dest_server_id
+                                        iterQueueMap->second[s].data->data().contents),
+                      iter->second)) {
+                mContext->trace()->timestampMessage(mContext->time,
+                                                    iterQueueMap->second[s].data->data().contents.unique(),
+                                                    Trace::DROPPED,
+                                                    iterQueueMap->second[s].data->data().contents.source_port(),
+                                                    iterQueueMap->second[s].data->data().contents.dest_port(),
+                                                    iterQueueMap->second[s].data->data().type());
+
+
+            }
         }
         queueMap.erase(iterQueueMap);
       }
@@ -388,13 +413,14 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     else
     {
         send_success=route(OBJECT_MESSAGESS,new ObjectMessage(mContext->id(),*obj_msg),lookupID);
-        /*
-        Network::Chunk dat;
-        obj_msg_class.serialize(dat,0);
-        OutgoingMessage *toPush=new OutgoingMessage(dat, lookupID, obj_msg_class.id());
-        (*mOutgoingMessages)->push(OBJECT_MESSAGESS,
-        //FUXMEmObjectMessageQueue->endSend(beginMess,lookupID); SEND IT STRAIGHT AWAY
-        */
+    }
+    if (!send_success) {
+        mContext->trace()->timestampMessage(mContext->time,
+                                            obj_msg->unique(),
+                                            Trace::DROPPED,
+                                            obj_msg->source_port(),
+                                            obj_msg->dest_port(),
+                                            MESSAGE_TYPE_OBJECT);
     }
     return send_success;
 }

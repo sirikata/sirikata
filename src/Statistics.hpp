@@ -117,6 +117,7 @@ public:
         DISPATCHED,
         DELIVERED,
         DESTROYED,
+        DROPPED,
         NUM_PATHS
     };
 
