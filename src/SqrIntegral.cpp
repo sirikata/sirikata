@@ -18,8 +18,9 @@ double inverse_polynomial(double r, double r2) {
 double bandwidth_bound_no_cutoff(double r, double r2, size_t dim, void *v_params) {
     struct sqrParams*params=(struct sqrParams*)v_params;    
     double flatness=params->flatness;
-    r*=flatness;
-    r2*=flatness*flatness;
+    //r*=100;
+    r+=flatness;
+    r2=r*r;
     return inverse_polynomial(r,r2);
 }
 double bandwidth_bound(double *x, size_t dim, void *v_params) {
@@ -61,7 +62,7 @@ double SqrIntegral::integrate(double cutoff, double flatness,const Vector3d&xymi
         return 0;
     }
 
-    int NCALLS=256;
+    int NCALLS=512;
     sqrParams params;
     params.constant_extent_rho=cutoff;
     params.constant_inner_speed_k=1.0;
