@@ -121,7 +121,10 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         //means that we have to call endSend on the message.
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
-          mObjectMessageQueue->endSend(iterQueueMap->second[s],iter->second); //iter->second is the dest_server_id
+            route(MessageRouter::OBJECT_MESSAGESS,new ObjectMessage(iter->second,
+                                                                    iterQueueMap->second[s].data->data().contents),
+                  iter->second);//iter->second is the dest_server_id
+            //mObjectMessageQueue->endSend(iterQueueMap->second[s],iter->second); 
         }
         queueMap.erase(iterQueueMap);
       }
