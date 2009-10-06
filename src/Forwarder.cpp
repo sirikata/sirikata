@@ -163,7 +163,7 @@ void Forwarder::service()
       self_messages.pop_front();
     }
     mProfiler.finishedStage();
-
+/*
 
     // XXXXXXXXXXXXXXXXXXXXXX Generate noise
     std::string noiseChunk;
@@ -202,7 +202,7 @@ void Forwarder::service()
     }
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
-
+    */
     (*mOutgoingMessages)->service(); mProfiler.finishedStage();
     while(true)
     {
@@ -372,33 +372,27 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     }
 
     ObjMessQBeginSend beginMess;
-    bool send_success = mObjectMessageQueue->beginSend(obj_msg, beginMess);
-
-    if (send_success)
+    ServerID lookupID = mOSeg->lookup(obj_msg->dest_object());
+    bool send_success=true;
+    if (lookupID == NullServerID)
     {
-      //      mOSeg->lookup(beginMess.dest_uuid);
-      ServerID lookupID = mOSeg->lookup(beginMess.dest_uuid);
-
-      if (lookupID == NullServerID)
-      {
-        if (queueMap.find(beginMess.dest_uuid) == queueMap.end())
-        {
-            //nothing is in queueMap
-            ObjMessQBeginSendList tmpList;
-            tmpList.push_back(beginMess);
-            queueMap[beginMess.dest_uuid] = tmpList;
-        }
-        else
-        {
-            queueMap[beginMess.dest_uuid].push_back(beginMess);
-        }
-      }
-      else
-      {
-          mObjectMessageQueue->endSend(beginMess,lookupID);
-      }
+        ObjectMessage obj_msg_class(mContext->id(), *obj_msg);        
+        beginMess.data=new ServerProtocolMessagePair(NULL,obj_msg_class,obj_msg_class.id());
+        beginMess.dest_uuid=obj_msg->dest_object();
+        queueMap[beginMess.dest_uuid].push_back(beginMess);
+        //if queueMap.full() send_success=false;
     }
-
+    else
+    {
+        send_success=route(OBJECT_MESSAGESS,new ObjectMessage(mContext->id(),*obj_msg),lookupID);
+        /*
+        Network::Chunk dat;
+        obj_msg_class.serialize(dat,0);
+        OutgoingMessage *toPush=new OutgoingMessage(dat, lookupID, obj_msg_class.id());
+        (*mOutgoingMessages)->push(OBJECT_MESSAGESS,
+        //FUXMEmObjectMessageQueue->endSend(beginMess,lookupID); SEND IT STRAIGHT AWAY
+        */
+    }
     return send_success;
 }
 

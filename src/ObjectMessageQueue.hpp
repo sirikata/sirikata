@@ -7,12 +7,12 @@
 #include "AbstractQueue.hpp"
 namespace CBR{
 class Forwarder;
-
+class ServerProtocolMessagePair;
 
 struct ObjMessQBeginSend
 {
     UUID dest_uuid;
-    void* data;
+    ServerProtocolMessagePair* data;
 };
 
 

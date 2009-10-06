@@ -25,7 +25,7 @@ template <class Queue> FairObjectMessageQueue<Queue>::FairObjectMessageQueue(Spa
 
 template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend &fromBegin)
 {
-    fromBegin.data = (void*)NULL;
+    fromBegin.data = NULL;
     fromBegin.dest_uuid = msg->dest_object();
     ObjectMessage obj_msg(mContext->id(), *msg);
 
@@ -35,7 +35,7 @@ template <class Queue> bool FairObjectMessageQueue<Queue>::beginSend(CBR::Protoc
     if (!success)
         delete smp;
     else
-        fromBegin.data = (void*)smp;
+        fromBegin.data = smp;
 
     return success;
 }

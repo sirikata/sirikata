@@ -45,7 +45,7 @@ public:
 
     ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<OutgoingMessage*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
         for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-            if (i==MessageRouter::OBJECT_MESSAGESS) {
+            if (false&&i==MessageRouter::OBJECT_MESSAGESS) {
                 mSendQueue.addQueue(mQueues[i]=omq,(MessageRouter::SERVICES)i,1.0);
             }else{
                 mSendQueue.addQueue(mQueues[i]=new Queue<OutgoingMessage*>(size),(MessageRouter::SERVICES)i,1.0);

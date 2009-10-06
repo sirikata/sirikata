@@ -19,7 +19,7 @@ FIFOObjectMessageQueue::FIFOObjectMessageQueue(SpaceContext* ctx, Forwarder* sm)
 
 bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg, ObjMessQBeginSend & fromBegin)
 {
-    fromBegin.data = (void*)NULL;
+    fromBegin.data = NULL;
     fromBegin.dest_uuid = msg->dest_object();
 
     Network::Chunk chunk;
@@ -32,7 +32,7 @@ bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg
     if (!success)
         delete smp;
     else
-        fromBegin.data = (void*)smp;
+        fromBegin.data = smp;
 
     return success;
 }

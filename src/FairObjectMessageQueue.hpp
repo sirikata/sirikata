@@ -107,6 +107,7 @@ public:
 
     QueueEnum::PushResult push(const ElementType&msg) {
         NOT_IMPLEMENTED();
+        assert(0);
         return QueueEnum::PushExceededMaximumSize;
     }
     bool empty()const {
