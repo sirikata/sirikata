@@ -38,7 +38,7 @@
 #include "Network.hpp"
 #include "Message.hpp"
 
-
+#include <gcrypt.h>
 
 namespace CBR {
 
@@ -51,150 +51,257 @@ T clamp(T val, T minval, T maxval) {
     return val;
 }
 
+void memdump1(uint8* buffer, int len) {
+  for (int i=0; i<len; i++) {
+    int val = buffer[i];
+    printf("%x ",  val);
+  }
+  printf("\n");
+  fflush(stdout);
+}
+
+String sha_1(void* data, size_t len) {
+  int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
+  /* output sha1 hash - this will be binary data */
+  unsigned char hash[ hash_len ];
+  gcry_md_hash_buffer( GCRY_MD_SHA1, hash, data, len);
+
+  char *out = (char *) malloc( sizeof(char) * ((hash_len*2)+1) );
+  char *p = out;
+
+  /* Convert each byte to its 2 digit ascii
+   * hex representation and place in out */
+  
+  for ( int i = 0; i < hash_len; i++, p += 2 ) {
+    snprintf ( p, 3, "%02x", hash[i] );
+  }
 
 
-CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim)
-  : CoordinateSegmentation(ctx),
-    mRegion(region),
-    mBSPTreeValid(true),
-    mAvailableServersCount(0)
+  String retval = out;
+  free(out);
+
+  return retval;
+}
+
+CoordinateSegmentationClient::CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
+							   ServerIDMap* sidmap)
+  : CoordinateSegmentation(ctx),  mRegion(region), mBSPTreeValid(false), mAvailableServersCount(0), mSidMap(sidmap)
 {
-    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+  
 
-  mTopLevelRegion.mBoundingBox = region;
+  mTopLevelRegion.mBoundingBox = BoundingBox3f( Vector3f(0,0,0), Vector3f(0,0,0));
 
-  client = enet_host_create (NULL , 1, 0, 0);
+  Address4* addy = mSidMap->lookupInternal(mContext->id());
+  
+  mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), addy->port+10000)));
 
-  if (client == NULL)
-  {
-      printf ("An error occurred while trying to create an ENet client host.\n");
-  }
+  startAccepting();
 
-  ENetAddress address;
-  ENetEvent event;
-
-  // Connect to CSEG server
-  enet_address_set_host (&address, GetOption("cseg-service-host")->as<String>().c_str() );
-  address.port = atoi( GetOption("cseg-service-enet-port")->as<String>().c_str() );
-
-  // Initiate the connection, allocating one channel.
-  peer = enet_host_connect (client, &address, 1);
-
-  if (peer == NULL)
-    {
-      printf ("No available peers for initiating an ENet connection.\n");
-    }
-
-  /* Wait up to 200 milliseconds for the connection attempt to succeed. */
-  if (enet_host_service (client, & event, 200) > 0 &&
-      event.type == ENET_EVENT_TYPE_CONNECT)
-    {
-      printf("Connection to CSEG succeeded.\n");
-    }
-    else
-    {
-        enet_peer_reset (peer);
-        printf ("Connection to CSEG failed.\n");
-    }
-
-
-  mSubscriptionClient = enet_host_create (NULL , 1, 0, 0);
-
-  if (mSubscriptionClient == NULL)
-  {
-      printf ("An error occurred while trying to create the subscription client host.\n");
-  }
-
-  // Initiate the connection, allocating one channel.
-  ENetPeer * subscriptionPeer = enet_host_connect (mSubscriptionClient, &address, 1);
-
-  if (subscriptionPeer == NULL)
-  {
-      printf ("No available peers for initiating a subscription connection.\n");
-  }
-
-  /* Wait up to 200 milliseconds for the connection attempt to succeed. */
-  if (enet_host_service (mSubscriptionClient, & event, 200) > 0 &&
-      event.type == ENET_EVENT_TYPE_CONNECT)
-    {
-      printf("Connection to CSEG for subscription succeeded.\n");
-    }
-    else
-    {
-        enet_peer_reset (subscriptionPeer);
-        printf ("Connection to CSEG for subscription failed.\n");
-    }
-
-  SegmentationListenMessage slMessage;
-  ENetPacket * packet = enet_packet_create (&slMessage,
-					    sizeof(slMessage),
-                                            ENET_PACKET_FLAG_RELIABLE);
-
-  enet_peer_send(subscriptionPeer, 0, packet);
-
-  downloadUpdatedBSPTree();
+  sendSegmentationListenMessage();
 }
 
+void CoordinateSegmentationClient::startAccepting() {
+  mSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(mIOService));
+  mAcceptor->async_accept(*mSocket, boost::bind(&CoordinateSegmentationClient::accept_handler,this));
+}
+
+void CoordinateSegmentationClient::accept_handler() {  
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  for (;;)
+    {
+      boost::array<uint8, 1024> buf;
+      boost::system::error_code error;
+      
+      size_t len = mSocket->read_some(boost::asio::buffer(buf), error);      
+      
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;       
+
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error) {
+	std::cout << "Error reading request from " << mSocket->remote_endpoint().address().to_string()
+		    <<" in accept_handler\n";
+        throw boost::system::system_error(error); // Some other error.
+      }
+    }
+
+  if ( dataReceived != NULL) {
+    SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*) dataReceived;
+
+    std::cout << "\n\nReceived segmentation change message with numEntries=" << segChangeMessage->numEntries << " at time " << mContext->simTime().raw() << "\n";
+
+    mTopLevelRegion.destroy();
+    mServerRegionCache.clear();
+
+    int offset = 2;
+    std::vector<Listener::SegmentationInfo> segInfoVector;
+    for (int i=0; i<segChangeMessage->numEntries; i++) {
+      BoundingBoxList bbList;
+      Listener::SegmentationInfo segInfo;
+      SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
+
+      for (unsigned int j=0; j < segChange->listLength; j++) {
+	BoundingBox3f bbox;
+	SerializedBBox sbbox= segChange->bboxList[j];
+	sbbox.deserialize(bbox);	
+	bbList.push_back(bbox);
+      }
+
+      segInfo.server = segChange->serverID;
+      segInfo.region = bbList;
+
+      printf("segInfo.server=%d, segInfo.region.size=%d\n", segInfo.server, (int)segInfo.region.size());
+      fflush(stdout);             
+
+      segInfoVector.push_back(segInfo);
+      offset += (4 + 4 + sizeof(SerializedBBox)*segChange->listLength);
+    }
+      
+    notifyListeners(segInfoVector);
+    
+    free(dataReceived);
+  }
+
+  mSocket->close();
+  startAccepting();
+}
+  
 CoordinateSegmentationClient::~CoordinateSegmentationClient() {
-    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
-
-   enet_peer_disconnect (peer, 0);
-
-  //delete all the SegmentedRegion objects created with 'new'
-   enet_host_destroy(client);
-
+   
 }
+
+void CoordinateSegmentationClient::sendSegmentationListenMessage() {
+  SegmentationListenMessage requestMessage;
+  Address4* addy = mSidMap->lookupInternal(mContext->id());   
+
+  gethostname(requestMessage.host, 255);
+  printf("host=%s\n", requestMessage.host);
+  requestMessage.port = addy->port+10000;
+
+  struct in_addr ip_addr;
+  ip_addr.s_addr = addy->ip;  
+  char* addr = inet_ntoa(ip_addr);  
+  
+  boost::asio::io_service io_service;  
+
+  tcp::resolver resolver(io_service);
+       
+  tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
+
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
+
+  //std::cout << "Calling CSEG server for serverRegion!\n";
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
+    }
+  if (error) {
+    std::cout << "Error connecting to  CSEG server for segmentation listen subscription\n";    
+  }
+
+  boost::asio::write(socket,
+                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
+                     boost::asio::transfer_all() );
+
+  socket.close();
+}
+
 
 ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
-
-  if ( mBSPTreeValid) {
-    Vector3f searchVec = pos;
-    BoundingBox3f region = mTopLevelRegion.mBoundingBox;
-
-    int i=0;
-    (searchVec.z < region.min().z) ? searchVec.z = region.min().z : (i=0);
-    (searchVec.x < region.min().x) ? searchVec.x = region.min().x : (i=0);
-    (searchVec.y < region.min().y) ? searchVec.y = region.min().y : (i=0);
-
-    (searchVec.z > region.max().z) ? searchVec.z = region.max().z : (i=0);
-    (searchVec.x > region.max().x) ? searchVec.x = region.max().x : (i=0);
-    (searchVec.y > region.max().y) ? searchVec.y = region.max().y : (i=0);
-
-    ServerID svrID =  mTopLevelRegion.lookup(searchVec);
-    assert(svrID != 1000000);
-
-    return svrID;
-  }
-
-  downloadUpdatedBSPTree();
-
   LookupRequestMessage lookupMessage;
   lookupMessage.x = pos.x;
   lookupMessage.y = pos.y;
   lookupMessage.z = pos.z;
 
-  ENetPacket * packet = enet_packet_create (&lookupMessage,
-					    sizeof(lookupMessage),
-                                            ENET_PACKET_FLAG_RELIABLE);
+  boost::asio::io_service io_service;
+    
+  tcp::resolver resolver(io_service);
+       
+  tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
 
-  enet_peer_send(peer, 0, packet);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
 
-  ENetEvent event;
-  if (enet_host_service (client, & event, 200) > 0) {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      LookupResponseMessage* response = (LookupResponseMessage*) event.packet->data;
-      //printf("lookupresponsetype=%d\n",  response->type);
-
-      ServerID svrID = response->serverID;
-
-      // Clean up the packet now that we're done using it.
-      enet_packet_destroy (event.packet);
-
-      return svrID;
+  //std::cout << "Calling CSEGServer::lookup!\n";
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
     }
+  if (error) {
+    std::cout << "Error connecting to  CSEG server for lookup\n";
+    return 0; 
   }
 
-  return NULL;
+  boost::asio::write(socket,
+                     boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
+                     boost::asio::transfer_all() );
+
+  //  std::cout << "Sent over lookup request to cseg server\n";  
+
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  bool failedOnce=false;
+  for (;;)
+  {
+      boost::system::error_code error;
+      boost::array<uint8, 1048576> buf;
+     
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
+      
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error) {
+	
+	std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string()
+		  <<" in lookup\n\n\n";
+        //throw boost::system::system_error(error); // Some other error.
+	//failedOnce=true;
+	
+      }
+  }
+
+
+  ////std::cout << "Received reply from cseg server for lookup"  << "\n";
+
+  LookupResponseMessage* response = (LookupResponseMessage*)dataReceived;
+  assert(response->type == LOOKUP_RESPONSE);
+
+  ServerID retval = response->serverID;
+
+  if (dataReceived != NULL) {
+    free(dataReceived);
+  }
+
+  return retval;  
 }
 
 BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& server)
@@ -202,37 +309,102 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
   BoundingBoxList boundingBoxList;
 
   if (mServerRegionCache.find(server) != mServerRegionCache.end()) {
+    //printf("Returning cached serverRegion\n");
     return mServerRegionCache[server];
   }
 
+ // printf("Going to server for serverRegion\n");
+
   ServerRegionRequestMessage requestMessage;
   requestMessage.serverID = server;
-  ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage),
-                                            ENET_PACKET_FLAG_RELIABLE);
+  
+  boost::asio::io_service io_service;
+    
+  tcp::resolver resolver(io_service);
+       
+  tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
 
-  enet_peer_send(peer, 0, packet);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
 
-  ENetEvent event;
-  if (enet_host_service (client, & event, 200) > 0) {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      ServerRegionResponseMessage* response = (ServerRegionResponseMessage*) event.packet->data;
-      //printf("serverregionresponsetype=%d\n",  response->type);
-
-      for (int i = 0; i < response->listLength; i++) {
-	SerializedBBox region = response->bboxList[i];
-	Vector3f vmin (region.minX,region.minY,region.minZ);
-	Vector3f vmax (region.maxX,region.maxY,region.maxZ);
-
-	//std::cout << "Returned bbox for server " << server << " : " << BoundingBox3f(vmin, vmax)<<std::endl;
-
-	boundingBoxList.push_back( BoundingBox3f(vmin, vmax) );
-      }
-
-      // Clean up the packet now that we're done using it.
-      enet_packet_destroy (event.packet);
+  //std::cout << "Calling CSEG server for serverRegion!\n";
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
     }
+  if (error) {
+    //std::cout << "Error connecting to  CSEG server for server region\n";
+    return boundingBoxList; 
   }
+
+  boost::asio::write(socket,
+                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
+                     boost::asio::transfer_all() );
+
+  //std::cout << "Sent over serverRegion request to cseg server\n";
+  
+
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  for (;;)
+  {
+      boost::system::error_code error;
+      boost::array<uint8, 1048576> buf;
+     
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
+      
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error) {	
+	std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string() <<" in serverRegion\n";
+       //throw boost::system::system_error(error); // Some other error.
+       
+	
+      }
+  }
+
+  if (dataReceived == NULL) {
+    boundingBoxList.push_back(BoundingBox3f(Vector3f(0,0,0), Vector3f(0,0,0)));
+    return boundingBoxList;
+  }
+
+  //std::cout << "Received reply from cseg server for server region"  << "\n";
+
+  ServerRegionResponseMessage* response = (ServerRegionResponseMessage*) malloc(bytesReceived);
+  memcpy(response, dataReceived, bytesReceived);  
+
+  assert(response->type == SERVER_REGION_RESPONSE);
+
+  for (uint i=0; i < response->listLength; i++) {
+    BoundingBox3f bbox;
+    SerializedBBox* sbbox = &(response->bboxList[i]);
+    sbbox->deserialize(bbox);
+    
+    boundingBoxList.push_back(bbox);
+  }
+  
+  free(dataReceived);
+  free(response);
+  //printf("serverRegion for %d returned %d boxes\n", server, boundingBoxList.size());
+  /*for (int i=0 ; i<boundingBoxList.size(); i++) {
+    //std::cout << server << " has bounding box : " << boundingBoxList[i] << "\n";
+  }*/
+
+  //memdump1((uint8*) response, bytesReceived);
 
   mServerRegionCache[server] = boundingBoxList;
 
@@ -240,115 +412,188 @@ BoundingBoxList CoordinateSegmentationClient::serverRegion(const ServerID& serve
 }
 
 BoundingBox3f CoordinateSegmentationClient::region()  {
-  if (mBSPTreeValid) {
+  //std::cout << "mTopLevelRegion.mBoundingBox= " << mTopLevelRegion.mBoundingBox << "\n";
+  if ( mTopLevelRegion.mBoundingBox.min().x  != mTopLevelRegion.mBoundingBox.max().x ) {
+    //printf("Returning cached region\n");
     return mTopLevelRegion.mBoundingBox;
   }
 
-  downloadUpdatedBSPTree();
-
+  printf("Going to server for region\n");
 
   RegionRequestMessage requestMessage;
 
-  ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage),
-                                            ENET_PACKET_FLAG_RELIABLE);
+  boost::asio::io_service io_service;
+    
+  tcp::resolver resolver(io_service);
+       
+  tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
 
-  enet_peer_send(peer, 0, packet);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
 
-  ENetEvent event;
-  if (enet_host_service (client, & event, 200) > 0) {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      RegionResponseMessage* response = (RegionResponseMessage*) event.packet->data;
-      //      printf("regionresponsetype=%d\n",  response->type);
-
-      SerializedBBox region = response->bbox;
-      Vector3f vmin (region.minX,region.minY,region.minZ);
-      Vector3f vmax (region.maxX,region.maxY,region.maxZ);
-
-      BoundingBox3f bbox(vmin, vmax);
-
-      // Clean up the packet now that we're done using it.
-      enet_packet_destroy (event.packet);
-
-      return bbox;
+  //std::cout << "Calling CSEG server for region!\n";
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
     }
+  if (error) {
+    //std::cout << "Error connecting to  CSEG server for region\n";
+    return BoundingBox3f(); 
   }
 
-  return BoundingBox3f();
+  boost::asio::write(socket,
+                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
+                     boost::asio::transfer_all() );
+
+  //std::cout << "Sent over region request to cseg server\n";
+  
+
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  for (;;)
+  {
+      boost::system::error_code error;
+      boost::array<uint8, 1048576> buf;
+     
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
+      
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error) {
+	//std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string()<<" in region\n";
+	
+        //throw boost::system::system_error(error); // Some other error.
+	return mTopLevelRegion.mBoundingBox;
+      }
+  }
+
+  //std::cout << "Received reply from cseg server for region"  << "\n";
+
+  if (dataReceived == NULL) {
+    return mTopLevelRegion.mBoundingBox;
+  }
+
+  RegionResponseMessage* response = (RegionResponseMessage*) malloc(bytesReceived);
+  memcpy(response, dataReceived, bytesReceived);
+  assert(response->type == REGION_RESPONSE);
+
+  
+  BoundingBox3f bbox;
+  SerializedBBox* sbbox = &response->bbox;
+  sbbox->deserialize(bbox);
+
+  free(dataReceived);
+  free(response);
+  
+  //std::cout << "Region returned " <<  bbox << "\n";
+
+  mTopLevelRegion.mBoundingBox = bbox;
+
+  return bbox;
 }
 
-uint32 CoordinateSegmentationClient::numServers()  {
-  if (mAvailableServersCount > 0) return mAvailableServersCount;
+uint32 CoordinateSegmentationClient::numServers()  { 
+  if (mAvailableServersCount > 0) {
+    //std::cout << "Returning cached numServers\n";
+    return mAvailableServersCount;
+  }
+
+  printf("Going to server for numServers\n");
 
   NumServersRequestMessage requestMessage;
 
-  ENetPacket * packet = enet_packet_create (&requestMessage,
-					    sizeof(requestMessage),
-                                            ENET_PACKET_FLAG_RELIABLE);
+  boost::asio::io_service io_service;
+    
+  tcp::resolver resolver(io_service);
+       
+  tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
+			               GetOption("cseg-service-tcp-port")->as<String>());
 
-  enet_peer_send(peer, 0, packet);
+  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+ 
+  tcp::resolver::iterator end;
 
-  ENetEvent event;
-  if (enet_host_service (client, & event, 200) > 0) {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      NumServersResponseMessage* response = (NumServersResponseMessage*) event.packet->data;
-
-      int numServers = response->numServers;
-      //      printf("numServers=%d, type=%d\n", numServers, response->type);
-
-      // Clean up the packet now that we're done using it.
-      enet_packet_destroy (event.packet);
-
-      mAvailableServersCount = numServers;
-      return numServers;
+  //std::cout << "Calling CSEG server for numservers!\n";
+  tcp::socket socket(io_service);
+  boost::system::error_code error = boost::asio::error::host_not_found;
+  while (error && endpoint_iterator != end)
+    {
+      socket.close();
+      socket.connect(*endpoint_iterator++, error);
     }
+  if (error) {
+    //std::cout << "Error connecting to  CSEG server for numservers\n";
+    return  mAvailableServersCount;; 
   }
 
-  return 0;
+  boost::asio::write(socket,
+                     boost::asio::buffer((const void*)&requestMessage,sizeof (requestMessage)),
+                     boost::asio::transfer_all() );
+
+  //std::cout << "Sent over numservers request to cseg server\n";
+  
+
+  uint8* dataReceived = NULL;
+  uint32 bytesReceived = 0;
+  for (;;)
+  {
+      boost::system::error_code error;
+      boost::array<uint8, 1048576> buf;
+     
+      size_t len = socket.read_some(boost::asio::buffer(buf), error);      
+      
+      if (dataReceived == NULL) {
+	dataReceived = (uint8*) malloc (len);	
+      }
+      else if (len > 0){
+	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
+      }
+      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
+      
+      bytesReceived += len;
+      if (error == boost::asio::error::eof)
+        break; // Connection closed cleanly by peer.
+      else if (error) {
+	//std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string() <<" in numservers\n";	
+	//       throw boost::system::system_error(error); // Some other error.
+	return mAvailableServersCount;
+      }
+  }
+
+  //std::cout << "Received reply from cseg server for numservers"  << "\n";
+
+  NumServersResponseMessage* response = (NumServersResponseMessage*)dataReceived;
+  assert(response->type == NUM_SERVERS_RESPONSE);
+
+  uint32 retval = response->numServers;
+  mAvailableServersCount = retval;
+
+  if (dataReceived != NULL) {
+    free(dataReceived);
+  }
+
+  //std::cout << "numServers returned " <<  retval << "\n";
+  return retval;
 }
 
 void CoordinateSegmentationClient::service() {
-  ENetEvent event;
-  ENetPacket* packet;
+  
+  mIOService.poll_one();
 
-  if ( enet_host_service (mSubscriptionClient, & event,0) > 0)
-  {
-    if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-      SegmentationChangeMessage* segChangeMessage = (SegmentationChangeMessage*)
-	                                                      event.packet->data;
-
-      std::vector<Listener::SegmentationInfo> segInfoVector;
-      for (int i=0; i<segChangeMessage->numEntries; i++) {
-	Listener::SegmentationInfo segInfo;
-	SerializedSegmentChange segChange = segChangeMessage->changedSegments[i];
-	BoundingBoxList bbList;
-
-	for (unsigned int j=0; j < segChange.listLength; j++) {
-	  Vector3f vmin(segChange.bboxList[j].minX,
-			segChange.bboxList[j].minY,
-			segChange.bboxList[j].minZ);
-	  Vector3f vmax(segChange.bboxList[j].maxX,
-			segChange.bboxList[j].maxY,
-			segChange.bboxList[j].maxZ);
-
-	  std::cout << segChange.serverID << " : " << vmin << " " << vmax << "\n";
-	  BoundingBox3f bbox (vmin, vmax);
-	  bbList.push_back(bbox);
-	}
-
-	segInfo.server = segChange.serverID;
-	segInfo.region = bbList;
-
-	segInfoVector.push_back(segInfo);
-      }
-
-      mAvailableServersCount = 0;
-      mBSPTreeValid = false;
-      mTopLevelRegion.destroy();
-      mServerRegionCache.clear();
-      notifyListeners(segInfoVector);
-    }
-  }
 }
 
 void CoordinateSegmentationClient::receiveMessage(Message* msg) {
@@ -362,64 +607,6 @@ void CoordinateSegmentationClient::migrationHint( std::vector<ServerLoadInfo>& s
 }
 
 void CoordinateSegmentationClient::downloadUpdatedBSPTree() {
-  boost::asio::io_service io_service;
-
-  tcp::resolver resolver(io_service);
-
-  tcp::resolver::query query(tcp::v4(),GetOption("cseg-service-host")->as<String>(),
-			               GetOption("cseg-service-tcp-port")->as<String>());
-
-  tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-  tcp::resolver::iterator end;
-
-
-  tcp::socket socket(io_service);
-  boost::system::error_code error = boost::asio::error::host_not_found;
-  while (error && endpoint_iterator != end)
-    {
-      socket.close();
-      socket.connect(*endpoint_iterator++, error);
-    }
-  if (error)
-    throw boost::system::system_error(error);
-
-
-  uint8* dataReceived = NULL;
-  uint32 bytesReceived = 0;
-  for (;;)
-    {
-      boost::array<uint8, 1048576> buf;
-      boost::system::error_code error;
-
-      size_t len = socket.read_some(boost::asio::buffer(buf), error);
-
-      if (dataReceived == NULL) {
-	dataReceived = (uint8*) malloc (len);
-      }
-      else if (len > 0){
-	dataReceived = (uint8*) realloc(dataReceived, bytesReceived+len);
-      }
-      memcpy(dataReceived+bytesReceived, buf.c_array(), len);
-
-      bytesReceived += len;
-      if (error == boost::asio::error::eof)
-        break; // Connection closed cleanly by peer.
-      else if (error)
-        throw boost::system::system_error(error); // Some other error.
-    }
-
-  uint32 nodeCount;
-  memcpy(&nodeCount, dataReceived, sizeof(uint32));
-  SerializedBSPTree serializedBSPTree(nodeCount);
-  printf("nodecount=%d\n" ,serializedBSPTree.mNodeCount );
-  memcpy(serializedBSPTree.mSegmentedRegions, dataReceived + 4, bytesReceived-4);
-  serializedBSPTree.deserializeBSPTree(&mTopLevelRegion, 0, &serializedBSPTree);
-
-  mBSPTreeValid = true;
-  if (dataReceived != NULL) {
-    free(dataReceived);
-  }
 }
 
 
