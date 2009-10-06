@@ -65,7 +65,8 @@ class ClusterSimSettings:
         self.loc = 'standard'
         self.space_server_pool = space_svr_pool
         self.cseg = 'uniform'
-        self.cseg_service_host = 'indus'
+        self.cseg_service_host = 'meru00'
+        self.cseg_service_tcp_port = 6234;
         self.oseg = 'oseg_craq'
         self.oseg_unique_craq_prefix = 'M' # NOTE: this is really a default, you should set unique = x in your .cluster
         self.oseg_analyze_after = '100' #Will perform oseg analysis after this many seconds of the run.
@@ -292,6 +293,7 @@ class ClusterSim:
                 "--loc=" + self.settings.loc,
                 "--cseg=" + self.settings.cseg,
                 "--cseg-service-host=" + self.settings.cseg_service_host,
+                "--cseg-service-tcp-port=" + str(self.settings.cseg_service_tcp_port),
                 "--oseg=" + self.settings.oseg,
                 "--oseg_unique_craq_prefix=" + self.settings.unique(),
                 "--object_drift_x=" + self.settings.object_drift_x,

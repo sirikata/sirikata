@@ -33,6 +33,9 @@
 #ifndef _CBR_SEGMENTED_REGION_HPP_
 #define _CBR_SEGMENTED_REGION_HPP_
 
+
+
+
 namespace CBR {
 
 #define LOOKUP_REQUEST 1
@@ -46,12 +49,32 @@ namespace CBR {
 #define SEGMENTATION_CHANGE 9
 #define SEGMENTATION_LISTEN 10
 
-#define MAX_BBOX_LIST_SIZE 60
-#define MAX_SERVER_REGIONS_CHANGED 3
+#define MAX_BBOX_LIST_SIZE 50000
+#define MAX_SERVER_REGIONS_CHANGED 2
+
+typedef struct SerializedVector{
+  float32 x, y, z;  
+
+  void serialize(const Vector3f& vect) {
+    x = vect.x;
+    y = vect.y;
+    z = vect.z;
+  }  
+
+  void deserialize(Vector3f& vect) {
+    vect = Vector3f(x,y,z);
+  }
+
+}__attribute__((__packed__)) SerializedVector ;
 
 typedef struct SerializedBBox{
-  float minX, minY, minZ;
-  float maxX, maxY, maxZ;
+  float32 minX;
+  float32 minY;
+  float32 minZ;
+
+  float32 maxX;
+  float32 maxY;
+  float32 maxZ;
 
   void serialize(const BoundingBox3f& bbox) {
     minX = bbox.min().x;
@@ -68,14 +91,14 @@ typedef struct SerializedBBox{
 			 Vector3f(maxX, maxY, maxZ));
   }
 
-} SerializedBBox;
+}__attribute__((__packed__)) SerializedBBox ;
 
 typedef struct SerializedSegmentChange{
   ServerID serverID;
-  uint8 listLength;
-  SerializedBBox bboxList[MAX_BBOX_LIST_SIZE/MAX_SERVER_REGIONS_CHANGED];
+  uint32 listLength;
+  SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
 
-} SerializedSegmentChange;
+}__attribute__((__packed__)) SerializedSegmentChange ;
 
 typedef struct GenericMessage {
   uint8 type;
@@ -83,12 +106,12 @@ typedef struct GenericMessage {
 
 typedef struct LookupRequestMessage {
   uint8 type;
-  float x, y, z;
+  float32 x, y, z;
 
   LookupRequestMessage() {
     type = LOOKUP_REQUEST;
   }
-} LookupRequestMessage;
+}__attribute__((__packed__)) LookupRequestMessage ;
 
 
 typedef struct LookupResponseMessage {
@@ -98,7 +121,7 @@ typedef struct LookupResponseMessage {
   LookupResponseMessage() {
     type = LOOKUP_RESPONSE;
   }
-} LookupResponseMessage;
+}__attribute__((__packed__)) LookupResponseMessage ;
 
 typedef struct NumServersRequestMessage {
   uint8 type;  
@@ -106,7 +129,7 @@ typedef struct NumServersRequestMessage {
   NumServersRequestMessage() {
     type = NUM_SERVERS_REQUEST;
   }
-} NumServersRequestMessage;
+}__attribute__((__packed__)) NumServersRequestMessage;
 
 typedef struct NumServersResponseMessage {
   uint8 type;
@@ -115,7 +138,7 @@ typedef struct NumServersResponseMessage {
   NumServersResponseMessage() {
     type = NUM_SERVERS_RESPONSE;
   }
-} NumServersResponseMessage;
+}__attribute__((__packed__)) NumServersResponseMessage;
 
 typedef struct ServerRegionRequestMessage {
   uint8 type;
@@ -124,17 +147,20 @@ typedef struct ServerRegionRequestMessage {
   ServerRegionRequestMessage() {
     type = SERVER_REGION_REQUEST;
   }
-} ServerRegionRequestMessage;
+}__attribute__((__packed__)) ServerRegionRequestMessage;
 
 typedef struct ServerRegionResponseMessage {
   uint8 type;
-  uint8 listLength;
+  
+  uint32 listLength;
   SerializedBBox bboxList[MAX_BBOX_LIST_SIZE];
 
   ServerRegionResponseMessage() {
     type = SERVER_REGION_RESPONSE;
+    
+    listLength = 0;
   }
-} ServerRegionResponseMessage;
+}__attribute__((__packed__)) ServerRegionResponseMessage;
 
 typedef struct RegionRequestMessage {
   uint8 type;  
@@ -142,7 +168,7 @@ typedef struct RegionRequestMessage {
   RegionRequestMessage() {
     type = REGION_REQUEST;
   }
-} RegionRequestMessage;
+}__attribute__((__packed__)) RegionRequestMessage;
 
 typedef struct RegionResponseMessage {
   uint8 type;
@@ -151,7 +177,7 @@ typedef struct RegionResponseMessage {
   RegionResponseMessage() {
     type = REGION_RESPONSE;
   }
-} RegionResponseMessage;
+}__attribute__((__packed__)) RegionResponseMessage;
 
 typedef struct SegmentationChangeMessage {
   uint8_t type;
@@ -162,21 +188,25 @@ typedef struct SegmentationChangeMessage {
     type = SEGMENTATION_CHANGE;
     numEntries =0;
   }
-} SegmentationChangeMessage;
+}__attribute__((__packed__)) SegmentationChangeMessage;
 
 typedef struct SegmentationListenMessage {
   uint8_t type;
   
+  char host[255];
+  uint16 port;
+  
   SegmentationListenMessage() {
     type = SEGMENTATION_LISTEN;
   }
-} SegmentationListenMessage;
+}__attribute__((__packed__)) SegmentationListenMessage;
 
 typedef struct SegmentedRegion {
 
   SegmentedRegion() {
     mLeafCount = 0;
     mLeftChild  = mRightChild = NULL;
+    mServer = 0;
   }
 
   void destroy() {
@@ -296,28 +326,42 @@ typedef struct SegmentedRegion {
     return NULL;
   }
 
-  ServerID lookup(const Vector3f& pos) const {
-    if (mRightChild == NULL && mLeftChild == NULL && mBoundingBox.contains(pos)) {
-	return mServer;
+const SegmentedRegion* lookup(const Vector3f& pos) const {
+    if (mRightChild == NULL && mLeftChild == NULL) {
+      //std::cout << "Left and right child is null: boundingbox = " << mBoundingBox<<"\n";
+      if (mBoundingBox.contains(pos)) {
+	return this;
+      }
     }
-
-    uint32_t FAKE_SVR_ID = 1000000;
-    ServerID serverID = FAKE_SVR_ID;
+    
+    const SegmentedRegion* region = NULL;
+    /*if (mLeftChild != NULL) {
+      std::cout << "Left child: boundingbox = " << mLeftChild->mBoundingBox<<"\n";
+    }*/
 
     if (mLeftChild != NULL && mLeftChild->mBoundingBox.contains(pos)) {
-     serverID = mLeftChild->lookup(pos);
+      //std::cout << "Contained in left child "  << mLeftChild->mBoundingBox << "\n";      
+      region = mLeftChild->lookup(pos);
     }
+    
+    /*if (mRightChild != NULL) {
+      std::cout << "Right child: boundingbox = " << mRightChild->mBoundingBox<<"\n";
+    }*/
 
-    if (mRightChild!=NULL && serverID == FAKE_SVR_ID && mRightChild->mBoundingBox.contains(pos)){
-      serverID= mRightChild->lookup(pos); 
+    if (mRightChild!=NULL && region == NULL && mRightChild->mBoundingBox.contains(pos)){
+      //std::cout << "Contained in right child " << mRightChild->mBoundingBox << "\n";
+      region= mRightChild->lookup(pos); 
     }
       
-    return serverID;
+    return region;
   }
 
 
   void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
+    //std::cout << mServer << " : " << mBoundingBox << " \n"; 
+
     if (mServer == server && mRightChild==NULL && mLeftChild==NULL) {
+      //std::cout << "Adding to bblist : " << mBoundingBox << "\n";
       boundingBoxList.push_back(mBoundingBox);
       return;
     }
@@ -336,7 +380,7 @@ typedef struct SegmentedRegion {
   ServerID  mServer;
   SegmentedRegion* mLeftChild;
   SegmentedRegion* mRightChild;
-  int mLeafCount;
+  uint32 mLeafCount;
   BoundingBox3f mBoundingBox;
 
 } SegmentedRegion;
@@ -353,7 +397,7 @@ typedef struct SerializedSegmentedRegion {
     mRightChildIdx = 0;
   }
       
-} SerializedSegmentedRegion;
+}__attribute__((__packed__)) SerializedSegmentedRegion;
 
 
 
@@ -385,8 +429,8 @@ typedef struct SerializedBSPTree {
     if (serializedTree->mSegmentedRegions[idx].mLeftChildIdx == 0 && 
        serializedTree->mSegmentedRegions[idx].mRightChildIdx == 0)
     {    
-      std::cout << region->mServer << " : " <<region->mLeafCount << "\n";
-      std::cout << region->mBoundingBox << "\n";
+      //std::cout << region->mServer << " : " <<region->mLeafCount << "\n";
+      //std::cout << region->mBoundingBox << "\n";
     }
 
     //std::cout << "left " << serializedTree->mSegmentedRegions[idx].mLeftChildIdx << "\n";
@@ -408,7 +452,8 @@ private:
     mNodeCount = 0;
   }
 
-} SerializedBSPTree;
+}__attribute__((__packed__)) SerializedBSPTree;
+
 
 }
 #endif

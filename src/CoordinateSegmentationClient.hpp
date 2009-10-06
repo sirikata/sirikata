@@ -41,13 +41,20 @@
 #include "SegmentedRegion.hpp"
 #include <enet/enet.h>
 
+
+
+#include <enet/enet.h>
+
+typedef boost::asio::ip::tcp tcp;
+
 namespace CBR {
 
 
 /** Distributed BSP-tree based implementation of CoordinateSegmentation. */
 class CoordinateSegmentationClient : public CoordinateSegmentation {
 public:
-    CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim);
+  CoordinateSegmentationClient(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim,
+				ServerIDMap* sidmap );
     virtual ~CoordinateSegmentationClient();
 
     virtual ServerID lookup(const Vector3f& pos) ;
@@ -80,6 +87,18 @@ private:
     std::map<ServerID, BoundingBoxList> mServerRegionCache;
 
     uint16 mAvailableServersCount;
+
+    boost::asio::io_service mIOService;  //creates an io service
+    boost::shared_ptr<tcp::acceptor> mAcceptor;
+    boost::shared_ptr<tcp::socket> mSocket;
+
+    ServerIDMap *  mSidMap;
+
+    void startAccepting();
+    void accept_handler();
+
+    void sendSegmentationListenMessage();
+
 }; // class CoordinateSegmentation
 
 } // namespace CBR

@@ -81,13 +81,13 @@ void ServerWeightCalculator::calculateWeight(ServerID source, ServerID dest, Nor
         result = unnormalized_result;
         break;
       case NORMALIZE_BY_MIN_SEND_AND_RECEIVE_RATE:
-        result = unnormalized_result/totalBandwidthCap;
+        result = (totalBandwidthCap == 0) ? 0 : unnormalized_result/totalBandwidthCap;
         break;
       case NORMALIZE_BY_RECEIVE_RATE:
-        result = unnormalized_result/totalReceiveBandwidth;
+        result = (totalReceiveBandwidth == 0)?0:unnormalized_result/totalReceiveBandwidth;
         break;
       case NORMALIZE_BY_SEND_RATE:
-        result = unnormalized_result/totalSendBandwidth;
+        result = (totalSendBandwidth==0) ? 0 : unnormalized_result/totalSendBandwidth;
         break;
       default:
         assert(false);

@@ -134,8 +134,6 @@ int main(int argc, char** argv) {
 void *main_loop(void *) {
     using namespace CBR;
 
-
-
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
         String server_port = GetOption("server-port")->as<String>();
@@ -218,10 +216,10 @@ void *main_loop(void *) {
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
     else if (cseg_type == "distributed") {
-      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers);
+      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers, server_id_map);
     }
     else if (cseg_type == "client") {
-      cseg = new CoordinateSegmentationClient(space_context, region, layout);
+      cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
     else {
         assert(false);
@@ -424,7 +422,6 @@ void *main_loop(void *) {
         oseg_process_stream.close();
 
         //completed round trip migrate times
-        std::cout<<"\n\n\nGot into here2\n\n";
         String migration_round_trip_times_filename = "oseg_migration_round_trip_times_file";
         migration_round_trip_times_filename += ".dat";
 
@@ -513,7 +510,7 @@ void *main_loop(void *) {
 
     ObjectSegmentation* oseg;
 
-    if (oseg_type == OSEG_OPTION_LOC)
+    if (oseg_type == OSEG_OPTION_LOC && cseg_type != "distributed")
     {
       //using loc approach
       std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
@@ -531,7 +528,7 @@ void *main_loop(void *) {
       oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap,forwarder);
     }
 
-    if (oseg_type == OSEG_OPTION_CRAQ)
+    if (oseg_type == OSEG_OPTION_CRAQ && cseg_type != "distributed")
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
@@ -631,7 +628,7 @@ void *main_loop(void *) {
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
-        Time now_time = Timer::now();
+        Time now_time = Timer::now();	
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
             printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
@@ -651,7 +648,9 @@ void *main_loop(void *) {
     // FIXME we have a special case for the distributed cseg server, this should be
     // turned into a separate binary
     if (cseg_type == "distributed") {
-      while( true ) {
+      srand(time(NULL));
+
+      while( true ) { 
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
 
         space_context->tick(tbegin + elapsed);
@@ -660,7 +659,7 @@ void *main_loop(void *) {
 
       exit(0);
     }
-
+    
 
     gNetwork->start();
 
@@ -676,7 +675,7 @@ void *main_loop(void *) {
     profiler.addStage("External OSeg III");
     profiler.addStage("Server Service");
 
-    while( true ) {
+    while( true ) {        
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
         if (elapsed > duration)
             break;
