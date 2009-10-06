@@ -61,13 +61,13 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 }
 
 
-Message::Message(const ServerID& origin, bool x)
+Message::Message(const ServerID& origin)
  : mID( GenerateUniqueID(origin) )
 {
 }
 
-Message::Message(uint64 _id)
- : mID(_id)
+Message::Message(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : mID(svr_msg.id())
 {
 }
 
@@ -78,87 +78,60 @@ uint64 Message::id() const {
     return mID;
 }
 
-uint32 Message::deserialize(const Network::Chunk& wire, uint32 offset, Message** result) {
-    uint8 raw_type;
-    uint64 _id;
-
-    memcpy( &raw_type, &wire[offset], 1 );
-    offset += 1;
-
-    memcpy( &_id, &wire[offset], sizeof(uint64) );
-    offset += sizeof(uint64);
+Message* Message::deserialize(const Network::Chunk& wire) {
+    CBR::Protocol::Server::ServerMessage svr_msg;
+    parsePBJMessage(&svr_msg, wire);
 
     Message* msg = NULL;
 
-    switch(raw_type) {
+    switch( svr_msg.dest_port() ) {
       case MESSAGE_TYPE_OBJECT:
-        msg = new ObjectMessage(wire, offset, _id);
+        msg = new ObjectMessage(svr_msg);
         break;
       case MESSAGE_TYPE_MIGRATE:
-        msg = new MigrateMessage(wire, offset, _id);
+        msg = new MigrateMessage(svr_msg);
         break;
       case MESSAGE_TYPE_CSEG_CHANGE:
-        msg = new CSegChangeMessage(wire, offset, _id);
+        msg = new CSegChangeMessage(svr_msg);
         break;
       case MESSAGE_TYPE_LOAD_STATUS:
-        msg = new LoadStatusMessage(wire, offset, _id);
+        msg = new LoadStatusMessage(svr_msg);
         break;
       case MESSAGE_TYPE_OSEG_MIGRATE_MOVE:
-        msg = new OSegMigrateMessageMove(wire,offset,_id);
+        msg = new OSegMigrateMessageMove(svr_msg);
         break;
       case MESSAGE_TYPE_KILL_OBJ_CONN:
-        msg = new KillObjConnMessage(wire,offset,_id);
+        msg = new KillObjConnMessage(svr_msg);
         break;
       case MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE:
-        msg = new OSegMigrateMessageAcknowledge(wire,offset,_id);
+        msg = new OSegMigrateMessageAcknowledge(svr_msg);
         break;
       case MESSAGE_TYPE_UPDATE_OSEG:
-        msg = new UpdateOSegMessage(wire,offset,_id);
+        msg = new UpdateOSegMessage(svr_msg);
         break;
       case MESSAGE_TYPE_OSEG_ADDED_OBJECT:
-        msg = new  OSegAddMessage(wire,offset,_id);
+        msg = new  OSegAddMessage(svr_msg);
         break;
       case MESSAGE_TYPE_NOISE:
-        msg = new NoiseMessage(wire,offset,_id);
+        msg = new NoiseMessage(svr_msg);
         break;
       case MESSAGE_TYPE_SERVER_PROX_QUERY:
-        msg = new ServerProximityQueryMessage(wire,offset,_id);
+        msg = new ServerProximityQueryMessage(svr_msg);
         break;
       case MESSAGE_TYPE_SERVER_PROX_RESULT:
-        msg = new ServerProximityResultMessage(wire,offset,_id);
+        msg = new ServerProximityResultMessage(svr_msg);
         break;
       case MESSAGE_TYPE_BULK_LOCATION:
-        msg = new BulkLocationMessage(wire,offset,_id);
+        msg = new BulkLocationMessage(svr_msg);
         break;
       default:
         assert(false);
         break;
     }
 
-    if (result != NULL)
-        *result = msg;
-    else // if they didn't want the result, just delete it
-        delete msg;
-
-    return offset;
+    return msg;
 }
 
-uint32 Message::headerSize()const {
-    return sizeof(MessageType) + sizeof(uint64);
-}
-uint32 Message::serializeHeader(Network::Chunk& wire, uint32 offset) {
-    if (wire.size() < offset + sizeof(MessageType) + sizeof(uint64) )
-        wire.resize( offset + sizeof(MessageType) + sizeof(uint64) );
-
-    MessageType t = type();
-    memcpy( &wire[offset], &t, sizeof(MessageType) );
-    offset += sizeof(MessageType);
-
-    memcpy( &wire[offset], &mID, sizeof(uint64) );
-    offset += sizeof(uint64);
-
-    return offset;
-}
 
 void MessageDispatcher::registerMessageRecipient(MessageType type, MessageRecipient* recipient) {
     MessageRecipientMap::iterator it = mMessageRecipients.find(type);
@@ -240,138 +213,114 @@ void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessa
 
 // Specific message types
 
-template<typename PBJMessageType>
-uint32 serializePBJMessage(const PBJMessageType& contents, Network::Chunk& wire, uint32 offset) {
-    std::string payload;
-    bool serialized_success = contents.SerializeToString(&payload);
-    assert(serialized_success);
-    wire.resize( wire.size() + payload.size() );
-    memcpy(&wire[offset], &payload[0], payload.size());
-    offset += payload.size();
 
-    return offset;
-}
-
-template<typename PBJMessageType>
-void parsePBJMessage(PBJMessageType& contents, const Network::Chunk& wire, uint32& offset) {
-    bool parse_success = contents.ParseFromArray((void*)&wire[offset], wire.size() - offset);
-    assert(parse_success);
-    offset = wire.size();
-}
-
-
-size_t ObjectMessage::size()const {
-    return contents.ByteSize()+headerSize();
+size_t ObjectMessage::size() const {
+    return serializedSize(contents);
 }
 
 ObjectMessage::ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src)
- : Message(origin, true),
+ : Message(origin),
    contents(src)
 {
 }
 
-ObjectMessage::ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+ObjectMessage::ObjectMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 MessageType ObjectMessage::type() const {
     return MESSAGE_TYPE_OBJECT;
 }
 
-uint32 ObjectMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool ObjectMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 NoiseMessage::NoiseMessage(const ServerID& origin, uint32 noise_sz)
- : Message(origin, true)
+ : Message(origin)
 {
     std::string payload(noise_sz, 'x');
     contents.set_payload(payload);
 }
 
-NoiseMessage::NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+NoiseMessage::NoiseMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 MessageType NoiseMessage::type() const {
     return MESSAGE_TYPE_NOISE;
 }
 
-uint32 NoiseMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool NoiseMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
 MigrateMessage::MigrateMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-MigrateMessage::MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+MigrateMessage::MigrateMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 MessageType MigrateMessage::type() const {
     return MESSAGE_TYPE_MIGRATE;
 }
 
-uint32 MigrateMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool MigrateMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
 CSegChangeMessage::CSegChangeMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-CSegChangeMessage::CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+CSegChangeMessage::CSegChangeMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 MessageType CSegChangeMessage::type() const {
   return MESSAGE_TYPE_CSEG_CHANGE;
 }
 
-uint32 CSegChangeMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool CSegChangeMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
 LoadStatusMessage::LoadStatusMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-LoadStatusMessage::LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+LoadStatusMessage::LoadStatusMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 MessageType LoadStatusMessage::type() const {
   return MESSAGE_TYPE_LOAD_STATUS;
 }
 
-uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool LoadStatusMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
@@ -380,7 +329,7 @@ uint32 LoadStatusMessage::serialize(Network::Chunk& wire, uint32 offset) {
 
 
 OSegMigrateMessageMove::OSegMigrateMessageMove(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id)
-  : Message(origin, true)
+  : Message(origin)
 {
   contents.set_m_servid_from               (sID_from);
   contents.set_m_servid_to                   (sID_to);
@@ -389,10 +338,10 @@ OSegMigrateMessageMove::OSegMigrateMessageMove(const ServerID& origin,ServerID s
   contents.set_m_objid                       (obj_id);
 }
 
-OSegMigrateMessageMove::OSegMigrateMessageMove(const Network::Chunk& wire, uint32& offset, uint64 _id)
-  : Message(_id)
+OSegMigrateMessageMove::OSegMigrateMessageMove(const CBR::Protocol::Server::ServerMessage& svr_msg)
+  : Message(svr_msg)
 {
-  parsePBJMessage(contents,wire,offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 
@@ -402,9 +351,8 @@ MessageType OSegMigrateMessageMove::type() const
 }
 
 
-uint32 OSegMigrateMessageMove::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool OSegMigrateMessageMove::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 ServerID OSegMigrateMessageMove::getServFrom()
@@ -433,7 +381,7 @@ ServerID OSegMigrateMessageMove::getMessageFrom()
 
 //and now ack message
 OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id)
-  : Message(origin, true)
+  : Message(origin)
 {
 
   contents.set_m_servid_from               (sID_from);
@@ -444,10 +392,10 @@ OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const ServerID& ori
 
 }
 
-OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id)
-  : Message(_id)
+OSegMigrateMessageAcknowledge::OSegMigrateMessageAcknowledge(const CBR::Protocol::Server::ServerMessage& svr_msg)
+  : Message(svr_msg)
 {
-  parsePBJMessage(contents,wire,offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 
@@ -457,9 +405,8 @@ MessageType OSegMigrateMessageAcknowledge::type() const
 }
 
 
-uint32 OSegMigrateMessageAcknowledge::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool OSegMigrateMessageAcknowledge::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 ServerID OSegMigrateMessageAcknowledge::getServFrom()
@@ -491,7 +438,7 @@ ServerID OSegMigrateMessageAcknowledge::getMessageFrom()
 
 
 UpdateOSegMessage::UpdateOSegMessage(const ServerID &sID_sendingMessage, const ServerID &sID_objOn, const UUID &obj_id)
-  : Message(sID_sendingMessage, true)
+  : Message(sID_sendingMessage)
 {
   contents.set_servid_sending_update         (sID_sendingMessage);
   contents.set_servid_obj_on                          (sID_objOn);
@@ -508,17 +455,15 @@ UpdateOSegMessage::~UpdateOSegMessage()
 }
 
 
-uint32 UpdateOSegMessage::serialize(Network::Chunk& wire, uint32 offset)
-{
-  offset = serializeHeader(wire, offset);
-  return serializePBJMessage(contents, wire, offset);
+bool UpdateOSegMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
-UpdateOSegMessage::UpdateOSegMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
-  : Message(_id)
+UpdateOSegMessage::UpdateOSegMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+  : Message(svr_msg)
 {
-  parsePBJMessage(contents,wire,offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 
@@ -528,7 +473,7 @@ UpdateOSegMessage::UpdateOSegMessage(const Network::Chunk& wire, uint32& offset,
 
 
 OSegAddMessage::OSegAddMessage(const ServerID& origin, const UUID& obj_id)
-  : Message(origin,true)
+  : Message(origin)
 {
   contents.set_m_objid(obj_id);
 }
@@ -543,25 +488,23 @@ MessageType OSegAddMessage::type() const
   return MESSAGE_TYPE_OSEG_ADDED_OBJECT;
 }
 
-uint32 OSegAddMessage::serialize(Network::Chunk& wire, uint32 offset)
-{
-  offset = serializeHeader(wire, offset);
-  return serializePBJMessage(contents, wire, offset);
+bool OSegAddMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
-OSegAddMessage::OSegAddMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
-  : Message(_id)
+OSegAddMessage::OSegAddMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+  : Message(svr_msg)
 {
-  parsePBJMessage(contents,wire,offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 
 //obj_conn_kill message:
 
 KillObjConnMessage::KillObjConnMessage(const ServerID& origin)
-  : Message(origin,true)
+  : Message(origin)
 {
 
 }
@@ -570,10 +513,10 @@ KillObjConnMessage::~KillObjConnMessage()
 
 }
 
-KillObjConnMessage::KillObjConnMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
-  : Message(_id)
+KillObjConnMessage::KillObjConnMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+  : Message(svr_msg)
 {
-  parsePBJMessage(contents,wire,offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 
@@ -583,24 +526,22 @@ MessageType KillObjConnMessage::type() const
 }
 
 
-uint32 KillObjConnMessage::serialize(Network::Chunk& wire, uint32 offset)
-{
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool KillObjConnMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 //end of obj_conn_kill message
 
 
 ServerProximityQueryMessage::ServerProximityQueryMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-ServerProximityQueryMessage::ServerProximityQueryMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+ServerProximityQueryMessage::ServerProximityQueryMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 ServerProximityQueryMessage::~ServerProximityQueryMessage() {
@@ -610,23 +551,22 @@ MessageType ServerProximityQueryMessage::type() const {
   return MESSAGE_TYPE_SERVER_PROX_QUERY;
 }
 
-uint32 ServerProximityQueryMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool ServerProximityQueryMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
 
 ServerProximityResultMessage::ServerProximityResultMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-ServerProximityResultMessage::ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+ServerProximityResultMessage::ServerProximityResultMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 ServerProximityResultMessage::~ServerProximityResultMessage() {
@@ -636,23 +576,22 @@ MessageType ServerProximityResultMessage::type() const {
   return MESSAGE_TYPE_SERVER_PROX_RESULT;
 }
 
-uint32 ServerProximityResultMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool ServerProximityResultMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 
 
 
 BulkLocationMessage::BulkLocationMessage(const ServerID& origin)
- : Message(origin, true)
+ : Message(origin)
 {
 }
 
-BulkLocationMessage::BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id)
- : Message(_id)
+BulkLocationMessage::BulkLocationMessage(const CBR::Protocol::Server::ServerMessage& svr_msg)
+ : Message(svr_msg)
 {
-    parsePBJMessage(contents, wire, offset);
+    parsePBJMessage(&contents, svr_msg.payload());
 }
 
 BulkLocationMessage::~BulkLocationMessage() {
@@ -662,9 +601,8 @@ MessageType BulkLocationMessage::type() const {
   return MESSAGE_TYPE_BULK_LOCATION;
 }
 
-uint32 BulkLocationMessage::serialize(Network::Chunk& wire, uint32 offset) {
-    offset = serializeHeader(wire, offset);
-    return serializePBJMessage(contents, wire, offset);
+bool BulkLocationMessage::serialize(Network::Chunk* wire) {
+    return serializeContents(wire, contents);
 }
 
 

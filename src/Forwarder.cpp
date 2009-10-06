@@ -289,9 +289,8 @@ void Forwarder::service()
 
       bool success = false;
 
-    uint32 offset = 0;
     Network::Chunk msg_serialized;
-    offset = msg->serialize(msg_serialized, offset);
+    msg->serialize(&msg_serialized);
 
 
     if (dest_server==mContext->id())
@@ -430,24 +429,17 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 
   void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
   {
-    Message* result;
-    uint32 offset=0;
+      Message* result = Message::deserialize(chunk);
 
-    do
-    {
-      offset = Message::deserialize(chunk,offset,&result);
       ObjectMessage *om=dynamic_cast<ObjectMessage*>(result);
       if (om) {
           mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::FORWARDED,om->contents.source_port(),om->contents.dest_port(),result->type());
       }
+
       if (!forwarded_self_msg)
-          mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
+          mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), chunk.size());
 
       dispatchMessage(result);
-
-      //if (delivered)
-      //  mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), offset);
-    }while (offset<chunk.size());
   }
 
 void Forwarder::receiveMessage(Message* msg) {

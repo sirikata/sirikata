@@ -24,7 +24,6 @@ bool FIFOObjectMessageQueue::beginSend(CBR::Protocol::Object::ObjectMessage* msg
 
     Network::Chunk chunk;
     ObjectMessage obj_msg(mContext->id(), *msg);
-    //obj_msg.serialize(chunk, 0);
 
     ServerProtocolMessagePair* smp = new ServerProtocolMessagePair(NULL, obj_msg, obj_msg.id());
     bool success = mQueue.push(msg->source_object(),smp)==QueueEnum::PushSucceeded;

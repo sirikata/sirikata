@@ -53,7 +53,8 @@ private:
             return;
 
         Network::Chunk s;
-        mFrontInput->data().serialize(s,0);
+        bool serialized = mFrontInput->data().serialize(&s);
+        assert(serialized);
         unconstThis()->mFrontOutput = new OutgoingMessage(s, mFrontInput->dest(), mFrontInput->id());
     }
 

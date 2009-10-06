@@ -102,6 +102,42 @@ uint64 GenerateUniqueID(const ServerID& origin);
 ServerID GetUniqueIDServerID(UniqueMessageID uid);
 uint64 GetUniqueIDMessageID(UniqueMessageID uid);
 
+
+template<typename PBJMessageType>
+std::string serializePBJMessage(const PBJMessageType& contents) {
+    std::string payload;
+    bool serialized_success = contents.SerializeToString(&payload);
+    assert(serialized_success);
+
+    return payload;
+}
+
+template<typename PBJMessageType>
+bool serializePBJMessage(std::string* payload, const PBJMessageType& contents) {
+    return contents.SerializeToString(payload);
+}
+
+/** Parse a PBJ message from the wire, starting at the given offset from the .
+ *  \param contents pointer to the message to parse from the data
+ *  \param wire the raw data to parse from, either a Network::Chunk or std::string
+ *  \param offset the number of bytes into the data to start parsing
+ *  \param length the number of bytes to parse, or -1 to use the entire
+ *  \returns true if parsed successfully, false otherwise
+ */
+template<typename PBJMessageType, typename WireType>
+bool parsePBJMessage(PBJMessageType* contents, const WireType& wire, uint32 offset = 0, int32 length = -1) {
+    assert(contents != NULL);
+    uint32 rlen = (length == -1) ? (wire.size() - offset) : length;
+    assert(offset + rlen <= wire.size()); // buffer overrun
+    return contents->ParseFromArray((void*)&wire[offset], rlen);
+}
+
+// FIXME we're using a nasty custom framing for object host messages
+std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg);
+
+CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+
+
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
  */
@@ -111,16 +147,48 @@ public:
 
     virtual MessageType type() const = 0;
     UniqueMessageID id() const;
-    uint32 headerSize()const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset) = 0;
-    static uint32 deserialize(const Network::Chunk& wire, uint32 offset, Message** result);
-protected:
-    Message(const ServerID& origin, bool x); // note the bool is here to make the signature different than the next constructor
-    Message(uint64 id);
 
-    // takes care of serializing the header information properly, will overwrite
-    // contents of chunk.  returns the offset after serializing the header
-    uint32 serializeHeader(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result) = 0;
+    static Message* deserialize(const Network::Chunk& wire);
+protected:
+    Message(const ServerID& origin);
+    Message(const CBR::Protocol::Server::ServerMessage& svr_msg);
+
+    template<typename ContentsPBJType>
+    void fillMessage(CBR::Protocol::Server::ServerMessage& msg, const ContentsPBJType& pbj) const {
+        msg.set_source_server( 0 ); // FIXME
+        msg.set_source_port( this->type() );
+        msg.set_dest_server( 0 ); // FIXME
+        msg.set_dest_port( this->type() );
+        msg.set_id(mID);
+
+        msg.set_payload( serializePBJMessage(pbj) ); // FIXME should return false if this fails
+    }
+
+    template<typename ContentsPBJType>
+    uint32 serializedSize(const ContentsPBJType& pbj) const {
+        // FIXME having to serialize to find out the size is ridiculous, but there doesn't seem to be
+        // an easy way to factor out the cost of the payload
+
+        CBR::Protocol::Server::ServerMessage msg;
+        fillMessage(msg, pbj);
+        return msg.ByteSize();
+    }
+
+    template<typename ContentsPBJType>
+    bool serializeContents(Network::Chunk* output, const ContentsPBJType& pbj) const {
+        CBR::Protocol::Server::ServerMessage msg;
+        fillMessage(msg, pbj);
+
+        // FIXME having to copy here sucks
+        std::string result;
+        bool success = serializePBJMessage(&result, msg);
+        if (!success) return false;
+        output->resize( result.size() );
+        memcpy(&((*output)[0]), &(result[0]), sizeof(uint8)*result.size());
+        return true;
+    }
+
 private:
     UniqueMessageID mID;
 }; // class Message
@@ -200,12 +268,14 @@ public:
     ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src);
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
+
     size_t size()const;
+
     CBR::Protocol::Object::ObjectMessage contents;
 private:
     friend class Message;
-    ObjectMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    ObjectMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 }; // class ObjectMessage
 
 
@@ -214,12 +284,12 @@ public:
     NoiseMessage(const ServerID& origin, uint32 noise_sz);
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::Object::Noise contents;
 private:
     friend class Message;
-    NoiseMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    NoiseMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 }; // class NoiseMessage
 
 class MigrateMessage : public Message {
@@ -227,12 +297,12 @@ public:
     MigrateMessage(const ServerID& origin);
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::Migration::MigrationMessage contents;
 private:
     friend class Message;
-    MigrateMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    MigrateMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 }; // class MigrateMessage
 
 class CSegChangeMessage : public Message {
@@ -240,12 +310,12 @@ public:
     CSegChangeMessage(const ServerID& origin);
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::CSeg::ChangeMessage contents;
 private:
     friend class Message;
-    CSegChangeMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    CSegChangeMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 class LoadStatusMessage : public Message {
@@ -253,12 +323,12 @@ public:
     LoadStatusMessage(const ServerID& origin);
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::CSeg::LoadMessage contents;
 private:
     friend class Message;
-    LoadStatusMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    LoadStatusMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -272,7 +342,7 @@ public:
 
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::OSeg::MigrateMessageMove contents;
 
@@ -285,7 +355,7 @@ public:
 
 private:
     friend class Message;
-    OSegMigrateMessageMove(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    OSegMigrateMessageMove(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -295,7 +365,7 @@ public:
   OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id);
 
   virtual MessageType type() const;
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
   CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
 
@@ -308,7 +378,7 @@ public:
 
 private:
   friend class Message;
-  OSegMigrateMessageAcknowledge(const Network::Chunk& wire, uint32& offset, uint64 _id);
+  OSegMigrateMessageAcknowledge(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -318,14 +388,15 @@ class UpdateOSegMessage : public Message
 public:
   UpdateOSegMessage(const ServerID& sID_sendingMessage, const ServerID& sID_objOn, const UUID& obj_id);
   virtual MessageType type() const;
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
+
   ~UpdateOSegMessage();
 
   CBR::Protocol::OSeg::UpdateOSegMessage contents;
 
 private:
   friend class Message;
-  UpdateOSegMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+  UpdateOSegMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 
 };
 
@@ -340,11 +411,11 @@ public:
   KillObjConnMessage(const ServerID& origin);
   ~KillObjConnMessage();
   virtual MessageType type() const;
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
 private:
   friend class Message;
-  KillObjConnMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+  KillObjConnMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 //end kill obj conn message
@@ -358,11 +429,11 @@ public:
   OSegAddMessage(const ServerID& origin, const UUID& obj_id);
   ~OSegAddMessage();
   virtual MessageType type() const;
-  virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
 private:
   friend class Message;
-  OSegAddMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+  OSegAddMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -378,12 +449,12 @@ public:
     ~ServerProximityQueryMessage();
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::Prox::ServerQuery contents;
 private:
     friend class Message;
-    ServerProximityQueryMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    ServerProximityQueryMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -393,12 +464,12 @@ public:
     ~ServerProximityResultMessage();
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::Prox::ProximityResults contents;
 private:
     friend class Message;
-    ServerProximityResultMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    ServerProximityResultMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
 
 
@@ -409,32 +480,13 @@ public:
     ~BulkLocationMessage();
 
     virtual MessageType type() const;
-    virtual uint32 serialize(Network::Chunk& wire, uint32 offset);
+    virtual bool serialize(Network::Chunk* result);
 
     CBR::Protocol::Loc::BulkLocationUpdate contents;
 private:
     friend class Message;
-    BulkLocationMessage(const Network::Chunk& wire, uint32& offset, uint64 _id);
+    BulkLocationMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
 };
-
-
-
-
-// Object message types
-
-template<typename PBJMessageType>
-std::string serializePBJMessage(const PBJMessageType& contents) {
-    std::string payload;
-    bool serialized_success = contents.SerializeToString(&payload);
-    assert(serialized_success);
-
-    return payload;
-}
-
-// FIXME we're using a nasty custom framing for object host messages
-std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg);
-
-CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
 } // namespace CBR
 
