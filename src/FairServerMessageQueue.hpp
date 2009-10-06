@@ -14,12 +14,12 @@ protected:
     struct CanSendPredicate {
     public:
         CanSendPredicate(FairServerMessageQueue* _fq) : fq(_fq) {}
-        bool operator()(const ServerID& key, const ServerMessagePair* msg) const;
+        bool operator()(const ServerID& key, const Message* msg) const;
     private:
         FairServerMessageQueue* fq;
     };
 
-    FairQueue<ServerMessagePair, ServerID, Queue<ServerMessagePair*>, CanSendPredicate > mServerQueues;
+    FairQueue<Message, ServerID, Queue<Message*>, CanSendPredicate > mServerQueues;
     FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
     uint32 mRate;

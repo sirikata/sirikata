@@ -59,14 +59,7 @@ bool FIFOServerMessageQueue::addMessage(Message* msg){
     }
 
     // Otherwise, store for push to network
-    Network::Chunk serialized;
-    msg->serialize(&serialized);
-    ServerMessagePair* smp = new ServerMessagePair(destinationServer,serialized);
-    bool success = mQueue.push(destinationServer,smp)==QueueEnum::PushSucceeded;
-    if (success)
-        delete msg;
-    else
-        delete smp;
+    bool success = mQueue.push(destinationServer,msg)==QueueEnum::PushSucceeded;
     return success;
 }
 
@@ -89,26 +82,29 @@ void FIFOServerMessageQueue::service(){
 
     // Send
 
-    ServerMessagePair* next_msg = NULL;
+    Message* next_msg = NULL;
     bool sent_success = true;
     while( send_bytes > 0 && (next_msg = mQueue.front(&send_bytes)) != NULL ) {
-        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
+        Address4* addy = mServerIDMap->lookupInternal(next_msg->destServer());
         assert(addy != NULL);
-        sent_success = mNetwork->send(*addy,next_msg->data(),false,true,1);
+
+        Network::Chunk serialized;
+        next_msg->serialize(&serialized);
+
+        sent_success = mNetwork->send(*addy,serialized,false,true,1);
 
         if (!sent_success) break;
 
-        ServerMessagePair* next_msg_popped = mQueue.pop(&send_bytes);
+        Message* next_msg_popped = mQueue.pop(&send_bytes);
         assert(next_msg_popped == next_msg);
 
-        uint32 packet_size = next_msg->data().size();
+        uint32 packet_size = serialized.size();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mSendRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        // FIXME - we need to store the Message* instead of a Network::Chunk to store this information
-        //mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->dest(), next_msg->data());
+        mContext->trace()->serverDatagramSent(start_time, end_time, 1, next_msg->destServer(), next_msg->id(), serialized.size());
 
         delete next_msg;
     }
@@ -126,11 +122,12 @@ void FIFOServerMessageQueue::service(){
     // Receive
     mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
     ServerID sid;
-    while( recv_bytes > 0 && (next_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
-        ServerMessagePair* next_msg_popped = mReceiveQueues.pop(&recv_bytes);
-        assert(next_msg_popped == next_msg);
+    ServerMessagePair* next_recv_msg = NULL;
+    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
+        ServerMessagePair* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
+        assert(next_recv_msg_popped == next_recv_msg);
 
-        uint32 packet_size = next_msg->data().size();
+        uint32 packet_size = next_recv_msg->data().size();
         Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
         Time start_time = mLastReceiveEndTime;
         Time end_time = mLastReceiveEndTime + recv_duration;
@@ -141,11 +138,11 @@ void FIFOServerMessageQueue::service(){
         mContext->trace()->serverDatagramReceived();
         */
         ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk(next_msg->data());
-        csp.source = next_msg->dest();
+        csp.chunk = new Network::Chunk(next_recv_msg->data());
+        csp.source = next_recv_msg->dest();
         mReceiveQueue.push( csp );
 
-        delete next_msg;
+        delete next_recv_msg;
     }
 
     if (mReceiveQueues.empty()) {

@@ -9,7 +9,7 @@
 
 namespace CBR {
 class FIFOServerMessageQueue:public ServerMessageQueue {
-    FIFOQueue<ServerMessagePair, ServerID> mQueue;
+    FIFOQueue<Message, ServerID> mQueue;
     // It seems weird that we're using a FairQueue, but we do so to split bandwidth evenly.
     // Doing round robin would be an alternative.
     FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;

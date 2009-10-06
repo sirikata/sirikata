@@ -8,7 +8,7 @@
 
 namespace CBR{
 
-bool FairServerMessageQueue::CanSendPredicate::operator()(const ServerID& key, const ServerMessagePair* msg) const {
+bool FairServerMessageQueue::CanSendPredicate::operator()(const ServerID& key, const Message* msg) const {
     return fq->canSend(msg);
 }
 
@@ -64,14 +64,7 @@ bool FairServerMessageQueue::addMessage(Message* msg){
     }
 
     // Otherwise, store for push to network
-    Network::Chunk serialized;
-    msg->serialize(&serialized);
-    ServerMessagePair* smp = new ServerMessagePair(destinationServer,serialized);
-    bool success = mServerQueues.push(destinationServer,smp)==QueueEnum::PushSucceeded;
-    if (success)
-        delete msg;
-    else
-        delete smp;
+    bool success = mServerQueues.push(destinationServer,msg)==QueueEnum::PushSucceeded;
     return success;
 }
 
@@ -91,9 +84,11 @@ bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* sourc
 
 // This is the callback for pop() operations, which ensures we push to the network at a safe
 // time for the FairQueue.
-static void push_to_network(Network* net, Address4* addr, ServerMessagePair* expected, ServerMessagePair* msg) {
+static void push_to_network(Network* net, Address4* addr, Message* expected, Message* msg) {
     assert(expected == msg);
-    bool sent_success = net->send(*addr,msg->data(),false,true,1);
+    Network::Chunk serialized;
+    msg->serialize(&serialized);
+    bool sent_success = net->send(*addr,serialized,false,true,1);
     if (!sent_success)
         SILOG(fairsmq,fatal,"Failed to push to network, even though predicate succeeded.");
 }
@@ -104,14 +99,14 @@ void FairServerMessageQueue::service(){
 
     // Send
 
-    ServerMessagePair* next_msg = NULL;
+    Message* next_msg = NULL;
     ServerID sid;
     bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest());
+        Address4* addy = mServerIDMap->lookupInternal(next_msg->destServer());
         assert(addy != NULL);
 
-        ServerMessagePair* next_msg_popped = mServerQueues.pop(
+        Message* next_msg_popped = mServerQueues.pop(
             &send_bytes,
             std::tr1::bind(
                 push_to_network,
@@ -124,17 +119,14 @@ void FairServerMessageQueue::service(){
         assert(next_msg_popped == next_msg);
         save_bytes = false;
 
-        uint32 packet_size = next_msg->data().size();
+        uint32 packet_size = next_msg->serializedSize();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        // FIXME we need to store the Message* to get all the info we need here
-        //mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest()),
-        //                           next_msg->dest(), next_msg->data());
-
-
+        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->destServer()),
+            next_msg->destServer(), next_msg->id(), next_msg->serializedSize());
         delete next_msg;
     }
 
@@ -163,12 +155,13 @@ void FairServerMessageQueue::service(){
 
 
     // Receive
+    ServerMessagePair* next_recv_msg = NULL;
     mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
-    while( recv_bytes > 0 && (next_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
-        ServerMessagePair* next_msg_popped = mReceiveQueues.pop(&recv_bytes);
-        assert(next_msg_popped == next_msg);
+    while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
+        ServerMessagePair* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
+        assert(next_recv_msg_popped == next_recv_msg);
 
-        uint32 packet_size = next_msg->data().size();
+        uint32 packet_size = next_recv_msg->data().size();
         Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
         Time start_time = mLastReceiveEndTime;
         Time end_time = mLastReceiveEndTime + recv_duration;
@@ -179,11 +172,11 @@ void FairServerMessageQueue::service(){
         mContext->trace()->serverDatagramReceived();
         */
         ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk(next_msg->data());
-        csp.source = next_msg->dest();
+        csp.chunk = new Network::Chunk(next_recv_msg->data());
+        csp.source = next_recv_msg->dest();
         mReceiveQueue.push( csp );
 
-        delete next_msg;
+        delete next_recv_msg;
     }
 
     if (mReceiveQueues.empty()) {
@@ -200,7 +193,7 @@ void FairServerMessageQueue::service(){
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {
     // send weight
     if (!mServerQueues.hasQueue(sid)) {
-        mServerQueues.addQueue(new Queue<ServerMessagePair*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
+        mServerQueues.addQueue(new Queue<Message*>(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>()),sid,weight);
     }
     else
         mServerQueues.setQueueWeight(sid, weight);

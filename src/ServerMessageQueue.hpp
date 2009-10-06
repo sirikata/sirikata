@@ -7,7 +7,6 @@
 #include "ServerNetwork.hpp"
 #include "ServerIDMap.hpp"
 #include "ServerProtocolMessagePair.hpp"
-#include "ServerMessagePair.hpp"
 
 namespace CBR{
 
@@ -74,12 +73,12 @@ public:
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
 protected:
-    bool canSend(const ServerMessagePair*msg) {
-        if (msg->dest()==mContext->id()) return true;
-        Address4* addy = mServerIDMap->lookupInternal(msg->dest());
+    bool canSend(const Message* msg) {
+        if (msg->destServer()==mContext->id()) return true;
+        Address4* addy = mServerIDMap->lookupInternal(msg->destServer());
 
         assert(addy != NULL);
-        return mNetwork->canSend(*addy,msg->data().size(),false,true,1);
+        return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);
     }
 
     SpaceContext* mContext;
