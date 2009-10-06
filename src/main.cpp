@@ -56,10 +56,8 @@
 #include "SSTNetwork.hpp"
 #include "ENetNetwork.hpp"
 #include "LossyQueue.hpp"
-#include "FIFOObjectMessageQueue.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
-#include "FairObjectMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
 #include "ExpIntegral.hpp"
 #include "SqrIntegral.hpp"
@@ -375,8 +373,8 @@ void *main_loop(void *) {
     {
       //bftm additional object messages log file creation.
       int osegProcessedAfterSeconds = GetOption(OSEG_ANALYZE_AFTER)->as<int>();
-        
-      
+
+
         //oseg migrates
         String object_segmentation_filename = "oseg_object_segmentation_file";
         object_segmentation_filename += ".dat";
@@ -408,7 +406,7 @@ void *main_loop(void *) {
         oseg_lookup_not_on_server_stream.flush();
         oseg_lookup_not_on_server_stream.close();
 
-        
+
         //oseg processed lookups
         String object_segmentation_processed_filename = "oseg_object_segmentation_processed_file";
         object_segmentation_processed_filename += ".dat";
@@ -486,10 +484,10 @@ void *main_loop(void *) {
 
         oseg_cached_error_response_stream.flush();
         oseg_cached_error_response_stream.close();
-        
+
         //end cached error analysis
 
-        
+
         //end bftm additional object message log file creation.
 
         exit(0);
@@ -567,22 +565,6 @@ void *main_loop(void *) {
 
 
 
-    ObjectMessageQueue* oq = NULL;
-    String object_queue_type = GetOption(OBJECT_QUEUE)->as<String>();
-    if (object_queue_type == "fifo")
-        oq = new FIFOObjectMessageQueue(space_context, forwarder);
-    else if (object_queue_type == "fairfifo")
-        oq = new FairObjectMessageQueue<Queue<ServerProtocolMessagePair*> > (space_context, forwarder, sq);
-    else if (object_queue_type == "fairlossy")
-        oq = new FairObjectMessageQueue<LossyQueue<ServerProtocolMessagePair*> > (space_context, forwarder, sq);
-    else if (object_queue_type == "fairreorder")
-        oq = new FairObjectMessageQueue<PartiallyOrderedList<ServerProtocolMessagePair*,ServerID > >(space_context, forwarder, sq);
-    else {
-        assert(false);
-        exit(-1);
-    }
-
-
     ServerWeightCalculator* weight_calc = NULL;
     if (cseg_type != "distributed") {
       if (GetOption("gaussian")->as<bool>()) {
@@ -613,7 +595,7 @@ void *main_loop(void *) {
     }
 
     // We have all the info to initialize the forwarder now
-    forwarder->initialize(cseg, oseg, oq, sq);
+    forwarder->initialize(cseg, oseg, sq);
 
     Proximity* prox = new Proximity(space_context, loc_service);
 

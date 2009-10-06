@@ -33,8 +33,6 @@ class ClusterSimSettings:
         self.flatness = 500
         self.server_queue = 'fair'
         self.server_queue_length = 8192
-        self.object_queue = 'fairfifo'
-        self.object_queue_length = 8192
 
         # OH: basic oh settings
         self.num_oh = num_object_hosts
@@ -287,8 +285,6 @@ class ClusterSim:
                 "--capexcessbandwidth=false",
                 "--server.queue=" + self.settings.server_queue,
                 "--server.queue.length=" + str(self.settings.server_queue_length),
-                "--object.queue=" + self.settings.object_queue,
-                "--object.queue.length=" + str(self.settings.object_queue_length),
                 "--noise=" + self.settings.noise,
                 "--loc=" + self.settings.loc,
                 "--cseg=" + self.settings.cseg,

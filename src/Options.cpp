@@ -89,14 +89,11 @@ void InitOptions() {
 
         .addOption(new OptionValue(ANALYSIS_OSEG, "false", Sirikata::OptionValueType<bool>(), "Run OSEG analyses - migrates, lookups, processed lookups"))
       .addOption(new OptionValue(OSEG_ANALYZE_AFTER,"0", Sirikata::OptionValueType<int>(),"Only run the oseg analysis after this many seconds of the run have elapsed."))
-      
+
 
         .addOption(new OptionValue(ANALYSIS_LOC_LATENCY, "false", Sirikata::OptionValueType<bool>(), "Run location latency analysis - latency of location updates"))
 
         .addOption(new OptionValue(ANALYSIS_PROX_DUMP, "", Sirikata::OptionValueType<String>(), "Run proximity dump analysis -- just dumps a textual form of all proximity events to the specified file"))
-
-        .addOption(new OptionValue(OBJECT_QUEUE, "fairfifo", Sirikata::OptionValueType<String>(), "The type of ObjectMessageQueue to use for routing."))
-        .addOption(new OptionValue(OBJECT_QUEUE_LENGTH, "8192", Sirikata::OptionValueType<uint32>(), "Length of queue for each object."))
 
         .addOption(new OptionValue(OBJECT_NUM_RANDOM, "100", Sirikata::OptionValueType<uint32>(), "Number of random objects to generate."))
         .addOption(new OptionValue(OBJECT_NUM_PACK, "0", Sirikata::OptionValueType<uint32>(), "Number of objects to load from a pack file."))

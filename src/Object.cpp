@@ -32,7 +32,6 @@
 
 #include "Object.hpp"
 #include "Message.hpp"
-#include "ObjectMessageQueue.hpp"
 #include "Random.hpp"
 #include "ObjectFactory.hpp"
 #include "Statistics.hpp"

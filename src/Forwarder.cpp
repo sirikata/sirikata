@@ -7,7 +7,6 @@
 #include "ServerMessageQueue.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
-#include "ObjectMessageQueue.hpp"
 
 #include "ForwarderUtilityClasses.hpp"
 #include "Forwarder.hpp"
@@ -48,7 +47,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mContext(ctx),
    mCSeg(NULL),
    mOSeg(NULL),
-   mObjectMessageQueue(NULL),
    mServerMessageQueue(NULL),
    mUniqueConnIDs(0),
    queueMap(&AlwaysPush),
@@ -92,13 +90,12 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ObjectMessageQueue* omq, ServerMessageQueue* smq)
+void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ServerMessageQueue* smq)
 {
   mCSeg = cseg;
   mOSeg = oseg;
-  mObjectMessageQueue = omq;
   mServerMessageQueue =smq;
-  mOutgoingMessages=new ForwarderQueue(smq,omq,16384);
+  mOutgoingMessages=new ForwarderQueue(smq,16384);
 }
 
   /*
@@ -533,11 +530,9 @@ void Forwarder::addObjectConnection(const UUID& dest_obj, ObjectConnection* conn
 
   //    mObjectConnections[dest_obj] = conn;
   mObjectConnections[dest_obj] = uoc;
-  mObjectMessageQueue->registerClient(dest_obj, 1); // FIXME weight?
 }
 
 ObjectConnection* Forwarder::removeObjectConnection(const UUID& dest_obj) {
-    mObjectMessageQueue->unregisterClient(dest_obj);
     //    ObjectConnection* conn = mObjectConnections[dest_obj];
     UniqueObjConn uoc = mObjectConnections[dest_obj];
     ObjectConnection* conn = uoc.conn;

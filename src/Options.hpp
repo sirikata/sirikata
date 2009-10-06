@@ -59,9 +59,6 @@
 #define ANALYSIS_LOC_LATENCY "analysis.loc.latency"
 #define ANALYSIS_PROX_DUMP "analysis.prox.dump"
 
-#define OBJECT_QUEUE         "object.queue"
-#define OBJECT_QUEUE_LENGTH  "object.queue.length"
-
 #define OBJECT_NUM_RANDOM    "object.num.random"
 #define OBJECT_NUM_PACK      "object.num.pack"
 #define OBJECT_CONNECT_PHASE "object.connect"

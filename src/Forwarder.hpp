@@ -10,7 +10,6 @@
 #include "ServerNetwork.hpp"
 
 #include "ForwarderUtilityClasses.hpp"
-#include "ObjectMessageQueue.hpp"
 #include "Queue.hpp"
 #include "FairQueue.hpp"
 
@@ -23,7 +22,6 @@ namespace CBR
   class ObjectSegmentation;
   class CoordinateSegmentation;
   class ServerMessageQueue;
-  class ObjectMessageQueue;
   class Network;
   class Trace;
   class ObjectConnection;
@@ -43,13 +41,9 @@ public:
     typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*>, CanSendPredicate, true> OutgoingFairQueue;
     OutgoingFairQueue mSendQueue;
 
-    ForwarderQueue(ServerMessageQueue*smq, AbstractQueue<Message*>*omq, uint32 size):mSendQueue(CanSendPredicate(smq)){
+    ForwarderQueue(ServerMessageQueue*smq, uint32 size):mSendQueue(CanSendPredicate(smq)){
         for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
-            if (false&&i==MessageRouter::OBJECT_MESSAGESS) {
-                mSendQueue.addQueue(mQueues[i]=omq,(MessageRouter::SERVICES)i,1.0);
-            }else{
-                mSendQueue.addQueue(mQueues[i]=new Queue<Message*>(size),(MessageRouter::SERVICES)i,1.0);
-            }
+            mSendQueue.addQueue(mQueues[i]=new Queue<Message*>(size),(MessageRouter::SERVICES)i,1.0);
         }
     }
     OutgoingFairQueue* operator->(){
@@ -78,7 +72,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     //Shared with server
       CoordinateSegmentation* mCSeg;
       ObjectSegmentation* mOSeg;
-      ObjectMessageQueue* mObjectMessageQueue;
       ServerMessageQueue* mServerMessageQueue;
 
       uint64 mUniqueConnIDs;
@@ -135,7 +128,7 @@ protected:
     public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ObjectMessageQueue* omq, ServerMessageQueue* smq);
+      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ServerMessageQueue* smq);
 
       void service();
 
