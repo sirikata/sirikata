@@ -234,7 +234,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   mAvailableCSEGServers = 4;
 
   
-  mWorldWidth = 8640;
+  /*mWorldWidth = 8640;
   mWorldHeight = 3432;
   mNumRegions = mWorldWidth * mWorldHeight;  
     
@@ -306,11 +306,11 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   delete regionList2;
   delete mTempRegionList1;
   delete mTempRegionList2; 
-  delete mHistogram;  
+  delete mHistogram;  */
   
 
   
-  /*mTopLevelRegion.mBoundingBox = region;
+  mTopLevelRegion.mBoundingBox = region;
 
   mTopLevelRegion.mLeftChild = new SegmentedRegion();
   mTopLevelRegion.mRightChild = new SegmentedRegion();
@@ -338,7 +338,7 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   mTopLevelRegion.mLeftChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, minY, minZ), Vector3f(maxX, (minY+maxY)/2, maxZ));
 
   mTopLevelRegion.mRightChild->mLeftChild->mBoundingBox = BoundingBox3f( Vector3f(minX, (minY+maxY)/2, minZ), Vector3f( (minX+maxX)/2, maxY, maxZ));
-  mTopLevelRegion.mRightChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, (minY+maxY)/2, minZ), Vector3f(maxX, maxY, maxZ));*/
+  mTopLevelRegion.mRightChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, (minY+maxY)/2, minZ), Vector3f(maxX, maxY, maxZ));
 
 
   int numLLTreesSoFar = 0;
