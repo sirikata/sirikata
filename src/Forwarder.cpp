@@ -180,7 +180,7 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
  */
 static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, Message* expected, Message* result) {
     assert(expected == result);
-    ctx->trace()->serverDatagramQueued(ctx->time, result->destServer(), result->id(), result->serializedSize());
+    ctx->trace()->serverDatagramQueued(ctx->time, result->dest_server(), result->id(), result->serializedSize());
     bool send_success = smq->addMessage(result);
     if (!send_success) {
         SILOG(cbr,fatal,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
@@ -292,10 +292,10 @@ void Forwarder::service()
   // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
   bool Forwarder::route(MessageRouter::SERVICES svc, Message* msg, bool is_forward)
   {
-      assert(msg->sourceServer() == mContext->id());
-      assert(msg->destServer() != NullServerID);
+      assert(msg->source_server() == mContext->id());
+      assert(msg->dest_server() != NullServerID);
 
-      ServerID dest_server = msg->destServer();
+      ServerID dest_server = msg->dest_server();
 
       bool success = false;
 
@@ -438,7 +438,7 @@ void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
     tryTimestampObjectMessage(mContext->trace(), mContext->time, msg, Trace::FORWARDED);
 
     if (!forwarded_self_msg)
-        mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->sourceServer(), msg->id(), msg->serializedSize());
+        mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->source_server(), msg->id(), msg->serializedSize());
 
     dispatchMessage(msg);
 }

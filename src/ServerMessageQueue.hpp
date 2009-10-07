@@ -73,8 +73,8 @@ public:
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
 protected:
     bool canSend(const Message* msg) {
-        if (msg->destServer()==mContext->id()) return true;
-        Address4* addy = mServerIDMap->lookupInternal(msg->destServer());
+        if (msg->dest_server()==mContext->id()) return true;
+        Address4* addy = mServerIDMap->lookupInternal(msg->dest_server());
 
         assert(addy != NULL);
         return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);

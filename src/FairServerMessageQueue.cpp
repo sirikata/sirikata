@@ -27,7 +27,7 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
 }
 
 bool FairServerMessageQueue::canAddMessage(const Message* msg) {
-    ServerID destinationServer = msg->destServer();
+    ServerID destinationServer = msg->dest_server();
 
     // If its just coming back here, we'll always accept it
     if (mContext->id() == destinationServer) {
@@ -48,7 +48,7 @@ bool FairServerMessageQueue::canAddMessage(const Message* msg) {
 }
 
 bool FairServerMessageQueue::addMessage(Message* msg){
-    ServerID destinationServer = msg->destServer();
+    ServerID destinationServer = msg->dest_server();
 
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {
@@ -94,7 +94,7 @@ void FairServerMessageQueue::service(){
     ServerID sid;
     bool save_bytes = true;
     while( send_bytes > 0 && (next_msg = mServerQueues.front(&send_bytes,&sid)) != NULL ) {
-        Address4* addy = mServerIDMap->lookupInternal(next_msg->destServer());
+        Address4* addy = mServerIDMap->lookupInternal(next_msg->dest_server());
         assert(addy != NULL);
 
         Message* next_msg_popped = mServerQueues.pop(
@@ -116,8 +116,8 @@ void FairServerMessageQueue::service(){
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
 
-        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->destServer()),
-            next_msg->destServer(), next_msg->id(), next_msg->serializedSize());
+        mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest_server()),
+            next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
         delete next_msg;
     }
 

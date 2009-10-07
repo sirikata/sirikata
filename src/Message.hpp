@@ -162,14 +162,7 @@ public:
         return mImpl.ParseFromArray(data, size);
     }
 
-
-    // Deprecated.  Remains for backwards compatibility.
-    ServerID sourceServer() const { return source_server(); }
-    void setSourceServer(ServerID source) { set_source_server(source); }
-    ServerID destServer() const { return dest_server(); }
-    void setDestServer(ServerID dest) { set_dest_server(dest); }
-
-    // Depracated. Remains for backwards compatibility.
+    // Deprecated. Remains for backwards compatibility.
     bool serialize(Network::Chunk* result);
     static Message* deserialize(const Network::Chunk& wire);
 

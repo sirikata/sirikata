@@ -22,7 +22,7 @@ class NetworkQueueWrapper {
             return NULL;
         }
 
-        if (msg->sourceServer() != mServerID) {
+        if (msg->source_server() != mServerID) {
             // FIXME if this happens we're probably going to never remove the chunk from the network...
             SILOG(net,warning,"[NET] Message source doesn't match connection's ID");
             delete msg;
