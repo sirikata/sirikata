@@ -54,11 +54,11 @@ LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, 
    mCurrentLoadReading(0),
    mAveragedLoadReading(0)
 {
-    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
 }
 
 LoadMonitor::~LoadMonitor() {
-    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_LOAD_STATUS, this);
+    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
 }
 
 void LoadMonitor::addLoadReading() {
@@ -109,30 +109,36 @@ void LoadMonitor::sendLoadReadings() {
   //send mCurrentLoadReading to other servers
   uint32 total_servers = mCoordinateSegmentation->numServers();
 
+  CBR::Protocol::CSeg::LoadMessage load_msg;
+  load_msg.set_load(mAveragedLoadReading);
+  std::string serialized_load = serializePBJMessage(load_msg);
+
   for (uint32 i=1 ; i <= total_servers; i++) {
       if (i != mContext->id() && handlesAdjacentRegion(i) ) {
           printf("%d handles adjacent region with %d\n", i, mContext->id());
 
-          LoadStatusMessage* msg = new LoadStatusMessage(mContext->id());
-      msg->contents.set_load(mAveragedLoadReading);
-      msg->setSourceServer(mContext->id());
-      msg->setDestServer(i);
-      mContext->router()->route(MessageRouter::CSEGS, msg);
+          Message* msg = new Message(
+              mContext->id(),
+              SERVER_PORT_LOAD_STATUS,
+              (ServerID)i,
+              SERVER_PORT_LOAD_STATUS,
+              serialized_load
+          );
+          mContext->router()->route(MessageRouter::CSEGS, msg);
     }
   }
 }
 
 void LoadMonitor::receiveMessage(Message* msg) {
-    LoadStatusMessage* load_status_msg = dynamic_cast<LoadStatusMessage*>(msg);
-    assert(load_status_msg != NULL);
+    CBR::Protocol::CSeg::LoadMessage load_msg;
+    bool parsed = parsePBJMessage(&load_msg, msg->payload());
 
-    loadStatusMessage(load_status_msg);
+    if (parsed)
+        loadStatusMessage(msg->source_server(), load_msg);
 }
 
-void LoadMonitor::loadStatusMessage(LoadStatusMessage* load_status_msg){
-  ServerID id = GetUniqueIDServerID(load_status_msg->id());
-
-  mRemoteLoadReadings[id] = load_status_msg->contents.load();
+void LoadMonitor::loadStatusMessage(const ServerID source, const CBR::Protocol::CSeg::LoadMessage& load_msg){
+  mRemoteLoadReadings[source] = load_msg.load();
 }
 
 void LoadMonitor::service() {

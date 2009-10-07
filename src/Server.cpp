@@ -36,9 +36,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mObjectHostConnectionManager(NULL),
    mProfiler("Server Loop")
 {
-      mForwarder->registerMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
-      mForwarder->registerMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
-      mForwarder->registerMessageRecipient(MESSAGE_TYPE_OSEG_ADDED_OBJECT, this);
+      mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
+      mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
+      mForwarder->registerMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
 
       mMigrationMonitor = new MigrationMonitor(mLocationService, mCSeg);
 
@@ -64,9 +64,9 @@ Server::~Server()
 
     delete mObjectHostConnectionManager;
 
-    mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_MIGRATE, this);
-    mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_KILL_OBJ_CONN, this);
-    mForwarder->unregisterMessageRecipient(MESSAGE_TYPE_OSEG_ADDED_OBJECT, this);
+    mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
+    mForwarder->unregisterMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
+    mForwarder->unregisterMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
 
     printf("mObjects.size=%d\n", (uint32)mObjects.size());
 
@@ -465,31 +465,40 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
 
 void Server::receiveMessage(Message* msg)
 {
-    MigrateMessage* migrate_msg = dynamic_cast<MigrateMessage*>(msg);
-    if (migrate_msg != NULL) {
-        const UUID obj_id = migrate_msg->contents.object();
-        mObjectMigrations[obj_id] = new CBR::Protocol::Migration::MigrationMessage( migrate_msg->contents );
-        // Try to handle this migration if all the info is available
+    if (msg->dest_port() == SERVER_PORT_MIGRATION) {
+        CBR::Protocol::Migration::MigrationMessage* mig_msg = new CBR::Protocol::Migration::MigrationMessage();
+        bool parsed = parsePBJMessage(mig_msg, msg->payload());
 
-        handleMigration(obj_id);
+        if (!parsed) {
+            delete mig_msg;
+        }
+        else {
+            const UUID obj_id = mig_msg->object();
+            mObjectMigrations[obj_id] = mig_msg;
+            // Try to handle this migration if all the info is available
+            handleMigration(obj_id);
+        }
+        delete msg;
     }
+    else if (msg->dest_port() == SERVER_PORT_KILL_OBJ_CONN) {
+        CBR::Protocol::ObjConnKill::ObjConnKill kill_msg;
+        bool parsed = parsePBJMessage(&kill_msg, msg->payload());
 
-    KillObjConnMessage* kill_obj_conn_msg = dynamic_cast<KillObjConnMessage*>(msg);
-    if (kill_obj_conn_msg != NULL)
-    {
-      const UUID obj_id = kill_obj_conn_msg->contents.m_objid();
-      killObjectConnection(obj_id);
+        if (parsed)
+            killObjectConnection( kill_msg.m_objid() );
+
+        delete msg;
     }
+    else if (msg->dest_port() == SERVER_PORT_OSEG_ADDED_OBJECT) {
+        CBR::Protocol::OSeg::AddedObjectMessage oseg_add_msg;
+        bool parsed = parsePBJMessage(&oseg_add_msg, msg->payload());
 
-    OSegAddMessage* oseg_add_msg = dynamic_cast<OSegAddMessage*>(msg);
-    if (oseg_add_msg != NULL)
-    {
-      //      std::cout<<"\n\nbftm debug message:  received an oseg add message \n\n";
-      const UUID obj_id = oseg_add_msg->contents.m_objid();
-      finishAddObject(obj_id);
+        if (parsed) {
+            finishAddObject(oseg_add_msg.m_objid());
+        }
+
+        delete msg;
     }
-
-    delete msg;
 }
 
 
@@ -689,29 +698,35 @@ void Server::checkObjectMigrations()
             mOSeg->migrateObject(obj_id,new_server_id);
 
             // Send out the migrate message
-            MigrateMessage* migrate_msg = new MigrateMessage(mContext->id());
-            migrate_msg->contents.set_source_server(mContext->id());
-            migrate_msg->contents.set_object(obj_id);
-            CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg->contents.mutable_loc();
+            CBR::Protocol::Migration::MigrationMessage migrate_msg;
+            migrate_msg.set_source_server(mContext->id());
+            migrate_msg.set_object(obj_id);
+            CBR::Protocol::Migration::ITimedMotionVector migrate_loc = migrate_msg.mutable_loc();
             TimedMotionVector3f obj_loc = mLocationService->location(obj_id);
             migrate_loc.set_t( obj_loc.updateTime() );
             migrate_loc.set_position( obj_loc.position() );
             migrate_loc.set_velocity( obj_loc.velocity() );
-            migrate_msg->contents.set_bounds( mLocationService->bounds(obj_id) );
+            migrate_msg.set_bounds( mLocationService->bounds(obj_id) );
 
             // FIXME we should allow components to package up state here
             // FIXME we should generate these from some map instead of directly
             std::string prox_data = mProximity->generateMigrationData(obj_id, mContext->id(), new_server_id);
             if (!prox_data.empty()) {
-                CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg->contents.add_client_data();
+                CBR::Protocol::Migration::IMigrationClientData client_data = migrate_msg.add_client_data();
                 client_data.set_key( mProximity->migrationClientTag() );
                 client_data.set_data( prox_data );
             }
 
             // Stop tracking the object locally
             //            mLocationService->removeLocalObject(obj_id);
-
-            mMigrateMessages.push(MigrateMessageBundle(migrate_msg, new_server_id));
+            Message* migrate_msg_packet = new Message(
+                mContext->id(),
+                SERVER_PORT_MIGRATION,
+                new_server_id,
+                SERVER_PORT_MIGRATION,
+                serializePBJMessage(migrate_msg)
+            );
+            mMigrateMessages.push(migrate_msg_packet);
 
             // Stop Forwarder from delivering via this Object's
             // connection, destroy said connection
@@ -749,9 +764,7 @@ void Server::checkObjectMigrations()
 
     // Try sending any outstanding migrate messages
     while(!mMigrateMessages.empty()) {
-        mMigrateMessages.front().msg->setSourceServer(mContext->id());
-        mMigrateMessages.front().msg->setDestServer( mMigrateMessages.front().dest );
-        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front().msg);
+        bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front());
         if (!sent)
             break;
         mMigrateMessages.pop();

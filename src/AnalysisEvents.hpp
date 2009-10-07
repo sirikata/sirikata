@@ -69,10 +69,9 @@ struct MessageTimestampEvent : public ObjectEvent {
     //unique id for all packets across the board
     uint64 uid;
     Trace::MessagePath path;
-    unsigned short srcport;
-    unsigned short dstport;
-    unsigned char msg_type;
-
+    ObjectMessagePort srcport;
+    ObjectMessagePort dstport;
+    ServerMessagePort msg_type;
 };
 
 

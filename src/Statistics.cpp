@@ -230,7 +230,7 @@ bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk
     return true;
 }
 */
-void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, unsigned short srcprt, unsigned short dstprt, unsigned char msg_type) {
+void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt, ServerMessagePort msg_type) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
 

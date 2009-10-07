@@ -107,16 +107,7 @@ private:
       bool serviceConnection;
     };
 
-
-      struct MigrateMessageBundle {
-          MigrateMessageBundle(MigrateMessage* _m, ServerID d)
-           : msg(_m), dest(d)
-          {}
-
-          MigrateMessage* msg;
-          ServerID dest;
-      };
-      typedef std::queue<MigrateMessageBundle> MigrateMessageQueue;
+      typedef std::queue<Message*> MigrateMessageQueue;
       // Outstanding MigrateMessages, which get objects to other servers.
       MigrateMessageQueue mMigrateMessages;
 

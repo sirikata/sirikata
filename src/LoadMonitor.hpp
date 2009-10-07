@@ -79,7 +79,7 @@ public:
     void service();
 
 private:
-  void loadStatusMessage(LoadStatusMessage* load_status_msg);
+    void loadStatusMessage(const ServerID source, const CBR::Protocol::CSeg::LoadMessage& load_status_msg);
 
   enum {
     SEND_TO_NEIGHBORS,

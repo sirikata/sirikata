@@ -19,6 +19,16 @@
 namespace CBR
 {
 
+// Helper method which timestamps a message if it is and object-to-object message. Note that this is potentially expensive since it requires parsing the inner message
+void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, Trace::MessagePath path) {
+    if (next_msg->source_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING && next_msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
+        CBR::Protocol::Object::ObjectMessage om;
+        bool got_om = parsePBJMessage(&om, next_msg->payload());
+        if (got_om)
+            trace->timestampMessage(t, om.unique(), path, om.source_port(), om.dest_port(), SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+    }
+}
+
 void OSegLookupQueue::ObjMessQBeginSendList::push_back(CBR::Protocol::Object::ObjectMessage* msg) {
     mTotalSize += msg->ByteSize();
     ObjectMessageVector::push_back(msg);
@@ -63,8 +73,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
-    this->registerMessageRecipient(MESSAGE_TYPE_OBJECT, this);
-    this->registerMessageRecipient(MESSAGE_TYPE_NOISE, this);
+    this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+    this->registerMessageRecipient(SERVER_PORT_NOISE, this);
 
     mProfiler.addStage("OSeg");
     mProfiler.addStage("Self Messages");
@@ -84,8 +94,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
     if (GetOption(PROFILE)->as<bool>())
         mProfiler.report();
 
-    this->unregisterMessageRecipient(MESSAGE_TYPE_OBJECT, this);
-    this->unregisterMessageRecipient(MESSAGE_TYPE_NOISE, this);
+    this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+    this->unregisterMessageRecipient(SERVER_PORT_NOISE, this);
   }
 
   /*
@@ -139,20 +149,24 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
             CBR::Protocol::Object::ObjectMessage* in_msg = (iterQueueMap->second[s]);
-            ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *in_msg);
-            obj_msg->setSourceServer(mContext->id());
-            obj_msg->setDestServer(dest_server);
-
+            Message* obj_msg = new Message(
+                mContext->id(),
+                SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+                dest_server,
+                SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+                serializePBJMessage(*in_msg)
+            );
             if (!route(MessageRouter::OBJECT_MESSAGESS, obj_msg)) {
                 mContext->trace()->timestampMessage(mContext->time,
                     in_msg->unique(),
                     Trace::DROPPED,
                     in_msg->source_port(),
                     in_msg->dest_port(),
-                    obj_msg->type()
+                    SERVER_PORT_OBJECT_MESSAGE_ROUTING
                 );
                 delete obj_msg;
             }
+            // FIXME should we be deleting in_msg here?
         }
         queueMap.erase(iterQueueMap);
       }
@@ -244,9 +258,7 @@ void Forwarder::service()
         Message* next_msg = (*mOutgoingMessages)->front(&size,&svc);
         if (!next_msg)
             break;
-        ObjectMessage* om = dynamic_cast<ObjectMessage*>(next_msg);
-        if (om != NULL)
-            mContext->trace()->timestampMessage(t, om->contents.unique(), Trace::SPACE_OUTGOING_MESSAGE, om->contents.source_port(), om->contents.dest_port(), om->type());
+        tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
 
         Message* pop_msg = (*mOutgoingMessages)->pop(
             &size,
@@ -374,10 +386,7 @@ void Forwarder::service()
 //end what i think it should be replaced with
 
 void Forwarder::dispatchMessage(Message*msg) const {
-    ObjectMessage *om=dynamic_cast<ObjectMessage*>(msg);
-    if (om) {
-        mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::DISPATCHED,om->contents.source_port(),om->contents.dest_port(),msg->type());
-    }
+    tryTimestampObjectMessage(mContext->trace(), mContext->time, msg, Trace::DISPATCHED);
     MessageDispatcher::dispatchMessage(msg);
 }
 void Forwarder::dispatchMessage(const CBR::Protocol::Object::ObjectMessage&msg) const {
@@ -393,36 +402,40 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
     }
 
     ServerID lookupID = mOSeg->lookup(obj_msg->dest_object());
-    bool send_success=true;
     if (lookupID == NullServerID)
     {
         queueMap[obj_msg->dest_object()].push_back(obj_msg);
         //if queueMap.full() send_success=false;
+        return true;
+        // FIXME what if the queueMap is full? Do we need to timestamp as below?
     }
     else
     {
-        ObjectMessage* svr_obj_msg = new ObjectMessage(mContext->id(), *obj_msg);
-        svr_obj_msg->setSourceServer(mContext->id());
-        svr_obj_msg->setDestServer(lookupID);
-        send_success=route(OBJECT_MESSAGESS, svr_obj_msg, lookupID);
+        Message* svr_obj_msg = new Message(
+            mContext->id(),
+            SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+            lookupID,
+            SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+            serializePBJMessage(*obj_msg)
+        );
+        bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, lookupID);
+        if (!send_success) {
+            delete svr_obj_msg;
+            mContext->trace()->timestampMessage(mContext->time,
+                obj_msg->unique(),
+                Trace::DROPPED,
+                obj_msg->source_port(),
+                obj_msg->dest_port(),
+                SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+        }
+        delete obj_msg;
+        return send_success;
     }
-    if (!send_success) {
-        mContext->trace()->timestampMessage(mContext->time,
-                                            obj_msg->unique(),
-                                            Trace::DROPPED,
-                                            obj_msg->source_port(),
-                                            obj_msg->dest_port(),
-                                            MESSAGE_TYPE_OBJECT);
-    }
-    return send_success;
 }
 
 
 void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
-    ObjectMessage *om=dynamic_cast<ObjectMessage*>(msg);
-    if (om) {
-        mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::FORWARDED,om->contents.source_port(),om->contents.dest_port(),msg->type());
-    }
+    tryTimestampObjectMessage(mContext->trace(), mContext->time, msg, Trace::FORWARDED);
 
     if (!forwarded_self_msg)
         mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->sourceServer(), msg->id(), msg->serializedSize());
@@ -431,7 +444,7 @@ void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
 }
 
 void Forwarder::receiveMessage(Message* msg) {
-    if (msg->type() == MESSAGE_TYPE_NOISE) {
+    if (msg->dest_port() == SERVER_PORT_NOISE) {
         delete msg;
         return;
     }
@@ -439,36 +452,34 @@ void Forwarder::receiveMessage(Message* msg) {
     // Forwarder only subscribes as a recipient for object messages
     // so it can easily check whether it can deliver directly
     // or needs to forward them.
-    assert(msg->type() == MESSAGE_TYPE_OBJECT);
-    ObjectMessage* obj_msg = dynamic_cast<ObjectMessage*>(msg);
-    assert(obj_msg != NULL);
+    assert(msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING);
 
-    UUID dest = obj_msg->contents.dest_object();
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    bool parsed = parsePBJMessage(obj_msg, msg->payload());
+    assert(parsed);
+
+    UUID dest = obj_msg->dest_object();
 
     // Special case: Object 0 is the space itself
     if (dest == UUID::null()) {
-        dispatchMessage(obj_msg->contents);
+        dispatchMessage(*obj_msg);
+        delete obj_msg;
         return;
     }
 
     // Otherwise, either deliver or forward it, depending on whether the destination object is attached to this server
-    // FIXME having to make this copy is nasty
-    CBR::Protocol::Object::ObjectMessage* obj_msg_cpy = new CBR::Protocol::Object::ObjectMessage(obj_msg->contents);
     ObjectConnection* conn = getObjectConnection(dest);
     if (conn != NULL) {
         // This should probably have control via push back as well, i.e. should return bool and we should care what
         // happens
-        conn->send(obj_msg_cpy);
+        conn->send(obj_msg);
     }
     else
     {
         // FIXME we need to check the result here. There needs to be a way to push back, which is probably trickiest here
         // since it would have to filter all the way back to where the original server to server message was decoded
-      route(obj_msg_cpy, true,GetUniqueIDServerID(obj_msg->id()) );// bftm changed to allow for forwarding back messages.
+        route(obj_msg, true, msg->source_server());// bftm changed to allow for forwarding back messages.
     }
-
-    //    else
-    //        route(obj_msg_cpy, true);
 
     delete msg;
 }
@@ -482,13 +493,15 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
 
 
   //#ifdef CRAQ_CACHE
+  CBR::Protocol::OSeg::UpdateOSegMessage contents;
+  contents.set_servid_sending_update(mContext->id());
+  contents.set_servid_obj_on(dest_serv);
+  contents.set_m_objid(obj_id);
+
   if (mServersToUpdate.find(obj_id) != mServersToUpdate.end())
   {
     for (int s=0; s < (int) mServersToUpdate[obj_id].size(); ++s)
     {
-      UpdateOSegMessage* up_os = new UpdateOSegMessage(mContext->id(),dest_serv,obj_id);
-      //      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, mServersToUpdate[obj_id][s],false);
-
 #ifdef CRAQ_DEBUG
       std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
       std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
@@ -496,8 +509,14 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
       std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
 #endif
 
-      up_os->setSourceServer(mContext->id());
-      up_os->setDestServer( mServersToUpdate[obj_id][s] );
+        Message* up_os = new Message(
+            mContext->id(),
+            SERVER_PORT_OSEG_UPDATE,
+            mServersToUpdate[obj_id][s],
+            SERVER_PORT_OSEG_UPDATE,
+            serializePBJMessage(contents)
+        );
+
       // FIXME what if this fails to get sent out?
       route(MessageRouter::OSEG_CACHE_UPDATE, up_os, false);
 
@@ -506,10 +525,18 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   //#endif
 
   // Wrap it up in one of our ObjectMessages and ship it.
-  ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *msg);  //turns the cbr::prot::message into just an object message.
-  obj_msg->setSourceServer(mContext->id());
-  obj_msg->setDestServer(dest_serv);
-  return route(svc, obj_msg, is_forward);
+  Message* obj_msg = new Message(
+      mContext->id(),
+      SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+      dest_serv,
+      SERVER_PORT_OBJECT_MESSAGE_ROUTING,
+      serializePBJMessage(*msg)
+  );
+  bool route_success = route(svc, obj_msg, is_forward);
+  // FIXME record drop? ignore? queue for later?
+  if (!route_success)
+      delete obj_msg;
+  return route_success;
 }
 
 

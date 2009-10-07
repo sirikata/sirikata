@@ -187,16 +187,16 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mLocService->addListener(this);
 
-    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
-    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX_QUERY, this);
+    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX_RESULT, this);
 
     // Start the processing thread
     mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
 
 Proximity::~Proximity() {
-    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_QUERY, this);
-    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_SERVER_PROX_RESULT, this);
+    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX_QUERY, this);
+    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX_RESULT, this);
 
     delete mObjectQueryHandler;
     delete mGlobalLocCache;
@@ -243,59 +243,76 @@ void Proximity::sendQueryRequests() {
     sub_servers.swap(mNeedServerQueryUpdate);
     for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
-        ServerProximityQueryMessage* msg = new ServerProximityQueryMessage(mContext->id());
-        msg->contents.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
-        CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg->contents.mutable_location();
+        CBR::Protocol::Prox::ServerQuery msg;
+        msg.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
+        CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
         msg_loc.set_t(loc.updateTime());
         msg_loc.set_position(loc.position());
         msg_loc.set_position(loc.velocity());
-        msg->contents.set_bounds(bounds);
-        msg->contents.set_min_angle(mMinObjectQueryAngle.asFloat());
-        msg->setSourceServer(mContext->id());
-        msg->setDestServer(sid);
-        bool sent = mContext->router()->route(MessageRouter::PROXS, msg);
-        if (!sent)
+        msg.set_bounds(bounds);
+        msg.set_min_angle(mMinObjectQueryAngle.asFloat());
+
+        Message* smsg = new Message(
+            mContext->id(),
+            SERVER_PORT_PROX_QUERY,
+            sid,
+            SERVER_PORT_PROX_QUERY,
+            serializePBJMessage(msg)
+        );
+        bool sent = mContext->router()->route(MessageRouter::PROXS, smsg);
+        if (!sent) {
+            delete smsg;
             mNeedServerQueryUpdate.insert(sid);
+        }
     }
 }
 
 void Proximity::receiveMessage(Message* msg) {
-    ServerProximityQueryMessage* prox_query_msg = dynamic_cast<ServerProximityQueryMessage*>(msg);
-    if (prox_query_msg != NULL) {
+    if (msg->dest_port() == SERVER_PORT_PROX_QUERY) {
+        CBR::Protocol::Prox::ServerQuery prox_query_msg;
+        bool parsed = parsePBJMessage(&prox_query_msg, msg->payload());
+        if (!parsed) {
+            delete msg;
+            return;
+        }
 
-        // FIXME we need to have a way to get the source server from the message without using this magic,
-        // probably by saving the header and delivering it along with the message
-        ServerID source_server = GetUniqueIDServerID(msg->id());
+        ServerID source_server = msg->source_server();
 
-        if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::AddOrUpdate) {
+        if (prox_query_msg.action() == CBR::Protocol::Prox::ServerQuery::AddOrUpdate) {
             assert(
-                prox_query_msg->contents.has_location() &&
-                prox_query_msg->contents.has_bounds() &&
-                prox_query_msg->contents.has_min_angle()
+                prox_query_msg.has_location() &&
+                prox_query_msg.has_bounds() &&
+                prox_query_msg.has_min_angle()
             );
 
-            CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg->contents.location();
+            CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
-            SolidAngle minangle(prox_query_msg->contents.min_angle());
+            SolidAngle minangle(prox_query_msg.min_angle());
 
-            updateQuery(source_server, qloc, prox_query_msg->contents.bounds(), minangle);
+            updateQuery(source_server, qloc, prox_query_msg.bounds(), minangle);
         }
-        else if (prox_query_msg->contents.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
+        else if (prox_query_msg.action() == CBR::Protocol::Prox::ServerQuery::Remove) {
             removeQuery(source_server);
         }
         else {
             assert(false);
         }
+        delete msg;
     }
+    else if (msg->dest_port() == SERVER_PORT_PROX_RESULT) {
+        CBR::Protocol::Prox::ProximityResults prox_result_msg;
+        bool parsed = parsePBJMessage(&prox_result_msg, msg->payload());
+        if (!parsed) {
+            delete msg;
+            return;
+        }
 
-    ServerProximityResultMessage* prox_result_msg = dynamic_cast<ServerProximityResultMessage*>(msg);
-    if (prox_result_msg != NULL) {
-        assert( prox_result_msg->contents.has_t() );
-        Time t = prox_result_msg->contents.t();
+        assert( prox_result_msg.has_t() );
+        Time t = prox_result_msg.t();
 
-        if (prox_result_msg->contents.addition_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg->contents.addition_size(); idx++) {
-                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg->contents.addition(idx);
+        if (prox_result_msg.addition_size() > 0) {
+            for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
+                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -305,12 +322,14 @@ void Proximity::receiveMessage(Message* msg) {
             }
         }
 
-        if (prox_result_msg->contents.removal_size() > 0) {
-            for(int32 idx = 0; idx < prox_result_msg->contents.removal_size(); idx++) {
-                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg->contents.removal(idx);
+        if (prox_result_msg.removal_size() > 0) {
+            for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
+                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }
+
+        delete msg;
     }
 }
 
@@ -410,16 +429,14 @@ void Proximity::service() {
         handleOutputEvent(*it);
 
     // Get and ship server results
-    std::deque<ProxResultServerPair> server_results_copy;
+    std::deque<Message*> server_results_copy;
     mServerResults.swap(server_results_copy);
     mServerResultsToSend.insert(mServerResultsToSend.end(), server_results_copy.begin(), server_results_copy.end());
 
     bool server_sent = true;
     while(server_sent && !mServerResultsToSend.empty()) {
-        ProxResultServerPair& msg_front = mServerResultsToSend.front();
-        msg_front.msg->setSourceServer(mContext->id());
-        msg_front.msg->setDestServer(msg_front.dest);
-        server_sent = mContext->router()->route(MessageRouter::PROXS, msg_front.msg);
+        Message* msg_front = mServerResultsToSend.front();
+        server_sent = mContext->router()->route(MessageRouter::PROXS, msg_front);
         if (server_sent)
             mServerResultsToSend.pop_front();
     }
@@ -555,8 +572,8 @@ void Proximity::generateServerQueryEvents(const Time& t) {
         query->popEvents(evts);
 
         while(!evts.empty()) {
-            ServerProximityResultMessage* result_msg = new ServerProximityResultMessage(mContext->id());
-            result_msg->contents.set_t(t);
+            CBR::Protocol::Prox::ProximityResults contents;
+            contents.set_t(t);
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
                 count++;
@@ -564,7 +581,7 @@ void Proximity::generateServerQueryEvents(const Time& t) {
                 if (evt.type() == QueryEvent::Added) {
                     mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt.id()) );
 
-                    CBR::Protocol::Prox::IObjectAddition addition = result_msg->contents.add_addition();
+                    CBR::Protocol::Prox::IObjectAddition addition = contents.add_addition();
                     addition.set_object( evt.id() );
 
                     TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
@@ -577,16 +594,23 @@ void Proximity::generateServerQueryEvents(const Time& t) {
                 }
                 else {
                     mOutputEvents.push( ProximityOutputEvent::RemoveServerLocSubscriptionEvent(sid, evt.id()) );
-                    CBR::Protocol::Prox::IObjectRemoval removal = result_msg->contents.add_removal();
+                    CBR::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
                     removal.set_object( evt.id() );
                 }
 
                 evts.pop_front();
             }
 
-            PROXLOG(insane,"Reporting " << result_msg->contents.addition_size() << " additions, " << result_msg->contents.removal_size() << " removals to server " << sid);
+            PROXLOG(insane,"Reporting " << contents.addition_size() << " additions, " << contents.removal_size() << " removals to server " << sid);
 
-            mServerResults.push( ProxResultServerPair(sid, result_msg) );
+            Message* msg = new Message(
+                mContext->id(),
+                SERVER_PORT_PROX_RESULT,
+                sid,
+                SERVER_PORT_PROX_RESULT,
+                serializePBJMessage(contents)
+            );
+            mServerResults.push(msg);
         }
     }
 }

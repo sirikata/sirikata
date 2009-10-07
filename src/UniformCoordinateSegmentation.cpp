@@ -52,7 +52,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
    mRegion(region),
    mServersPerDim(perdim)
 {
-    mContext->dispatcher()->registerMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_CSEG_CHANGE, this);
 
   /* Read in the file which maintains how the layout of the region
      changes at different times. */
@@ -107,7 +107,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
 }
 
 UniformCoordinateSegmentation::~UniformCoordinateSegmentation() {
-    mContext->dispatcher()->unregisterMessageRecipient(MESSAGE_TYPE_CSEG_CHANGE, this);
+    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_CSEG_CHANGE, this);
 }
 
 ServerID UniformCoordinateSegmentation::lookup(const Vector3f& pos)  {
@@ -202,12 +202,9 @@ void UniformCoordinateSegmentation::service() {
 }
 
 void UniformCoordinateSegmentation::receiveMessage(Message* msg) {
-    CSegChangeMessage* server_split_msg = dynamic_cast<CSegChangeMessage*>(msg);
-    assert(server_split_msg != NULL);
-
-    // FIXME are we supposed to be listening for these in this cseg?
-
-    delete server_split_msg;
+    // FIXME what are we doing with these
+    assert(msg->dest_port() == SERVER_PORT_CSEG_CHANGE);
+    delete msg;
 }
 
 } // namespace CBR

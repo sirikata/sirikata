@@ -52,50 +52,36 @@
 
 namespace CBR {
 
-typedef uint8 MessageType;
+typedef uint16 ServerMessagePort;
 
-#define MESSAGE_TYPE_OBJECT                     1
-#define MESSAGE_TYPE_MIGRATE                    4
-#define MESSAGE_TYPE_COUNT                      5
-#define MESSAGE_TYPE_CSEG_CHANGE                6
-#define MESSAGE_TYPE_LOAD_STATUS                7
-#define MESSAGE_TYPE_OSEG_MIGRATE_MOVE          8
-#define MESSAGE_TYPE_OSEG_MIGRATE_ACKNOWLEDGE   9
-#define MESSAGE_TYPE_NOISE                     10
-#define MESSAGE_TYPE_SERVER_PROX_QUERY         11
-#define MESSAGE_TYPE_SERVER_PROX_RESULT        12
-#define MESSAGE_TYPE_BULK_LOCATION             13
-#define MESSAGE_TYPE_KILL_OBJ_CONN             14
-#define MESSAGE_TYPE_UPDATE_OSEG               15
-#define MESSAGE_TYPE_FORWARDED                 16
-#define MESSAGE_TYPE_OSEG_ADDED_OBJECT         17
-#define MESSAGE_TYPE_OBJECT_NOISE              18
-#define MESSAGE_TYPE_UNPROCESSED_PACKET        255
-
+// List of well known server ports.
+// FIXME Reduce the number of these ports (combine related ones), reorder, and renumber
+#define SERVER_PORT_OBJECT_MESSAGE_ROUTING     1
+#define SERVER_PORT_LOCATION                   13
+#define SERVER_PORT_PROX_QUERY                 11
+#define SERVER_PORT_PROX_RESULT                12
+#define SERVER_PORT_MIGRATION                  4
+#define SERVER_PORT_KILL_OBJ_CONN              14
+#define SERVER_PORT_CSEG_CHANGE                6
+#define SERVER_PORT_LOAD_STATUS                7
+#define SERVER_PORT_OSEG_ADDED_OBJECT          17
+#define SERVER_PORT_OSEG_MIGRATE_MOVE          8
+#define SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE   9
+#define SERVER_PORT_OSEG_UPDATE                15
+#define SERVER_PORT_NOISE                      10
+#define SERVER_PORT_UNPROCESSED_PACKET         0xFFFF
 
 
-// List of well known server ports, which should replace message types
-#define SERVER_PORT_OBJECT_MESSAGE_ROUTING 1
+typedef uint16 ObjectMessagePort;
 
-// List of well known object ports, which should replace message types
+// List of well known object ports.
 #define OBJECT_PORT_SESSION       1
 #define OBJECT_PORT_PROXIMITY     2
 #define OBJECT_PORT_LOCATION      3
 #define OBJECT_PORT_SUBSCRIPTION  4
-#define OBJECT_PORT_NOISE 253
-#define OBJECT_PORT_PING  254
+#define OBJECT_PORT_NOISE         253
+#define OBJECT_PORT_PING          254
 
-template <typename scalar>
-class SplitRegion {
-public:
-  ServerID mNewServerID;
-
-  scalar minX, minY, minZ;
-  scalar maxX, maxY, maxZ;
-
-};
-
-typedef SplitRegion<float> SplitRegionf;
 
 typedef uint64 UniqueMessageID;
 uint64 GenerateUniqueID(const ServerID& origin);
@@ -143,66 +129,63 @@ CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server
  */
 class Message {
 public:
-    virtual ~Message();
+    Message(const ServerID& origin);
+    Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port);
+    Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl);
 
-    virtual MessageType type() const = 0;
-    UniqueMessageID id() const;
+    ServerID source_server() const { return mImpl.source_server(); }
+    void set_source_server(const ServerID sid) {
+        mImpl.set_source_server(sid);
+        set_id( GenerateUniqueID(sid) );
+    }
 
-    ServerID sourceServer() const { return mSource; }
-    void setSourceServer(ServerID source) { mSource = source; }
-    ServerID destServer() const { return mDest; }
-    void setDestServer(ServerID dest) { mDest = dest; }
+    uint16 source_port() const { return mImpl.source_port(); }
+    void set_source_port(const uint16 port) { mImpl.set_source_port(port); }
 
-    virtual bool serialize(Network::Chunk* result) = 0;
+    ServerID dest_server() const { return mImpl.dest_server(); }
+    void set_dest_server(const ServerID sid) { mImpl.set_dest_server(sid); }
+
+    uint16 dest_port() const { return mImpl.dest_port(); }
+    void set_dest_port(const uint16 port) { mImpl.set_dest_port(port); }
+
+    UniqueMessageID id() const { return mImpl.id(); }
+    // NOTE: We don't expose set_id() so we can guarantee they will be unique
+
+    std::string payload() const { return mImpl.payload(); }
+    void set_payload(const std::string& pl) { mImpl.set_payload(pl); }
+
+
+    bool ParseFromString(const std::string& data) {
+        return mImpl.ParseFromString(data);
+    }
+    bool ParseFromArray(const void* data, int size) {
+        return mImpl.ParseFromArray(data, size);
+    }
+
+
+    // Deprecated.  Remains for backwards compatibility.
+    ServerID sourceServer() const { return source_server(); }
+    void setSourceServer(ServerID source) { set_source_server(source); }
+    ServerID destServer() const { return dest_server(); }
+    void setDestServer(ServerID dest) { set_dest_server(dest); }
+
+    // Depracated. Remains for backwards compatibility.
+    bool serialize(Network::Chunk* result);
     static Message* deserialize(const Network::Chunk& wire);
 
-    virtual uint32 serializedSize() const = 0;
+    // Deprecated. Remains for backwards compatibility.
+    uint32 serializedSize() const;
     uint32 size() const { return serializedSize(); }
 
 protected:
-    Message(const ServerID& origin);
-    Message(const CBR::Protocol::Server::ServerMessage& svr_msg);
+    // Note: Should only be used for deserialization to ensure unique ID's are handled properly
+    Message();
 
-    template<typename ContentsPBJType>
-    void fillMessage(CBR::Protocol::Server::ServerMessage& msg, const ContentsPBJType& pbj) const {
-        msg.set_source_server( mSource );
-        msg.set_source_port( this->type() );
-        msg.set_dest_server( mDest );
-        msg.set_dest_port( this->type() );
-        msg.set_id(mID);
-
-        msg.set_payload( serializePBJMessage(pbj) ); // FIXME should return false if this fails
-    }
-
-    template<typename ContentsPBJType>
-    uint32 getSerializedSize(const ContentsPBJType& pbj) const {
-        // FIXME having to serialize to find out the size is ridiculous, but there doesn't seem to be
-        // an easy way to factor out the cost of the payload
-
-        CBR::Protocol::Server::ServerMessage msg;
-        fillMessage(msg, pbj);
-        return msg.ByteSize();
-    }
-
-    template<typename ContentsPBJType>
-    bool serializeContents(Network::Chunk* output, const ContentsPBJType& pbj) const {
-        CBR::Protocol::Server::ServerMessage msg;
-        fillMessage(msg, pbj);
-
-        // FIXME having to copy here sucks
-        std::string result;
-        bool success = serializePBJMessage(&result, msg);
-        if (!success) return false;
-        output->resize( result.size() );
-        memcpy(&((*output)[0]), &(result[0]), sizeof(uint8)*result.size());
-        return true;
-    }
-
+    void set_id(const UniqueMessageID _id) { mImpl.set_id(_id); }
 private:
-    UniqueMessageID mID;
-    ServerID mSource;
-    ServerID mDest;
+    CBR::Protocol::Server::ServerMessage mImpl;
 }; // class Message
+
 
 
 
@@ -227,20 +210,20 @@ public:
 /** Base class for a message dispatcher. */
 class MessageDispatcher {
 public:
-    void registerMessageRecipient(MessageType type, MessageRecipient* recipient);
-    void unregisterMessageRecipient(MessageType type, MessageRecipient* recipient);
+    void registerMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
+    void unregisterMessageRecipient(ServerMessagePort type, MessageRecipient* recipient);
 
     // Registration and unregistration for object messages destined for the space
-    void registerObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
-    void unregisterObjectMessageRecipient(uint16 port, ObjectMessageRecipient* recipient);
+    void registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
+    void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
 protected:
     virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
 private:
-    typedef std::map<MessageType, MessageRecipient*> MessageRecipientMap;
+    typedef std::map<ServerMessagePort, MessageRecipient*> MessageRecipientMap;
     MessageRecipientMap mMessageRecipients;
-    typedef std::map<uint16, ObjectMessageRecipient*> ObjectMessageRecipientMap;
+    typedef std::map<ObjectMessagePort, ObjectMessageRecipient*> ObjectMessageRecipientMap;
     ObjectMessageRecipientMap mObjectMessageRecipients;
 }; // class MessageDispatcher
 
@@ -269,246 +252,6 @@ public:
 
 };
 
-
-
-
-// Specific message types
-
-class ObjectMessage : public Message {
-public:
-    ObjectMessage(const ServerID& origin, const CBR::Protocol::Object::ObjectMessage& src);
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Object::ObjectMessage contents;
-private:
-    friend class Message;
-    ObjectMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-}; // class ObjectMessage
-
-
-class NoiseMessage : public Message {
-public:
-    NoiseMessage(const ServerID& origin, uint32 noise_sz);
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Object::Noise contents;
-private:
-    friend class Message;
-    NoiseMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-}; // class NoiseMessage
-
-class MigrateMessage : public Message {
-public:
-    MigrateMessage(const ServerID& origin);
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Migration::MigrationMessage contents;
-private:
-    friend class Message;
-    MigrateMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-}; // class MigrateMessage
-
-class CSegChangeMessage : public Message {
-public:
-    CSegChangeMessage(const ServerID& origin);
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::CSeg::ChangeMessage contents;
-private:
-    friend class Message;
-    CSegChangeMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-class LoadStatusMessage : public Message {
-public:
-    LoadStatusMessage(const ServerID& origin);
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::CSeg::LoadMessage contents;
-private:
-    friend class Message;
-    LoadStatusMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-
-  //oseg message
-
-class OSegMigrateMessageMove : public Message
-{
-public:
-  OSegMigrateMessageMove(const ServerID& origin,ServerID sID_from, ServerID sID_to, ServerID sMessageDest, ServerID sMessageFrom, UUID obj_id);
-
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::OSeg::MigrateMessageMove contents;
-
-    ServerID            getServFrom();
-    ServerID            getServTo();
-    UUID                getObjID();
-    ServerID            getMessageDestination();
-    ServerID            getMessageFrom();
-
-
-private:
-    friend class Message;
-    OSegMigrateMessageMove(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-class OSegMigrateMessageAcknowledge : public Message
-{
-public:
-  OSegMigrateMessageAcknowledge(const ServerID& origin, const ServerID &sID_from, const ServerID &sID_to, const ServerID &sMessageDest, const ServerID &sMessageFrom, const UUID &obj_id);
-
-  virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-  CBR::Protocol::OSeg::MigrateMessageAcknowledge contents;
-
-  ServerID            getServFrom();
-  ServerID            getServTo();
-  UUID                getObjID();
-  ServerID            getMessageDestination();
-  ServerID            getMessageFrom();
-
-
-private:
-  friend class Message;
-  OSegMigrateMessageAcknowledge(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-//update oseg message
-class UpdateOSegMessage : public Message
-{
-public:
-  UpdateOSegMessage(const ServerID& sID_sendingMessage, const ServerID& sID_objOn, const UUID& obj_id);
-  virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-  ~UpdateOSegMessage();
-
-  CBR::Protocol::OSeg::UpdateOSegMessage contents;
-
-private:
-  friend class Message;
-  UpdateOSegMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-
-};
-
-
-  //end oseg message
-
-//kill obj conn message
-class KillObjConnMessage : public Message
-{
-public:
-  CBR::Protocol::ObjConnKill::ObjConnKill contents;
-  KillObjConnMessage(const ServerID& origin);
-  ~KillObjConnMessage();
-  virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-private:
-  friend class Message;
-  KillObjConnMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-//end kill obj conn message
-
-
-class OSegAddMessage : public Message
-{
-public:
-  CBR::Protocol::OSeg::AddedObjectMessage contents;
-
-  OSegAddMessage(const ServerID& origin, const UUID& obj_id);
-  ~OSegAddMessage();
-  virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-private:
-  friend class Message;
-  OSegAddMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-//forwarded message
-//class
-
-//end
-
-
-class ServerProximityQueryMessage : public Message {
-public:
-    ServerProximityQueryMessage(const ServerID& origin);
-    ~ServerProximityQueryMessage();
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Prox::ServerQuery contents;
-private:
-    friend class Message;
-    ServerProximityQueryMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-class ServerProximityResultMessage : public Message {
-public:
-    ServerProximityResultMessage(const ServerID& origin);
-    ~ServerProximityResultMessage();
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Prox::ProximityResults contents;
-private:
-    friend class Message;
-    ServerProximityResultMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
-
-
-/** Location updates from Prox/Loc to an object. */
-class BulkLocationMessage : public Message {
-public:
-    BulkLocationMessage(const ServerID& origin);
-    ~BulkLocationMessage();
-
-    virtual MessageType type() const;
-    virtual bool serialize(Network::Chunk* result);
-    virtual uint32 serializedSize() const;
-
-    CBR::Protocol::Loc::BulkLocationUpdate contents;
-private:
-    friend class Message;
-    BulkLocationMessage(const CBR::Protocol::Server::ServerMessage& svr_msg);
-};
 
 } // namespace CBR
 

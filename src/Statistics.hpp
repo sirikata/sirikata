@@ -125,7 +125,7 @@ public:
 
     void setServerIDMap(ServerIDMap* sidmap);
     //bool timestampMessage(const Time&t, MessagePath path,const Network::Chunk&);
-    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, uint16 optionalMessageSourcePort=0, uint16 optionalMessageDestPort=0, MessageType optionalMessageType= MESSAGE_TYPE_UNPROCESSED_PACKET);
+    void timestampMessage(const Time&t, uint64 packetId, MessagePath path, ObjectMessagePort optionalMessageSourcePort=0, ObjectMessagePort optionalMessageDestPort=0, ServerMessagePort optionalMessageType = SERVER_PORT_UNPROCESSED_PACKET);
     void prox(const Time& t, const UUID& receiver, const UUID& source, bool entered, const TimedMotionVector3f& loc);
     void objectLoc(const Time& t, const UUID& receiver, const UUID& source, const TimedMotionVector3f& loc);
     void objectGenLoc(const Time& t, const UUID& source, const TimedMotionVector3f& loc);

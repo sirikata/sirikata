@@ -182,13 +182,7 @@ void OracleLocationService::removeReplicaObject(const Time& t, const UUID& uuid)
 }
 
 void OracleLocationService::receiveMessage(Message* msg) {
-    BulkLocationMessage* bulk_loc = dynamic_cast<BulkLocationMessage*>(msg);
-    if (bulk_loc != NULL) {
-        // We don't actually use these updates here because we are an Oracle --
-        // we already know all the positions. Normally these would generate
-        // replica events.
-        delete msg;
-    }
+    delete msg;
 }
 
 void OracleLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {

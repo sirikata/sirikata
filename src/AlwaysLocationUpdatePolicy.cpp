@@ -123,10 +123,13 @@ bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const CBR::Protocol::
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const ServerID& dest, const CBR::Protocol::Loc::BulkLocationUpdate& blu) {
-    BulkLocationMessage* msg = new BulkLocationMessage(mLocService->context()->id());
-    msg->contents = blu;
-    msg->setSourceServer(mLocService->context()->id());
-    msg->setDestServer(dest);
+    Message* msg = new Message(
+        mLocService->context()->id(),
+        SERVER_PORT_LOCATION,
+        dest,
+        SERVER_PORT_LOCATION,
+        serializePBJMessage(blu)
+    );
     return mLocService->context()->router()->route(MessageRouter::LOCS, msg);
 }
 

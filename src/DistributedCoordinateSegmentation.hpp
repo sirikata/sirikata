@@ -53,7 +53,7 @@ typedef struct ServerAvailability  {
 typedef struct WorldRegion {
   BoundingBox3f mBoundingBox;
   double density;
- 
+
   WorldRegion() {
     density = 0;
     mBoundingBox = BoundingBox3f();
@@ -91,20 +91,20 @@ public:
 
 private:
 
-    void csegChangeMessage(CSegChangeMessage* ccMsg);
+    void csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector);
-  
+
     void serializeBSPTree(SerializedBSPTree* serializedBSPTree);
 
 
-    void traverseAndStoreTree(SegmentedRegion* region, uint32& idx, 
+    void traverseAndStoreTree(SegmentedRegion* region, uint32& idx,
 			      SerializedBSPTree* serializedTree);
 
     void startAccepting();
 
     void startAcceptingLLRequests();
-  
+
     //ServerID mCSEGServerID;
 
     SegmentedRegion mTopLevelRegion;
@@ -124,7 +124,7 @@ private:
     boost::shared_ptr<tcp::socket> mLLTreeAcceptorSocket;
 
 
- 
+
 
     int mWorldWidth;
     int mWorldHeight;
@@ -133,14 +133,14 @@ private:
     int mBiggestDepth;
     BoundingBox3f mRectangle1;
     BoundingBox3f mRectangle2;
-  
+
     BoundingBox3f mIntersect1;
     BoundingBox3f mIntersect2;
 
     WorldRegion* mTempRegionList1;
     WorldRegion* mTempRegionList2;
-  
-    
+
+
     std::map<String, SegmentedRegion*> mHigherLevelTrees;
     std::map<String, SegmentedRegion*> mLowerLevelTrees;
 
@@ -148,11 +148,11 @@ private:
 
     int* mHistogram;
     void setupRegionBoundaries(WorldRegion* regionList);
-    
+
     void accept_handler();
 
     void acceptLLTreeRequestHandler();
-  
+
     void constructBSPTree(SegmentedRegion& bspTree, WorldRegion* regionList, int listLength, bool makeHorizontalCut, int depth);
 
     void generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar);
@@ -162,8 +162,8 @@ private:
     void callLowerLevelCSEGServersForServerRegions(ServerID server_id, BoundingBoxList&);
 
     void ioServicingLoop();
-      
-   
+
+
 
     ServerIDMap *  mSidMap;
 

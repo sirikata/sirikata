@@ -71,13 +71,13 @@ public:
 
 private:
     BoundingBox3f mRegion;
-    void csegChangeMessage(CSegChangeMessage* ccMsg);
+    void csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg);
 
     void downloadUpdatedBSPTree();
 
     SegmentedRegion mTopLevelRegion;
     bool mBSPTreeValid;
-    
+
     Trace* mTrace;
 
     ENetHost * client;

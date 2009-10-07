@@ -121,14 +121,14 @@ void StandardLocationService::removeLocalObject(const UUID& uuid) {
     printf("\n\nDoes not meet second condition for object:  %s\n\n", uuid.toString().c_str());
     fflush(stdout);
   }
-  
+
   assert( mLocations.find(uuid) != mLocations.end() );
   assert( mLocations[uuid].local == true );
   mLocations.erase(uuid);
 
 
 
-    
+
     // Remove from the list of local objects
     mContext->trace()->serverObjectEvent(mContext->time, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
     notifyLocalObjectRemoved(uuid);
@@ -189,10 +189,13 @@ void StandardLocationService::removeReplicaObject(const Time& t, const UUID& uui
 
 
 void StandardLocationService::receiveMessage(Message* msg) {
-    BulkLocationMessage* bulk_loc = dynamic_cast<BulkLocationMessage*>(msg);
-    if (bulk_loc != NULL) {
-        for(int32 idx = 0; idx < bulk_loc->contents.update_size(); idx++) {
-            CBR::Protocol::Loc::LocationUpdate update = bulk_loc->contents.update(idx);
+    assert(msg->dest_port() == SERVER_PORT_LOCATION);
+    CBR::Protocol::Loc::BulkLocationUpdate contents;
+    bool parsed = parsePBJMessage(&contents, msg->payload());
+
+    if (parsed) {
+        for(int32 idx = 0; idx < contents.update_size(); idx++) {
+            CBR::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
             // Its possible we'll get an out of date update. We only use this update
             // if (a) we have this object marked as a replica object and (b) we don't
@@ -220,9 +223,9 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 notifyReplicaBoundsUpdated( update.object(), newbounds );
             }
         }
-
-        delete msg;
     }
+
+    delete msg;
 }
 
 void StandardLocationService::receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
