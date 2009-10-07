@@ -174,8 +174,6 @@ void DistributedCoordinateSegmentation::constructBSPTree(SegmentedRegion& bspTre
   for (i=0; i<  listLength; i++) {
     if (regionList[i].density == 0) continue;
 
-    
-
     if (intersects(bspTree1->mBoundingBox, regionList[i].mBoundingBox) ) {
       
       mIntersect1 = intersect(bspTree1->mBoundingBox, regionList[i].mBoundingBox);
@@ -355,25 +353,6 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
 
   //printf("%d servers\n", nservers);
 
-  ENetAddress address;
-
-  /* Bind the server to the default localhost.     */
-  /* A specific host address can be specified by   */
-  /* enet_address_set_host (& address, "x.x.x.x"); */
-
-  address.host = ENET_HOST_ANY;
-  address.port = atoi( GetOption("cseg-service-enet-port")->as<String>().c_str() );
-
-  server = enet_host_create (& address /* the address to bind the server host to */,
-			     254      /* allow up to 254 clients and/or outgoing connections */,
-			     0      /* assume any amount of incoming bandwidth */,
-			     0      /* assume any amount of outgoing bandwidth */);
-  if (server == NULL)
-    {
-      //printf ("An error occurred while trying to create an ENet server host.\n");
-      exit (EXIT_FAILURE);
-    }
-
   mAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), atoi( GetOption("cseg-service-tcp-port")->as<String>().c_str() ))));
 
   Address4* addy = sidmap->lookupInternal(ctx->id());
@@ -384,14 +363,10 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
   
   startAccepting(); 
 
-  boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
-  
-  printf("DCS constructor ended\n");
+  boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));    
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
-
-
     //delete all the SegmentedRegion objects created with 'new'
     mTopLevelRegion.destroy();
 }
@@ -453,7 +428,6 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
   }
   else {
     //remote function call to the relevant server
-    //printf("Remote lookup.. ignoring for now\n");
     return callLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox);
   }
 }
@@ -506,9 +480,7 @@ uint32 DistributedCoordinateSegmentation::numServers() {
 }
 
 void DistributedCoordinateSegmentation::service() {
-  Time t = mContext->time;
-
-  //mIOService.poll();
+  Time t = mContext->time;  
 
   if ( !GetOption("random-splits-merges")->as<bool>() ) {
     return;
@@ -527,7 +499,7 @@ void DistributedCoordinateSegmentation::service() {
   static bool splitAlready = false;
 
   /* Do splits and merges every 30 seconds, except the first time, when its done
-     120 seconds after startup.
+     80 seconds after startup.
    */
   static int duration = 80;
   if (availableSvrIndex !=65535 && t - mLastUpdateTime > Duration::seconds(duration)) {
@@ -1137,7 +1109,7 @@ void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
 
 void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar) {
 
-  int cutOffDepth = 15;
+  int cutOffDepth = 3;
   if (depth>=cutOffDepth) {
     region->mServer =  (numLLTreesSoFar % mAvailableCSEGServers)+1;
     
