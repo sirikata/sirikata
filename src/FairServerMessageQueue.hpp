@@ -2,7 +2,6 @@
 #define _CBR_FAIRSENDQUEUE_HPP
 
 #include "FairQueue.hpp"
-#include "ServerMessagePair.hpp"
 #include "ServerMessageQueue.hpp"
 #include "NetworkQueueWrapper.hpp"
 
@@ -20,7 +19,7 @@ protected:
     };
 
     FairQueue<Message, ServerID, Queue<Message*>, CanSendPredicate > mServerQueues;
-    FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
+    FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
     uint32 mRate;
     uint32 mRecvRate;
@@ -31,18 +30,14 @@ protected:
 
     typedef std::set<ServerID> ReceiveServerSet;
     ReceiveServerSet mReceiveSet;
-    struct ChunkSourcePair {
-        Network::Chunk* chunk;
-        ServerID source;
-    };
-    std::queue<ChunkSourcePair> mReceiveQueue;
+    std::queue<Message*> mReceiveQueue;
 public:
 
     FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(Message* msg);
     virtual bool canAddMessage(const Message* msg);
-    virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
+    virtual bool receive(Message** msg_out);
     virtual void service();
 
     virtual void setServerWeight(ServerID, float weight);

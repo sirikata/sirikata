@@ -113,7 +113,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
     TimeProfiler mProfiler;
 
     //Private Functions
-    void processChunk(const Sirikata::Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg);
+    void processChunk(Message* msg, bool forwarded_self_msg);
 
 
     typedef std::vector<ServerID> ListServersUpdate;

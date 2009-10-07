@@ -52,14 +52,7 @@ bool FairServerMessageQueue::addMessage(Message* msg){
 
     // If its just coming back here, skip routing and just push the payload onto the receive queue
     if (mContext->id() == destinationServer) {
-        ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk();
-        msg->serialize(csp.chunk);
-        csp.source = mContext->id();
-
-        mReceiveQueue.push(csp);
-        delete msg;
-
+        mReceiveQueue.push(msg);
         return true;
     }
 
@@ -68,17 +61,15 @@ bool FairServerMessageQueue::addMessage(Message* msg){
     return success;
 }
 
-bool FairServerMessageQueue::receive(Network::Chunk** chunk_out, ServerID* source_server_out) {
-    if (!mReceiveQueue.empty()) {
-        ChunkSourcePair csp = mReceiveQueue.front();
-        *chunk_out = csp.chunk;
-        *source_server_out = csp.source;
-        mReceiveQueue.pop();
-        return true;
+bool FairServerMessageQueue::receive(Message** msg_out) {
+    if (mReceiveQueue.empty()) {
+        *msg_out = NULL;
+        return false;
     }
 
-    *chunk_out = NULL;
-    return false;
+    *msg_out = mReceiveQueue.front();
+    mReceiveQueue.pop();
+    return true;
 }
 
 
@@ -155,13 +146,13 @@ void FairServerMessageQueue::service(){
 
 
     // Receive
-    ServerMessagePair* next_recv_msg = NULL;
+    Message* next_recv_msg = NULL;
     mReceiveQueues.service(); // FIXME this shouldn't be necessary if NetworkQueueWrapper could notify the FairQueue
     while( recv_bytes > 0 && (next_recv_msg = mReceiveQueues.front(&recv_bytes,&sid)) != NULL ) {
-        ServerMessagePair* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
+        Message* next_recv_msg_popped = mReceiveQueues.pop(&recv_bytes);
         assert(next_recv_msg_popped == next_recv_msg);
 
-        uint32 packet_size = next_recv_msg->data().size();
+        uint32 packet_size = next_recv_msg->serializedSize();
         Duration recv_duration = Duration::seconds((float)packet_size / (float)mRecvRate);
         Time start_time = mLastReceiveEndTime;
         Time end_time = mLastReceiveEndTime + recv_duration;
@@ -171,12 +162,7 @@ void FairServerMessageQueue::service(){
            FIXME at some point we should record this here instead of in Server.cpp
         mContext->trace()->serverDatagramReceived();
         */
-        ChunkSourcePair csp;
-        csp.chunk = new Network::Chunk(next_recv_msg->data());
-        csp.source = next_recv_msg->dest();
-        mReceiveQueue.push( csp );
-
-        delete next_recv_msg;
+        mReceiveQueue.push(next_recv_msg);
     }
 
     if (mReceiveQueues.empty()) {

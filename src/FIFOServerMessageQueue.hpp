@@ -3,7 +3,6 @@
 
 #include "FIFOQueue.hpp"
 #include "ServerMessageQueue.hpp"
-#include "ServerMessagePair.hpp"
 #include "FairQueue.hpp"
 #include "NetworkQueueWrapper.hpp"
 
@@ -12,7 +11,7 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     FIFOQueue<Message, ServerID> mQueue;
     // It seems weird that we're using a FairQueue, but we do so to split bandwidth evenly.
     // Doing round robin would be an alternative.
-    FairQueue<ServerMessagePair, ServerID, NetworkQueueWrapper > mReceiveQueues;
+    FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
     uint32 mSendRate;
     uint32 mRecvRate;
@@ -23,17 +22,13 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
 
     typedef std::set<ServerID> ReceiveServerList;
     ReceiveServerList mSourceServers;
-    struct ChunkSourcePair {
-        Network::Chunk* chunk;
-        ServerID source;
-    };
-    std::queue<ChunkSourcePair> mReceiveQueue;
+    std::queue<Message*> mReceiveQueue;
 public:
     FIFOServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second);
 
     virtual bool addMessage(Message* msg);
     virtual bool canAddMessage(const Message* msg);
-    virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out);
+    virtual bool receive(Message** msg_out);
     virtual void service();
 
     virtual void setServerWeight(ServerID sid, float weight);

@@ -64,7 +64,7 @@ public:
      */
     virtual bool canAddMessage(const Message* msg)=0;
 
-    virtual bool receive(Network::Chunk** chunk_out, ServerID* source_server_out) = 0;
+    virtual bool receive(Message** msg_out) = 0;
     virtual void service() = 0;
 
     virtual void setServerWeight(ServerID sid, float weight) = 0;

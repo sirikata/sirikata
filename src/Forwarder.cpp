@@ -186,8 +186,8 @@ void Forwarder::service()
     self_messages.swap( mSelfMessages );
     while (!self_messages.empty())
     {
-        processChunk(self_messages.front().data, mContext->id(), self_messages.front().forwarded);
-      self_messages.pop_front();
+        processChunk(self_messages.front().msg, self_messages.front().forwarded);
+        self_messages.pop_front();
     }
     mProfiler.finishedStage();
 /*
@@ -258,12 +258,9 @@ void Forwarder::service()
 
     tickOSeg(t);  mProfiler.finishedStage();
 
-    Sirikata::Network::Chunk *c=NULL;
-    ServerID source_server;
-    while(mServerMessageQueue->receive(&c, &source_server))
-    {
-        processChunk(*c, source_server, false);
-        delete c;
+    Message* next_msg = NULL;
+    while(mServerMessageQueue->receive(&next_msg)) {
+        processChunk(next_msg, false);
     }
     mProfiler.finishedStage();
   }
@@ -302,12 +299,8 @@ void Forwarder::service()
 */
       // FIXME this should be limited in size so we can actually provide pushback to other servers when we can't route to ourselves/
       // connected objects fast enough
-        Network::Chunk msg_serialized;
-        msg->serialize(&msg_serialized);
-
-      mSelfMessages.push_back( SelfMessage(msg_serialized, is_forward) );
+      mSelfMessages.push_back( SelfMessage(msg, is_forward) );
       success = true;
-      delete msg;
     }
     else
     {
@@ -423,20 +416,17 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
 }
 
 
-  void Forwarder::processChunk(const Network::Chunk&chunk, const ServerID& source_server, bool forwarded_self_msg)
-  {
-      Message* result = Message::deserialize(chunk);
+void Forwarder::processChunk(Message* msg, bool forwarded_self_msg) {
+    ObjectMessage *om=dynamic_cast<ObjectMessage*>(msg);
+    if (om) {
+        mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::FORWARDED,om->contents.source_port(),om->contents.dest_port(),msg->type());
+    }
 
-      ObjectMessage *om=dynamic_cast<ObjectMessage*>(result);
-      if (om) {
-          mContext->trace()->timestampMessage(mContext->time,om->contents.unique(),Trace::FORWARDED,om->contents.source_port(),om->contents.dest_port(),result->type());
-      }
+    if (!forwarded_self_msg)
+        mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, msg->sourceServer(), msg->id(), msg->serializedSize());
 
-      if (!forwarded_self_msg)
-          mContext->trace()->serverDatagramReceived(mContext->time, mContext->time, source_server, result->id(), chunk.size());
-
-      dispatchMessage(result);
-  }
+    dispatchMessage(msg);
+}
 
 void Forwarder::receiveMessage(Message* msg) {
     if (msg->type() == MESSAGE_TYPE_NOISE) {

@@ -2,17 +2,37 @@
 #define _NETWORK_QUEUE_WRAPPER
 
 #include "Network.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 class NetworkQueueWrapper {
-    Network * mNetwork;
+    Network* mNetwork;
     ServerID mServerID;
     uint32 mMaxRecvSize;
     Address4 mServerAddress;
-    ServerMessagePair* mFront;
+    Message* mFront;
     typedef Network::Chunk Chunk;
+
+    Message* parse(Chunk* c) {
+        Message* msg = Message::deserialize(*c);
+
+        if (msg == NULL) {
+            // FIXME if this happens we're probably going to never remove the chunk from the network...
+            SILOG(net,warning,"[NET] Couldn't parse message.");
+            return NULL;
+        }
+
+        if (msg->sourceServer() != mServerID) {
+            // FIXME if this happens we're probably going to never remove the chunk from the network...
+            SILOG(net,warning,"[NET] Message source doesn't match connection's ID");
+            delete msg;
+            return NULL;
+        }
+
+        return msg;
+    }
 public:
-    typedef ServerMessagePair* ElementType;
+    typedef Message* ElementType;
     typedef std::tr1::function<void(const ElementType&)> PopCallback;
 
     NetworkQueueWrapper(ServerID sid, Network*net,ServerIDMap*idmap) {
@@ -24,26 +44,21 @@ public:
     }
     ~NetworkQueueWrapper(){}
 
-    QueueEnum::PushResult push(const ServerMessagePair *msg){
+    QueueEnum::PushResult push(const Message *msg){
         return QueueEnum::PushExceededMaximumSize;
     }
 
-    ServerMessagePair* front() {
+    Message* front() {
         if (mFront == NULL) {
             Chunk* c = mNetwork->front(mServerAddress, mMaxRecvSize);
-
-            if (c != NULL) {
-                CBR::Protocol::Server::ServerMessage msg;
-                bool parsed = parsePBJMessage(&msg, *c);
-                assert( parsed && msg.source_server() == mServerID );
-                mFront = new ServerMessagePair(mServerID, *c);
-            }
+            if (c != NULL)
+                mFront = parse(c);
         }
 
         return mFront;
     }
 
-    ServerMessagePair* pop(){
+    Message* pop(){
         Chunk* c = mNetwork->receiveOne(mServerAddress,mMaxRecvSize);
 
         if (c == NULL) {
@@ -51,21 +66,21 @@ public:
             return NULL;
         }
 
-        ServerMessagePair* result = NULL;
+        Message* result = NULL;
         if (mFront != NULL) {
             result = mFront;
             mFront = NULL;
         }
         else {
-            result = new ServerMessagePair(mServerID, *c);
+            result = parse(c);
         }
 
         delete c;
         return result;
     }
 
-    ServerMessagePair* pop(const PopCallback& cb) {
-        ServerMessagePair* popped = pop();
+    Message* pop(const PopCallback& cb) {
+        Message* popped = pop();
         if (cb != 0)
             cb(popped);
         return popped;

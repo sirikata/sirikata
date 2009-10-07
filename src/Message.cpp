@@ -84,7 +84,12 @@ uint64 Message::id() const {
 
 Message* Message::deserialize(const Network::Chunk& wire) {
     CBR::Protocol::Server::ServerMessage svr_msg;
-    parsePBJMessage(&svr_msg, wire);
+    bool parsed = parsePBJMessage(&svr_msg, wire);
+
+    if (!parsed) {
+        SILOG(msg,warning,"[MSG] Couldn't parse message.");
+        return NULL;
+    }
 
     Message* msg = NULL;
 

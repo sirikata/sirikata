@@ -29,10 +29,10 @@ namespace CBR
 
   struct SelfMessage
   {
-    SelfMessage(const Network::Chunk& d, bool f)
-      : data(d), forwarded(f) {}
+    SelfMessage(Message* m, bool f)
+      : msg(m), forwarded(f) {}
 
-    Network::Chunk data;
+      Message* msg;
     bool forwarded;
   };
 
