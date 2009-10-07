@@ -66,7 +66,6 @@
 #include "LoadMonitor.hpp"
 #include "LocObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
-#include "ServerProtocolMessagePair.hpp"
 
 
 
@@ -608,7 +607,7 @@ void *main_loop(void *) {
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
-        Time now_time = Timer::now();	
+        Time now_time = Timer::now();
         if (start_time > now_time) {
             Duration sleep_time = start_time - now_time;
             printf("Waiting %f seconds\n", sleep_time.toSeconds() ); fflush(stdout);
@@ -630,7 +629,7 @@ void *main_loop(void *) {
     if (cseg_type == "distributed") {
       srand(time(NULL));
 
-      while( true ) { 
+      while( true ) {
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
 
         space_context->tick(tbegin + elapsed);
@@ -639,7 +638,7 @@ void *main_loop(void *) {
 
       exit(0);
     }
-    
+
 
     gNetwork->start();
 
@@ -655,7 +654,7 @@ void *main_loop(void *) {
     profiler.addStage("External OSeg III");
     profiler.addStage("Server Service");
 
-    while( true ) {        
+    while( true ) {
         Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
         if (elapsed > duration)
             break;

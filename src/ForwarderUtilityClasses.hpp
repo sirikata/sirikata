@@ -4,26 +4,12 @@
 
 
 #include "Utility.hpp"
-
-
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 
-
-
-
-
 namespace CBR
 {
-  class ServerProtocolMessagePair;
-  struct ObjMessQBeginSend
-  {
-      UUID dest_uuid;
-    ServerProtocolMessagePair* data;
-  };
-
   class Object;
-
 
   typedef std::map<UUID, Object*> ObjectMap;
 
@@ -39,24 +25,25 @@ namespace CBR
   //std::deque<SelfMessage> mSelfMessages;
 
   class OSegLookupQueue {
-      class ObjMessQBeginSendList : protected std::vector<ObjMessQBeginSend>{
+      class ObjMessQBeginSendList : protected std::vector<CBR::Protocol::Object::ObjectMessage*>{
+          typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageVector;
           size_t mTotalSize;
       public:
           size_t ByteSize() const{
               return mTotalSize;
           }
           size_t size()const {
-              return std::vector<ObjMessQBeginSend>::size();
+              return ObjectMessageVector::size();
           }
-          ObjMessQBeginSend&operator[] (size_t where){
-              return std::vector<ObjMessQBeginSend>::operator[](where);
+          CBR::Protocol::Object::ObjectMessage*& operator[] (size_t where){
+              return ObjectMessageVector::operator[](where);
           }
-          void push_back(const ObjMessQBeginSend&msg) ;//in Forwarder.cpp
-          std::vector<ObjMessQBeginSend>::iterator begin(){
-              return std::vector<ObjMessQBeginSend>::begin();
+          void push_back(CBR::Protocol::Object::ObjectMessage* msg) ;//in Forwarder.cpp
+          ObjectMessageVector::iterator begin(){
+              return ObjectMessageVector::begin();
           }
-          std::vector<ObjMessQBeginSend>::iterator end(){
-              return std::vector<ObjMessQBeginSend>::end();
+          ObjectMessageVector::iterator end(){
+              return ObjectMessageVector::end();
           }
       };
       size_t mTotalSize;
@@ -74,7 +61,7 @@ namespace CBR
       ObjMessQBeginSendList&operator[](const UUID&objid) {
           return mObjects[objid];
       }
-      void push(UUID objid,const ObjMessQBeginSend &dat);
+      void push(UUID objid, CBR::Protocol::Object::ObjectMessage* dat);
       ObjectMap::iterator find(const UUID&objid) {
           return mObjects.find(objid);
       }

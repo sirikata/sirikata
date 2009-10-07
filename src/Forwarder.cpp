@@ -19,12 +19,13 @@
 namespace CBR
 {
 
-void OSegLookupQueue::ObjMessQBeginSendList::push_back(const ObjMessQBeginSend&msg) {
-    mTotalSize+=msg.data->data().contents.ByteSize();
+void OSegLookupQueue::ObjMessQBeginSendList::push_back(CBR::Protocol::Object::ObjectMessage* msg) {
+    mTotalSize += msg->ByteSize();
+    ObjectMessageVector::push_back(msg);
 }
 
-void OSegLookupQueue::push(UUID objid,const ObjMessQBeginSend &dat) {
-    size_t cursize=dat.data->data().contents.ByteSize();
+void OSegLookupQueue::push(UUID objid, CBR::Protocol::Object::ObjectMessage* dat) {
+    size_t cursize = dat->ByteSize();
     if (mPredicate(objid,cursize,mTotalSize)) {
         mTotalSize+=cursize;
         mObjects[objid].push_back(dat);
@@ -133,19 +134,24 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
       iterQueueMap = queueMap.find(iter->first);
       if (iterQueueMap != queueMap.end())
       {
+          ServerID dest_server = iter->second;
+
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
-            ObjectMessage* obj_msg = new ObjectMessage(iter->second, iterQueueMap->second[s].data->data().contents);
+            CBR::Protocol::Object::ObjectMessage* in_msg = (iterQueueMap->second[s]);
+            ObjectMessage* obj_msg = new ObjectMessage(mContext->id(), *in_msg);
             obj_msg->setSourceServer(mContext->id());
-            obj_msg->setDestServer(iter->second);
+            obj_msg->setDestServer(dest_server);
 
             if (!route(MessageRouter::OBJECT_MESSAGESS, obj_msg)) {
                 mContext->trace()->timestampMessage(mContext->time,
-                                                    iterQueueMap->second[s].data->data().contents.unique(),
-                                                    Trace::DROPPED,
-                                                    iterQueueMap->second[s].data->data().contents.source_port(),
-                                                    iterQueueMap->second[s].data->data().contents.dest_port(),
-                                                    iterQueueMap->second[s].data->data().type());
+                    in_msg->unique(),
+                    Trace::DROPPED,
+                    in_msg->source_port(),
+                    in_msg->dest_port(),
+                    obj_msg->type()
+                );
+                delete obj_msg;
             }
         }
         queueMap.erase(iterQueueMap);
@@ -386,15 +392,11 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         return true;
     }
 
-    ObjMessQBeginSend beginMess;
     ServerID lookupID = mOSeg->lookup(obj_msg->dest_object());
     bool send_success=true;
     if (lookupID == NullServerID)
     {
-        ObjectMessage obj_msg_class(mContext->id(), *obj_msg);
-        beginMess.data=new ServerProtocolMessagePair(NULL,obj_msg_class,obj_msg_class.id());
-        beginMess.dest_uuid=obj_msg->dest_object();
-        queueMap[beginMess.dest_uuid].push_back(beginMess);
+        queueMap[obj_msg->dest_object()].push_back(obj_msg);
         //if queueMap.full() send_success=false;
     }
     else

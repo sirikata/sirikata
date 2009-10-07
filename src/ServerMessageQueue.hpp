@@ -6,7 +6,6 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 #include "ServerIDMap.hpp"
-#include "ServerProtocolMessagePair.hpp"
 
 namespace CBR{
 
