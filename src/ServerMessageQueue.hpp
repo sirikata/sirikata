@@ -71,7 +71,6 @@ public:
     virtual void reportQueueInfo(const Time& t) const = 0;
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const = 0;
-protected:
     bool canSend(const Message* msg) {
         if (msg->dest_server()==mContext->id()) return true;
         Address4* addy = mServerIDMap->lookupInternal(msg->dest_server());
@@ -79,6 +78,7 @@ protected:
         assert(addy != NULL);
         return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);
     }
+protected:
 
     SpaceContext* mContext;
     Network* mNetwork;

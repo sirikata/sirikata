@@ -250,24 +250,31 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
     */
-    (*mOutgoingMessages)->service(); mProfiler.finishedStage();
-    while(true)
-    {
-        uint64 size=1<<30;
-        MessageRouter::SERVICES svc;
-        Message* next_msg = (*mOutgoingMessages)->front(&size,&svc);
-        if (!next_msg)
-            break;
-        tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
+    //FIXME do we really need to call service? (*mOutgoingMessages)->service(); mProfiler.finishedStage();
+    for (int sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
+        while(true)
+        {
+            
+            uint64 size=1<<30;
+            MessageRouter::SERVICES svc;
+            Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
+            if (!next_msg)
+                break;
+            
+            if (!mServerMessageQueue->canSend(next_msg))
+                break;
 
-        Message* pop_msg = (*mOutgoingMessages)->pop(
-            &size,
-            std::tr1::bind(push_to_smq,
-                mServerMessageQueue,
-                mContext,
-                next_msg,
-                std::tr1::placeholders::_1)
-        );
+            tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
+            
+            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(
+                &size,
+                std::tr1::bind(push_to_smq,
+                               mServerMessageQueue,
+                               mContext,
+                               next_msg,
+                               std::tr1::placeholders::_1)
+                );
+        }
     }
     mProfiler.finishedStage();
 
@@ -322,7 +329,7 @@ void Forwarder::service()
     }
     else
     {
-        QueueEnum::PushResult push_result = (*mOutgoingMessages)->push(svc, msg);
+        QueueEnum::PushResult push_result = mOutgoingMessages->getFairQueue(dest_server).push(svc, msg);
         success = (push_result == QueueEnum::PushSucceeded);
     }
     return success;
