@@ -1079,6 +1079,34 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*) {
     SILOG(ogre,debug,"onCreatedWindow");
 }
 
+void WebView::onPaintPluginTexture(
+        Berkelium::Window *win,
+        void* sourceGLTexture,
+        const std::vector<Berkelium::Rect> srcRects, // relative to destRect
+        const Berkelium::Rect &destRect) {
+}
+
+void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
+    SILOG(ogre,debug,"onWidgetCreated");
+}
+void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget) {
+    SILOG(ogre,debug,"onWidgetDestroyed");
+}
+void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h) {
+    SILOG(ogre,debug,"onWidgetResize");
+}
+void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
+    SILOG(ogre,debug,"onWidgetMove");
+}
+void WebView::onWidgetPaint(
+        Berkelium::Window *win,
+        Berkelium::Widget *wid,
+        const unsigned char *sourceBuffer,
+        const Berkelium::Rect &rect,
+        int dx, int dy,
+        const Berkelium::Rect &scrollRect) {
+    SILOG(ogre,debug,"onWidgetPaint");
+}
 
 
 

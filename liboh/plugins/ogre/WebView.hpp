@@ -54,6 +54,8 @@ class WebView {};
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
 struct Rect {};
+struct Window;
+struct Widget;
 }
 #endif
 
@@ -467,6 +469,31 @@ namespace Graphics {
         void onCancelUnload(Berkelium::Window*);
         void onCrashed(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
+
+    /** Linux only. uses an OpenGL texture.
+     * If not using OpenGL, each srcRect will get its own call to 'onPaint'
+     * It should be possible to paint plugins directly onto the canvas.
+     * If this is not possible, then plugins may be created as widgets with
+     * a negative z-index (i.e. below anything else on the screen).
+     */
+    virtual void onPaintPluginTexture(
+        Berkelium::Window *win,
+        void* sourceGLTexture,
+        const std::vector<Berkelium::Rect> srcRects, // relative to destRect
+        const Berkelium::Rect &destRect);
+
+    virtual void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
+    virtual void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
+    virtual void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);
+    virtual void onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y);
+    virtual void onWidgetPaint(
+        Berkelium::Window *win,
+        Berkelium::Widget *wid,
+        const unsigned char *sourceBuffer,
+        const Berkelium::Rect &rect,
+        int dx, int dy,
+        const Berkelium::Rect &scrollRect);
+
 	};
 
 }
