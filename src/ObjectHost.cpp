@@ -290,7 +290,7 @@ void ObjectHost::randomPing(const Time&t) {
 
     Object * a=roundRobinObject(1);
     Object * b=randomObject();
-        
+
     if (a&&b) {
         if (a == NULL || b == NULL) return;
         if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
@@ -525,7 +525,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     assert(!session_msg.has_connect());
 
     if (session_msg.has_connect_response()) {
-        CBR::Protocol::Session::IConnectResponse conn_resp = session_msg.connect_response();
+        CBR::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
 
         UUID obj = msg->dest_object();
 
@@ -570,7 +570,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
     }
 
     if (session_msg.has_init_migration()) {
-        CBR::Protocol::Session::IInitiateMigration init_migr = session_msg.init_migration();
+        CBR::Protocol::Session::InitiateMigration init_migr = session_msg.init_migration();
         OH_LOG(insane,"Received migration request for " << msg->dest_object().toString() << " to " << init_migr.new_server());
         migrate(msg->dest_object(), init_migr.new_server());
     }

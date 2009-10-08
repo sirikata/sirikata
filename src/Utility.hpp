@@ -40,6 +40,7 @@
 #include <sirikata/util/BoundingSphere.hpp>
 #include <sirikata/util/UUID.hpp>
 #include <sirikata/options/Options.hpp>
+#include <sirikata/util/Time.hpp>
 #include <sirikata/util/TemporalValue.hpp>
 #include <sirikata/util/Extrapolation.hpp>
 #include <sirikata/util/AtomicTypes.hpp>
@@ -86,7 +87,7 @@ typedef Sirikata::OptionSet OptionSet;
 typedef Sirikata::OptionValue OptionValue;
 typedef Sirikata::InitializeClassOptions InitializeOptions;
 
-typedef Sirikata::Task::AbsTime Time;
+typedef Sirikata::Time Time;
 typedef Sirikata::Task::DeltaTime Duration;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */

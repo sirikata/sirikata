@@ -599,7 +599,7 @@ void Server::service() {
     serviceProximity();           mProfiler.finishedStage();
 
     //FOrwarder analysis
-    Time start_time_forwarder = Time::now();
+    Time start_time_forwarder = Timer::now();
 
     // Note, object hosts must be serviced before Forwarder so they can
     // push object messages on the queue before noise is generated
@@ -609,7 +609,7 @@ void Server::service() {
 
     if (mContext->simTime().raw()/1000 > 100000)
     {
-      Duration tmpDur = Time::now() - start_time_forwarder;
+      Duration tmpDur = Timer::now() - start_time_forwarder;
       if (tmpDur.toMilliseconds() > 50)
       {
         //        printf("\n\nHUGEFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
@@ -625,13 +625,13 @@ void Server::service() {
     mLoadMonitor->service();      mProfiler.finishedStage();
 
 
-    Time start_time = Time::now();
+    Time start_time = Timer::now();
 
     serviceObjectHostNetwork();   mProfiler.finishedStage();
 
     if (mContext->simTime().raw()/1000 > 100000)
     {
-      Duration tmpDur = Time::now() - start_time;
+      Duration tmpDur = Timer::now() - start_time;
       if (tmpDur.toMilliseconds() > 50)
       {
         //        printf("\n\nHUGEOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());

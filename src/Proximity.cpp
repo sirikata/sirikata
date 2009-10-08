@@ -289,7 +289,7 @@ void Proximity::receiveMessage(Message* msg) {
                 prox_query_msg.has_min_angle()
             );
 
-            CBR::Protocol::Prox::ITimedMotionVector msg_loc = prox_query_msg.location();
+            CBR::Protocol::Prox::TimedMotionVector msg_loc = prox_query_msg.location();
             TimedMotionVector3f qloc(msg_loc.t(), MotionVector3f(msg_loc.position(), msg_loc.velocity()));
             SolidAngle minangle(prox_query_msg.min_angle());
 
@@ -311,7 +311,7 @@ void Proximity::receiveMessage(Message* msg) {
 
         if (prox_result_msg.addition_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
-                CBR::Protocol::Prox::IObjectAddition addition = prox_result_msg.addition(idx);
+                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -323,7 +323,7 @@ void Proximity::receiveMessage(Message* msg) {
 
         if (prox_result_msg.removal_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
-                CBR::Protocol::Prox::IObjectRemoval removal = prox_result_msg.removal(idx);
+                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }

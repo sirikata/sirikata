@@ -1,3 +1,6 @@
+
+"pbj-0.0.3"
+
 package CBR.Protocol.OSeg;
 
 message MigrateMessageMove
@@ -5,7 +8,7 @@ message MigrateMessageMove
     required uint64 m_servid_from          = 1;
     required uint64 m_servid_to            = 2;
     required uint64 m_message_destination  = 3;
-    required uint64 m_message_from         = 4; 
+    required uint64 m_message_from         = 4;
     required uuid   m_objid                = 5;
 }
 
@@ -14,7 +17,7 @@ message MigrateMessageAcknowledge
     required uint64 m_servid_from          = 1;
     required uint64 m_servid_to            = 2;
     required uint64 m_message_destination  = 3;
-    required uint64 m_message_from         = 4; 
+    required uint64 m_message_from         = 4;
     required uuid   m_objid                = 5;
 }
 
