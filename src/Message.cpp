@@ -63,7 +63,7 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 
 /* Helper methods for filling in message data in a single line. */
-inline void fillMessage(Message* outmsg, ServerID src, uint16 src_port, ServerID dest, ServerID dest_port) {
+inline void fillMessage(Message* outmsg, ServerID src, uint16 src_port, ServerID dest, uint16 dest_port) {
     outmsg->set_source_server(src);
     outmsg->set_source_port(src_port);
     outmsg->set_dest_server(dest);
@@ -86,7 +86,7 @@ Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_por
     fillMessage(this, src, src_port, dest, dest_port);
 }
 
-Message::Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl) {
+Message::Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl) {
     fillMessage(this, src, src_port, dest, dest_port, pl);
 }
 

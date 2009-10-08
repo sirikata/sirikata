@@ -210,49 +210,27 @@ void Forwarder::service()
         self_messages.pop_front();
     }
     mProfiler.finishedStage();
-/*
-
-    // XXXXXXXXXXXXXXXXXXXXXX Generate noise
-    std::string noiseChunk;
     if (GetOption(NOISE)->as<bool>()) {
-        static UUID key=UUID::random();
-        static UUID zerodkey=key;
-        ServerID nilo=0;
-        memcpy(&zerodkey,&nilo,sizeof(nilo));
         for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
             if (sid == mContext->id()) continue;
-            memcpy(&key,&sid,sizeof(sid));
-            if (!mObjectMessageQueue->hasClient(key)) {
-                mObjectMessageQueue->registerClient(key,1.0e-6);
-            }
-            bool send_success;
-            do {
-                Protocol::Object::ObjectMessage* noise_msg = new Protocol::Object::ObjectMessage;
-                noiseChunk.resize(50 + 200*randFloat());
-                noise_msg->set_payload(noiseChunk);
-                noise_msg->set_source_port(OBJECT_PORT_NOISE);
-                noise_msg->set_dest_port(OBJECT_PORT_NOISE);
-
-                noise_msg->set_source_object(key);
-                noise_msg->set_dest_object(UUID::null());///bizzzzogus
-                uint64 test=(1<<30);
-                test<<=30;
-                noise_msg->set_unique(GenerateUniqueID(mContext->id()));
-
-                ObjMessQBeginSend beginMess;
-                send_success=mObjectMessageQueue->beginSend(noise_msg,beginMess);
-                if(send_success) {
-                    mObjectMessageQueue->endSend(beginMess,sid);
+            while(true) {
+                std::string randnoise;
+                randnoise.resize((size_t)(50 + 200*randFloat()));
+                Message* noise_msg = new Message(mContext->id(),SERVER_PORT_NOISE,sid, SERVER_PORT_NOISE, randnoise); // FIXME control size from options?
+                
+                bool sent_success = mServerMessageQueue->addMessage(noise_msg);
+                if (sent_success) {
+                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), 0);
+                }else {
+                    delete noise_msg;
                 }
-            }while (send_success);
+                if (!sent_success) break;
+            }
         }
     }
-    mProfiler.finishedStage();
-    // XXXXXXXXXXXXXXXXXXXXXXXX
-    */
     //FIXME do we really need to call service? 
     for (int sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
-        mOutgoingMessages->getFairQueue(sid).service();
+        //mOutgoingMessages->getFairQueue(sid).service();
         while(true)
         {
             

@@ -130,7 +130,7 @@ class Message {
 public:
     Message(const ServerID& origin);
     Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port);
-    Message(ServerID src, uint16 src_port, ServerID dest, ServerID dest_port, const std::string& pl);
+    Message(ServerID src, uint16 src_port, ServerID dest, uint16 dest_port, const std::string& pl);
 
     ServerID source_server() const { return mImpl.source_server(); }
     void set_source_server(const ServerID sid) {
