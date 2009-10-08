@@ -37,7 +37,7 @@ public:
         }
         bool operator() (MessageRouter::SERVICES svc, const Message* msg);
     };
-    typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*>, CanSendPredicate, true> OutgoingFairQueue;
+    typedef FairQueue<Message, MessageRouter::SERVICES, AbstractQueue<Message*>, AlwaysUsePredicate, true> OutgoingFairQueue;
     std::vector<OutgoingFairQueue*> mQueues;
     uint32 mQueueSize;
     ServerMessageQueue *mServerMessageQueue;
@@ -52,11 +52,12 @@ public:
             mQueues.push_back(NULL);
         }
         if(!mQueues[sid]) {
-            mQueues[sid]=new OutgoingFairQueue(CanSendPredicate(mServerMessageQueue));
+            mQueues[sid]=new OutgoingFairQueue(AlwaysUsePredicate());
             for(unsigned int i=0;i<MessageRouter::NUM_SERVICES;++i) {
                 mQueues[sid]->addQueue(new Queue<Message*>(mQueueSize),(MessageRouter::SERVICES)i,1.0);
             }
         }
+        return *mQueues[sid];
     }
     ~ForwarderQueue (){
         for(unsigned int i=0;i<mQueues.size();++i) {

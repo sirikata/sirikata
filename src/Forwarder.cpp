@@ -250,8 +250,9 @@ void Forwarder::service()
     mProfiler.finishedStage();
     // XXXXXXXXXXXXXXXXXXXXXXXX
     */
-    //FIXME do we really need to call service? (*mOutgoingMessages)->service(); mProfiler.finishedStage();
+    //FIXME do we really need to call service? 
     for (int sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
+        mOutgoingMessages->getFairQueue(sid).service();
         while(true)
         {
             
