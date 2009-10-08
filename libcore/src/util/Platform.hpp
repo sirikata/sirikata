@@ -270,6 +270,7 @@ class RoutableMessageBody;
 #include "Vector4.hpp"
 #include "Matrix3x3.hpp"
 #include "Quaternion.hpp"
+#include "SolidAngle.hpp"
 #include "SelfWeakPtr.hpp"
 #include "Noncopyable.hpp"
 #include "Array.hpp"

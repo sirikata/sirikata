@@ -862,6 +862,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
 	${LIBCORE_SOURCE_DIR}/util/PluginManager.cpp
 	${LIBCORE_SOURCE_DIR}/util/Sha256.cpp
+	${LIBCORE_SOURCE_DIR}/util/SolidAngle.cpp
 	${LIBCORE_SOURCE_DIR}/util/ThreadSafeQueue.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
     ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
@@ -914,6 +915,7 @@ IF(NOT WIN32)
  ${LIBCORE_SOURCE_DIR}/util/ThreadId.hpp
  ${LIBCORE_SOURCE_DIR}/util/Vector3.hpp
  ${LIBCORE_SOURCE_DIR}/util/Vector4.hpp
+ ${LIBCORE_SOURCE_DIR}/util/SolidAngle.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_sha1.hpp
  ${LIBCORE_SOURCE_DIR}/util/boost_uuid.hpp
  ${LIBCORE_SOURCE_DIR}/util/valgrind.h
