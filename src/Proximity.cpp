@@ -187,16 +187,14 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mLocService->addListener(this);
 
-    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX_QUERY, this);
-    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX_RESULT, this);
+    mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 
     // Start the processing thread
     mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
 
 Proximity::~Proximity() {
-    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX_QUERY, this);
-    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX_RESULT, this);
+    mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_PROX, this);
 
     delete mObjectQueryHandler;
     delete mGlobalLocCache;
@@ -243,7 +241,8 @@ void Proximity::sendQueryRequests() {
     sub_servers.swap(mNeedServerQueryUpdate);
     for(std::set<ServerID>::iterator it = sub_servers.begin(); it != sub_servers.end(); it++) {
         ServerID sid = *it;
-        CBR::Protocol::Prox::ServerQuery msg;
+        CBR::Protocol::Prox::Container container;
+        CBR::Protocol::Prox::IServerQuery msg = container.mutable_query();
         msg.set_action(CBR::Protocol::Prox::ServerQuery::AddOrUpdate);
         CBR::Protocol::Prox::ITimedMotionVector msg_loc = msg.mutable_location();
         msg_loc.set_t(loc.updateTime());
@@ -254,10 +253,10 @@ void Proximity::sendQueryRequests() {
 
         Message* smsg = new Message(
             mContext->id(),
-            SERVER_PORT_PROX_QUERY,
+            SERVER_PORT_PROX,
             sid,
-            SERVER_PORT_PROX_QUERY,
-            serializePBJMessage(msg)
+            SERVER_PORT_PROX,
+            serializePBJMessage(container)
         );
         bool sent = mContext->router()->route(MessageRouter::PROXS, smsg);
         if (!sent) {
@@ -268,13 +267,18 @@ void Proximity::sendQueryRequests() {
 }
 
 void Proximity::receiveMessage(Message* msg) {
-    if (msg->dest_port() == SERVER_PORT_PROX_QUERY) {
-        CBR::Protocol::Prox::ServerQuery prox_query_msg;
-        bool parsed = parsePBJMessage(&prox_query_msg, msg->payload());
-        if (!parsed) {
-            delete msg;
-            return;
-        }
+    assert(msg->dest_port() == SERVER_PORT_PROX);
+
+    CBR::Protocol::Prox::Container prox_container;
+    bool parsed = parsePBJMessage(&prox_container, msg->payload());
+    if (!parsed) {
+        PROXLOG(warn,"Couldn't parse message, ID=" << msg->id());
+        delete msg;
+        return;
+    }
+
+    if (prox_container.has_query()) {
+        CBR::Protocol::Prox::ServerQuery prox_query_msg = prox_container.query();
 
         ServerID source_server = msg->source_server();
 
@@ -297,22 +301,17 @@ void Proximity::receiveMessage(Message* msg) {
         else {
             assert(false);
         }
-        delete msg;
     }
-    else if (msg->dest_port() == SERVER_PORT_PROX_RESULT) {
-        CBR::Protocol::Prox::ProximityResults prox_result_msg;
-        bool parsed = parsePBJMessage(&prox_result_msg, msg->payload());
-        if (!parsed) {
-            delete msg;
-            return;
-        }
+
+    if (prox_container.has_result()) {
+        CBR::Protocol::Prox::ProximityResults prox_result_msg = prox_container.result();
 
         assert( prox_result_msg.has_t() );
         Time t = prox_result_msg.t();
 
         if (prox_result_msg.addition_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.addition_size(); idx++) {
-                CBR::Protocol::Prox::ObjectAddition addition = prox_result_msg.addition(idx);
+                CBR::Protocol::Prox::IObjectAddition addition = prox_result_msg.addition(idx);
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -324,13 +323,13 @@ void Proximity::receiveMessage(Message* msg) {
 
         if (prox_result_msg.removal_size() > 0) {
             for(int32 idx = 0; idx < prox_result_msg.removal_size(); idx++) {
-                CBR::Protocol::Prox::ObjectRemoval removal = prox_result_msg.removal(idx);
+                CBR::Protocol::Prox::IObjectRemoval removal = prox_result_msg.removal(idx);
                 mLocService->removeReplicaObject(t, removal.object());
             }
         }
-
-        delete msg;
     }
+
+    delete msg;
 }
 
 // MigrationDataClient Interface
@@ -572,7 +571,8 @@ void Proximity::generateServerQueryEvents(const Time& t) {
         query->popEvents(evts);
 
         while(!evts.empty()) {
-            CBR::Protocol::Prox::ProximityResults contents;
+            CBR::Protocol::Prox::Container container;
+            CBR::Protocol::Prox::IProximityResults contents = container.mutable_result();
             contents.set_t(t);
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
@@ -605,10 +605,10 @@ void Proximity::generateServerQueryEvents(const Time& t) {
 
             Message* msg = new Message(
                 mContext->id(),
-                SERVER_PORT_PROX_RESULT,
+                SERVER_PORT_PROX,
                 sid,
-                SERVER_PORT_PROX_RESULT,
-                serializePBJMessage(contents)
+                SERVER_PORT_PROX,
+                serializePBJMessage(container)
             );
             mServerResults.push(msg);
         }

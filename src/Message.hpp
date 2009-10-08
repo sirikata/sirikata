@@ -58,8 +58,7 @@ typedef uint16 ServerMessagePort;
 // FIXME Reduce the number of these ports (combine related ones), reorder, and renumber
 #define SERVER_PORT_OBJECT_MESSAGE_ROUTING     1
 #define SERVER_PORT_LOCATION                   13
-#define SERVER_PORT_PROX_QUERY                 11
-#define SERVER_PORT_PROX_RESULT                12
+#define SERVER_PORT_PROX                       11
 #define SERVER_PORT_MIGRATION                  4
 #define SERVER_PORT_KILL_OBJ_CONN              14
 #define SERVER_PORT_CSEG_CHANGE                6

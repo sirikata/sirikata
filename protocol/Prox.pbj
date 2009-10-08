@@ -75,3 +75,8 @@ message ProximityResults {
     repeated ObjectAddition addition = 2;
     repeated ObjectRemoval removal = 3;
 }
+
+message Container {
+    optional ServerQuery query = 1;
+    optional ProximityResults result = 2;
+}
