@@ -38,6 +38,7 @@
 #include <sirikata/util/Vector4.hpp>
 #include <sirikata/util/BoundingBox.hpp>
 #include <sirikata/util/BoundingSphere.hpp>
+#include <sirikata/util/SolidAngle.hpp>
 #include <sirikata/util/UUID.hpp>
 #include <sirikata/options/Options.hpp>
 #include <sirikata/util/Time.hpp>
@@ -78,6 +79,8 @@ typedef Sirikata::BoundingBox<float32> BoundingBox3f;
 typedef Sirikata::BoundingBox<float64> BoundingBox3d;
 typedef Sirikata::BoundingSphere<float32> BoundingSphere3f;
 typedef Sirikata::BoundingSphere<float64> BoundingSphere3d;
+
+typedef Sirikata::SolidAngle SolidAngle;
 
 typedef Sirikata::UUID UUID;
 
@@ -193,8 +196,6 @@ public:
 };
 
 } // namespace CBR
-
-#include "SolidAngle.hpp" //FIXME this should be coming from Sirikata
 
 // We need to define some additional operators to get these working with Options
 namespace Sirikata {
