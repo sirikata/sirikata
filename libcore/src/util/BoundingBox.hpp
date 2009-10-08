@@ -121,7 +121,7 @@ public:
         Vector3<real> mmin = min();
         for(int i = 0; i < Vector3<real>::size; i++) {
             if ( (point[i] - mmin[i] < -eps) ||
-                (mmax[i] - point[i] > eps) )
+                (mmax[i] - point[i] < -eps) )
                 return false;
         }
         return true;
