@@ -43,6 +43,7 @@ public:
     ServerMessageQueue *mServerMessageQueue;
     ForwarderQueue(ServerMessageQueue*smq, uint32 size){
         mServerMessageQueue=smq;
+        mQueueSize=size;
     }
     size_t numServerQueues()const {
         return mQueues.size();
