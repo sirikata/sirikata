@@ -139,7 +139,9 @@ if [ ${opt_components_sirikata} == "true" ]; then
     git checkout master
     git pull origin
   fi
-  git checkout ${sirikata_commit}
+  git branch -D cbr_pinned
+  git branch cbr_pinned ${sirikata_commit}
+  git checkout cbr_pinned
   git submodule init
   git submodule update
   cd build/cmake
