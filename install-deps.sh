@@ -65,7 +65,7 @@ if [ ${opt_components_sst} == "true" ]; then
       rm -rf installed-sst
     fi
     #svn co svn://svn.pdos.csail.mit.edu/uia/trunk/uia/sst
-    git clone git@ahoy:sst.git
+    git clone git@ahoy.stanford.edu:sst.git
     cd sst
     git branch stanford origin/stanford
     git checkout stanford
@@ -172,7 +172,7 @@ if [ ${opt_components_prox} == "true" ]; then
     if [ -e installed-prox ]; then
       rm -rf installed-prox
     fi
-    git clone git@ahoy:prox.git
+    git clone git@ahoy.stanford.edu:prox.git
     cd prox
   else
     cd prox
