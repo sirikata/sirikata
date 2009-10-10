@@ -232,7 +232,7 @@ struct HostedObject::PrivateCallbacks {
         realThis->mObjectHost->getWorkQueue()->dequeueAll();
     }
 
-    static void receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
+    static bool receivedRoutableMessage(const HostedObjectWPtr&thus,const SpaceID&sid, const Network::Chunk&msgChunk) {
         HostedObjectPtr realThis (thus.lock());
 
         RoutableMessageHeader header;
@@ -251,10 +251,11 @@ struct HostedObject::PrivateCallbacks {
 
         if (!realThis) {
             SILOG(objecthost,error,"Received message for dead HostedObject. SpaceID = "<<sid<<"; DestObject = "<<header.destination_object());
-            return;
+            return true;
         }
 
         realThis->processRoutableMessage(header, bodyData);
+        return true;
     }
 
     static void handlePersistenceResponse(

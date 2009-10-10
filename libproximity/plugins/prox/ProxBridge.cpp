@@ -448,7 +448,7 @@ void ProxBridge::delObj(const ObjectReference&source, const Sirikata::Protocol::
 }
 
 
-void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
+bool ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                                  const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                                  const Network::Chunk&data) {
     RoutableMessageHeader hdr;
@@ -488,6 +488,7 @@ void ProxBridge::incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
             }
         }
     }
+    return true;
 }
 void ProxBridge::disconnectionCallback(const std::tr1::shared_ptr<Network::Stream> &stream,
                                        const std::tr1::shared_ptr<std::vector<ObjectReference> >&refs,

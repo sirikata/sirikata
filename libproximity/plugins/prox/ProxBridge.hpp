@@ -106,7 +106,7 @@ class ProxBridge : public ProximitySystem {
     void delObj(ObjectStateMap::iterator wheres);
     ObjectStateMap::iterator newObj(ObjectReference&,const Sirikata::Protocol::IRetObj&objectData);
     void newObjectStreamCallback(Network::Stream*newStream, Network::Stream::SetCallbacks&setCallbacks);
-    void incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
+    bool incomingMessage(const std::tr1::weak_ptr<Network::Stream>&strm,
                          const std::tr1::shared_ptr<std::vector<ObjectReference> >&ref,
                          const Network::Chunk&data);
     void disconnectionCallback(const std::tr1::shared_ptr<Network::Stream>&strm,

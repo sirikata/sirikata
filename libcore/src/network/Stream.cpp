@@ -38,7 +38,8 @@ void Stream::ignoreSubstreamCallback(Stream * stream, SetCallbacks&) {
 }
 void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::string&) {
 }
-void Stream::ignoreBytesReceived(const Chunk&c) {
+bool Stream::ignoreBytesReceived(const Chunk&c) {
+    return true;
 }
 
 } }

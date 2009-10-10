@@ -87,7 +87,7 @@ void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream:
         //tls stream deleted
     }
 }
-void Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Network::Chunk&dat){
+bool Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1::shared_ptr<Network::Stream> >&stream,const Network::Chunk&dat){
     Protocol::Subscribe subscriptionRequest;
     bool success=false;
     if (!dat.empty()&&subscriptionRequest.ParseFromArray(&dat[0],dat.size())&&subscriptionRequest.has_broadcast_name()) {
@@ -104,6 +104,7 @@ void Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
         }
         *stream=std::tr1::shared_ptr<Stream>();
     }
+    return true;
 }
 void Server::purgeWaitingSubscriberOnBroadcastIOService(const std::tr1::weak_ptr<Server> &weak_thus, const UUID&uuid, size_t which){
     std::tr1::shared_ptr<Server>thus=weak_thus.lock();
@@ -193,7 +194,7 @@ void Server::broadcastConnectionCallback(SubscriptionState*subscription,Network:
         delete subscription;
     }
 }
-void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Network::Chunk&chunk) {
+bool Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Network::Chunk&chunk) {
     if (state->mEpoch==SubscriptionState::ReservedEpoch) {
         Protocol::Broadcast broadcastRegistration;
         if (!chunk.empty()&&broadcastRegistration.ParseFromArray(&chunk[0],chunk.size())&&broadcastRegistration.has_broadcast_name()) {
@@ -237,6 +238,7 @@ void Server::broadcastBytesReceivedCallback(SubscriptionState*state, const Netwo
             state->clearLastSentMessage();
         }
     }
+    return true;
 }
 void Server::broadcastStreamCallback(Network::Stream* stream,Network::Stream::SetCallbacks&cb) {
     if (stream ) {

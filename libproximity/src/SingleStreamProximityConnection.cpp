@@ -47,7 +47,7 @@ void connectionCallback(ProximityConnection* con, Network::Stream::ConnectionSta
     if (status!=Network::Stream::Connected)
         con->streamDisconnected();
 }
-void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
+bool readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
                           MessageService** system,
                           const ObjectReference &object,
                           const Network::Chunk&chunk) {
@@ -61,6 +61,7 @@ void readProximityMessage(std::tr1::weak_ptr<Network::Stream> mLock,
             sys->processMessage(hdr,body);
         }
     }
+    return true;
 }
 }
 

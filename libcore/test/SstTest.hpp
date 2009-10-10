@@ -74,15 +74,16 @@ public:
         }
 
     }
-    void dataRecvCallback(Stream *s,int id, const Chunk&data) {
+    bool dataRecvCallback(Stream *s,int id, const Chunk&data) {
         mDataMap[id].push_back(data);
         ++mCount;
+        return true;
     }
-    void connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
-        dataRecvCallback(s,id,data);
+    bool connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
+        return dataRecvCallback(s,id,data);
     }
-    void listenerDataRecvCallback(Stream *s,int id, const Chunk&data) {
-        dataRecvCallback(s,id,data);
+    bool listenerDataRecvCallback(Stream *s,int id, const Chunk&data) {
+        return dataRecvCallback(s,id,data);
     }
     void connectorNewStreamCallback (int id,Stream * newStream, Stream::SetCallbacks& setCallbacks) {
         if (newStream) {

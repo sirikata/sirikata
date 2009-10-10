@@ -117,7 +117,7 @@ class SIRIKATA_SPACE_EXPORT ObjectConnections : public MessageService {
      *                                     or giving up and forwarding them to mSpace in the hopes
      *                                     that they may to a service or a forwader
      */
-    void bytesReceivedCallback(Network::Stream*stream,const Network::Chunk&chunk);
+    bool bytesReceivedCallback(Network::Stream*stream,const Network::Chunk&chunk);
     ///makes a Disconnection message for the Registration service in the event a connection should unexpectedly close
     void forgeDisconnectionMessage(const ObjectReference&ref);
     ///actually close a Stream connection to an object.

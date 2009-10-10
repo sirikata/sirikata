@@ -106,13 +106,13 @@ void processTimePacket(MessageService* mSpace, Network::Stream *stream, const Ro
 }
 
 
-void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk) {
+bool ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Network::Chunk&chunk) {
     RoutableMessageHeader hdr;
     MemoryReference chunkRef(chunk);//parse header
     MemoryReference message_body=hdr.ParseFromArray(chunkRef.data(),chunkRef.size());
     if (hdr.destination_port()==Services::TIMESYNC&&hdr.has_destination_object()&&hdr.destination_object()==ObjectReference::spaceServiceID()) {
         processTimePacket(mSpace,stream,hdr,message_body);//for low latency shortcut the other processing
-        return;
+        return true;
     }
     //find the temporary stream ID and connected boolean
     std::tr1::unordered_map<Network::Stream*,StreamMapUUID>::iterator where=mStreams.find(stream);
@@ -171,6 +171,7 @@ void ObjectConnections::bytesReceivedCallback(Network::Stream*stream, const Netw
             SILOG(space,warning,"Dropping message from "<<where->second.uuid().toString()<<" due to already disconnected object");
         }
     }
+    return true;
 }
 void ObjectConnections::forgeDisconnectionMessage(const ObjectReference&ref) {
     RoutableMessage rm;

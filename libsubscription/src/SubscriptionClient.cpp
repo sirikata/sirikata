@@ -199,7 +199,7 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::wea
 namespace {
 size_t sMaximumSubscriptionStateSize=1360;
 }
-void SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&weak_thus,
+bool SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&weak_thus,
                           const Network::Chunk&data) {
     std::tr1::shared_ptr<State> thus=weak_thus.lock();
     if (thus) {
@@ -224,6 +224,7 @@ void SubscriptionClient::State::bytesReceived(const std::tr1::weak_ptr<State>&we
             thus->mLastDeliveredMessage.resize(0);
         }
     }
+    return true;
 }
 
 void SubscriptionClient::State::connectionCallback(const std::tr1::weak_ptr<State>&weak_thus,

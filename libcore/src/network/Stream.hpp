@@ -72,8 +72,8 @@ public:
     };
     ///Callback type for when a connection happens (or doesn't) Callees will receive a ConnectionStatus code indicating connection successful, rejected or a later disconnection event
     typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
-    ///Callback type for when a full chunk of bytes are waiting on the stream
-    typedef std::tr1::function<void(const Chunk&)> BytesReceivedCallback;
+    ///Callback type for when a full chunk of bytes are waiting on the stream. If false is returned, then the chunk is rejected and the stream becomes paused. Resume by calling readyRead()
+    typedef std::tr1::function<bool(const Chunk&)> BytesReceivedCallback;
     /**
      *  This class is passed into any newSubstreamCallback functions so they may 
      *  immediately setup callbacks for connetion events and possibly start sending immediate responses.     
@@ -99,7 +99,7 @@ public:
     ///Simple example function to ignore connection requests
     static void ignoreConnectionStatus(ConnectionStatus status,const std::string&reason);
     ///Simple example function to ignore incoming bytes on a connection
-    static void ignoreBytesReceived(const Chunk&);
+    static bool ignoreBytesReceived(const Chunk&);
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
      * The stream is immediately active and may have bytes sent on it immediately. 
@@ -134,7 +134,8 @@ public:
     virtual Stream* clone(const SubstreamCallback&cb)=0;
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
                           const BytesReceivedCallback&chunkReceivedCallback)=0;
-    
+    ///tells the stream that downstream elements may accept further bytes after the stream has been paused
+    virtual void readyRead()=0;
     virtual void send(MemoryReference, StreamReliability)=0;
     virtual void send(MemoryReference, MemoryReference, StreamReliability)=0;
     ///Send a chunk of data to the receiver
