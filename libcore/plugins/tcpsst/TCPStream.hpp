@@ -141,6 +141,8 @@ public:
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
     TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
+    ///There is room on a downstream queue and futher sends should be retried
+    virtual void readyRead();
     ///Implementation of send interface
     virtual void send(MemoryReference, StreamReliability);
     ///Implementation of send interface

@@ -61,11 +61,8 @@ public:
     void async_accept(TCPSocket&socket,
                       const std::tr1::function<void(const boost::system::error_code& ) > &cb);
 };
-class MultiplexedSocket;
 #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
 // #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
-
-void MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
 
 } }
 #endif

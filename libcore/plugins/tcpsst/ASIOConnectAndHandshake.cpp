@@ -35,6 +35,7 @@
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
+#include "ASIOReadBuffer.hpp"
 #include "TCPStream.hpp"
 #include "MultiplexedSocket.hpp"
 #include "ASIOConnectAndHandshake.hpp"

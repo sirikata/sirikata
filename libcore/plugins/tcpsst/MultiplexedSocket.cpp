@@ -35,6 +35,7 @@
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
+#include "ASIOReadBuffer.hpp"
 #include "MultiplexedSocket.hpp"
 #include "ASIOConnectAndHandshake.hpp"
 #include "TCPSetCallbacks.hpp"
@@ -268,7 +269,8 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
         mFreeStreamIDs.push(id);
     }
 }
-void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk){
+bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk){
+    bool retval=true;
     if (id==Stream::StreamID()) {//control packet
         if(newChunk.size()) {
             unsigned int controlCode=*newChunk.begin();
@@ -315,6 +317,7 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
         CommitCallbacks(registrations,CONNECTED,false);
         CallbackMap::iterator where=mCallbacks.find(id);
         if (where!=mCallbacks.end()) {
+            retval=true;//FIXME CBR absorb return value of mBytesReceivedCallback
             where->second->mBytesReceivedCallback(newChunk);
         }else if (mOneSidedClosingStreams.find(id)==mOneSidedClosingStreams.end()) {
             //new substream
@@ -323,6 +326,7 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
             mNewSubstreamCallback(newStream,setCallbackFunctor);
             if (setCallbackFunctor.mCallbacks != NULL) {
                 CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
+                retval=true;//FIXME CBR absorb return value of mBytesReceivedCallback
                 setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
             }else {
                 closeStream(getSharedPtr(),id);
@@ -331,6 +335,7 @@ void MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
             //IGNORED MESSAGE
         }
     }
+    return retval;
 }
 void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase status, Stream::ConnectionStatus reportedProblem, const std::string&errorMessage) {
     Stream::ConnectionStatus stat=reportedProblem;
@@ -381,4 +386,17 @@ void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) 
     //will notify connectionFailureOrSuccessCallback when resolved
     ASIOConnectAndHandshake::connect(headerCheck,address);
 }
+
+void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus){
+    std::tr1::shared_ptr<MultiplexedSocket> thus(weak_thus.lock());
+    if (thus) {
+        assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+        for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
+            if (i->getReadBuffer()) {
+                i->getReadBuffer()->ioReactorThreadResumeRead(thus);
+            }
+        }
+    }
+}
+
 } }

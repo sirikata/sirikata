@@ -39,12 +39,21 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
+#include "network/IOServiceFactory.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 
 using namespace boost::asio::ip;
 TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
 
+}
+
+void TCPStream::readyRead() {
+    std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
+    IOServiceFactory::dispatchServiceMessage(&mSocket->getASIOService(),
+                               std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
+                                              mpsocket));
+    
 }
 void TCPStream::send(const Chunk&data, StreamReliability reliability) {
     send(MemoryReference(data),reliability);

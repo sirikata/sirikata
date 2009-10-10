@@ -38,20 +38,21 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
-void MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket) {
-    new ASIOReadBuffer(parentSocket,whichSocket);
+ASIOReadBuffer* MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket) {
+    return new ASIOReadBuffer(parentSocket,whichSocket);
 }
 void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
     parentSocket->hostDisconnectedCallback(mWhichBuffer,error);
+    parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }
-void ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, const Chunk&newChunk){
-    parentSocket->receiveFullChunk(whichSocket,id,newChunk);
+bool ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, const Chunk&newChunk){
+    return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
 }
 
 
 void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
-     
+    mReadStatus=READING_FIXED_BUFFER;
      
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
@@ -61,9 +62,27 @@ void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedS
                                    _1,
                                    _2));
 }
+void ASIOReadBuffer::ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedSocket>&thus) {
+    assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+    switch(mReadStatus) {
+      case PAUSED_FIXED_BUFFER:
+        translateBuffer(thus);
+        break;
+      case PAUSED_NEW_CHUNK:
+        if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk)) {
+            mNewChunk.resize(0);
+            mBufferPos=0;
+            readIntoFixedBuffer(thus);
+        }
+        break;
+      case READING_FIXED_BUFFER:
+      case READING_NEW_CHUNK:
+        break;
+    }
+}
 void ASIOReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
      
-     
+    mReadStatus=READING_NEW_CHUNK;     
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
     assert(mBufferPos<mNewChunk.size());
     parentSocket
@@ -92,6 +111,7 @@ void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocke
         unsigned int chunkPos=0;
         unsigned int packetHeaderLength;
         vuint32 packetLength;
+        bool readBufferFull=false;
         while ((packetHeaderLength=mBufferPos-chunkPos)!=0&&packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {
             if (mBufferPos-chunkPos<packetLength.read()+packetHeaderLength) {
                 if (mBufferPos-chunkPos<sLowWaterMark) {
@@ -108,16 +128,23 @@ void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocke
                 uint32 chunkLength=packetLength.read();
                 Chunk resultChunk;
                 Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
-                processFullChunk(thus,mWhichBuffer,resultID,resultChunk);
-                chunkPos+=packetHeaderLength+packetLength.read();
+                if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk)) {
+                    chunkPos+=packetHeaderLength+packetLength.read();
+                }else {
+                    mReadStatus=PAUSED_FIXED_BUFFER;
+                    readBufferFull=true;
+                    break;//FIXME
+                }
             }
         }
         if (chunkPos!=0&&mBufferPos!=chunkPos) {//move partial bytes to beginning
             std::memmove(mBuffer,mBuffer+chunkPos,mBufferPos-chunkPos);
         }
         mBufferPos-=chunkPos;
-        readIntoFixedBuffer(thus);
-    }
+        if (!readBufferFull) {
+            readIntoFixedBuffer(thus);
+        }
+}
 
 
 
@@ -132,10 +159,13 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
         }else {
             if (mBufferPos>=mNewChunk.size()){
                 assert(mBufferPos==mNewChunk.size());
-                processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk);
-                mNewChunk.resize(0);
-                mBufferPos=0;
-                readIntoFixedBuffer(thus);
+                if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk)) {
+                    mNewChunk.resize(0);
+                    mBufferPos=0;
+                    readIntoFixedBuffer(thus);
+                }else{
+                    mReadStatus=PAUSED_NEW_CHUNK;
+                }
             }else {
                 readIntoChunk(thus);
             }
@@ -161,6 +191,7 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     }
 }
 ASIOReadBuffer::ASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
+    mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;
     readIntoFixedBuffer(parentSocket);

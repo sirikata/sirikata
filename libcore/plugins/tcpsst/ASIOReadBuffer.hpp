@@ -31,6 +31,9 @@
  */
 
 namespace Sirikata { namespace Network {
+class MultiplexedSocket;
+
+
 
 class ASIOReadBuffer {
     enum {
@@ -39,6 +42,12 @@ class ASIOReadBuffer {
         ///The length of the fixed buffer
         sBufferLength=1440        
     };
+    enum ReadStatus{
+        PAUSED_FIXED_BUFFER=0x0,
+        READING_FIXED_BUFFER=0x1,
+        PAUSED_NEW_CHUNK=0x2,
+        READING_NEW_CHUNK=0x3
+    }mReadStatus;
     ///A fixed length buffer to read incoming requests when the data is unknown in size or so far small in size
     uint8 mBuffer[sBufferLength];
     ///Where is ASIO writing to in mBuffer
@@ -63,8 +72,9 @@ class ASIOReadBuffer {
      * \param whichSocket is the current ASIO socket responsible for having read the data. It must equal mWhichBuffer
      * \param sid is the StreamID that sent the data which made it to this socket and got processed. It will help determine which callback to call
      * \param newChunk is the chunk that was sent from the other side to this side and is ready for client processing (or server processing if sid==Stream::StreamID())
+     * \returns whether the host can accept a packet into a lower queue
      */
-    void processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,
+    bool processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,
                           unsigned int whichSocket,
                           const Stream::StreamID& sid,
                           const Chunk&newChunk);
@@ -120,5 +130,15 @@ public:
      *  \param whichSocket indicates which substream this read buffer is for, so the appropriate ASIO socket can be retrieved
      */
     ASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
+    /**
+     *  If read was paused by a user that could not proocess a packet
+     *  This call attempts to deliver the packet to a user again
+     *  If the user accepts the packet then the system is asked for future packets
+     *  This function may be called if the read was not paused
+     */
+    void ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedSocket>&thus);
 };
+
+ASIOReadBuffer* MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);
+
 } }

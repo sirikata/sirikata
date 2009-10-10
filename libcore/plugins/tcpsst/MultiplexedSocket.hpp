@@ -31,9 +31,13 @@
  */
 #include "util/ThreadId.hpp"
 namespace Sirikata { namespace Network {
+class ASIOReadBuffer;
+
+
 
 class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>,ThreadIdCheck {
 public:
+    friend class ASIOReadBuffer;
     class RawRequest {
     public:
         bool unordered;
@@ -162,7 +166,7 @@ public:
      * Control packets come in on Stream::StreamID() and others should be directed
      * to the appropriate callback
      */
-    void receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk);
+    bool receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk);
    /**
     * The a particular socket's connection failed
     * This function will call all substreams disconnected methods
@@ -220,6 +224,7 @@ public:
         hostDisconnectedCallback(which==mSockets.size()?0:which,error.message());
     }
 
+    static void ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&);
 
    /**
     * The a particular established a connection:

@@ -33,12 +33,14 @@
 
 namespace Sirikata { namespace Network {
 class ASIOSocketWrapper;
+class ASIOReadBuffer;
 
 void triggerMultiplexedConnectionError(MultiplexedSocket*,ASIOSocketWrapper*,const boost::system::error_code &error);
 void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buffer, size_t buffersize);
 class ASIOSocketWrapper {
-
     TCPSocket*mSocket;
+
+    ASIOReadBuffer *mReadBuffer;
     /**
      * The status of sending threads: odd number indicates asynchronous send... number >0  indicates other waiting threads number&ASYNCHRONOUS_SEND_FLAG indicates a thread is
      * currently sending data off. number&QUEUE_CHECK_FLAG means queue is currently being swapped away and items added to the queue may not ever be processed if the queue is empty
@@ -129,7 +131,12 @@ public:
 
     ASIOSocketWrapper() :mSocket(NULL),mSendingStatus(0){
     }
-
+    void clearReadBuffer(){
+        mReadBuffer=NULL;
+    }
+    ASIOReadBuffer*getReadBuffer(){
+        return mReadBuffer;
+    }
     TCPSocket&getSocket() {return *mSocket;}
 
     const TCPSocket&getSocket()const {return *mSocket;}
