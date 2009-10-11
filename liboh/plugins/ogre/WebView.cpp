@@ -128,9 +128,12 @@ WebView::~WebView()
 	if(overlay)
 		delete overlay;
 
-	MaterialManager::getSingletonPtr()->remove(viewName + "Material");
-	TextureManager::getSingletonPtr()->remove(viewName + "Texture");
-	if(usingMask) TextureManager::getSingletonPtr()->remove(viewName + "MaskTexture");
+	MaterialManager::getSingletonPtr()->remove(getMaterialName());
+	if (!this->viewTexture.isNull()) {
+        ResourcePtr res(this->viewTexture);
+        this->viewTexture.setNull();
+        Ogre::TextureManager::getSingleton().remove(res);
+    }
 
 	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
 }
@@ -197,9 +200,10 @@ void WebView::createMaterial()
 	// Create the texture
 #if defined(HAVE_BERKELIUM) || defined(HAVE_AWESOMIUM) || !defined(__APPLE__)
 	TexturePtr texture = TextureManager::getSingleton().createManual(
-		viewName + "Texture", ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+		getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
 		TU_DYNAMIC_WRITE_ONLY_DISCARDABLE, this);
+    this->viewTexture = texture;
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
@@ -213,14 +217,14 @@ void WebView::createMaterial()
 
 	pixelBuffer->unlock();
 #endif
-	MaterialPtr material = MaterialManager::getSingleton().create(viewName + "Material",
+	MaterialPtr material = MaterialManager::getSingleton().create(getMaterialName(),
 		ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	matPass = material->getTechnique(0)->getPass(0);
 	//matPass->setSeparateSceneBlending (SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
 	matPass->setSeparateSceneBlending (SBF_ONE, SBF_ONE_MINUS_SOURCE_ALPHA, SBF_SOURCE_ALPHA, SBF_ONE_MINUS_SOURCE_ALPHA);
 	matPass->setDepthWriteEnabled(false);
 
-	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
+	baseTexUnit = matPass->createTextureUnitState(getViewTextureName());
 
 	baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
 	if(texFiltering == FO_ANISOTROPIC)
@@ -262,7 +266,7 @@ void WebView::update()
 	if(!webView->isDirty())
 		return;
 
-	TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
+	TexturePtr texture = viewTexture;
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
@@ -477,124 +481,6 @@ void WebView::setIgnoreTransparent(bool ignoreTrans, float threshold)
 	transparent = threshold;
 }
 
-void WebView::setMask(std::string maskFileName, std::string groupName)
-{
-	if(usingMask)
-	{
-		if(maskTexUnit)
-		{
-			matPass->removeTextureUnitState(1);
-			maskTexUnit = 0;
-		}
-
-		if(!TextureManager::getSingleton().getByName(viewName + "MaskTexture").isNull())
-			TextureManager::getSingleton().remove(viewName + "MaskTexture");
-	}
-
-	if(alphaCache)
-	{
-		delete[] alphaCache;
-		alphaCache = 0;
-	}
-
-	if(maskFileName == "")
-	{
-		usingMask = false;
-		maskImageParameters.first = "";
-		maskImageParameters.second = "";
-
-		if(isWebViewTransparent)
-		{
-			setTransparent(true);
-			update();
-		}
-
-		return;
-	}
-
-	maskImageParameters.first = maskFileName;
-	maskImageParameters.second = groupName;
-
-	if(!maskTexUnit)
-	{
-		maskTexUnit = matPass->createTextureUnitState();
-		maskTexUnit->setIsAlpha(true);
-		maskTexUnit->setTextureFiltering(FO_NONE, FO_NONE, FO_NONE);
-		maskTexUnit->setColourOperationEx(LBX_SOURCE1, LBS_CURRENT, LBS_CURRENT);
-		maskTexUnit->setAlphaOperation(LBX_MODULATE);
-	}
-
-	Image srcImage;
-	srcImage.load(maskFileName, groupName);
-
-	Ogre::PixelBox srcPixels = srcImage.getPixelBox();
-	unsigned char* conversionBuf = 0;
-
-	if(srcImage.getFormat() != Ogre::PF_BYTE_A)
-	{
-		size_t dstBpp = Ogre::PixelUtil::getNumElemBytes(Ogre::PF_BYTE_A);
-		conversionBuf = new unsigned char[srcImage.getWidth() * srcImage.getHeight() * dstBpp];
-		Ogre::PixelBox convPixels(Ogre::Box(0, 0, srcImage.getWidth(), srcImage.getHeight()), Ogre::PF_BYTE_A, conversionBuf);
-		Ogre::PixelUtil::bulkPixelConversion(srcImage.getPixelBox(), convPixels);
-		srcPixels = convPixels;
-	}
-
-	TexturePtr maskTexture = TextureManager::getSingleton().createManual(
-		viewName + "MaskTexture", ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_A, TU_STATIC_WRITE_ONLY);
-
-	HardwarePixelBufferSharedPtr pixelBuffer = maskTexture->getBuffer();
-	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
-	const PixelBox& pixelBox = pixelBuffer->getCurrentLock();
-	size_t maskTexDepth = Ogre::PixelUtil::getNumElemBytes(pixelBox.format);
-	alphaCachePitch = pixelBox.rowPitch;
-
-	alphaCache = new unsigned char[alphaCachePitch*texHeight];
-
-	uint8* buffer = static_cast<uint8*>(pixelBox.data);
-
-	memset(buffer, 0, alphaCachePitch * texHeight);
-
-	size_t minRowSpan = std::min(alphaCachePitch, srcPixels.rowPitch);
-	size_t minHeight = std::min(texHeight, (unsigned short)srcPixels.getHeight());
-
-	if(maskTexDepth == 1)
-	{
-		for(unsigned int row = 0; row < minHeight; row++)
-			memcpy(buffer + row * alphaCachePitch, (unsigned char*)srcPixels.data + row * srcPixels.rowPitch, minRowSpan);
-
-		memcpy(alphaCache, buffer, alphaCachePitch*texHeight);
-	}
-	else if(maskTexDepth == 4)
-	{
-		size_t destRowOffset, srcRowOffset, cacheRowOffset;
-
-		for(unsigned int row = 0; row < minHeight; row++)
-		{
-			destRowOffset = row * alphaCachePitch * maskTexDepth;
-			srcRowOffset = row * srcPixels.rowPitch;
-			cacheRowOffset = row * alphaCachePitch;
-
-			for(unsigned int col = 0; col < minRowSpan; col++)
-				alphaCache[cacheRowOffset + col] = buffer[destRowOffset + col * maskTexDepth + 3] = ((unsigned char*)srcPixels.data)[srcRowOffset + col];
-		}
-	}
-	else
-	{
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
-			"Unexpected depth and format were encountered while creating a PF_BYTE_A HardwarePixelBuffer. Pixel format: " +
-                    StringConverter::toString((uint32)pixelBox.format) + ", Depth:" + StringConverter::toString(maskTexDepth), "WebView::setMask");
-	}
-
-	pixelBuffer->unlock();
-
-	if(conversionBuf)
-		delete[] conversionBuf;
-
-	maskTexUnit->setTextureName(viewName + "MaskTexture");
-	usingMask = true;
-}
-
 void WebView::setMaxUPS(unsigned int maxUPS)
 {
 	maxUpdatePS = maxUPS;
@@ -675,12 +561,29 @@ void WebView::show(bool fade, unsigned short fadeDurationMS)
 
 void WebView::focus()
 {
-	if(overlay)
-		WebViewManager::getSingleton().focusWebView(0, 0, this);
-#if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
-	else
-		webView->focus();
+#if defined(HAVE_AWESOMIUM)
+    webView->focus();
+#elif defined(HAVE_BERKELIUM)
+    if (webView->getWidget()) webView->getWidget()->focus();
 #endif
+}
+
+void WebView::unfocus()
+{
+#if defined(HAVE_AWESOMIUM)
+    webView->unfocus();
+#elif defined(HAVE_BERKELIUM)
+    if (webView->getWidget()) webView->getWidget()->unfocus();
+#endif
+}
+
+void WebView::raise()
+{
+	if(overlay) {
+		WebViewManager::getSingleton().focusWebView(0, 0, this);
+    } else {
+        focus();
+    }
 }
 
 void WebView::move(int deltaX, int deltaY)
@@ -726,6 +629,11 @@ std::string WebView::getName()
 	return viewName;
 }
 
+std::string WebView::getViewTextureName()
+{
+    return viewName + "Texture";
+}
+
 std::string WebView::getMaterialName()
 {
 	return viewName + "Material";
@@ -767,7 +675,7 @@ void WebView::injectMouseMove(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseMove(xPos, yPos);
 #elif defined(HAVE_BERKELIUM)
-	webView->mouseMoved(xPos, yPos);
+	if (webView->getWidget()) webView->getWidget()->mouseMoved(xPos, yPos);
 #endif
 }
 
@@ -776,7 +684,7 @@ void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseWheelXY(relScrollX, relScrollY);
 #elif defined(HAVE_BERKELIUM)
-	webView->mouseWheel(relScrollX, relScrollY);
+	if (webView->getWidget()) webView->getWidget()->mouseWheel(relScrollX, relScrollY);
 #endif
 }
 
@@ -785,7 +693,7 @@ void WebView::injectMouseDown(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
-	webView->mouseButton(0, true);
+	if (webView->getWidget()) webView->getWidget()->mouseButton(0, true);
 #endif
 }
 
@@ -794,7 +702,7 @@ void WebView::injectMouseUp(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
-	webView->mouseButton(0, false);
+	if (webView->getWidget()) webView->getWidget()->mouseButton(0, false);
 #endif
 }
 
@@ -802,7 +710,7 @@ void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancod
 #if defined(HAVE_AWESOMIUM)
 	webView->injectKeyEvent(press, modifiers, vk_code, scancode);
 #elif defined(HAVE_BERKELIUM)
-	webView->keyEvent(press, modifiers, vk_code, scancode);
+	if (webView->getWidget()) webView->getWidget()->keyEvent(press, modifiers, vk_code, scancode);
 #endif
 }
 
@@ -814,7 +722,7 @@ void WebView::injectTextEvent(std::string utf8) {
 #if defined(HAVE_AWESOMIUM)
 	webView->injectTextEvent(widestr);
 #elif defined(HAVE_BERKELIUM)
-	webView->textEvent(widestr);
+	if (webView->getWidget()) webView->getWidget()->textEvent(widestr);
 #endif
 #endif
 }
@@ -886,14 +794,19 @@ void WebView::resize(int width, int height)
 
 	matPass->removeAllTextureUnitStates();
 	maskTexUnit = 0;
-#if defined(HAVE_AWESOMIUM)|| !defined (__APPLE__)
+#if defined(HAVE_AWESOMIUM)|| defined(HAVE_BERKELIUM)
 
-	Ogre::TextureManager::getSingleton().remove(viewName + "Texture");
+	if (!this->viewTexture.isNull()) {
+        ResourcePtr res(this->viewTexture);
+        this->viewTexture.setNull();
+        Ogre::TextureManager::getSingleton().remove(res);
+    }
 
-	TexturePtr texture = TextureManager::getSingleton().createManual(
-		viewName + "Texture", ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+	this->viewTexture = TextureManager::getSingleton().createManual(
+		getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
 		TU_DYNAMIC_WRITE_ONLY_DISCARDABLE, this);
+    TexturePtr texture = this->viewTexture;
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 	pixelBuffer->lock(HardwareBuffer::HBL_DISCARD);
@@ -908,17 +821,13 @@ void WebView::resize(int width, int height)
 	pixelBuffer->unlock();
 #endif
 
-	baseTexUnit = matPass->createTextureUnitState(viewName + "Texture");
+	baseTexUnit = matPass->createTextureUnitState(viewTexture->getName());
 
 	baseTexUnit->setTextureFiltering(texFiltering, texFiltering, FO_NONE);
 	if(texFiltering == FO_ANISOTROPIC)
 		baseTexUnit->setTextureAnisotropy(4);
 
-	if(usingMask)
-	{
-		setMask(maskImageParameters.first, maskImageParameters.second);
-	}
-	else if(alphaCache)
+    if(alphaCache)
 	{
 		delete[] alphaCache;
 		alphaCache = new unsigned char[texWidth * texHeight];
@@ -990,22 +899,22 @@ void WebView::onRequestDrag(WebView *caller, const Awesomium::JSArguments &args)
 
 ///////// Berkelium Callbacks...
 void WebView::onAddressBarChanged(Berkelium::Window*, const std::string&) {
-    SILOG(ogre,debug,"onAddressBarChanged");
+    SILOG(webview,debug,"onAddressBarChanged");
 }
 void WebView::onStartLoading(Berkelium::Window*, const std::string&) {
-    SILOG(ogre,debug,"onStartLoading");
+    SILOG(webview,debug,"onStartLoading");
 }
 void WebView::onLoad(Berkelium::Window*) {
-    SILOG(ogre,debug,"onLoad");
+    SILOG(webview,debug,"onLoad");
 }
 void WebView::onLoadError(Berkelium::Window*, const std::string&) {
-    SILOG(ogre,debug,"onLoadError");
+    SILOG(webview,debug,"onLoadError");
 }
 void WebView::onPaint(Berkelium::Window*win,
                       const unsigned char*srcBuffer, const Berkelium::Rect&rect,
                       int dx, int dy, const Berkelium::Rect&clipRect) {
 #ifdef HAVE_BERKELIUM
-    TexturePtr texture = TextureManager::getSingleton().getByName(viewName + "Texture");
+    TexturePtr texture = viewTexture;
 
     HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 
@@ -1015,7 +924,7 @@ void WebView::onPaint(Berkelium::Window*win,
     pixelBufferRect.mTop=0;
     pixelBufferRect.mLeft=0;
     if (dx || dy) {
-            SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
+            SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
 
         Berkelium::Rect scrollRect = clipRect;
         scrollRect.mLeft += dx;
@@ -1031,7 +940,7 @@ void WebView::onPaint(Berkelium::Window*win,
             {
                 HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();    
                 
-                SILOG(ogre,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
+                SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
                 shadowBuffer->blit(
                     pixelBuffer,
                     Ogre::Box(scrollRect.left()-dx, scrollRect.top()-dy, scrollRect.right()-dx, scrollRect.bottom()-dy),
@@ -1048,7 +957,7 @@ void WebView::onPaint(Berkelium::Window*win,
     }
     pixelBufferRect=pixelBufferRect.intersect(rect);
     if (memcmp(&pixelBufferRect,&rect,sizeof(Berkelium::Rect))!=0) {
-        SILOG(ogre,error,"Incoming berkelium size mismatch ["<<pixelBufferRect.left()<<' '<<pixelBufferRect.top()<<'-'<<pixelBufferRect.right()<<' '<<pixelBufferRect.bottom()<<"] != [" <<rect.left()<<' '<<rect.top()<<'-'<<rect.right()<<' '<<rect.bottom()<<"]");
+        SILOG(webview,error,"Incoming berkelium size mismatch ["<<pixelBufferRect.left()<<' '<<pixelBufferRect.top()<<'-'<<pixelBufferRect.right()<<' '<<pixelBufferRect.bottom()<<"] != [" <<rect.left()<<' '<<rect.top()<<'-'<<rect.right()<<' '<<rect.bottom()<<"]");
     }
     pixelBuffer->blitFromMemory(
         Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
@@ -1067,16 +976,16 @@ void WebView::onPaint(Berkelium::Window*win,
 #endif
 }
 void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
-    SILOG(ogre,debug,"onBeforeUnload");
+    SILOG(webview,debug,"onBeforeUnload");
 }
 void WebView::onCancelUnload(Berkelium::Window*) {
-    SILOG(ogre,debug,"onCancelUnload");
+    SILOG(webview,debug,"onCancelUnload");
 }
 void WebView::onCrashed(Berkelium::Window*) {
-    SILOG(ogre,debug,"onCrashed");
+    SILOG(webview,debug,"onCrashed");
 }
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*) {
-    SILOG(ogre,debug,"onCreatedWindow");
+    SILOG(webview,debug,"onCreatedWindow");
 }
 
 void WebView::onPaintPluginTexture(
@@ -1087,16 +996,16 @@ void WebView::onPaintPluginTexture(
 }
 
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
-    SILOG(ogre,debug,"onWidgetCreated");
+    SILOG(webview,debug,"onWidgetCreated");
 }
 void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget) {
-    SILOG(ogre,debug,"onWidgetDestroyed");
+    SILOG(webview,debug,"onWidgetDestroyed");
 }
 void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h) {
-    SILOG(ogre,debug,"onWidgetResize");
+    SILOG(webview,debug,"onWidgetResize");
 }
 void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
-    SILOG(ogre,debug,"onWidgetMove");
+    SILOG(webview,debug,"onWidgetMove");
 }
 void WebView::onWidgetPaint(
         Berkelium::Window *win,
@@ -1105,7 +1014,7 @@ void WebView::onWidgetPaint(
         const Berkelium::Rect &rect,
         int dx, int dy,
         const Berkelium::Rect &scrollRect) {
-    SILOG(ogre,debug,"onWidgetPaint");
+    SILOG(webview,debug,"onWidgetPaint");
 }
 
 

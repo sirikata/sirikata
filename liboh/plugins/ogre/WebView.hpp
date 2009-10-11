@@ -171,23 +171,6 @@ namespace Graphics {
 		void setIgnoreTransparent(bool ignoreTrans, float threshold = 0.05);
 
 		/**
-		* Masks the alpha channel of this WebView with that of a provided image.
-		*
-		* @param	maskFileName	The filename of the Alpha Mask Image. The Alpha Mask Image MUST have a
-		*							width greater than or equal to the WebView width and it MUST have a height
-		*							greater than or equal to the WebView height. Alpha Mask Images larger than
-		*							the WebView will not be stretched, instead WebView will take Alpha values starting
-		*							from the Top-Left corner of the Alpha Mask Image. To reset WebView to use no
-		*							Alpha Mask Image, simply provide an empty String ("").
-		*
-		* @param	groupName		The Resource Group to find the Alpha Mask Image filename.
-		*
-		* @throws	Ogre::Exception::ERR_INVALIDPARAMS	Throws this if the width or height of the Alpha Mask Image is
-		*												less than the width or height of the WebView it is applied to.
-		*/
-		void setMask(std::string maskFileName, std::string groupName = Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-
-		/**
 		* Adjusts the number of times per second this WebView may update.
 		*
 		* @param	maxUPS		The maximum number of times per second this WebView can update. Set this to '0' to
@@ -246,9 +229,18 @@ namespace Graphics {
 		void show(bool fade, unsigned short fadeDurationMS = 300);
 
 		/**
-		* 'Focuses' this WebView by popping it to the front of all other WebViews. (not applicable to WebViews created as materials)
+		* Sends a focus message to this webView to highlight active form elements, etc.
 		*/
 		void focus();
+		/**
+		* Sends a 'blurs'/unfocus message to this webview, which causes form elements to become grayed out.
+		*/
+		void unfocus();
+
+		/**
+		* 'Raises' this WebView by popping it to the front of all other WebViews. (not applicable to WebViews created as materials)
+		*/
+		void raise();
 
 		/**
 		* Moves this WebView by relative amounts. (not applicable to WebViews created as materials or non-movable WebViews)
@@ -297,6 +289,11 @@ namespace Graphics {
 		* Returns the name of this WebView.
 		*/
 		std::string getName();
+
+		/**
+		* Returns the name of the Ogre::Material used internally by this WebView.
+		*/
+		std::string getViewTextureName();
 
 		/**
 		* Returns the name of the Ogre::Material used internally by this WebView.
@@ -408,6 +405,8 @@ namespace Graphics {
 		bool isWebViewTransparent;
 		bool ignoringBounds;
 		bool okayToDelete;
+
+        Ogre::TexturePtr viewTexture;
 
 		double fadeValue;
 		bool isFading;

@@ -98,6 +98,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         chromeWebView->setTransparent(true);
 #endif
 #ifdef HAVE_BERKELIUM
+/*
         // flash test
         WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
         mychromeWebView->loadURL("http://yahoo.com/");
@@ -108,6 +109,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         // flash video test
         mychromeWebView = createWebView("youtube", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
+        mychromeWebView->setTransparent(true);
+*/
+        WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
+        mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
         mychromeWebView->setTransparent(true);
 #endif
 }
@@ -467,7 +472,7 @@ bool WebViewManager::focusWebView(int x, int y, WebView* selection)
 
 	focusedWebView = webViewToFocus;
 #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
-	focusedWebView->webView->focus();
+	focusedWebView->focus();
 #endif
 
         if (focusedWebView != chromeWebView)
@@ -502,7 +507,7 @@ void WebViewManager::deFocusAllWebViews()
 	WebViewMap::iterator iter;
 #if defined(HAVE_AWESOMIUM) || defined(HAVE_BERKELIUM)
 	for(iter = activeWebViews.begin(); iter != activeWebViews.end(); iter++)
-		iter->second->webView->unfocus();
+		iter->second->unfocus();
 #endif
 	/*
 	astralMgr->defocusAll();
