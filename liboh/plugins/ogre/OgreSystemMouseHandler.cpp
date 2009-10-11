@@ -889,6 +889,19 @@ private:
         if (!axisev)
             return EventResponse::nop();
 
+        float multiplier = mParent->mInputManager->mWheelToAxis->as<float>();
+
+        if (axisev->mAxis == SDLMouse::WHEELY) {
+            bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));
+            if (used)
+                return EventResponse::cancel();
+        }
+        if (axisev->mAxis == SDLMouse::WHEELX) {
+            bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(axisev->mValue.getCentered()/multiplier, 0));
+            if (used)
+                return EventResponse::cancel();
+        }
+
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
 
