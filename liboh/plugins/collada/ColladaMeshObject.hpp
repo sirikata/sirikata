@@ -47,7 +47,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
     : public MeshObject
 {
     public:
-        explicit ColladaMeshObject ( ColladaSystem* system );
+        explicit ColladaMeshObject ( ColladaSystem& system );
         ColladaMeshObject ( ColladaMeshObject const& rhs );
         ColladaMeshObject& operator = ( ColladaMeshObject const& rhs );
         virtual ~ColladaMeshObject ();
@@ -55,7 +55,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaMeshObject
     protected:
     
     private:
-        ColladaSystem* mSystem;
+        ColladaSystem& mSystem;
 
         URI mMeshURI;
         Vector3f mScale;

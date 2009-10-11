@@ -32,9 +32,13 @@
 
 #include "ColladaMeshObject.hpp"
 
+#include "ColladaSystem.hpp"
+
+/////////////////////////////////////////////////////////////////////
+
 namespace Sirikata { namespace Models {
     
-ColladaMeshObject::ColladaMeshObject ( ColladaSystem* system )
+ColladaMeshObject::ColladaMeshObject ( ColladaSystem& system )
     :   MeshObject (),
         mSystem ( system )
 {
@@ -55,6 +59,8 @@ ColladaMeshObject::~ColladaMeshObject ()
 {
 
 }
+
+/////////////////////////////////////////////////////////////////////
     
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject
@@ -62,6 +68,8 @@ ColladaMeshObject::~ColladaMeshObject ()
 void ColladaMeshObject::setMesh ( URI const& rhs )
 {
     mMeshURI = rhs;
+    // MCB: trigger importation of mesh content
+    mSystem.loadDocument ( rhs );
 }
     
 URI const& ColladaMeshObject::getMesh () const
