@@ -134,8 +134,11 @@ public:
     void clearReadBuffer(){
         mReadBuffer=NULL;
     }
-    ASIOReadBuffer*getReadBuffer(){
+    ASIOReadBuffer*getReadBuffer()const{
         return mReadBuffer;
+    }
+    ASIOReadBuffer* setReadBuffer(ASIOReadBuffer*arb) {
+        return mReadBuffer=arb;
     }
     TCPSocket&getSocket() {return *mSocket;}
 

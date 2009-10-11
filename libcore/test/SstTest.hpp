@@ -75,9 +75,14 @@ public:
 
     }
     bool dataRecvCallback(Stream *s,int id, const Chunk&data) {
-        mDataMap[id].push_back(data);
-        ++mCount;
-        return true;
+        static bool dopause=false;
+        dopause=!dopause;
+        if (!dopause) {//true||rand()>RAND_MAX/10) {
+            mDataMap[id].push_back(data);
+            ++mCount;
+            return true;
+        }
+        return false;
     }
     bool connectorDataRecvCallback(Stream *s,int id, const Chunk&data) {
         return dataRecvCallback(s,id,data);
@@ -445,7 +450,6 @@ public:
     void testConnectSend (void )
     {
         Stream*z=NULL;
-        Stream*tcpz;
         bool doSubstreams=true;
         {
             Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mIO);
@@ -467,7 +471,6 @@ public:
                 using std::tr1::placeholders::_2;
                 z=r->clone(std::tr1::bind(&SstTest::testSubstream,this,_1,_2));
                 if (z) {
-                    tcpz=z;
                     runRoutine(z);
                 }else {
                     ++mDisconCount;
@@ -477,6 +480,14 @@ public:
             time_t last_time=time(NULL);
             int retry_count=10;
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
+                if (rand()<RAND_MAX/10) {
+                    r->readyRead();
+                    z->readyRead();
+                    for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                        (*i)->readyRead();
+                    }
+                }
+
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Message Receive Count == "<<mCount.read()<<'\n';
@@ -502,6 +513,13 @@ public:
             time_t last_time=time(NULL);
             int retry_count=3;
             while(mDisconCount.read()<3){
+                if (rand()<RAND_MAX/10) {
+                    z->readyRead();
+                    for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                        (*i)->readyRead();
+                    }
+                }
+
                 time_t this_time=time(NULL);
                 if (this_time>last_time+5) {
                     std::cerr<<"Close Receive Count == "<<mDisconCount.read()<<'\n';
@@ -520,6 +538,11 @@ public:
         int retry_count=3;
         while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
+            if (rand()<RAND_MAX/10) {
+                for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
+                    (*i)->readyRead();
+                }
+            }
             if (this_time>last_time+5) {
                 std::cerr<<"SubStream End Receive Count == "<<mEndCount.read()<<'\n';
                 last_time=this_time;

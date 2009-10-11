@@ -39,7 +39,7 @@
 #include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
 ASIOReadBuffer* MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket) {
-    return new ASIOReadBuffer(parentSocket,whichSocket);
+    return parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
 }
 void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
     parentSocket->hostDisconnectedCallback(mWhichBuffer,error);

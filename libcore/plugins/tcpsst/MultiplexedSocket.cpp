@@ -317,8 +317,7 @@ bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
         CommitCallbacks(registrations,CONNECTED,false);
         CallbackMap::iterator where=mCallbacks.find(id);
         if (where!=mCallbacks.end()) {
-            retval=true;//FIXME CBR absorb return value of mBytesReceivedCallback
-            where->second->mBytesReceivedCallback(newChunk);
+            retval=where->second->mBytesReceivedCallback(newChunk);
         }else if (mOneSidedClosingStreams.find(id)==mOneSidedClosingStreams.end()) {
             //new substream
             TCPStream*newStream=new TCPStream(getSharedPtr(),id);
@@ -326,8 +325,7 @@ bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
             mNewSubstreamCallback(newStream,setCallbackFunctor);
             if (setCallbackFunctor.mCallbacks != NULL) {
                 CommitCallbacks(registrations,CONNECTED,false);//make sure bytes are received
-                retval=true;//FIXME CBR absorb return value of mBytesReceivedCallback
-                setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
+                retval=setCallbackFunctor.mCallbacks->mBytesReceivedCallback(newChunk);
             }else {
                 closeStream(getSharedPtr(),id);
             }
