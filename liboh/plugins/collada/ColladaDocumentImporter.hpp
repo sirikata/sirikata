@@ -33,28 +33,55 @@
 #ifndef _SIRIKATA_COLLADA_DOCUMENT_IMPORTER_
 #define _SIRIKATA_COLLADA_DOCUMENT_IMPORTER_
 
+#include "ColladaDocument.hpp"
 
-#include <oh/Platform.hpp>
+//#include <oh/Platform.hpp>
 
 //#include <task/EventManager.hpp>
 
 #include "COLLADAFWIWriter.h"
 
-namespace Sirikata { namespace Models {
+/////////////////////////////////////////////////////////////////////
 
+namespace Sirikata { 
+
+namespace Transfer {
+
+class URI;
+
+}
+    
+namespace Models {
+
+/////////////////////////////////////////////////////////////////////
+
+/**
+ *  An implementation of the OpenCOLLADA IWriter class that is responsible for importing
+ *  COLLADA documents and re-Writing (i.e. converting) the data to suit the application.
+ */    
 class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     :   public COLLADAFW::IWriter
 {
     public:
-        ColladaDocumentImporter ();
-        ColladaDocumentImporter ( ColladaDocumentImporter const& );
-        ColladaDocumentImporter& operator = ( ColladaDocumentImporter const& );
+        explicit ColladaDocumentImporter ( Transfer::URI const& uri );
         ~ColladaDocumentImporter ();
 
+        ColladaDocumentPtr getDocument () const;
+        
     protected:
 
     private:
+        ColladaDocumentImporter ( ColladaDocumentImporter const& ); // unimplemented
+        ColladaDocumentImporter& operator = ( ColladaDocumentImporter const& ); // unimplemented
 
+        void postProcess ();
+
+        ColladaDocumentPtr mDocument;
+        
+        enum State { CANCELLED = -1, IDLE, STARTED, FINISHED };
+        State mState;
+    
+    
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
     public:

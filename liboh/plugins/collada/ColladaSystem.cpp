@@ -34,13 +34,14 @@
 
 #include "ColladaErrorHandler.hpp"
 #include "ColladaDocumentImporter.hpp"
+#include "ColladaDocumentLoader.hpp"
 
 #include "ColladaMeshObject.hpp"
 
 #include <oh/ProxyMeshObject.hpp>
 //#include <oh/SimulationFactory.hpp>
 //#include <options/Options.hpp>
-//#include <transfer/TransferManager.hpp>
+#include <transfer/TransferManager.hpp>
 
 // OpenCOLLADA headers
 #include "COLLADAFWRoot.h"
@@ -52,27 +53,74 @@
 namespace Sirikata { namespace Models {
 
 ColladaSystem::ColladaSystem ()
-    :   mErrorHandler ( new ColladaErrorHandler ),
-        mSaxLoader ( new COLLADASaxFWL::Loader ( mErrorHandler ) ),
-        mDocumentImporter ( new ColladaDocumentImporter ),
-        mFramework ( new COLLADAFW::Root ( mSaxLoader, mDocumentImporter ) )
+    :   mDocuments ()
 {
-    std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl;
+    assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
 
 }
     
 ColladaSystem::~ColladaSystem ()
 {
-    std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl;
-    delete mFramework;
-    delete mDocumentImporter;
-    delete mSaxLoader;
-    delete mErrorHandler;
+    assert((std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl,true));
+
 }
+
+/////////////////////////////////////////////////////////////////////
+
+void ColladaSystem::loadDocument ( Transfer::URI const& what )
+{
+    // Use our TransferManager to async download the data into memory.
+    Transfer::TransferManager* transferManager = static_cast< Transfer::TransferManager* > ( mTransferManager->as< void* > () );
+
+    if ( transferManager )
+    {
+        Transfer::TransferManager::EventListener listener ( std::tr1::bind ( &ColladaSystem::downloadFinished, this, _1, what ) );
+        
+        transferManager->download ( what, listener, Transfer::Range ( true ) );
+    }
+    else
+        throw std::logic_error ( "ColladaSystem::loadDocument() needs a TransferManager" );
+}
+
+Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what )
+{
+    Transfer::DownloadEventPtr ev = std::tr1::static_pointer_cast< Transfer::DownloadEvent > ( evbase );
+
+    assert((std::cout << "MCB: ColladaSystem::downloadFinished()"
+            << " status: " <<  ev->getStatus ()
+            << " length: " <<  ev->data ().length ()
+            << std::endl,true));
+
+    if ( ev->getStatus () == Transfer::TransferManager::SUCCESS )
+    {
+        Transfer::DenseDataPtr flatData = ev->data ().flatten ();
+
+        // Pass the data memory pointer to OpenCOLLADA for use by the XML parser (libxml2)
+        // MCB: Serialized because OpenCOLLADA thread safety is unknown
+        ColladaDocumentLoader loader ( what );
+
+        if ( loader.load ( *flatData->begin () , flatData->length () ) )
+        {
+            // finally we can add the Product to our set of completed documents
+            mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
+        }
+        else
+        {
+            std::cout << "ColladaSystem::downloadFinished() loader failed!" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "ColladaSystem::downloadFinished() failed!" << std::endl;
+    }
+    return Task::EventResponse::del ();
+}
+    
+/////////////////////////////////////////////////////////////////////
 
 ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
 {
-    std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl;
+    assert((std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl,true));
     ColladaSystem* system ( new ColladaSystem );
     
     if ( system->initialize ( proxyManager, options ) )
@@ -83,7 +131,15 @@ ColladaSystem* ColladaSystem::create ( Provider< ProxyCreationListener* >* proxy
 
 bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options )
 {
-    std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl;
+    assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
+
+    mEventManager = new OptionValue ( "eventmanager", "0", OptionValueType< void* > (), "Memory address of the EventManager<Event>" );
+    mTransferManager = new OptionValue ( "transfermanager", "0", OptionValueType< void* > (), "dummy" );
+    mWorkQueue = new OptionValue ( "workqueue", "0", OptionValueType< void* > (), "Memory address of the WorkQueue" );
+
+    InitializeClassOptions ( "colladamodels", this, mTransferManager, mWorkQueue, mEventManager, NULL );
+    OptionSet::getOptions ( "colladamodels", this )->parse ( options );
+    
 
     proxyManager->addListener ( this );
 
@@ -99,20 +155,19 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
 
 void ColladaSystem::onCreateProxy ( ProxyObjectPtr proxy )
 {
-    std::cout << "MCB: onCreateProxy (" << proxy << ") entered for ID: " << proxy->getObjectReference () << std::endl;
+    assert((std::cout << "MCB: onCreateProxy (" << proxy << ") entered for ID: " << proxy->getObjectReference () << std::endl,true));
 
     std::tr1::shared_ptr< ProxyMeshObject > asMesh ( std::tr1::dynamic_pointer_cast< ProxyMeshObject > ( proxy ) );
     
     if ( asMesh )
     {
-        std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl;
+        assert((std::cout << "MCB: onCreateProxy (" << asMesh << ") entered for mesh ID: " << asMesh->getObjectReference () << std::endl,true));
         
-        ProxyMeshObject::ModelObjectPtr mesh ( new ColladaMeshObject ( this ) );
+        ProxyMeshObject::ModelObjectPtr mesh ( new ColladaMeshObject ( *this ) );
         
         // try to supply the proxy with a data model
         if ( ! proxy->hasModelObject () )
         {
-            // MCB: trigger importation of mesh content
             asMesh->setModelObject ( mesh );  // MCB: hoist to a common base class? with overloads??
         }
         else

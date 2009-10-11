@@ -36,31 +36,35 @@
 #include <iostream>
 
 namespace Sirikata { namespace Models {
-    
-ColladaDocumentImporter::ColladaDocumentImporter ()
+
+ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri )
+    :   mDocument ( new ColladaDocument ( uri ) ),
+        mState ( IDLE )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered" << std::endl,true));
     
 }
 
-ColladaDocumentImporter::ColladaDocumentImporter ( ColladaDocumentImporter const& rhs )
-{
-    assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter(copy) entered" << std::endl,true));
-
-}
-
-ColladaDocumentImporter::ColladaDocumentImporter& ColladaDocumentImporter::operator = ( ColladaDocumentImporter const& rhs )
-{
-    assert((std::cout << "MCB: ColladaDocumentImporter::operator=() entered" << std::endl,true));
-    return *this;
-}
-
 ColladaDocumentImporter::~ColladaDocumentImporter ()
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::~ColladaDocumentImporter() entered" << std::endl,true));
-    
+
 }
 
+/////////////////////////////////////////////////////////////////////
+
+ColladaDocumentPtr ColladaDocumentImporter::getDocument () const
+{
+    assert(mState == FINISHED);
+    return mDocument;
+}
+
+void ColladaDocumentImporter::postProcess ()
+{
+    assert((std::cout << "MCB: ColladaDocumentImporter::postProcess() entered" << std::endl,true));
+
+}
+        
 /////////////////////////////////////////////////////////////////////
 // overrides from COLLADAFW::IWriter
 
@@ -68,24 +72,31 @@ void ColladaDocumentImporter::cancel ( COLLADAFW::String const& errorMessage )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::cancel(" << errorMessage << ") entered" << std::endl,true));
 
+    mState = CANCELLED;
 }
 
 void ColladaDocumentImporter::start ()
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::start() entered" << std::endl,true));
 
+    mState = STARTED;
 }
 
 void ColladaDocumentImporter::finish ()
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::finish() entered" << std::endl,true));
 
+    postProcess ();
+    mState = FINISHED;    
 }
     
 bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asset )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered" << std::endl,true));
-    return true;
+
+    bool ok = mDocument->import ( *this, *asset );
+
+    return ok;
 }
 
 bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
@@ -98,7 +109,10 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* visualScene )
 {
     assert((std::cout << "MCB: ColladaDocumentImporter::writeVisualScene(" << visualScene << ") entered" << std::endl,true));
-    return true;
+
+    bool ok = true;
+    
+    return ok;
 }
 
 

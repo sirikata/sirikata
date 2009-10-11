@@ -1,5 +1,5 @@
-/*  Sirikata liboh -- Collada Models System
- *  ColladaSystem.hpp
+/*  Sirikata liboh -- Collada Models Document Loader
+ *  ColladaDocumentLoader.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,74 +30,67 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_
-#define _SIRIKATA_COLLADA_SYSTEM_
+#ifndef _SIRIKATA_COLLADA_DOCUMENT_LOADER_
+#define _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 
 #include "ColladaDocument.hpp"
 
-#include <oh/Platform.hpp>
-#include <oh/ModelsSystem.hpp>
-#include <util/ListenerProvider.hpp>
+//#include <oh/Platform.hpp>
+//#include <oh/ModelsSystem.hpp>
+//#include <util/ListenerProvider.hpp>
 
-#include <task/EventManager.hpp>
-
-#include <set>
+//#include <task/EventManager.hpp>
 
 /////////////////////////////////////////////////////////////////////
 
-namespace Sirikata { 
+namespace COLLADAFW {
+    
+class Root;
+    
+}
 
-class OptionValue;
-
-namespace Models {
+namespace COLLADASaxFWL {
+    
+class Loader;
+    
+}
 
 /////////////////////////////////////////////////////////////////////
 
-class SIRIKATA_PLUGIN_EXPORT ColladaSystem
-    :   public ModelsSystem
+namespace Sirikata { namespace Models {
+
+class ColladaDocumentImporter;
+class ColladaErrorHandler;
+
+/////////////////////////////////////////////////////////////////////
+
+/**
+ * A class designed to (one-shot) load a single COLLADA document using OpenCOLLADA.
+ */
+class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 {
     public:
-        virtual ~ColladaSystem ();
+        explicit ColladaDocumentLoader ( Transfer::URI const& uri );
+        ~ColladaDocumentLoader ();
 
-        static ColladaSystem* create ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
+        bool ColladaDocumentLoader::load ( char const& buffer, size_t bufferLength );
+        ColladaDocumentPtr getDocument () const;
 
-        void loadDocument ( Transfer::URI const& what );
-        
     protected:
 
     private:
-        ColladaSystem (); // called by create()
-        ColladaSystem ( ColladaSystem const& ); // not implemented
-        ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
+        ColladaDocumentLoader ( ColladaDocumentLoader const& ); // not implemented
+        ColladaDocumentLoader& operator = ( ColladaDocumentLoader const & ); // not implemented
 
-        bool initialize ( Provider< ProxyCreationListener* >* proxyManager, String const& options );
-
-        Task::EventResponse downloadFinished ( Task::EventPtr evbase, Transfer::URI const& what );
-
-        // things we need to integrate with Sirikata
-        OptionValue* mEventManager; // MCB: managed object
-        OptionValue* mTransferManager; // MCB: managed object
-        OptionValue* mWorkQueue; // MCB: managed object
-
-        // documents that have been transfered, parsed, and loaded.
-        // MCB: make this a map when/if a key becomes useful
-        typedef std::set< ColladaDocumentPtr > DocumentSet;
-        DocumentSet mDocuments;
-
-    // interface from ModelsSystem
-    public:
-    protected:
-    
-    // interface from ProxyCreationListener
-    public:
-        virtual void onCreateProxy ( ProxyObjectPtr object );
-        virtual void onDestroyProxy ( ProxyObjectPtr object );
-
-    protected:
-
+        // things we need to integrate with OpenCollada (declared in order of initialization, do not change)
+        ColladaErrorHandler* mErrorHandler; // 1st
+        COLLADASaxFWL::Loader* mSaxLoader; // next
+        ColladaDocumentImporter* mDocumentImporter; // next
+        COLLADAFW::Root* mFramework; // last
 };
+
 
 } // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_
+#endif // _SIRIKATA_COLLADA_DOCUMENT_LOADER_
