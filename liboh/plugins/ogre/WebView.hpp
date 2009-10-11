@@ -382,6 +382,10 @@ namespace Graphics {
 	protected:
 #ifdef HAVE_BERKELIUM
 		Berkelium::Window* webView;
+        Berkelium::Rect blitNewImage(Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                                              const unsigned char*srcBuffer, const Berkelium::Rect&rect,
+                                              int dx, int dy, const Berkelium::Rect&clipRect);
+        void compositeWidgets(Berkelium::Window*);
 #else
 		Awesomium::WebView* webView;
 #endif
@@ -407,7 +411,8 @@ namespace Graphics {
 		bool okayToDelete;
 
         Ogre::TexturePtr viewTexture;
-
+        Ogre::TexturePtr backingTexture;
+        std::map<Berkelium::Widget*,Ogre::TexturePtr>widgetTextures;
 		double fadeValue;
 		bool isFading;
 		double deltaFadePerMS;

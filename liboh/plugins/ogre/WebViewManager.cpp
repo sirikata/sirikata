@@ -74,8 +74,9 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 	  isDragging(false), isResizing(false),
           zOrderCounter(5),
 	  lastTooltip(0), tooltipShowTime(0), isDraggingFocusedWebView(0),
-     mInputManager(inputMgr),
-     baseDirectory(baseDirectory)
+     baseDirectory(baseDirectory),
+     mInputManager(inputMgr)
+
 {
     tooltipWebView = 0;
 #ifdef HAVE_AWESOMIUM
@@ -112,6 +113,9 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->setTransparent(true);
 */
         WebView *mychromeWebView = createWebView("yahoo", 800, 600, OverlayPosition(RP_TOPLEFT), false, 70);
+        mychromeWebView->loadURL("http://dunnbypaul.net/js_mouse/");
+        mychromeWebView->setTransparent(true);
+        mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
         mychromeWebView->setTransparent(true);
 #endif

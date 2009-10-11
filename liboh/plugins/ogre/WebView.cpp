@@ -202,7 +202,7 @@ void WebView::createMaterial()
 	TexturePtr texture = TextureManager::getSingleton().createManual(
 		getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
-		TU_DYNAMIC_WRITE_ONLY_DISCARDABLE, this);
+		TU_DYNAMIC, this);
     this->viewTexture = texture;
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
@@ -241,7 +241,7 @@ void WebView::loadResource(Resource* resource)
 	tex->setHeight(texHeight);
 	tex->setNumMipmaps(0);
 	tex->setFormat(PF_BYTE_BGRA);
-	tex->setUsage(TU_DYNAMIC_WRITE_ONLY_DISCARDABLE);
+	tex->setUsage(TU_DYNAMIC);
 	tex->createInternalResources();
 
 	// force update
@@ -805,7 +805,8 @@ void WebView::resize(int width, int height)
 	this->viewTexture = TextureManager::getSingleton().createManual(
 		getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
 		TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
-		TU_DYNAMIC_WRITE_ONLY_DISCARDABLE, this);
+		TU_DYNAMIC, this);
+
     TexturePtr texture = this->viewTexture;
 
 	HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
@@ -819,6 +820,18 @@ void WebView::resize(int width, int height)
 	memset(pDest, 128, texHeight*texPitch);
 
 	pixelBuffer->unlock();
+
+	if (!this->backingTexture.isNull()) {
+        ResourcePtr res(this->backingTexture);
+        this->backingTexture.setNull();
+        Ogre::TextureManager::getSingleton().remove(res);
+
+        this->backingTexture = TextureManager::getSingleton().createManual(
+            "B"+getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+            TEX_TYPE_2D, texWidth, texHeight, 0, PF_BYTE_BGRA,
+            TU_DYNAMIC, this);
+    }
+
 #endif
 
 	baseTexUnit = matPass->createTextureUnitState(viewTexture->getName());
@@ -910,14 +923,11 @@ void WebView::onLoad(Berkelium::Window*) {
 void WebView::onLoadError(Berkelium::Window*, const std::string&) {
     SILOG(webview,debug,"onLoadError");
 }
-void WebView::onPaint(Berkelium::Window*win,
+
+
+Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
                       const unsigned char*srcBuffer, const Berkelium::Rect&rect,
                       int dx, int dy, const Berkelium::Rect&clipRect) {
-#ifdef HAVE_BERKELIUM
-    TexturePtr texture = viewTexture;
-
-    HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
-
     Berkelium::Rect pixelBufferRect;
     pixelBufferRect.mHeight=pixelBuffer->getHeight();
     pixelBufferRect.mWidth=pixelBuffer->getWidth();
@@ -936,7 +946,7 @@ void WebView::onPaint(Berkelium::Window*win,
         size_t height=scrollRect.height();
         if (width && height) {
 
-            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,width,height,1,1,texture->getFormat());
+            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,width,height,1,1,PF_BYTE_BGRA);
             {
                 HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();    
                 
@@ -962,7 +972,22 @@ void WebView::onPaint(Berkelium::Window*win,
     pixelBuffer->blitFromMemory(
         Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
         Ogre::Box(pixelBufferRect.left(), pixelBufferRect.top(), pixelBufferRect.right(), pixelBufferRect.bottom()));
+    return pixelBufferRect;
+}
 
+
+void WebView::onPaint(Berkelium::Window*win,
+                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
+                      int dx, int dy, const Berkelium::Rect&clipRect) {
+#ifdef HAVE_BERKELIUM
+    TexturePtr texture = backingTexture.isNull()?viewTexture:backingTexture;
+
+    HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
+    Berkelium::Rect pixelBufferRect=blitNewImage(pixelBuffer,srcBuffer,rect,dx,dy,clipRect);
+
+    if (!backingTexture.isNull()) {
+        compositeWidgets(win);
+    }
     if(isWebViewTransparent && !usingMask && ignoringTrans)
     {
         int top = pixelBufferRect.top();
@@ -998,14 +1023,84 @@ void WebView::onPaintPluginTexture(
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
     SILOG(webview,debug,"onWidgetCreated");
 }
-void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget) {
+void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *wid) {
+    std::map<Berkelium::Widget*,TexturePtr>::iterator where=widgetTextures.find(wid);
+    if (where!=widgetTextures.end()) {
+        if (!where->second.isNull()) {
+            ResourcePtr mfd(where->second);
+            widgetTextures.erase(where);
+            TextureManager::getSingleton().remove(mfd);
+        }else widgetTextures.erase(where);
+    }
+    if (widgetTextures.size()==0&&!backingTexture.isNull()) {
+        
+        ResourcePtr mfd(backingTexture);
+        viewTexture->getBuffer()->blit(backingTexture->getBuffer(),
+                                       Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()),
+                                       Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()));
+        backingTexture.setNull();
+        TextureManager::getSingleton().remove(mfd);        
+    }
     SILOG(webview,debug,"onWidgetDestroyed");
 }
 void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h) {
+    TexturePtr tmp (TextureManager::getSingleton().createManual(
+                        "Widget"+UUID::random().toString(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+        TEX_TYPE_2D, w, h, 0, PF_BYTE_BGRA,
+        TU_DYNAMIC, this));
+    TexturePtr old=widgetTextures[widg];
+    if (!old.isNull()) {
+        int minwid=old->getWidth()<(unsigned int)w?old->getWidth():w;
+        int minhei=old->getHeight()<(unsigned int)h?old->getHeight():h;
+        tmp->getBuffer()->blit(old->getBuffer(),Ogre::Box(0,0,minwid,minhei),Ogre::Box(0,0,minwid,minhei));
+/*        viewBuffer->blit(backingBuffer,
+                         Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()),
+                         Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()));
+*/
+    }
+    widgetTextures[widg]=tmp;
+    if (!old.isNull()){
+        ResourcePtr mfd(old);
+        old.setNull();
+        TextureManager::getSingleton().remove(mfd);
+    }
     SILOG(webview,debug,"onWidgetResize");
 }
 void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
     SILOG(webview,debug,"onWidgetMove");
+    if (!backingTexture.isNull()) {
+        compositeWidgets(win);
+    }
+}
+void WebView::compositeWidgets(Berkelium::Window*win) {
+    if (viewTexture.isNull()||backingTexture.isNull()) {
+        SILOG(webview,fatal,"View or backing texture null during ocmpositing step");
+        assert(false);
+    }else {
+        viewTexture->getBuffer()->blit(backingTexture->getBuffer(),
+                                       Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()),
+                                       Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()));
+        int count=0;
+        for (Berkelium::Window::BackToFrontIter i=win->backIter(),ie=win->backEnd();
+             i!=ie;
+             ++i,++count) {
+            SILOG(webkit,warning,"Widget count: "<<count);
+            std::map<Berkelium::Widget*,Ogre::TexturePtr>::iterator where=widgetTextures.find(*i);
+            if (where!=widgetTextures.end()) {
+                SILOG(webkit,warning,"Widget found: "<<*i);
+                if (!where->second.isNull()){
+                    Berkelium::Rect rect=(*i)->getRect();
+                    SILOG(webkit,warning,"Blitting to "<<rect.top()<<" "<<rect.left()<<" "<<rect.width()<<" "<<rect.height());
+                    viewTexture->getBuffer()->blit(where->second->getBuffer(),
+                                                   Ogre::Box(0,0,rect.width(),rect.height()),
+                                                   Ogre::Box(rect.top(),rect.left(),rect.width(),rect.height()));
+                }else {
+                    widgetTextures.erase(where);
+                }
+            }
+        }
+        
+    }
 }
 void WebView::onWidgetPaint(
         Berkelium::Window *win,
@@ -1014,6 +1109,24 @@ void WebView::onWidgetPaint(
         const Berkelium::Rect &rect,
         int dx, int dy,
         const Berkelium::Rect &scrollRect) {
+    if (backingTexture.isNull()&&!viewTexture.isNull()) {
+        backingTexture=TextureManager::getSingleton().createManual(
+            "B"+getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+            TEX_TYPE_2D, viewTexture->getWidth(), viewTexture->getHeight(), 0, PF_BYTE_BGRA,
+		TU_DYNAMIC, this);
+        HardwarePixelBufferSharedPtr viewBuffer = viewTexture->getBuffer();
+        HardwarePixelBufferSharedPtr backingBuffer = backingTexture->getBuffer();
+        backingBuffer->blit(viewBuffer,
+                            Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()),
+                            Ogre::Box(0,0,viewTexture->getWidth(),viewTexture->getHeight()));
+    }
+    TexturePtr widgetTex=widgetTextures[wid];
+    if (widgetTex.isNull()) {
+        onWidgetResize(win,wid,wid->getRect().width(),wid->getRect().height());
+        widgetTex=widgetTextures[wid];
+    }
+    blitNewImage(widgetTex->getBuffer(),sourceBuffer,rect,dx,dy,scrollRect);
+    compositeWidgets(win);    
     SILOG(webview,debug,"onWidgetPaint");
 }
 
