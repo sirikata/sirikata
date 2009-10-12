@@ -946,7 +946,7 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
         size_t height=scrollRect.height();
         if (width && height) {
 
-            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,width,height,1,1,PF_BYTE_BGRA);
+            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,Bitwise::firstPO2From(width),Bitwise::firstPO2From(height),1,1,PF_BYTE_BGRA);
             {
                 HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();    
                 
@@ -1046,7 +1046,7 @@ void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *wid) 
 void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h) {
     TexturePtr tmp (TextureManager::getSingleton().createManual(
                         "Widget"+UUID::random().toString(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        TEX_TYPE_2D, w, h, 0, PF_BYTE_BGRA,
+                        TEX_TYPE_2D, Bitwise::firstPO2From(w), Bitwise::firstPO2From(h), 0, PF_BYTE_BGRA,
         TU_DYNAMIC, this));
     TexturePtr old=widgetTextures[widg];
     if (!old.isNull()) {
