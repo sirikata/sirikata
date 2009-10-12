@@ -1093,7 +1093,7 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
                     SILOG(webkit,warning,"Blitting to "<<rect.top()<<" "<<rect.left()<<" "<<rect.width()<<" "<<rect.height());
                     viewTexture->getBuffer()->blit(where->second->getBuffer(),
                                                    Ogre::Box(0,0,rect.width(),rect.height()),
-                                                   Ogre::Box(rect.top(),rect.left(),rect.width(),rect.height()));
+                                                   Ogre::Box(rect.left(),rect.top(),rect.right(),rect.bottom()));
                 }else {
                     widgetTextures.erase(where);
                 }
