@@ -181,13 +181,13 @@ void ObjectHost::processMessage(const RoutableMessageHeader&header, MemoryRefere
     assert(header.has_destination_object());
     assert(header.has_source_object());
     assert(!header.has_source_space() || header.source_space() == header.destination_space());
-    if (++mEnqueuers>0) {
+    if (++*mEnqueuers>0) {
         Task::WorkQueue *queue = mMessageQueue;
         if (queue) {
             queue->enqueue(new MessageProcessor(this, header, message_body));
         }
     }
-    --mEnqueuers;
+    --*mEnqueuers;
 }
 
 void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
