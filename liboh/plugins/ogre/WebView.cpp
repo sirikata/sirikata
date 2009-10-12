@@ -460,7 +460,7 @@ void WebView::setTransparent(bool isTransparent)
 		}
 	}
 
-#ifdef HAVE_AWESOMIUM
+#if defined(HAVE_AWESOMIUM)||defined(HAVE_BERKELIUM)
 	webView->setTransparent(isTransparent);
 #endif
 	isWebViewTransparent = isTransparent;
@@ -693,6 +693,7 @@ void WebView::injectMouseDown(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
+    webView->mouseMoved(xPos, yPos);
     webView->mouseButton(0, true);
 #endif
 }
@@ -702,6 +703,7 @@ void WebView::injectMouseUp(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
+    webView->mouseMoved(xPos, yPos);
 	webView->mouseButton(0, false);
 #endif
 }
