@@ -564,7 +564,7 @@ void WebView::focus()
 #if defined(HAVE_AWESOMIUM)
     webView->focus();
 #elif defined(HAVE_BERKELIUM)
-    if (webView->getWidget()) webView->getWidget()->focus();
+    webView->focus();
 #endif
 }
 
@@ -573,7 +573,7 @@ void WebView::unfocus()
 #if defined(HAVE_AWESOMIUM)
     webView->unfocus();
 #elif defined(HAVE_BERKELIUM)
-    if (webView->getWidget()) webView->getWidget()->unfocus();
+    webView->unfocus();
 #endif
 }
 
@@ -675,7 +675,7 @@ void WebView::injectMouseMove(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseMove(xPos, yPos);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->mouseMoved(xPos, yPos);
+	webView->mouseMoved(xPos, yPos);
 #endif
 }
 
@@ -684,7 +684,7 @@ void WebView::injectMouseWheel(int relScrollX, int relScrollY)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseWheelXY(relScrollX, relScrollY);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->mouseWheel(relScrollX, relScrollY);
+    webView->mouseWheel(relScrollX, relScrollY);
 #endif
 }
 
@@ -693,7 +693,7 @@ void WebView::injectMouseDown(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseDown(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->mouseButton(0, true);
+    webView->mouseButton(0, true);
 #endif
 }
 
@@ -702,7 +702,7 @@ void WebView::injectMouseUp(int xPos, int yPos)
 #if defined(HAVE_AWESOMIUM)
 	webView->injectMouseUp(Awesomium::LEFT_MOUSE_BTN);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->mouseButton(0, false);
+	webView->mouseButton(0, false);
 #endif
 }
 
@@ -710,7 +710,7 @@ void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancod
 #if defined(HAVE_AWESOMIUM)
 	webView->injectKeyEvent(press, modifiers, vk_code, scancode);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->keyEvent(press, modifiers, vk_code, scancode);
+	webView->keyEvent(press, modifiers, vk_code, scancode);
 #endif
 }
 
@@ -722,7 +722,7 @@ void WebView::injectTextEvent(std::string utf8) {
 #if defined(HAVE_AWESOMIUM)
 	webView->injectTextEvent(widestr);
 #elif defined(HAVE_BERKELIUM)
-	if (webView->getWidget()) webView->getWidget()->textEvent(widestr);
+	webView->textEvent(widestr);
 #endif
 #endif
 }
@@ -1090,7 +1090,7 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
                 SILOG(webkit,warning,"Widget found: "<<*i);
                 if (!where->second.isNull()){
                     Berkelium::Rect rect=(*i)->getRect();
-                    SILOG(webkit,warning,"Blitting to "<<rect.top()<<" "<<rect.left()<<" "<<rect.width()<<" "<<rect.height());
+                    SILOG(webkit,warning,"Blitting to "<<rect.left()<<","<<rect.top()<<" - "<<rect.right()<<","<<rect.bottom());
                     viewTexture->getBuffer()->blit(where->second->getBuffer(),
                                                    Ogre::Box(0,0,rect.width(),rect.height()),
                                                    Ogre::Box(rect.left(),rect.top(),rect.right(),rect.bottom()));
