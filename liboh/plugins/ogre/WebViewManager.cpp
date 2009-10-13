@@ -118,6 +118,9 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView = createWebView("xahoo", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
         mychromeWebView->loadURL("http://www.adobe.com/aboutadobe/contact.html");
         mychromeWebView->setTransparent(true);
+        mychromeWebView = createWebView("GoOGLE", 800, 600, OverlayPosition(RP_TOPRIGHT), false, 70);
+        mychromeWebView->loadURL("http://www.google.com/");
+        mychromeWebView->setTransparent(false);
 #endif
 }
 

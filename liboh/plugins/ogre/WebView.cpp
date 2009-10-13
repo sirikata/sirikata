@@ -1011,8 +1011,15 @@ void WebView::onCancelUnload(Berkelium::Window*) {
 void WebView::onCrashed(Berkelium::Window*) {
     SILOG(webview,debug,"onCrashed");
 }
-void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*) {
+void WebView::onResponsive(Berkelium::Window*) {
+    SILOG(webview,debug,"onResponsive");
+}
+void WebView::onUnresponsive(Berkelium::Window*) {
+    SILOG(webview,debug,"onUnresponsive");
+}
+void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     SILOG(webview,debug,"onCreatedWindow");
+    delete newwin;
 }
 
 void WebView::onPaintPluginTexture(

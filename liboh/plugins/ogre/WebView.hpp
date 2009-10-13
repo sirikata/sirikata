@@ -472,6 +472,8 @@ namespace Graphics {
         void onBeforeUnload(Berkelium::Window*, bool*);
         void onCancelUnload(Berkelium::Window*);
         void onCrashed(Berkelium::Window*);
+        void onResponsive(Berkelium::Window*);
+        void onUnresponsive(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
 
     /** Linux only. uses an OpenGL texture.
