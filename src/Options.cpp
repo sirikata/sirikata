@@ -119,8 +119,6 @@ void InitOptions() {
       .addOption(new OptionValue(OSEG,OSEG_OPTION_LOC,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
 
       .addOption(new OptionValue(OSEG_UNIQUE_CRAQ_PREFIX,"G",Sirikata::OptionValueType<String>(),"Specifies a unique character prepended to Craq lookup calls.  Note: takes in type string.  Will only select the first character in the string.  Also note that it acceptable values range from g to z, and are case sensitive."))
-
-
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
         .addOption(new OptionValue(NOISE, "false", Sirikata::OptionValueType<bool>(), "If true, will generate noise packets between servers to fill buffers."))
         .addOption(new OptionValue(LOC, "oracle", Sirikata::OptionValueType<String>(), "Type of location service to run."))
@@ -131,7 +129,14 @@ void InitOptions() {
         .addOption(new OptionValue("cseg-service-host", "meru00", Sirikata::OptionValueType<String>(), "Hostname of machine running the CSEG service (running with --cseg=distributed)"))
         .addOption(new OptionValue("cseg-service-tcp-port", "2234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
         .addOption(new OptionValue("cseg-server-ll-port", "3234", Sirikata::OptionValueType<uint16>(), "Port where CSEG servers can be contacted for lower-tree requests."))
-        
+        .addOption(new OptionValue("num-cseg-servers", "1", Sirikata::OptionValueType<uint16>(), "Number of CSEG servers for the distributed implementation."))        
+
+        .addOption(new OptionValue("cseg-uses-world-pop", "false", Sirikata::OptionValueType<bool>(), "If true, CSEG uses the world population data to create the BSP tree."))
+        .addOption(new OptionValue("cseg-world-width", "8640", Sirikata::OptionValueType<uint32>(), "The number of cells across the width of the world population dataset."))
+        .addOption(new OptionValue("cseg-world-height", "3432", Sirikata::OptionValueType<uint32>(), "The number of cells across the height of the world population dataset."))
+        .addOption(new OptionValue("cseg-max-leaf-population", "800", Sirikata::OptionValueType<uint32>(), "The maximum number of avatars/people at the leaf of the BSP tree."))
+      .addOption(new OptionValue("cseg-population-density-file", "glds00ag.asc", Sirikata::OptionValueType<String>(), "The file containing the population density numbers."))
+
       ;
 }
 

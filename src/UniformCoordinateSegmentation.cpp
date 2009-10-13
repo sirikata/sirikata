@@ -87,16 +87,10 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
 
     std::istringstream is(layoutAsStr);
     is >> vec;
-
-
-    std::cout << vec.toString() << std::endl;
-
-
+    
     LayoutChangeEntry lce;
     lce.time = time_val;
     lce.layout = vec;
-
-
 
     mLayoutChangeEntries.push_back(lce);
   }

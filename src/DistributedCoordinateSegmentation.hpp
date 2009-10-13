@@ -50,21 +50,7 @@ typedef struct ServerAvailability  {
 
 } ServerAvailability;
 
-typedef struct WorldRegion {
-  BoundingBox3f mBoundingBox;
-  double density;
 
-  WorldRegion() {
-    density = 0;
-    mBoundingBox = BoundingBox3f();
-  }
-
-  WorldRegion(const WorldRegion& wr) {
-    density = wr.density;
-    mBoundingBox = wr.mBoundingBox;
-  }
-
-} WorldRegion;
 
 typedef struct SegmentationChangeListener {
   char host[255];
@@ -126,19 +112,7 @@ private:
 
 
 
-    int mWorldWidth;
-    int mWorldHeight;
-    int mNumRegions;
-
-    int mBiggestDepth;
-    BoundingBox3f mRectangle1;
-    BoundingBox3f mRectangle2;
-
-    BoundingBox3f mIntersect1;
-    BoundingBox3f mIntersect2;
-
-    WorldRegion* mTempRegionList1;
-    WorldRegion* mTempRegionList2;
+    
 
 
     std::map<String, SegmentedRegion*> mHigherLevelTrees;
@@ -146,15 +120,12 @@ private:
 
     int mAvailableCSEGServers;
 
-    int* mHistogram;
-    void setupRegionBoundaries(WorldRegion* regionList);
-
+    
     void accept_handler();
 
     void acceptLLTreeRequestHandler();
 
-    void constructBSPTree(SegmentedRegion& bspTree, WorldRegion* regionList, int listLength, bool makeHorizontalCut, int depth);
-
+    
     void generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar);
 
     ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, const BoundingBox3f& boundingBox);
@@ -167,7 +138,7 @@ private:
 
     ServerIDMap *  mSidMap;
 
-    int mTotalLeaves;
+   
 
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;
     std::map<ServerID, BoundingBoxList > mLowerTreeServerRegionMap;
