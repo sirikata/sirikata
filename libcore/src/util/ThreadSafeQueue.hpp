@@ -60,11 +60,12 @@ SIRIKATA_EXPORT void condDestroy(Condition*oldcond);
 }
 /// A queue of any type that has thread-safe push() and pop() functions.
 template <typename T> class ThreadSafeQueue {
-private:
+protected:
 	typedef std::deque<T> ListType;
-	ListType mList;
     ThreadSafeQueueNS::Lock* mLock;
+	ListType mList;
     ThreadSafeQueueNS::Condition* mCond;
+private:
     /**
      * Private function to copy a ThreadSafeQueue to another
      * Must pick a particular order, in this case pointer order, to acquire the locks
@@ -175,12 +176,17 @@ public:
         ThreadSafeQueueNS::unlock(mLock);
     }
 
+    void popAll(std::deque<T> *popResults) {
+        popResults->resize(0);
+        swap(*popResults);
+    }
+
 	/**
 	 * Pushes value onto the queue
 	 *
 	 * @param value  is a new'ed value (you must not keep a reference)
 	 */
-	void push(T value) {
+	void push(const T &value) {
         ThreadSafeQueueNS::lock(mLock);
         try {
             mList.push_back(value);

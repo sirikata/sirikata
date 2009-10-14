@@ -41,5 +41,8 @@ void Stream::ignoreConnectionStatus(Stream::ConnectionStatus status, const std::
 bool Stream::ignoreBytesReceived(const Chunk&c) {
     return true;
 }
+void Stream::ignoreReadySend() {
+    
+}
 
 } }

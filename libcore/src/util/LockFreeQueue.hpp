@@ -244,7 +244,18 @@ public:
     void blockingPop(T &item) {
     	throw std::runtime_error(std::string("Blocking Pop not implemented!!!"));
     }
-
+    void swap(std::deque<T>&swapWith){
+        if (!swapWith.empty())
+            throw std::runtime_error(std::string("Trying to swap with a nonempty queue"));            
+        popAll(&swapWith);
+    }
+    void popAll(std::deque<T>*toPop) {
+        assert (toPop->empty());
+        T value;
+        while (pop(value)){
+            toPop->push(value);
+        }
+    }
     bool probablyEmpty() {
         volatile Node* formerHead = mHead;
         if (formerHead) {

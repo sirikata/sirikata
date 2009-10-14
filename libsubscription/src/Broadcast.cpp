@@ -59,7 +59,8 @@ public:
                                             Network::Stream::SetCallbacks&setCallbacks) {
         thus->mStream=stream;
         setCallbacks(std::tr1::bind(cb,thus,_1,_2),
-                     &Network::Stream::ignoreBytesReceived);
+                     &Network::Stream::ignoreBytesReceived,
+                     &Network::Stream::ignoreReadySend);
         
     }
     static void setBroadcastStreamCallbacksShared(const std::tr1::shared_ptr<Broadcast::BroadcastStream>&thus,
@@ -71,7 +72,8 @@ public:
         std::tr1::weak_ptr<Broadcast::BroadcastStream> bs(thus);
         thus->mStream=stream;
         setCallbacks(std::tr1::bind(cb,bs,_1,_2),
-                     &Network::Stream::ignoreBytesReceived);
+                     &Network::Stream::ignoreBytesReceived,
+                     &Network::Stream::ignoreReadySend);
     
     }
 };
@@ -103,7 +105,8 @@ std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroad
             (topLevelStream=tlstemp)->connect(addy,
                                               &Network::Stream::ignoreSubstreamCallback,
                                               &Network::Stream::ignoreConnectionStatus,
-                                              &Network::Stream::ignoreBytesReceived);
+                                              &Network::Stream::ignoreBytesReceived,
+                                              &Network::Stream::ignoreReadySend);
             *weak_topLevelStream=tlstemp;
         }
         std::tr1::shared_ptr<Broadcast::BroadcastStream> bs(new BroadcastStream(topLevelStream,NULL));
@@ -142,7 +145,7 @@ Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address
         if ((topLevelStream=weak_topLevelStream->lock())) {
         }else{
             std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getDefaultConstructor()(mIOService));
-            (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionStatus,&Network::Stream::ignoreBytesReceived);
+            (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionStatus,&Network::Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
             *weak_topLevelStream=tlstemp;
         }
         newBroadcastStream=topLevelStream->clone(std::tr1::bind(&BroadcastStreamCallbacks::setBroadcastStreamCallbacks,

@@ -63,7 +63,7 @@ void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSo
     //Turn on the information that the queue is being checked and this means that further pushes to the queue may not be heeded if the queue happened to be empty
     mSendingStatus+=QUEUE_CHECK_FLAG;
     std::deque<Chunk*>toSend;
-    mSendQueue.swap(toSend);
+    mSendQueue.popAll(&toSend);
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
         //if there are no packets in the queue, some other send() operation will need to take the torch to send further packets
@@ -234,7 +234,7 @@ void ASIOSocketWrapper::retryQueuedSend(const std::tr1::shared_ptr<MultiplexedSo
                 //then this thread should take the torch, check the queue and if not empty be willing to send
                 mSendingStatus+=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG-1);
                 std::deque<Chunk*>toSend;
-                mSendQueue.swap(toSend);
+                mSendQueue.popAll(&toSend);
                 if (toSend.empty()) {//the chunk that we put on the queue must have been sent by someone else
                     //nothing to send, let another thread take up the torch if something was placed there by it
                     mSendingStatus-=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG);
@@ -288,7 +288,8 @@ void ASIOSocketWrapper::destroySocket() {
 }
 
 
-void ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk) {
+bool ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force) {
+    bool retval=true;
     TCPSSTLOG(this,"raw",&*chunk->begin(),chunk->size(),false);
     uint32 current_status=++mSendingStatus;
     if (current_status==1) {//we are teh chosen thread
@@ -296,13 +297,16 @@ void ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&pa
         sendToWire(parentMultiSocket, chunk);
     }else {//if someone else is possibly sending a packet
         //push the packet on the queue
-        mSendQueue.push(chunk);
+        retval=mSendQueue.push(chunk, force);
         current_status=--mSendingStatus;
-        //the packet is out of our hands now...
-        //but the other thread could just have been finishing up and we have missed the send
-        //this is our opportunity to take up the torch and send if our packet is still there
-        retryQueuedSend(parentMultiSocket,current_status);
+        if (retval) {
+            //the packet is out of our hands now...
+            //but the other thread could just have been finishing up and we have missed the send
+            //this is our opportunity to take up the torch and send if our packet is still there
+            retryQueuedSend(parentMultiSocket,current_status);
+        }//else delete chunk; <-- deleted by sender
     }
+    return retval;
 }
 Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid){
     const unsigned int max_size=16;
@@ -330,7 +334,7 @@ void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<Multiplexe
     
     Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
     copyHeader(&*headerData->begin(),value,numConnections);
-    rawSend(parentMultiSocket,headerData);
+    rawSend(parentMultiSocket,headerData,true);
 }
 
 } }

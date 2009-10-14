@@ -657,7 +657,7 @@ HostedObject::PerSpaceData& HostedObject::cloneTopLevelStream(const SpaceID&sid,
                              std::tr1::bind(&PrivateCallbacks::receivedRoutableMessage,
                                             getWeakPtr(),
                                             sid,
-                                            _1))))).first;
+                                            _1),&Network::Stream::ignoreReadySend)))).first;
     return iter->second;
 }
 

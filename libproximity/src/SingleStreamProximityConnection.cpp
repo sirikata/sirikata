@@ -98,7 +98,8 @@ SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::
         mConnectionStream->connect(addy,
                                    &Network::Stream::ignoreSubstreamCallback,
                                    std::tr1::bind(&connectionCallback,this,_1,_2),
-                                   &Network::Stream::ignoreBytesReceived);
+                                   &Network::Stream::ignoreBytesReceived,
+                                   &Network::Stream::ignoreReadySend);
     
 }
 void SingleStreamProximityConnection::streamDisconnected() {
@@ -136,7 +137,7 @@ SingleStreamProximityConnection::~SingleStreamProximityConnection() {
 void SingleStreamProximityConnection::constructObjectStream(const ObjectReference&obc) {
     mObjectStreams[obc]
         = mConnectionStream->clone(&Network::Stream::ignoreConnectionStatus,
-                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1));
+                                   std::tr1::bind(&readProximityMessage,std::tr1::weak_ptr<Network::Stream>(mConnectionStream), &mParent, obc,_1),&Network::Stream::ignoreReadySend);
 }
 void SingleStreamProximityConnection::deleteObjectStream(const ObjectReference&obc) {
     ObjectStreamMap::iterator where=mObjectStreams.find(obc);

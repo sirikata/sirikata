@@ -97,7 +97,8 @@ public:
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                         std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1));
+                         std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1),
+                         &Network::Stream::ignoreReadySend);
             ++newid;
             runRoutine(newStream);
         }else {
@@ -111,7 +112,8 @@ public:
             using std::tr1::placeholders::_1;
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
-                         std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1));
+                         std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1),
+                         &Network::Stream::ignoreReadySend);
             ++newid;
             runRoutine(newStream);
         }
@@ -361,7 +363,8 @@ public:
         s->connect(addy,
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
-                   std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1));
+                   std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1),
+                   &Network::Stream::ignoreReadySend);
         --id;
     }
     void testInt30Serialization(void) {
@@ -439,13 +442,14 @@ public:
         
     }
     static void noopSubstream(Stream *stream, Stream::SetCallbacks&scb) {
-        scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived);
+        scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
     }
     void testSubstream(Stream* stream, Stream::SetCallbacks&scb) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
-            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1));
+            std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1),
+            &Network::Stream::ignoreReadySend);
     }
     void testConnectSend (void )
     {

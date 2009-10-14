@@ -127,12 +127,15 @@ public:
     public:
         Stream::ConnectionCallback mConnectionCallback;
         Stream::BytesReceivedCallback mBytesReceivedCallback;
+        Stream::ReadySendCallback mReadySendCallback;
         std::tr1::weak_ptr<AtomicValue<int> > mSendStatus;
         Callbacks(const Stream::ConnectionCallback &connectionCallback,
                   const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                  const Stream::ReadySendCallback &readySendCallback,
                   const std::tr1::weak_ptr<AtomicValue<int> >&sendStatus):
             mConnectionCallback(connectionCallback),
             mBytesReceivedCallback(bytesReceivedCallback),
+            mReadySendCallback(readySendCallback),
             mSendStatus(sendStatus){
         }
     };
@@ -144,17 +147,27 @@ public:
     ///There is room on a downstream queue and futher sends should be retried
     virtual void readyRead();
     ///Implementation of send interface
-    virtual void send(MemoryReference, StreamReliability);
+#ifndef _WIN32
+    __attribute__ ((warn_unused_result))
+#endif
+    virtual bool send(MemoryReference, StreamReliability);
     ///Implementation of send interface
-    virtual void send(MemoryReference, MemoryReference, StreamReliability);
+#ifndef _WIN32
+    __attribute__ ((warn_unused_result))
+#endif
+    virtual bool send(MemoryReference, MemoryReference, StreamReliability);
     ///Implementation of send interface
-    virtual void send(const Chunk&data,StreamReliability);
+#ifndef _WIN32
+    __attribute__ ((warn_unused_result))
+#endif
+    virtual bool send(const Chunk&data,StreamReliability);
     ///Implementation of connect interface
     virtual void connect(
         const Address& addy,
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback);
+        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReadySendCallback&readySend);
     /**
      * Will specify all callbacks for the first successful stream and allow this stream to be cloned
      * The stream is immediately active and may have bytes sent on it immediately. 
@@ -163,7 +176,8 @@ public:
     virtual void prepareOutboundConnection(
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback);
+        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReadySendCallback&readySend);
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
      * A connectionCallback specified in prepareConnection will be called as soon as connection has succeeded or failed
@@ -179,7 +193,8 @@ public:
     virtual Stream* clone(const SubstreamCallback&cb);
     ///Creates a new substream on this connection. This is for when the callbacks do not require the Stream*
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
-                          const BytesReceivedCallback&chunkReceivedCallback);
+                          const BytesReceivedCallback&chunkReceivedCallback,
+                          const ReadySendCallback&readySendCallback);
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
     ~TCPStream();

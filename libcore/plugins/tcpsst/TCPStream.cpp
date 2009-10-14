@@ -55,13 +55,13 @@ void TCPStream::readyRead() {
                                               mpsocket));
     
 }
-void TCPStream::send(const Chunk&data, StreamReliability reliability) {
-    send(MemoryReference(data),reliability);
+bool TCPStream::send(const Chunk&data, StreamReliability reliability) {
+    return send(MemoryReference(data),reliability);
 }
-void TCPStream::send(MemoryReference firstChunk, StreamReliability reliability) {
-    send(firstChunk,MemoryReference::null(),reliability);
+bool TCPStream::send(MemoryReference firstChunk, StreamReliability reliability) {
+    return send(firstChunk,MemoryReference::null(),reliability);
 }
-void TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, StreamReliability reliability) {
+bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, StreamReliability reliability) {
     MultiplexedSocket::RawRequest toBeSent;
     // only allow 3 of the four possibilities because unreliable ordered is tricky and usually useless
     switch(reliability) {
@@ -111,8 +111,7 @@ void TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
     //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);
     if ((sendStatus&(3*SendStatusClosing))==0) {///max of 3 entities can close the stream at once (FIXME: should implement |= on atomic ints), but as of now at most the recv thread the sender responsible and a user close() is all that is allowed at once...so 3 is fine)
-        MultiplexedSocket::sendBytes(mSocket,toBeSent);
-        didsend=true;
+        didsend=MultiplexedSocket::sendBytes(mSocket,toBeSent);
     }
     //relinquish control to a potential closer
     --(*mSendStatus);
@@ -121,6 +120,7 @@ void TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
         delete toBeSent.data;
         SILOG(tcpsst,debug,"printing to closed stream id "<<getID().read());
     }
+    return didsend;
 }
 ///This function waits on the sendStatus clearing up so no outstanding sends are being made (and no further ones WILL be made cus of the SendStatusClosing flag that is on
 bool TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
@@ -158,12 +158,14 @@ TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0))
 void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
-                        const BytesReceivedCallback&bytesReceivedCallback) {
+                        const BytesReceivedCallback&bytesReceivedCallback,
+                        const ReadySendCallback&readySendCallback) {
     mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
     *mSendStatus=0;
     mID=StreamID(1);
     mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
                                                 bytesReceivedCallback,
+                                                readySendCallback,
                                                 mSendStatus));
     mSocket->connect(addy,NUM_SIMULANEOUS_CONNECTIONS);
 }
@@ -171,12 +173,14 @@ void TCPStream::connect(const Address&addy,
 void TCPStream::prepareOutboundConnection(
                         const SubstreamCallback &substreamCallback,
                         const ConnectionCallback &connectionCallback,
-                        const BytesReceivedCallback&bytesReceivedCallback) {
+                        const BytesReceivedCallback&bytesReceivedCallback,
+                        const ReadySendCallback&readySendCallback) {
     mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
     *mSendStatus=0;
     mID=StreamID(1);
     mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
                                                 bytesReceivedCallback,
+                                                readySendCallback,
                                                 mSendStatus));
     mSocket->prepareConnect(NUM_SIMULANEOUS_CONNECTIONS);
 }
@@ -203,7 +207,8 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
 }
 
 Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
-                         const BytesReceivedCallback&chunkReceivedCallback) { 
+                         const BytesReceivedCallback&chunkReceivedCallback,
+                         const ReadySendCallback&readySendCallback) { 
     if (!mSocket) {
         return NULL;
     }
@@ -213,7 +218,7 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
     StreamID newID=mSocket->getNewID();
     retval->mID=newID;
     TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
-    setCallbackFunctor(connectionCallback,chunkReceivedCallback);
+    setCallbackFunctor(connectionCallback,chunkReceivedCallback, readySendCallback);
     return retval;
 }
 

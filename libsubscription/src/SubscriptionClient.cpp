@@ -134,7 +134,8 @@ void SubscriptionClient::State::setStream(const std::tr1::shared_ptr<State> thus
                                                           _2),
                                            std::tr1::bind(&State::bytesReceived,
                                                           weak_thus,
-                                                          _1)));
+                                                          _1),
+                                           &Network::Stream::ignoreReadySend));
     thus->mStream=clonedStream;
     if (serializedStream.length()) {//if the message has any substance, send it
         thus->mStream->send(MemoryReference(serializedStream),Network::ReliableUnordered);
@@ -318,7 +319,8 @@ std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
             topLevelStream->connect(address,
                                     &Network::Stream::ignoreSubstreamCallback,
                                     &Network::Stream::ignoreConnectionStatus,
-                                    &Network::Stream::ignoreBytesReceived);
+                                    &Network::Stream::ignoreBytesReceived,
+                                    &Network::Stream::ignoreReadySend);
             std::tr1::shared_ptr<State> state(new State(subscription.update_period(),
                                                                   address,
                                                                   subscription.broadcast_name(),

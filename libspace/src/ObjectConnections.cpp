@@ -69,7 +69,8 @@ void ObjectConnections::newStreamCallback(Network::Stream*stream, Network::Strea
         mTemporaryStreams.insert(TemporaryStreamMultimap::value_type(temporaryId,data));//record this stream to the mTemporaryStreams
         using std::tr1::placeholders::_1;    using std::tr1::placeholders::_2;
         callbacks(std::tr1::bind(&ObjectConnections::connectionCallback,this,stream,_1,_2),
-                  std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1));
+                  std::tr1::bind(&ObjectConnections::bytesReceivedCallback,this,stream,_1),
+                  &Network::Stream::ignoreReadySend);
     }else{
         //whole object host has disconnected
     }

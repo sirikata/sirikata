@@ -54,7 +54,8 @@ void ProxBridge::newObjectStreamCallback(Network::Stream*newStream, Network::Str
         std::tr1::shared_ptr<Network::Stream> stream(newStream);
         setCallbacks(
             std::tr1::bind(&ProxBridge::disconnectionCallback,this,stream,ref,_1,_2),
-            std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1));
+            std::tr1::bind(&ProxBridge::incomingMessage,this,stream,ref,_1),
+            &Network::Stream::ignoreReadySend);
     }else {
         //whole object host has disconnected;
     }

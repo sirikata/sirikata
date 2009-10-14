@@ -39,7 +39,8 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOConnectAndHandshake.hpp"
 #include "TCPSetCallbacks.hpp"
-
+#define ASIO_SEND_BUFFER_SIZE 1440
+#define MAX_ASIO_ENQUEUED_SEND_SIZE 0
 namespace Sirikata { namespace Network {
 
 
@@ -78,7 +79,7 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
                 newRequests.swap(mNewRequests);
             }
             for (size_t i=0,ie=newRequests.size();i<ie;++i) {
-                sendBytesNow(getSharedPtr(),newRequests[i]);
+                sendBytesNow(getSharedPtr(),newRequests[i], true/*force since we promised to send them out*/);
             }
             
         }
@@ -90,7 +91,7 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
             } else {
                 mSocketConnectionPhase=WAITCONNECTING;
                 for (size_t i=0,ie=mNewRequests.size();i<ie;++i) {
-                    sendBytesNow(getSharedPtr(),mNewRequests[i]);
+                    sendBytesNow(getSharedPtr(),mNewRequests[i],true);
                 }
                 mNewRequests.clear();
                 mSocketConnectionPhase=CONNECTED;
@@ -107,28 +108,32 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
 }
 
 size_t MultiplexedSocket::leastBusyStream() {
-        ///FIXME look at bytes to be sent or recently used, etc
-        return rand()%mSockets.size();
+    
+    ///FIXME look at bytes to be sent or recently used, etc
+    return rand()%mSockets.size();
  }
 float MultiplexedSocket::dropChance(const Chunk*data,size_t whichStream) {
     return .25;
 }
 
-void MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
+bool MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data, bool force) {
     TCPSSTLOG(this,"sendnow",&*data.data->begin(),data.data->size(),false);
     TCPSSTLOG(this,"sendnow","\n",1,false);
     static Stream::StreamID::Hasher hasher;
     if (data.originStream==Stream::StreamID()) {
         unsigned int socket_size=(unsigned int)thus->mSockets.size();
         for(unsigned int i=1;i<socket_size;++i) {                
-            thus->mSockets[i].rawSend(thus,new Chunk(*data.data));
+            thus->mSockets[i].rawSend(thus,new Chunk(*data.data),true);
         }
-        thus->mSockets[0].rawSend(thus,data.data);
+        thus->mSockets[0].rawSend(thus,data.data,true);
+        return true;
     }else {
         size_t whichStream=data.unordered?thus->leastBusyStream():hasher(data.originStream)%thus->mSockets.size();
         if (data.unreliable==false||rand()/(float)RAND_MAX>thus->dropChance(data.data,whichStream)) {
-            thus->mSockets[whichStream].rawSend(thus,data.data);
-        }        
+            return thus->mSockets[whichStream].rawSend(thus,data.data,force);
+        }else {
+            return true;
+        }
     }
 }
 
@@ -143,9 +148,10 @@ void MultiplexedSocket::closeStream(const std::tr1::shared_ptr<MultiplexedSocket
 }
 
 
-void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
+bool MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
+    bool retval=false;
     if (thus->mSocketConnectionPhase==CONNECTED) {
-        sendBytesNow(thus,data);
+        retval=sendBytesNow(thus,data,false);
     }else {
         bool lockCheckConnected=false;
         {
@@ -157,19 +163,20 @@ void MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
                 //FIXME is this the correct thing to do?
                 TCPSSTLOG(this,"sendnvr",&*data.data->begin(),data.data->size(),false);                
                 TCPSSTLOG(this,"sendnvr","\n",1,false);
-                delete data.data;
             }else {
                 //with the connectionMutex acquired, no socket is allowed to be in the mSocketConnectionPhase
                 assert(thus->mSocketConnectionPhase==PRECONNECTION);
                 TCPSSTLOG(this,"sendl8r",&*data.data->begin(),data.data->size(),false);
                 TCPSSTLOG(this,"sendl8r","\n",1,false);
                 thus->mNewRequests.push_back(data);
+                retval=true;
             }
         }
         if (lockCheckConnected) {
-            sendBytesNow(thus,data);
+            retval=sendBytesNow(thus,data,false);
         }
     }
+    return retval;
 }
 
 MultiplexedSocket::SocketConnectionPhase MultiplexedSocket::addCallbacks(const Stream::StreamID&sid, 
@@ -199,7 +206,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vec
      mHighestStreamID(0) {
     mSocketConnectionPhase=PRECONNECTION;
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
-        mSockets.push_back(ASIOSocketWrapper(sockets[i]));
+        mSockets.push_back(ASIOSocketWrapper(sockets[i],MAX_ASIO_ENQUEUED_SEND_SIZE,ASIO_SEND_BUFFER_SIZE));
     }
 }
 void MultiplexedSocket::sendAllProtocolHeaders(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const UUID&syncedUUID) {
@@ -370,9 +377,9 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets) {
     mSocketConnectionPhase=PRECONNECTION;
     unsigned int oldSize=(unsigned int)mSockets.size();
     if (numSockets>mSockets.size()) {
-        mSockets.resize(numSockets);
         for (unsigned int i=oldSize;i<numSockets;++i) {
-            mSockets[i].createSocket(getASIOService());
+            mSockets.push_back(ASIOSocketWrapper(MAX_ASIO_ENQUEUED_SEND_SIZE,ASIO_SEND_BUFFER_SIZE));
+            mSockets.back().createSocket(getASIOService());
         }
     }
 }

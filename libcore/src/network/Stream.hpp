@@ -74,6 +74,8 @@ public:
     typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
     ///Callback type for when a full chunk of bytes are waiting on the stream. If false is returned, then the chunk is rejected and the stream becomes paused. Resume by calling readyRead()
     typedef std::tr1::function<bool(const Chunk&)> BytesReceivedCallback;
+    ///Callback type for when a send has failed in the past, but now the stream is ready to accept more bytes
+    typedef std::tr1::function<void()> ReadySendCallback;
     /**
      *  This class is passed into any newSubstreamCallback functions so they may 
      *  immediately setup callbacks for connetion events and possibly start sending immediate responses.     
@@ -86,7 +88,8 @@ public:
          * of a newly cloned or received stream. This allows bytes to be immediately sent off
          */
         virtual void operator()(const Stream::ConnectionCallback &connectionCallback,
-                                const Stream::BytesReceivedCallback &bytesReceivedCallback)=0;
+                                const Stream::BytesReceivedCallback &bytesReceivedCallback,
+                                const Stream::ReadySendCallback&readySendCallback)=0;
     };
     /**
      * The substreamCallback must call SetCallbacks' operator() to activate the stream
@@ -100,6 +103,8 @@ public:
     static void ignoreConnectionStatus(ConnectionStatus status,const std::string&reason);
     ///Simple example function to ignore incoming bytes on a connection
     static bool ignoreBytesReceived(const Chunk&);
+    ///Simple example function to ignore a ready-to-send response
+    static void ignoreReadySend();
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
      * The stream is immediately active and may have bytes sent on it immediately. 
@@ -109,7 +114,8 @@ public:
         const Address& addy,
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback)=0;
+        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReadySendCallback&readySendCallback)=0;
 
     /**
      * Will specify all callbacks for the first successful stream and allow this stream to be cloned
@@ -119,7 +125,8 @@ public:
     virtual void prepareOutboundConnection(
         const SubstreamCallback &substreamCallback,
         const ConnectionCallback &connectionCallback,
-        const BytesReceivedCallback&chunkReceivedCallback)=0;
+        const BytesReceivedCallback&chunkReceivedCallback,
+        const ReadySendCallback&readySendCallback)=0;
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
      * A connectionCallback specified in prepareConnection will be called as soon as connection has succeeded or failed
@@ -133,13 +140,14 @@ public:
     ///Makes this stream a clone of stream "s" if they are of the same type and immediately calls the callback 
     virtual Stream* clone(const SubstreamCallback&cb)=0;
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
-                          const BytesReceivedCallback&chunkReceivedCallback)=0;
+                          const BytesReceivedCallback&chunkReceivedCallback,
+                          const ReadySendCallback&readySendCallback)=0;
     ///tells the stream that downstream elements may accept further bytes after the stream has been paused
     virtual void readyRead()=0;
-    virtual void send(MemoryReference, StreamReliability)=0;
-    virtual void send(MemoryReference, MemoryReference, StreamReliability)=0;
+    virtual bool send(MemoryReference, StreamReliability)=0;
+    virtual bool send(MemoryReference, MemoryReference, StreamReliability)=0;
     ///Send a chunk of data to the receiver
-    virtual void send(const Chunk&data,StreamReliability)=0;
+    virtual bool send(const Chunk&data,StreamReliability)=0;
     ///close this stream: if it is the last stream, close the connection as well
     virtual void close()=0;
     virtual ~Stream(){};

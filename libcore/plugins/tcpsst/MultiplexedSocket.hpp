@@ -113,7 +113,7 @@ private:
      *  sends bytes to the network directly.
      *  assumes that the mSocketConnectionPhase in the CONNECTED state    
      */
-    static void sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
+    static bool sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data, bool force);
     /**
      * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
      * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
@@ -143,7 +143,7 @@ public:
      * Either sends or queues bytes in the data request depending on the connection state 
      * if the state is not connected then it must take a lock and place them on the mNewRequests queue
      */
-    static void sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
+    static bool sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
     /**
      * Adds callbacks onto the queue of callbacks-to-be-added
      * Returns true if the callbacks will be actually used or false if the socket is already disconnected

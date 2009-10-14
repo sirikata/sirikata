@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/UUID.hpp"
-
+#include "util/SizedThreadSafeQueue.hpp"
 namespace Sirikata { namespace Network {
 class ASIOSocketWrapper;
 class ASIOReadBuffer;
@@ -50,13 +50,14 @@ class ASIOSocketWrapper {
     /**
      * The queue of packets to send while an active async_send is doing its job
      */
-    ThreadSafeQueue<Chunk*>mSendQueue;
+    SizedThreadSafeQueue<Chunk*,SizedPointerResourceMonitor>mSendQueue;
 	enum {
 		ASYNCHRONOUS_SEND_FLAG=(1<<29),
 		QUEUE_CHECK_FLAG=(1<<30),
-		PACKET_BUFFER_SIZE=1400
+		
 	};
-    uint8 mBuffer[PACKET_BUFFER_SIZE];
+    size_t PACKET_BUFFER_SIZE;
+    uint8 *mBuffer;
 
     typedef boost::system::error_code ErrorCode;
     /**
@@ -116,11 +117,12 @@ class ASIOSocketWrapper {
 
 public:
 
-    ASIOSocketWrapper(TCPSocket* socket) :mSocket(socket),mSendingStatus(0){
+    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(socket),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
         //mPacketLogger.reserve(268435456);
     }
 
-    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0){
+    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0),mSendQueue(socket.getResourceMonitor()),PACKET_BUFFER_SIZE(socket.PACKET_BUFFER_SIZE),mBuffer(new uint8[socket.PACKET_BUFFER_SIZE]) {
+        
         //mPacketLogger.reserve(268435456);
     }
 
@@ -128,8 +130,11 @@ public:
         mSocket=socket.mSocket;
         return *this;
     }
-
-    ASIOSocketWrapper() :mSocket(NULL),mSendingStatus(0){
+    const SizedPointerResourceMonitor&getResourceMonitor()const{return mSendQueue.getResourceMonitor();}
+    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
+    }
+    ~ASIOSocketWrapper() {
+        delete []mBuffer;
     }
     void clearReadBuffer(){
         mReadBuffer=NULL;
@@ -156,7 +161,7 @@ public:
      * Sends the exact bytes contained within the typedeffed vector
      * \param chunk is the exact bytes to put on the network (including streamID and framing data)
      */
-    void rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk);
+    bool rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force);
 
     static Chunk*constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
     /**
@@ -164,7 +169,7 @@ public:
      *  To start with only stream disconnect and the ack thereof are allowed
      */
     void sendControlPacket(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid) {
-        rawSend(parentMultiSocket,constructControlPacket(code,sid));
+        rawSend(parentMultiSocket,constructControlPacket(code,sid),true);
     }
     /**
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
