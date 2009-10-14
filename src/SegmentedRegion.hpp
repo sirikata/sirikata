@@ -188,6 +188,42 @@ typedef struct SegmentationChangeMessage {
     type = SEGMENTATION_CHANGE;
     numEntries =0;
   }
+
+  uint32 serialize(uint8** buff) {
+    
+    int bufSize = sizeof(uint8_t) + sizeof(uint8_t);
+
+    for (int i=0; i<numEntries; i++) {
+      bufSize += sizeof(ServerID) + sizeof(uint32);
+      bufSize += changedSegments[i].listLength * sizeof(SerializedBBox);
+    }    
+
+    *buff = new uint8[bufSize];
+    printf("inside_serialize, buffer=%x, bufSize=%d\n", (*buff), bufSize);
+
+    uint8 offset = 0;
+
+    memcpy((*buff)+offset, &type, sizeof(uint8_t));
+    offset+=sizeof(uint8_t);
+    
+    memcpy((*buff)+offset, &numEntries, sizeof(uint8_t));
+    offset+=sizeof(uint8_t);
+
+    for (int i=0; i<numEntries; i++) {
+      memcpy((*buff)+offset, &changedSegments[i].serverID, sizeof(ServerID));
+      offset += sizeof(ServerID);
+
+      memcpy((*buff)+offset, &changedSegments[i].listLength, sizeof(uint32));
+      offset += sizeof(uint32);
+
+      memcpy((*buff)+offset, &changedSegments[i].bboxList, 
+	     changedSegments[i].listLength * sizeof(SerializedBBox));
+      offset += changedSegments[i].listLength * sizeof(SerializedBBox);
+    }
+
+    return bufSize;
+  }
+
 }__attribute__((__packed__)) SegmentationChangeMessage;
 
 typedef struct SegmentationListenMessage {

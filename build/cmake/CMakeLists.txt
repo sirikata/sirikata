@@ -268,6 +268,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
+  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
 

@@ -100,8 +100,6 @@ private:
     std::vector<SegmentationChangeListener> mSpacePeers;
     std::vector<ServerAvailability> mAvailableServers;
 
-
-
     boost::asio::io_service mIOService;  //creates an io service
     boost::shared_ptr<tcp::acceptor> mAcceptor;
     boost::shared_ptr<tcp::socket> mSocket;
@@ -109,17 +107,10 @@ private:
     boost::shared_ptr<tcp::acceptor> mLLTreeAcceptor;
     boost::shared_ptr<tcp::socket> mLLTreeAcceptorSocket;
 
-
-
-
-    
-
-
     std::map<String, SegmentedRegion*> mHigherLevelTrees;
     std::map<String, SegmentedRegion*> mLowerLevelTrees;
 
     int mAvailableCSEGServers;
-
     
     void accept_handler();
 
@@ -134,11 +125,17 @@ private:
 
     void ioServicingLoop();
 
+    void sendToAllCSEGServers(uint8* buffer, int buflen);
 
+    void sendToAllSpaceServers(uint8* buffer, int buflen);
 
+    uint32 getAvailableServerIndex();
+
+    void getRandomLeafParentSibling(SegmentedRegion** randomLeaf, 
+				    SegmentedRegion** sibling,
+				    SegmentedRegion** parent);
+      
     ServerIDMap *  mSidMap;
-
-   
 
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;
     std::map<ServerID, BoundingBoxList > mLowerTreeServerRegionMap;

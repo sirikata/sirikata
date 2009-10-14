@@ -267,51 +267,76 @@ uint32 DistributedCoordinateSegmentation::numServers() {
   //return count;
 }
 
-void DistributedCoordinateSegmentation::service() {
-  Time t = mContext->time;
-
-  if ( !GetOption("random-splits-merges")->as<bool>() ) {
-    return;
-  }
-
-  uint16_t availableSvrIndex = 65535;
-  ServerID availableServer;
+uint32 DistributedCoordinateSegmentation::getAvailableServerIndex() {
+  uint32 availableSvrIndex = INT_MAX;
+  
   for (uint32 i=0; i<mAvailableServers.size(); i++) {
     if (mAvailableServers[i].mAvailable == true) {
-      availableSvrIndex = i;
-      availableServer = mAvailableServers[i].mServer;
+      availableSvrIndex = i;      
       break;
     }
   }
 
+  return availableSvrIndex;
+}
+
+void DistributedCoordinateSegmentation::getRandomLeafParentSibling(SegmentedRegion** randomLeaf, 
+								   SegmentedRegion** sibling,
+								   SegmentedRegion** parent)
+{
+  int numLowerLevelTrees = rand() % mLowerLevelTrees.size();
+  int i=0;
+
+  printf("numLowerLevelTrees=%d\n", numLowerLevelTrees);
+
+  for (std::map<String, SegmentedRegion*>::iterator it=mLowerLevelTrees.begin();
+       it != mLowerLevelTrees.end();
+       it++, i++)
+  {
+    if (i == numLowerLevelTrees) {      
+
+      *randomLeaf = it->second->getRandomLeaf();
+
+      printf("*randomLeaf=%x\n", *randomLeaf);
+
+      *sibling = it->second->getSibling(*randomLeaf);
+      *parent = it->second->getParent(*randomLeaf);
+      
+      break;
+    }
+  }
+}
+
+void DistributedCoordinateSegmentation::service() {
+  Time t = mContext->time;
+
+  if ( !GetOption("random-splits-merges")->as<bool>()) {
+    return;
+  }
+
+  uint32 availableSvrIndex = getAvailableServerIndex();
+
+  if (availableSvrIndex == INT_MAX) 
+    return;
+
+  ServerID availableServer = mAvailableServers[availableSvrIndex].mServer;
+
   static bool splitAlready = false;
 
-  /* Do splits and merges every 30 seconds, except the first time, when its done
-     80 seconds after startup.
+  /* Do splits and merges every 15 seconds, except the first time, when its done
+     15 seconds after startup.
    */
-  static int duration = 80;
-  if (availableSvrIndex !=65535 && t - mLastUpdateTime > Duration::seconds(duration)) {
+  static int duration = 15;
+  if (t - mLastUpdateTime > Duration::seconds(duration)) {
     mLastUpdateTime = t;
-    duration = 30;
+    duration = 15;
 
-    int numLowerLevelTrees = rand() % mLowerLevelTrees.size();
-
-    int i=0;
     SegmentedRegion* randomLeaf = NULL;
     SegmentedRegion* sibling = NULL;
     SegmentedRegion* parent = NULL;
-    for (std::map<String, SegmentedRegion*>::iterator it=mLowerLevelTrees.begin();
-	 it != mLowerLevelTrees.end();
-	 it++, i++)
-    {
-      if (i == numLowerLevelTrees) {
-	randomLeaf = it->second->getRandomLeaf();
-	sibling = it->second->getSibling(randomLeaf);
-	parent = it->second->getParent(randomLeaf);
+    getRandomLeafParentSibling(&randomLeaf, &sibling, &parent);
 
-	break;
-      }
-    }
+    printf("randomLeaf=%x\n", randomLeaf);
 
     bool okToMerge = false;
     if ( sibling != NULL) {
@@ -322,7 +347,7 @@ void DistributedCoordinateSegmentation::service() {
     }
 
     std::vector<Listener::SegmentationInfo> segInfoVector;
-    if (okToMerge && rand() % 2 == 0) {
+    if (okToMerge && rand() % 2 == 0 &&false) {
       if (parent == NULL) {
 	//std::cout << "Parent of " << randomLeaf->mServer <<" not found.\n";
 	return;
@@ -348,7 +373,6 @@ void DistributedCoordinateSegmentation::service() {
       mWholeTreeServerRegionMap.erase(parent->mServer);
       mLowerTreeServerRegionMap.erase(rightChild->mServer);
 
-
       Listener::SegmentationInfo segInfo, segInfo2;
       segInfo.server = parent->mServer;
       segInfo.region = serverRegion(parent->mServer);
@@ -356,10 +380,7 @@ void DistributedCoordinateSegmentation::service() {
 
       segInfo2.server = rightChild->mServer;
       segInfo2.region = serverRegion(rightChild->mServer);
-      segInfoVector.push_back(segInfo2);
-
-
-      boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,this,segInfoVector));
+      segInfoVector.push_back(segInfo2);      
 
       delete rightChild;
       delete leftChild;
@@ -398,15 +419,10 @@ void DistributedCoordinateSegmentation::service() {
 
       segInfo2.server = availableServer;
       segInfo2.region = serverRegion(availableServer);
-      segInfoVector.push_back(segInfo2);
-
-      boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,this,segInfoVector));
+      segInfoVector.push_back(segInfo2);      
     }
 
-    for (uint i=0; i<segInfoVector.size(); i++) {
-      mWholeTreeServerRegionMap.erase(segInfoVector[i].server);
-      mLowerTreeServerRegionMap.erase(segInfoVector[i].server);
-    }
+    boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::notifySpaceServersOfChange,this,segInfoVector));    
   }
 }
 
@@ -415,7 +431,6 @@ void DistributedCoordinateSegmentation::receiveMessage(Message* msg) {
 
 void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::vector<Listener::SegmentationInfo> segInfoVector)
 {
-
   /* Initialize the serialized message to send over the wire */
   SegmentationChangeMessage* segChangeMsg = new SegmentationChangeMessage();
 
@@ -426,7 +441,7 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
 
   uint32 msgSize = 1+1;
 
-  /* Fill in the fields in the serialized message */
+  /* Fill in the fields in the message */
   for (unsigned int i=0 ;i<MAX_SERVER_REGIONS_CHANGED && i<segInfoVector.size(); i++) {
     SerializedSegmentChange* segmentChange = &segChangeMsg->changedSegments[i];
     segmentChange->serverID = segInfoVector[i].server;
@@ -444,104 +459,20 @@ void DistributedCoordinateSegmentation::notifySpaceServersOfChange(const std::ve
     msgSize += segInfoVector[i].region.size() * sizeof(SerializedBBox);
   }
 
+  uint8* buffer=NULL;
+  uint32 buflen = segChangeMsg->serialize(&buffer);
 
-  /* Send to other CSEG servers so they can forward the segmentation change message to
-     space servers connected to them. */
-  boost::asio::io_service io_service;
-  tcp::resolver resolver(io_service);
+  printf("buffer=%x\n", buffer);
 
-  for (int i = 1; i <= mAvailableCSEGServers; i++) {
-    if (i == mContext->id()) continue;
-
-    Address4* addy = mSidMap->lookupInternal(i);
-    if (addy == NULL) break;
-
-    struct in_addr ip_addr;
-    ip_addr.s_addr = addy->ip;
-
-    char* addr = inet_ntoa(ip_addr);
-    char port_str[10];
-    sprintf(port_str,"%d", (addy->port+10000));
-
-    tcp::resolver::query query(tcp::v4(), addr, port_str);
-
-    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-    tcp::resolver::iterator end;
-
-    //std::cout << "Calling " << addr << "@" << port_str << "!\n";
-    tcp::socket socket(io_service);
-    boost::system::error_code error = boost::asio::error::host_not_found;
-    while (error && endpoint_iterator != end)
-      {
-	socket.close();
-	socket.connect(*endpoint_iterator++, error);
-      }
-    if (error) {
-      std::cout << "Connection refused to " << addr << ":"<<port_str <<"\n";
-      continue;
-    }
-
-    //printf("msg size=%d\n", msgSize);
-    boost::asio::write(socket,
-		       boost::asio::buffer((void*) segChangeMsg, 2),
-		       boost::asio::transfer_all() );
-    for (uint8 i =0; i<segChangeMsg->numEntries; i++) {
-      SerializedSegmentChange* ssc= &segChangeMsg->changedSegments[i];
-
-      boost::asio::write(socket,
-                       boost::asio::buffer((void*) ssc,
-                                           8+sizeof(SerializedBBox)*ssc->listLength),
-					   boost::asio::transfer_all() );
-    }
-
-    socket.close();
-  }
+  /* Send to CSEG servers connected to this server.  */
+  sendToAllCSEGServers(buffer, buflen);
 
   /* Send to space servers connected to this server.  */
-  for (std::vector<SegmentationChangeListener>::const_iterator it=mSpacePeers.begin(); 
-       it!=mSpacePeers.end(); it++) 
-  {
-    SegmentationChangeListener scl = *it;
+  sendToAllSpaceServers(buffer, buflen);
 
-    char* addr = scl.host;
-    char port_str[20];
-    sprintf(port_str,"%d", scl.port);
+  printf("buffer=%x\n", buffer);
 
-    tcp::resolver::query query(tcp::v4(), addr, port_str);
-
-    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-    tcp::resolver::iterator end;
-
-    //std::cout << "Calling " << addr << "@" << port_str << "!\n";
-    tcp::socket socket(io_service);
-    boost::system::error_code error = boost::asio::error::host_not_found;
-    while (error && endpoint_iterator != end)
-      {
-	socket.close();
-	socket.connect(*endpoint_iterator++, error);
-      }
-    if (error) {
-      std::cout << "Connection refused to " << addr << ":"<<port_str <<"\n";
-      continue;
-    }
-
-    //printf("msg size=%d\n", msgSize);
-    boost::asio::write(socket,
-		       boost::asio::buffer((void*) segChangeMsg, 2),
-		       boost::asio::transfer_all() );
-    for (uint8 i =0; i<segChangeMsg->numEntries; i++) {
-      SerializedSegmentChange* ssc= &segChangeMsg->changedSegments[i];
-
-      boost::asio::write(socket,
-                       boost::asio::buffer((void*) ssc,
-                                           8+sizeof(SerializedBBox)*ssc->listLength),
-					   boost::asio::transfer_all() );
-    }
-
-    socket.close();
-  }
+  delete buffer;
 
   delete segChangeMsg;
 
@@ -665,12 +596,7 @@ void DistributedCoordinateSegmentation::accept_handler()
 	responseMessage->bboxList[i].serialize(bbox);
       }
 
-      responseMessage->listLength = bboxList.size();
-
-      //std::cout << "Response for " << message->serverID << " with bbox="
-      //          << bboxList[0] << "\n";
-
-      //memdump((uint8*) responseMessage, 1+4+bboxList.size()*sizeof(SerializedBBox));
+      responseMessage->listLength = bboxList.size();      
 
       boost::asio::write(*mSocket,
 			 boost::asio::buffer((void*) responseMessage, 1+4+bboxList.size()*sizeof(SerializedBBox)),
@@ -729,13 +655,13 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
       }
     }
 
-  //std::cout << "Received LLTree request: bytes=" << bytesReceived<<"\n" ;
+  std::cout << "Received LLTree request: bytes=" << bytesReceived<<"\n" ;
 
   if (bytesReceived >=1) {
     // Now decode the packet from the received buffer
     uint8 packetType = dataReceived[0];
 
-    if (packetType == 1 && bytesReceived >= 1+sizeof(SerializedVector)+sizeof(SerializedBBox)) {
+    if (packetType == LOOKUP_REQUEST && bytesReceived >= 1+sizeof(SerializedVector)+sizeof(SerializedBBox)) {
       SerializedVector serialVector;
       SerializedBBox serialBox;
       memcpy(&serialVector, dataReceived+1, sizeof(serialVector));
@@ -768,7 +694,7 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
 
        delete buffer;
     }
-    else if (packetType == 2 && bytesReceived >= 1+sizeof(ServerID)) {
+    else if (packetType == SERVER_REGION_REQUEST && bytesReceived >= 1+sizeof(ServerID)) {
       ServerID serverID;
       memcpy(&serverID, dataReceived + 1, sizeof(ServerID));
       BoundingBoxList boundingBoxList;
@@ -820,12 +746,15 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
       int offset = 2;
 
       for (int i=0; i<segChangeMessage->numEntries; i++) {
-	SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);
-	//segInfo.server = segChange->serverID;
-
+	SerializedSegmentChange* segChange = (SerializedSegmentChange*) (dataReceived+offset);	
+	BoundingBox3f bbox;
+	segChange->bboxList[0].deserialize(bbox);
+	std::cout << "segchange: serverID "<<segChange->serverID
+	          << " bbox: " << bbox << "\n";
+	
 	for (uint32 i=0; i<mAvailableServers.size(); i++) {
 	  if (mAvailableServers[i].mServer == segChange->serverID &&
-	      segChange->listLength==1 &&
+	      segChange->listLength>=1 &&
 	      segChange->bboxList[0].minX != segChange->bboxList[0].maxX)
           {
 	    mAvailableServers[i].mAvailable = false;
@@ -836,41 +765,9 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
 	offset += (4 + 4 + sizeof(SerializedBBox)*segChange->listLength);
       }
 
-      for (std::vector<SegmentationChangeListener>::const_iterator it=mSpacePeers.begin(); it!=mSpacePeers.end(); it++) {
-	SegmentationChangeListener scl = *it;
-
-
-	char* addr = scl.host;
-	char port_str[20];
-	sprintf(port_str,"%d", scl.port);
-
-	tcp::resolver::query query(tcp::v4(), addr, port_str);
-
-	tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-	tcp::resolver::iterator end;
-
-	//std::cout << "Calling " << addr << "@" << port_str << "!\n";
-	tcp::socket socket(io_service);
-	boost::system::error_code error = boost::asio::error::host_not_found;
-	while (error && endpoint_iterator != end)
-	  {
-	    socket.close();
-	    socket.connect(*endpoint_iterator++, error);
-	  }
-	if (error) {
-	  std::cout << "Connection refused to " << addr << ":"<<port_str <<"\n";
-	  continue;
-	}
-
-	boost::asio::write(socket,
-			   boost::asio::buffer((void*) dataReceived, bytesReceived),
-			   boost::asio::transfer_all() );
-	socket.close();
-      }
+      sendToAllSpaceServers(dataReceived, bytesReceived);      
     }
   }
-
 
   mLLTreeAcceptorSocket->close();
 
@@ -893,8 +790,8 @@ void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
 
 
 void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar) {
-
   int cutOffDepth = 3;
+
   if (depth>=cutOffDepth) {
     region->mServer =  (numLLTreesSoFar % mAvailableCSEGServers)+1;
 
@@ -986,7 +883,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
 
   uint16 dataSize = 1 + sizeof(serialVector) + sizeof(serialBox);
   uint8* buffer = new uint8[dataSize];
-  buffer[0] = 1; //1 means its a lookup request.
+  buffer[0] = LOOKUP_REQUEST;
   memcpy(buffer+1, &serialVector , sizeof(serialVector));
   memcpy(buffer+1+sizeof(serialVector), &serialBox, sizeof(serialBox));
 
@@ -1079,7 +976,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 
     uint16 dataSize = 1 + sizeof(ServerID);
     uint8* buffer = new uint8[dataSize];
-    buffer[0] = 2; //2 means its a serverRegion request.
+    buffer[0] = SERVER_REGION_REQUEST; 
     memcpy(buffer+1, &server_id , sizeof(ServerID));
 
     boost::asio::write(*socket,
@@ -1149,6 +1046,91 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
   }
 }
 
+void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int buflen) {
+  /* Send to other CSEG servers so they can forward the segmentation change message to
+     space servers connected to them. */
+  boost::asio::io_service io_service;
+  tcp::resolver resolver(io_service);
+
+  for (int i = 1; i <= mAvailableCSEGServers; i++) {
+    if (i == mContext->id()) continue;
+
+    Address4* addy = mSidMap->lookupInternal(i);
+    if (addy == NULL) break;
+
+    struct in_addr ip_addr;
+    ip_addr.s_addr = addy->ip;
+
+    char* addr = inet_ntoa(ip_addr);
+    char port_str[10];
+    sprintf(port_str,"%d", (addy->port+10000));
+
+    tcp::resolver::query query(tcp::v4(), addr, port_str);
+
+    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+    tcp::resolver::iterator end;
+
+    std::cout << "Calling " << addr << "@" << port_str << "!\n";
+    tcp::socket socket(io_service);
+    boost::system::error_code error = boost::asio::error::host_not_found;
+    while (error && endpoint_iterator != end)
+      {
+	socket.close();
+	socket.connect(*endpoint_iterator++, error);
+      }
+    if (error) {
+      std::cout << "Connection refused to " << addr << ":"<<port_str <<"\n";
+      continue;
+    }
+    
+    boost::asio::write(socket,
+		       boost::asio::buffer((void*) buffer, buflen),
+		       boost::asio::transfer_all() );
+
+    socket.close();
+  }
+}
+
+void DistributedCoordinateSegmentation::sendToAllSpaceServers(uint8* buffer, int buflen) {
+  boost::asio::io_service io_service;
+  tcp::resolver resolver(io_service);
+
+  for (std::vector<SegmentationChangeListener>::const_iterator it=mSpacePeers.begin(); 
+       it!=mSpacePeers.end(); it++) 
+  {
+    SegmentationChangeListener scl = *it;
+
+    char* addr = scl.host;
+    char port_str[20];
+    sprintf(port_str,"%d", scl.port);
+
+    tcp::resolver::query query(tcp::v4(), addr, port_str);
+
+    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+    tcp::resolver::iterator end;
+
+    std::cout << "Calling " << addr << "@" << port_str << "!\n";
+    tcp::socket socket(io_service);
+    boost::system::error_code error = boost::asio::error::host_not_found;
+    while (error && endpoint_iterator != end)
+      {
+	socket.close();
+	socket.connect(*endpoint_iterator++, error);
+      }
+    if (error) {
+      std::cout << "Connection refused to " << addr << ":"<<port_str <<"\n";
+      continue;
+    }
+    
+    boost::asio::write(socket,
+		       boost::asio::buffer((void*) buffer, buflen),
+		       boost::asio::transfer_all() );    
+
+    socket.close();
+  }
+}
 
 
 } // namespace CBR
