@@ -59,6 +59,8 @@ class ASIOSocketWrapper {
     size_t PACKET_BUFFER_SIZE;
     uint8 *mBuffer;
 
+    std::vector<Stream::StreamID> mPausedSendStreams;
+
     typedef boost::system::error_code ErrorCode;
     /**
      * This function sets the QUEUE_CHECK_FLAG and checks the sendQueue for additional packets to send out.
@@ -175,6 +177,7 @@ public:
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
      */
     void sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections);
-
+    void ioReactorThreadPauseStream(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Stream::StreamID sid);
+    void unpauseSendStreams(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket);
 };
 } }

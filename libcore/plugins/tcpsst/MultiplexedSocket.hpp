@@ -101,8 +101,9 @@ private:
     void ioReactorThreadCommitCallback(StreamIDCallbackPair& newcallback);
     ///reads the current list of id-callback pairs to the registration list and if setConectedStatus is set, changes the status of the overall MultiplexedSocket at the same time
     bool CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus=false);
-    ///Returns the least busy stream upon which unordered data may be piled
-    size_t leastBusyStream();
+
+    ///Returns the least busy stream upon which unordered data may be piled. It will always favor preferred stream if that is less busy
+    size_t leastBusyStream(size_t preferredStream);
     /**
      *chance in the current load that an unreliable packet may be dropped 
      * (due to busy queues, etc). 
@@ -224,7 +225,8 @@ public:
         hostDisconnectedCallback(which==mSockets.size()?0:which,error.message());
     }
 
-    static void ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&);
+    static void ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&, Stream::StreamID id);
+    static void ioReactorThreadPauseSend(const std::tr1::weak_ptr<MultiplexedSocket>&mp, Stream::StreamID id);
 
    /**
     * The a particular established a connection:
@@ -233,6 +235,7 @@ public:
     void connectedCallback() {
         connectionFailureOrSuccessCallback(CONNECTED,Stream::Connected);
     }
+    void unpauseSendStreams(const std::vector<Stream::StreamID>&toUnpause);
 /**
  *  Connect a newly constructed MultiplexedSocket to a given address
  * \param address is a protocol-agnostic string of endpoint and service ID

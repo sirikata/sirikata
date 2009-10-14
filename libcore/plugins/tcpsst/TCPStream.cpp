@@ -52,9 +52,20 @@ void TCPStream::readyRead() {
     std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
     IOServiceFactory::dispatchServiceMessage(&mSocket->getASIOService(),
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
-                                              mpsocket));
+                                              mpsocket,
+                                              mID));
     
 }
+
+void TCPStream::pauseSend() {
+    std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
+    IOServiceFactory::dispatchServiceMessage(&mSocket->getASIOService(),
+                               std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
+                                              mpsocket,
+                                              mID));
+    
+}
+
 bool TCPStream::send(const Chunk&data, StreamReliability reliability) {
     return send(MemoryReference(data),reliability);
 }

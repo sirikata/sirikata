@@ -146,6 +146,8 @@ public:
     virtual Stream*factory();
     ///There is room on a downstream queue and futher sends should be retried
     virtual void readyRead();
+    ///Send a readySendCallback notification when there is room on the send queue
+    virtual void pauseSend();
     ///Implementation of send interface
 #ifndef _WIN32
     __attribute__ ((warn_unused_result))

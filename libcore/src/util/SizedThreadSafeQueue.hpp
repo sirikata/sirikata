@@ -45,6 +45,9 @@ public:
     void reset() {
         mSize=0;
     }
+    uint32 filledSize() const {
+        return (uint32)mSize.read();
+    }
     SizedPointerResourceMonitor(uint32 limit):mSize(0),mLimit((int32)limit){
         assert(mLimit>=0);
     }

@@ -45,7 +45,20 @@ namespace Sirikata { namespace Network {
 
 
 boost::mutex MultiplexedSocket::sConnectingMutex; 
-
+void MultiplexedSocket::unpauseSendStreams(const std::vector<Stream::StreamID>&toUnpause) {
+    if (toUnpause.size()) { 
+        std::deque<StreamIDCallbackPair> registrations;
+        CommitCallbacks(registrations,MultiplexedSocket::CONNECTED,false);
+        for (std::vector<Stream::StreamID>::const_iterator i=toUnpause.begin(),ie=toUnpause.end();i!=ie;++i) {
+            CallbackMap::iterator where=mCallbacks.find(*i);
+            if (where!=mCallbacks.end()) {
+                where->second->mReadySendCallback();
+            }else {
+                SILOG(tcpsst,debug,"Stream  unpaused but no callback registered for it\n");//Call commit callbacks
+            }
+        }
+    }
+}
 
 void triggerMultiplexedConnectionError(MultiplexedSocket*socket,ASIOSocketWrapper*wrapper,const boost::system::error_code &error){
     socket->hostDisconnectedCallback(wrapper,error);
@@ -107,11 +120,14 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
     return statusChanged;
 }
 
-size_t MultiplexedSocket::leastBusyStream() {
-    
-    ///FIXME look at bytes to be sent or recently used, etc
-    return rand()%mSockets.size();
- }
+size_t MultiplexedSocket::leastBusyStream(size_t favored) {
+    size_t retval=rand()%mSockets.size();
+    if (favored==retval||mSockets[favored].getResourceMonitor().filledSize()<mSockets[retval].getResourceMonitor().filledSize()) {
+        return favored;
+    }
+    return retval;
+}
+
 float MultiplexedSocket::dropChance(const Chunk*data,size_t whichStream) {
     return .25;
 }
@@ -128,7 +144,10 @@ bool MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocke
         thus->mSockets[0].rawSend(thus,data.data,true);
         return true;
     }else {
-        size_t whichStream=data.unordered?thus->leastBusyStream():hasher(data.originStream)%thus->mSockets.size();
+        size_t whichStream=hasher(data.originStream)%thus->mSockets.size();
+        if (data.unordered) {
+            whichStream=thus->leastBusyStream(whichStream);
+        }
         if (data.unreliable==false||rand()/(float)RAND_MAX>thus->dropChance(data.data,whichStream)) {
             return thus->mSockets[whichStream].rawSend(thus,data.data,force);
         }else {
@@ -392,7 +411,7 @@ void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) 
     ASIOConnectAndHandshake::connect(headerCheck,address);
 }
 
-void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus){
+void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus, Stream::StreamID sid){
     std::tr1::shared_ptr<MultiplexedSocket> thus(weak_thus.lock());
     if (thus) {
         assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
@@ -401,6 +420,15 @@ void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<Multi
                 i->getReadBuffer()->ioReactorThreadResumeRead(thus);
             }
         }
+    }
+}
+void MultiplexedSocket::ioReactorThreadPauseSend(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus, Stream::StreamID sid) {
+    std::tr1::shared_ptr<MultiplexedSocket> thus(weak_thus.lock());
+    if (thus) {
+        static Stream::StreamID::Hasher hasher;
+        assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+        size_t whichStream=hasher(sid)%thus->mSockets.size();
+        thus->mSockets[whichStream].ioReactorThreadPauseStream(thus, sid);
     }
 }
 

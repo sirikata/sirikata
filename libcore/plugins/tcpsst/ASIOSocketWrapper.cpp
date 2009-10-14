@@ -57,6 +57,13 @@ void copyHeader(void * destination, const UUID&key, unsigned int num) {
                 UUID::static_size);
 }
 
+void ASIOSocketWrapper::unpauseSendStreams(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket) {
+    std::vector<Stream::StreamID> toUnpause;
+    toUnpause.swap(mPausedSendStreams);
+    parentMultiSocket->unpauseSendStreams(toUnpause);
+}
+
+
 void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket) {
     //When this function is called, the ASYNCHRONOUS_SEND_FLAG must be set because this particular context is the one finishing up a send
     assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
@@ -67,7 +74,7 @@ void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSo
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
         //if there are no packets in the queue, some other send() operation will need to take the torch to send further packets
-        mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);
+        mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);                    
     }else {
         //there are packets in the queue, now is the chance to send them out, so get rid of the queue check flag since further items *will* be checked from the queue as soon as the
         //send finishes
@@ -77,6 +84,8 @@ void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSo
         else
             sendToWire(parentMultiSocket,toSend);
     }
+    //unpause streams after lock released, in case callback takes a while to avoid deadlock
+    unpauseSendStreams(parentMultiSocket);
 }
 void ASIOSocketWrapper::sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",&*toSend->begin()+originalOffset,bytes_sent,error);
@@ -238,6 +247,8 @@ void ASIOSocketWrapper::retryQueuedSend(const std::tr1::shared_ptr<MultiplexedSo
                 if (toSend.empty()) {//the chunk that we put on the queue must have been sent by someone else
                     //nothing to send, let another thread take up the torch if something was placed there by it
                     mSendingStatus-=(QUEUE_CHECK_FLAG+ASYNCHRONOUS_SEND_FLAG);
+                    //unpause send streams after lock released, in case callback takes a while to avoid deadlock
+                    unpauseSendStreams(parentMultiSocket);
                     return;
                 }else {//the chunk may be on this queue, but we should promise folks to send it
                     //we just set the asynchronous send flag, so it shouuld still be set
@@ -251,6 +262,8 @@ void ASIOSocketWrapper::retryQueuedSend(const std::tr1::shared_ptr<MultiplexedSo
                         //if there are more packets to send, send those
                         sendToWire(parentMultiSocket,toSend);
                     }
+                    //unpause streams after lock released, in case callback takes a while to avoid deadlock
+                    unpauseSendStreams(parentMultiSocket);
                     return;
                 }
             }else {
@@ -336,5 +349,12 @@ void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<Multiplexe
     copyHeader(&*headerData->begin(),value,numConnections);
     rawSend(parentMultiSocket,headerData,true);
 }
-
+void ASIOSocketWrapper::ioReactorThreadPauseStream(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Stream::StreamID sid){
+    mPausedSendStreams.push_back(sid);
+    if (mSendQueue.probablyEmpty()) {
+        //everything may have drained out by the time we got here
+        //so we better notify everyone on the queue that the send queue has room
+        unpauseSendStreams(parentMultiSocket);
+    }
+}
 } }

@@ -144,6 +144,8 @@ public:
                           const ReadySendCallback&readySendCallback)=0;
     ///tells the stream that downstream elements may accept further bytes after the stream has been paused
     virtual void readyRead()=0;
+    ///Tells the stream that send has been paused until the stream calls back a readySendCallback
+    virtual void pauseSend()=0;
     virtual bool send(MemoryReference, StreamReliability)=0;
     virtual bool send(MemoryReference, MemoryReference, StreamReliability)=0;
     ///Send a chunk of data to the receiver
