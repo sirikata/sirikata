@@ -45,6 +45,9 @@ public:
     void reset() {
         mSize=0;
     }
+    uint32 maxSize() const {
+        return (uint32)mLimit;
+    }
     uint32 filledSize() const {
         return (uint32)mSize.read();
     }

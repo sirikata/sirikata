@@ -65,7 +65,17 @@ void TCPStream::pauseSend() {
                                               mID));
     
 }
-
+bool TCPStream::canSend(const size_t dataSize)const {
+    uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
+    unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
+    unsigned int successLengthNeeded=mID.serialize(serializedStreamId,streamIdLength);
+    size_t totalSize=dataSize+successLengthNeeded;
+    vuint32 packetLength=vuint32(totalSize);
+    uint8 packetLengthSerialized[vuint32::MAX_SERIALIZED_LENGTH];
+    unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,vuint32::MAX_SERIALIZED_LENGTH);
+    totalSize+=packetHeaderLength;
+    return mSocket->canSendBytes(mID,totalSize);
+}
 bool TCPStream::send(const Chunk&data, StreamReliability reliability) {
     return send(MemoryReference(data),reliability);
 }

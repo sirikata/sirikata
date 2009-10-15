@@ -300,7 +300,10 @@ void ASIOSocketWrapper::destroySocket() {
     mSocket=NULL;
 }
 
-
+bool ASIOSocketWrapper::canSend(size_t dataSize) const{
+    if (mSendingStatus.read()==0) return true;
+    return mSendQueue.getResourceMonitor().filledSize()+dataSize<=(size_t)mSendQueue.getResourceMonitor().maxSize();
+}
 bool ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force) {
     bool retval=true;
     TCPSSTLOG(this,"raw",&*chunk->begin(),chunk->size(),false);

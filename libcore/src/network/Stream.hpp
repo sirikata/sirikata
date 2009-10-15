@@ -150,6 +150,8 @@ public:
     virtual bool send(MemoryReference, MemoryReference, StreamReliability)=0;
     ///Send a chunk of data to the receiver
     virtual bool send(const Chunk&data,StreamReliability)=0;
+    virtual bool canSend(size_t dataSize)const=0;
+
     ///close this stream: if it is the last stream, close the connection as well
     virtual void close()=0;
     virtual ~Stream(){};

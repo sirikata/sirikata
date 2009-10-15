@@ -146,6 +146,10 @@ public:
      */
     static bool sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
     /**
+     * Finds if there is enough space to enqueue the particular bytes at this moment.
+     */
+    bool canSendBytes(Stream::StreamID origin,size_t dataSize)const;
+    /**
      * Adds callbacks onto the queue of callbacks-to-be-added
      * Returns true if the callbacks will be actually used or false if the socket is already disconnected
      */

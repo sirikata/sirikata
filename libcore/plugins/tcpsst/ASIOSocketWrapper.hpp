@@ -164,7 +164,7 @@ public:
      * \param chunk is the exact bytes to put on the network (including streamID and framing data)
      */
     bool rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force);
-
+    bool canSend(size_t dataSize)const;
     static Chunk*constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
     /**
      *  Sends a streamID #0 packet with further control data on it. 

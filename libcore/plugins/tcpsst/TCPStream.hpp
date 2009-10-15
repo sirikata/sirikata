@@ -163,6 +163,7 @@ public:
     __attribute__ ((warn_unused_result))
 #endif
     virtual bool send(const Chunk&data,StreamReliability);
+    virtual bool canSend(const size_t dataSize)const;
     ///Implementation of connect interface
     virtual void connect(
         const Address& addy,

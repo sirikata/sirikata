@@ -166,6 +166,16 @@ void MultiplexedSocket::closeStream(const std::tr1::shared_ptr<MultiplexedSocket
     sendBytes(thus,closeRequest);
 }
 
+bool MultiplexedSocket::canSendBytes(Stream::StreamID originStream,size_t dataSize)const{
+    if (mSocketConnectionPhase==CONNECTED) {
+        static Stream::StreamID::Hasher hasher;
+        size_t whichStream=hasher(originStream)%mSockets.size();
+        return mSockets[whichStream].canSend(dataSize);
+    }else {
+        //FIXME should we give a blank check to unconnected streams or should we tell them false--cus it won't get sent until later
+        return false;
+    }
+}
 
 bool MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
     bool retval=false;
