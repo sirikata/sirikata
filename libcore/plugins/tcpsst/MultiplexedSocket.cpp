@@ -305,7 +305,7 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
         mFreeStreamIDs.push(id);
     }
 }
-bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,const Chunk&newChunk){
+bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::StreamID id,Chunk&newChunk){
     bool retval=true;
     if (id==Stream::StreamID()) {//control packet
         if(newChunk.size()) {

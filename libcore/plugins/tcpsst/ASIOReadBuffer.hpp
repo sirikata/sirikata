@@ -77,7 +77,7 @@ class ASIOReadBuffer {
     bool processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,
                           unsigned int whichSocket,
                           const Stream::StreamID& sid,
-                          const Chunk&newChunk);
+                          Chunk&newChunk);
     /**
      *  This function is called when either 0 information is known about the data to be read (such as size, etc)
      *  or if the data is known but the packet is sufficiently small that other packets may be conjoined with it in the buffer

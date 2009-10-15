@@ -46,7 +46,7 @@ void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::s
     parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }
-bool ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, const Chunk&newChunk){
+bool ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
     return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
 }
 

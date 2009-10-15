@@ -72,8 +72,8 @@ public:
     };
     ///Callback type for when a connection happens (or doesn't) Callees will receive a ConnectionStatus code indicating connection successful, rejected or a later disconnection event
     typedef std::tr1::function<void(ConnectionStatus,const std::string&reason)> ConnectionCallback;
-    ///Callback type for when a full chunk of bytes are waiting on the stream. If false is returned, then the chunk is rejected and the stream becomes paused. Resume by calling readyRead()
-    typedef std::tr1::function<bool(const Chunk&)> BytesReceivedCallback;
+    ///Callback type for when a full chunk of bytes are waiting on the stream. If false is returned, then the chunk is rejected and the stream becomes paused. Resume by calling readyRead() The chunk is mutable and may be destroyed by the called function
+    typedef std::tr1::function<bool(Chunk&)> BytesReceivedCallback;
     ///Callback type for when a send has failed in the past, but now the stream is ready to accept more bytes
     typedef std::tr1::function<void()> ReadySendCallback;
     /**
