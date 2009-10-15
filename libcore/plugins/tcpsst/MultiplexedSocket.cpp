@@ -441,5 +441,19 @@ void MultiplexedSocket::ioReactorThreadPauseSend(const std::tr1::weak_ptr<Multip
         thus->mSockets[whichStream].ioReactorThreadPauseStream(thus, sid);
     }
 }
+Address MultiplexedSocket::getRemoteEndpoint(Stream::StreamID originStream)const {
+    if (mSocketConnectionPhase==CONNECTED) {
+        
+        size_t whichStream=Stream::StreamID::Hasher()(originStream)%mSockets.size();
+        return mSockets[whichStream].getRemoteEndpoint();
+    }else return Address::null();    
+}
+Address MultiplexedSocket::getLocalEndpoint(Stream::StreamID originStream)const {
+    if (mSocketConnectionPhase==CONNECTED) {
+        size_t whichStream=Stream::StreamID::Hasher()(originStream)%mSockets.size();
+        return mSockets[whichStream].getLocalEndpoint();
+        
+    }else return Address::null();    
+}
 
 } }

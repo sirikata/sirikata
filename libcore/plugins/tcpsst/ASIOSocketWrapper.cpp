@@ -360,4 +360,18 @@ void ASIOSocketWrapper::ioReactorThreadPauseStream(const std::tr1::shared_ptr<Mu
         unpauseSendStreams(parentMultiSocket);
     }
 }
+
+Sirikata::Network::Address convertEndpointToAddress(const boost::asio::ip::tcp::endpoint&ep) {
+    std::ostringstream address;
+    address<<ep.address();
+    std::ostringstream port;
+    port<<ep.port();
+    return Address (address.str(),port.str());
+}
+Address ASIOSocketWrapper::getRemoteEndpoint()const{
+    return convertEndpointToAddress(mSocket->remote_endpoint());
+}
+Address ASIOSocketWrapper::getLocalEndpoint()const{
+    return convertEndpointToAddress(mSocket->local_endpoint());
+}
 } }

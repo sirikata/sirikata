@@ -263,5 +263,8 @@ public:
     const ASIOSocketWrapper&getASIOSocketWrapper(unsigned int whichSocket)const{
         return mSockets[whichSocket];
     }
+
+    Address getRemoteEndpoint(Stream::StreamID id)const ;
+    Address getLocalEndpoint(Stream::StreamID id)const ;
 };
 } }

@@ -198,6 +198,13 @@ public:
     virtual Stream* clone(const ConnectionCallback &connectionCallback,
                           const BytesReceivedCallback&chunkReceivedCallback,
                           const ReadySendCallback&readySendCallback);
+
+    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    Address getRemoteEndpoint() const;
+    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    Address getLocalEndpoint() const;
+
+
     //Shuts down the socket, allowing StreamID to be reused and opposing stream to get disconnection callback
     virtual void close();
     ~TCPStream();

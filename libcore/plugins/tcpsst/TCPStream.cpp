@@ -244,4 +244,13 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
 }
 
 
+///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+Address TCPStream::getRemoteEndpoint() const{
+    return mSocket->getRemoteEndpoint(mID);
+}
+///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+Address TCPStream::getLocalEndpoint() const{
+    return mSocket->getLocalEndpoint(mID);
+}
+
 }  }

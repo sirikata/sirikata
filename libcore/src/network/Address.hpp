@@ -49,6 +49,10 @@ public:
                        value.substr(where+1));
         return retval;
     }
+    String toString()const{
+        return getHostName()+':'+getService();
+    }
+
     const String &getHostName()const {
         return mName;
     }

@@ -179,5 +179,7 @@ public:
     void sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections);
     void ioReactorThreadPauseStream(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Stream::StreamID sid);
     void unpauseSendStreams(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket);
+    Address getRemoteEndpoint()const;
+    Address getLocalEndpoint()const;
 };
 } }

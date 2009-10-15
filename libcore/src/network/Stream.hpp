@@ -105,6 +105,7 @@ public:
     static bool ignoreBytesReceived(const Chunk&);
     ///Simple example function to ignore a ready-to-send response
     static void ignoreReadySend();
+
     /**
      * Will attempt to connect to the given provided address, specifying all callbacks for the first successful stream
      * The stream is immediately active and may have bytes sent on it immediately. 
@@ -151,6 +152,11 @@ public:
     ///Send a chunk of data to the receiver
     virtual bool send(const Chunk&data,StreamReliability)=0;
     virtual bool canSend(size_t dataSize)const=0;
+
+    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    virtual Address getRemoteEndpoint() const=0;
+    ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
+    virtual Address getLocalEndpoint() const=0;
 
     ///close this stream: if it is the last stream, close the connection as well
     virtual void close()=0;
