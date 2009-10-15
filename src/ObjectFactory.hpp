@@ -31,7 +31,6 @@
  */
 
 #include "Utility.hpp"
-#include "SolidAngle.hpp"
 
 namespace CBR {
 class MotionPath;

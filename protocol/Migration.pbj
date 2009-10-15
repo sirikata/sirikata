@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+"pbj-0.0.3"
+
 package CBR.Protocol.Migration;
 
 message TimedMotionVector {

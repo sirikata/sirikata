@@ -36,7 +36,6 @@
 #include "Utility.hpp"
 #include "Message.hpp"
 #include "MotionPath.hpp"
-#include "SolidAngle.hpp"
 #include "ObjectHost.hpp"
 
 namespace CBR {

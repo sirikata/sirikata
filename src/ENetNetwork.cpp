@@ -1,5 +1,7 @@
 #include "ENetNetwork.hpp"
 #include "Statistics.hpp"
+#include "Timer.hpp"
+
 namespace CBR {
 
 #define MAGIC_PORT_OFFSET 8192
@@ -223,7 +225,7 @@ void ENetNetwork::service(const Time& t){
 
         if (enet_host_service (mSendHost, & event,0))
             processOutboundEvent(event);
-    }while (Time::now()<t);
+    }while (Timer::now()<t);
 
 
     senditer=mSendPeers.begin();

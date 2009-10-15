@@ -218,7 +218,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     assert(parse_success);
 
     for(int32 idx = 0; idx < contents.addition_size(); idx++) {
-        CBR::Protocol::Prox::IObjectAddition addition = contents.addition(idx);
+        CBR::Protocol::Prox::ObjectAddition addition = contents.addition(idx);
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
@@ -244,7 +244,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
         }
     }
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
-        CBR::Protocol::Prox::IObjectRemoval removal = contents.removal(idx);
+        CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
         mContext->trace->prox(
             mContext->time,
