@@ -120,7 +120,7 @@ if [[ "x${ARCH}" == "x" ]]; then
   ARCH=`uname -m`
 fi
 
-sirikata_commit="770d90a1ec7e0cc19c6b8d616ccdbe9b6c74944a"
+sirikata_commit="ffe1d57ce27d0d2eeadfc78089f6b31c2100003c"
 
 if [ ${opt_components_sirikata} == "true" ]; then
 
