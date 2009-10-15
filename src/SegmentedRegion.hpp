@@ -34,8 +34,6 @@
 #define _CBR_SEGMENTED_REGION_HPP_
 
 
-
-
 namespace CBR {
 
 #define LOOKUP_REQUEST 1
@@ -48,6 +46,9 @@ namespace CBR {
 #define REGION_RESPONSE 8
 #define SEGMENTATION_CHANGE 9
 #define SEGMENTATION_LISTEN 10
+
+#define LL_LOOKUP_REQUEST 11
+#define LL_SERVER_REGION_REQUEST 12
 
 #define MAX_BBOX_LIST_SIZE 50000
 #define MAX_SERVER_REGIONS_CHANGED 2
@@ -199,7 +200,6 @@ typedef struct SegmentationChangeMessage {
     }    
 
     *buff = new uint8[bufSize];
-    printf("inside_serialize, buffer=%x, bufSize=%d\n", (*buff), bufSize);
 
     uint8 offset = 0;
 
@@ -229,7 +229,7 @@ typedef struct SegmentationChangeMessage {
 typedef struct SegmentationListenMessage {
   uint8_t type;
   
-  char host[255];
+  char host[128];
   uint16 port;
   
   SegmentationListenMessage() {

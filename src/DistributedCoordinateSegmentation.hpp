@@ -134,6 +134,14 @@ private:
     void getRandomLeafParentSibling(SegmentedRegion** randomLeaf, 
 				    SegmentedRegion** sibling,
 				    SegmentedRegion** parent);
+
+    bool fullMessageReceived(uint8* dataReceived, uint32 bytesReceived);
+
+    uint32 readFromSocket(boost::shared_ptr<tcp::socket> socket,
+			  uint8** dataReceived, bool readTillEOF);
+  
+    boost::shared_ptr<tcp::socket> getSocketToCSEGServer(ServerID server_id);
+
       
     ServerIDMap *  mSidMap;
 
