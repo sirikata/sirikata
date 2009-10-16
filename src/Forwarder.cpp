@@ -65,7 +65,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
 {
-    //no need to initialize mSelfMessages and mOutgoingMessages.
+    //no need to initialize mOutgoingMessages.
 
     // Fill in the rest of the context
     mContext->mRouter = this;
@@ -77,9 +77,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
     this->registerMessageRecipient(SERVER_PORT_NOISE, this);
 
     mProfiler.addStage("OSeg");
-    mProfiler.addStage("Self Messages");
     mProfiler.addStage("Noise");
-    mProfiler.addStage("Outgoing Messages");
     mProfiler.addStage("Forwarder Queue => Server Message Queue");
     mProfiler.addStage("Server Message Queue");
     mProfiler.addStage("OSegII");
@@ -202,14 +200,6 @@ void Forwarder::service()
 
     tickOSeg(t);  mProfiler.finishedStage();
 
-    std::deque<SelfMessage> self_messages;
-    self_messages.swap( mSelfMessages );
-    while (!self_messages.empty())
-    {
-        processChunk(self_messages.front().msg, self_messages.front().forwarded);
-        self_messages.pop_front();
-    }
-    mProfiler.finishedStage();
     if (GetOption(NOISE)->as<bool>()) {
         for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
             if (sid == mContext->id()) continue;
@@ -217,7 +207,7 @@ void Forwarder::service()
                 std::string randnoise;
                 randnoise.resize((size_t)(50 + 200*randFloat()));
                 Message* noise_msg = new Message(mContext->id(),SERVER_PORT_NOISE,sid, SERVER_PORT_NOISE, randnoise); // FIXME control size from options?
-                
+
                 bool sent_success = mServerMessageQueue->addMessage(noise_msg);
                 if (sent_success) {
                         mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), 0);
@@ -228,23 +218,25 @@ void Forwarder::service()
             }
         }
     }
-    //FIXME do we really need to call service? 
+    mProfiler.finishedStage();
+
+    //FIXME do we really need to call service?
     for (int sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
         //mOutgoingMessages->getFairQueue(sid).service();
         while(true)
         {
-            
+
             uint64 size=1<<30;
             MessageRouter::SERVICES svc;
             Message* next_msg = mOutgoingMessages->getFairQueue(sid).front(&size,&svc);
             if (!next_msg)
                 break;
-            
+
             if (!mServerMessageQueue->canSend(next_msg))
                 break;
 
             tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
-            
+
             Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(
                 &size,
                 std::tr1::bind(push_to_smq,
@@ -287,24 +279,8 @@ void Forwarder::service()
 
     if (dest_server==mContext->id())
     {
-/* Because these are just routed out to the object host or to the appropriate service, we don't record datagram queued and sent -- they effectively don't happen since they bypass
-      any server-to-server queues.
-      if (!is_forward)
-      {
-          mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-          mContext->trace()->serverDatagramSent(mContext->time, mContext->time, 0 , dest_server, msg->id(), offset); // self rate is infinite => start and end times are identical
-      }
-      else
-      {
-          // The more times the message goes through a forward to self loop, the more times this will record, causing an explosion
-          // in trace size.  It's probably not worth recording this information...
-          //mContext->trace()->serverDatagramQueued(mContext->time, dest_server, msg->id(), offset);
-      }
-*/
-      // FIXME this should be limited in size so we can actually provide pushback to other servers when we can't route to ourselves/
-      // connected objects fast enough
-      mSelfMessages.push_back( SelfMessage(msg, is_forward) );
-      success = true;
+        processChunk(msg, is_forward);
+        success = true;
     }
     else
     {

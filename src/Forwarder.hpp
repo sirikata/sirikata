@@ -72,7 +72,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
 {
     private:
     //Unique to forwarder
-      std::deque<SelfMessage> mSelfMessages; //will be used in route.
       ForwarderQueue *mOutgoingMessages;
 
       SpaceContext* mContext;
