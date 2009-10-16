@@ -1099,9 +1099,20 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
                 SILOG(webkit,warning,"Widget found: "<<*i);
                 if (!where->second.isNull()){
                     Berkelium::Rect rect=(*i)->getRect();
+                    Berkelium::Rect srcRect = rect;
                     SILOG(webkit,warning,"Blitting to "<<rect.left()<<","<<rect.top()<<" - "<<rect.right()<<","<<rect.bottom());
+                    Berkelium::Rect windowRect;
+					windowRect.mTop = 0;
+					windowRect.mLeft = 0;
+					windowRect.mHeight = viewTexture->getBuffer()->getHeight();
+					windowRect.mWidth = viewTexture->getBuffer()->getWidth();
+					rect = rect.intersect(windowRect);
+					srcRect.mTop = rect.mTop - srcRect.mTop;
+					srcRect.mLeft = rect.mLeft - srcRect.mLeft;
+					srcRect.mHeight = rect.height();
+					srcRect.mWidth = rect.width();
                     viewTexture->getBuffer()->blit(where->second->getBuffer(),
-                                                   Ogre::Box(0,0,rect.width(),rect.height()),
+                                                   Ogre::Box(srcRect.left(),srcRect.top(),srcRect.right(),srcRect.bottom()),
                                                    Ogre::Box(rect.left(),rect.top(),rect.right(),rect.bottom()));
                 }else {
                     widgetTextures.erase(where);
