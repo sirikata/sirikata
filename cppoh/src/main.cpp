@@ -296,7 +296,7 @@ int main ( int argc,const char**argv ) {
         if (frameSeconds<frameTime) {
             //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
             
-            Network::IOServiceFactory::dispatchServiceMessage(ioServ,
+            Network::IOServiceFactory::postServiceMessage(ioServ,
                                                               (frameTime-frameSeconds),
                                                               std::tr1::bind(&Network::IOServiceFactory::stopService,
                                                                              ioServ)

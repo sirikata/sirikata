@@ -118,7 +118,7 @@ static void CallDelegate(const std::tr1::weak_ptr<HostedObject>&weak_ho, const M
 }
 static void Mono_Context_AsyncWait(MonoObject*callback, MonoObject*duration){
     std::tr1::weak_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
-    Sirikata::Network::IOServiceFactory::dispatchServiceMessage(MonoContext::getSingleton().getVWObject()->getObjectHost()->getSpaceIO(),
+    Sirikata::Network::IOServiceFactory::postServiceMessage(MonoContext::getSingleton().getVWObject()->getObjectHost()->getSpaceIO(),
                                              Mono::Object(duration).unboxDuration(),
                                              std::tr1::bind(&CallDelegate,ho,MonoContext::getSingleton().getDomain(), Mono::Delegate(Mono::Object(callback))));
 }

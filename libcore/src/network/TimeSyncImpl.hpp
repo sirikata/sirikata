@@ -114,7 +114,7 @@ protected:
         if (thus&&delay==thus->mRetryDelay) {
             thus->internalStartSync();
             std::tr1::function<void(std::tr1::weak_ptr<TimeSyncImpl<WeakRef> > weak_thus, Duration delay)> myfunc(&TimeSyncImpl<WeakRef>::startSync);
-            IOServiceFactory::dispatchServiceMessage(thus->mWaitService,delay,std::tr1::bind(myfunc,weak_thus,delay));
+            IOServiceFactory::postServiceMessage(thus->mWaitService,delay,std::tr1::bind(myfunc,weak_thus,delay));
         }
     }
 public:

@@ -50,7 +50,7 @@ TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket
 
 void TCPStream::readyRead() {
     std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
-    IOServiceFactory::dispatchServiceMessage(&mSocket->getASIOService(),
+    IOServiceFactory::postServiceMessage(&mSocket->getASIOService(),
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
                                               mID));
@@ -59,7 +59,7 @@ void TCPStream::readyRead() {
 
 void TCPStream::pauseSend() {
     std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
-    IOServiceFactory::dispatchServiceMessage(&mSocket->getASIOService(),
+    IOServiceFactory::postServiceMessage(&mSocket->getASIOService(),
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,
                                               mID));

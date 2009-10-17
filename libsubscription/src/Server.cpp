@@ -93,7 +93,7 @@ bool Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
     bool success=false;
     if (!dat.empty()&&subscriptionRequest.ParseFromArray(&dat[0],dat.size())&&subscriptionRequest.has_broadcast_name()) {
         Network::IOServiceFactory::
-            dispatchServiceMessage(mBroadcastIOService,
+            postServiceMessage(mBroadcastIOService,
                                    std::tr1::bind(&Server::subscriberBytesReceivedCallbackOnBroadcastIOService,
                                                   this,
                                                   stream,
@@ -152,7 +152,7 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
             waiting->push_back(WaitingStreams(stream,subscriptionRequest));
             std::tr1::weak_ptr<Server> thus=shared_from_this();
             Network::IOServiceFactory::
-                dispatchServiceMessage(mBroadcastIOService,
+                postServiceMessage(mBroadcastIOService,
                                        mMaxSubscribeDelay,
                                        std::tr1::bind(&Server::purgeWaitingSubscriberOnBroadcastIOService,
                                                       thus,
@@ -255,7 +255,7 @@ void Server::broadcastStreamCallback(Network::Stream* stream,Network::Stream::Se
 void Server::initiatePolling(const UUID&name, const Duration&waitTime) {
     std::tr1::weak_ptr<Server>thus=shared_from_this();
     Network::IOServiceFactory::
-        dispatchServiceMessage(mBroadcastIOService,
+        postServiceMessage(mBroadcastIOService,
                                waitTime,
                                std::tr1::bind(&poll,
                                               thus,
