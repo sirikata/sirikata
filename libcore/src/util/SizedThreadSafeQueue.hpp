@@ -104,7 +104,7 @@ public:
         }
         return false;
     }
-    bool pop(const T &value) {
+    bool pop(T &value) {
         if (Superclass::pop(value)) {
             mResourceMonitor.postDecrement(value);
             return true;
