@@ -140,6 +140,10 @@ Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
         if (!front->front)  {
             Chunk **frontptr=&front->front;
             front->buffer.pop(*frontptr);
+            if (front->paused) {
+                front->paused=false;
+                front->stream->readyRead();
+            }
         }
         if (front->front&&front->front->size()<=max_size) {
             return front->front;        
@@ -151,8 +155,13 @@ Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
 Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));
     if (front) {
-        if (!front->front) 
+        if (!front->front) {
             front->buffer.pop(front->front);
+            if (front->paused) {
+                front->paused=false;
+                front->stream->readyRead();
+            }
+        }
         if (front->front&&front->front->size()<=max_size) {
             Chunk * retval=front->front;
             front->front=NULL;
