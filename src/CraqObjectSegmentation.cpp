@@ -784,6 +784,9 @@ void CraqObjectSegmentation::processUpdateOSegMessage(const CBR::Protocol::OSeg:
 
     std::map<UUID,TransLookup>::iterator inTransIt;
 
+    mCraqCache.insert(obj_id, serv_from); //note: make sure that this is the right insert order.
+
+    
     inTransIt = mInTransitOrLookup.find(obj_id);
     if (inTransIt != mInTransitOrLookup.end())
     {
