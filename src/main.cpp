@@ -55,6 +55,7 @@
 #include "Test.hpp"
 #include "SSTNetwork.hpp"
 #include "ENetNetwork.hpp"
+#include "TCPNetwork.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
 #include "TabularServerIDMap.hpp"
@@ -120,6 +121,8 @@ int main(int argc, char** argv) {
         gNetwork = new SSTNetwork(gTrace);
     else if (network_type == "enet")
         gNetwork = new ENetNetwork(gTrace,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+    else if (network_type == "tcp")
+        gNetwork = new TCPNetwork(gTrace,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     gNetwork->init(&main_loop);
 
     sync.stop();
