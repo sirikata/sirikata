@@ -292,6 +292,13 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqHybrid.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/asyncCraqUtil.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncConnectionGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_gets/asyncCraqGet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncConnectionSet.cpp
+  ${CBR_SOURCE_DIR}/craq_hybrid/craq_sets/asyncCraqSet.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
@@ -313,7 +320,7 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
-  ${CBR_SOURCE_DIR}/TCPNetwork.cpp
+  #  ${CBR_SOURCE_DIR}/TCPNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/Test.cpp

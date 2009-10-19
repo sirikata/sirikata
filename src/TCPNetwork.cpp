@@ -5,7 +5,6 @@
 #include "sirikata/network/StreamListenerFactory.hpp"
 #include "sirikata/network/StreamListener.hpp"
 #include "Options.hpp"
-
 #include "Message.hpp"
 #include "ServerIDMap.hpp"
 

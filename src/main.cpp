@@ -107,7 +107,9 @@ int main(int argc, char** argv) {
     if (network_type == "sst")
         gNetwork = new SSTNetwork(space_context);
     else if (network_type == "tcp")
-        gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+      gNetwork = new TCPNetwork(space_context,GetOption("space-to-space-receive-buffer")->as<size_t>(),GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+
+
     gNetwork->init(&main_loop);
 
     sync.stop();
@@ -227,7 +229,6 @@ void *main_loop(void *) {
      }
 
      std::cout<<"\n\nUniquely appending  "<<oseg_craq_prefix[0]<<"\n\n";
-     std::cout<<"\n\nAre any of my changes happening?\n\n";
      oseg = new CraqObjectSegmentation (space_context, cseg, initServObjVec, craqArgsGet, craqArgsSet, oseg_craq_prefix[0]);
 
     }      //end craq approach
