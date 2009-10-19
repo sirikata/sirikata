@@ -12,7 +12,15 @@ namespace CBR {
 class Trace;
 class TCPNetwork :public Network{
     Trace*mTrace;
-    typedef std::tr1::unordered_map<Address4, Sirikata::Network::Stream*,Address4::Hasher> TCPStreamMap;
+    struct SendStream {
+        Sirikata::Network::Stream* stream;
+        bool connected;
+        SendStream(Sirikata::Network::Stream* stream) {
+            this->stream=stream;
+            connected=false;
+        }
+    };
+    typedef std::tr1::unordered_map<Address4, SendStream,Address4::Hasher> TCPStreamMap;
     Sirikata::Network::StreamListener *mListener;
     TCPStreamMap mSendStreams;
     uint32 mIncomingBufferLength;
@@ -21,6 +29,7 @@ class TCPNetwork :public Network{
     Sirikata::PluginManager mPluginManager;
     Sirikata::Network::IOService *mIOService;
     void * mThread;
+    void processNewConnectionsOnMainThread();
     class TSQueue {
     public:
         Sirikata::Network::Stream *stream;
@@ -37,6 +46,7 @@ class TCPNetwork :public Network{
     typedef std::tr1::shared_ptr<std::tr1::shared_ptr<TSQueue> > dbl_ptr_queue;
     typedef std::tr1::weak_ptr<std::tr1::shared_ptr<TSQueue> > weak_dbl_ptr_queue;
     Sirikata::ThreadSafeQueue<Address4> mDisconnectedStreams;
+    Sirikata::ThreadSafeQueue<Address4> mNewConnectedStreams;
     bool bytesReceivedCallback(const weak_dbl_ptr_queue&queue, Chunk&data);
     void receivedConnectionCallback(const weak_dbl_ptr_queue&queue, const Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);
     void readySendCallback(const Address4&);

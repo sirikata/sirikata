@@ -46,6 +46,8 @@ void TCPNetwork::sendStreamConnectionCallback(const Address4&addy, const Sirikat
     //std::cout<<" Got connection callback "<<status<<" with "<<reason<<'\n';
     if (status!=Sirikata::Network::Stream::Connected) {
         mDisconnectedStreams.push(addy);
+    }else {
+        mNewConnectedStreams.push(addy);
     }
 }
 void TCPNetwork::readySendCallback(const Address4 &addy) {
@@ -70,12 +72,15 @@ Address convertAddress4ToSirikata(const Address4&addy) {
 }
 bool TCPNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool ordered, int priority){
     //std::cout<<"Can send "<<convertAddress4ToSirikata(addy).toString()<<" "<<size<<"?";
-    std::tr1::unordered_map<Address4,Stream*>::iterator where;
+    std::tr1::unordered_map<Address4,SendStream>::iterator where;
     if ((where=mSendStreams.find(addy))==mSendStreams.end()) {
         //std::cout<<"#t\n";
         return true;
     }
-    if (where->second->canSend(size)) {
+    if (where->second.connected==false) {
+        processNewConnectionsOnMainThread();
+    }
+    if (where->second.connected&&where->second.stream->canSend(size)) {
         //std::cout<<"yes\n";
         return true;
     }
@@ -95,13 +100,23 @@ void hexPrint(const char *name, const Chunk&data) {
     }
     std::cout<< name<<' '<<str<<'\n';
 }
+void TCPNetwork::processNewConnectionsOnMainThread(){
+    Address4 newaddy;
+    while (mNewConnectedStreams.pop(newaddy)) {
+        std::tr1::unordered_map<Address4,SendStream>::iterator where=mSendStreams.find(newaddy);
+        if (where!=mSendStreams.end()) {
+            where->second.connected=true;
+        }
+    }
+
+}
 bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, bool ordered, int priority) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    std::tr1::unordered_map<Address4,Stream*>::iterator where;
+    std::tr1::unordered_map<Address4,SendStream>::iterator where;
     if ((where=mSendStreams.find(addy))==mSendStreams.end()) {
-        mSendStreams[addy]=StreamFactory::getSingleton().getDefaultConstructor()(mIOService);
+        mSendStreams.insert(std::pair<Address4,SendStream>(addy,SendStream(StreamFactory::getSingleton().getDefaultConstructor()(mIOService))));
         where=mSendStreams.find(addy);
 
         Stream::ConnectionCallback connectionCallback(std::tr1::bind(&TCPNetwork::sendStreamConnectionCallback,this,addy,_1,_2));
@@ -109,15 +124,18 @@ bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, boo
         Stream::BytesReceivedCallback br(&Stream::ignoreBytesReceived);
         Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback,this,addy));
         //std::cout<< "Connecting to "<<convertAddress4ToSirikata(addy).toString()<<'\n';
-        where->second->connect(convertAddress4ToSirikata(addy),
+        where->second.stream->connect(convertAddress4ToSirikata(addy),
                                sscb,
                                connectionCallback,
                                br,
                                readySendCallback);
     }
     //std::cout<<"Send existing "<<convertAddress4ToSirikata(addy).toString()<<" "<<data.size()<<"\n";
-
-    if (where->second->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
+    if (where->second.connected==false) {
+        processNewConnectionsOnMainThread();
+    }
+    if (where->second.connected && 
+        where->second.stream->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
         //hexPrint("Sent",data);
         return true;
     }else {

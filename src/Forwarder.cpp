@@ -183,7 +183,7 @@ static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, Message* exp
     ctx->trace()->serverDatagramQueued(ctx->time, result->dest_server(), result->id(), result->serializedSize());
     bool send_success = smq->addMessage(result);
     if (!send_success) {
-        SILOG(cbr,fatal,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
+        SILOG(cbr,insane,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
         delete result;
     }
 }
