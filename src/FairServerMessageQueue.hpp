@@ -9,16 +9,7 @@ namespace CBR {
 class FairServerMessageQueue:public ServerMessageQueue {
 protected:
 
-    /** Predicate for FairQueue which checks if the network will be able to send the message. */
-    struct CanSendPredicate {
-    public:
-        CanSendPredicate(FairServerMessageQueue* _fq) : fq(_fq) {}
-        bool operator()(const ServerID& key, const Message* msg) const;
-    private:
-        FairServerMessageQueue* fq;
-    };
-
-    FairQueue<Message, ServerID, Queue<Message*>, CanSendPredicate > mServerQueues;
+    FairQueue<Message, ServerID, Queue<Message*> > mServerQueues;
     FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
     uint32 mRate;

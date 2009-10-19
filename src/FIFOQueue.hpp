@@ -60,7 +60,6 @@ protected:
 
 public:
     typedef MessageType* ElementType;
-    typedef std::tr1::function<void(const ElementType&)> PopCallback;
 
     FIFOQueue(uint32 maxsize)
      : mMessages(maxsize)
@@ -95,10 +94,6 @@ public:
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allotted
     MessageType* pop(uint64* bytes) {
-        return pop(bytes, 0);
-    }
-
-    MessageType* pop(uint64* bytes, const PopCallback& cb) {
         if (mMessages.empty()) return NULL;
 
         KeyMessagePair result = mMessages.front();
@@ -107,8 +102,6 @@ public:
         *bytes -= result.msg->size();
         mMessages.pop();
         mDestSizes[result.key] = size(result.key) - result.msg->size();
-
-        cb(result.msg);
 
         return result.msg;
     }

@@ -8,14 +8,9 @@
 
 namespace CBR{
 
-bool FairServerMessageQueue::CanSendPredicate::operator()(const ServerID& key, const Message* msg) const {
-    return fq->canSend(msg);
-}
-
-
 FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap, uint32 send_bytes_per_second, uint32 recv_bytes_per_second)
  : ServerMessageQueue(ctx, net, sidmap),
-   mServerQueues( CanSendPredicate(this) ),
+   mServerQueues(),
    mReceiveQueues(),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
@@ -73,17 +68,6 @@ bool FairServerMessageQueue::receive(Message** msg_out) {
 }
 
 
-// This is the callback for pop() operations, which ensures we push to the network at a safe
-// time for the FairQueue.
-static void push_to_network(Network* net, Address4* addr, Message* expected, Message* msg) {
-    assert(expected == msg);
-    Network::Chunk serialized;
-    msg->serialize(&serialized);
-    bool sent_success = net->send(*addr,serialized,false,true,1);
-    if (!sent_success)
-        SILOG(fairsmq,fatal,"Failed to push to network, even though predicate succeeded.");
-}
-
 void FairServerMessageQueue::service(){
     uint64 send_bytes = mContext->sinceLast.toSeconds() * mRate + mRemainderSendBytes;
     uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderReceiveBytes;
@@ -97,27 +81,27 @@ void FairServerMessageQueue::service(){
         Address4* addy = mServerIDMap->lookupInternal(next_msg->dest_server());
         assert(addy != NULL);
 
-        Message* next_msg_popped = mServerQueues.pop(
-            &send_bytes,
-            std::tr1::bind(
-                push_to_network,
-                mNetwork,
-                addy,
-                next_msg,
-                std::tr1::placeholders::_1
-            )
-        );
-        assert(next_msg_popped == next_msg);
+        Network::Chunk serialized;
+        next_msg->serialize(&serialized);
+        bool sent_success = mNetwork->send(*addy, serialized, false, true, 1);
+        if (!sent_success)
+            break;
+
+        // Pop the message
+        Message* next_msg_popped = mServerQueues.pop(&send_bytes);
+        assert(next_msg == next_msg_popped);
         save_bytes = false;
 
-        uint32 packet_size = next_msg->serializedSize();
+        // Record trace send times
+        uint32 packet_size = serialized.size();
         Duration send_duration = Duration::seconds((float)packet_size / (float)mRate);
         Time start_time = mLastSendEndTime;
         Time end_time = mLastSendEndTime + send_duration;
         mLastSendEndTime = end_time;
-
         mContext->trace()->serverDatagramSent(start_time, end_time, getServerWeight(next_msg->dest_server()),
-            next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+            next_msg->dest_server(), next_msg->id(), serialized.size());
+
+        // Get rid of the message
         delete next_msg;
     }
 

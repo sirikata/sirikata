@@ -63,7 +63,7 @@ class Queue : public AbstractQueue<ElementType> {
     uint32 mSize;
 public:
     typedef ElementType Type;
-    typedef std::tr1::function<void(const ElementType&)> PopCallback;
+
     Queue(uint32 max_size){
         mMaxSize=max_size;
         mSize = 0;
@@ -95,10 +95,6 @@ public:
         uint32 m_size = mSizeFunctor(m);
         mSize -= m_size;
         return m;
-    }
-
-    ElementType pop(const PopCallback& cb) {
-        return AbstractQueue<ElementType>::pop(cb);
     }
 
     bool empty() const{

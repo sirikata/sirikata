@@ -37,21 +37,10 @@
 
 namespace CBR {
 
-/** Predicate for FairQueue which never rejects the item being considered. */
-struct AlwaysUsePredicate {
-    template<typename Key, typename Message>
-    bool operator()(const Key& key, const Message* msg) const {
-        return true;
-    }
-};
-
 /** Fair Queue with one input queue of Messages per Key, backed by a TQueue. Each
- *  input queue can be assigned a weight and selection happens according to FairQueuing,
- *  with the additional constraint that each potential front element will be checked
- *  against a Predicate to give the user a chance to block certain queues from being used
- *  (for instance, if the downstream queue couldn't handle it).
+ *  input queue can be assigned a weight and selection happens according to FairQueuing.
  */
-template <class Message,class Key,class TQueue,class Predicate=AlwaysUsePredicate,bool DoubleCheckFront=false> class FairQueue {
+template <class Message,class Key,class TQueue> class FairQueue {
 private:
     typedef TQueue MessageQueue;
 
@@ -100,19 +89,11 @@ private:
     typedef std::set<Key> KeySet;
     typedef std::set<QueueInfo*> QueueInfoSet;
 public:
-
-    // Callback passed to pop which allows you to perform operations on the popped message
-    // at the right time, before any further, new messages will be evaluated.  Use this to
-    // perform operations which may affect any upstream queues operations, e.g. things that
-    // are checked in a predicate.
-    typedef std::tr1::function<void(Message*)> PopCallback;
-
-    FairQueue(const Predicate pred = Predicate())
+    FairQueue()
      :mCurrentVirtualTime(Time::null()),
       mQueuesByKey(),
       mQueuesByTime(),
       mEmptyQueues(),
-      mPredicate(pred),
       mFrontQueue(NULL)
     {
     }
@@ -218,12 +199,9 @@ public:
 
     // Returns the next message to deliver, given the number of bytes available for transmission
     // \param bytes number of bytes available; updated appropriately when returns
-    // \param cb callback which is called after the item has been popped from its originating queue
-    //           but before that queue's front method is used again, providing a period when you can
-    //           perform operations which might affect that input queue's front operation.
     // \returns the next message, or NULL if the queue is empty or the next message cannot be handled
     //          given the number of bytes allotted
-    Message* pop(uint64* bytes, PopCallback cb = 0) {
+    Message* pop(uint64* bytes) {
         Message* result = NULL;
         Time vftime(Time::null());
 
@@ -247,7 +225,7 @@ public:
             assert( *bytes >= result->size() );
             *bytes -= result->size();
 
-            Message* popped_val = mFrontQueue->messageQueue->pop(cb);
+            Message* popped_val = mFrontQueue->messageQueue->pop();
             assert(popped_val == mFrontQueue->nextFinishMessage);
             assert(popped_val == result);
 
@@ -307,91 +285,8 @@ public:
             computeNextFinishTime( mQueuesByKey.find(key)->second );
         }
         empty_keys.clear();
-
-        // Verify front elements haven't changed out from under us
-        if (DoubleCheckFront) {
-            checkInputFront(true);
-        }
-#if SIRIKATA_DEBUG & 0  // Big performance hit, only enable if necessary
-        else {
-            bool valid = verifyInputFront();
-            if (!valid)
-                SILOG(fairqueue,fatal,"[FAIRQUEUE] service: Invalid front elements on queue marked DoubleCheckFront=false.");
-        }
-
-        if (!verifyEmpties()) {
-            SILOG(fairqueue,fatal,"[FAIRQUEUE] service: Input queue marked as empty not really empty, front is not NULL.");
-        }
-#endif
     }
 protected:
-
-    /** Verifies that all inputs, ensuring their front elements are what we expect.  Doesn't modify
-     *  any data, only returns whether this assumption is valid.
-     *  Returns true if the the front of the input queues were all valid, false if any were invalid.
-     */
-    bool verifyInputFront() {
-        // This is the same as updating inputs, it just doesn't do any real updating
-        return checkInputFront(false);
-    }
-
-    /** Checks all input queues to ensure that their front items are the same as the ones used
-     *  to calculate virtual finish times, and recalculates them if they are incorrect.
-     *  Returns true if the the front of the input queues were all valid, false if any were invalid.
-     */
-    bool checkInputFront(bool update) {
-        /** First scan through and get a list of elements that need to be updated.  This avoids duplicate work
-         *  when rearranging elements as well as guaranteeing no broken iterators.
-         */
-        QueueInfoByKey invalid_front_keys;
-        for(ByTimeIterator it = mQueuesByTime.begin(); it != mQueuesByTime.end(); it++) {
-            QueueInfo* queue_info = it->second;
-
-            // Verify that the front is still really the front, can be violated by "queues" which don't adhere to
-            // strict queue semantics, e.g. the FairQueue itself
-            Message* queue_front = queue_info->messageQueue->front();
-            if (queue_front != queue_info->nextFinishMessage || queue_front == NULL) {
-                invalid_front_keys[queue_info->key] = queue_info;
-            }
-        }
-
-        if (!update)
-            return (invalid_front_keys.empty());
-
-        for(ByKeyIterator it = invalid_front_keys.begin(); it != invalid_front_keys.end(); it++) {
-            QueueInfo* queue_info = it->second;
-
-            // We need to:
-            // 1. Recompute the finish time based on the new message
-            // 2. Fix up the ByTimeIndex
-
-            // Remove from queue time list, note that this will fubar the iterators
-            removeFromTimeIndex(queue_info);
-
-            // Recompute finish time, using the start time from the last element we thought would finish next
-            // This will also add back to the ByTimeIndex, again, fubaring iterators
-            computeNextFinishTime(queue_info, queue_info->nextFinishStartTime);
-        }
-
-        return (invalid_front_keys.empty());
-    }
-
-    /** Verifies that queues we think are empty (or can't release an element) really are empty.  Returns true
-     *  if all are actually empty, false otherwise.
-     */
-    bool verifyEmpties() {
-        for(typename KeySet::iterator it = mEmptyQueues.begin(); it != mEmptyQueues.end(); it++) {
-            ByKeyIterator by_key_it = mQueuesByKey.find(*it);
-            QueueInfo* qi = by_key_it->second;
-
-            if (qi->messageQueue->empty() || qi->messageQueue->front() == NULL)
-                continue;
-
-            return false;
-        }
-        return true;
-    }
-
     // Checks if the given queue is satisfactory.  Returns false if the queue would violate a constraint, and the
     // consideration of any later queues should stop.  Otherwise it returns true.  The other outputs indicate whether
     // the queue was actually satisfactory, i.e. if *result_out != NULL then there was the queue was truly satisfactory.
@@ -405,14 +300,10 @@ protected:
         if (*bytes < qi->nextFinishMessage->size())
             return false;
 
-        // Now give the user a chance to veto this packet.  If they can use it, set output and return.
-        // Otherwise just continue trying the rest of the options.
-        if (mPredicate(qi->key, qi->nextFinishMessage)) {
-            *qiout = qi;
-            *vftime_out = qi->nextFinishTime;
-            *result_out = qi->nextFinishMessage;
-        }
-
+        // Otherwsie, we have enough space and can use this queue.
+        *qiout = qi;
+        *vftime_out = qi->nextFinishTime;
+        *result_out = qi->nextFinishMessage;
         return true;
     }
 
@@ -420,18 +311,6 @@ protected:
     // for transmission.  May update bytes for null messages, but does not update it to remove bytes to be used for
     // the returned message.  Returns null either if the number of bytes is not sufficient or the queue is empty.
     void nextMessage(uint64* bytes, Message** result_out, Time* vftime_out, QueueInfo** min_queue_info_out) {
-        // Only turn on if necessary, if many queues are empty, this can destroy performance, especially since
-        // recursive fair queues can cause it to be called very often.
-#if SIRIKATA_DEBUG & 0
-        if (!verifyInputFront())
-            SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Invalid front elements on queue marked DoubleCheckFront=false.");
-
-        // These are sanity checks on the queues that should be valid if the user calls service appropriately
-        // and uses pop callbacks properly to avoid changing things out from under us.
-        if (!verifyEmpties())
-            SILOG(fairqueue,fatal,"[FAIRQUEUE] nextMessage: Input queue marked as empty not really empty, front is not NULL.");
-#endif
-
         *result_out = NULL;
 
         // If there's nothing in the queue, there is no next message
@@ -596,7 +475,6 @@ protected:
     QueueInfoByFinishTime mQueuesByTime;
     KeySet mEmptyQueues; // FIXME everything but NetworkQueueWrapper works without tracking these, it only requires
                          // it because "pushing" to the NetworkQueue doesn't go through this FairQueue
-    Predicate mPredicate;
     QueueInfo* mFrontQueue; // Queue holding the front item
 }; // class FairQueue
 

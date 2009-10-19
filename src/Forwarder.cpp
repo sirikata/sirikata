@@ -43,11 +43,6 @@ void OSegLookupQueue::push(UUID objid, CBR::Protocol::Object::ObjectMessage* dat
 }
 
 
-bool ForwarderQueue::CanSendPredicate::operator() (MessageRouter::SERVICES svc, const Message*msg) {
-    return mServerMessageQueue->canAddMessage(msg);
-}
-
-
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
   /*
     Constructor for Forwarder
@@ -172,20 +167,6 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   }
 
 
-/** This is a helper method which is used as a callback when popping an element off the ForwarderQueue, to
- *  guarantee that we don't screw up the fair queue by mucking with the ServerMessageQueue after it has computed
- *  a new front value.
- */
-static void push_to_smq(ServerMessageQueue* smq, SpaceContext* ctx, Message* expected, Message* result) {
-    assert(expected == result);
-    ctx->trace()->serverDatagramQueued(ctx->time, result->dest_server(), result->id(), result->serializedSize());
-    bool send_success = smq->addMessage(result);
-    if (!send_success) {
-        SILOG(cbr,insane,"Push to ServerMessageQueueFailed.  Probably indicates that the predicate is incorrect.");
-        delete result;
-    }
-}
-
 void Forwarder::service()
 {
     Time t = mContext->time;
@@ -220,9 +201,7 @@ void Forwarder::service()
     }
     mProfiler.finishedStage();
 
-    //FIXME do we really need to call service?
-    for (int sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
-        //mOutgoingMessages->getFairQueue(sid).service();
+    for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
         while(true)
         {
 
@@ -237,14 +216,14 @@ void Forwarder::service()
 
             tryTimestampObjectMessage(mContext->trace(), mContext->time, next_msg, Trace::SPACE_OUTGOING_MESSAGE);
 
-            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(
-                &size,
-                std::tr1::bind(push_to_smq,
-                               mServerMessageQueue,
-                               mContext,
-                               next_msg,
-                               std::tr1::placeholders::_1)
-                );
+
+            mContext->trace()->serverDatagramQueued(mContext->time, next_msg->dest_server(), next_msg->id(), next_msg->serializedSize());
+            bool send_success = mServerMessageQueue->addMessage(next_msg);
+            if (!send_success)
+                break;
+
+            Message* pop_msg = mOutgoingMessages->getFairQueue(sid).pop(&size);
+            assert(pop_msg == next_msg);
         }
     }
     mProfiler.finishedStage();
