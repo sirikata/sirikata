@@ -32,11 +32,12 @@
 #ifndef _SIRIKATA_IOSERVICEFACTORY_HPP_
 #define _SIRIKATA_IOSERVICEFACTORY_HPP_
 
-namespace Sirikata { namespace Network {
+namespace Sirikata {
+namespace Network {
+
 class IOService;
-
-
 class BoostAsioDeadlineTimer;
+
 class SIRIKATA_EXPORT TimerHandle {
     BoostAsioDeadlineTimer *mTimer;
     std::tr1::function<void()> mFunc;
@@ -85,5 +86,8 @@ class SIRIKATA_EXPORT IOServiceFactory {
     static void postServiceMessage(IOService*,const std::tr1::function<void()>&f);
     static void postServiceMessage(IOService*,const Duration& waitFor, const std::tr1::function<void()>&f);
 };
-} }
+
+} // namespace Network
+} // namespace Sirikata
+
 #endif

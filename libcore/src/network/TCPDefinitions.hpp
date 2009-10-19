@@ -42,14 +42,28 @@ namespace Sirikata { namespace Network {
 typedef boost::asio::io_service InternalIOService;
 typedef boost::asio::ip::tcp::socket InternalTCPSocket;
 typedef  boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
-class IOServiceFactory;
+typedef  boost::asio::ip::tcp::resolver InternalTCPResolver;
 
-class SIRIKATA_EXPORT IOService:public InternalIOService {
+class IOServiceFactory;
+class TimerHandle;
+class TCPSocket;
+class TCPListener;
+class TCPResolver;
+
+class SIRIKATA_EXPORT IOService {
     friend class IOServiceFactory;
+    friend class TimerHandle;
+    friend class TCPSocket;
+    friend class TCPListener;
+    friend class TCPResolver;
+
     IOService();
     ~IOService();
+
+    InternalIOService* mImpl;
 public:
 };
+
 class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
   public:
     TCPSocket(IOService&io);
@@ -61,6 +75,13 @@ public:
     void async_accept(TCPSocket&socket,
                       const std::tr1::function<void(const boost::system::error_code& ) > &cb);
 };
+
+class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
+  public:
+    TCPResolver(IOService&io);
+};
+
+
 #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
 // #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
 

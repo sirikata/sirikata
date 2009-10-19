@@ -33,11 +33,15 @@
 #include "TCPDefinitions.hpp"
 #include "IOServiceFactory.hpp"
 #include "util/Time.hpp"
-namespace Sirikata { namespace Network {
+
+namespace Sirikata {
+namespace Network {
+
 namespace {
 boost::once_flag io_singleton=BOOST_ONCE_INIT;
 bool called_io_service=false;
 }
+
 void IOServiceFactory::io_service_initializer(IOService*io_ret){
     static IOService io;
     called_io_service=true;
@@ -60,40 +64,40 @@ void IOServiceFactory::destroyIOService(IOService*io) {
 }
 
 std::size_t IOServiceFactory::pollService(IOService*ios){
-    return ios->poll();
+    return ios->mImpl->poll();
 }
 std::size_t IOServiceFactory::runService(IOService*ios){
-    return ios->run();
+    return ios->mImpl->run();
 }
 std::size_t IOServiceFactory::pollOneService(IOService*ios){
-    return ios->poll_one();
+    return ios->mImpl->poll_one();
 }
 std::size_t IOServiceFactory::runOneService(IOService*ios){
-    return ios->run_one();
+    return ios->mImpl->run_one();
 }
 void IOServiceFactory::stopService(IOService*ios){
-    ios->stop();
+    ios->mImpl->stop();
 }
 void IOServiceFactory::resetService(IOService*ios){
-    ios->reset();
+    ios->mImpl->reset();
 }
 
 void IOServiceFactory::postServiceMessage(IOService*ios,const std::tr1::function<void()>&f){
-    ios->post(f);
+    ios->mImpl->post(f);
 }
 void IOServiceFactory::dispatchServiceMessage(IOService*ios,const std::tr1::function<void()>&f){
-    ios->dispatch(f);
+    ios->mImpl->dispatch(f);
 }
 namespace {
 void handle_deadline_timer(const boost::system::error_code&e,const std::tr1::shared_ptr<boost::asio::deadline_timer>&timer,const std::tr1::function<void()>&f) {
-    if (e) {
-    }else {
-        f();
-    }
+    if (e)
+        return;
+
+    f();
 }
 }
 void IOServiceFactory::postServiceMessage(IOService*ios,const Duration&waitFor,const std::tr1::function<void()>&f){
-    std::tr1::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(*ios,boost::posix_time::microseconds(waitFor.toMicroseconds())));
+    std::tr1::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(*(ios->mImpl),boost::posix_time::microseconds(waitFor.toMicroseconds())));
     using std::tr1::placeholders::_1;
     t->async_wait(std::tr1::bind(&handle_deadline_timer,_1,t,f));
 }
@@ -123,11 +127,11 @@ public:
 };
 
 TimerHandle::TimerHandle(IOService *io) {
-    mTimer = new BoostAsioDeadlineTimer(*io);
+    mTimer = new BoostAsioDeadlineTimer(*(io->mImpl));
 }
 
 TimerHandle::TimerHandle(IOService *io, const std::tr1::function<void()>&f) {
-    mTimer = new BoostAsioDeadlineTimer(*io);
+    mTimer = new BoostAsioDeadlineTimer(*(io->mImpl));
     setCallback(f);
 }
 
@@ -151,6 +155,13 @@ void TimerHandle::cancel() {
     mTimer->cancel();
 }
 
-IOService::IOService():boost::asio::io_service(1){}
-IOService::~IOService(){}
-} }
+IOService::IOService() {
+    mImpl = new boost::asio::io_service(1);
+}
+
+IOService::~IOService(){
+    delete mImpl;
+}
+
+} // namespace Network
+} // namespace Sirikata
