@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Object Host
+/*  Sirikata Network Utilities
  *  SentMessage.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
@@ -35,7 +35,7 @@
 #define _SIRIKATA_SentMessage_HPP_
 
 #include "QueryTracker.hpp"
-#include <network/IOServiceFactory.hpp>
+#include <network/IOTimer.hpp>
 
 namespace Sirikata {
 
@@ -72,7 +72,7 @@ private:
     ///asserts that these requests are all happening on the same thread
     void * mDebugThreadId;
     /// Manages timeout, cancelled when response received or SentMessage deleted.
-    std::tr1::shared_ptr<Network::TimerHandle> mTimerHandle;
+    Network::IOTimerPtr mTimerHandle;
 
 public:
     /// Destructor: Caution: NOT VIRTUAL!!! Make sure to downcast if necessary!!

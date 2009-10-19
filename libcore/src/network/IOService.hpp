@@ -53,6 +53,7 @@ class TCPListener;
 class TCPResolver;
 class UDPSocket;
 class UDPResolver;
+class DeadlineTimer;
 
 /** IOService provides queuing, processing, and dispatch for
  *  asynchronous IO, including timers, sockets, resolvers, and simple
@@ -79,6 +80,7 @@ class SIRIKATA_EXPORT IOService {
     friend class TCPResolver;
     friend class UDPSocket;
     friend class UDPResolver;
+    friend class DeadlineTimer;
 
     /** Get the underlying IOService.  Only made available to allow for
      *  efficient implementation of ASIO provided functionality such as

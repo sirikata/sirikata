@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IOServiceFactory.cpp
+ *  IOTimer.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,42 +29,48 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "IOService.hpp"
-#include "IOServiceFactory.hpp"
-#include "util/Time.hpp"
+#ifndef _SIRIKATA_IOTIMER_HPP_
+#define _SIRIKATA_IOTIMER_HPP_
 
-#include <boost/thread/once.hpp>
-#include <boost/asio.hpp>
+#include "util/Platform.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-namespace {
-boost::once_flag io_singleton=BOOST_ONCE_INIT;
-bool called_io_service=false;
-}
+class DeadlineTimer;
 
-void IOServiceFactory::io_service_initializer(IOService*io_ret){
-    static IOService io;
-    called_io_service=true;
-    io_ret=&io;
-}
+class SIRIKATA_EXPORT IOTimer {
+    DeadlineTimer *mTimer;
+    std::tr1::function<void()> mFunc;
+    class TimedOut;
+public:
+    IOTimer(IOService *io);
 
-IOService&IOServiceFactory::singletonIOService() {
-    static IOService*io=NULL;
-    boost::call_once(io_singleton,boost::bind(io_service_initializer,io));
-    return *io;
-}
-IOService*IOServiceFactory::makeIOService() {
-    return new IOService;
-}
-void IOServiceFactory::destroyIOService(IOService*io) {
-    if (called_io_service==false)
-        delete io;
-    else if (&singletonIOService()!=io)
-        delete io;
-}
+    IOTimer(IOService *io, const std::tr1::function<void()>&f);
+
+    void wait(const std::tr1::shared_ptr<IOTimer> &thisPtr,
+              const Duration &num_seconds);
+
+    void wait(const std::tr1::shared_ptr<IOTimer> &thisPtr,
+              const Duration &num_seconds,
+              const std::tr1::function<void()>&f) {
+        setCallback(f);
+        wait(thisPtr, num_seconds);
+    }
+
+    void setCallback(const std::tr1::function<void()>&f) {
+        mFunc = f;
+    }
+
+    ~IOTimer();
+
+    void cancel();
+};
+
+typedef std::tr1::shared_ptr<IOTimer> IOTimerPtr;
+typedef std::tr1::weak_ptr<IOTimer> IOTimerWPtr;
 
 } // namespace Network
 } // namespace Sirikata
+
+#endif //_SIRIKATA_IOTIMER_HPP_

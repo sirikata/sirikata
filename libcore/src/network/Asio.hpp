@@ -40,10 +40,6 @@
  */
 
 #include <boost/asio.hpp>
-//#include <boost/thread/mutex.hpp>
-//#include <boost/system/system_error.hpp>
-//#include <boost/thread/shared_mutex.hpp>
-//#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -100,6 +96,14 @@ class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
     UDPResolver(IOService&io);
 };
 
+/** Simple wrapper around Boost.Asio's deadline_timer, allowing for safe,
+ *  cross-platform allocation and use.  If you just want a timer that works
+ *  with IOService, see IOTimer.
+ */
+class DeadlineTimer : public boost::asio::deadline_timer {
+public:
+    DeadlineTimer(IOService& io);
+};
 
 #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
 // #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}

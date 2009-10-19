@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IOServiceFactory.cpp
+ *  IOTimer.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,41 +29,61 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
-#include "IOService.hpp"
-#include "IOServiceFactory.hpp"
-#include "util/Time.hpp"
 
-#include <boost/thread/once.hpp>
+#include "util/Standard.hh"
+#include "IOTimer.hpp"
+#include "IOService.hpp"
+#include "util/Time.hpp"
+#include "Asio.hpp"
 #include <boost/asio.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-namespace {
-boost::once_flag io_singleton=BOOST_ONCE_INIT;
-bool called_io_service=false;
+class IOTimer::TimedOut {
+public:
+    static void timedOut(
+            const boost::system::error_code &error,
+            std::tr1::weak_ptr<IOTimer> wthis)
+    {
+        std::tr1::shared_ptr<IOTimer> sharedThis (wthis.lock());
+        if (!sharedThis) {
+            return; // we've been deleted already.
+        }
+        if (error == boost::asio::error::operation_aborted) {
+            return; // don't care if the timer was cancelled.
+        }
+        sharedThis->mFunc();
+    }
+};
+
+IOTimer::IOTimer(IOService *io) {
+    mTimer = new DeadlineTimer(*io);
 }
 
-void IOServiceFactory::io_service_initializer(IOService*io_ret){
-    static IOService io;
-    called_io_service=true;
-    io_ret=&io;
+IOTimer::IOTimer(IOService *io, const std::tr1::function<void()>&f) {
+    mTimer = new DeadlineTimer(*io);
+    setCallback(f);
 }
 
-IOService&IOServiceFactory::singletonIOService() {
-    static IOService*io=NULL;
-    boost::call_once(io_singleton,boost::bind(io_service_initializer,io));
-    return *io;
+void IOTimer::wait(
+        const std::tr1::shared_ptr<IOTimer> &thisPtr,
+        const Duration &num_seconds) {
+    mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
+    std::tr1::weak_ptr<IOTimer> weakThisPtr(thisPtr);
+    mTimer->async_wait(
+        boost::bind(
+            &IOTimer::TimedOut::timedOut,
+            boost::asio::placeholders::error,
+            weakThisPtr));
 }
-IOService*IOServiceFactory::makeIOService() {
-    return new IOService;
+
+IOTimer::~IOTimer() {
+    cancel();
 }
-void IOServiceFactory::destroyIOService(IOService*io) {
-    if (called_io_service==false)
-        delete io;
-    else if (&singletonIOService()!=io)
-        delete io;
+
+void IOTimer::cancel() {
+    mTimer->cancel();
 }
 
 } // namespace Network

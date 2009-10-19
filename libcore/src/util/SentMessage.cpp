@@ -1,4 +1,4 @@
-/*  Sirikata liboh -- Object Host
+/*  Sirikata Network Utilities
  *  SentMessage.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
@@ -39,7 +39,7 @@
 #include <boost/thread.hpp>
 
 #include <network/IOService.hpp>
-
+#include <network/IOTimer.hpp>
 
 namespace Sirikata {
 void  checkThreadId(void *mDebugThreadId){
@@ -123,7 +123,7 @@ void SentMessage::send(MemoryReference bodystr) {
 void SentMessage::unsetTimeout() {
     if (mTimerHandle) {
         mTimerHandle->cancel();
-        std::tr1::weak_ptr<Network::TimerHandle> tmp(mTimerHandle);
+        Network::IOTimerWPtr tmp(mTimerHandle);
         mTimerHandle.reset();
         assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
     }
@@ -135,8 +135,8 @@ void SentMessage::setTimeout(const Duration& timeout) {
         checkThreadId(mDebugThreadId);
         Network::IOService *io = mTracker->getIOService();
         if (io) {
-            std::tr1::weak_ptr<Network::TimerHandle> tmp(mTimerHandle);
-            mTimerHandle.reset(new Network::TimerHandle(io));
+            Network::IOTimerWPtr tmp(mTimerHandle);
+            mTimerHandle.reset(new Network::IOTimer(io));
             assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
 
             mTimerHandle->setCallback(std::tr1::bind(&SentMessage::timedOut, this));

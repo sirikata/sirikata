@@ -38,5 +38,10 @@ UDPResolver::UDPResolver(IOService&io)
 {
 }
 
+DeadlineTimer::DeadlineTimer(IOService& io)
+    : boost::asio::deadline_timer(io.asioService()) {
+}
+
+
 } // namespace Network
 } // namespace Sirikata
