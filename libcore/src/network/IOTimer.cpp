@@ -36,6 +36,7 @@
 #include "util/Time.hpp"
 #include "Asio.hpp"
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 namespace Sirikata {
 namespace Network {

@@ -150,4 +150,4 @@ public:
 } // namespace Network
 } // namespace Sirikata
 
-#endif _SIRIKATA_IOSERVICE_HPP_
+#endif //_SIRIKATA_IOSERVICE_HPP_

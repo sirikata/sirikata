@@ -36,6 +36,7 @@
 
 #include <boost/thread/once.hpp>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 namespace Sirikata {
 namespace Network {
