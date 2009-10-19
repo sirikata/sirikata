@@ -32,9 +32,13 @@
 
 #ifndef SIRIKATA_TimeSyncImpl_HPP__
 #define SIRIKATA_TimeSyncImpl_HPP__
+
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
+
 namespace Sirikata {
 namespace Network {
+
 template <class WeakRef> class TimeSyncImpl : public TimeSync {
     WeakRef mParent;
     IOService*mWaitService;
@@ -90,7 +94,7 @@ template <class WeakRef> class TimeSyncImpl : public TimeSync {
         }
 */
         Duration oldOffset=mOffset;
-        mOffset=mOffsets[mOffsets.size()/2];        
+        mOffset=mOffsets[mOffsets.size()/2];
         mCallback(mOffsets[mOffsets.size()/2]);
     }
     void incrementSyncRound(){
@@ -108,13 +112,13 @@ protected:
     }
 
 
-    
+
     static void startSync(const std::tr1::weak_ptr<TimeSyncImpl<WeakRef> >&weak_thus, const Duration&delay) {
         std::tr1::shared_ptr<TimeSyncImpl<WeakRef> >thus (weak_thus.lock());
         if (thus&&delay==thus->mRetryDelay) {
             thus->internalStartSync();
             std::tr1::function<void(std::tr1::weak_ptr<TimeSyncImpl<WeakRef> > weak_thus, Duration delay)> myfunc(&TimeSyncImpl<WeakRef>::startSync);
-            IOServiceFactory::postServiceMessage(thus->mWaitService,delay,std::tr1::bind(myfunc,weak_thus,delay));
+            thus->mWaitService->post(delay,std::tr1::bind(myfunc,weak_thus,delay));
         }
     }
 public:
@@ -126,7 +130,7 @@ public:
         mNumAverage=0;
         mRetryDelay=Duration::seconds(0);
 
-        mSyncRound=0;        
+        mSyncRound=0;
     }
     static bool bytesReceived(const std::tr1::weak_ptr<TimeSyncImpl<WeakRef> >&weak_thus, const Network::Chunk&data) {
         std::tr1::shared_ptr<TimeSyncImpl<WeakRef> >thus (weak_thus.lock());
@@ -142,13 +146,15 @@ public:
         thus->mRetryDelay=delay;
         startSync(thus,delay);
     }
-    
+
     void setCallback(const std::tr1::function<void(const Duration&)>&cb) {
         mCallback=cb;
     }
 
 
 };
-}
-}
-#endif
+
+} // namespace Network
+} // namespace Sirikata
+
+#endif //SIRIKATA_TimeSyncImpl_HPP__

@@ -1,6 +1,10 @@
 #include "util/Standard.hh"
 #include "TCPDefinitions.hpp"
-namespace Sirikata { namespace Network {
+#include "IOService.hpp"
+
+namespace Sirikata {
+namespace Network {
+
 TCPSocket::TCPSocket(IOService&io):
     boost::asio::ip::tcp::socket(*(io.mImpl)){}
 
@@ -19,4 +23,5 @@ TCPResolver::TCPResolver(IOService&io)
 {
 }
 
-} }
+} // namespace Network
+} // namespace Sirikata

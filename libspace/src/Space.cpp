@@ -37,6 +37,7 @@
 #include <network/StreamListener.hpp>
 #include <network/StreamListenerFactory.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <network/IOService.hpp>
 #include <space/ObjectConnections.hpp>
 #include <Space_Sirikata.pbj.hpp>
 #include <util/RoutableMessage.hpp>
@@ -63,7 +64,7 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     unsigned int fsi=Services::ROUTER;
     unsigned char randomKey[SHA256::static_size]={3,2,1,4,5,6,3,8,235,124,24,15,26,165,123,95,
                                                   53,2,111,114,125,166,123,158,232,144,4,152,221,161,122,96};
-    
+
     Protocol::SpaceServices spaceServices;
     spaceServices.set_registration_port(rsi);
     spaceServices.set_loc_port(lsi);//UUID(lsi,sizeof(lsi)));
@@ -71,7 +72,7 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     //spaceServices.set_oseg(osi);//UUID(osi,sizeof(osi)));
     //spaceServices.set_cseg(csi);//UUID(csi,sizeof(csi)));
     spaceServices.set_router_port(fsi);//UUID(fsi,sizeof(fsi)));
-    
+
     mRegistration = new Registration(SHA256::convertFromBinary(randomKey));
     mLoc=new Loc;
     Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
@@ -101,10 +102,10 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     mLoc->forwardMessagesTo(mGeom);
 }
 void Space::run() {
-    Network::IOServiceFactory::runService(mIO);
+    mIO->run();
 }
 void Space::processMessage(const ObjectReference*ref,MemoryReference message){
-    
+
     RoutableMessageHeader hdr;
     MemoryReference message_body=hdr.ParseFromArray(message.data(),message.size());
     if (!hdr.has_source_object()&&ref) {

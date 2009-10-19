@@ -47,6 +47,7 @@
 #include <oh/HostedObject.hpp>
 #include <oh/SpaceIDMap.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <network/IOService.hpp>
 #include <util/KnownServices.hpp>
 #include <persistence/ObjectStorage.hpp>
 #include <persistence/ReadWriteHandlerFactory.hpp>
@@ -295,16 +296,16 @@ int main ( int argc,const char**argv ) {
         Duration frameSeconds=(curTickTime-lastTickTime);
         if (frameSeconds<frameTime) {
             //printf ("%f/%f Sleeping for %f\n",frameSeconds.toSeconds(), frameTime.toSeconds(),(frameTime-frameSeconds).toSeconds());
-            
-            Network::IOServiceFactory::postServiceMessage(ioServ,
+
+            ioServ->post(
                                                               (frameTime-frameSeconds),
-                                                              std::tr1::bind(&Network::IOServiceFactory::stopService,
+                                                              std::tr1::bind(&Network::IOService::stop,
                                                                              ioServ)
                                                               );
-            Network::IOServiceFactory::runService(ioServ);
-            Network::IOServiceFactory::resetService(ioServ);
+            ioServ->run();
+            ioServ->reset();
         }else {
-            Network::IOServiceFactory::pollService(ioServ);
+            ioServ->poll();
         }
         lastTickTime=curTickTime;
     }

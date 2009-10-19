@@ -35,6 +35,7 @@
 #include "network/StreamFactory.hpp"
 #include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "util/ObjectReference.hpp"
 #include "Test_Subscription.pbj.hpp"
 #include "util/PluginManager.hpp"
@@ -86,16 +87,16 @@ class SubscriptionTest : public CxxTest::TestSuite
 
     std::tr1::shared_ptr<Subscription::SubscriptionClient::IndividualSubscription> otherTLS;
     void subscriptionThread() {
-        Network::IOServiceFactory::runService(mSubIO);
+        mSubIO->run();
     }
     void broadcastThread() {
-        Network::IOServiceFactory::runService(mBroadIO);
+        mBroadIO->run();
     }
-    void broadcastCallback(Network::Stream::ConnectionStatus status, const std::string&reason) { 
+    void broadcastCallback(Network::Stream::ConnectionStatus status, const std::string&reason) {
         if (status!=Network::Stream::Connected) {
             mDisconnected=true;
         }else {
-            
+
         }
     }
     Network::Address mBroadcastAddress;
@@ -127,7 +128,7 @@ public:
         mSubscriptionMessage.mutable_broadcast_address().set_hostname(mSubscriptionAddress.getHostName());
         mSubscriptionMessage.mutable_broadcast_address().set_service(mSubscriptionAddress.getService());
         mSubscriptionMessage.set_broadcast_name(tBroadcastUUID);
-        
+
     }
     static SubscriptionTest*createSuite() {
         return new SubscriptionTest;
@@ -147,9 +148,9 @@ public:
 #else
             sleep(1);
 #endif
-        
-        Network::IOServiceFactory::stopService(mSubIO);
-        Network::IOServiceFactory::stopService(mBroadIO);
+
+            mSubIO->stop();
+            mBroadIO->stop();
         mBroadThread->join();
         mSubThread->join();
         mServer=std::tr1::shared_ptr<Subscription::Server>();
@@ -176,10 +177,10 @@ public:
                               std::tr1::bind(&SubscriptionTest::subscriptionDiscon,this,1));
         tBroadcast=mBroad->establishBroadcast(mBroadcastAddress,
                                               tBroadcastUUID,
-                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));        
+                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));
         oBroadcast=mBroad->establishBroadcast(mBroadcastAddress,
                                               oBroadcastUUID,
-                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));        
+                                              std::tr1::bind(&SubscriptionTest::broadcastCallback,this,_2,_3));
         (*tBroadcast)->send(stdref,Network::ReliableOrdered);
 
         for (int i=0;i<93;++i) {
@@ -191,6 +192,6 @@ public:
             if (mSubInitStage[1].read()==1)
                 break;
         }
-        TS_ASSERT_EQUALS(mSubInitStage[1].read(),1);       
+        TS_ASSERT_EQUALS(mSubInitStage[1].read(),1);
     }
 };

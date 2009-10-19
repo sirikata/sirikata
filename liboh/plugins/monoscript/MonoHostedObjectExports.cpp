@@ -4,6 +4,7 @@
 #include "oh/ObjectHost.hpp"
 #include "oh/SpaceTimeOffsetManager.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "MonoDefs.hpp"
 #include "MonoDomain.hpp"
 #include "MonoContext.hpp"
@@ -85,7 +86,7 @@ static MonoObject* InternalMono_Context_CallFunction(MonoObject *message, MonoOb
                                                              MonoContext::getSingleton().getDomain(),
                                                              Mono::Delegate(Mono::Object(callback)),
                                                              _1,_2,_3));
-        
+
         sm->setTimeout(duration);
         sm->header()=hdr;
         sm->send(body);
@@ -118,7 +119,7 @@ static void CallDelegate(const std::tr1::weak_ptr<HostedObject>&weak_ho, const M
 }
 static void Mono_Context_AsyncWait(MonoObject*callback, MonoObject*duration){
     std::tr1::weak_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
-    Sirikata::Network::IOServiceFactory::postServiceMessage(MonoContext::getSingleton().getVWObject()->getObjectHost()->getSpaceIO(),
+    MonoContext::getSingleton().getVWObject()->getObjectHost()->getSpaceIO()->post(
                                              Mono::Object(duration).unboxDuration(),
                                              std::tr1::bind(&CallDelegate,ho,MonoContext::getSingleton().getDomain(), Mono::Delegate(Mono::Object(callback))));
 }
@@ -134,12 +135,12 @@ static MonoObject* Mono_Context_CallFunction(MonoObject *message, MonoObject*cal
 static MonoObject* Mono_Context_SendMessage(MonoObject *message){
     std::tr1::shared_ptr<HostedObject> ho=MonoContext::getSingleton().getVWObject();
     MemoryBuffer buf;
-    
+
     Mono::Array(message).unboxInPlaceByteArray(buf);
     if (ho&&!buf.empty()) {
         RoutableMessageHeader hdr;
         MemoryReference body=hdr.ParseFromArray(&buf[0],buf.size());
-        
+
         ho->send(hdr,body);
     }else {
         return MonoContext::getSingleton().getDomain().Boolean(false).object();
@@ -167,7 +168,7 @@ void Mono_Context_setTime(MonoObject *timeRetval, const Time& cur) {
     uint32 curUpper=curRaw;
     retval.send("setLowerUpper",
                 MonoContext::getSingleton().getDomain().UInt32(curLower),
-                MonoContext::getSingleton().getDomain().UInt32(curUpper)); 
+                MonoContext::getSingleton().getDomain().UInt32(curUpper));
 }
 static void Mono_Context_GetTime(MonoObject*space_id,MonoObject *timeRetval) {
     SpaceID sid=SpaceID(Mono::Object(space_id).unboxUUID());
@@ -207,7 +208,7 @@ static void Mono_Context_GetTimeString(MonoObject*space_id, MonoObject* timeRetv
 
 namespace Sirikata {
 
-void 
+void
 InitHostedObjectExports () {
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::GetUUID", (void*)Mono_Context_CurrentUUID);
     mono_add_internal_call ("Sirikata.Runtime.HostedObject::iSendMessage", (void*)Mono_Context_SendMessage);

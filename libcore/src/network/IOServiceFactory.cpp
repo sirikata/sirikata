@@ -31,6 +31,7 @@
  */
 #include "util/Standard.hh"
 #include "TCPDefinitions.hpp"
+#include "IOService.hpp"
 #include "IOServiceFactory.hpp"
 #include "util/Time.hpp"
 
@@ -61,45 +62,6 @@ void IOServiceFactory::destroyIOService(IOService*io) {
         delete io;
     else if (&singletonIOService()!=io)
         delete io;
-}
-
-std::size_t IOServiceFactory::pollService(IOService*ios){
-    return ios->mImpl->poll();
-}
-std::size_t IOServiceFactory::runService(IOService*ios){
-    return ios->mImpl->run();
-}
-std::size_t IOServiceFactory::pollOneService(IOService*ios){
-    return ios->mImpl->poll_one();
-}
-std::size_t IOServiceFactory::runOneService(IOService*ios){
-    return ios->mImpl->run_one();
-}
-void IOServiceFactory::stopService(IOService*ios){
-    ios->mImpl->stop();
-}
-void IOServiceFactory::resetService(IOService*ios){
-    ios->mImpl->reset();
-}
-
-void IOServiceFactory::postServiceMessage(IOService*ios,const std::tr1::function<void()>&f){
-    ios->mImpl->post(f);
-}
-void IOServiceFactory::dispatchServiceMessage(IOService*ios,const std::tr1::function<void()>&f){
-    ios->mImpl->dispatch(f);
-}
-namespace {
-void handle_deadline_timer(const boost::system::error_code&e,const std::tr1::shared_ptr<boost::asio::deadline_timer>&timer,const std::tr1::function<void()>&f) {
-    if (e)
-        return;
-
-    f();
-}
-}
-void IOServiceFactory::postServiceMessage(IOService*ios,const Duration&waitFor,const std::tr1::function<void()>&f){
-    std::tr1::shared_ptr<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(*(ios->mImpl),boost::posix_time::microseconds(waitFor.toMicroseconds())));
-    using std::tr1::placeholders::_1;
-    t->async_wait(std::tr1::bind(&handle_deadline_timer,_1,t,f));
 }
 
 class BoostAsioDeadlineTimer : public boost::asio::deadline_timer {
@@ -153,14 +115,6 @@ TimerHandle::~TimerHandle() {
 
 void TimerHandle::cancel() {
     mTimer->cancel();
-}
-
-IOService::IOService() {
-    mImpl = new boost::asio::io_service(1);
-}
-
-IOService::~IOService(){
-    delete mImpl;
 }
 
 } // namespace Network

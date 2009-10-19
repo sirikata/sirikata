@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IOServiceFactory.hpp
+ *  IOService.cpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -29,56 +29,75 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_IOSERVICEFACTORY_HPP_
-#define _SIRIKATA_IOSERVICEFACTORY_HPP_
+
+#include "util/Standard.hh"
+#include "IOService.hpp"
+#include "util/Time.hpp"
+#include <boost/asio.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-class IOService;
-class BoostAsioDeadlineTimer;
+typedef boost::asio::io_service InternalIOService;
 
-class SIRIKATA_EXPORT TimerHandle {
-    BoostAsioDeadlineTimer *mTimer;
-    std::tr1::function<void()> mFunc;
-    class TimedOut;
-public:
-    TimerHandle(IOService *io);
+typedef boost::asio::deadline_timer deadline_timer;
+typedef std::tr1::shared_ptr<deadline_timer> deadline_timer_ptr;
+typedef boost::posix_time::microseconds posix_microseconds;
+using std::tr1::placeholders::_1;
 
-    TimerHandle(IOService *io, const std::tr1::function<void()>&f);
+IOService::IOService() {
+    mImpl = new boost::asio::io_service(1);
+}
 
-    void wait(const std::tr1::shared_ptr<TimerHandle> &thisPtr,
-              const Duration &num_seconds);
+IOService::~IOService(){
+    delete mImpl;
+}
 
-    void wait(const std::tr1::shared_ptr<TimerHandle> &thisPtr,
-              const Duration &num_seconds,
-              const std::tr1::function<void()>&f) {
-        setCallback(f);
-        wait(thisPtr, num_seconds);
-    }
+uint32 IOService::pollOne() {
+    return (uint32) mImpl->poll_one();
+}
 
-    void setCallback(const std::tr1::function<void()>&f) {
-        mFunc = f;
-    }
+uint32 IOService::poll() {
+    return (uint32) mImpl->poll();
+}
 
-    ~TimerHandle();
+uint32 IOService::runOne() {
+    return (uint32) mImpl->run_one();
+}
 
-    void cancel();
-};
+uint32 IOService::run() {
+    return (uint32) mImpl->run();
+}
 
-typedef std::tr1::shared_ptr<TimerHandle> TimerHandlePtr;
-typedef std::tr1::weak_ptr<TimerHandle> TimerHandleWPtr;
+void IOService::stop() {
+    mImpl->stop();
+}
 
+void IOService::reset() {
+    mImpl->reset();
+}
 
-class SIRIKATA_EXPORT IOServiceFactory {
-    static void io_service_initializer(IOService*io_ret);
-  public:
-    static IOService* makeIOService();
-    static void destroyIOService(IOService*io);
-    static IOService& singletonIOService();
-};
+void IOService::dispatch(const CompletionHandler& handler) {
+    mImpl->dispatch(handler);
+}
+
+void IOService::post(const CompletionHandler& handler) {
+    mImpl->post(handler);
+}
+
+namespace {
+void handle_deadline_timer(const boost::system::error_code&e, const deadline_timer_ptr& timer, const IOService::CompletionHandler& handler) {
+    if (e)
+        return;
+
+    handler();
+}
+} // namespace
+
+void IOService::post(const Duration& waitFor, const CompletionHandler& handler) {
+    deadline_timer_ptr timer(new deadline_timer(*mImpl, posix_microseconds(waitFor.toMicroseconds())));
+    timer->async_wait(std::tr1::bind(&handle_deadline_timer, _1, timer, handler));
+}
 
 } // namespace Network
 } // namespace Sirikata
-
-#endif

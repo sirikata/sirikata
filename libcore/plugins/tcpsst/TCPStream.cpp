@@ -40,6 +40,7 @@
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 
@@ -50,20 +51,18 @@ TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket
 
 void TCPStream::readyRead() {
     std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
-    IOServiceFactory::postServiceMessage(&mSocket->getASIOService(),
+    mSocket->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
                                               mID));
-    
 }
 
 void TCPStream::pauseSend() {
     std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
-    IOServiceFactory::postServiceMessage(&mSocket->getASIOService(),
+    mSocket->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,
                                               mID));
-    
 }
 bool TCPStream::canSend(const size_t dataSize)const {
     uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
@@ -229,7 +228,7 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
 
 Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
                          const BytesReceivedCallback&chunkReceivedCallback,
-                         const ReadySendCallback&readySendCallback) { 
+                         const ReadySendCallback&readySendCallback) {
     if (!mSocket) {
         return NULL;
     }

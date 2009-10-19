@@ -35,6 +35,7 @@
 #include "network/StreamFactory.hpp"
 #include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "util/AtomicTypes.hpp"
 #include "util/PluginManager.hpp"
 #include "util/DynamicLibrary.hpp"
@@ -69,7 +70,7 @@ public:
         }
 
         mDataMap[id].push_back(connectionReason);
-        if (stat!=Stream::Connected){ 
+        if (stat!=Stream::Connected){
             ++mDisconCount;
         }
 
@@ -125,7 +126,7 @@ public:
 
 		s->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
         mReadyToConnect=true;
-        IOServiceFactory::runService(mIO);
+        mIO->run();
         delete s;
     }
     std::string mPort;
@@ -179,7 +180,7 @@ public:
             Sirikata::Network::Chunk::const_iterator aiter=a->begin();
             Sirikata::Network::Chunk::const_iterator biter=b->begin();
             for(;i<ilim;++i,++aiter,++biter) {
-                
+
                 if ((*aiter)<(*biter)) {
                     return true;
                 }
@@ -194,10 +195,10 @@ public:
         bool operator() (const std::string*a, const std::string*b) {
             return *a<*b;
         }
-        bool ascmp (const Sirikata::Network::Chunk*a, const Sirikata::Network::Chunk*b) {        
+        bool ascmp (const Sirikata::Network::Chunk*a, const Sirikata::Network::Chunk*b) {
             return (*this)(a,b);
         }
-        bool acmp (const Sirikata::Network::Chunk&a, const Sirikata::Network::Chunk&b) {        
+        bool acmp (const Sirikata::Network::Chunk&a, const Sirikata::Network::Chunk&b) {
             return (*this)(&a,&b);
         }
     };
@@ -212,14 +213,14 @@ public:
                 orderedNetData.push_back(&netData[i]);
             }else {
                 unorderedNetData.push_back(&netData[i]);
-            }            
+            }
         }
         for (size_t i=0;i<keyData.size();++i) {
             if (keyData[i].size()==0||keyData[i][0]=='T') {
                 orderedKeyData.push_back(&keyData[i]);
             }else {
                 unorderedKeyData.push_back(&keyData[i]);
-            }            
+            }
         }
         Comparator c;
         std::sort(unorderedNetData.begin(),unorderedNetData.end(),c);
@@ -343,14 +344,14 @@ public:
     static void destroySuite(SstTest*sst) {
         delete sst;
     }
-    
+
     ~SstTest() {
         for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
             delete *i;
         }
         mStreams.resize(0);
-        IOServiceFactory::stopService(mIO);
-        
+        mIO->stop();
+
         mThread->join();
         delete mThread;
         IOServiceFactory::destroyIOService(mIO);
@@ -423,23 +424,23 @@ public:
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);
 
-            }            
+            }
             {
                 Sirikata::vuint32 vartest(iter+iter/2);
                 curlen=vartest.serialize(buffer,maxlen);
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);
 
-            }            
+            }
             for (int i=0;i<10;++i) {
                 Sirikata::vuint32 vartest(iter+i);
                 curlen=vartest.serialize(buffer,maxlen);
                 TS_ASSERT(guinea.unserialize(buffer,curlen));
                 TS_ASSERT_EQUALS(vartest,guinea);
 
-            }            
+            }
         }
-        
+
     }
     static void noopSubstream(Stream *stream, Stream::SetCallbacks&scb) {
         scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
@@ -463,7 +464,7 @@ public:
             if (doSubstreams) {
 
                 {
-                    Stream*zz=r->factory();        
+                    Stream*zz=r->factory();
                     zz = r->clone(&SstTest::noopSubstream);
                     if (zz) {
                         runRoutine(zz);

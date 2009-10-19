@@ -33,6 +33,7 @@
 #include "subscription/Platform.hpp"
 #include "subscription/SubscriptionClient.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "network/Stream.hpp"
 #include "network/StreamFactory.hpp"
 #include "Subscription_Subscription.pbj.hpp"
@@ -63,8 +64,7 @@ void SubscriptionClient::upgradeFromIOThread(const std::tr1::weak_ptr<State>&wea
 
 void SubscriptionClient::upgrade(const std::tr1::weak_ptr<State>&source,
                                  const std::tr1::weak_ptr<State>&dest) {
-    Network::IOServiceFactory::
-        dispatchServiceMessage(mService,
+    mService->dispatch(
                                std::tr1::bind(&SubscriptionClient::upgradeFromIOThread,
                                               this,
                                               source,
@@ -74,8 +74,7 @@ void SubscriptionClient::upgrade(const std::tr1::weak_ptr<State>&source,
 
 void SubscriptionClient::removeSubscriberHint(const Network::Address&address,
                                  const UUID&uuid) {
-    Network::IOServiceFactory::
-        dispatchServiceMessage(mService,
+    mService->dispatch(
                                std::tr1::bind(&SubscriptionClient::removeSubscriberFromIOThreadHint,
                                               this,
                                               address,
@@ -100,8 +99,7 @@ void SubscriptionClient::removeSubscriberFromIOThreadHint(Network::Address addre
     }
 }
 void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscription>&individual, bool sendIntroMessage){
-    Network::IOServiceFactory::
-        dispatchServiceMessage(mService,
+    mService->dispatch(
                                std::tr1::bind(&SubscriptionClient::addSubscriberFromIOThread,
                                               this,
                                               individual,
@@ -127,7 +125,7 @@ void SubscriptionClient::State::setStream(const std::tr1::shared_ptr<State> thus
 
     std::tr1::weak_ptr<State> weak_thus(thus);
     //clone the toplevel stream and bind weak_ptr functions from the state to callback
-    std::tr1::shared_ptr<Network::Stream> 
+    std::tr1::shared_ptr<Network::Stream>
         clonedStream(topLevelStream->clone(std::tr1::bind(&State::connectionCallback,
                                                           weak_thus,
                                                           _1,
@@ -147,10 +145,10 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::wea
     Duration period(Duration::microseconds(0));
     // an example live listener, without which the above period is meaningless
     std::tr1::shared_ptr<IndividualSubscription> tooGoodForMe;
-    
+
     //start at the end
     size_t i=mSubscribers.size();
-    
+
     while(i>0) {
         --i;//and work down
         std::tr1::shared_ptr<IndividualSubscription> individual=mSubscribers[i].lock();
@@ -184,7 +182,7 @@ void SubscriptionClient::State::purgeSubscribersFromIOThread(const std::tr1::wea
             Protocol::Subscribe subscription;//make a subscription packet
             subscription.set_broadcast_name(mUUID);//populate it with fields from this
             subscription.set_update_period(period);//and with the desired slower period
-            
+
             //FIXME any more properties? we don't have a way to determine to edit the code if there are
             parent->subscribe(mAddress,
                               subscription,

@@ -36,6 +36,7 @@
 #include "network/StreamFactory.hpp"
 #include "network/StreamListenerFactory.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "util/UUID.hpp"
 #include "Subscription_Subscription.pbj.hpp"
 #include "subscription/Server.hpp"
@@ -74,7 +75,7 @@ Server::~Server() {
         mSubscriptions.clear();
     }
     delete mBroadcastersSubscriptionsLock;
-    
+
 }
 void Server::subscriberStreamCallback(Network::Stream*newStream,Network::Stream::SetCallbacks&cb){
     if (newStream) {
@@ -92,8 +93,7 @@ bool Server::subscriberBytesReceivedCallback(const std::tr1::shared_ptr<std::tr1
     Protocol::Subscribe subscriptionRequest;
     bool success=false;
     if (!dat.empty()&&subscriptionRequest.ParseFromArray(&dat[0],dat.size())&&subscriptionRequest.has_broadcast_name()) {
-        Network::IOServiceFactory::
-            postServiceMessage(mBroadcastIOService,
+        mBroadcastIOService->post(
                                    std::tr1::bind(&Server::subscriberBytesReceivedCallbackOnBroadcastIOService,
                                                   this,
                                                   stream,
@@ -151,14 +151,13 @@ void Server::subscriberBytesReceivedCallbackOnBroadcastIOService(const std::tr1:
             size_t which=waiting->size();
             waiting->push_back(WaitingStreams(stream,subscriptionRequest));
             std::tr1::weak_ptr<Server> thus=shared_from_this();
-            Network::IOServiceFactory::
-                postServiceMessage(mBroadcastIOService,
+            mBroadcastIOService->post(
                                        mMaxSubscribeDelay,
                                        std::tr1::bind(&Server::purgeWaitingSubscriberOnBroadcastIOService,
                                                       thus,
                                                       uuid,
                                                       which));
-                           
+
         }
     }
     if (!success) {
@@ -254,8 +253,7 @@ void Server::broadcastStreamCallback(Network::Stream* stream,Network::Stream::Se
 
 void Server::initiatePolling(const UUID&name, const Duration&waitTime) {
     std::tr1::weak_ptr<Server>thus=shared_from_this();
-    Network::IOServiceFactory::
-        postServiceMessage(mBroadcastIOService,
+    mBroadcastIOService->post(
                                waitTime,
                                std::tr1::bind(&poll,
                                               thus,

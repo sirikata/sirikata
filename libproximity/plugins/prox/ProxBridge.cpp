@@ -44,6 +44,7 @@
 #include "network/StreamFactory.hpp"
 #include "options/Options.hpp"
 #include "network/IOServiceFactory.hpp"
+#include "network/IOService.hpp"
 #include "util/RoutableMessage.hpp"
 //#include "Sirikata.pbj.hpp"
 namespace Sirikata { namespace Proximity {
@@ -65,7 +66,7 @@ void ProxBridge::update(const Duration&duration,const std::tr1::weak_ptr<Prox::Q
     std::tr1::shared_ptr<Prox::QueryHandler> listener=listen.lock();
     if (listener) {
         listener->tick(Prox::Time((Time::now(Duration::zero())-Time::epoch()).toMicroseconds()));//FIXME for distributed space servers
-        Network::IOServiceFactory::postServiceMessage(mIO,duration,std::tr1::bind(&ProxBridge::update,this,duration,listen));
+        mIO->post(duration,std::tr1::bind(&ProxBridge::update,this,duration,listen));
     }
 }
 bool ProxBridge::forwardMessagesTo(MessageService*ms){
@@ -100,7 +101,7 @@ ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHa
 						  NULL);
     (mOptions=OptionSet::getOptions("proxbridge",this))->parse(options);
     std::tr1::weak_ptr<Prox::QueryHandler> phandler=mQueryHandler;
-    Network::IOServiceFactory::postServiceMessage(&io,updateDuration->as<Duration>(),std::tr1::bind(&ProxBridge::update,this,updateDuration->as<Duration>(),phandler));
+    io.post(updateDuration->as<Duration>(),std::tr1::bind(&ProxBridge::update,this,updateDuration->as<Duration>(),phandler));
     mListener->listen(Network::Address("127.0.0.1",port->as<String>()),
                       std::tr1::bind(&ProxBridge::newObjectStreamCallback,this,_1,_2));
 

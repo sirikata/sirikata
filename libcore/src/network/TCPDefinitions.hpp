@@ -32,37 +32,20 @@
 
 #ifndef _TCPDefinitions_HPP_
 #define _TCPDefinitions_HPP_
+
 #include <boost/asio.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread.hpp>
-namespace Sirikata { namespace Network {
+
+namespace Sirikata {
+namespace Network {
 
 typedef boost::asio::io_service InternalIOService;
 typedef boost::asio::ip::tcp::socket InternalTCPSocket;
 typedef  boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
 typedef  boost::asio::ip::tcp::resolver InternalTCPResolver;
-
-class IOServiceFactory;
-class TimerHandle;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-
-class SIRIKATA_EXPORT IOService {
-    friend class IOServiceFactory;
-    friend class TimerHandle;
-    friend class TCPSocket;
-    friend class TCPListener;
-    friend class TCPResolver;
-
-    IOService();
-    ~IOService();
-
-    InternalIOService* mImpl;
-public:
-};
 
 class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
   public:
@@ -85,5 +68,7 @@ class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
 #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)
 // #define TCPSSTLOG(thisname,extension,buffer,buffersize,error)  if (!error) {Sirikata::Network::ASIOLogBuffer(thisname,extension,(buffersize)?(buffer):NULL,buffersize);}
 
-} }
+} // namespace Network
+} // namespace Sirikata
+
 #endif

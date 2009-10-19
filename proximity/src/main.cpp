@@ -34,6 +34,7 @@
 #include <options/Options.hpp>
 #include <util/PluginManager.hpp>
 #include <network/IOServiceFactory.hpp>
+#include <network/IOService.hpp>
 namespace Sirikata{ namespace Protocol {
 class IMessage;
 class IRetObj;
@@ -58,9 +59,9 @@ int main(int argc,const char**argv) {
     PluginManager plugins;
     plugins.load( DynamicLibrary::filename("tcpsst") );
     plugins.load( DynamicLibrary::filename("prox") );
-    
+
     Network::IOService*io=Network::IOServiceFactory::makeIOService();
     Proximity::ProximitySystemFactory::getSingleton().getDefaultConstructor()(io,"",&Sirikata::Proximity::ProximitySystem::defaultNoAddressProximityCallback);
-    Network::IOServiceFactory::runService(io);
+    io->run();
     return 0;
 }
