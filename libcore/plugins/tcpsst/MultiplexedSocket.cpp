@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Platform.hpp"
-#include "network/TCPDefinitions.hpp"
+#include "network/Asio.hpp"
 #include "network/Stream.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
@@ -39,14 +39,18 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOConnectAndHandshake.hpp"
 #include "TCPSetCallbacks.hpp"
+
+#include <boost/thread.hpp>
+
 #define ASIO_SEND_BUFFER_SIZE 1440
 #define MAX_ASIO_ENQUEUED_SEND_SIZE 0
-namespace Sirikata { namespace Network {
 
+namespace Sirikata {
+namespace Network {
 
-boost::mutex MultiplexedSocket::sConnectingMutex; 
+boost::mutex MultiplexedSocket::sConnectingMutex;
 void MultiplexedSocket::unpauseSendStreams(const std::vector<Stream::StreamID>&toUnpause) {
-    if (toUnpause.size()) { 
+    if (toUnpause.size()) {
         std::deque<StreamIDCallbackPair> registrations;
         CommitCallbacks(registrations,MultiplexedSocket::CONNECTED,false);
         for (std::vector<Stream::StreamID>::const_iterator i=toUnpause.begin(),ie=toUnpause.end();i!=ie;++i) {
@@ -86,7 +90,7 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
     if (setConnectedStatus||!mCallbackRegistration.empty()) {
         if (status==CONNECTED) {
             //do a little house cleaning and empty as many new requests as possible
-            std::vector<RawRequest> newRequests;            
+            std::vector<RawRequest> newRequests;
             {
                 boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
                 newRequests.swap(mNewRequests);
@@ -94,7 +98,7 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
             for (size_t i=0,ie=newRequests.size();i<ie;++i) {
                 sendBytesNow(getSharedPtr(),newRequests[i], true/*force since we promised to send them out*/);
             }
-            
+
         }
         boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
         statusChanged=(status!=mSocketConnectionPhase);
@@ -138,7 +142,7 @@ bool MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocke
     static Stream::StreamID::Hasher hasher;
     if (data.originStream==Stream::StreamID()) {
         unsigned int socket_size=(unsigned int)thus->mSockets.size();
-        for(unsigned int i=1;i<socket_size;++i) {                
+        for(unsigned int i=1;i<socket_size;++i) {
             thus->mSockets[i].rawSend(thus,new Chunk(*data.data),true);
         }
         thus->mSockets[0].rawSend(thus,data.data,true);
@@ -190,7 +194,7 @@ bool MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
             }else if(thus->mSocketConnectionPhase==DISCONNECTED) {
                 //retval=false;
                 //FIXME is this the correct thing to do?
-                TCPSSTLOG(this,"sendnvr",&*data.data->begin(),data.data->size(),false);                
+                TCPSSTLOG(this,"sendnvr",&*data.data->begin(),data.data->size(),false);
                 TCPSSTLOG(this,"sendnvr","\n",1,false);
             }else {
                 //with the connectionMutex acquired, no socket is allowed to be in the mSocketConnectionPhase
@@ -208,7 +212,7 @@ bool MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&
     return retval;
 }
 
-MultiplexedSocket::SocketConnectionPhase MultiplexedSocket::addCallbacks(const Stream::StreamID&sid, 
+MultiplexedSocket::SocketConnectionPhase MultiplexedSocket::addCallbacks(const Stream::StreamID&sid,
                                                                          TCPStream::Callbacks* cb) {
     boost::lock_guard<boost::mutex> connectingMutex(sConnectingMutex);
     mCallbackRegistration.push_back(StreamIDCallbackPair(sid,cb));
@@ -251,20 +255,20 @@ void MultiplexedSocket::sendAllProtocolHeaders(const std::tr1::shared_ptr<Multip
     assert (thus->mNewRequests.size()==0);//would otherwise need to empty out new requests--but no one should have a reference to us here
 }
 ///erase all sockets and callbacks since the refcount is now zero;
-MultiplexedSocket::~MultiplexedSocket() {        
+MultiplexedSocket::~MultiplexedSocket() {
     Stream::SubstreamCallback callbackToBeDeleted=mNewSubstreamCallback;
     mNewSubstreamCallback=&Stream::ignoreSubstreamCallback;
-    TCPSetCallbacks setCallbackFunctor(this,NULL);        
+    TCPSetCallbacks setCallbackFunctor(this,NULL);
     callbackToBeDeleted(NULL,setCallbackFunctor);
     for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
         mSockets[i].shutdownAndClose();
-    }        
-    boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);        
+    }
+    boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
     for (unsigned int i=0;i<(unsigned int)mSockets.size();++i){
         mSockets[i].destroySocket();
     }
     mSockets.clear();
-    
+
     while (!mCallbackRegistration.empty()){
         delete mCallbackRegistration.front().mCallback;
         mCallbackRegistration.pop_front();
@@ -276,7 +280,7 @@ MultiplexedSocket::~MultiplexedSocket() {
     while(!mCallbacks.empty()) {
         delete mCallbacks.begin()->second;
         mCallbacks.erase(mCallbacks.begin());
-    }    
+    }
 }
 
 void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stream::StreamID &id) {
@@ -290,12 +294,12 @@ void MultiplexedSocket::shutDownClosedStream(unsigned int controlCode,const Stre
                 TCPStream::closeSendStatus(*sendStatus);
             }
             where->second->mConnectionCallback(Stream::Disconnected,"Remote Host Disconnected");
-            
+
             CommitCallbacks(registrations,CONNECTED,false);//just in case stream committed new callbacks during callback
             where=mCallbacks.find(id);
             delete where->second;
             mCallbacks.erase(where);
-        }                                    
+        }
     }
     std::tr1::unordered_set<Stream::StreamID>::iterator where=mOneSidedClosingStreams.find(id);
     if (where!=mOneSidedClosingStreams.end()) {
@@ -326,7 +330,7 @@ bool MultiplexedSocket::receiveFullChunk(unsigned int whichSocket, Stream::Strea
                         where->second++;
                         int how_much=where->second;
                         if (where->second==mSockets.size()) {
-                            mAckedClosingStreams.erase(where);        
+                            mAckedClosingStreams.erase(where);
                             shutDownClosedStream(controlCode,id);
                             if (controlCode==TCPStream::TCPStreamCloseStream) {
                                 closeStream(getSharedPtr(),id,TCPStream::TCPStreamAckCloseStream);
@@ -384,7 +388,7 @@ void MultiplexedSocket::connectionFailureOrSuccessCallback(SocketConnectionPhase
     }
 }
 void MultiplexedSocket::connectionFailedCallback(const std::string& error) {
-    
+
     connectionFailureOrSuccessCallback(DISCONNECTED,Stream::ConnectionFailed,error);
 }
 void MultiplexedSocket::connectionFailedCallback(unsigned int whichSocket, const std::string& error) {
@@ -393,7 +397,7 @@ void MultiplexedSocket::connectionFailedCallback(unsigned int whichSocket, const
 }
 
 void MultiplexedSocket::hostDisconnectedCallback(const std::string& error) {
-    
+
     connectionFailureOrSuccessCallback(DISCONNECTED,Stream::Disconnected,error);
 }
 void MultiplexedSocket::hostDisconnectedCallback(unsigned int whichSocket, const std::string& error) {
@@ -414,7 +418,7 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets) {
 }
 void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) {
     prepareConnect(numSockets);
-    std::tr1::shared_ptr<ASIOConnectAndHandshake> 
+    std::tr1::shared_ptr<ASIOConnectAndHandshake>
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));
     //will notify connectionFailureOrSuccessCallback when resolved
@@ -443,17 +447,18 @@ void MultiplexedSocket::ioReactorThreadPauseSend(const std::tr1::weak_ptr<Multip
 }
 Address MultiplexedSocket::getRemoteEndpoint(Stream::StreamID originStream)const {
     if (mSocketConnectionPhase==CONNECTED) {
-        
+
         size_t whichStream=Stream::StreamID::Hasher()(originStream)%mSockets.size();
         return mSockets[whichStream].getRemoteEndpoint();
-    }else return Address::null();    
+    }else return Address::null();
 }
 Address MultiplexedSocket::getLocalEndpoint(Stream::StreamID originStream)const {
     if (mSocketConnectionPhase==CONNECTED) {
         size_t whichStream=Stream::StreamID::Hasher()(originStream)%mSockets.size();
         return mSockets[whichStream].getLocalEndpoint();
-        
-    }else return Address::null();    
+
+    }else return Address::null();
 }
 
-} }
+} // namespace Network
+} // namespace Sirikata

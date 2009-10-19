@@ -30,10 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/ThreadId.hpp"
-namespace Sirikata { namespace Network {
+#include <boost/thread.hpp>
+
+namespace Sirikata {
+namespace Network {
+
 class ASIOReadBuffer;
-
-
 
 class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>,ThreadIdCheck {
 public:
@@ -105,14 +107,14 @@ private:
     ///Returns the least busy stream upon which unordered data may be piled. It will always favor preferred stream if that is less busy
     size_t leastBusyStream(size_t preferredStream);
     /**
-     *chance in the current load that an unreliable packet may be dropped 
-     * (due to busy queues, etc). 
-     * \returns drop chance which must be less than 1.0 and greater or equal to 0.0 
+     *chance in the current load that an unreliable packet may be dropped
+     * (due to busy queues, etc).
+     * \returns drop chance which must be less than 1.0 and greater or equal to 0.0
      */
     float dropChance(const Chunk*data,size_t whichStream);
     /**
      *  sends bytes to the network directly.
-     *  assumes that the mSocketConnectionPhase in the CONNECTED state    
+     *  assumes that the mSocketConnectionPhase in the CONNECTED state
      */
     static bool sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data, bool force);
     /**
@@ -133,7 +135,7 @@ private:
 public:
     ///public io service accessor for new stream construction
     IOService&getASIOService(){return *mIO;}
-    
+
     /**
      * Sends a packet telling the other side that this stream is closed (or alternatively if its a closeAck that the close request was received and no further packets for that
      * stream will be sent with that streamID
@@ -141,7 +143,7 @@ public:
     static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream);
 
     /**
-     * Either sends or queues bytes in the data request depending on the connection state 
+     * Either sends or queues bytes in the data request depending on the connection state
      * if the state is not connected then it must take a lock and place them on the mNewRequests queue
      */
     static bool sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
@@ -248,7 +250,7 @@ public:
     void connect(const Address&address, unsigned int numSockets);
 
 /**
- *  Prepare a socket for an outbound connection. 
+ *  Prepare a socket for an outbound connection.
  *  After this call messages may be queued and number of redundant connections set
  *  Additionally this socket may now be cloned
  */
@@ -267,4 +269,6 @@ public:
     Address getRemoteEndpoint(Stream::StreamID id)const ;
     Address getLocalEndpoint(Stream::StreamID id)const ;
 };
-} }
+
+} // namespace Network
+} // namespace Sirikata

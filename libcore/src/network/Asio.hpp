@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  TCPDefinitions.hpp
+ *  Asio.hpp
  *
  *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
@@ -30,28 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _TCPDefinitions_HPP_
-#define _TCPDefinitions_HPP_
+#ifndef _SIRIKATA_ASIO_HPP_
+#define _SIRIKATA_ASIO_HPP_
+
+/** Note: All the classes provided in this file are thin wrappers around
+ *  the corresponding classes in ASIO.  These are provided because ASIO
+ *  has problems allocating these objects from different threads on some
+ *  platforms.
+ */
 
 #include <boost/asio.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/system/system_error.hpp>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread.hpp>
+//#include <boost/thread/mutex.hpp>
+//#include <boost/system/system_error.hpp>
+//#include <boost/thread/shared_mutex.hpp>
+//#include <boost/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-typedef boost::asio::io_service InternalIOService;
 typedef boost::asio::ip::tcp::socket InternalTCPSocket;
-typedef  boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
-typedef  boost::asio::ip::tcp::resolver InternalTCPResolver;
+typedef boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
+typedef boost::asio::ip::tcp::resolver InternalTCPResolver;
 
+/** Simple wrapper around Boost.Asio's tcp::socket, allowing for safe,
+ *  cross-platform allocation and use.
+ */
 class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
   public:
     TCPSocket(IOService&io);
 };
 
+/** Simple wrapper around Boost.Asio's tcp::acceptor, allowing for safe,
+ *  cross-platform allocation and use.
+ */
 class SIRIKATA_EXPORT TCPListener :public InternalTCPAcceptor {
 public:
     TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&);
@@ -59,9 +70,34 @@ public:
                       const std::tr1::function<void(const boost::system::error_code& ) > &cb);
 };
 
+/** Simple wrapper around Boost.Asio's tcp::resolver, allowing for safe,
+ *  cross-platform allocation and use.
+ */
 class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
   public:
     TCPResolver(IOService&io);
+};
+
+
+
+
+typedef boost::asio::ip::udp::socket InternalUDPSocket;
+typedef boost::asio::ip::udp::resolver InternalUDPResolver;
+
+/** Simple wrapper around Boost.Asio's udp::socket, allowing for safe,
+ *  cross-platform allocation and use.
+ */
+class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
+  public:
+    UDPSocket(IOService&io);
+};
+
+/** Simple wrapper around Boost.Asio's udp::resolver, allowing for safe,
+ *  cross-platform allocation and use.
+ */
+class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
+  public:
+    UDPResolver(IOService&io);
 };
 
 
@@ -71,4 +107,4 @@ class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
 } // namespace Network
 } // namespace Sirikata
 
-#endif
+#endif //_SIRIKATA_ASIO_HPP_

@@ -31,7 +31,7 @@
  */
 
 #include "util/Platform.hpp"
-#include "network/TCPDefinitions.hpp"
+#include "network/Asio.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOStreamBuilder.hpp"
@@ -57,10 +57,10 @@ void handleAccept(const std::tr1::shared_ptr<std::auto_ptr<TCPSocket> >&socket,T
 }
 bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
     std::auto_ptr<TCPSocket>tmpsocket(new TCPSocket(*io));
-    
+
     std::tr1::shared_ptr<std::auto_ptr<TCPSocket> > socketWrapper(new std::auto_ptr<TCPSocket> (tmpsocket));
     //need to use boost bind to avoid TR1 errors about compatibility with boost::asio::placeholders
-     
+
     listen->async_accept(**socketWrapper,
                          std::tr1::bind(&handleAccept,socketWrapper,listen,io,cb,_1));
     return true;

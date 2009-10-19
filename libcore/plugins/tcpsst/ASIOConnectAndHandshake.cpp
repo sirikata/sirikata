@@ -31,7 +31,7 @@
  */
 
 #include "util/Platform.hpp"
-#include "network/TCPDefinitions.hpp"
+#include "network/Asio.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
@@ -41,8 +41,8 @@
 #include "ASIOConnectAndHandshake.hpp"
 namespace Sirikata { namespace Network {
 using namespace boost::asio::ip;
-void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket, 
-                                                  Array<uint8,TCPStream::TcpSstHeaderSize>* buffer, 
+void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
+                                                  Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
     std::tr1::shared_ptr<MultiplexedSocket> connection=mConnection.lock();
@@ -141,7 +141,7 @@ void ASIOConnectAndHandshake::handleResolve(const std::tr1::shared_ptr<ASIOConne
                                boost::asio::error::host_not_found);
         }
     }
-    
+
 }
 
 void ASIOConnectAndHandshake::connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
@@ -152,7 +152,7 @@ void ASIOConnectAndHandshake::connect(const std::tr1::shared_ptr<ASIOConnectAndH
                                               thus,
                                               boost::asio::placeholders::error,
                                               boost::asio::placeholders::iterator));
-    
+
 }
 
 ASIOConnectAndHandshake::ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,

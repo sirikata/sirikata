@@ -31,7 +31,7 @@
  */
 
 #include "util/Platform.hpp"
-#include "network/TCPDefinitions.hpp"
+#include "network/Asio.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
@@ -53,7 +53,7 @@ bool ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSock
 
 void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
     mReadStatus=READING_FIXED_BUFFER;
-     
+
     parentSocket
         ->getASIOSocketWrapper(mWhichBuffer).getSocket()
         .async_receive(boost::asio::buffer(mBuffer+mBufferPos,sBufferLength-mBufferPos),
@@ -81,8 +81,8 @@ void ASIOReadBuffer::ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedS
     }
 }
 void ASIOReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
-     
-    mReadStatus=READING_NEW_CHUNK;     
+
+    mReadStatus=READING_NEW_CHUNK;
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
     assert(mBufferPos<mNewChunk.size());
     parentSocket
@@ -152,7 +152,7 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);
     mBufferPos+=bytes_read;
     std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
-    
+
     if (thus) {
         if (error){
             processError(&*thus,error);
@@ -179,7 +179,7 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     TCPSSTLOG(this,"rcv",&mBuffer[mBufferPos],bytes_read,error);
     mBufferPos+=bytes_read;
     std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
-    
+
     if (thus) {
         if (error){
             processError(&*thus,error);

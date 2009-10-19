@@ -32,7 +32,7 @@
 
 
 #include "util/Platform.hpp"
-#include "network/TCPDefinitions.hpp"
+#include "network/Asio.hpp"
 #include "TCPStream.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
@@ -46,7 +46,7 @@ void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buf
     FILE*fp=fopen(filename,"ab");
     fwrite(buffer,buffersize,1,fp);
     fclose(fp);
-    
+
 }
 void copyHeader(void * destination, const UUID&key, unsigned int num) {
     std::memcpy(destination,TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH);
@@ -74,7 +74,7 @@ void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSo
     std::size_t num_packets=toSend.size();
     if (num_packets==0) {
         //if there are no packets in the queue, some other send() operation will need to take the torch to send further packets
-        mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);                    
+        mSendingStatus-=(ASYNCHRONOUS_SEND_FLAG+QUEUE_CHECK_FLAG);
     }else {
         //there are packets in the queue, now is the chance to send them out, so get rid of the queue check flag since further items *will* be checked from the queue as soon as the
         //send finishes
@@ -136,8 +136,8 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
         SILOG(tcpsst,insane,"Socket disconnected...waiting for recv to trigger error condition\n");
     }else if (bytes_sent!=bufferSize) {
-		 
-		 
+
+
         //if the previous send was not able to push the whole buffer out to the network, the rest must be sent
         mSocket->async_send(ASIOSocketWrapperBuffer(currentBuffer+bytes_sent,bufferSize-bytes_sent),
                             std::tr1::bind(&ASIOSocketWrapper::sendStaticBuffer,
@@ -148,7 +148,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
                                         bufferSize-bytes_sent,
                                         lastChunkOffset,
                                           _1,
-                                          _2));        
+                                          _2));
     }else {
         if (!toSend.empty()) {
             //if stray items are left in a deque
@@ -165,12 +165,12 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
         }
     }
 }
-    
+
 
 void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
-     
-     
+
+
     mSocket->async_send(ASIOSocketWrapperBuffer(&*toSend->begin()+bytesSent,toSend->size()-bytesSent),
                         std::tr1::bind(&ASIOSocketWrapper::sendLargeChunkItem,
                                     this,
@@ -182,10 +182,10 @@ void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>
 }
 
 void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent){
-     
-     
+
+
     if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
-        //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself 
+        //if there's but a single packet, or a single big packet that is bigger than the mBuffer's size...send that one by itself
         mSocket->async_send(ASIOSocketWrapperBuffer(&*const_toSend.front()->begin()+bytesSent,const_toSend.front()->size()-bytesSent),
                             std::tr1::bind(&ASIOSocketWrapper::sendLargeDequeItem,
                                         this,
@@ -202,7 +202,7 @@ void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>
         delete toSend.front();
         toSend.pop_front();
         bytesSent=0;
-        while (bufferLocation<PACKET_BUFFER_SIZE&&toSend.size()) {            
+        while (bufferLocation<PACKET_BUFFER_SIZE&&toSend.size()) {
             if (toSend.front()->size()>PACKET_BUFFER_SIZE-bufferLocation) {
                 //if the first packet is too large for the buffer, copy part of it but keep it around
                 bytesSent=PACKET_BUFFER_SIZE-bufferLocation;
@@ -286,7 +286,7 @@ void ASIOSocketWrapper::shutdownAndClose() {
     }
     try {
         mSocket->close();
-    }catch (boost::system::system_error&err) {                
+    }catch (boost::system::system_error&err) {
         SILOG(tcpsst,insane,"Error closing socket: "<<err.what());
     }
 }
@@ -335,7 +335,7 @@ Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes
     unsigned int cur=vuint32::MAX_SERIALIZED_LENGTH+size;
     size=max_size-cur;
     size=sid.serialize(&dataStream[cur],size);
-    assert(size+cur<=max_size);   
+    assert(size+cur<=max_size);
     vuint32 streamSize=vuint32(size+cur-vuint32::MAX_SERIALIZED_LENGTH);
     unsigned int actualHeaderLength=streamSize.serialize(dataStream,vuint32::MAX_SERIALIZED_LENGTH);
     if (actualHeaderLength!=vuint32::MAX_SERIALIZED_LENGTH) {
@@ -347,7 +347,7 @@ Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes
 
 void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections) {
     UUID return_value=UUID::random();
-    
+
     Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
     copyHeader(&*headerData->begin(),value,numConnections);
     rawSend(parentMultiSocket,headerData,true);

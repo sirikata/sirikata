@@ -30,10 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
-#include "TCPDefinitions.hpp"
 #include "IOService.hpp"
 #include "IOServiceFactory.hpp"
 #include "util/Time.hpp"
+
+#include <boost/thread/once.hpp>
+#include <boost/asio.hpp>
 
 namespace Sirikata {
 namespace Network {

@@ -1,16 +1,20 @@
 #include "util/Standard.hh"
-#include "TCPDefinitions.hpp"
+#include "Asio.hpp"
 #include "IOService.hpp"
 
 namespace Sirikata {
 namespace Network {
 
 TCPSocket::TCPSocket(IOService&io):
-    boost::asio::ip::tcp::socket(*(io.mImpl)){}
+    boost::asio::ip::tcp::socket(io.asioService())
+{
+}
 
 
 TCPListener::TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&ep):
-    boost::asio::ip::tcp::acceptor(*(io.mImpl),ep){}
+    boost::asio::ip::tcp::acceptor(io.asioService(),ep)
+{
+}
 
 void TCPListener::async_accept(TCPSocket&socket,
                                const std::tr1::function<void(const boost::system::error_code&)>&cb) {
@@ -19,7 +23,18 @@ void TCPListener::async_accept(TCPSocket&socket,
 
 
 TCPResolver::TCPResolver(IOService&io)
-    : boost::asio::ip::tcp::resolver(*(io.mImpl))
+    : boost::asio::ip::tcp::resolver(io.asioService())
+{
+}
+
+
+UDPSocket::UDPSocket(IOService&io):
+    boost::asio::ip::udp::socket(io.asioService())
+{
+}
+
+UDPResolver::UDPResolver(IOService&io)
+    : boost::asio::ip::udp::resolver(io.asioService())
 {
 }
 

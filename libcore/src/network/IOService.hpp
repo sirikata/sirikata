@@ -51,6 +51,8 @@ class TimerHandle;
 class TCPSocket;
 class TCPListener;
 class TCPResolver;
+class UDPSocket;
+class UDPResolver;
 
 /** IOService provides queuing, processing, and dispatch for
  *  asynchronous IO, including timers, sockets, resolvers, and simple
@@ -62,16 +64,36 @@ class TCPResolver;
  *  sockets and timers or via periodic tasks.
  */
 class SIRIKATA_EXPORT IOService {
-    friend class IOServiceFactory;
-    friend class TimerHandle;
-    friend class TCPSocket;
-    friend class TCPListener;
-    friend class TCPResolver;
+    InternalIOService* mImpl;
 
     IOService();
     ~IOService();
 
-    InternalIOService* mImpl;
+    friend class IOServiceFactory;
+
+  protected:
+
+    friend class TimerHandle;
+    friend class TCPSocket;
+    friend class TCPListener;
+    friend class TCPResolver;
+    friend class UDPSocket;
+    friend class UDPResolver;
+
+    /** Get the underlying IOService.  Only made available to allow for
+     *  efficient implementation of ASIO provided functionality such as
+     *  tcp/udp sockets and deadline timers.
+     */
+    InternalIOService& asioService() {
+        return *mImpl;
+    }
+    /** Get the underlying IOService.  Only made available to allow for
+     *  efficient implementation of ASIO provided functionality such as
+     *  tcp/udp sockets and deadline timers.
+     */
+    const InternalIOService& asioService() const {
+        return *mImpl;
+    }
 public:
     typedef std::tr1::function<void()> CompletionHandler;
 

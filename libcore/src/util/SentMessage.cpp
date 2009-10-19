@@ -35,12 +35,10 @@
 #include "util/RoutableMessageHeader.hpp"
 #include "SentMessage.hpp"
 
-#include <boost/asio/deadline_timer.hpp>
-#include <boost/bind.hpp>
-#include <boost/asio/placeholders.hpp>
-#include <boost/asio/error.hpp>
+#include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
-#include <network/TCPDefinitions.hpp> // For "class IOService" definition...
+#include <network/IOService.hpp>
 
 
 namespace Sirikata {
