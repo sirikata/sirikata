@@ -20,6 +20,7 @@ TCPNetwork::TCPNetwork(Trace* trace, uint32 incomingBufferLength, uint32 incomin
     mIOService->post(Duration::seconds(60*60*24*365*68),&noop);
     mListener=StreamListenerFactory::getSingleton().getDefaultConstructor()(mIOService);
     mThread= new boost::thread(std::tr1::bind(&IOService::run,mIOService));
+    //mThread= new boost::thread(&noop);//std::tr1::bind(&IOServiceFactory::runService,mIOService));    
 
 }
 
@@ -81,6 +82,19 @@ bool TCPNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool or
     //std::cout<<"#f\n";
     return false;
 }
+char toHex(unsigned char u) {
+    if (u>=0&&u<=9) return '0'+u;
+    return 'A'+(u-10);
+}
+void hexPrint(const char *name, const Chunk&data) {
+    std::string str;
+    str.resize(data.size()*2);
+    for (size_t i=0;i<data.size();++i) {
+        str[i*2]=toHex(data[i]%16);
+        str[i*2+1]=toHex(data[i]/16);
+    }
+    std::cout<< name<<' '<<str<<'\n';
+}
 bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, bool ordered, int priority) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
@@ -102,7 +116,13 @@ bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, boo
                                readySendCallback);
     }
     //std::cout<<"Send existing "<<convertAddress4ToSirikata(addy).toString()<<" "<<data.size()<<"\n";
-    return where->second->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered);
+
+    if (where->second->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
+        //hexPrint("Sent",data);
+        return true;
+    }else {
+        return false;
+    }
 }
 void TCPNetwork::listen(const Address4&as_server) {
     using std::tr1::placeholders::_1;
@@ -166,7 +186,9 @@ std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&ad
     return std::tr1::shared_ptr<TSQueue>();
 }
 void TCPNetwork::reportQueueInfo(const Time&)const {}
-void TCPNetwork::service(const Time&){}
+void TCPNetwork::service(const Time&){
+//    mIOService->poll();
+}
 Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));
     if (front) {
@@ -208,6 +230,7 @@ Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
             Chunk * retval=front->front;
             front->front=NULL;
             //std::cout<<"Returning "<<retval->size()<<" bytes from "<<convertAddress4ToSirikata(from).toString()<<'\n';
+            //hexPrint("Rcvd",*retval);
             return retval;
         }
     }
@@ -217,12 +240,14 @@ Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
 bool TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chunk&data){
     dbl_ptr_queue queue(weak_queue.lock());
     if (queue&&*queue){
+        
         Chunk * tmp=new Chunk;
         tmp->swap(data);
         //std::cout<<"Pushing "<<tmp->size()<<"to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';
         if (!(*queue)->buffer.push(tmp,false)) {
             (*queue)->paused=true;
             //std::cout<<"Push fail of "<<data.size()<< "to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';
+            tmp->swap(data);
             delete tmp;
             return false;
         }

@@ -120,7 +120,7 @@ if [[ "x${ARCH}" == "x" ]]; then
   ARCH=`uname -m`
 fi
 
-sirikata_commit="784893397af5561a6d4b81c724686c3019863a50"
+sirikata_commit="5c6040bbf99da6f885b247a83bce492e5c7688df"
 
 if [ ${opt_components_sirikata} == "true" ]; then
 
@@ -133,11 +133,13 @@ if [ ${opt_components_sirikata} == "true" ]; then
     fi
     git clone git://github.com/sirikata/sirikata.git sirikata
     cd sirikata
+    git fetch origin
     make ARCH=${ARCH} minimaldepends
   else
     cd sirikata
     git checkout master
     git pull origin
+    git fetch origin
   fi
   git branch -D cbr_pinned
   git branch cbr_pinned ${sirikata_commit}
