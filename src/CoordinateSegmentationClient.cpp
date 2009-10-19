@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <boost/tokenizer.hpp>
+#include <boost/bind.hpp>
 #include "Options.hpp"
 #include "Network.hpp"
 #include "Message.hpp"

@@ -12,7 +12,7 @@ namespace CBR {
 class Trace;
 class TCPNetwork :public Network{
     Trace*mTrace;
-    typedef std::tr1::unordered_map<Address4, Sirikata::Network::Stream*> TCPStreamMap;
+    typedef std::tr1::unordered_map<Address4, Sirikata::Network::Stream*,Address4::Hasher> TCPStreamMap;
     Sirikata::Network::StreamListener *mListener;
     TCPStreamMap mSendStreams;
     uint32 mIncomingBufferLength;
@@ -42,7 +42,7 @@ class TCPNetwork :public Network{
     void readySendCallback(const Address4&);
     void sendStreamConnectionCallback(const Address4&, const Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);
     void newStreamCallback(Sirikata::Network::Stream*, Sirikata::Network::Stream::SetCallbacks&cb);
-    std::tr1::unordered_map<Address4,dbl_ptr_queue>mReceiveBuffers;
+    std::tr1::unordered_map<Address4,dbl_ptr_queue,Address4::Hasher>mReceiveBuffers;
     Sirikata::ThreadSafeQueue<std::pair<Address4,dbl_ptr_queue> > mNewReceiveBuffers;
     std::tr1::shared_ptr<TSQueue> getQueue(const Address4&);
 public:
