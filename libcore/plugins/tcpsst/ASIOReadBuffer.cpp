@@ -128,9 +128,11 @@ void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocke
                 uint32 chunkLength=packetLength.read();
                 Chunk resultChunk;
                 Stream::StreamID resultID=processPartialChunk(mBuffer+chunkPos+packetHeaderLength,packetLength.read(),chunkLength,resultChunk);
+                size_t vectorSize=resultChunk.size();
                 if (processFullChunk(thus,mWhichBuffer,resultID,resultChunk)) {
                     chunkPos+=packetHeaderLength+packetLength.read();
                 }else {
+                    assert(resultChunk.size()==vectorSize);//if the user rejects the packet they should not munge it
                     mReadStatus=PAUSED_FIXED_BUFFER;
                     readBufferFull=true;
                     break;//FIXME
@@ -158,12 +160,14 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
             processError(&*thus,error);
         }else {
             if (mBufferPos>=mNewChunk.size()){
-                assert(mBufferPos==mNewChunk.size());
+                size_t vectorSize=mNewChunk.size();
+                assert(mBufferPos==vectorSize);
                 if (processFullChunk(thus,mWhichBuffer,mNewChunkID,mNewChunk)) {
                     mNewChunk.resize(0);
                     mBufferPos=0;
                     readIntoFixedBuffer(thus);
                 }else{
+                    assert(mNewChunk.size()==vectorSize);//if the user rejects the packet they should not munge it. This is a high level check of that
                     mReadStatus=PAUSED_NEW_CHUNK;
                 }
             }else {
