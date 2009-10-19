@@ -145,8 +145,8 @@ void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocke
             readIntoFixedBuffer(thus);
         }
 }
-
-
+ASIOReadBuffer::~ASIOReadBuffer() {
+}
 
 void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read){
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);

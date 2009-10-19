@@ -137,6 +137,7 @@ public:
      *  This function may be called if the read was not paused
      */
     void ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedSocket>&thus);
+    ~ASIOReadBuffer();
 };
 
 ASIOReadBuffer* MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket);

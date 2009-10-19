@@ -119,11 +119,11 @@ class ASIOSocketWrapper {
 
 public:
 
-    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(socket),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
+    ASIOSocketWrapper(TCPSocket* socket,uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(socket),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
         //mPacketLogger.reserve(268435456);
     }
 
-    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mSendingStatus(0),mSendQueue(socket.getResourceMonitor()),PACKET_BUFFER_SIZE(socket.PACKET_BUFFER_SIZE),mBuffer(new uint8[socket.PACKET_BUFFER_SIZE]) {
+    ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(socket.getResourceMonitor()),PACKET_BUFFER_SIZE(socket.PACKET_BUFFER_SIZE),mBuffer(new uint8[socket.PACKET_BUFFER_SIZE]) {
         
         //mPacketLogger.reserve(268435456);
     }
@@ -133,7 +133,7 @@ public:
         return *this;
     }
     const SizedPointerResourceMonitor&getResourceMonitor()const{return mSendQueue.getResourceMonitor();}
-    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
+    ASIOSocketWrapper(uint32 queuedBufferSize,uint32 sendBufferSize) :mSocket(NULL),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(SizedPointerResourceMonitor(queuedBufferSize)),PACKET_BUFFER_SIZE(sendBufferSize),mBuffer(new uint8[sendBufferSize]){
     }
     ~ASIOSocketWrapper() {
         delete []mBuffer;

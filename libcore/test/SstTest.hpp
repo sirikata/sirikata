@@ -99,7 +99,7 @@ public:
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
                          std::tr1::bind(&SstTest::connectorDataRecvCallback,this,newStream,newid,_1),
-                         &Network::Stream::ignoreReadySend);
+                         &Stream::ignoreReadySend);
             ++newid;
             runRoutine(newStream);
         }else {
@@ -114,7 +114,7 @@ public:
             using std::tr1::placeholders::_2;
             setCallbacks(std::tr1::bind(&SstTest::connectionCallback,this,newid,_1,_2),
                          std::tr1::bind(&SstTest::listenerDataRecvCallback,this,newStream,newid,_1),
-                         &Network::Stream::ignoreReadySend);
+                         &Stream::ignoreReadySend);
             ++newid;
             runRoutine(newStream);
         }
@@ -365,7 +365,7 @@ public:
                    std::tr1::bind(&SstTest::connectorNewStreamCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::mainStreamConnectionCallback,this,id,_1,_2),
                    std::tr1::bind(&SstTest::connectorDataRecvCallback,this,s,id,_1),
-                   &Network::Stream::ignoreReadySend);
+                   &Stream::ignoreReadySend);
         --id;
     }
     void testInt30Serialization(void) {
@@ -443,14 +443,14 @@ public:
 
     }
     static void noopSubstream(Stream *stream, Stream::SetCallbacks&scb) {
-        scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
+        scb(&Stream::ignoreConnectionStatus,&Stream::ignoreBytesReceived,&Stream::ignoreReadySend);
     }
     void testSubstream(Stream* stream, Stream::SetCallbacks&scb) {
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         scb(std::tr1::bind(&SstTest::connectionCallback,this,-2000000000,_1,_2),
             std::tr1::bind(&SstTest::connectorDataRecvCallback,this,stream,-2000000000,_1),
-            &Network::Stream::ignoreReadySend);
+            &Stream::ignoreReadySend);
     }
     void testConnectSend (void )
     {
@@ -520,8 +520,8 @@ public:
             while(mDisconCount.read()<3){
                 if (rand()<RAND_MAX/10) {
                     z->readyRead();
-                    for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
-                        (*i)->readyRead();
+                    for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
+                        mStreams[i]->readyRead();
                     }
                 }
 
@@ -544,8 +544,8 @@ public:
         while(mEndCount.read()<1){//checking for that final call to newSubstream
             time_t this_time=time(NULL);
             if (rand()<RAND_MAX/10) {
-                for(std::vector<Stream*>::iterator i=mStreams.begin(),ie=mStreams.end();i!=ie;++i) {
-                    (*i)->readyRead();
+                for (ptrdiff_t i=((ptrdiff_t)mStreams.size())-1;i>=0;--i) {
+                    mStreams[i]->readyRead();
                 }
             }
             if (this_time>last_time+5) {
