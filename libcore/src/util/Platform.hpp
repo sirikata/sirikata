@@ -113,6 +113,17 @@
 #endif
 
 
+// Where supported, marking a function with WARN_UNUSED will cause the compiler
+// to complain if a caller ignores the return value.
+#ifndef WARN_UNUSED
+# if defined(__GNUC__) && __GNUC__ >= 4  // This is conservative, maybe be available with earlier versions
+#  define WARN_UNUSED __attribute__((warn_unused_result))
+# else
+#  define WARN_UNUSUED
+# endif
+#endif
+
+
 #ifdef __GLIBC__
 # include <endian.h>
 # define SIRIKATA_LITTLE_ENDIAN __LITTLE_ENDIAN
