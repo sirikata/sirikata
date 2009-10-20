@@ -67,6 +67,9 @@ class SIRIKATA_EXPORT IOStrand {
      */
     ~IOStrand();
 
+    /** Get an IOService associated with this strand. */
+    IOService& service() const;
+
     /** Request that the given handler be invoked, possibly before
      *  returning, on this strand.
      *  \param handler the handler callback to be called

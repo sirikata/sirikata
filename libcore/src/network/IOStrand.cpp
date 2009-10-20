@@ -48,6 +48,10 @@ IOStrand::~IOStrand() {
     delete mImpl;
 }
 
+IOService& IOStrand::service() const {
+    return mService;
+}
+
 void IOStrand::dispatch(const IOCallback& handler) {
     mService.dispatch( mImpl->wrap( handler ) );
 }
