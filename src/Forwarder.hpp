@@ -76,19 +76,7 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       uint64 mUniqueConnIDs;
 
 
-    struct MessageAndForward
-    {
-      bool mIsForward;
-      CBR::Protocol::Object::ObjectMessage* mMessage;
-    };
-    typedef std::vector<MessageAndForward> ObjectMessageList;
-    //    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageList;
-    std::map<UUID,ObjectMessageList> mObjectsInTransit;  //this is a map of messages's for objects that are being looked up in oseg or are in transit.
-
-
-
-    OSegLookupQueue  queueMap; //this maps the object ids to a list of messages that are being looked up in oseg.
-
+    OSegLookupQueue mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
 
 
     Time mLastSampleTime;
@@ -148,10 +136,10 @@ protected:
      bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
   //  void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom );
 
-  //  private:
+private:
       // This version is provided if you already know which server the message should be sent to
     __attribute__ ((warn_unused_result))
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, MessageRouter::SERVICES from_another_object=MessageRouter::OBJECT_MESSAGESS);
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 

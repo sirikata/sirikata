@@ -29,16 +29,16 @@ void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, T
     }
 }
 
-void OSegLookupQueue::ObjMessQBeginSendList::push_back(CBR::Protocol::Object::ObjectMessage* msg) {
-    mTotalSize += msg->ByteSize();
-    ObjectMessageVector::push_back(msg);
+void OSegLookupQueue::ObjMessQBeginSendList::push_back(const OSegLookup& lu) {
+    mTotalSize += lu.msg->ByteSize();
+    OSegLookupVector::push_back(lu);
 }
 
-void OSegLookupQueue::push(UUID objid, CBR::Protocol::Object::ObjectMessage* dat) {
-    size_t cursize = dat->ByteSize();
+void OSegLookupQueue::push(UUID objid, const OSegLookup& lu) {
+    size_t cursize = lu.msg->ByteSize();
     if (mPredicate(objid,cursize,mTotalSize)) {
         mTotalSize+=cursize;
-        mObjects[objid].push_back(dat);
+        mObjects[objid].push_back(lu);
     }
 }
 
@@ -55,7 +55,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mOSeg(NULL),
    mServerMessageQueue(NULL),
    mUniqueConnIDs(0),
-   queueMap(&AlwaysPush),
+   mOSegLookups(&AlwaysPush),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
    mProfiler("Forwarder Loop")
@@ -107,10 +107,8 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
   */
   void Forwarder::tickOSeg(const Time&t)
   {
-
     std::map<UUID,ServerID> updatedObjectLocations;
     std::map<UUID,ServerID>::iterator iter;
-    std::map<UUID,ObjectMessageList>::iterator iterObjectsInTransit;
 
     OSegLookupQueue::ObjectMap::iterator iterQueueMap;
 
@@ -119,49 +117,29 @@ void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* ose
     //    cross-check updates against held messages.
     for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
     {
-      iterObjectsInTransit = mObjectsInTransit.find(iter->first);
-      if (iterObjectsInTransit != mObjectsInTransit.end())
-      {
-        //means that we can route messages being held in mObjectsInTransit
-        for (int s=0; s < (signed)((iterObjectsInTransit->second).size()); ++s)
-        {
-            // FIXME what if this fails?
-            routeObjectMessageToServer((iterObjectsInTransit->second)[s].mMessage,iter->second,(iterObjectsInTransit->second)[s].mIsForward,MessageRouter::OSEG_TO_OBJECT_MESSAGESS);
-        }
-
-        //remove the messages from the objects in transit
-        mObjectsInTransit.erase(iterObjectsInTransit);
-      }
+        ServerID dest_server = iter->second;
 
       //Now sending messages that we had saved up from oseg lookup calls.
-      iterQueueMap = queueMap.find(iter->first);
-      if (iterQueueMap != queueMap.end())
+      iterQueueMap = mOSegLookups.find(iter->first);
+      if (iterQueueMap != mOSegLookups.end())
       {
-          ServerID dest_server = iter->second;
-
         for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
         {
-            CBR::Protocol::Object::ObjectMessage* in_msg = (iterQueueMap->second[s]);
-            Message* obj_msg = new Message(
-                mContext->id(),
-                SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-                dest_server,
-                SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-                serializePBJMessage(*in_msg)
-            );
-            if (!route(MessageRouter::OBJECT_MESSAGESS, obj_msg)) {
+            const OSegLookup& lu = (iterQueueMap->second[s]);
+            if (!routeObjectMessageToServer(lu.msg, dest_server, lu.forward)) {
                 mContext->trace()->timestampMessage(mContext->time,
-                    in_msg->unique(),
+                    lu.msg->unique(),
                     Trace::DROPPED,
-                    in_msg->source_port(),
-                    in_msg->dest_port(),
+                    lu.msg->source_port(),
+                    lu.msg->dest_port(),
                     SERVER_PORT_OBJECT_MESSAGE_ROUTING
                 );
-                delete obj_msg;
+                // FIXME causing a crash
+                //delete lu.msg;
             }
             // FIXME should we be deleting in_msg here?
         }
-        queueMap.erase(iterQueueMap);
+        mOSegLookups.erase(iterQueueMap);
       }
     }
   }
@@ -275,7 +253,6 @@ void Forwarder::service()
     UUID dest_obj = msg->dest_object();
     ServerID dest_server_id = mOSeg->lookup(dest_obj);
 
-
     //#ifdef  CRAQ_CACHE
     if (is_forward && (forwardFrom != NullServerID))
     {
@@ -305,23 +282,21 @@ void Forwarder::service()
     //#endif
 
 
-
-    if (dest_server_id != NullServerID)
+    ServerID destServer = mOSeg->lookup(msg->dest_object());
+    if (destServer == NullServerID)
     {
-      //means that we instantly knew what the location of the object is, and we can route immediately!
-        return routeObjectMessageToServer(msg, dest_server_id,is_forward,MessageRouter::SERVER_TO_OBJECT_MESSAGESS);
+        OSegLookup lu;
+        lu.msg = msg;
+        lu.forward = is_forward;
+        mOSegLookups[msg->dest_object()].push_back(lu);
+        //if mOSegLookups.full() send_success=false;
+        return true;
+        // FIXME what if the mOSegLookups is full? Do we need to timestamp?
     }
-
-    // FIXME we need to handle this delay somewhere else. We can't just queue up an arbitrarily large number of messages
-    // waiting for oseg lookups...
-    //add message to objects in transit.
-    MessageAndForward mAndF;
-    mAndF.mMessage = msg;
-    mAndF.mIsForward = is_forward;
-
-
-    mObjectsInTransit[dest_obj].push_back(mAndF);
-    return true;
+    else
+    {
+        return routeObjectMessageToServer(msg, destServer, is_forward);
+    }
   }
 
 //end what i think it should be replaced with
@@ -342,36 +317,7 @@ bool Forwarder::routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj
         return true;
     }
 
-    ServerID lookupID = mOSeg->lookup(obj_msg->dest_object());
-    if (lookupID == NullServerID)
-    {
-        queueMap[obj_msg->dest_object()].push_back(obj_msg);
-        //if queueMap.full() send_success=false;
-        return true;
-        // FIXME what if the queueMap is full? Do we need to timestamp as below?
-    }
-    else
-    {
-        Message* svr_obj_msg = new Message(
-            mContext->id(),
-            SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-            lookupID,
-            SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-            serializePBJMessage(*obj_msg)
-        );
-        bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, lookupID);
-        if (!send_success) {
-            delete svr_obj_msg;
-            mContext->trace()->timestampMessage(mContext->time,
-                obj_msg->unique(),
-                Trace::DROPPED,
-                obj_msg->source_port(),
-                obj_msg->dest_port(),
-                SERVER_PORT_OBJECT_MESSAGE_ROUTING);
-        }
-        delete obj_msg;
-        return send_success;
-    }
+    return route(obj_msg, false, NullServerID);
 }
 
 
@@ -427,11 +373,10 @@ void Forwarder::receiveMessage(Message* msg) {
 
 
 
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward, MessageRouter::SERVICES svc)
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, bool is_forward)
 {
   //send out all server updates associated with an object with this message:
-  UUID obj_id =  msg->dest_object();
-
+  UUID obj_id =  obj_msg->dest_object();
 
   //#ifdef CRAQ_CACHE
   CBR::Protocol::OSeg::UpdateOSegMessage contents;
@@ -465,19 +410,25 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   }
   //#endif
 
-  // Wrap it up in one of our ObjectMessages and ship it.
-  Message* obj_msg = new Message(
+  Message* svr_obj_msg = new Message(
       mContext->id(),
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
       dest_serv,
       SERVER_PORT_OBJECT_MESSAGE_ROUTING,
-      serializePBJMessage(*msg)
+      serializePBJMessage(*obj_msg)
   );
-  bool route_success = route(svc, obj_msg, is_forward);
-  // FIXME record drop? ignore? queue for later?
-  if (!route_success)
-      delete obj_msg;
-  return route_success;
+  bool send_success=route(OBJECT_MESSAGESS, svr_obj_msg, is_forward);
+  if (!send_success) {
+      delete svr_obj_msg;
+      mContext->trace()->timestampMessage(mContext->time,
+          obj_msg->unique(),
+          Trace::DROPPED,
+          obj_msg->source_port(),
+          obj_msg->dest_port(),
+          SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+  }
+  delete obj_msg;
+  return send_success;
 }
 
 

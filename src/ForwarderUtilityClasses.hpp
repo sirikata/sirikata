@@ -22,28 +22,37 @@ namespace CBR
     bool forwarded;
   };
 
-  //std::deque<SelfMessage> mSelfMessages;
+
+/** The data used or stored during an OSeg lookup. Strictly speaking,
+ *  only the message itself is required, but we maintain additional
+ *  information for bookkeeping and statistics purposes.
+ */
+struct OSegLookup
+{
+    bool forward;
+    CBR::Protocol::Object::ObjectMessage* msg;
+};
 
   class OSegLookupQueue {
-      class ObjMessQBeginSendList : protected std::vector<CBR::Protocol::Object::ObjectMessage*>{
-          typedef std::vector<CBR::Protocol::Object::ObjectMessage*> ObjectMessageVector;
+      class ObjMessQBeginSendList : protected std::vector<OSegLookup>{
+          typedef std::vector<OSegLookup> OSegLookupVector;
           size_t mTotalSize;
       public:
           size_t ByteSize() const{
               return mTotalSize;
           }
           size_t size()const {
-              return ObjectMessageVector::size();
+              return OSegLookupVector::size();
           }
-          CBR::Protocol::Object::ObjectMessage*& operator[] (size_t where){
-              return ObjectMessageVector::operator[](where);
+          OSegLookup& operator[] (size_t where){
+              return OSegLookupVector::operator[](where);
           }
-          void push_back(CBR::Protocol::Object::ObjectMessage* msg) ;//in Forwarder.cpp
-          ObjectMessageVector::iterator begin(){
-              return ObjectMessageVector::begin();
+          void push_back(const OSegLookup& msg) ;//in Forwarder.cpp
+          OSegLookupVector::iterator begin(){
+              return OSegLookupVector::begin();
           }
-          ObjectMessageVector::iterator end(){
-              return ObjectMessageVector::end();
+          OSegLookupVector::iterator end(){
+              return OSegLookupVector::end();
           }
       };
       size_t mTotalSize;
@@ -61,7 +70,7 @@ namespace CBR
       ObjMessQBeginSendList&operator[](const UUID&objid) {
           return mObjects[objid];
       }
-      void push(UUID objid, CBR::Protocol::Object::ObjectMessage* dat);
+      void push(UUID objid, const OSegLookup& lu);
       ObjectMap::iterator find(const UUID&objid) {
           return mObjects.find(objid);
       }
