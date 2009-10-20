@@ -77,16 +77,16 @@ void IOService::reset() {
     mImpl->reset();
 }
 
-void IOService::dispatch(const CompletionHandler& handler) {
+void IOService::dispatch(const IOCallback& handler) {
     mImpl->dispatch(handler);
 }
 
-void IOService::post(const CompletionHandler& handler) {
+void IOService::post(const IOCallback& handler) {
     mImpl->post(handler);
 }
 
 namespace {
-void handle_deadline_timer(const boost::system::error_code&e, const deadline_timer_ptr& timer, const IOService::CompletionHandler& handler) {
+void handle_deadline_timer(const boost::system::error_code&e, const deadline_timer_ptr& timer, const IOCallback& handler) {
     if (e)
         return;
 
@@ -94,7 +94,7 @@ void handle_deadline_timer(const boost::system::error_code&e, const deadline_tim
 }
 } // namespace
 
-void IOService::post(const Duration& waitFor, const CompletionHandler& handler) {
+void IOService::post(const Duration& waitFor, const IOCallback& handler) {
     deadline_timer_ptr timer(new deadline_timer(*mImpl, posix_microseconds(waitFor.toMicroseconds())));
     timer->async_wait(std::tr1::bind(&handle_deadline_timer, _1, timer, handler));
 }

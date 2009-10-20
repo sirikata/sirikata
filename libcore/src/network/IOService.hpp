@@ -81,8 +81,6 @@ class SIRIKATA_EXPORT IOService {
         return *mImpl;
     }
 public:
-    typedef std::tr1::function<void()> CompletionHandler;
-
     /** Run at most one handler in the event queue.
      *  \returns the number of handlers executed
      */
@@ -114,21 +112,21 @@ public:
      *  returning.
      *  \param handler the handler callback to be called
      */
-    void dispatch(const CompletionHandler& handler);
+    void dispatch(const IOCallback& handler);
 
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  The handler will not be invoked during
      *  this method call.
      *  \param handler the handler callback to be called
      */
-    void post(const CompletionHandler& handler);
+    void post(const IOCallback& handler);
     /** Request that the given handler be appended to the event queue
      *  and invoked later.  Regardless of the wait duration requested,
      *  the handler will never be invoked during this method call.
      *  \param waitFor the length of time to wait before invoking the handler
      *  \param handler the handler callback to be called
      */
-    void post(const Duration& waitFor, const CompletionHandler& handler);
+    void post(const Duration& waitFor, const IOCallback& handler);
 };
 
 } // namespace Network
