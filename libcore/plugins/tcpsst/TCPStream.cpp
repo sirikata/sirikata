@@ -45,12 +45,12 @@
 namespace Sirikata { namespace Network {
 
 using namespace boost::asio::ip;
-TCPStream::TCPStream(const std::tr1::shared_ptr<MultiplexedSocket>&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
+TCPStream::TCPStream(const MultiplexedSocketPtr&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
 
 }
 
 void TCPStream::readyRead() {
-    std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
+    MultiplexedSocketWPtr mpsocket(mSocket);
     mSocket->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
@@ -58,7 +58,7 @@ void TCPStream::readyRead() {
 }
 
 void TCPStream::pauseSend() {
-    std::tr1::weak_ptr<MultiplexedSocket> mpsocket(mSocket);
+    MultiplexedSocketWPtr mpsocket(mSocket);
     mSocket->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,

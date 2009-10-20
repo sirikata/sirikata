@@ -29,13 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
+#define _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
+
 #include "util/ThreadId.hpp"
 #include <boost/thread.hpp>
+#include "TCPSSTDecls.hpp"
 
 namespace Sirikata {
 namespace Network {
 
 class ASIOReadBuffer;
+class ASIOSocketWrapper;
 
 class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>,ThreadIdCheck {
 public:
@@ -116,7 +122,7 @@ private:
      *  sends bytes to the network directly.
      *  assumes that the mSocketConnectionPhase in the CONNECTED state
      */
-    static bool sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data, bool force);
+    static bool sendBytesNow(const MultiplexedSocketPtr& thus,const RawRequest&data, bool force);
     /**
      * Calls the connected callback with the succeess or failure status. Sets status while holding the sConnectingMutex lock so that after that point no more Connected responses
      * will be sent out. Then inserts the registrations into the mCallbacks map during the ioReactor thread.
@@ -140,13 +146,13 @@ public:
      * Sends a packet telling the other side that this stream is closed (or alternatively if its a closeAck that the close request was received and no further packets for that
      * stream will be sent with that streamID
      */
-    static void closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream);
+    static void closeStream(const MultiplexedSocketPtr& thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code=TCPStream::TCPStreamCloseStream);
 
     /**
      * Either sends or queues bytes in the data request depending on the connection state
      * if the state is not connected then it must take a lock and place them on the mNewRequests queue
      */
-    static bool sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data);
+    static bool sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data);
     /**
      * Finds if there is enough space to enqueue the particular bytes at this moment.
      */
@@ -163,7 +169,7 @@ public:
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
     MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
-    static void sendAllProtocolHeaders(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const UUID&syncedUUID);
+    static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID);
     ///erase all sockets and callbacks since the refcount is now zero;
     ~MultiplexedSocket();
     ///a stream that has been closed and the other side has agreed not to send any more packets using that ID
@@ -231,8 +237,8 @@ public:
         hostDisconnectedCallback(which==mSockets.size()?0:which,error.message());
     }
 
-    static void ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&, Stream::StreamID id);
-    static void ioReactorThreadPauseSend(const std::tr1::weak_ptr<MultiplexedSocket>&mp, Stream::StreamID id);
+    static void ioReactorThreadResumeRead(const MultiplexedSocketWPtr&, Stream::StreamID id);
+    static void ioReactorThreadPauseSend(const MultiplexedSocketWPtr& mp, Stream::StreamID id);
 
    /**
     * The a particular established a connection:
@@ -272,3 +278,6 @@ public:
 
 } // namespace Network
 } // namespace Sirikata
+
+
+#endif //_SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_

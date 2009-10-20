@@ -54,7 +54,7 @@ class ASIOSocketWrapper {
 	enum {
 		ASYNCHRONOUS_SEND_FLAG=(1<<29),
 		QUEUE_CHECK_FLAG=(1<<30),
-		
+
 	};
     size_t PACKET_BUFFER_SIZE;
     uint8 *mBuffer;
@@ -67,21 +67,21 @@ class ASIOSocketWrapper {
      * If nothing is in the queue then it unsets the ASYNCHRONOUS_SEND_FLAG and QUEUE_CHECK_FLAGS
      * If something is present in the queue it calls sendToWire with the queue
      */
-    void finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket);
+    void finishAsyncSend(const MultiplexedSocketPtr&parentMultiSocket);
 
     /**
      * The callback for when a single Chunk was sent.
      * If the whole Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the finishAsyncSend function is called
      */
-    void sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
+    void sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
 
     /**
      * The callback for when a single large Chunk at the front of a chunk deque was sent.
      * If the whole large Chunk was not sent then the rest of the Chunk is passed back to sendToWire
      * If the whole Chunk was shipped off, the sendToWire function is called with the rest of the queue unless it is empty in which case the finishAsyncSend is called
      */
-    void sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
+    void sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent);
 
     /**
      * The callback for when a static buffer was shipped to the network.
@@ -90,12 +90,12 @@ class ASIOSocketWrapper {
      * in one go.
      * If the whole buffer was shipped off, the sendToWire function is called with the rest of the queue unless it is empty
      */
-    void sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent);
+    void sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent);
 
 /**
  * When there's a single packet to be sent to the network, mSocket->async_send is simply called upon the Chunk to be sent
  */
-    void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent=0);
+    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t bytesSent=0);
 
 /**
  *  This function sends a while queue of packets to the network
@@ -104,7 +104,7 @@ class ASIOSocketWrapper {
  * If the packet is not too large it and all subsequent packets that can fit are jammed into the packet sized mBuffer
  *  and then those packets are deleted from the queue and shipped to the network partial packets are left on the queue in that case
  */
-    void sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent=0);
+    void sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent=0);
 
 /**
  * If another thread claimed to be sending data asynchronously
@@ -115,7 +115,7 @@ class ASIOSocketWrapper {
  * If data is on the queue, it goes ahead and sends the data to the wire by using the appropriate overload of the sendToWire function
  * it then unsets the QUEUE_CHECK_FLAG and if data isn't being set also the ASYNCHRONOUS_SEND_FLAG
  */
-    void retryQueuedSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, uint32 current_status);
+    void retryQueuedSend(const MultiplexedSocketPtr&parentMultiSocket, uint32 current_status);
 
 public:
 
@@ -124,7 +124,7 @@ public:
     }
 
     ASIOSocketWrapper(const ASIOSocketWrapper& socket) :mSocket(socket.mSocket),mReadBuffer(NULL),mSendingStatus(0),mSendQueue(socket.getResourceMonitor()),PACKET_BUFFER_SIZE(socket.PACKET_BUFFER_SIZE),mBuffer(new uint8[socket.PACKET_BUFFER_SIZE]) {
-        
+
         //mPacketLogger.reserve(268435456);
     }
 
@@ -163,22 +163,22 @@ public:
      * Sends the exact bytes contained within the typedeffed vector
      * \param chunk is the exact bytes to put on the network (including streamID and framing data)
      */
-    bool rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force);
+    bool rawSend(const MultiplexedSocketPtr&parentMultiSocket, Chunk * chunk, bool force);
     bool canSend(size_t dataSize)const;
     static Chunk*constructControlPacket(TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid);
     /**
-     *  Sends a streamID #0 packet with further control data on it. 
+     *  Sends a streamID #0 packet with further control data on it.
      *  To start with only stream disconnect and the ack thereof are allowed
      */
-    void sendControlPacket(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid) {
+    void sendControlPacket(const MultiplexedSocketPtr&parentMultiSocket, TCPStream::TCPStreamControlCodes code,const Stream::StreamID&sid) {
         rawSend(parentMultiSocket,constructControlPacket(code,sid),true);
     }
     /**
      * Sends 24 byte header that indicates version of SST, a unique ID and how many TCP connections should be established
      */
-    void sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections);
-    void ioReactorThreadPauseStream(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Stream::StreamID sid);
-    void unpauseSendStreams(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket);
+    void sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const UUID&value, unsigned int numConnections);
+    void ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid);
+    void unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket);
     Address getRemoteEndpoint()const;
     Address getLocalEndpoint()const;
 };

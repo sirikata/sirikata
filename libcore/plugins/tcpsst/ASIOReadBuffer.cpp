@@ -38,7 +38,7 @@
 #include "MultiplexedSocket.hpp"
 #include "ASIOReadBuffer.hpp"
 namespace Sirikata { namespace Network {
-ASIOReadBuffer* MakeASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket) {
+ASIOReadBuffer* MakeASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket) {
     return parentSocket->getASIOSocketWrapper(whichSocket).setReadBuffer(new ASIOReadBuffer(parentSocket,whichSocket));
 }
 void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::system::error_code &error){
@@ -46,12 +46,12 @@ void ASIOReadBuffer::processError(MultiplexedSocket*parentSocket, const boost::s
     parentSocket->getASIOSocketWrapper(mWhichBuffer).clearReadBuffer();
     delete this;
 }
-bool ASIOReadBuffer::processFullChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
+bool ASIOReadBuffer::processFullChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket, const Stream::StreamID&id, Chunk&newChunk){
     return parentSocket->receiveFullChunk(whichSocket,id,newChunk);
 }
 
 
-void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
+void ASIOReadBuffer::readIntoFixedBuffer(const MultiplexedSocketPtr &parentSocket){
     mReadStatus=READING_FIXED_BUFFER;
 
     parentSocket
@@ -62,7 +62,7 @@ void ASIOReadBuffer::readIntoFixedBuffer(const std::tr1::shared_ptr<MultiplexedS
                                    _1,
                                    _2));
 }
-void ASIOReadBuffer::ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedSocket>&thus) {
+void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
     assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
     switch(mReadStatus) {
       case PAUSED_FIXED_BUFFER:
@@ -80,7 +80,7 @@ void ASIOReadBuffer::ioReactorThreadResumeRead(std::tr1::shared_ptr<MultiplexedS
         break;
     }
 }
-void ASIOReadBuffer::readIntoChunk(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket){
+void ASIOReadBuffer::readIntoChunk(const MultiplexedSocketPtr &parentSocket){
 
     mReadStatus=READING_NEW_CHUNK;
     assert(mNewChunk.size()>0);//otherwise should have been filtered out by caller
@@ -107,7 +107,7 @@ Stream::StreamID ASIOReadBuffer::processPartialChunk(uint8* dataBuffer, uint32 p
     }
     return retid;
 }
-void ASIOReadBuffer::translateBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &thus) {
+void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
         unsigned int chunkPos=0;
         unsigned int packetHeaderLength;
         vuint32 packetLength;
@@ -153,7 +153,7 @@ ASIOReadBuffer::~ASIOReadBuffer() {
 void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_read){
     TCPSSTLOG(this,"rcv",&mNewChunk[mBufferPos],bytes_read,error);
     mBufferPos+=bytes_read;
-    std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+    MultiplexedSocketPtr thus(mParentSocket.lock());
 
     if (thus) {
         if (error){
@@ -182,7 +182,7 @@ void ASIOReadBuffer::asioReadIntoChunk(const ErrorCode&error,std::size_t bytes_r
 void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t bytes_read){
     TCPSSTLOG(this,"rcv",&mBuffer[mBufferPos],bytes_read,error);
     mBufferPos+=bytes_read;
-    std::tr1::shared_ptr<MultiplexedSocket> thus(mParentSocket.lock());
+    MultiplexedSocketPtr thus(mParentSocket.lock());
 
     if (thus) {
         if (error){
@@ -194,7 +194,7 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
         delete this;// the socket is deleted
     }
 }
-ASIOReadBuffer::ASIOReadBuffer(const std::tr1::shared_ptr<MultiplexedSocket> &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
+ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;

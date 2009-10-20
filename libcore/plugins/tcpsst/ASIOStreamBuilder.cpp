@@ -37,7 +37,10 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
-namespace Sirikata { namespace Network { namespace ASIOStreamBuilder{
+
+namespace Sirikata {
+namespace Network {
+namespace ASIOStreamBuilder{
 
 class IncompleteStreamState {
 public:
@@ -75,7 +78,7 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
         }else {
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
-                std::tr1::shared_ptr<MultiplexedSocket> shared_socket(
+                MultiplexedSocketPtr shared_socket(
                     MultiplexedSocket::construct<MultiplexedSocket>(ioService,context,where->second.mSockets,callback));
                 MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                 sIncompleteStreams.erase(where);
@@ -106,4 +109,6 @@ void beginNewStream(TCPSocket * socket, IOService*ioService,const Stream::Substr
                             std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,_1,_2));
 }
 
-} } }
+} // namespace ASIOStreamBuilder
+} // namespace Network
+} // namespace Sirikata

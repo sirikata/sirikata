@@ -136,7 +136,7 @@ float MultiplexedSocket::dropChance(const Chunk*data,size_t whichStream) {
     return .25;
 }
 
-bool MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data, bool force) {
+bool MultiplexedSocket::sendBytesNow(const MultiplexedSocketPtr& thus,const RawRequest&data, bool force) {
     TCPSSTLOG(this,"sendnow",&*data.data->begin(),data.data->size(),false);
     TCPSSTLOG(this,"sendnow","\n",1,false);
     static Stream::StreamID::Hasher hasher;
@@ -161,7 +161,7 @@ bool MultiplexedSocket::sendBytesNow(const std::tr1::shared_ptr<MultiplexedSocke
 }
 
 
-void MultiplexedSocket::closeStream(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code) {
+void MultiplexedSocket::closeStream(const MultiplexedSocketPtr& thus,const Stream::StreamID&sid,TCPStream::TCPStreamControlCodes code) {
     RawRequest closeRequest;
     closeRequest.originStream=Stream::StreamID();//control packet
     closeRequest.unordered=false;
@@ -181,7 +181,7 @@ bool MultiplexedSocket::canSendBytes(Stream::StreamID originStream,size_t dataSi
     }
 }
 
-bool MultiplexedSocket::sendBytes(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const RawRequest&data) {
+bool MultiplexedSocket::sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data) {
     bool retval=false;
     if (thus->mSocketConnectionPhase==CONNECTED) {
         retval=sendBytesNow(thus,data,false);
@@ -242,7 +242,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vec
         mSockets.push_back(ASIOSocketWrapper(sockets[i],MAX_ASIO_ENQUEUED_SEND_SIZE,ASIO_SEND_BUFFER_SIZE));
     }
 }
-void MultiplexedSocket::sendAllProtocolHeaders(const std::tr1::shared_ptr<MultiplexedSocket>&thus,const UUID&syncedUUID) {
+void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID) {
     unsigned int numSockets=(unsigned int)thus->mSockets.size();
     for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
         i->sendProtocolHeader(thus,syncedUUID,numSockets);
@@ -418,15 +418,15 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets) {
 }
 void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) {
     prepareConnect(numSockets);
-    std::tr1::shared_ptr<ASIOConnectAndHandshake>
+    ASIOConnectAndHandshakePtr
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));
     //will notify connectionFailureOrSuccessCallback when resolved
     ASIOConnectAndHandshake::connect(headerCheck,address);
 }
 
-void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus, Stream::StreamID sid){
-    std::tr1::shared_ptr<MultiplexedSocket> thus(weak_thus.lock());
+void MultiplexedSocket::ioReactorThreadResumeRead(const MultiplexedSocketWPtr& weak_thus, Stream::StreamID sid){
+    MultiplexedSocketPtr thus(weak_thus.lock());
     if (thus) {
         assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
         for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
@@ -436,8 +436,8 @@ void MultiplexedSocket::ioReactorThreadResumeRead(const std::tr1::weak_ptr<Multi
         }
     }
 }
-void MultiplexedSocket::ioReactorThreadPauseSend(const std::tr1::weak_ptr<MultiplexedSocket>&weak_thus, Stream::StreamID sid) {
-    std::tr1::shared_ptr<MultiplexedSocket> thus(weak_thus.lock());
+void MultiplexedSocket::ioReactorThreadPauseSend(const MultiplexedSocketWPtr& weak_thus, Stream::StreamID sid) {
+    MultiplexedSocketPtr thus(weak_thus.lock());
     if (thus) {
         static Stream::StreamID::Hasher hasher;
         assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));

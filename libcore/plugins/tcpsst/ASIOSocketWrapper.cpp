@@ -57,14 +57,14 @@ void copyHeader(void * destination, const UUID&key, unsigned int num) {
                 UUID::static_size);
 }
 
-void ASIOSocketWrapper::unpauseSendStreams(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket) {
+void ASIOSocketWrapper::unpauseSendStreams(const MultiplexedSocketPtr&parentMultiSocket) {
     std::vector<Stream::StreamID> toUnpause;
     toUnpause.swap(mPausedSendStreams);
     parentMultiSocket->unpauseSendStreams(toUnpause);
 }
 
 
-void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket) {
+void ASIOSocketWrapper::finishAsyncSend(const MultiplexedSocketPtr&parentMultiSocket) {
     //When this function is called, the ASYNCHRONOUS_SEND_FLAG must be set because this particular context is the one finishing up a send
     assert(mSendingStatus.read()&ASYNCHRONOUS_SEND_FLAG);
     //Turn on the information that the queue is being checked and this means that further pushes to the queue may not be heeded if the queue happened to be empty
@@ -87,7 +87,7 @@ void ASIOSocketWrapper::finishAsyncSend(const std::tr1::shared_ptr<MultiplexedSo
     //unpause streams after lock released, in case callback takes a while to avoid deadlock
     unpauseSendStreams(parentMultiSocket);
 }
-void ASIOSocketWrapper::sendLargeChunkItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendLargeChunkItem(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",&*toSend->begin()+originalOffset,bytes_sent,error);
     if (error)  {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
@@ -100,7 +100,7 @@ void ASIOSocketWrapper::sendLargeChunkItem(const std::tr1::shared_ptr<Multiplexe
     }
 }
 
-void ASIOSocketWrapper::sendLargeDequeItem(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendLargeDequeItem(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*> &const_toSend, size_t originalOffset, const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",&*const_toSend.front()->begin()+originalOffset,bytes_sent,error);
     if (error )   {
         triggerMultiplexedConnectionError(&*parentMultiSocket,this,error);
@@ -127,7 +127,7 @@ void ASIOSocketWrapper::sendLargeDequeItem(const std::tr1::shared_ptr<Multiplexe
     }
 }
 #define ASIOSocketWrapperBuffer(pointer,size) boost::asio::buffer(pointer,(size))
-void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
+void ASIOSocketWrapper::sendStaticBuffer(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&toSend, uint8* currentBuffer, size_t bufferSize, size_t lastChunkOffset,  const ErrorCode &error, std::size_t bytes_sent) {
     TCPSSTLOG(this,"snd",current_buffer,bytes_sent,error);
     if (!error) {
         //mPacketLogger.insert(mPacketLogger.end(),currentBuffer,currentBuffer+bytes_sent);
@@ -167,7 +167,7 @@ void ASIOSocketWrapper::sendStaticBuffer(const std::tr1::shared_ptr<MultiplexedS
 }
 
 
-void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk *toSend, size_t bytesSent) {
+void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, Chunk *toSend, size_t bytesSent) {
     //sending a single chunk is a straightforward call directly to asio
 
 
@@ -181,7 +181,7 @@ void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>
                                           _2));
 }
 
-void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent){
+void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, const std::deque<Chunk*>&const_toSend, size_t bytesSent){
 
 
     if (const_toSend.front()->size()-bytesSent>PACKET_BUFFER_SIZE||const_toSend.size()==1) {
@@ -230,7 +230,7 @@ void ASIOSocketWrapper::sendToWire(const std::tr1::shared_ptr<MultiplexedSocket>
     }
 }
 #undef ASIOSocketWrapperBuffer
-void ASIOSocketWrapper::retryQueuedSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, uint32 current_status) {
+void ASIOSocketWrapper::retryQueuedSend(const MultiplexedSocketPtr&parentMultiSocket, uint32 current_status) {
     bool queue_check=(current_status&QUEUE_CHECK_FLAG)!=0;
     bool sending_packet=(current_status&ASYNCHRONOUS_SEND_FLAG)!=0;
     while (sending_packet==false||queue_check) {
@@ -304,7 +304,7 @@ bool ASIOSocketWrapper::canSend(size_t dataSize) const{
     if (mSendingStatus.read()==0) return true;
     return mSendQueue.getResourceMonitor().filledSize()+dataSize<=(size_t)mSendQueue.getResourceMonitor().maxSize();
 }
-bool ASIOSocketWrapper::rawSend(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Chunk * chunk, bool force) {
+bool ASIOSocketWrapper::rawSend(const MultiplexedSocketPtr&parentMultiSocket, Chunk * chunk, bool force) {
     bool retval=true;
     TCPSSTLOG(this,"raw",&*chunk->begin(),chunk->size(),false);
     uint32 current_status=++mSendingStatus;
@@ -345,14 +345,14 @@ Chunk*ASIOSocketWrapper::constructControlPacket(TCPStream::TCPStreamControlCodes
     return new Chunk(dataStream+vuint32::MAX_SERIALIZED_LENGTH-actualHeaderLength,dataStream+size+cur);
 }
 
-void ASIOSocketWrapper::sendProtocolHeader(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, const UUID&value, unsigned int numConnections) {
+void ASIOSocketWrapper::sendProtocolHeader(const MultiplexedSocketPtr&parentMultiSocket, const UUID&value, unsigned int numConnections) {
     UUID return_value=UUID::random();
 
     Chunk *headerData=new Chunk(TCPStream::TcpSstHeaderSize);
     copyHeader(&*headerData->begin(),value,numConnections);
     rawSend(parentMultiSocket,headerData,true);
 }
-void ASIOSocketWrapper::ioReactorThreadPauseStream(const std::tr1::shared_ptr<MultiplexedSocket>&parentMultiSocket, Stream::StreamID sid){
+void ASIOSocketWrapper::ioReactorThreadPauseStream(const MultiplexedSocketPtr&parentMultiSocket, Stream::StreamID sid){
     mPausedSendStreams.push_back(sid);
     if (mSendQueue.probablyEmpty()) {
         //everything may have drained out by the time we got here

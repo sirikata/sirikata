@@ -29,11 +29,12 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-namespace Sirikata { namespace Network {
+namespace Sirikata {
+namespace Network {
 
-class ASIOConnectAndHandshake{
+class ASIOConnectAndHandshake {
     TCPResolver mResolver;
-    std::tr1::weak_ptr<MultiplexedSocket> mConnection;
+    MultiplexedSocketWPtr mConnection;
     ///num positive checks remaining (or -n for n sockets of which at least 1 failed)
     int mFinishedCheckCount;
     UUID mHeaderUUID;
@@ -55,7 +56,7 @@ class ASIOConnectAndHandshake{
     /**
      * This function simply wraps checkHeaderContents having been passed a shared_ptr from an asio_callback
      */
-    static void checkHeader(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+    static void checkHeader(const ASIOConnectAndHandshakePtr& thus,
                             unsigned int whichSocket,
                             Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                             const ErrorCode&error,
@@ -70,7 +71,7 @@ class ASIOConnectAndHandshake{
     * If anything goes wrong and the first header check integer is already below zero it will decline to take action
     * The buffer passed in will be deleted by this function
     */
-    static void connectToIPAddress(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+    static void connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
                                    unsigned int whichSocket,
                                    const boost::asio::ip::tcp::resolver::iterator &it,
                                    const ErrorCode &error);
@@ -78,7 +79,7 @@ class ASIOConnectAndHandshake{
     * This function is a callback from the async_resolve call from ASIO initialized from the public interface connect
     * It may get an error if the host was not found or otherwise a valid iterator to a number of ip addresses
     */
-    static void handleResolve(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+    static void handleResolve(const ASIOConnectAndHandshakePtr &thus,
                               const boost::system::error_code &error,
                               boost::asio::ip::tcp::resolver::iterator it);
 public:
@@ -89,9 +90,11 @@ public:
      *    - MultiplexedSocket::connectedCallback() is called
      *    - An ASIOReadBuffer is created for handling future reads
      */
-    static void connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
+    static void connect(const ASIOConnectAndHandshakePtr &thus,
                         const Address&address);
-    ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
+    ASIOConnectAndHandshake(const MultiplexedSocketPtr &connection,
                             const UUID&sharedUuid);
 };
-} }
+
+} // namespace Network
+} // namespace Sirikata

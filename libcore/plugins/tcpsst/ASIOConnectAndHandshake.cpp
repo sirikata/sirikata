@@ -45,7 +45,7 @@ void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
                                                   Array<uint8,TCPStream::TcpSstHeaderSize>* buffer,
                                                   const ErrorCode&error,
                                                   std::size_t bytes_received) {
-    std::tr1::shared_ptr<MultiplexedSocket> connection=mConnection.lock();
+    MultiplexedSocketPtr connection=mConnection.lock();
     if (connection) {
         if (mFinishedCheckCount==(int)connection->numSockets()) {
             mFirstReceivedHeader=*buffer;
@@ -72,11 +72,11 @@ void ASIOConnectAndHandshake::checkHeaderContents(unsigned int whichSocket,
     delete buffer;
 }
 
-void ASIOConnectAndHandshake::connectToIPAddress(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePtr& thus,
                                                  unsigned int whichSocket,
                                                  const tcp::resolver::iterator &it,
                                                  const ErrorCode &error) {
-    std::tr1::shared_ptr<MultiplexedSocket> connection=thus->mConnection.lock();
+    MultiplexedSocketPtr connection=thus->mConnection.lock();
     if (!connection) {
         return;
     }
@@ -123,10 +123,10 @@ void ASIOConnectAndHandshake::connectToIPAddress(const std::tr1::shared_ptr<ASIO
     }
 }
 
-void ASIOConnectAndHandshake::handleResolve(const std::tr1::shared_ptr<ASIOConnectAndHandshake>&thus,
+void ASIOConnectAndHandshake::handleResolve(const ASIOConnectAndHandshakePtr& thus,
                                             const boost::system::error_code &error,
                                             tcp::resolver::iterator it) {
-    std::tr1::shared_ptr<MultiplexedSocket> connection=thus->mConnection.lock();
+    MultiplexedSocketPtr connection=thus->mConnection.lock();
     if (!connection) {
         return;
     }
@@ -144,7 +144,7 @@ void ASIOConnectAndHandshake::handleResolve(const std::tr1::shared_ptr<ASIOConne
 
 }
 
-void ASIOConnectAndHandshake::connect(const std::tr1::shared_ptr<ASIOConnectAndHandshake> &thus,
+void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
                                       const Address&address){
     tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
     thus->mResolver.async_resolve(query,
@@ -155,7 +155,7 @@ void ASIOConnectAndHandshake::connect(const std::tr1::shared_ptr<ASIOConnectAndH
 
 }
 
-ASIOConnectAndHandshake::ASIOConnectAndHandshake(const std::tr1::shared_ptr<MultiplexedSocket> &connection,
+ASIOConnectAndHandshake::ASIOConnectAndHandshake(const MultiplexedSocketPtr &connection,
                                                  const UUID&sharedUuid):
     mResolver(connection->getASIOService()),
         mConnection(connection),

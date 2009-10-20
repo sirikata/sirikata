@@ -31,10 +31,14 @@
  */
 #ifndef SIRIKATA_TCPStream_HPP__
 #define SIRIKATA_TCPStream_HPP__
+
 #include "network/Stream.hpp"
 #include "util/AtomicTypes.hpp"
-namespace Sirikata { namespace Network {
-class MultiplexedSocket;
+#include "TCPSSTDecls.hpp"
+
+namespace Sirikata {
+namespace Network {
+
 class TCPSetCallbacks;
 class IOService;
 
@@ -103,7 +107,7 @@ private:
     ///The low level boost::asio io service handle
     IOService* mIO;
     ///the shared pointer to the communal sending connection
-    std::tr1::shared_ptr<MultiplexedSocket> mSocket;
+    MultiplexedSocketPtr mSocket;
     ///A function to add callbacks to this particular stream, called by the relevant TCPSetCallbacks function inheriting from SetCallbacks
     void addCallbacks(Callbacks*);
     ///The streamID that must be prepended to the data within any packet sent and all received packets for this Stream
@@ -142,7 +146,7 @@ public:
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone()
     TCPStream(IOService&);
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
-    TCPStream(const std::tr1::shared_ptr<MultiplexedSocket> &shared_socket, const Stream::StreamID&);
+    TCPStream(const MultiplexedSocketPtr &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
     ///There is room on a downstream queue and futher sends should be retried
     virtual void readyRead();
@@ -203,5 +207,8 @@ public:
     virtual void close();
     ~TCPStream();
 };
-} }
-#endif
+
+} // namespace Network
+} // namespace Sirikata
+
+#endif //SIRIKATA_TCPStream_HPP__
