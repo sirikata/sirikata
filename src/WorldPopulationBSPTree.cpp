@@ -233,13 +233,20 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
 
   int mindensity = MIN_REGION_DENSITY_CUTOFF;
   j=0;
-  WorldRegion* regionList2 = new WorldRegion[mNumRegions];
+  std::vector<WorldRegion> regionVector;
   for (k=0; k<mNumRegions; k++) {
     if (regionList[k].density > mindensity) {
-      regionList2[j] = regionList[k];
+      regionVector.push_back(regionList[k]);
       j++;
     }
   }
+
+  WorldRegion* regionList2 = new WorldRegion[regionVector.size()];
+  for (k=0; k < regionVector.size(); k++) {
+    regionList2[k] = regionVector[k];
+  }
+
+  regionVector.clear();
 
   delete regionList;
 

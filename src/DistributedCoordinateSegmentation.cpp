@@ -696,9 +696,7 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
     delete buffer;
   }
   else if (packetType == SEGMENTATION_CHANGE) {
-    boost::asio::io_service io_service;
-
-    tcp::resolver resolver(io_service);
+    tcp::resolver resolver(mIOService);
 
     mWholeTreeServerRegionMap.clear();
 
@@ -750,13 +748,13 @@ void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
 
 
 void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar) {
-  int cutOffDepth = 3;
+  int cutOffDepth = 20;
 
   if (depth>=cutOffDepth) {
     region->mServer =  (numLLTreesSoFar % mAvailableCSEGServers)+1;
 
     if ( region->mServer == mContext->id()) {
-      std::cout << " Assigned to me, bbox : " << region->mBoundingBox<<"\n";
+      //std::cout << " Assigned to me, bbox : " << region->mBoundingBox<<"\n";
       SegmentedRegion* segRegion = new SegmentedRegion();
       segRegion->mBoundingBox = region->mBoundingBox;
       segRegion->mLeftChild = region->mLeftChild;
@@ -846,8 +844,7 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   if (socket.get() == 0) {
     assert(false);
     return 0;
-  }
-  
+  }  
 
   SerializedVector serialVector;
   serialVector.serialize(searchVec);
@@ -940,8 +937,6 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForServerRegion
 void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int buflen) {
   /* Send to other CSEG servers so they can forward the segmentation change message to
      space servers connected to them. */
-  
-
   for (int i = 1; i <= mAvailableCSEGServers; i++) {
     if (i == mContext->id()) continue;
 
@@ -959,8 +954,7 @@ void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int 
 }
 
 void DistributedCoordinateSegmentation::sendToAllSpaceServers(uint8* buffer, int buflen) {
-  boost::asio::io_service io_service;
-  tcp::resolver resolver(io_service);
+  tcp::resolver resolver(mIOService);
 
   for (std::vector<SegmentationChangeListener>::const_iterator it=mSpacePeers.begin(); 
        it!=mSpacePeers.end(); it++) 
@@ -978,7 +972,7 @@ void DistributedCoordinateSegmentation::sendToAllSpaceServers(uint8* buffer, int
     tcp::resolver::iterator end;
 
     std::cout << "Calling " << addr << "@" << port_str << "!\n";
-    tcp::socket socket(io_service);
+    tcp::socket socket(mIOService);
     boost::system::error_code error = boost::asio::error::host_not_found;
     while (error && endpoint_iterator != end)
       {
