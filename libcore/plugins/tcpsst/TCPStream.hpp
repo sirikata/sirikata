@@ -41,9 +41,9 @@ class IOService;
 /**
  * This is a particular example implementation of the Stream interface sitting atop TCP.
  * The protocol specified in the Structured streams paper http://pdos.csail.mit.edu/uia/sst/
- * May be used as another implementation of the Stream interface. This is provided as the 
+ * May be used as another implementation of the Stream interface. This is provided as the
  * default implementation as it supports a wide range of network devices and is not subject to
- * prejudice against UDP connections which we routinely see on the net (my home system gets 10 
+ * prejudice against UDP connections which we routinely see on the net (my home system gets 10
  * second lag on UDP connections just due to ISP policy combating P2P networks)
  *
  * The protocol is as follows:
@@ -53,17 +53,17 @@ class IOService;
  * and sends the version string (currently SSTTCP ), an ascii 2 digit representation of N (in this case '03')
  * and a 16 byte unique ID used to pair up connections and possibly in the future for encryption
  * The other side respinds in turn on each connection with a similar handshake (though the 16 bytes may be different)
- * now the connection is online. The remote host may immediately follow the handshake with live packets and 
+ * now the connection is online. The remote host may immediately follow the handshake with live packets and
  * the other side may respond as soon as it receives the remote hosts handshake response
  *
  * --Live Phase--
- * The first live stream has StreamID of 1. New streams coming from listener must have even StreamID's and new 
+ * The first live stream has StreamID of 1. New streams coming from listener must have even StreamID's and new
  * streams coming from connector must have odd stream ID's.
  * To indicate a new substream, simply send a packet with a new stream ID
  *
  * --Packet Format--
  * All packets are prepended by a variable length int30 length and int30 StreamID and then the bytestream of data
- * The length value includes the length of the variable-length StreamID. 
+ * The length value includes the length of the variable-length StreamID.
  * the int30 format is as follows
  *      if the highest value bit in the first byte is 0, the other 7 bits represent numbers 0-128
  *      if the highest value bit in the first byte is 1, and the highest value bit in the second byte is 0
@@ -74,12 +74,12 @@ class IOService;
  *
  * --Shutting down a Stream--
  * If either side decides to close a stream they must send a control packet (which is the implicit stream with
- * StreamID = default int30, which serializes to a single byte=0) 
+ * StreamID = default int30, which serializes to a single byte=0)
  * and then a control code which must be a byte equal to 1, and finally a variable length StreamID indicating which stream to close
  * This control packet must be broadcast on every related open TCP socket connection
  * This party may not reuse the streamID (given parity match) until it receives control packets with control code equal to 2 (close Ack) on all sockets.
  * The other side must keep the bargain and send the control packet with control code 2 on all sockets to allow ID reuse.
- * 
+ *
  * If all streams are shut down, the sockets may be deactivated
  * If the socket disconnects due to error, then Disconnect callbacks must be called
  */
@@ -123,7 +123,7 @@ public:
      * A pair of callbacks related to a stream. Used for a target of a map type
      * Holds the callback to receive for a connection and the bytes received callback
      */
-    class Callbacks:public Noncopyable {        
+    class Callbacks:public Noncopyable {
     public:
         Stream::ConnectionCallback mConnectionCallback;
         Stream::BytesReceivedCallback mBytesReceivedCallback;
@@ -149,19 +149,13 @@ public:
     ///Send a readySendCallback notification when there is room on the send queue
     virtual void pauseSend();
     ///Implementation of send interface
-#ifndef _WIN32
-    __attribute__ ((warn_unused_result))
-#endif
+    WARN_UNUSED
     virtual bool send(MemoryReference, StreamReliability);
     ///Implementation of send interface
-#ifndef _WIN32
-    __attribute__ ((warn_unused_result))
-#endif
+    WARN_UNUSED
     virtual bool send(MemoryReference, MemoryReference, StreamReliability);
     ///Implementation of send interface
-#ifndef _WIN32
-    __attribute__ ((warn_unused_result))
-#endif
+    WARN_UNUSED
     virtual bool send(const Chunk&data,StreamReliability);
     virtual bool canSend(const size_t dataSize)const;
     ///Implementation of connect interface
@@ -173,7 +167,7 @@ public:
         const ReadySendCallback&readySend);
     /**
      * Will specify all callbacks for the first successful stream and allow this stream to be cloned
-     * The stream is immediately active and may have bytes sent on it immediately. 
+     * The stream is immediately active and may have bytes sent on it immediately.
      * A connectionCallback will be called as soon as connection has succeeded or failed
      */
     virtual void prepareOutboundConnection(
