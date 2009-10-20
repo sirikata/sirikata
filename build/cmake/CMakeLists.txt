@@ -850,6 +850,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/task/UniqueId.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
 	${LIBCORE_SOURCE_DIR}/network/Asio.cpp
+	${LIBCORE_SOURCE_DIR}/network/AsioStrandIO.cpp
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp

@@ -60,6 +60,19 @@ class SIRIKATA_EXPORT IOStrand {
     /** Construct an IOStrand associated with the given IOService. */
     IOStrand(IOService& io);
 
+  protected:
+
+    friend class StrandTCPSocket;
+
+    /** Wrap the given handler so that it will be handled in this strand.
+     *  Note: This
+     *  \param handler the handler which should be wrapped
+     *  \returns a new handler which will cause the original handler
+     *           to be invoked in this strand
+     */
+    template<typename CallbackType>
+    CallbackType wrap_any(const CallbackType& handler);
+
   public:
 
     /** Destroy the strand.  Outstanding events on the strand will be

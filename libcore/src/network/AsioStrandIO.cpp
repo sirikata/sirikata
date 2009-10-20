@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IODefs.hpp
+ *  IOStrand.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -29,52 +29,26 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_NETWORK_IODEFS_HPP_
-#define _SIRIKATA_NETWORK_IODEFS_HPP_
 
-#include "util/Platform.hpp"
-
-namespace boost {
-namespace asio {
-class io_service;
-} // namespace asio
-} // namespace boost
-
+#include "util/Standard.hh"
+#include "AsioStrandIO.hpp"
+#include "IOService.hpp"
+#include "IOStrand.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-// Exposes internal implementation service, allowing implementations to hook,
-// directly in, but assumes that we could load alternative plugins with a
-// different implementation
-typedef boost::asio::io_service InternalIOService;
 
-// Useful typedefs used throughout the Network IO API
-typedef std::tr1::function<void()> IOCallback;
+StrandTCPSocket::StrandTCPSocket(IOStrand* strand)
+ : TCPSocket(strand->service()),
+   mStrand(strand)
+{
+}
 
-// The real classes we provide which attempt to abstract the event queue / IO
-// services.
-class IOService;
-class IOServiceFactory;
-class IOTimer;
-class IOStrand;
+void StrandTCPSocket::async_connect(const endpoint_type& peer_endpoint, ConnectHandler handler) {
+    TCPSocket::async_connect(peer_endpoint, mStrand->wrap_any(handler));
+}
 
-// Subclasses of internal classes, exposed to allow for safe cross-library
-// allocation and use.
-class InternalIOStrand;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-class UDPSocket;
-class UDPResolver;
-class DeadlineTimer;
-
-// Subclasses of internal classes which are wrapped by a strand, guaranteeing
-// serializability of their event handlers
-class StrandTCPSocket;
 
 } // namespace Network
 } // namespace Sirikata
-
-
-#endif //_SIRIKATA_NETWORK_IODEFS_HPP_

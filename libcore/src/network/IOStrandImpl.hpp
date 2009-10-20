@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IODefs.hpp
+ *  IOStrandImpl.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -29,52 +29,26 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_NETWORK_IODEFS_HPP_
-#define _SIRIKATA_NETWORK_IODEFS_HPP_
+#ifndef _SIRIKATA_IOSTRAND_INTERNAL_HPP_
+#define _SIRIKATA_IOSTRAND_INTERNAL_HPP_
 
-#include "util/Platform.hpp"
-
-namespace boost {
-namespace asio {
-class io_service;
-} // namespace asio
-} // namespace boost
-
+#include "IOStrand.hpp"
+#include "Asio.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-// Exposes internal implementation service, allowing implementations to hook,
-// directly in, but assumes that we could load alternative plugins with a
-// different implementation
-typedef boost::asio::io_service InternalIOService;
+// Note: We isolate this here because it requires including all the Boost.Asio
+// headers to get the templatized version.  This functionality is only available
+// internally -- only wrapped sockets and the like will use it -- so we
+// factor it out so it only needs to be included for those implementations.
 
-// Useful typedefs used throughout the Network IO API
-typedef std::tr1::function<void()> IOCallback;
-
-// The real classes we provide which attempt to abstract the event queue / IO
-// services.
-class IOService;
-class IOServiceFactory;
-class IOTimer;
-class IOStrand;
-
-// Subclasses of internal classes, exposed to allow for safe cross-library
-// allocation and use.
-class InternalIOStrand;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-class UDPSocket;
-class UDPResolver;
-class DeadlineTimer;
-
-// Subclasses of internal classes which are wrapped by a strand, guaranteeing
-// serializability of their event handlers
-class StrandTCPSocket;
+template<typename CallbackType>
+CallbackType IOStrand::wrap_any(const CallbackType& handler) {
+    return mImpl->wrap(handler);
+}
 
 } // namespace Network
 } // namespace Sirikata
 
-
-#endif //_SIRIKATA_NETWORK_IODEFS_HPP_
+#endif //_SIRIKATA_IOSTRAND_INTERNAL_HPP_
