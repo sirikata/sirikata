@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IODefs.hpp
+ *  IOStrand.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -29,48 +29,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_NETWORK_IODEFS_HPP_
-#define _SIRIKATA_NETWORK_IODEFS_HPP_
 
-#include "util/Platform.hpp"
-
-namespace boost {
-namespace asio {
-class io_service;
-} // namespace asio
-} // namespace boost
-
+#include "util/Standard.hh"
+#include "IOStrand.hpp"
+#include "IOService.hpp"
+#include "Asio.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-// Exposes internal implementation service, allowing implementations to hook,
-// directly in, but assumes that we could load alternative plugins with a
-// different implementation
-typedef boost::asio::io_service InternalIOService;
+IOStrand::IOStrand(IOService& io)
+ : mService(io)
+{
+    mImpl = new InternalIOStrand(io);
+}
 
-// Useful typedefs used throughout the Network IO API
-typedef std::tr1::function<void()> IOCallback;
+IOStrand::~IOStrand() {
+    delete mImpl;
+}
 
-// The real classes we provide which attempt to abstract the event queue / IO
-// services.
-class IOService;
-class IOServiceFactory;
-class IOTimer;
-class IOStrand;
+void IOStrand::dispatch(const IOCallback& handler) {
+    mService.dispatch( mImpl->wrap( handler ) );
+}
 
-// Subclasses of internal classes, exposed to allow for safe cross-library
-// allocation and use.
-class InternalIOStrand;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-class UDPSocket;
-class UDPResolver;
-class DeadlineTimer;
+void IOStrand::post(const IOCallback& handler) {
+    mService.post( mImpl->wrap( handler ) );
+}
+
+void IOStrand::post(const Duration& waitFor, const IOCallback& handler) {
+    mService.post(waitFor, mImpl->wrap( handler ) );
+}
+
+IOCallback IOStrand::wrap(const IOCallback& handler) {
+    return mImpl->wrap(handler);
+}
 
 } // namespace Network
 } // namespace Sirikata
-
-
-#endif //_SIRIKATA_NETWORK_IODEFS_HPP_

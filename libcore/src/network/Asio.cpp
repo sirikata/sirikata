@@ -5,6 +5,13 @@
 namespace Sirikata {
 namespace Network {
 
+
+InternalIOStrand::InternalIOStrand(IOService &io)
+ : boost::asio::io_service::strand(io.asioService())
+{
+}
+
+
 TCPSocket::TCPSocket(IOService&io):
     boost::asio::ip::tcp::socket(io.asioService())
 {

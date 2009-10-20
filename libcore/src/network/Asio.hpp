@@ -44,6 +44,17 @@
 namespace Sirikata {
 namespace Network {
 
+/** Simple wrapper around Boost.Asio's io_service::strand, allowing for safe,
+ *  cross-platform allocation and use. Normally we would prefer a typedef here,
+ *  but strand is an internal class, so we can't make this work without forcing
+ *  Asio include's on everybody that needs to use strands.
+ */
+class InternalIOStrand : public boost::asio::io_service::strand {
+public:
+    InternalIOStrand(IOService &io);
+};
+
+
 typedef boost::asio::ip::tcp::socket InternalTCPSocket;
 typedef boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
 typedef boost::asio::ip::tcp::resolver InternalTCPResolver;
