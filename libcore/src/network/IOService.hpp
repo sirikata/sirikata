@@ -33,27 +33,10 @@
 #define _SIRIKATA_IOSERVICE_HPP_
 
 #include "util/Platform.hpp"
-
-
-namespace boost {
-namespace asio {
-class io_service;
-} // namespace asio
-} // namespace boost
-
+#include "IODefs.hpp"
 
 namespace Sirikata {
 namespace Network {
-
-typedef boost::asio::io_service InternalIOService;
-class IOServiceFactory;
-class TimerHandle;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-class UDPSocket;
-class UDPResolver;
-class DeadlineTimer;
 
 /** IOService provides queuing, processing, and dispatch for
  *  asynchronous IO, including timers, sockets, resolvers, and simple

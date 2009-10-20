@@ -33,42 +33,61 @@
 #define _SIRIKATA_IOTIMER_HPP_
 
 #include "util/Platform.hpp"
+#include "IODefs.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-class DeadlineTimer;
+typedef std::tr1::shared_ptr<IOTimer> IOTimerPtr;
+typedef std::tr1::weak_ptr<IOTimer> IOTimerWPtr;
 
-class SIRIKATA_EXPORT IOTimer {
+/** A timer which handles events using an IOService.  The user specifies
+ *  a timeout and a callback and that callback is triggered after at least
+ *  the specified duration has passed.  Repeated, periodic callbacks are
+ *  supported by specifying a callback up front and
+ */
+class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer> {
     DeadlineTimer *mTimer;
-    std::tr1::function<void()> mFunc;
+    IOCallback mFunc;
     class TimedOut;
 public:
+    /** Create a new timer, serviced by the specified IOService.
+     *  \param io the IOService to service this timers events
+     */
     IOTimer(IOService *io);
+    IOTimer(IOService &io);
 
-    IOTimer(IOService *io, const std::tr1::function<void()>&f);
-
-    void wait(const std::tr1::shared_ptr<IOTimer> &thisPtr,
-              const Duration &num_seconds);
-
-    void wait(const std::tr1::shared_ptr<IOTimer> &thisPtr,
-              const Duration &num_seconds,
-              const std::tr1::function<void()>&f) {
-        setCallback(f);
-        wait(thisPtr, num_seconds);
-    }
-
-    void setCallback(const std::tr1::function<void()>&f) {
-        mFunc = f;
-    }
+    /** Create a new timer, serviced by the specified IOService.
+     *  \param io the IOService to service this timers events
+     *  \param cb the handler for this timer's events.
+     */
+    IOTimer(IOService *io, const IOCallback& cb);
+    IOTimer(IOService &io, const IOCallback& cb);
 
     ~IOTimer();
 
+    /** Set the callback which will be used by this timer.  Note that this sets
+     *  the callback regardless of the current state of the timer, and will be
+     *  used for timeouts currently in progress.
+     */
+    void setCallback(const IOCallback& cb);
+
+    /** Wait for the specified duration, then call the previously set callback.
+     *  \param waitFor the amount of time to wait.
+     */
+    void wait(const Duration &waitFor);
+
+    /** Wait for the specified duration, then call the previously set callback.
+     *  \param waitFor the amount of time to wait.
+     *  \param cb the callback to set for this, and future, timeout events.
+     */
+    void wait(const Duration &waitFor, const IOCallback& cb);
+
+    /** Cancel the current timer.  This will cancel the callback that would
+     *  have resulted when the timer expired.
+     */
     void cancel();
 };
-
-typedef std::tr1::shared_ptr<IOTimer> IOTimerPtr;
-typedef std::tr1::weak_ptr<IOTimer> IOTimerWPtr;
 
 } // namespace Network
 } // namespace Sirikata

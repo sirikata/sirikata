@@ -58,20 +58,31 @@ public:
     }
 };
 
-IOTimer::IOTimer(IOService *io) {
+IOTimer::IOTimer(IOService* io) {
     mTimer = new DeadlineTimer(*io);
 }
 
-IOTimer::IOTimer(IOService *io, const std::tr1::function<void()>&f) {
-    mTimer = new DeadlineTimer(*io);
-    setCallback(f);
+IOTimer::IOTimer(IOService& io) {
+    mTimer = new DeadlineTimer(io);
 }
 
-void IOTimer::wait(
-        const std::tr1::shared_ptr<IOTimer> &thisPtr,
-        const Duration &num_seconds) {
+IOTimer::IOTimer(IOService* io, const IOCallback& cb) {
+    mTimer = new DeadlineTimer(*io);
+    setCallback(cb);
+}
+
+IOTimer::IOTimer(IOService& io, const IOCallback& cb) {
+    mTimer = new DeadlineTimer(io);
+    setCallback(cb);
+}
+
+IOTimer::~IOTimer() {
+    cancel();
+}
+
+void IOTimer::wait(const Duration &num_seconds) {
     mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
-    std::tr1::weak_ptr<IOTimer> weakThisPtr(thisPtr);
+    std::tr1::weak_ptr<IOTimer> weakThisPtr(this->shared_from_this());
     mTimer->async_wait(
         boost::bind(
             &IOTimer::TimedOut::timedOut,
@@ -79,8 +90,13 @@ void IOTimer::wait(
             weakThisPtr));
 }
 
-IOTimer::~IOTimer() {
-    cancel();
+void IOTimer::wait(const Duration &num_seconds, const IOCallback& cb) {
+    setCallback(cb);
+    wait(num_seconds);
+}
+
+void IOTimer::setCallback(const IOCallback& cb) {
+    mFunc = cb;
 }
 
 void IOTimer::cancel() {

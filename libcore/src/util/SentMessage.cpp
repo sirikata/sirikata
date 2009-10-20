@@ -140,7 +140,7 @@ void SentMessage::setTimeout(const Duration& timeout) {
             assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
 
             mTimerHandle->setCallback(std::tr1::bind(&SentMessage::timedOut, this));
-            mTimerHandle->wait(mTimerHandle, timeout);
+            mTimerHandle->wait(timeout);
         }
     }
 }
