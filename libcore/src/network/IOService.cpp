@@ -33,6 +33,7 @@
 #include "util/Standard.hh"
 #include "IOService.hpp"
 #include "util/Time.hpp"
+#include "IOStrand.hpp"
 #include <boost/asio.hpp>
 
 namespace Sirikata {
@@ -51,6 +52,10 @@ IOService::IOService() {
 
 IOService::~IOService(){
     delete mImpl;
+}
+
+IOStrand* IOService::createStrand() {
+    return new IOStrand(*this);
 }
 
 uint32 IOService::pollOne() {

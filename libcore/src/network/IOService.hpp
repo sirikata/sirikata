@@ -81,6 +81,9 @@ class SIRIKATA_EXPORT IOService {
         return *mImpl;
     }
 public:
+    /** Creates a new IOStrand. */
+    IOStrand* createStrand();
+
     /** Run at most one handler in the event queue.
      *  \returns the number of handlers executed
      */
