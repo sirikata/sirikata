@@ -52,6 +52,10 @@ namespace Network {
  *  handled in the user specified strand. If a strand is not specified or
  *  it is reset, then the socket will behave like an un-stranded socket,
  *  dispatching events to any available threads, possibly concurrently.
+ *
+ *  Note that these methods are *not* virtual.  You must use them via
+ *  this class for them to provide the stranding guarantees.  If used,
+ *  for example, via a TCPSocket*, no guarantees are made.
  */
 class SIRIKATA_EXPORT StrandTCPSocket : public TCPSocket {
   private:
