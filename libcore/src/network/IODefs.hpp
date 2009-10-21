@@ -34,11 +34,22 @@
 
 #include "util/Platform.hpp"
 
+
+// First we forward declare a bunch of Boost.Asio specific classes
+// so we can use them without including everything that Boost.Asio
+// includes indirectly
 namespace boost {
 namespace asio {
 class io_service;
+
+namespace detail {
+template <typename Dispatcher, typename Handler>
+class wrapped_handler;
+} // namespace detail
+
 } // namespace asio
 } // namespace boost
+
 
 
 namespace Sirikata {

@@ -57,22 +57,17 @@ class SIRIKATA_EXPORT IOStrand {
 
     friend class IOService;
 
-    // This friend class will be able to wrap handlers for other classes
-    // which understand strand internals
-    friend class StrandWrapper;
-
     /** Construct an IOStrand associated with the given IOService. */
     IOStrand(IOService& io);
-
-  public:
-    template<typename HandlerType>
-    class WrappedHandler;
 
   protected:
 
     friend class StrandTCPSocket;
 
   public:
+
+    template<typename CallbackType>
+    class WrappedHandler;
 
     /** Destroy the strand.  Outstanding events on the strand will be
      *  handled safely, i.e. non-concurrently.
@@ -110,6 +105,15 @@ class SIRIKATA_EXPORT IOStrand {
      *           to be invoked in this strand
      */
     IOCallback wrap(const IOCallback& handler);
+
+
+    /** Wrap the given handler so that it will be handled in this strand.
+     *  \param handler the handler which should be wrapped
+     *  \returns a new handler which will cause the original handler
+     *           to be invoked in this strand
+     */
+    template<typename CallbackType>
+    WrappedHandler<CallbackType> wrap(const CallbackType& handler);
 };
 
 } // namespace Network
