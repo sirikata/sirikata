@@ -116,6 +116,10 @@ private:
 
     void acceptLLTreeRequestHandler();
 
+    void subdivideTopLevelRegion(SegmentedRegion* region,
+				 Vector3ui32 perdim, 
+				 int& numServersAssigned);
+
     
     void generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar);
 

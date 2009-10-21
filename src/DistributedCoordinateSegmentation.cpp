@@ -62,6 +62,14 @@ void memdump(uint8* buffer, int len) {
   fflush(stdout);
 }
 
+bool isPowerOfTwo(double n) {  
+  if (n < 1.0) return false;
+
+  if (n == 1.0) return true;
+  
+  return isPowerOfTwo(n/2.0);
+}
+
 
 String sha1(void* data, size_t len) {
   int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
@@ -84,6 +92,76 @@ String sha1(void* data, size_t len) {
   return retval;
 }
 
+void DistributedCoordinateSegmentation::subdivideTopLevelRegion(SegmentedRegion* region,
+								Vector3ui32 perdim, 
+								int& numServersAssigned) 
+{
+  assert( isPowerOfTwo(perdim.x) );
+  assert( isPowerOfTwo(perdim.y) );
+  assert( isPowerOfTwo(perdim.z) );  
+
+  if (perdim.x == 1 && perdim.y == 1 && perdim.z == 1) {
+    region->mServer = (++numServersAssigned);
+    std::cout << "Server " << numServersAssigned << " assigned: " << region->mBoundingBox << "\n";
+    return;
+  }
+  
+  float minX = region->mBoundingBox.min().x; float maxX = region->mBoundingBox.max().x;
+  float minY = region->mBoundingBox.min().y; float maxY = region->mBoundingBox.max().y;
+  float minZ = region->mBoundingBox.min().z; float maxZ = region->mBoundingBox.max().z;
+
+  region->mLeftChild = new SegmentedRegion();
+  region->mRightChild = new SegmentedRegion();
+
+  
+  if (perdim.x > 1) {
+    region->mLeftChild->mBoundingBox = BoundingBox3f( region->mBoundingBox.min(),
+						      Vector3f( (minX+maxX)/2, maxY, maxZ) );
+    region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f( (minX+maxX)/2, minY, minZ),
+						       region->mBoundingBox.max() );
+
+    subdivideTopLevelRegion(region->mLeftChild,
+			    Vector3ui32(perdim.x/2, perdim.y, perdim.z), 
+			    numServersAssigned
+			   );
+    subdivideTopLevelRegion(region->mRightChild,
+			    Vector3ui32(perdim.x/2, perdim.y, perdim.z), 
+			    numServersAssigned			    
+			   );
+  }
+  else if (perdim.y > 1) {
+    region->mLeftChild->mBoundingBox = BoundingBox3f( region->mBoundingBox.min(),
+						      Vector3f( maxX, (minY+maxY)/2, maxZ) );
+    region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX,(minY+maxY)/2,minZ),
+						       region->mBoundingBox.max() );
+
+    subdivideTopLevelRegion(region->mLeftChild,
+			    Vector3ui32(perdim.x, perdim.y/2, perdim.z), 
+			    numServersAssigned
+			   );
+    subdivideTopLevelRegion(region->mRightChild,
+			    Vector3ui32(perdim.x, perdim.y/2, perdim.z), 
+			    numServersAssigned			    
+			   );
+  }
+  else if (perdim.z > 1) {
+    region->mLeftChild->mBoundingBox = BoundingBox3f( region->mBoundingBox.min(),
+						      Vector3f( maxX, maxY, (minZ+maxZ)/2) );
+    region->mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX, minY , (minZ+maxZ)/2),
+						       region->mBoundingBox.max() );
+
+    subdivideTopLevelRegion(region->mLeftChild,
+			    Vector3ui32(perdim.x, perdim.y, perdim.z/2), 
+			    numServersAssigned
+			   );
+    subdivideTopLevelRegion(region->mRightChild,
+			    Vector3ui32(perdim.x, perdim.y, perdim.z/2), 
+			    numServersAssigned			    
+			   );
+  }
+
+}
+
 DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContext* ctx, const BoundingBox3f& region, const Vector3ui32& perdim, int nservers, ServerIDMap * sidmap)
  : CoordinateSegmentation(ctx),
    mLastUpdateTime(mContext->time),
@@ -91,52 +169,26 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
 {
   mAvailableCSEGServers = GetOption("num-cseg-servers")->as<uint16>();
 
-  assert (nservers >= perdim.x * perdim.y * perdim.z);
+  assert (nservers >= (int)(perdim.x * perdim.y * perdim.z));
 
   if (GetOption("cseg-uses-world-pop")->as<bool>()) {
     WorldPopulationBSPTree wPopTree;
     wPopTree.constructBSPTree(mTopLevelRegion);
   }
   else {
-    
     mTopLevelRegion.mBoundingBox = region;
 
-    mTopLevelRegion.mLeftChild = new SegmentedRegion();
-    mTopLevelRegion.mRightChild = new SegmentedRegion();
-
-    float minX = region.min().x; float minY = region.min().y;
-    float maxX = region.max().x; float maxY = region.max().y;
-    float minZ = region.min().z; float maxZ = region.max().z;
-
-    mTopLevelRegion.mLeftChild->mBoundingBox = BoundingBox3f( region.min(),
-							      Vector3f( maxX, (minY+maxY)/2, maxZ) );
-    mTopLevelRegion.mRightChild->mBoundingBox = BoundingBox3f( Vector3f(minX,(minY+maxY)/2,minZ),
-							       region.max() );
-
-    mTopLevelRegion.mLeftChild->mLeftChild = new SegmentedRegion();
-    mTopLevelRegion.mRightChild->mRightChild = new SegmentedRegion();
-    mTopLevelRegion.mLeftChild->mRightChild = new SegmentedRegion();
-    mTopLevelRegion.mRightChild->mLeftChild = new SegmentedRegion();
-
-    mTopLevelRegion.mLeftChild->mLeftChild->mServer = 1;
-    mTopLevelRegion.mLeftChild->mRightChild->mServer = 2;
-    mTopLevelRegion.mRightChild->mLeftChild->mServer = 3;
-    mTopLevelRegion.mRightChild->mRightChild->mServer = 4;
-
-    mTopLevelRegion.mLeftChild->mLeftChild->mBoundingBox = BoundingBox3f( Vector3f(minX, minY, minZ), Vector3f( (minX+maxX)/2, (minY+maxY)/2, maxZ) );
-    mTopLevelRegion.mLeftChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, minY, minZ), Vector3f(maxX, (minY+maxY)/2, maxZ));
-
-    mTopLevelRegion.mRightChild->mLeftChild->mBoundingBox = BoundingBox3f( Vector3f(minX, (minY+maxY)/2, minZ), Vector3f( (minX+maxX)/2, maxY, maxZ));
-    mTopLevelRegion.mRightChild->mRightChild->mBoundingBox = BoundingBox3f( Vector3f((minX+maxX)/2, (minY+maxY)/2, minZ), Vector3f(maxX, maxY, maxZ));
+    int numServersAssigned = 0;
+    subdivideTopLevelRegion(&mTopLevelRegion, perdim, numServersAssigned); 
   }
-
+    
   int numLLTreesSoFar = 0;
-  generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);
+  generateHierarchicalTrees(&mTopLevelRegion, 1, numLLTreesSoFar);  
 
   for (int i=0; i<nservers;i++) {
     ServerAvailability sa;
     sa.mServer = i+1;
-    (i<perdim.x*perdim.y*perdim.z) ? (sa.mAvailable = 0) : (sa.mAvailable = 1);
+    (i < (int)(perdim.x*perdim.y*perdim.z)) ? (sa.mAvailable = 0) : (sa.mAvailable = 1);
 
     mAvailableServers.push_back(sa);
   }
