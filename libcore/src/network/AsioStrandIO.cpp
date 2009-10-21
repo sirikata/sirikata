@@ -38,6 +38,11 @@
 namespace Sirikata {
 namespace Network {
 
+StrandTCPSocket::StrandTCPSocket(IOService& io)
+ : TCPSocket(io),
+   mStrand(NULL)
+{
+}
 
 StrandTCPSocket::StrandTCPSocket(IOStrand* strand)
  : TCPSocket(strand->service()),
@@ -45,8 +50,19 @@ StrandTCPSocket::StrandTCPSocket(IOStrand* strand)
 {
 }
 
+void StrandTCPSocket::bind(IOStrand* strand) {
+    mStrand = strand;
+}
+
+void StrandTCPSocket::unbind() {
+    mStrand = NULL;
+}
+
 void StrandTCPSocket::async_connect(const endpoint_type& peer_endpoint, ConnectHandler handler) {
-    TCPSocket::async_connect(peer_endpoint, mStrand->wrap_any(handler));
+    if (mStrand != NULL)
+        TCPSocket::async_connect(peer_endpoint, mStrand->wrap_any(handler));
+    else
+        TCPSocket::async_connect(peer_endpoint, handler);
 }
 
 

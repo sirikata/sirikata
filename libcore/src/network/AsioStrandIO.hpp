@@ -49,19 +49,39 @@ namespace Sirikata {
 namespace Network {
 
 /** A TCPSocket which guarantees all handlers for events it generates are
- *  handled in the user specified strand.
+ *  handled in the user specified strand. If a strand is not specified or
+ *  it is reset, then the socket will behave like an un-stranded socket,
+ *  dispatching events to any available threads, possibly concurrently.
  */
 class SIRIKATA_EXPORT StrandTCPSocket : public TCPSocket {
   private:
     IOStrand* mStrand;
 
   public:
+    /** Creates a new TCP socket using the specified IOService but not bound
+     *  to a strand.
+     *  \param strand the strand in which socket events will be handled
+     */
+    StrandTCPSocket(IOService& io);
     /** Creates a new TCP socket which will handle events in the specified
      *  strand.
      *  \param strand the strand in which socket events will be handled
      */
     StrandTCPSocket(IOStrand* strand);
 
+
+    /** Bind Set the strand which will handle events for this socket.  Note that this
+     *  is not retroactive -- any outstanding bound handlers will use the previous strand
+     *  (or work normally if the socket was not previously bound to a strand).
+     *  \param strand the new strand to run new events in.
+     */
+    void bind(IOStrand* strand);
+
+    /** Unbind the socket from its currently bound strand.  This will cause it
+     *  to behave like a regular socket, dispatching events to any available threads
+     *  with a running IOService, potentially concurrently.
+     */
+    void unbind();
 
     typedef std::tr1::function<void(const boost::system::error_code&)> ConnectHandler;
     typedef std::tr1::function<void(const boost::system::error_code&, std::size_t)> ReadHandler;
@@ -72,22 +92,34 @@ class SIRIKATA_EXPORT StrandTCPSocket : public TCPSocket {
 
     template<typename MutableBufferSequence, typename ReadHandler>
     void async_read_some(const MutableBufferSequence & buffers, ReadHandler handler) {
-        TCPSocket::async_read_some<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+        if (mStrand != NULL)
+            TCPSocket::async_read_some<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+        else
+            TCPSocket::async_read_some<MutableBufferSequence, ReadHandler>(buffers, handler);
     }
 
     template<typename MutableBufferSequence, typename ReadHandler>
     void async_receive(const MutableBufferSequence & buffers, ReadHandler handler) {
-        TCPSocket::async_receive<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+        if (mStrand != NULL)
+            TCPSocket::async_receive<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+        else
+            TCPSocket::async_receive<MutableBufferSequence, ReadHandler>(buffers, handler);
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
     void async_send(const ConstBufferSequence & buffers, WriteHandler handler) {
-        TCPSocket::async_send<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+        if (mStrand != NULL)
+            TCPSocket::async_send<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+        else
+            TCPSocket::async_send<ConstBufferSequence, WriteHandler>(buffers, handler);
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
     void async_write_some(const ConstBufferSequence & buffers, WriteHandler handler) {
-        TCPSocket::async_write_some<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+        if (mStrand != NULL)
+            TCPSocket::async_write_some<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+        else
+            TCPSocket::async_write_some<ConstBufferSequence, WriteHandler>(buffers, handler);
     }
 };
 
