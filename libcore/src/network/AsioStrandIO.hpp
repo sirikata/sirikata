@@ -88,42 +88,40 @@ class SIRIKATA_EXPORT StrandTCPSocket : public TCPSocket {
     void unbind();
 
     typedef std::tr1::function<void(const boost::system::error_code&)> ConnectHandler;
-    typedef std::tr1::function<void(const boost::system::error_code&, std::size_t)> ReadHandler;
-    typedef std::tr1::function<void(const boost::system::error_code&, std::size_t)> WriteHandler;
 
 
     void async_connect(const endpoint_type& peer_endpoint, ConnectHandler handler);
 
     template<typename MutableBufferSequence, typename ReadHandler>
-    void async_read_some(const MutableBufferSequence & buffers, ReadHandler handler) {
+    void async_read_some(const MutableBufferSequence& buffers, ReadHandler handler) {
         if (mStrand != NULL)
-            TCPSocket::async_read_some<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+            InternalTCPSocket::async_read_some(buffers, StrandWrapper::wrap(mStrand, handler));
         else
-            TCPSocket::async_read_some<MutableBufferSequence, ReadHandler>(buffers, handler);
+            InternalTCPSocket::async_read_some(buffers, handler);
     }
 
     template<typename MutableBufferSequence, typename ReadHandler>
-    void async_receive(const MutableBufferSequence & buffers, ReadHandler handler) {
+    void async_receive(const MutableBufferSequence& buffers, ReadHandler handler) {
         if (mStrand != NULL)
-            TCPSocket::async_receive<MutableBufferSequence, ReadHandler>(buffers, mStrand->wrap_any(handler));
+            InternalTCPSocket::async_receive(buffers, StrandWrapper::wrap(mStrand, handler));
         else
-            TCPSocket::async_receive<MutableBufferSequence, ReadHandler>(buffers, handler);
+            InternalTCPSocket::async_receive(buffers, handler);
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
-    void async_send(const ConstBufferSequence & buffers, WriteHandler handler) {
+    void async_send(const ConstBufferSequence& buffers, WriteHandler handler) {
         if (mStrand != NULL)
-            TCPSocket::async_send<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+            InternalTCPSocket::async_send(buffers, StrandWrapper::wrap(mStrand, handler));
         else
-            TCPSocket::async_send<ConstBufferSequence, WriteHandler>(buffers, handler);
+            InternalTCPSocket::async_send(buffers, handler);
     }
 
     template<typename ConstBufferSequence, typename WriteHandler>
-    void async_write_some(const ConstBufferSequence & buffers, WriteHandler handler) {
+    void async_write_some(const ConstBufferSequence& buffers, WriteHandler handler) {
         if (mStrand != NULL)
-            TCPSocket::async_write_some<ConstBufferSequence, WriteHandler>(buffers, mStrand->wrap_any(handler));
+            InternalTCPSocket::async_write_some(buffers, StrandWrapper::wrap(mStrand, handler));
         else
-            TCPSocket::async_write_some<ConstBufferSequence, WriteHandler>(buffers, handler);
+            InternalTCPSocket::async_write_some(buffers, handler);
     }
 };
 

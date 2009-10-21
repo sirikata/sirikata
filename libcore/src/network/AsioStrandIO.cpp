@@ -60,7 +60,7 @@ void StrandTCPSocket::unbind() {
 
 void StrandTCPSocket::async_connect(const endpoint_type& peer_endpoint, ConnectHandler handler) {
     if (mStrand != NULL)
-        TCPSocket::async_connect(peer_endpoint, mStrand->wrap_any(handler));
+        TCPSocket::async_connect(peer_endpoint, StrandWrapper::wrap(mStrand, handler));
     else
         TCPSocket::async_connect(peer_endpoint, handler);
 }

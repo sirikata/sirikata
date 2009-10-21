@@ -43,10 +43,37 @@ namespace Network {
 // internally -- only wrapped sockets and the like will use it -- so we
 // factor it out so it only needs to be included for those implementations.
 
-template<typename CallbackType>
-CallbackType IOStrand::wrap_any(const CallbackType& handler) {
-    return mImpl->wrap(handler);
-}
+/** Handles wrapping callbacks for strands.  Should never actually be instantiated,
+ *  simply provides one static template method which performs wrapping. The class
+ *  only exists to allow us to implement this without exposing all the types
+ *  to classes that
+ */
+class StrandWrapper {
+public:
+    /** Wrap the given handler so that it will be handled in this strand.
+     *  Note: This
+     *  \param strand the strand to wrap the handler for
+     *  \param handler the handler which should be wrapped
+     *  \returns a new handler which will cause the original handler
+     *           to be invoked in this strand
+     */
+    template<typename CallbackType>
+    static boost::asio::detail::wrapped_handler<boost::asio::io_service::strand, CallbackType> wrap(IOStrand& strand, const CallbackType& handler) {
+        return strand.mImpl->wrap(handler);
+    }
+    /** Wrap the given handler so that it will be handled in this strand.
+     *  Note: This
+     *  \param strand the strand to wrap the handler for
+     *  \param handler the handler which should be wrapped
+     *  \returns a new handler which will cause the original handler
+     *           to be invoked in this strand
+     */
+    template<typename CallbackType>
+    static boost::asio::detail::wrapped_handler<boost::asio::io_service::strand, CallbackType> wrap(IOStrand* strand, const CallbackType& handler) {
+        return strand->mImpl->wrap(handler);
+    }
+};
+
 
 } // namespace Network
 } // namespace Sirikata
