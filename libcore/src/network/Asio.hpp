@@ -65,6 +65,7 @@ typedef boost::asio::ip::tcp::resolver InternalTCPResolver;
 class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
   public:
     TCPSocket(IOService&io);
+    virtual ~TCPSocket(); // Users of subclasses may use TCPSocket interface directly
 };
 
 /** Simple wrapper around Boost.Asio's tcp::acceptor, allowing for safe,
@@ -73,6 +74,8 @@ class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
 class SIRIKATA_EXPORT TCPListener :public InternalTCPAcceptor {
 public:
     TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&);
+    virtual ~TCPListener(); // Users of subclasses may use TCPListener interface directly
+
     void async_accept(TCPSocket&socket,
                       const std::tr1::function<void(const boost::system::error_code& ) > &cb);
 };
@@ -83,6 +86,7 @@ public:
 class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
   public:
     TCPResolver(IOService&io);
+    virtual ~TCPResolver(); // Users of subclasses may use TCPResolver interface directly
 };
 
 
@@ -97,6 +101,7 @@ typedef boost::asio::ip::udp::resolver InternalUDPResolver;
 class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
   public:
     UDPSocket(IOService&io);
+    virtual ~UDPSocket(); // Users of subclasses may use UDPSocket interface directly
 };
 
 /** Simple wrapper around Boost.Asio's udp::resolver, allowing for safe,
@@ -105,6 +110,7 @@ class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
 class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
   public:
     UDPResolver(IOService&io);
+    virtual ~UDPResolver(); // Users of subclasses may use UDPResolver interface directly
 };
 
 /** Simple wrapper around Boost.Asio's deadline_timer, allowing for safe,

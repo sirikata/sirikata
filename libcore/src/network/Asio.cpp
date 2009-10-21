@@ -17,9 +17,17 @@ TCPSocket::TCPSocket(IOService&io):
 {
 }
 
+TCPSocket::~TCPSocket()
+{
+}
+
 
 TCPListener::TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&ep):
     boost::asio::ip::tcp::acceptor(io.asioService(),ep)
+{
+}
+
+TCPListener::~TCPListener()
 {
 }
 
@@ -34,14 +42,26 @@ TCPResolver::TCPResolver(IOService&io)
 {
 }
 
+TCPResolver::~TCPResolver()
+{
+}
+
 
 UDPSocket::UDPSocket(IOService&io):
     boost::asio::ip::udp::socket(io.asioService())
 {
 }
 
+UDPSocket::~UDPSocket()
+{
+}
+
 UDPResolver::UDPResolver(IOService&io)
     : boost::asio::ip::udp::resolver(io.asioService())
+{
+}
+
+UDPResolver::~UDPResolver()
 {
 }
 
