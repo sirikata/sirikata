@@ -483,7 +483,7 @@ public:
             }
             //wait until done
             time_t last_time=time(NULL);
-            int retry_count=10;
+            int retry_count=20;
             while(mCount<(int)(mMessagesToSend.size()*(doSubstreams?5:2))&&!mAbortTest) {
                 if (rand()<RAND_MAX/10) {
                     r->readyRead();
@@ -516,7 +516,7 @@ public:
         if( doSubstreams){
             z->close();
             time_t last_time=time(NULL);
-            int retry_count=3;
+            int retry_count=6;
             while(mDisconCount.read()<3){
                 if (rand()<RAND_MAX/10) {
                     z->readyRead();
