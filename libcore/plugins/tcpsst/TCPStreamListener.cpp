@@ -91,9 +91,14 @@ void TCPStreamListener::Data::startAccept(DataPtr& data) {
 }
 
 void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::error_code& error) {
-    if(error) {
-        boost::system::system_error se(error);
-        SILOG(tcpsst,error, "Error listening for TCP stream:" << se.what() << std::endl);
+    if (error) {
+        if (error == boost::system::errc::operation_canceled) {
+            SILOG(tcpsst, insane, "TCPStreamListener listening operation cancelled. Likely due to socket shutdown.");
+        }
+        else {
+            boost::system::system_error se(error);
+            SILOG(tcpsst, error, "Error listening for TCP stream:" << se.what() << std::endl);
+        }
         //FIXME: attempt more?
         return;
     }
