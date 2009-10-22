@@ -121,10 +121,10 @@ void AsyncCraqGet::runTestOfConnection()
 
 
 //assumes that we're already connected.
-int AsyncCraqGet::set(StreamCraqDataSetGet dataToSet)
+int AsyncCraqGet::set(CraqDataSetGet dataToSet)
 {
   //force this to be a set message.
-  dataToSet.messageType = StreamCraqDataSetGet::SET;
+  dataToSet.messageType = CraqDataSetGet::SET;
 
   
   if (dataToSet.trackMessage)
@@ -170,11 +170,11 @@ int AsyncCraqGet::numStillProcessing()
 
 
 
-int AsyncCraqGet::get(StreamCraqDataSetGet dataToGet)
+int AsyncCraqGet::get(CraqDataSetGet dataToGet)
 {
   
   //force this to be a set message.
-  dataToGet.messageType = StreamCraqDataSetGet::GET;
+  dataToGet.messageType = CraqDataSetGet::GET;
   //we got all the way through without finding a ready connection.  Need to add query to queue.
   mQueue.push(dataToGet);
 
@@ -204,14 +204,14 @@ void AsyncCraqGet::straightPoll()
   tick processes 
   tick returns all the 
 */
-void AsyncCraqGet::tick(std::vector<StreamCraqOperationResult*>&getResults, std::vector<StreamCraqOperationResult*>&trackedSetResults)
+void AsyncCraqGet::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
 {
 
   straightPoll();
   
-  std::vector<StreamCraqOperationResult*> tickedMessages_getResults;
-  std::vector<StreamCraqOperationResult*> tickedMessages_errorResults;
-  std::vector<StreamCraqOperationResult*> tickedMessages_trackedSetResults;
+  std::vector<CraqOperationResult*> tickedMessages_getResults;
+  std::vector<CraqOperationResult*> tickedMessages_errorResults;
+  std::vector<CraqOperationResult*> tickedMessages_trackedSetResults;
   
   for (int s=0; s < (int)mConnections.size(); ++s)
   {
@@ -247,18 +247,18 @@ void AsyncCraqGet::tick(std::vector<StreamCraqOperationResult*>&getResults, std:
 /*
   errorRes is full of results that went bad from a craq connection.  In the future, we may do something more intelligent, but for now, we are just going to put the request back in mQueue
 */
-void AsyncCraqGet::processErrorResults(std::vector <StreamCraqOperationResult*> & errorRes)
+void AsyncCraqGet::processErrorResults(std::vector <CraqOperationResult*> & errorRes)
 {
   for (int s=0;s < (int)errorRes.size(); ++s)
   {
-    if (errorRes[s]->whichOperation == StreamCraqOperationResult::GET)
+    if (errorRes[s]->whichOperation == CraqOperationResult::GET)
     {
-      StreamCraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, StreamCraqDataSetGet::GET);
+      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
       mQueue.push(cdSG);
     }
     else
     {
-      StreamCraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, StreamCraqDataSetGet::SET);
+      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
       mQueue.push(cdSG);      
     }
 
@@ -287,17 +287,17 @@ void AsyncCraqGet::checkConnections(int s)
     if (mQueue.size() != 0)
     {
       //need to put in another
-      StreamCraqDataSetGet cdSG = mQueue.front();
+      CraqDataSetGet cdSG = mQueue.front();
       mQueue.pop();
 
       ++numOperations;
       
-      if (cdSG.messageType == StreamCraqDataSetGet::GET)
+      if (cdSG.messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
         mConnections[s]->get(cdSG.dataKey);
       }
-      else if (cdSG.messageType == StreamCraqDataSetGet::SET)
+      else if (cdSG.messageType == CraqDataSetGet::SET)
       {
         //performing a set in connections.
         mConnections[s]->set(cdSG.dataKey, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID);

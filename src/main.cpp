@@ -208,13 +208,15 @@ void *main_loop(void *) {
      CraqInitializeArgs cInitArgs1;
 
      cInitArgs1.ipAdd = "localhost";
-     cInitArgs1.port  =     "10299";
+     //     cInitArgs1.port  =     "10299";
+     cInitArgs1.port  =     "10298";
      craqArgsGet.push_back(cInitArgs1);
 
      std::vector<CraqInitializeArgs> craqArgsSet;
      CraqInitializeArgs cInitArgs2;
      cInitArgs2.ipAdd = "localhost";
-     cInitArgs2.port  =     "10298";
+     //     cInitArgs2.port  =     "10298";
+     cInitArgs2.port  =     "10498";
      craqArgsSet.push_back(cInitArgs2);
 
 

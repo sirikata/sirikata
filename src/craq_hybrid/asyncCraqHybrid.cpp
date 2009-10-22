@@ -24,22 +24,22 @@ AsyncCraqHybrid::~AsyncCraqHybrid()
 }
 
 
-int AsyncCraqHybrid::set(StreamCraqDataSetGet cdSet)
+int AsyncCraqHybrid::set(CraqDataSetGet cdSet)
 {
   return aCraqSet.set(cdSet);
 }
 
-int AsyncCraqHybrid::get(StreamCraqDataSetGet cdGet)
+int AsyncCraqHybrid::get(CraqDataSetGet cdGet)
 {
   return aCraqGet.get(cdGet);
 }
 
 
-void AsyncCraqHybrid::tick(std::vector<StreamCraqOperationResult*>&allGetResults, std::vector<StreamCraqOperationResult*>&allTrackedResults)
+void AsyncCraqHybrid::tick(std::vector<CraqOperationResult*>&allGetResults, std::vector<CraqOperationResult*>&allTrackedResults)
 {
 
-  std::vector<StreamCraqOperationResult*> getResults;
-  std::vector<StreamCraqOperationResult*> trackedSetResults;
+  std::vector<CraqOperationResult*> getResults;
+  std::vector<CraqOperationResult*> trackedSetResults;
   
   aCraqGet.tick(getResults,trackedSetResults);
 
@@ -47,8 +47,8 @@ void AsyncCraqHybrid::tick(std::vector<StreamCraqOperationResult*>&allGetResults
   allTrackedResults.insert(allTrackedResults.end(), trackedSetResults.begin(), trackedSetResults.end());
 
   
-  std::vector<StreamCraqOperationResult*> getResults2;
-  std::vector<StreamCraqOperationResult*> trackedSetResults2;
+  std::vector<CraqOperationResult*> getResults2;
+  std::vector<CraqOperationResult*> trackedSetResults2;
 
   aCraqSet.tick(getResults2,trackedSetResults2);
 

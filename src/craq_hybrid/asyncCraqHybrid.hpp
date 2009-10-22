@@ -17,10 +17,10 @@ public:
   
   void initialize(std::vector<CraqInitializeArgs>);
 
-  int set(StreamCraqDataSetGet cdSet);
-  int get(StreamCraqDataSetGet cdGet);
+  int set(CraqDataSetGet cdSet);
+  int get(CraqDataSetGet cdGet);
 
-  void tick(std::vector<StreamCraqOperationResult*>&getResults, std::vector<StreamCraqOperationResult*>&trackedSetResults);
+  void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
 
   int queueSize();
   int numStillProcessing();

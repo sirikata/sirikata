@@ -71,9 +71,11 @@ private:
     ForwarderQueue *mOutgoingMessages;
     ServerMessageQueue* mServerMessageQueue;
 
+
     OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
 
     ForwarderSampler* mSampler;
+
 
     // Object connections, identified by a separate unique ID to handle fast migrations
     uint64 mUniqueConnIDs; // Connection ID generator

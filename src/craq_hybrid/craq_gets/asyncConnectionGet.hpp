@@ -21,12 +21,12 @@ public:
   
   void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
 
-  void tick(std::vector<StreamCraqOperationResult*>&opResults_get, std::vector<StreamCraqOperationResult*>&opResults_error, std::vector<StreamCraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
+  void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
   
   AsyncConnectionGet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
-  bool set(StreamCraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
-  bool get(StreamCraqDataKey dataToGet);
+  bool set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
+  bool get(CraqDataKey dataToGet);
   
   ~AsyncConnectionGet();
   AsyncConnectionGet();
@@ -48,7 +48,7 @@ private:
   {
     enum GetOrSet {GET,SET};
     GetOrSet gs;
-    StreamCraqDataKey currentlySearchingFor;
+    CraqDataKey currentlySearchingFor;
     int currentlySettingTo;
     bool is_tracking;
     int tracking_number;
@@ -60,14 +60,14 @@ private:
   
   ConnectionState mReady;
 
-  bool getQuery(StreamCraqDataKey dataToGet);
+  bool getQuery(CraqDataKey dataToGet);
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
   
-  std::vector<StreamCraqOperationResult*> mOperationResultVector;
-  std::vector<StreamCraqOperationResult*> mOperationResultErrorVector;
-  std::vector<StreamCraqOperationResult*> mOperationResultTrackedSetsVector;
+  std::vector<CraqOperationResult*> mOperationResultVector;
+  std::vector<CraqOperationResult*> mOperationResultErrorVector;
+  std::vector<CraqOperationResult*> mOperationResultTrackedSetsVector;
 
   void set_generic_read_result_handler();
   void set_generic_read_error_handler();

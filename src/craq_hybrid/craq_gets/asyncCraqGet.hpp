@@ -29,21 +29,21 @@ public:
 
   boost::asio::io_service io_service;  //creates an io service
 
-  int set(StreamCraqDataSetGet cdSet);
-  int get(StreamCraqDataSetGet cdGet);
+  int set(CraqDataSetGet cdSet);
+  int get(CraqDataSetGet cdGet);
 
   void runTestOfConnection();
   void runTestOfAllConnections();
-  void tick(std::vector<StreamCraqOperationResult*>&getResults, std::vector<StreamCraqOperationResult*>&trackedSetResults);
+  void tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
 
   int queueSize();
   int numStillProcessing();
   
 private:
   
-  void processGetResults       (std::vector <StreamCraqOperationResult*> & getRes);
-  void processErrorResults     (std::vector <StreamCraqOperationResult*> & errorRes);
-  void processTrackedSetResults(std::vector <StreamCraqOperationResult*> & trackedSetRes);
+  void processGetResults       (std::vector <CraqOperationResult*> & getRes);
+  void processErrorResults     (std::vector <CraqOperationResult*> & errorRes);
+  void processTrackedSetResults(std::vector <CraqOperationResult*> & trackedSetRes);
 
   void straightPoll();
   std::vector<CraqInitializeArgs> mIpAddPort;
@@ -51,7 +51,7 @@ private:
   int mCurrentTrackNum;
   bool connected;
 
-  std::queue<StreamCraqDataSetGet> mQueue;
+  std::queue<CraqDataSetGet> mQueue;
   
 
   void reInitializeNode(int s);

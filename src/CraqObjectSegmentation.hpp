@@ -15,6 +15,10 @@
 #include <vector>
 #include "CraqCacheGood.hpp"
 
+#include "craq_hybrid/asyncCraqHybrid.hpp"
+#include "craq_hybrid/asyncCraqUtil.hpp"
+
+
 
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
@@ -63,7 +67,7 @@ namespace CBR
 
     struct TrackedSetResultsData
     {
-        CBR::Protocol::OSeg::MigrateMessageAcknowledge* migAckMsg;
+      CBR::Protocol::OSeg::MigrateMessageAcknowledge* migAckMsg;
       Duration dur;
     };
 
@@ -92,8 +96,12 @@ namespace CBR
 
 
     //for lookups and sets
-    AsyncCraq craqDhtGet;
-    AsyncCraq craqDhtSet;
+    //    AsyncCraq craqDhtGet;
+    //    AsyncCraq craqDhtSet;
+    AsyncCraqHybrid craqDhtGet;
+    AsyncCraqHybrid craqDhtSet;
+    
+
     void convert_obj_id_to_dht_key(const UUID& obj_id, CraqDataKey& returner) const;
 
     std::vector <UUID> mObjects; //a list of the objects that are currently being hosted on the space server associated with this oseg.
@@ -106,27 +114,13 @@ namespace CBR
     //for message addition. when add an object, send a message to the server that you can now finish adding it to forwarder, loc services, etc.
     struct TrackedSetResultsDataAdded
     {
-        CBR::Protocol::OSeg::AddedObjectMessage* msgAdded;
+      CBR::Protocol::OSeg::AddedObjectMessage* msgAdded;
       Duration dur;
     };
     typedef std::map<int, TrackedSetResultsDataAdded> TrackedMessageMapAdded;
     TrackedMessageMapAdded trackedAddMessages; // so that can't query for object until it's registered.
-      CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id);
+    CBR::Protocol::OSeg::AddedObjectMessage* generateAddedMessage(const UUID& obj_id);
     //end message addition.
-
-
-    //for oseg cacing
-//     struct OSegCacheVal
-//     {
-//       ServerID sID;
-//       uint64 timeStamp;
-//       bool lastLookup;
-//     };
-
-//     typedef std::map<UUID,OSegCacheVal> ObjectCacheMap;
-//     ObjectCacheMap mServerObjectCache;
-//     ServerID satisfiesCache(const UUID& obj_id);
-    //end caching
 
 
     //building for the cache
@@ -157,9 +151,9 @@ namespace CBR
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void newObjectAdd(const UUID& obj_id);
 
-      CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
-      void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
-      void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
+    CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
+    void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+    void processMigrateMessageMove(const CBR::Protocol::OSeg::MigrateMessageMove& msg);
     void processCraqTrackedSetResults(std::vector<CraqOperationResult*> &trackedSetResults, std::map<UUID,ServerID>& updated);
     void processUpdateOSegMessage(const CBR::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 

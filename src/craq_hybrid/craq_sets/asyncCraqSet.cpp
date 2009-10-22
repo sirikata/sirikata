@@ -48,7 +48,7 @@ void AsyncCraqSet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
   
   //  AsyncConnectionTwo tmpConn;
 
-  for (int s=0; s < CRAQ_NUM_CONNECTIONS_SET; ++s)
+  for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
   {
     AsyncConnectionSet* tmpConn = new AsyncConnectionSet;
     mConnections.push_back(tmpConn);
@@ -56,10 +56,10 @@ void AsyncCraqSet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
   boost::asio::ip::tcp::socket* passSocket;
   
-  if (((int)ipAddPort.size()) >= CRAQ_NUM_CONNECTIONS_SET)
+  if (((int)ipAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_SET)
   {
     //just assign each connection a separate router (in order that they were provided).
-    for (int s = 0; s < CRAQ_NUM_CONNECTIONS_SET; ++s)
+    for (int s = 0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
     {
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
@@ -75,9 +75,9 @@ void AsyncCraqSet::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 
     boost::asio::ip::tcp::resolver::iterator iterator;
     
-    for (int s=0; s < CRAQ_NUM_CONNECTIONS_SET; ++s)
+    for (int s=0; s < STREAM_CRAQ_NUM_CONNECTIONS_SET; ++s)
     {
-      percentageConnectionsServed = ((double)s)/((double) CRAQ_NUM_CONNECTIONS_SET);
+      percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_SET);
       whichRouterServing = (int)(percentageConnectionsServed*((double)ipAddPort.size()));
 
       //      whichRouterServing = 0; //bftm debug
@@ -305,7 +305,7 @@ void AsyncCraqSet::reInitializeNode(int s)
 
   boost::asio::ip::tcp::resolver resolver(io_service);   //a resolver can resolve a query into a series of endpoints.
   
-  if ( ((int)mIpAddPort.size()) >= CRAQ_NUM_CONNECTIONS_SET)
+  if ( ((int)mIpAddPort.size()) >= STREAM_CRAQ_NUM_CONNECTIONS_SET)
   {
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
@@ -317,7 +317,7 @@ void AsyncCraqSet::reInitializeNode(int s)
     
     boost::asio::ip::tcp::resolver::iterator iterator;
 
-    double percentageConnectionsServed = ((double)s)/((double) CRAQ_NUM_CONNECTIONS_SET);
+    double percentageConnectionsServed = ((double)s)/((double) STREAM_CRAQ_NUM_CONNECTIONS_SET);
     int whichRouterServing = (int)(percentageConnectionsServed*((double)mIpAddPort.size()));
 
     //    whichRouterServing = 0; //bftm debug

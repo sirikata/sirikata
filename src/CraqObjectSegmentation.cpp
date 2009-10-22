@@ -40,7 +40,7 @@ namespace CBR
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
 
-    //    craqDht.initialize(initArgs);
+
 
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
@@ -95,8 +95,6 @@ namespace CBR
     fflush(stdout);
     printf("\n\nNUM ALREADY LOOKING UP:  %i\n\n",numAlreadyLookingUp);
     fflush(stdout);
-    //    printf("\n\nSIZE OF CACHE:   %i \n\n", (int) mServerObjectCache.size()),
-    //    fflush(stdout);
 
   }
 
@@ -392,7 +390,7 @@ namespace CBR
     Duration tmpDurer= mTimer.elapsed();
     //    tmpTransLookup.timeAdmitted = mContext->time.raw();
     tmpTransLookup.timeAdmitted = (int)tmpDurer.toMilliseconds();
-    //    tmpTransLookup.timeAdmitted = numServices;
+    //        tmpTransLookup.timeAdmitted = numServices;
 
     mInTransitOrLookup[obj_id] = tmpTransLookup;
 

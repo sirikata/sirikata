@@ -29,9 +29,6 @@ AsyncConnectionGet::~AsyncConnectionGet()
     delete mSocket;
   }
 
-  //  printf("\n\n************ ENDING****** \n\n");
-  //  printf("\n\nHere is allResps:  %s\n\n ", mAllResps.c_str());
-  //  fflush(stdout);
 }
 
 
@@ -43,7 +40,7 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 
 
 //servicing function.  gets results of all the operations that we were processing.
-void AsyncConnectionGet::tick(std::vector<StreamCraqOperationResult*>&opResults_get, std::vector<StreamCraqOperationResult*>&opResults_error, std::vector<StreamCraqOperationResult*>&opResults_trackedSets)
+void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
 {
 
   if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
@@ -108,11 +105,8 @@ void AsyncConnectionGet::initialize( boost::asio::ip::tcp::socket* socket,    bo
   mSocket->async_connect(*it, boost::bind(&AsyncConnectionGet::connect_handler,this,_1));  //using that tcp socket for an asynchronous connection.
   
   mPrevReadFrag = "";
-  //  mAllResps = "";
-
 
   mTimesBetweenResults = 0;
-  
 }
 
 
@@ -547,11 +541,11 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
     if (outQueriesIter->second->gs == IndividualQueryData::GET )
     {
       //says that this is a get.
-      StreamCraqOperationResult* cor  = new StreamCraqOperationResult(0,
+      CraqOperationResult* cor  = new CraqOperationResult(0,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
                                                           true,
-                                                          StreamCraqOperationResult::GET,
+                                                          CraqOperationResult::GET,
                                                           false); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
@@ -665,11 +659,11 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, int sID)
     if (outQueriesIter->second->gs == IndividualQueryData::GET) //we only need to 
     {
       
-      StreamCraqOperationResult* cor  = new StreamCraqOperationResult(sID,
+      CraqOperationResult* cor  = new CraqOperationResult(sID,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
                                                           true,
-                                                          StreamCraqOperationResult::GET,
+                                                          CraqOperationResult::GET,
                                                           false); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';
@@ -751,11 +745,11 @@ void AsyncConnectionGet::processStoredValue(std::string dataKey)
   {
     if (outQueriesIter->second->gs == IndividualQueryData::SET) //we only need to 
     {
-      StreamCraqOperationResult* cor  = new StreamCraqOperationResult(outQueriesIter->second->currentlySettingTo,
+      CraqOperationResult* cor  = new CraqOperationResult(outQueriesIter->second->currentlySettingTo,
                                                           outQueriesIter->second->currentlySearchingFor,
                                                           outQueriesIter->second->tracking_number,
                                                           true,
-                                                          StreamCraqOperationResult::SET,
+                                                          CraqOperationResult::SET,
                                                           outQueriesIter->second->is_tracking); //this is a not_found, means that we add 0 for the id found
 
       cor->objID[CRAQ_DATA_KEY_SIZE -1] = '\0';

@@ -180,7 +180,7 @@ class ClusterSim:
         self.run_cluster_sim()
         self.retrieve_data()
 
-        self.bandwidth_analysis()
+#        self.bandwidth_analysis()
         self.latency_analysis()
         self.oseg_analysis()
         self.object_latency_analysis()
