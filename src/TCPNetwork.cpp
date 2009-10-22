@@ -54,22 +54,6 @@ void TCPNetwork::readySendCallback(const Address4 &addy) {
     //not sure what to do here since we don't have the push/pull style notifications
 }
 
-static Address4 zeroPort(Address4 addy) {
-    addy.port=0;
-    return addy;
-}
-Address convertAddress4ToSirikata(const Address4&addy) {
-    std::stringstream port;
-    port << addy.getPort();
-    std::stringstream hostname;
-    uint32 mynum=addy.ip;
-    unsigned char bleh[4];
-    memcpy(bleh,&mynum,4);
-
-    hostname << (unsigned int)bleh[0]<<'.'<<(unsigned int)bleh[1]<<'.'<<(unsigned int)bleh[2]<<'.'<<(unsigned int)bleh[3];
-
-    return Address(hostname.str(),port.str());
-}
 bool TCPNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool ordered, int priority){
     //std::cout<<"Can send "<<convertAddress4ToSirikata(addy).toString()<<" "<<size<<"?";
     std::tr1::unordered_map<Address4,SendStream>::iterator where;
@@ -163,6 +147,10 @@ TCPNetwork::~TCPNetwork() {
 }
 void TCPNetwork::start() {
 
+}
+static Address4 zeroPort(Address4 addy) {
+    addy.port=0;
+    return addy;
 }
 
 std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&addy){

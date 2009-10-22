@@ -35,6 +35,7 @@
 
 #include "ObjectHostContext.hpp"
 #include "TimeProfiler.hpp"
+#include "sirikata/network/IOService.hpp"
 #include <boost/asio.hpp>
 
 namespace CBR {
@@ -65,7 +66,7 @@ public:
     Object* randomObject();
     Object* randomObject(ServerID whichServer);
     Object * roundRobinObject(ServerID whichServer);
-    UUID lastFuckinObject;
+    UUID mLastRRObject;
 private:
     struct SpaceNodeConnection;
 
@@ -101,7 +102,9 @@ private:
     void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
-    void handleSpaceConnection(const boost::system::error_code& err, ServerID sid);
+    void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status, 
+                               const std::string&reason, 
+                               ServerID sid);
 
 
     /** Object session initiation. */
@@ -124,11 +127,8 @@ private:
 
 
     /** Reading and writing handling for SpaceNodeConnections. */
-
-    // Start async reading for this connection
-    void startReading(SpaceNodeConnection* conn);
     // Handle async reading callbacks for this connection
-    void handleConnectionRead(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn);
+    bool handleConnectionRead(SpaceNodeConnection* conn,Sirikata::Network::Chunk& chunk);
 
     // Start async writing for this connection if it has data to be sent
     void startWriting(SpaceNodeConnection* conn);
@@ -140,15 +140,15 @@ private:
     ObjectHostContext* mContext;
     ServerIDMap* mServerIDMap;
 
-    boost::asio::io_service mIOService;
+    Sirikata::Network::IOService *mIOService;
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid);
+        SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid);
         ~SpaceNodeConnection();
 
         ServerID server;
-        boost::asio::ip::tcp::socket* socket;
+        Sirikata::Network::Stream* socket;
 
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
 
@@ -158,7 +158,7 @@ private:
         boost::asio::streambuf write_buf;
 
         boost::asio::streambuf read_buf;
-        uint32 read_next_size;
+
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;

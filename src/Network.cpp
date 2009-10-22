@@ -19,4 +19,18 @@ Address4::Address4(const Sirikata::Network::Address&a){
     }
     this->port=atoi(a.getService().c_str());
 }
+using namespace Sirikata::Network;
+Address convertAddress4ToSirikata(const Address4&addy) {
+    std::stringstream port;
+    port << addy.getPort();
+    std::stringstream hostname;
+    uint32 mynum=addy.ip;
+    unsigned char bleh[4];
+    memcpy(bleh,&mynum,4);
+
+    hostname << (unsigned int)bleh[0]<<'.'<<(unsigned int)bleh[1]<<'.'<<(unsigned int)bleh[2]<<'.'<<(unsigned int)bleh[3];
+
+    return Address(hostname.str(),port.str());
+}
+
 }

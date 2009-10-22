@@ -99,11 +99,25 @@ bool Message::serialize(Network::Chunk* output) {
     memcpy(&((*output)[0]), &(result[0]), sizeof(uint8)*result.size());
     return true;
 }
+static char toHex(unsigned char u) {
+    if (u>=0&&u<=9) return '0'+u;
+    return 'A'+(u-10);
+}
+static void hexPrint(const char *name, const Network::Chunk&data) {
+    std::string str;
+    str.resize(data.size()*2);
+    for (size_t i=0;i<data.size();++i) {
+        str[i*2]=toHex(data[i]%16);
+        str[i*2+1]=toHex(data[i]/16);
+    }
+    std::cout<< name<<' '<<str<<'\n';
+}
 
 Message* Message::deserialize(const Network::Chunk& wire) {
     Message* result = new Message();
     bool parsed = result->ParseFromArray( &(wire[0]), wire.size() );
     if (!parsed) {
+        hexPrint("Fail",wire);
         SILOG(msg,warning,"[MSG] Couldn't parse message.");
         delete result;
         return NULL;

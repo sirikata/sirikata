@@ -233,7 +233,11 @@ bool Trace::timestampMessage(const Time&t, MessagePath path,const Network::Chunk
 void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, ObjectMessagePort srcprt, ObjectMessagePort dstprt, ServerMessagePort msg_type) {
 #ifdef TRACE_MESSAGE
     if (mShuttingDown) return;
-
+/*
+    if (msg_type!=CREATED&&msg_type!=DESTROYED&&msg_type!=SPACE_OUTGOING_MESSAGE) {
+        return;
+    }
+*/
     data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
     data.write( &sent, sizeof(sent) );
     data.write( &uid, sizeof(uid) );

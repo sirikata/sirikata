@@ -34,21 +34,27 @@
 #include "Statistics.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
+#include "sirikata/network/IOService.hpp"
+#include "sirikata/network/IOServiceFactory.hpp"
+#include "sirikata/network/StreamFactory.hpp"
+#include "sirikata/network/Stream.hpp"
+#include "sirikata/util/PluginManager.hpp"
 #include "ServerIDMap.hpp"
 #include "Random.hpp"
 #include "Options.hpp"
 #include <boost/bind.hpp>
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
-
+using namespace Sirikata;
+using namespace Sirikata::Network;
 namespace CBR {
-
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(boost::asio::io_service& ios, ServerID sid)
+static void noop(){}
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid)
  : server(sid),
-   is_writing(false),
-   read_next_size(0)
+   is_writing(false)
 {
-    socket = new boost::asio::ip::tcp::socket(ios);
+
+    socket=Sirikata::Network::StreamFactory::getSingleton().getDefaultConstructor()(&ios);
     connecting = false;
 }
 
@@ -79,11 +85,12 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 
 
 ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& epoch, const Time& curt)
- : mContext( new ObjectHostContext(_id, epoch, curt) ),
-   mServerIDMap(sidmap),
-   mProfiler("Object Host Loop")
+    : mContext( new ObjectHostContext(_id, epoch, curt) ),
+     mServerIDMap(sidmap),
+     mIOService(Sirikata::Network::IOServiceFactory::makeIOService()),
+     mProfiler("Object Host Loop")
 {
-    lastFuckinObject=UUID::null();
+    mLastRRObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
     mContext->objectFactory = obj_factory;
@@ -97,7 +104,7 @@ ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trac
 ObjectHost::~ObjectHost() {
     if (GetOption(PROFILE)->as<bool>())
         mProfiler.report();
-
+    Sirikata::Network::IOServiceFactory::destroyIOService(mIOService);
     delete mContext;
 }
 
@@ -251,13 +258,13 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
 }
 Object*ObjectHost::roundRobinObject(ServerID whichServer) {
     if (mObjectInfo.size()==0) return NULL;
-    UUID myrand=lastFuckinObject;
+    UUID myrand(mLastRRObject);
     ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
     if (i!=mObjectInfo.end()) ++i;
     if (i==mObjectInfo.end()) i=mObjectInfo.begin();
-    for (int ii=0;ii<mObjectInfo.size();++ii) {
+    for (size_t ii=0;ii<mObjectInfo.size();++ii) {
         if (i->second.connectedTo==whichServer||whichServer==NullServerID) {
-            lastFuckinObject=i->first;
+            mLastRRObject=i->first;
             return i->second.object;
         }
         ++i;
@@ -364,7 +371,7 @@ floods the console with too much noise
 
     // Service the IOService.
     // This will allow both the readers and writers to make progress.
-    mIOService.poll(); mProfiler.finishedStage();
+    mIOService->poll(); mProfiler.finishedStage();
     //if (mOutgoingQueue.size() > 1000)
     //    SILOG(oh,warn,"[OH] Warning: outgoing queue size > 1000: " << mOutgoingQueue.size());
 }
@@ -405,31 +412,39 @@ void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb)
 }
 
 void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb) {
+    static Sirikata::PluginManager sPluginManager;
+    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
     using namespace boost::asio::ip;
 
-    SpaceNodeConnection* conn = new SpaceNodeConnection(mIOService, server);
+    SpaceNodeConnection* conn = new SpaceNodeConnection(*mIOService, server);
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 
     // Lookup the server's address
     Address4* addr = mServerIDMap->lookupExternal(server);
-
-    // Try to initiate connection
-    tcp::endpoint endpt( address_v4(ntohl(addr->ip)), (unsigned short)addr->port);
-    OH_LOG(debug,"Trying to connect to " << endpt);
+    Address addy(convertAddress4ToSirikata(*addr));
+    conn->socket->connect(addy,
+                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
+                          std::tr1::bind(&ObjectHost::handleSpaceConnection, 
+                                         this, 
+                                         std::tr1::placeholders::_1,std::tr1::placeholders::_2,server),
+                          std::tr1::bind(&ObjectHost::handleConnectionRead,
+                                         this,
+                                         conn, 
+                                         _1),
+                          &Sirikata::Network::Stream::ignoreReadySend);
+    OH_LOG(debug,"Trying to connect to " << addy.toString());
     conn->connecting = true;
-    conn->socket->async_connect(
-        endpt,
-        boost::bind(&ObjectHost::handleSpaceConnection, this, boost::asio::placeholders::error, server)
-    );
 }
 
-void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, ServerID sid) {
-    SpaceNodeConnection* conn = mConnections[sid];
+void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status, 
+                                       const std::string&reason, 
+                                       ServerID sid) {
+     SpaceNodeConnection* conn = mConnections[sid];
 
     OH_LOG(debug,"Handling space connection...");
-    if (err) {
-        OH_LOG(error,"Failed to connect to server " << sid << ": " << err << ", " << err.message());
+    if (status!=Sirikata::Network::Stream::Connected) {
+        OH_LOG(error,"Failed to connect to server " << sid << ": " << reason);
         for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
             (*it)(NULL);
         conn->connectCallbacks.clear();
@@ -441,58 +456,22 @@ void ObjectHost::handleSpaceConnection(const boost::system::error_code& err, Ser
     OH_LOG(debug,"Successfully connected to " << sid);
     conn->connecting = false;
 
-    // Set up reading for this connection
-    startReading(conn);
-
     // Tell all requesters that the connection is available
     for(std::vector<GotSpaceConnectionCallback>::iterator it = conn->connectCallbacks.begin(); it != conn->connectCallbacks.end(); it++)
         (*it)(conn);
     conn->connectCallbacks.clear();
 }
 
-void ObjectHost::startReading(SpaceNodeConnection* conn) {
-    boost::asio::async_read(
-        *(conn->socket),
-        conn->read_buf,
-        boost::asio::transfer_at_least(1), // NOTE: This is important, defaults to transfer_all...
-        boost::bind( &ObjectHost::handleConnectionRead, this,
-            boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, conn
-        )
-    );
-}
+bool ObjectHost::handleConnectionRead(SpaceNodeConnection* conn,Chunk& chunk) {
 
-void ObjectHost::handleConnectionRead(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn) {
-    if (err) {
-        // FIXME some kind of error, need to handle this
-        OH_LOG(error,"Error in connection read:" << err << " = " << err.message());
-        return;
-    }
-
-    std::istream read_stream(&conn->read_buf);
-
-    // try to extract messages
-    while( true ) {
-        if (conn->read_next_size == 0 && conn->read_buf.size() > sizeof(uint32))
-            read_stream.read((char*)&conn->read_next_size, sizeof(uint32));
-
-        if (conn->read_next_size == 0 || conn->read_buf.size() < conn->read_next_size)
-            break;
-
-        std::string real_payload;
-        real_payload.resize(conn->read_next_size);
-        read_stream.read(&real_payload[0], conn->read_next_size);
-
-        CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
-        bool parse_success = obj_msg->ParseFromString(real_payload);
-        assert(parse_success == true);
-
-        handleServerMessage( conn, obj_msg );
-
-        conn->read_next_size = 0;
-    }
-
-    // continue reading
-    startReading(conn);
+    
+    CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
+    bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
+    assert(parse_success == true);
+    
+    handleServerMessage( conn, obj_msg );
+    return true;
+    
 }
 
 
@@ -581,45 +560,17 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 // Start async writing for this connection if it has data to be sent
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
     // Push stuff onto the stream, if we're not still in the middle of an async_write
-    if (!conn->is_writing && !conn->queue.empty()) {
-        std::ostream write_stream(&conn->write_buf);
+    if (!conn->queue.empty()) {
         while(!conn->queue.empty()) {
             std::string* msg = conn->queue.front();
-            write_stream.write(&((*msg)[0]), msg->size());
-            conn->queue.pop();
-            delete msg;
+            if (conn->socket->send(Sirikata::MemoryReference(&((*msg)[0]), msg->size()),Sirikata::Network::ReliableOrdered)) {
+                conn->queue.pop();
+                delete msg;
+            }else break;
         }
-        write_stream.flush();
-    }
-
-    if (!conn->is_writing && conn->write_buf.size() > 0) {
-        conn->is_writing = true;
-
-        // And start the write
-        OH_LOG(insane,"Starting write of " << conn->write_buf.size() << " bytes");
-        boost::asio::async_write(
-            *(conn->socket),
-            conn->write_buf,
-            boost::bind( &ObjectHost::handleConnectionWrite, this,
-                boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, conn)
-        );
     }
 }
 
-// Handle the async writing callback for this connection
-void ObjectHost::handleConnectionWrite(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn) {
-    conn->is_writing = false;
-
-    if (err) {
-        // FIXME some kind of error, need to handle this
-        OH_LOG(error,"Error in connection write\n");
-        return;
-    }
-
-    OH_LOG(insane,"Wrote " << bytes_transferred << ", " << conn->write_buf.size() << " left");
-
-    startWriting(conn);
-}
 
 
 } // namespace CBR
