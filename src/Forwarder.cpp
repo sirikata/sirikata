@@ -426,8 +426,9 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
           obj_msg->source_port(),
           obj_msg->dest_port(),
           SERVER_PORT_OBJECT_MESSAGE_ROUTING);
+  }else {
+      delete obj_msg;
   }
-  delete obj_msg;
   return send_success;
 }
 

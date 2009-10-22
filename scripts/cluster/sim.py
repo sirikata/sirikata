@@ -74,6 +74,7 @@ class ClusterSimSettings:
 
         self.loglevels = {
             "prox" : "warn",
+            #"tcpsst" : "insane",
             }
 
         # sanity checks
@@ -271,6 +272,7 @@ class ClusterSim:
         cmd_seq.extend(debug_params)
         cmd_seq.extend( [
                 "--id=%(node)d",
+#                "--net=tcp",
                 "--layout=" + self.settings.layout(),
                 "--num-oh=" + str(self.settings.num_oh),
                 "--region=" + self.settings.region(),
@@ -374,6 +376,9 @@ class ClusterSim:
 
     def object_latency_analysis(self):
         subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
+
+    def message_latency_analysis(self):
+        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
 
     def oseg_analysis(self):
