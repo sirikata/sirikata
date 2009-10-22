@@ -40,6 +40,7 @@
  */
 
 #include <boost/asio.hpp>
+#include "IOService.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -59,10 +60,18 @@ typedef boost::asio::ip::tcp::socket InternalTCPSocket;
 typedef boost::asio::ip::tcp::acceptor InternalTCPAcceptor;
 typedef boost::asio::ip::tcp::resolver InternalTCPResolver;
 
+template <typename T>
+class ServiceAccessor {
+public:
+    IOService service() const {
+        return IOService(this->get_io_service());
+    }
+};
+
 /** Simple wrapper around Boost.Asio's tcp::socket, allowing for safe,
  *  cross-platform allocation and use.
  */
-class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
+class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket, ServiceAccessor<TCPSocket> {
   public:
     TCPSocket(IOService&io);
     virtual ~TCPSocket(); // Users of subclasses may use TCPSocket interface directly
@@ -71,7 +80,7 @@ class SIRIKATA_EXPORT TCPSocket: public InternalTCPSocket {
 /** Simple wrapper around Boost.Asio's tcp::acceptor, allowing for safe,
  *  cross-platform allocation and use.
  */
-class SIRIKATA_EXPORT TCPListener :public InternalTCPAcceptor {
+class SIRIKATA_EXPORT TCPListener :public InternalTCPAcceptor, ServiceAccessor<TCPListener> {
 public:
     TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&);
     virtual ~TCPListener(); // Users of subclasses may use TCPListener interface directly
@@ -83,7 +92,7 @@ public:
 /** Simple wrapper around Boost.Asio's tcp::resolver, allowing for safe,
  *  cross-platform allocation and use.
  */
-class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver {
+class SIRIKATA_EXPORT TCPResolver : public InternalTCPResolver, ServiceAccessor<TCPResolver> {
   public:
     TCPResolver(IOService&io);
     virtual ~TCPResolver(); // Users of subclasses may use TCPResolver interface directly
@@ -98,7 +107,7 @@ typedef boost::asio::ip::udp::resolver InternalUDPResolver;
 /** Simple wrapper around Boost.Asio's udp::socket, allowing for safe,
  *  cross-platform allocation and use.
  */
-class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
+class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket, ServiceAccessor<UDPSocket> {
   public:
     UDPSocket(IOService&io);
     virtual ~UDPSocket(); // Users of subclasses may use UDPSocket interface directly
@@ -107,7 +116,7 @@ class SIRIKATA_EXPORT UDPSocket: public InternalUDPSocket {
 /** Simple wrapper around Boost.Asio's udp::resolver, allowing for safe,
  *  cross-platform allocation and use.
  */
-class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
+class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver, ServiceAccessor<UDPSocket> {
   public:
     UDPResolver(IOService&io);
     virtual ~UDPResolver(); // Users of subclasses may use UDPResolver interface directly

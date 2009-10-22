@@ -66,6 +66,9 @@ public:
 
     ~IOTimer();
 
+    /** Get the IOService associated with this timer. */
+    IOService service() const;
+
     /** Set the callback which will be used by this timer.  Note that this sets
      *  the callback regardless of the current state of the timer, and will be
      *  used for timeouts currently in progress.

@@ -48,10 +48,32 @@ using std::tr1::placeholders::_1;
 
 IOService::IOService() {
     mImpl = new boost::asio::io_service(1);
+    mOwn = false;
+}
+
+IOService::IOService(InternalIOService* bs)
+ : mImpl(bs),
+   mOwn(false)
+{
+}
+
+IOService::IOService(const IOService& cpy)
+ : mImpl(cpy.mImpl),
+   mOwn(false)
+{
+}
+
+IOService& IOService::operator=(IOService& rhs) {
+    if (mOwn)
+        delete mImpl;
+    mImpl = rhs.mImpl;
+    mOwn = false;
+    return *this;
 }
 
 IOService::~IOService(){
-    delete mImpl;
+    if (mOwn)
+        delete mImpl;
 }
 
 IOStrand* IOService::createStrand() {

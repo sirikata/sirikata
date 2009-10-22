@@ -49,6 +49,7 @@ namespace Network {
  */
 class SIRIKATA_EXPORT IOService {
     InternalIOService* mImpl;
+    bool mOwn;
 
     IOService();
     ~IOService();
@@ -58,13 +59,13 @@ class SIRIKATA_EXPORT IOService {
   protected:
 
     friend class InternalIOStrand;
-    friend class TimerHandle;
     friend class TCPSocket;
     friend class TCPListener;
     friend class TCPResolver;
     friend class UDPSocket;
     friend class UDPResolver;
     friend class DeadlineTimer;
+    friend class IOTimer;
 
     /** Get the underlying IOService.  Only made available to allow for
      *  efficient implementation of ASIO provided functionality such as
@@ -80,7 +81,22 @@ class SIRIKATA_EXPORT IOService {
     const InternalIOService& asioService() const {
         return *mImpl;
     }
+
+    /** Generated an IOService wrapper from the internal version.  The
+     *  generated IOService will *not* take ownership.  This should only
+     *  be used to allow IO objects to return a reference to their owner.
+     */
+    IOService(InternalIOService* bs);
+
 public:
+    /* Copies the IOService.  The underlying resources remain owned by the
+     * original and will be controlled by its lifetime.
+     * \param cpy the original IOService to copy
+     */
+    IOService(const IOService& cpy);
+
+    IOService& operator=(IOService& rhs);
+
     /** Creates a new IOStrand. */
     IOStrand* createStrand();
 
