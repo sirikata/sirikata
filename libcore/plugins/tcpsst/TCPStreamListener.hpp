@@ -32,35 +32,39 @@
 
 #ifndef SIRIKATA_TCPStreamListener_HPP__
 #define SIRIKATA_TCPStreamListener_HPP__
+
+#include "network/IODefs.hpp"
 #include "network/StreamListener.hpp"
-namespace Sirikata { namespace Network {
-class IOService;
-class TCPListener;
+
+namespace Sirikata {
+namespace Network {
+
 /**
  * This class waits on a service and listens for incoming connections
  * It calls the callback whenever such connections are encountered
  */
-class TCPStreamListener:public StreamListener{
-
+class TCPStreamListener : public StreamListener {
 public:
     TCPStreamListener(IOService&);
-    ///subclasses will expose these methods with similar arguments + protocol specific args
-    virtual bool listen(
-        const Address&addy,
-        const Stream::SubstreamCallback&newStreamCallback);
-    ///returns the name of the computer followed by a colon and then the service being listened on
-    virtual String listenAddressName()const;
-    ///returns the name of the computer followed by a colon and then the service being listened on
-    virtual Address listenAddress()const;
-    ///stops listening
-    virtual void close();
+    virtual ~TCPStreamListener();
+
     static TCPStreamListener* construct(Network::IOService*io) {
         return new TCPStreamListener(*io);
     }
 
-    virtual ~TCPStreamListener();
-    IOService * mIOService;
-    TCPListener *mTCPAcceptor;
+    virtual bool listen(const Address&addr, const Stream::SubstreamCallback&newStreamCallback);
+    virtual String listenAddressName()const;
+    virtual Address listenAddress()const;
+    virtual void close();
+
+private:
+    struct Data; // Data which may be needed in callbacks, so is stored separately in shared_ptr
+    typedef std::tr1::shared_ptr<Data> DataPtr;
+    DataPtr mData;
 };
-} }
+
+} // namespace Network
+} // namespace Sirikata
+
+
 #endif

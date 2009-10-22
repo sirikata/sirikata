@@ -33,7 +33,6 @@
 #include "util/Platform.hpp"
 #include "network/Asio.hpp"
 #include "TCPStream.hpp"
-#include "util/ThreadSafeQueue.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
@@ -41,6 +40,8 @@
 namespace Sirikata {
 namespace Network {
 namespace ASIOStreamBuilder{
+
+typedef Array<uint8,TCPStream::TcpSstHeaderSize> TcpSstHeaderArray;
 
 class IncompleteStreamState {
 public:
@@ -53,8 +54,9 @@ typedef std::map<UUID,IncompleteStreamState> IncompleteStreamMap;
 std::deque<UUID> sStaleUUIDs;
 IncompleteStreamMap sIncompleteStreams;
 }
+
 ///gets called when a complete 24 byte header is actually received: uses the UUID within to match up appropriate sockets
-void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
+void buildStream(TcpSstHeaderArray *buffer,
                  TCPSocket *socket,
                  IOService *ioService,
                  Stream::SubstreamCallback callback,
@@ -99,9 +101,8 @@ void buildStream(Array<uint8,TCPStream::TcpSstHeaderSize> *buffer,
     delete buffer;
 }
 
-void beginNewStream(TCPSocket * socket, IOService*ioService,const Stream::SubstreamCallback& cb) {
-    Array<uint8,TCPStream::TcpSstHeaderSize> *buffer=new Array<uint8,TCPStream::TcpSstHeaderSize>;
-
+void beginNewStream(TCPSocket* socket, IOService* ioService, const Stream::SubstreamCallback& cb) {
+    TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),

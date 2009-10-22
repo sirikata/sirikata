@@ -39,6 +39,14 @@
 // so we can use them without including everything that Boost.Asio
 // includes indirectly
 namespace boost {
+
+namespace system {
+class error_code;
+class system_error;
+class error_condition;
+class error_category;
+}
+
 namespace asio {
 class io_service;
 

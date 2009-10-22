@@ -32,63 +32,119 @@
 
 #include "util/Platform.hpp"
 #include "network/Asio.hpp"
+#include "network/IOStrand.hpp"
+#include "network/IOStrandImpl.hpp"
+#include "network/IOService.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
 #include "ASIOStreamBuilder.hpp"
 #include "options/Options.hpp"
-namespace Sirikata { namespace Network {
+
+namespace Sirikata {
+namespace Network {
+
 using namespace boost::asio::ip;
 
-TCPStreamListener::TCPStreamListener(IOService&io) {
-    mIOService=&io;
-    mTCPAcceptor=NULL;
-}
-bool newAcceptPhase(TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb);
-void handleAccept(const std::tr1::shared_ptr<std::auto_ptr<TCPSocket> >&socket,TCPListener*listen, IOService* io,const Stream::SubstreamCallback &cb,const boost::system::error_code& error){
-    if(error) {
-		boost::system::system_error se(error);
-		SILOG(tcpsst,error, "ERROR IN THE TCP STREAM ACCEPTING PROCESS"<<se.what() << std::endl);
-        //FIXME: attempt more?
-    }else {
-        TCPSocket*newSocket=socket->release();
-        ASIOStreamBuilder::beginNewStream(newSocket,io,cb);
-        newAcceptPhase(listen,io,cb);
+struct TCPStreamListener::Data {
+private:
+    static void startAccept(DataPtr& data);
+    static void handleAccept(DataPtr& data, const boost::system::error_code& error);
+public:
+    Data(IOService& io)
+     : ios(io),
+       acceptor(NULL),
+       socket(NULL),
+       cb(0)
+    {
+        strand = ios.createStrand();
     }
-}
-bool newAcceptPhase(TCPListener*listen, IOService* io, const Stream::SubstreamCallback &cb) {
-    std::auto_ptr<TCPSocket>tmpsocket(new TCPSocket(*io));
 
-    std::tr1::shared_ptr<std::auto_ptr<TCPSocket> > socketWrapper(new std::auto_ptr<TCPSocket> (tmpsocket));
-    //need to use boost bind to avoid TR1 errors about compatibility with boost::asio::placeholders
+    ~Data() {
+        delete strand;
+        delete acceptor;
+        delete socket;
+    }
 
-    listen->async_accept(**socketWrapper,
-                         std::tr1::bind(&handleAccept,socketWrapper,listen,io,cb,_1));
-    return true;
+    // Start the listening process.
+    void start(DataPtr shared_this) {
+        assert(shared_this.get() == this);
+        strand->post(
+            std::tr1::bind(&TCPStreamListener::Data::startAccept, shared_this)
+        );
+    }
+
+    IOService& ios;
+    IOStrand* strand;
+    TCPListener* acceptor;
+    TCPSocket* socket;
+    Stream::SubstreamCallback cb;
+};
+
+// All the real work happens here in these methods
+void TCPStreamListener::Data::startAccept(DataPtr& data) {
+    assert(data->socket == NULL);
+    data->socket = new TCPSocket(data->ios);
+    data->acceptor->async_accept(
+        *(data->socket),
+        data->strand->wrap(std::tr1::bind(&TCPStreamListener::Data::handleAccept, data, _1))
+    );
 }
+
+void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::error_code& error) {
+    if(error) {
+        boost::system::system_error se(error);
+        SILOG(tcpsst,error, "Error listening for TCP stream:" << se.what() << std::endl);
+        //FIXME: attempt more?
+        return;
+    }
+
+    TCPSocket* newSocket = data->socket;
+    data->socket = NULL;
+
+    // Hand off the new connection for sessions initiation
+    ASIOStreamBuilder::beginNewStream(newSocket, &(data->ios), data->cb);
+
+    // Continue listening
+    startAccept(data);
+}
+
+
+TCPStreamListener::TCPStreamListener(IOService& io)
+ : mData(new Data(io))
+{
+}
+
+TCPStreamListener::~TCPStreamListener() {
+    close();
+}
+
 bool TCPStreamListener::listen (const Address&address,
                                 const Stream::SubstreamCallback&newStreamCallback) {
+    mData->acceptor = new TCPListener(mData->ios,tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
+    mData->cb = newStreamCallback;
+    mData->start(mData);
+    return true;
+}
 
-    mTCPAcceptor = new TCPListener(*mIOService,tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
-    return newAcceptPhase(mTCPAcceptor,mIOService,newStreamCallback);
-}
-TCPStreamListener::~TCPStreamListener() {
-    delete mTCPAcceptor;
-}
 String TCPStreamListener::listenAddressName() const {
     std::stringstream retval;
-    retval<<mTCPAcceptor->local_endpoint().address().to_string()<<':'<<mTCPAcceptor->local_endpoint().port();
+    retval << mData->acceptor->local_endpoint().address().to_string() << ':' << mData->acceptor->local_endpoint().port();
     return retval.str();
 }
 
 Address TCPStreamListener::listenAddress() const {
     std::stringstream port;
-    port << mTCPAcceptor->local_endpoint().port();
-    return Address(mTCPAcceptor->local_endpoint().address().to_string(),
+    port << mData->acceptor->local_endpoint().port();
+    return Address(mData->acceptor->local_endpoint().address().to_string(),
                    port.str());
 }
+
 void TCPStreamListener::close(){
-    delete mTCPAcceptor;
-    mTCPAcceptor=NULL;
+    if (mData->acceptor != NULL) {
+        mData->acceptor->cancel();
+        mData->acceptor->close();
+    }
 }
 
-} }
+} // namespace Network
+} // namespace Sirikata
