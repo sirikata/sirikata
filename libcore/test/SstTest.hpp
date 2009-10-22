@@ -119,19 +119,10 @@ public:
             runRoutine(newStream);
         }
     }
-    void ioThread(){
-        StreamListener *s=StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO);
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-
-		s->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
-        mReadyToConnect=true;
-        mIO->run();
-        delete s;
-    }
     std::string mPort;
     IOService *mIO;
     boost::thread *mThread;
+    StreamListener* mListener;
     std::vector<Stream*> mStreams;
     std::vector<std::string> mMessagesToSend;
     Sirikata::AtomicValue<int> mCount;
@@ -141,7 +132,6 @@ public:
     std::map<unsigned int, std::vector<Sirikata::Network::Chunk> > mDataMap;
     const char * ENDSTRING;
     volatile bool mAbortTest;
-    volatile bool mReadyToConnect;
     void validateSameness(
         int id,
         const std::vector<const Sirikata::Network::Chunk* >&netData,
@@ -229,11 +219,18 @@ public:
         validateSameness(id,orderedNetData,orderedKeyData);
         validateSameness(id,unorderedNetData,unorderedKeyData);
     }
-    SstTest():mIO(IOServiceFactory::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false),mReadyToConnect(false){
+    SstTest():mIO(IOServiceFactory::makeIOService()),mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
         Sirikata::PluginManager plugins;
         plugins.load( Sirikata::DynamicLibrary::filename("tcpsst") );
         mPort="9142";
-        mThread= new boost::thread(std::tr1::bind(&SstTest::ioThread,this));
+
+        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO);
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+        mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
+
+        mThread = new boost::thread(std::tr1::bind(&IOService::run,mIO));
+
         bool doUnorderedTest=true;
         bool doShortTest=false;
 
@@ -350,10 +347,14 @@ public:
             delete *i;
         }
         mStreams.resize(0);
-        mIO->stop();
 
+        delete mListener;
+        //mIO->stop();
+
+        // The other thread should finish up any outstanding handlers and stop
         mThread->join();
         delete mThread;
+
         IOServiceFactory::destroyIOService(mIO);
         mIO=NULL;
     }
@@ -458,7 +459,6 @@ public:
         bool doSubstreams=true;
         {
             Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mIO);
-            while (!mReadyToConnect);
             simpleConnect(r,Address("127.0.0.1",mPort));
             runRoutine(r);
             if (doSubstreams) {
