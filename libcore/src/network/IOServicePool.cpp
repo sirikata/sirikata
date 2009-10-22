@@ -30,18 +30,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "util/Standard.hh"
+#include "IOServicePool.hpp"
 #include "IOService.hpp"
 #include "IOServiceFactory.hpp"
+
+#include <boost/thread/thread.hpp>
 
 namespace Sirikata {
 namespace Network {
 
-IOService*IOServiceFactory::makeIOService() {
-    return new IOService;
+IOServicePool::IOServicePool(uint32 nthreads) {
+    for(uint32 i = 0; i < nthreads; i++) {
+        ThreadData data;
+        data.ios = IOServiceFactory::makeIOService();
+        data.thread = NULL;
+        mThreads.push_back(data);
+    }
 }
 
-void IOServiceFactory::destroyIOService(IOService*io) {
-    delete io;
+IOServicePool::~IOServicePool() {
+    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++) {
+        delete it->thread;
+        IOServiceFactory::destroyIOService(it->ios);
+    }
+}
+
+void IOServicePool::run() {
+    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
+        it->thread = new boost::thread( std::tr1::bind(&IOService::run, it->ios) );
+}
+
+void IOServicePool::join() {
+    for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
+        it->thread->join();
+}
+
+IOService* IOServicePool::service(uint32 thr) {
+    assert(thr < mThreads.size());
+    return mThreads[thr].ios;
 }
 
 } // namespace Network

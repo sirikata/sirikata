@@ -853,6 +853,7 @@ SET(SIRIKATA_CORE_SOURCES
    	${LIBCORE_SOURCE_DIR}/options/Options.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOService.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOServiceFactory.cpp
+	${LIBCORE_SOURCE_DIR}/network/IOServicePool.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOStrand.cpp
 	${LIBCORE_SOURCE_DIR}/network/IOTimer.cpp
 	${LIBCORE_SOURCE_DIR}/network/Stream.cpp

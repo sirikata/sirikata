@@ -43,20 +43,16 @@ namespace Network {
  *  properly.
  */
 class SIRIKATA_EXPORT IOServiceFactory {
-    static void io_service_initializer(IOService*io_ret);
   public:
     /** Create a new IOService. This is not specifically associated
      *  with any thread.
      */
     static IOService* makeIOService();
+
     /** Destroy the specificed IOService safely.
      *  \param io the IOService to destroy.
      */
     static void destroyIOService(IOService*io);
-    /** Get the singleton IOService for this thread. Note that this
-     *  currently just returns a single, global IOService.
-     */
-    static IOService& singletonIOService();
 };
 
 } // namespace Network

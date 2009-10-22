@@ -1,7 +1,7 @@
 /*  Sirikata Network Utilities
- *  IOServiceFactory.cpp
+ *  IOServicePool.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,51 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "util/Standard.hh"
+#ifndef _SIRIKATA_IOSERVICE_POOL_HPP_
+#define _SIRIKATA_IOSERVICE_POOL_HPP_
+
+#include "IODefs.hpp"
 #include "IOService.hpp"
-#include "IOServiceFactory.hpp"
+
+namespace boost {
+class thread;
+} // namespace boost
+
 
 namespace Sirikata {
 namespace Network {
 
-IOService*IOServiceFactory::makeIOService() {
-    return new IOService;
-}
+/** IOServicePool creates a pool of IOService threads for handling
+ *  IO events.
+ */
+class SIRIKATA_EXPORT IOServicePool {
+  public:
+    IOServicePool(uint32 nthreads);
+    ~IOServicePool();
 
-void IOServiceFactory::destroyIOService(IOService*io) {
-    delete io;
-}
+    /** Run the */
+    void run();
+
+    /** Block until all the child threads exit. */
+    void join();
+
+    /** Get the IOService corresponding to the given thread.  Note that
+     *  you rarely need a specific service, so requesting the default
+     *  is sufficient.
+     *  \param thr the index of the thread to retrieve the IOService for
+     */
+    IOService* service(uint32 thr = 0);
+
+  private:
+    struct ThreadData {
+        boost::thread* thread;
+        IOService* ios;
+    };
+    typedef std::vector<ThreadData> ThreadList;
+    ThreadList mThreads;
+};
 
 } // namespace Network
 } // namespace Sirikata
+
+#endif //_SIRIKATA_IOSERVICE_POOL_HPP_
