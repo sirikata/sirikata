@@ -160,7 +160,7 @@ void ObjectHostConnectionManager::handleConnectionRead(const boost::system::erro
 
     conn->read_avail += std::string(buf, buf_size);
 
-    delete buf;
+    delete []buf;
 
     // try to extract messages
     while( conn->read_avail.size() > sizeof(uint32) ) {

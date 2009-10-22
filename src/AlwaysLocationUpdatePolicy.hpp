@@ -151,8 +151,12 @@ private:
                 return;
 
             SubscriberInfo* subs = sub_it->second;
-            while(!subs->subscribedTo.empty())
-                unsubscribe(remote, *(subs->subscribedTo.begin()));
+
+            while(!subs->subscribedTo.empty()) {
+                UUID tmp=*(subs->subscribedTo.begin());
+                unsubscribe(remote, tmp);
+                
+            }
 
             // Might have outstanding updates, so leave it in place and
             // potentially remove in the tick that actually sends updates.

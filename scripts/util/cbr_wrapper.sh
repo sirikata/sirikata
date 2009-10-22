@@ -86,7 +86,9 @@ if [ $want_debug -eq 1 ] ; then
   exit $?
 else
   if [ $want_valgrind -eq 1 ] ; then
-    exec valgrind $APPDIR/$APPNAME "$@"
+    export LD_LIBRARY_PATH=/home/meru/usr/lib:$LD_LIBRARY_PATH
+    export PATH=/home/meru/usr/bin:$PATH
+    exec valgrind --error-limit=no --num-callers=12 $APPDIR/$APPNAME "$@"
   else
     exec $APPDIR/$APPNAME "$@"
   fi
