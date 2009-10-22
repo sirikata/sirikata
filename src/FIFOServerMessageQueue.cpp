@@ -171,4 +171,12 @@ void FIFOServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) co
   }
 }
 
+ServerMessageQueue::KnownServerIterator FIFOServerMessageQueue::knownServersBegin() {
+    return mSourceServers.begin();
+}
+
+ServerMessageQueue::KnownServerIterator FIFOServerMessageQueue::knownServersEnd() {
+    return mSourceServers.end();
+}
+
 }

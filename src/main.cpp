@@ -595,7 +595,7 @@ void *main_loop(void *) {
     }
 
     // We have all the info to initialize the forwarder now
-    forwarder->initialize(cseg, oseg, sq);
+    forwarder->initialize(oseg, sq);
 
     Proximity* prox = new Proximity(space_context, loc_service);
 

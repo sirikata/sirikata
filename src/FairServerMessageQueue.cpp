@@ -211,4 +211,12 @@ void FairServerMessageQueue::getQueueInfo(std::vector<QueueInfo>& queue_info) co
     }
 }
 
+ServerMessageQueue::KnownServerIterator FairServerMessageQueue::knownServersBegin() {
+    return mReceiveSet.begin();
+}
+
+ServerMessageQueue::KnownServerIterator FairServerMessageQueue::knownServersEnd() {
+    return mReceiveSet.end();
+}
+
 }

@@ -51,7 +51,6 @@ Forwarder::Forwarder(SpaceContext* ctx)
  :
    mOutgoingMessages(NULL),
    mContext(ctx),
-   mCSeg(NULL),
    mOSeg(NULL),
    mServerMessageQueue(NULL),
    mUniqueConnIDs(0),
@@ -94,9 +93,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
   /*
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
-void Forwarder::initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ServerMessageQueue* smq)
+void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
 {
-  mCSeg = cseg;
   mOSeg = oseg;
   mServerMessageQueue =smq;
   mOutgoingMessages=new ForwarderQueue(smq,16384);
@@ -160,7 +158,8 @@ void Forwarder::service()
     tickOSeg(t);  mProfiler.finishedStage();
 
     if (GetOption(NOISE)->as<bool>()) {
-        for(ServerID sid = 1; sid <= mCSeg->numServers(); sid++) {
+        for(ServerMessageQueue::KnownServerIterator it = mServerMessageQueue->knownServersBegin(); it != mServerMessageQueue->knownServersEnd(); it++) {
+            ServerID sid = *it;
             if (sid == mContext->id()) continue;
             while(true) {
                 std::string randnoise;

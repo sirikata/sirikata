@@ -69,7 +69,6 @@ class Forwarder : public MessageDispatcher, public MessageRouter, public Message
       SpaceContext* mContext;
 
     //Shared with server
-      CoordinateSegmentation* mCSeg;
       ObjectSegmentation* mOSeg;
       ServerMessageQueue* mServerMessageQueue;
 
@@ -115,7 +114,7 @@ protected:
     public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
-      void initialize(CoordinateSegmentation* cseg, ObjectSegmentation* oseg, ServerMessageQueue* smq);
+      void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
 
       void service();
 

@@ -35,7 +35,11 @@ typedef struct QueueInfo{
 } QueueInfo;
 
 class ServerMessageQueue {
+protected:
+    typedef std::set<ServerID> KnownServerSet;
 public:
+    typedef KnownServerSet::const_iterator KnownServerIterator;
+
     ServerMessageQueue(SpaceContext* ctx, Network* net, ServerIDMap* sidmap)
      : mContext(ctx),
        mNetwork(net),
@@ -78,6 +82,12 @@ public:
         assert(addy != NULL);
         return mNetwork->canSend(*addy,msg->serializedSize(),false,true,1);
     }
+
+    /** Get a begin iterator over known Servers (ServerIDs). */
+    virtual KnownServerIterator knownServersBegin() = 0;
+    /** Get an end iterator over known Servers (ServerIDs). */
+    virtual KnownServerIterator knownServersEnd() = 0;
+
 protected:
 
     SpaceContext* mContext;

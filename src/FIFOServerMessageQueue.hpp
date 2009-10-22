@@ -36,6 +36,10 @@ public:
     virtual void reportQueueInfo(const Time& t) const;
 
     virtual void getQueueInfo(std::vector<QueueInfo>& queue_info) const;
+
+    virtual KnownServerIterator knownServersBegin();
+    virtual KnownServerIterator knownServersEnd();
+
 };
 }
 #endif
