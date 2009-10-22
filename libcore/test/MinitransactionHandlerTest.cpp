@@ -95,7 +95,6 @@ static void fill_minitransaction_handler(MinitransactionHandler* mth) {
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
 static void check_minitransaction_results(MinitransactionHandler* mth, Protocol::Response *response, volatile bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
 
-    TS_ASSERT(response->has_return_status());
     if (expected_error != Protocol::Response::SUCCESS) {
         TS_ASSERT(response->has_return_status());
         TS_ASSERT_EQUALS( response->return_status(), expected_error );
@@ -140,9 +139,9 @@ static void test_minitransaction(MinitransactionHandler* mth, Protocol::Minitran
 }
 
 static void check_stress_test_result(MinitransactionHandler*mth, Protocol::Response* result, AtomicValue<Sirikata::uint32>* done) {
-    if (result->has_return_status()) 
+    if (result->has_return_status())
         TS_ASSERT_EQUALS( result->return_status(), Protocol::Response::SUCCESS );
-    
+
     mth->destroyResponse(result);
     (*done)++;
 }
@@ -240,11 +239,11 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
     copyStorageElement(trans_7->mutable_compares(0),keyvalues()[0]);
     copyStorageKey(trans_7->mutable_reads(0),keyvalues()[1]);
     StorageSet expected_7;
-    expected_7.add_reads();    
+    expected_7.add_reads();
     copyStorageElement(expected_7.mutable_reads(0),keyvalues()[1]);
     test_minitransaction(fixture.handler, trans_7, Response::SUCCESS, expected_7,7);
 
-    // 1 failed compare, 1 read 
+    // 1 failed compare, 1 read
     Minitransaction* trans_8 = fixture.handler->createMinitransaction((Minitransaction*)NULL,1,0,1);
     copyStorageKey(trans_8->mutable_compares(0),keyvalues()[0]);
     copyStorageValue(trans_8->mutable_compares(0),keyvalues()[1]);
@@ -282,7 +281,7 @@ void test_minitransaction_handler_order(SetupMinitransactionHandlerFunction _set
 
     // finally just verify that the previous write did not happen
     Minitransaction* trans_11 = fixture.handler->createMinitransaction((Minitransaction*)NULL,1,0,0);
-    
+
     copyStorageKey(trans_11->mutable_reads(0),keyvalues()[2]);
     StorageSet expected_11;
     expected_11.add_reads();

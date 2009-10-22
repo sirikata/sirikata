@@ -101,8 +101,14 @@ static void fill_read_write_handler(ReadWriteHandler* rwh) {
 // note: we use a StorageSet for expected instead of a ReadSet so we can add pairs to it
 static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *response, volatile bool* done, Protocol::Response::ReturnStatus expected_error, Protocol::StorageSet expected, int testnum) {
     using namespace Sirikata::Persistence::Protocol;
-    TS_ASSERT(response->has_return_status());
-    TS_ASSERT_EQUALS( response->return_status(), expected_error );
+
+    if (expected_error != Protocol::Response::SUCCESS) {
+        TS_ASSERT(response->has_return_status());
+        TS_ASSERT_EQUALS( response->return_status(), expected_error );
+    }else if (response->has_return_status()) {
+        TS_ASSERT_EQUALS(response->return_status(),Protocol::Response::SUCCESS);
+    }
+
     TS_ASSERT_EQUALS( response->reads_size(), expected.reads_size() );
     if (response->return_status()!= expected_error||response->reads_size()!=expected.reads_size()) {
         int THIS_TEST_FAILED=-1;
@@ -124,7 +130,7 @@ static void check_read_write_results(ReadWriteHandler* rwh, Protocol::Response *
                 int THIS_TEST_FAILED=-1;
                 TS_ASSERT_EQUALS(testnum,THIS_TEST_FAILED);
             }
-            
+
         }
     }
     rwh->destroyResponse(response);
@@ -150,9 +156,9 @@ static void test_read_write(ReadWriteHandler* rwh, Protocol::ReadWriteSet* trans
 }
 
 static void check_stress_test_result(ReadWriteHandler*rwh, Protocol::Response* result, AtomicValue<Sirikata::uint32>* done) {
-    if (result->has_return_status()) 
+    if (result->has_return_status())
         TS_ASSERT_EQUALS( result->return_status(), Protocol::Response::SUCCESS );
-    
+
     rwh->destroyResponse(result);
     (*done)++;
 }
