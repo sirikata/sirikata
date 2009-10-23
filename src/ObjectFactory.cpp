@@ -277,11 +277,7 @@ Object* ObjectFactory::object(const UUID& id) {
     ObjectMap::iterator it = mObjects.find(id);
     if (it != mObjects.end()) return it->second;
 
-    Object* new_obj = NULL;
-    if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        new_obj = new Object(id, motion(id), bounds(id), registerQuery(id), queryAngle(id), mContext, mObjectIDs);
-    else
-        new_obj = new Object(id, motion(id), bounds(id), registerQuery(id), queryAngle(id), mContext);
+    Object* new_obj = new Object(id, motion(id), bounds(id), registerQuery(id), queryAngle(id), mContext);
     mObjects[id] = new_obj;
     return new_obj;
 }

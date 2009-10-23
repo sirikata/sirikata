@@ -58,22 +58,6 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
 {
 }
 
-Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects)
- : mID(id),
-   mContext(ctx),
-   mGlobalIntroductions(true),
-   mMotion(motion),
-   mBounds(bnds),
-   mLocation(mMotion->initial()),
-   mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
-   mRegisterQuery(regQuery),
-   mQueryAngle(queryAngle),
-   mConnectedTo(0),
-   mMigrating(false)
-{
-    mSubscribers = objects;
-}
-
 Object::~Object() {
     mContext->objectFactory->notifyDestroyed(mID);
 }

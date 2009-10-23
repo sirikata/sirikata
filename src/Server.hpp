@@ -42,7 +42,6 @@ class Server : public MessageRecipient
       virtual void receiveMessage(Message* msg);
 private:
     // Methods for periodic servicing
-    void serviceProximity();
     void serviceObjectHostNetwork();
     void checkObjectMigrations();
 

@@ -596,7 +596,7 @@ void Server::service() {
     mProfiler.startIteration();
 
     mLocationService->service();  mProfiler.finishedStage();
-    serviceProximity();           mProfiler.finishedStage();
+    mProximity->service();        mProfiler.finishedStage();
 
     //FOrwarder analysis
     Time start_time_forwarder = Timer::now();
@@ -645,16 +645,6 @@ void Server::service() {
 
     checkObjectMigrations();      mProfiler.finishedStage();
 }
-
-void Server::serviceProximity() {
-    // If we have global introduction, then we can just ignore proximity evaluation.
-    if (GetOption(OBJECT_GLOBAL)->as<bool>() == true)
-        return;
-
-  // Check for proximity updates
-  mProximity->service();
-}
-
 
 //this is called by the server that is sending an object to another server.
 void Server::checkObjectMigrations()

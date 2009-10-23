@@ -53,8 +53,6 @@ class Object {
 public:
     /** Standard constructor. */
     Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
-    /** Global knowledge constructor - used to give object knowledge of all other objects in the world. */
-    Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx, const std::set<UUID>& objects);
 
     ~Object();
 

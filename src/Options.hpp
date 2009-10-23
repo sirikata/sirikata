@@ -69,8 +69,6 @@
 #define OBJECT_PACK          "object.pack"
 #define OBJECT_PACK_OFFSET   "object.pack-offset"
 
-#define OBJECT_GLOBAL        "object.global"
-
 
 #define SERVER_QUEUE         "server.queue"
 #define SERVER_QUEUE_LENGTH  "server.queue.length"

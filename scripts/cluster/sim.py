@@ -46,7 +46,6 @@ class ClusterSimSettings:
         self.object_drift_z = '0'
         self.object_simple = 'true'
         self.object_2d = 'true'
-        self.object_global = 'false'
 
         # OH: pack object generation settings
         self.num_pack_objects = 0
@@ -145,7 +144,6 @@ class ClusterSim:
             '--object.static=' + self.settings.object_static,
             '--object.simple=' + self.settings.object_simple,
             '--object.2d=' + self.settings.object_2d,
-            '--object.global=' + self.settings.object_global,
             '--object.num.pack=' + str(self.settings.num_pack_objects),
             '--object.pack=' + self.settings.object_pack,
             '%(packoffset)s',
