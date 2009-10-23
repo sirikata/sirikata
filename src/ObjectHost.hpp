@@ -36,7 +36,6 @@
 #include "ObjectHostContext.hpp"
 #include "TimeProfiler.hpp"
 #include "sirikata/network/IOService.hpp"
-#include <boost/asio.hpp>
 
 namespace CBR {
 
@@ -102,8 +101,8 @@ private:
     void setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb);
 
     // Handle a connection event, i.e. the socket either successfully connected or failed
-    void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status, 
-                               const std::string&reason, 
+    void handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
+                               const std::string&reason,
                                ServerID sid);
 
 
@@ -132,9 +131,6 @@ private:
 
     // Start async writing for this connection if it has data to be sent
     void startWriting(SpaceNodeConnection* conn);
-    // Handle the async writing callback for this connection
-    void handleConnectionWrite(const boost::system::error_code& err, std::size_t bytes_transferred, SpaceNodeConnection* conn);
-
 
 
     ObjectHostContext* mContext;
@@ -154,11 +150,6 @@ private:
 
         std::queue<std::string*> queue;
         bool connecting;
-        bool is_writing;
-        boost::asio::streambuf write_buf;
-
-        boost::asio::streambuf read_buf;
-
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;
     ServerConnectionMap mConnections;

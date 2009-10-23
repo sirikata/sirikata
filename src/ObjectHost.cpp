@@ -45,15 +45,15 @@
 #include <boost/bind.hpp>
 
 #define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+
 using namespace Sirikata;
 using namespace Sirikata::Network;
-namespace CBR {
-static void noop(){}
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid)
- : server(sid),
-   is_writing(false)
-{
 
+namespace CBR {
+
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid)
+ : server(sid)
+{
     socket=Sirikata::Network::StreamFactory::getSingleton().getDefaultConstructor()(&ios);
     connecting = false;
 }
@@ -121,6 +121,8 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
 }
 
 void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, ConnectedCallback cb) {
+    using std::tr1::placeholders::_1;
+
     // Make sure we have this object's info stored
     ObjectInfoMap::iterator it = mObjectInfo.find(obj->uuid());
     if (it == mObjectInfo.end()) {
@@ -134,7 +136,7 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
 
     // Get a connection to request
     getSpaceConnection(
-        boost::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), _1)
+        std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), _1)
     );
 }
 
@@ -172,6 +174,8 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
 
 
 void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
+    using std::tr1::placeholders::_1;
+
     OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
     mObjectInfo[obj_id].migratingTo = sid;
@@ -179,7 +183,7 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
     // Get or start the connection we need to start this migration
     getSpaceConnection(
         sid,
-        boost::bind(&ObjectHost::openConnectionStartMigration, this, obj_id, sid, _1)
+        std::tr1::bind(&ObjectHost::openConnectionStartMigration, this, obj_id, sid, _1)
     );
 }
 
@@ -412,9 +416,11 @@ void ObjectHost::getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb)
 }
 
 void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallback cb) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
-    using namespace boost::asio::ip;
 
     SpaceNodeConnection* conn = new SpaceNodeConnection(*mIOService, server);
     conn->connectCallbacks.push_back(cb);
@@ -425,20 +431,20 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     Address addy(convertAddress4ToSirikata(*addr));
     conn->socket->connect(addy,
                           &Sirikata::Network::Stream::ignoreSubstreamCallback,
-                          std::tr1::bind(&ObjectHost::handleSpaceConnection, 
-                                         this, 
-                                         std::tr1::placeholders::_1,std::tr1::placeholders::_2,server),
+                          std::tr1::bind(&ObjectHost::handleSpaceConnection,
+                                         this,
+                                         _1, _2, server),
                           std::tr1::bind(&ObjectHost::handleConnectionRead,
                                          this,
-                                         conn, 
+                                         conn,
                                          _1),
                           &Sirikata::Network::Stream::ignoreReadySend);
     OH_LOG(debug,"Trying to connect to " << addy.toString());
     conn->connecting = true;
 }
 
-void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status, 
-                                       const std::string&reason, 
+void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
+                                       const std::string&reason,
                                        ServerID sid) {
      SpaceNodeConnection* conn = mConnections[sid];
 
@@ -462,16 +468,13 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
     conn->connectCallbacks.clear();
 }
 
-bool ObjectHost::handleConnectionRead(SpaceNodeConnection* conn,Chunk& chunk) {
-
-    
+bool ObjectHost::handleConnectionRead(SpaceNodeConnection* conn, Chunk& chunk) {
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
-    
+
     handleServerMessage( conn, obj_msg );
     return true;
-    
 }
 
 
@@ -497,6 +500,8 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
 }
 
 void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg) {
+    using std::tr1::placeholders::_1;
+
     CBR::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
     assert(parse_success);
@@ -533,7 +538,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
             // Get a connection to request
             getSpaceConnection(
                 redirected,
-                boost::bind(&ObjectHost::openConnectionStartSession, this, obj, _1)
+                std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj, _1)
             );
 
         }
