@@ -212,12 +212,8 @@ void MessageDispatcher::dispatchMessage(const CBR::Protocol::Object::ObjectMessa
 
 
 std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
-    // FIXME we need a small header for framing purposes
-    std::string real_payload = serializePBJMessage(msg);
-    char payload_size_buffer[ sizeof(uint32) + sizeof(uint8) ];
-    *((uint32*)payload_size_buffer) = real_payload.size(); // FIXME endian
-    *(payload_size_buffer + sizeof(uint32)) = 0; // null terminator
-    std::string* final_payload = new std::string( std::string(payload_size_buffer,sizeof(uint32)) + real_payload );
+    // FIXME get rid of this, it shouldn't be necessary anymore
+    std::string* final_payload = new std::string( serializePBJMessage(msg) );
     return final_payload;
 }
 

@@ -37,7 +37,8 @@
 #include "SpaceContext.hpp"
 #include "Network.hpp"
 #include "Message.hpp"
-#include <boost/asio.hpp>
+#include <sirikata/network/IOService.hpp>
+#include <sirikata/network/StreamListener.hpp>
 
 namespace CBR {
 
@@ -59,22 +60,15 @@ public:
 private:
     SpaceContext* mContext;
 
-    boost::asio::io_service mIOService;
-    boost::asio::ip::tcp::acceptor* mAcceptor;
+    Sirikata::Network::IOService* mIOService;
+    Sirikata::Network::StreamListener* mAcceptor;
 
     struct ObjectHostConnection {
-        ObjectHostConnection(boost::asio::io_service& ios, const ConnectionID& conn_id);
+        ObjectHostConnection(const ConnectionID& conn_id, Sirikata::Network::Stream* str);
         ~ObjectHostConnection();
 
         ConnectionID id;
-        boost::asio::ip::tcp::socket* socket;
-        std::queue<std::string*> queue;
-
-        bool is_writing;
-
-        boost::asio::streambuf read_buf;
-        std::string read_avail;
-        boost::asio::streambuf write_buf;
+        Sirikata::Network::Stream* socket;
     };
     typedef std::map<ConnectionID, ObjectHostConnection*> ObjectHostConnectionMap;
     ObjectHostConnectionMap mConnections;
@@ -86,20 +80,12 @@ private:
 
     /** Listen for and handle new connections. */
     void listen(const Address4& listen_addr); // sets up the acceptor, starts the listening cycle
-    void startListening(); // initiates listening for next connection
-    void handleNewConnection(const boost::system::error_code& error, ObjectHostConnection* new_conn);
+    void handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& sc);
 
     /** Reading and writing handling for ObjectHostConnections. */
 
-    // Start async reading for this connection
-    void startReading(ObjectHostConnection* conn);
     // Handle async reading callbacks for this connection
-    void handleConnectionRead(const boost::system::error_code& err, ObjectHostConnection* conn);
-
-    // Start async writing for this connection if it has data to be sent
-    void startWriting(ObjectHostConnection* conn);
-    // Handle the async writing callback for this connection
-    void handleConnectionWrite(const boost::system::error_code& err, ObjectHostConnection* conn);
+    bool handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk);
 
     /** Handle messages, either directly, e.g. for sessions, or by dispatching them. */
     void handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
