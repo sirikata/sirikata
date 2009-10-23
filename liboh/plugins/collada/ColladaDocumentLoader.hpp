@@ -73,7 +73,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
         explicit ColladaDocumentLoader ( Transfer::URI const& uri );
         ~ColladaDocumentLoader ();
 
-        bool ColladaDocumentLoader::load ( char const& buffer, size_t bufferLength );
+        bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength );
         ColladaDocumentPtr getDocument () const;
 
     protected:

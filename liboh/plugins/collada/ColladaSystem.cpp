@@ -99,7 +99,8 @@ Task::EventResponse ColladaSystem::downloadFinished ( Task::EventPtr evbase, Tra
         // MCB: Serialized because OpenCOLLADA thread safety is unknown
         ColladaDocumentLoader loader ( what );
 
-        if ( loader.load ( *flatData->begin () , flatData->length () ) )
+        char const* buffer = reinterpret_cast< char const* > ( flatData->begin () );
+        if ( loader.load ( buffer , flatData->length () ) )
         {
             // finally we can add the Product to our set of completed documents
             mDocuments.insert ( DocumentSet::value_type ( loader.getDocument () ) );
@@ -134,7 +135,7 @@ bool ColladaSystem::initialize ( Provider< ProxyCreationListener* >* proxyManage
     assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
 
     mEventManager = new OptionValue ( "eventmanager", "0", OptionValueType< void* > (), "Memory address of the EventManager<Event>" );
-    mTransferManager = new OptionValue ( "transfermanager", "0", OptionValueType< void* > (), "dummy" );
+    mTransferManager = new OptionValue ( "transfermanager", "0", OptionValueType< void* > (), "Memory address of the TransferManager" );
     mWorkQueue = new OptionValue ( "workqueue", "0", OptionValueType< void* > (), "Memory address of the WorkQueue" );
 
     InitializeClassOptions ( "colladamodels", this, mTransferManager, mWorkQueue, mEventManager, NULL );

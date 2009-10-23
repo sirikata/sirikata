@@ -69,7 +69,7 @@ bool ColladaAsset::import ( ColladaDocumentImporter& importer, COLLADAFW::FileIn
 {
     assert((std::cout << "MCB: ColladaAsset::import() entered" << std::endl,true));
 
-    bool ok = false;
+    bool ok = true;
     
     computeUpAxisRotation ( importer, asset );
 

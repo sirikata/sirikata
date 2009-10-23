@@ -240,18 +240,6 @@ int main ( int argc,const char**argv ) {
         return 1;
     }
 
-    // MCB: seems like a good place to initialize models system
-    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, String ( "--todo" ) ) );
-
-    if ( mm )
-    {
-        SILOG(cppoh,info,"Created ModelsSystemFactory ");
-    }
-    else
-    {
-        SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
-    }
-    
     TransferManager *tm;
     try {
         tm = initializeTransferManager((*transferOptions)["cdn"], eventManager);
@@ -272,6 +260,19 @@ int main ( int argc,const char**argv ) {
         os << "--workqueue=" << workQueue << " ";
         graphicsCommandArguments = os.str();
     }
+
+    // MCB: seems like a good place to initialize models system
+    ModelsSystem* mm ( ModelsSystemFactory::getSingleton ().getConstructor ( "colladamodels" ) ( provider, graphicsCommandArguments ) );
+    
+    if ( mm )
+    {
+        SILOG(cppoh,info,"Created ModelsSystemFactory ");
+    }
+    else
+    {
+        SILOG(cppoh,error,"Failed to create ModelsSystemFactory ");
+    }
+    
     if (!provider) {
         SILOG(cppoh,error,"Failed to get TopLevelSpaceConnection for main space "<<mainSpace);
     }

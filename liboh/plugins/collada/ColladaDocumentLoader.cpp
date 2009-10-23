@@ -73,10 +73,9 @@ ColladaDocumentLoader::~ColladaDocumentLoader ()
     
 /////////////////////////////////////////////////////////////////////
 
-bool ColladaDocumentLoader::load ( char const& buffer, size_t bufferLength )
+bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )
 {
-//    bool ok = mFramework->loadDocument ( mBuffer, mBufferLength );
-    bool ok = false;
+    bool ok = mFramework->loadDocument ( buffer, bufferLength );
 
     return ok;
 }
