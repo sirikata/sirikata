@@ -8,9 +8,9 @@
 #include "Statistics.hpp"
 #include "Options.hpp"
 
-#include "ForwarderUtilityClasses.hpp"
 #include "Forwarder.hpp"
 #include "ObjectSegmentation.hpp"
+#include "OSegLookupQueue.hpp"
 
 #include "ObjectConnection.hpp"
 
@@ -29,34 +29,19 @@ void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, T
     }
 }
 
-void OSegLookupQueue::ObjMessQBeginSendList::push_back(const OSegLookup& lu) {
-    mTotalSize += lu.msg->ByteSize();
-    OSegLookupVector::push_back(lu);
-}
-
-void OSegLookupQueue::push(UUID objid, const OSegLookup& lu) {
-    size_t cursize = lu.msg->ByteSize();
-    if (mPredicate(objid,cursize,mTotalSize)) {
-        mTotalSize+=cursize;
-        mObjects[objid].push_back(lu);
-    }
-}
-
-
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
   /*
     Constructor for Forwarder
   */
 Forwarder::Forwarder(SpaceContext* ctx)
  :
-   mOutgoingMessages(NULL),
    mContext(ctx),
-   mOSeg(NULL),
+   mOutgoingMessages(NULL),
    mServerMessageQueue(NULL),
-   mUniqueConnIDs(0),
-   mOSegLookups(&AlwaysPush),
+   mOSegLookups(NULL),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
+   mUniqueConnIDs(0),
    mProfiler("Forwarder Loop")
 {
     //no need to initialize mOutgoingMessages.
@@ -95,9 +80,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
   */
 void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
 {
-  mOSeg = oseg;
-  mServerMessageQueue =smq;
-  mOutgoingMessages=new ForwarderQueue(smq,16384);
+    mOSegLookups = new OSegLookupQueue(oseg, &AlwaysPush);
+    mServerMessageQueue = smq;
+    mOutgoingMessages = new ForwarderQueue(smq,16384);
 }
 
   /*
@@ -105,41 +90,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
   */
   void Forwarder::tickOSeg(const Time&t)
   {
-    std::map<UUID,ServerID> updatedObjectLocations;
-    std::map<UUID,ServerID>::iterator iter;
-
-    OSegLookupQueue::ObjectMap::iterator iterQueueMap;
-
-    mOSeg->service(updatedObjectLocations);
-
-    //    cross-check updates against held messages.
-    for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
-    {
-        ServerID dest_server = iter->second;
-
-      //Now sending messages that we had saved up from oseg lookup calls.
-      iterQueueMap = mOSegLookups.find(iter->first);
-      if (iterQueueMap != mOSegLookups.end())
-      {
-        for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
-        {
-            const OSegLookup& lu = (iterQueueMap->second[s]);
-            if (!routeObjectMessageToServer(lu.msg, dest_server, lu.forward)) {
-                mContext->trace()->timestampMessage(mContext->time,
-                    lu.msg->unique(),
-                    Trace::DROPPED,
-                    lu.msg->source_port(),
-                    lu.msg->dest_port(),
-                    SERVER_PORT_OBJECT_MESSAGE_ROUTING
-                );
-                // FIXME causing a crash
-                //delete lu.msg;
-            }
-            // FIXME should we be deleting in_msg here?
-        }
-        mOSegLookups.erase(iterQueueMap);
-      }
-    }
+      mOSegLookups->service();
   }
 
 
@@ -246,56 +197,24 @@ void Forwarder::service()
     return success;
   }
 
-
   bool Forwarder::route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom)
   {
-    UUID dest_obj = msg->dest_object();
-    ServerID dest_server_id = mOSeg->lookup(dest_obj);
+      UUID dest_obj = msg->dest_object();
+      bool accepted = mOSegLookups->lookup(
+          msg,
+          boost::bind(&Forwarder::routeObjectMessageToServer, this, _1, _2, is_forward, forwardFrom)
+      );
 
-    //#ifdef  CRAQ_CACHE
-    if (is_forward && (forwardFrom != NullServerID))
-    {
-      //means that when we figure out which server this object is located on, we should also send an oseg update message.
-      //we need to be careful not to send multiple update messages to the same server:
-      //
-
-      if (mServersToUpdate.find(dest_obj) != mServersToUpdate.end()) //if the object already exists in mServersToUpdate
-      {
-        if (mServersToUpdate[dest_obj].end() == std::find(mServersToUpdate[dest_obj].begin(), mServersToUpdate[dest_obj].end(), forwardFrom))  //if the server that we want to update doesn't already exist for that entry of dest_obj
-        {
-          //don't already know that forwardFrom needs to be updated.  means that we should append the forwardFrom ServerID to a list of servers that we need to update when we know which server to send the message to.
-          mServersToUpdate[dest_obj].push_back(forwardFrom);
-
-#ifdef CRAQ_DEBUG
-          std::cout<<"\n\n bftm debug: got a server to update at time  "<<mContext->time.raw()<< " obj_id:   "<<dest_obj.toString()<<"    server to send update to:  "<<forwardFrom<<"\n\n";
-#endif
-
-        }
+      if (!accepted) {
+          mContext->trace()->timestampMessage(mContext->time,
+              msg->unique(),
+              Trace::DROPPED,
+              msg->source_port(),
+              msg->dest_port(),
+              SERVER_PORT_OBJECT_MESSAGE_ROUTING);
       }
-      else
-      {
-        //the object doesn't already exist in mServersToUpdate: put it in mServersToUpdate
-        mServersToUpdate[dest_obj].push_back(forwardFrom);
-      }
-    }
-    //#endif
 
-
-    ServerID destServer = mOSeg->lookup(msg->dest_object());
-    if (destServer == NullServerID)
-    {
-        OSegLookup lu;
-        lu.msg = msg;
-        lu.forward = is_forward;
-        mOSegLookups[msg->dest_object()].push_back(lu);
-        //if mOSegLookups.full() send_success=false;
-        return true;
-        // FIXME what if the mOSegLookups is full? Do we need to timestamp?
-    }
-    else
-    {
-        return routeObjectMessageToServer(msg, destServer, is_forward);
-    }
+      return accepted;
   }
 
 //end what i think it should be replaced with
@@ -371,43 +290,10 @@ void Forwarder::receiveMessage(Message* msg) {
 }
 
 
-
-bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, bool is_forward)
+bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* obj_msg, ServerID dest_serv, bool is_forward, ServerID forwardFrom)
 {
   //send out all server updates associated with an object with this message:
   UUID obj_id =  obj_msg->dest_object();
-
-  //#ifdef CRAQ_CACHE
-  CBR::Protocol::OSeg::UpdateOSegMessage contents;
-  contents.set_servid_sending_update(mContext->id());
-  contents.set_servid_obj_on(dest_serv);
-  contents.set_m_objid(obj_id);
-
-  if (mServersToUpdate.find(obj_id) != mServersToUpdate.end())
-  {
-    for (int s=0; s < (int) mServersToUpdate[obj_id].size(); ++s)
-    {
-#ifdef CRAQ_DEBUG
-      std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
-      std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
-      std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
-      std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
-#endif
-
-        Message* up_os = new Message(
-            mContext->id(),
-            SERVER_PORT_OSEG_UPDATE,
-            mServersToUpdate[obj_id][s],
-            SERVER_PORT_OSEG_UPDATE,
-            serializePBJMessage(contents)
-        );
-
-      // FIXME what if this fails to get sent out?
-      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, false);
-
-    }
-  }
-  //#endif
 
   Message* svr_obj_msg = new Message(
       mContext->id(),
@@ -428,6 +314,37 @@ bool Forwarder::routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage*
   }else {
       delete obj_msg;
   }
+
+  // Note that this is done *after* the real message is sent since it is an optimization and
+  // we don't want it blocking useful traffic
+  if (forwardFrom != NullServerID) {
+      // FIXME we used to kind of keep track of sending the same OSeg cache fix to a server multiple
+      // times, but it really only applied for the rate of lookups/migrations.  We should a) determine
+      // if this is actually a problem and b) if it is, take a more principled approach to solving it.
+#ifdef CRAQ_DEBUG
+      std::cout<<"\n\n bftm debug Sending an oseg cache update message at time:  "<<mContext->time.raw()<<"\n";
+      std::cout<<"\t for object:  "<<obj_id.toString()<<"\n";
+      std::cout<<"\t to server:   "<<mServersToUpdate[obj_id][s]<<"\n";
+      std::cout<<"\t obj on:      "<<dest_serv<<"\n\n";
+#endif
+
+      CBR::Protocol::OSeg::UpdateOSegMessage contents;
+      contents.set_servid_sending_update(mContext->id());
+      contents.set_servid_obj_on(dest_serv);
+      contents.set_m_objid(obj_id);
+
+      Message* up_os = new Message(
+          mContext->id(),
+          SERVER_PORT_OSEG_UPDATE,
+          forwardFrom,
+          SERVER_PORT_OSEG_UPDATE,
+          serializePBJMessage(contents)
+      );
+
+      // FIXME what if this fails to get sent out?
+      route(MessageRouter::OSEG_CACHE_UPDATE, up_os, false);
+  }
+
   return send_success;
 }
 

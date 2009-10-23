@@ -9,7 +9,6 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 
-#include "ForwarderUtilityClasses.hpp"
 #include "Queue.hpp"
 #include "FairQueue.hpp"
 
@@ -25,7 +24,7 @@ namespace CBR
   class Network;
   class Trace;
   class ObjectConnection;
-
+class OSegLookupQueue;
 
 class ForwarderQueue{
 public:
@@ -60,60 +59,44 @@ public:
         }
     }
 };
+
 class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
 {
-    private:
-    //Unique to forwarder
-      ForwarderQueue *mOutgoingMessages;
+private:
+    SpaceContext* mContext;
+    ForwarderQueue *mOutgoingMessages;
+    ServerMessageQueue* mServerMessageQueue;
 
-      SpaceContext* mContext;
-
-    //Shared with server
-      ObjectSegmentation* mOSeg;
-      ServerMessageQueue* mServerMessageQueue;
-
-      uint64 mUniqueConnIDs;
-
-
-    OSegLookupQueue mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
-
+    OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
 
     Time mLastSampleTime;
     Duration mSampleRate;
 
-
+    // Object connections, identified by a separate unique ID to handle fast migrations
+    uint64 mUniqueConnIDs; // Connection ID generator
     struct UniqueObjConn
     {
       uint64 id;
       ObjectConnection* conn;
     };
-
-
-  //    typedef std::map<UUID, ObjectConnection*> ObjectConnectionMap;
-  //    ObjectConnectionMap mObjectConnections;
-
     typedef std::map<UUID, UniqueObjConn> ObjectConnectionMap;
     ObjectConnectionMap mObjectConnections;
 
+    typedef std::vector<ServerID> ListServersUpdate;
+    typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
+    ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result
 
     TimeProfiler mProfiler;
 
-    //Private Functions
+
     void processChunk(Message* msg, bool forwarded_self_msg);
-
-
-    typedef std::vector<ServerID> ListServersUpdate;
-    typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
-    ObjectServerUpdateMap mServersToUpdate;
-
-
 protected:
     virtual void dispatchMessage(Message* msg) const;
     virtual void dispatchMessage(const CBR::Protocol::Object::ObjectMessage& msg) const;
 
     public:
       Forwarder(SpaceContext* ctx);
-      ~Forwarder(); //D-E-S-T-R-U-C-T-O-R
+      ~Forwarder();
       void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
 
       void service();
@@ -126,19 +109,18 @@ protected:
       // for either servers or objects.  The second form will simply automatically do the destination
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    //__attribute__ ((warn_unused_result))
+    __attribute__ ((warn_unused_result))
     bool route(MessageRouter::SERVICES svc, Message* msg, bool is_forward = false);
 
     //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with
     //the stale cache value.
     __attribute__ ((warn_unused_result))
      bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
-  //  void route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom );
 
 private:
       // This version is provided if you already know which server the message should be sent to
     __attribute__ ((warn_unused_result))
-    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false);
+    bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, ServerID forwardFrom = NullServerID);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
 
