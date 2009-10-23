@@ -338,6 +338,7 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
+
 SET(CSEG_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
@@ -364,6 +365,7 @@ SET(BENCH_SOURCES
   ${BENCH_SOURCE_DIR}/SSTBenchmark.cpp
   ${BENCH_SOURCE_DIR}/main.cpp
 )
+
 
 SET(CBR_MOC_HEADERS
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.h
@@ -439,6 +441,28 @@ TARGET_LINK_LIBRARIES(oh
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+
+ADD_EXECUTABLE(craq_get_test ${CRAQ_GET_TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(craq_get_test
+        ${Boost_THREAD_LIBRARY}
+        ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
+        ${SirikataCore_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
+
+ADD_EXECUTABLE(craq_set_test ${CRAQ_SET_TEST_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(craq_set_test
+        ${Boost_THREAD_LIBRARY}
+        ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
+        ${SirikataCore_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+      
 
 ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(cseg

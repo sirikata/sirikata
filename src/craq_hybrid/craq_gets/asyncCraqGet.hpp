@@ -29,8 +29,8 @@ public:
 
   boost::asio::io_service io_service;  //creates an io service
 
-  int set(CraqDataSetGet cdSet);
-  int get(CraqDataSetGet cdGet);
+  int set(const CraqDataSetGet& cdSet);
+  int get(const CraqDataSetGet& cdGet);
 
   void runTestOfConnection();
   void runTestOfAllConnections();
@@ -51,7 +51,7 @@ private:
   int mCurrentTrackNum;
   bool connected;
 
-  std::queue<CraqDataSetGet> mQueue;
+  std::queue<CraqDataSetGet*> mQueue;
   
 
   void reInitializeNode(int s);

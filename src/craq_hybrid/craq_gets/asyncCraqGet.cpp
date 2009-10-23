@@ -121,23 +121,42 @@ void AsyncCraqGet::runTestOfConnection()
 
 
 //assumes that we're already connected.
-int AsyncCraqGet::set(CraqDataSetGet dataToSet)
+int AsyncCraqGet::set(const CraqDataSetGet& dataToSet)
 {
   //force this to be a set message.
-  dataToSet.messageType = CraqDataSetGet::SET;
 
-  
+  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToSet.dataKey,dataToSet.dataKeyValue,dataToSet.trackMessage,CraqDataSetGet::SET);
+
   if (dataToSet.trackMessage)
   {
-    dataToSet.trackingID = mCurrentTrackNum;
+    cdQuery->trackingID = mCurrentTrackNum;
     ++mCurrentTrackNum;
 
-    mQueue.push(dataToSet);
-    return mCurrentTrackNum -1;
+    mQueue.push(cdQuery);
+    straightPoll();
+    return mCurrentTrackNum - 1;
+      
   }
   
+  mQueue.push(cdQuery);
+  straightPoll();
+  checkConnections(0);
+  usleep(1);
+
+  //  dataToSet.messageType = CraqDataSetGet::SET;
+
+  
+  //  if (dataToSet.trackMessage)
+  //  {
+  //    dataToSet.trackingID = mCurrentTrackNum;
+  //    ++mCurrentTrackNum;
+
+  //    mQueue.push(dataToSet);
+  //    return mCurrentTrackNum -1;
+  //  }
+  
   //we got all the way through without finding a ready connection.  Need to add query to queue.
-  mQueue.push(dataToSet);
+  //  mQueue.push(dataToSet);
   return 0;
 }
 
@@ -170,18 +189,25 @@ int AsyncCraqGet::numStillProcessing()
 
 
 
-int AsyncCraqGet::get(CraqDataSetGet dataToGet)
+int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
 {
-  
-  //force this to be a set message.
-  dataToGet.messageType = CraqDataSetGet::GET;
-  //we got all the way through without finding a ready connection.  Need to add query to queue.
-  mQueue.push(dataToGet);
+  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
 
+  mQueue.push(cdQuery);
   straightPoll();
-  //bftm added here.
   checkConnections(0);
   usleep(1);
+
+  
+  //force this to be a set message.
+  //  dataToGet.messageType = CraqDataSetGet::GET;
+  //we got all the way through without finding a ready connection.  Need to add query to queue.
+  //  mQueue.push(dataToGet);
+
+  //  straightPoll();
+  //bftm added here.
+  //  checkConnections(0);
+  //  usleep(1);
   
   
   return 0;
@@ -253,12 +279,12 @@ void AsyncCraqGet::processErrorResults(std::vector <CraqOperationResult*> & erro
   {
     if (errorRes[s]->whichOperation == CraqOperationResult::GET)
     {
-      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
+      CraqDataSetGet* cdSG = new CraqDataSetGet (errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::GET);
       mQueue.push(cdSG);
     }
     else
     {
-      CraqDataSetGet cdSG(errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
+      CraqDataSetGet* cdSG = new CraqDataSetGet (errorRes[s]->objID,errorRes[s]->servID,errorRes[s]->tracking, CraqDataSetGet::SET);
       mQueue.push(cdSG);      
     }
 
@@ -287,21 +313,23 @@ void AsyncCraqGet::checkConnections(int s)
     if (mQueue.size() != 0)
     {
       //need to put in another
-      CraqDataSetGet cdSG = mQueue.front();
+      CraqDataSetGet* cdSG = mQueue.front();
       mQueue.pop();
 
       ++numOperations;
       
-      if (cdSG.messageType == CraqDataSetGet::GET)
+      if (cdSG->messageType == CraqDataSetGet::GET)
       {
         //perform a get in  connections.
-        mConnections[s]->get(cdSG.dataKey);
+        mConnections[s]->get(cdSG->dataKey);
       }
-      else if (cdSG.messageType == CraqDataSetGet::SET)
+      else if (cdSG->messageType == CraqDataSetGet::SET)
       {
         //performing a set in connections.
-        mConnections[s]->set(cdSG.dataKey, cdSG.dataKeyValue, cdSG.trackMessage, cdSG.trackingID);
+        mConnections[s]->set(cdSG->dataKey, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID);
       }
+
+      delete cdSG;
     }
   }
   //  else if (mConnections[s].ready() == AsyncConnectionTwo::NEED_NEW_SOCKET)
