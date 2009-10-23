@@ -6,6 +6,7 @@ build/cmake/Makefile
 build/cmake/cmake_install.cmake
 
 # build products
+build/cmake/libcbr-core.a
 build/cmake/cbr
 build/cmake/oh
 

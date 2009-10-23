@@ -218,6 +218,20 @@ INCLUDE_DIRECTORIES(BEFORE
         )
 
 #source files
+SET(CBR_CORE_SOURCES
+  ${CBR_SOURCE_DIR}/Message.cpp
+  ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
+  ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
+  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
+  ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
+  ${CBR_SOURCE_DIR}/Statistics.cpp
+  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
+  ${CBR_SOURCE_DIR}/TimeProfiler.cpp
+  ${CBR_SOURCE_DIR}/Timer.cpp
+  ${CBR_SOURCE_DIR}/TimeSync.cpp
+)
+
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
   ${CBR_SOURCE_DIR}/Analysis.cpp
@@ -239,34 +253,23 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/LoadMonitor.cpp
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/LocObjectSegmentation.cpp
-  ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
-  ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OracleLocationService.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
-  ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
-  ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/Proximity.cpp
-  ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
-  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
   ${CBR_SOURCE_DIR}/Server.cpp
   ${CBR_SOURCE_DIR}/ServerWeightCalculator.cpp
   ${CBR_SOURCE_DIR}/StandardLocationService.cpp
-  ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
-  ${CBR_SOURCE_DIR}/Statistics.cpp
   ${CBR_SOURCE_DIR}/TCPNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/ENetNetwork.cpp
-  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
-  ${CBR_SOURCE_DIR}/TimeProfiler.cpp
-  ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
@@ -274,21 +277,10 @@ SET(CBR_SOURCES
 )
 
 SET(OH_SOURCES
-  ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Network.cpp
   ${CBR_SOURCE_DIR}/Object.cpp
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/ObjectHost.cpp
-  ${CBR_SOURCE_DIR}/Options.cpp
-  ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
-  ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
-  ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
-  ${CBR_SOURCE_DIR}/StaticMotionPath.cpp
-  ${CBR_SOURCE_DIR}/Statistics.cpp
-  ${CBR_SOURCE_DIR}/TabularServerIDMap.cpp
-  ${CBR_SOURCE_DIR}/TimeProfiler.cpp
-  ${CBR_SOURCE_DIR}/Timer.cpp
-  ${CBR_SOURCE_DIR}/TimeSync.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
 )
 
@@ -336,9 +328,13 @@ LINK_DIRECTORIES(
         ${GSL_LINK_DIRECTORIES}
 )
 
+#libs
+ADD_LIBRARY(cbr-core STATIC ${CBR_CORE_SOURCES} ${CBR_PROTOCOL_SOURCES})
+
 #binaries
-ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES} ${CBR_PROTOCOL_SOURCES})
+ADD_EXECUTABLE(cbr ${CBR_SOURCES} ${CBR_MOC_SOURCES})
 TARGET_LINK_LIBRARIES(cbr
+  cbr-core
         ${GSL_CONFIG_LIBS}
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
@@ -354,6 +350,7 @@ TARGET_LINK_LIBRARIES(cbr
 
 ADD_EXECUTABLE(oh ${OH_SOURCES} ${CBR_PROTOCOL_SOURCES})
 TARGET_LINK_LIBRARIES(oh
+  cbr-core
         ${Boost_THREAD_LIBRARY}
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}

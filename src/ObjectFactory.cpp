@@ -269,8 +269,12 @@ SolidAngle ObjectFactory::queryAngle(const UUID& id) {
     return mInputs[id]->queryAngle;
 }
 
-#ifdef OH_BUILD
+bool ObjectFactory::isActive(const UUID& id) {
+    ObjectMap::iterator it = mObjects.find(id);
+    return (it != mObjects.end());
+}
 
+#ifdef OH_BUILD
 Object* ObjectFactory::object(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );
 
@@ -281,14 +285,7 @@ Object* ObjectFactory::object(const UUID& id) {
     mObjects[id] = new_obj;
     return new_obj;
 }
-#endif //OH_BUILD
 
-bool ObjectFactory::isActive(const UUID& id) {
-    ObjectMap::iterator it = mObjects.find(id);
-    return (it != mObjects.end());
-}
-
-#ifdef OH_BUILD
 void ObjectFactory::tick() {
     Time t = mContext->time;
     for(iterator it = begin(); it != end(); it++) {
