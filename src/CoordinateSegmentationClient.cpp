@@ -62,7 +62,7 @@ void memdump1(uint8* buffer, int len) {
 }
 
 String sha_1(void* data, size_t len) {
-  int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
+  static int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
   /* output sha1 hash - this will be binary data */
   unsigned char hash[ hash_len ];
   gcry_md_hash_buffer( GCRY_MD_SHA1, hash, data, len);
@@ -231,6 +231,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   boost::asio::io_service io_service;
 
+  
   tcp::resolver resolver(io_service);
 
   tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
@@ -240,7 +241,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   tcp::resolver::iterator end;
 
-  //std::cout << "Calling CSEGServer::lookup!\n";
+  
   tcp::socket socket(io_service);
   boost::system::error_code error = boost::asio::error::host_not_found;
   while (error && endpoint_iterator != end)
@@ -257,7 +258,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
                      boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
                      boost::asio::transfer_all() );
 
-  //  std::cout << "Sent over lookup request to cseg server\n";
+  
 
   uint8* dataReceived = NULL;
   uint32 bytesReceived = 0;
@@ -281,17 +282,10 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
       if (error == boost::asio::error::eof)
         break; // Connection closed cleanly by peer.
       else if (error) {
-
 	std::cout << "Error reading response from " << socket.remote_endpoint().address().to_string()
 		  <<" in lookup\n\n\n";
-        //throw boost::system::system_error(error); // Some other error.
-	//failedOnce=true;
-
       }
   }
-
-
-  ////std::cout << "Received reply from cseg server for lookup"  << "\n";
 
   LookupResponseMessage* response = (LookupResponseMessage*)dataReceived;
   assert(response->type == LOOKUP_RESPONSE);

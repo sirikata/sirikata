@@ -87,8 +87,7 @@ private:
   BoundingBox3f mIntersect1;
   BoundingBox3f mIntersect2;
 
-  WorldRegion* mTempRegionList1;
-  WorldRegion* mTempRegionList2;
+  
 
   int* mHistogram;
 

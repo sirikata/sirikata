@@ -362,7 +362,7 @@ typedef struct SegmentedRegion {
     return NULL;
   }
 
-const SegmentedRegion* lookup(const Vector3f& pos) const {
+  const SegmentedRegion* lookup(const Vector3f& pos) const {
     if (mRightChild == NULL && mLeftChild == NULL) {
       //std::cout << "Left and right child is null: boundingbox = " << mBoundingBox<<"\n";
       if (mBoundingBox.contains(pos)) {
@@ -394,8 +394,6 @@ const SegmentedRegion* lookup(const Vector3f& pos) const {
 
 
   void serverRegion(const ServerID& server, BoundingBoxList& boundingBoxList) const {
-    //std::cout << mServer << " : " << mBoundingBox << " \n"; 
-
     if (mServer == server && mRightChild==NULL && mLeftChild==NULL) {
       //std::cout << "Adding to bblist : " << mBoundingBox << "\n";
       boundingBoxList.push_back(mBoundingBox);

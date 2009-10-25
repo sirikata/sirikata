@@ -101,6 +101,8 @@ private:
     std::vector<ServerAvailability> mAvailableServers;
 
     boost::asio::io_service mIOService;  //creates an io service
+    boost::asio::io_service mLLIOService;  //creates an io service
+
     boost::shared_ptr<tcp::acceptor> mAcceptor;
     boost::shared_ptr<tcp::socket> mSocket;
 
@@ -128,6 +130,7 @@ private:
     void callLowerLevelCSEGServersForServerRegions(ServerID server_id, BoundingBoxList&);
 
     void ioServicingLoop();
+    void llIOServicingLoop();
 
     void sendToAllCSEGServers(uint8* buffer, int buflen);
 

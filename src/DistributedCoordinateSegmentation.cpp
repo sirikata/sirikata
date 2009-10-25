@@ -72,7 +72,7 @@ bool isPowerOfTwo(double n) {
 
 
 String sha1(void* data, size_t len) {
-  int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
+  static int hash_len = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
   /* output sha1 hash - this will be binary data */
   unsigned char hash[ hash_len ];
   gcry_md_hash_buffer( GCRY_MD_SHA1, hash, data, len);
@@ -197,13 +197,14 @@ DistributedCoordinateSegmentation::DistributedCoordinateSegmentation(SpaceContex
 
   Address4* addy = sidmap->lookupInternal(ctx->id());
   uint16 cseg_server_ll_port = addy->getPort()+10000;
-  mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
+  mLLTreeAcceptor = boost::shared_ptr<tcp::acceptor>(new tcp::acceptor(mLLIOService,tcp::endpoint(tcp::v4(), cseg_server_ll_port)));
 
   startAcceptingLLRequests();
 
   startAccepting();
 
   boost::thread thrd(boost::bind(&DistributedCoordinateSegmentation::ioServicingLoop, this));
+  boost::thread thrd2(boost::bind(&DistributedCoordinateSegmentation::llIOServicingLoop, this));
 }
 
 DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
@@ -212,12 +213,24 @@ DistributedCoordinateSegmentation::~DistributedCoordinateSegmentation() {
 }
 
 void DistributedCoordinateSegmentation::ioServicingLoop() {
-  while (true) {
-    mIOService.poll_one();
-  }
+  
+  mIOService.run();
+   
 }
 
+void DistributedCoordinateSegmentation::llIOServicingLoop() {
+  
+  mLLIOService.run();
+    
+
+}
+
+
 ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
+  ServerID sid;
+
+  Time start_time = Timer::now();
+
   Vector3f searchVec = pos;
   BoundingBox3f region = mTopLevelRegion.mBoundingBox;
 
@@ -248,7 +261,7 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
 
       //printf("local lookup returned %d\n", segRegion->mServer);
 
-      return segRegion->mServer;
+      sid = segRegion->mServer;
     }
 
     it =  mLowerLevelTrees.find(bbox_hash);
@@ -258,16 +271,23 @@ ServerID DistributedCoordinateSegmentation::lookup(const Vector3f& pos) {
 
       //printf("local lookup returned %d\n", segRegion->mServer);
 
-      return segRegion->mServer;
+      sid = segRegion->mServer;
     }
     else {
-      return 0;
+      sid = 0;
     }
   }
   else {
     //remote function call to the relevant server
-    return callLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox);
+    std::cout << "local_processing_time: " << (Timer::now() - start_time).toMicroseconds() << "\n";
+    sid= callLowerLevelCSEGServer(topLevelIdx, searchVec, segRegion->mBoundingBox); 
+    std::cout << "Total_time: " << (Timer::now() - start_time).toMicroseconds() << "\n";
+    fflush(stdout);
+    return sid;
   }
+
+  
+  return sid;
 }
 
 BoundingBoxList DistributedCoordinateSegmentation::serverRegion(const ServerID& server)
@@ -561,6 +581,9 @@ uint32 DistributedCoordinateSegmentation::readFromSocket(boost::shared_ptr<tcp::
       boost::array<uint8, 65536> buf;
       boost::system::error_code error;
 
+      //std::cout << "Reading from socket\n";
+      //fflush(stdout);      
+
       size_t len = socket->read_some(boost::asio::buffer(buf), error);
 
       if (dataReceived == NULL) {
@@ -600,7 +623,6 @@ void DistributedCoordinateSegmentation::accept_handler()
     GenericMessage* genericMessage = (GenericMessage*) dataReceived;    
 
     if (genericMessage->type == LOOKUP_REQUEST) {
-
       LookupRequestMessage* lookupMessage = (LookupRequestMessage*) dataReceived;
 
       LookupResponseMessage lookupResponseMessage;
@@ -668,8 +690,12 @@ void DistributedCoordinateSegmentation::accept_handler()
 }
 
 void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
+  Time start = Timer::now();
   uint8* dataReceived = NULL;
+
+  
   uint32 bytesReceived = readFromSocket(mLLTreeAcceptorSocket, &dataReceived, false);
+  
   
   // Now decode the packet from the received buffer
   uint8 packetType = dataReceived[0];
@@ -683,8 +709,6 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
     BoundingBox3f bbox; Vector3f vect;
     serialBox.deserialize(bbox);
     serialVector.deserialize(vect);
-
-    //std::cout << "received vect,bbox=" << vect << " , " << bbox << "\n";
 
     String bbox_hash = sha1(&serialBox, sizeof(serialBox));
     std::map<String, SegmentedRegion*>::iterator it=  mLowerLevelTrees.find(bbox_hash);
@@ -702,8 +726,6 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
     boost::asio::write(*mLLTreeAcceptorSocket,
 		       boost::asio::buffer((const void*)buffer, sizeof(ServerID)),
 		       boost::asio::transfer_all() );
-
-    //std::cout << "Written reply with retval=" << retval << "\n";
 
     delete buffer;
   }
@@ -748,6 +770,7 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
     delete buffer;
   }
   else if (packetType == SEGMENTATION_CHANGE) {
+    
     tcp::resolver resolver(mIOService);
 
     mWholeTreeServerRegionMap.clear();
@@ -786,6 +809,9 @@ void DistributedCoordinateSegmentation::acceptLLTreeRequestHandler() {
   }
 
   startAcceptingLLRequests();
+
+  std::cout << "LLCall:" << (Timer::now() -start).toMicroseconds() << "\n";
+  fflush(stdout);
 }
 
 void DistributedCoordinateSegmentation::startAccepting() {
@@ -794,7 +820,7 @@ void DistributedCoordinateSegmentation::startAccepting() {
 }
 
 void DistributedCoordinateSegmentation::startAcceptingLLRequests() {
-  mLLTreeAcceptorSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(mIOService));
+  mLLTreeAcceptorSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(mLLIOService));
   mLLTreeAcceptor->async_accept(*mLLTreeAcceptorSocket, boost::bind(&DistributedCoordinateSegmentation::acceptLLTreeRequestHandler,this));
 }
 
@@ -849,9 +875,7 @@ void DistributedCoordinateSegmentation::generateHierarchicalTrees(SegmentedRegio
   generateHierarchicalTrees(region->mRightChild, depth+1, numLLTreesSoFar);
 }
 
-boost::shared_ptr<tcp::socket> DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerID server_id) {
-  
-  
+boost::shared_ptr<tcp::socket> DistributedCoordinateSegmentation::getSocketToCSEGServer(ServerID server_id) {    
   tcp::resolver resolver(mIOService);
 
   Address4* addy = mSidMap->lookupInternal(server_id);
@@ -891,12 +915,12 @@ boost::shared_ptr<tcp::socket> DistributedCoordinateSegmentation::getSocketToCSE
 ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID server_id,
 								      const Vector3f& searchVec,
 								      const BoundingBox3f& boundingBox)
-{
+{  
   boost::shared_ptr<tcp::socket> socket = getSocketToCSEGServer(server_id);
   if (socket.get() == 0) {
     assert(false);
     return 0;
-  }  
+  }    
 
   SerializedVector serialVector;
   serialVector.serialize(searchVec);
@@ -910,20 +934,23 @@ ServerID DistributedCoordinateSegmentation::callLowerLevelCSEGServer( ServerID s
   memcpy(buffer+1, &serialVector , sizeof(serialVector));
   memcpy(buffer+1+sizeof(serialVector), &serialBox, sizeof(serialBox));
 
+  
+  //std::cout << "Sending to server id: " << server_id << "\n";
+
   boost::asio::write(*socket,
                      boost::asio::buffer((const void*)buffer,dataSize),
                      boost::asio::transfer_all() );
-
+  
   uint8* dataReceived = NULL;
   uint32 bytesReceived = readFromSocket(socket, &dataReceived, true);
 
-  //std::cout << "Received reply from " << addr << "\n";
+  //std::cout << "Received reply from " << server_id << "\n";
 
   ServerID retval = *dataReceived;
 
   if (dataReceived != NULL) {
     free(dataReceived);
-  }
+  }  
 
   return retval;
 }
@@ -1005,7 +1032,7 @@ void DistributedCoordinateSegmentation::sendToAllCSEGServers(uint8* buffer, int 
   }
 }
 
-void DistributedCoordinateSegmentation::sendToAllSpaceServers(uint8* buffer, int buflen) {
+void DistributedCoordinateSegmentation::sendToAllSpaceServers(uint8* buffer, int buflen) { 
   tcp::resolver resolver(mIOService);
 
   for (std::vector<SegmentationChangeListener>::const_iterator it=mSpacePeers.begin(); 

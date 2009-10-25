@@ -122,7 +122,11 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
   double sum2 = 0;
 
   int  i =0;
-  int idx1=0, idx2=0;
+  int idx1=0, idx2=0; 
+  
+  WorldRegion* tempRegionList1 = new WorldRegion[listLength];
+  WorldRegion* tempRegionList2 = new WorldRegion[listLength];
+
   for (i=0; i<  listLength; i++) {
     if (regionList[i].density == 0) continue;
 
@@ -130,13 +134,13 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
 
       mIntersect1 = intersect(bspTree1->mBoundingBox, regionList[i].mBoundingBox);
       sum1 += regionList[i].density * mIntersect1.across().x * mIntersect1.across().y;
-      mTempRegionList1[idx1++] = regionList[i];
+      tempRegionList1[idx1++] = regionList[i];
     }
     if (intersects(bspTree2->mBoundingBox, regionList[i].mBoundingBox) ) {
 
       mIntersect2 = intersect(bspTree2->mBoundingBox, regionList[i].mBoundingBox);
       sum2 += regionList[i].density * mIntersect2.across().x * mIntersect2.across().y;
-      mTempRegionList2[idx2++] = regionList[i];
+      tempRegionList2[idx2++] = regionList[i];
     }
 
     if (sum1 > mMaxPeopleInLeaf) {
@@ -151,11 +155,14 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
   WorldRegion* regionList2 = new WorldRegion[idx2];
 
   for (i=0; i<idx1; i++) {
-    regionList1[i] = mTempRegionList1[i];
+    regionList1[i] = tempRegionList1[i];
   }
   for (i=0; i<idx2; i++) {
-    regionList2[i] = mTempRegionList2[i];
+    regionList2[i] = tempRegionList2[i];
   }
+
+  delete tempRegionList1;
+  delete tempRegionList2;
 
   if (split1 || split2) {
     bspTree.mLeftChild = bspTree1;
@@ -170,6 +177,8 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& bspTree, WorldReg
     ++mTotalLeaves;
     mHistogram[depth]++;
   }
+
+  
 
   delete regionList1;
   delete regionList2;
@@ -192,6 +201,7 @@ WorldPopulationBSPTree::WorldPopulationBSPTree()
 
 void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
   mBiggestDepth = 0;
+  mTotalLeaves = 0;
 
   double i =0, sum=0, largestdensity = 0;
   int j=0, k=0;
@@ -248,10 +258,7 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
 
   regionVector.clear();
 
-  delete regionList;
-
-  mTempRegionList1 = new WorldRegion[mNumRegions];
-  mTempRegionList2 = new WorldRegion[mNumRegions];
+  delete regionList;  
 
   topLevelRegion.mBoundingBox = BoundingBox3f(
 				    Vector3f(0,0,0),
@@ -265,9 +272,10 @@ void WorldPopulationBSPTree::constructBSPTree(SegmentedRegion& topLevelRegion) {
   }
 
   delete regionList2;
-  delete mTempRegionList1;
-  delete mTempRegionList2;
-  delete mHistogram;  
+  
+  delete mHistogram; 
+
+  fflush(stdout);
 }
 
 }
