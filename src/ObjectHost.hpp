@@ -36,6 +36,7 @@
 #include "ObjectHostContext.hpp"
 #include "TimeProfiler.hpp"
 #include "sirikata/network/IOService.hpp"
+#include "QueueRouterElement.hpp"
 
 namespace CBR {
 
@@ -148,7 +149,7 @@ private:
 
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
 
-        std::queue<std::string*> queue;
+        QueueRouterElement<std::string> queue;
         bool connecting;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;

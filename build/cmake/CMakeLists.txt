@@ -221,6 +221,7 @@ INCLUDE_DIRECTORIES(BEFORE
 SET(CBR_CORE_SOURCES
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
+  ${CBR_SOURCE_DIR}/RouterElement.cpp
   ${CBR_SOURCE_DIR}/OSegTestMotionPath.cpp
   ${CBR_SOURCE_DIR}/RandomMotionPath.cpp
   ${CBR_SOURCE_DIR}/QuakeMotionPath.cpp
