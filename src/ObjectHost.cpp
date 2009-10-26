@@ -53,10 +53,13 @@ namespace CBR {
 
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid)
  : server(sid),
-   queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1))
+   queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1)),
+   rateLimiter(1024*1024)
 {
     socket=Sirikata::Network::StreamFactory::getSingleton().getDefaultConstructor()(&ios);
     connecting = false;
+
+    queue.connect(0, &rateLimiter, 0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -562,7 +565,7 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 void ObjectHost::startWriting(SpaceNodeConnection* conn) {
     // Push stuff onto the stream, if we're not still in the middle of an async_write
     std::string* msg = NULL;
-    while( (msg = conn->queue.pull()) != NULL) {
+    while( (msg = conn->rateLimiter.pull()) != NULL) {
         bool success = conn->socket->send(Sirikata::MemoryReference(&((*msg)[0]), msg->size()),Sirikata::Network::ReliableOrdered);
         // FIXME do we need some way to check whether we'll be able to send it first?
         delete msg;

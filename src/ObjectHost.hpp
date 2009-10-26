@@ -37,6 +37,7 @@
 #include "TimeProfiler.hpp"
 #include "sirikata/network/IOService.hpp"
 #include "QueueRouterElement.hpp"
+#include "BandwidthShaper.hpp"
 
 namespace CBR {
 
@@ -150,6 +151,7 @@ private:
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
 
         QueueRouterElement<std::string> queue;
+        BandwidthShaper<std::string> rateLimiter;
         bool connecting;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;

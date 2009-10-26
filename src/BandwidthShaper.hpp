@@ -1,5 +1,5 @@
 /*  cbr
- *  QueueRouterElement.hpp
+ *  BandwidthShaper.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,55 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_QUEUE_ROUTER_ELEMENT_
-#define _CBR_QUEUE_ROUTER_ELEMENT_
+#ifndef _CBR_BANDWIDTH_SHAPER_
+#define _CBR_BANDWIDTH_SHAPER_
 
 #include "Utility.hpp"
 #include "RouterElement.hpp"
 
 namespace CBR {
 
-/** A queue router element which buffers packets. The size of the queue and
- *  a method for determining the size of a packet is provided.  If the maximum
- *  size would be violated, drops the last item in the queue.  Only has a single
- *  input and output.
+/** A bandwidth shaper router element which limits packet flow to a specified
+ *  maximum bandwidth.
  */
 template<typename PacketType>
-class QueueRouterElement : public UpstreamElementFixed<PacketType, 1>, public DownstreamElementFixed<PacketType, 1> {
+class BandwidthShaper : public UpstreamElementFixed<PacketType, 1>, public DownstreamElementFixed<PacketType, 1> {
 public:
-    typedef std::tr1::function<uint32(PacketType*)> SizeFunctor;
-
-    QueueRouterElement(uint32 max_size, SizeFunctor sizefunc)
-     : mSizeFunctor(sizefunc),
-       mMaxSize(max_size),
-       mSize(0)
+    BandwidthShaper(uint32 rate)
+     : mRate(rate),
+       mRemainder(0),
+       mLastEvalTime(Timer::now()),
+       mLastEndTime(mLastEvalTime)
     {
     }
 
-    ~QueueRouterElement() {
-        PacketType* pkt = NULL;
-        while( (pkt = pull()) != NULL)
-            delete pkt;
-    }
-
-    void push(PacketType* pkt) {
-        push(0, pkt);
-    }
     virtual void push(uint32 port, PacketType* pkt) {
-        assert(pkt != NULL);
-        assert(port == 0);
-
-        uint32 sz = mSizeFunctor(pkt);
-        uint32 new_size = mSize + sz;
-        if (new_size > mMaxSize) {
-            // drop
-            delete pkt;
-            return;
-        }
-
-        // else store
-        mSize = new_size;
-        mPackets.push(pkt);
+        assert(false);
     }
 
     PacketType* pull() {
@@ -87,24 +62,43 @@ public:
     virtual PacketType* pull(uint32 port) {
         assert(port == 0);
 
-        if (mPackets.empty())
+        // Update current budget
+        Time curtime = Timer::now();
+        Duration since_last = curtime - mLastEvalTime;
+        mLastEvalTime = curtime;
+        mRemainder = since_last.toSeconds() * mRate + mRemainder;
+
+        // If we're still running a deficit, bail out
+        if (mRemainder <= 0)
             return NULL;
 
-        PacketType* pkt = mPackets.front();
-        mPackets.pop();
-        uint32 sz = mSizeFunctor(pkt);
-        mSize -= sz;
+        // Otherwise, try to pull
+        PacketType* pkt = this->input(0).pull();
+
+        // If upstream has nothing for us, bail out, dropping our budget
+        if (pkt == NULL) {
+            mRemainder = 0;
+            mLastEndTime = curtime;
+            return NULL;
+        }
+
+        // Otherwise, we're golden and we just need to do accounting
+        uint32 pkt_size = pkt->size();
+        Duration duration = Duration::seconds((float)pkt_size / (float)mRate);
+        Time start_time = mLastEndTime;
+        Time end_time = mLastEndTime + duration;
+        mRemainder -= pkt_size;
+        mLastEndTime = end_time;
         return pkt;
     }
 
 private:
-    typedef std::queue<PacketType*> PacketQueue;
-    PacketQueue mPackets;
-    SizeFunctor mSizeFunctor;
-    uint32 mMaxSize;
-    uint32 mSize;
-}; // class QueueRouterElement
+    uint32 mRate; // rate in bytes / second
+    int32 mRemainder; // remainder bytes left from last round
+    Time mLastEvalTime; // last time we evaluated the real time
+    Time mLastEndTime; // packet send end time
+}; // class BandwidthShaper
 
 } // namespace CBR
 
-#endif //_CBR_QUEUE_ROUTER_ELEMENT_
+#endif //_CBR_BANDWIDTH_SHAPER_

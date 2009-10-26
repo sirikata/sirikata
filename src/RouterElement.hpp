@@ -95,12 +95,9 @@ public:
      *  \param outport the output port on the providing element to connect to
      *  \returns true if the connection was successful, false otherwise
      */
-    virtual bool connect(uint32 inport, InputElement* elmt, uint32 outport) {
+    virtual bool connectInput(uint32 inport, InputElement* elmt, uint32 outport) {
         InputPort& i = input(inport);
-        if (i.element != elmt || i.port != outport) {
-            i.set(elmt, outport);
-            elmt->connect(outport, this, inport);
-        }
+        i.set(elmt, outport);
         return true;
     }
 
@@ -129,7 +126,7 @@ protected:
 
         PacketType* pull() {
             assert(element != NULL);
-            element->pull(port);
+            return element->pull(port);
         }
 
         InputElement* element;
@@ -201,10 +198,8 @@ public:
      */
     virtual bool connect(uint32 outport, OutputElement* elmt, uint32 inport) {
         OutputPort& o = output(outport);
-        if (o.element != elmt || o.port != inport) {
-            o.set(elmt, inport);
-            elmt->connect(inport, this, outport);
-        }
+        o.set(elmt, inport);
+        elmt->connectInput(inport, this, outport);
         return true;
     }
 
