@@ -71,9 +71,6 @@ int main(int argc, char** argv) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
-    float time_dilation = GetOption("time-dilation")->as<float>();
-    float inv_time_dilation = 1.f / time_dilation;
-
     // Get the starting time
     String start_time_str = GetOption("wait-until")->as<String>();
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
@@ -82,12 +79,16 @@ int main(int argc, char** argv) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-    ObjectFactory* obj_factory = new ObjectFactory(region, duration);
+    Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time);
 
-    Time init_oh_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
-    ObjectHost* obj_host = new ObjectHost(oh_id, obj_factory, gTrace, server_id_map, start_time, init_oh_ctx_time);
+    IOService* ios = IOServiceFactory::makeIOService();
+    IOStrand* mainStrand = ios->createStrand();
 
-    obj_factory->initialize(obj_host->context());
+    ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, gTrace, start_time, init_oh_ctx_time, duration);
+
+    ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
+
+    ObjectHost* obj_host = new ObjectHost(ctx, obj_factory, gTrace, server_id_map);
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
@@ -99,33 +100,17 @@ int main(int argc, char** argv) {
         }
     }
 
-    TimeProfiler whole_profiler("Whole Main Loop");
-    whole_profiler.addStage("Loop");
+    //TimeProfiler whole_profiler("Whole Main Loop");
+    //whole_profiler.addStage("Loop");
 
     ///////////Go go go!! start of simulation/////////////////////
-
-    Time tbegin = Time::null();
-    Time tend = tbegin + duration;
-
-    {
-        while( true )
-        {
-            whole_profiler.startIteration();
-
-            Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
-            if (elapsed > duration)
-                break;
-
-            Time curt = tbegin + elapsed;
-
-            obj_host->tick(curt);
-
-            whole_profiler.finishedStage();
-        }
-    }
+    ctx->add(ctx);
+    ctx->add(obj_host);
+    ctx->add(obj_factory);
+    ctx->ioService->run();
 
     if (GetOption(PROFILE)->as<bool>()) {
-        whole_profiler.report();
+        //whole_profiler.report();
     }
 
     gTrace->prepareShutdown();
@@ -133,10 +118,14 @@ int main(int argc, char** argv) {
     delete server_id_map;
     delete obj_factory;
     delete obj_host;
+    delete ctx;
 
     gTrace->shutdown();
     delete gTrace;
     gTrace = NULL;
+
+    delete mainStrand;
+    IOServiceFactory::destroyIOService(ios);
 
     sync.stop();
 

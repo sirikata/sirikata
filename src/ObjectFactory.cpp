@@ -63,10 +63,12 @@ static UUID packUUID(const uint64 packid) {
     return id;
 }
 
-ObjectFactory::ObjectFactory(const BoundingBox3f& region, const Duration& duration)
- : mContext(NULL),
+ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration)
+ : PollingService(ctx->mainStrand),
+   mContext(ctx),
    mLocalIDSource(0)
 {
+    mContext->objectFactory = this;
     // Note: we do random second in order make sure they get later connect times
     generatePackObjects(region, duration);
     generateRandomObjects(region, duration);
@@ -225,10 +227,6 @@ void ObjectFactory::setConnectTimes() {
     }
 }
 
-void ObjectFactory::initialize(const ObjectHostContext* ctx) {
-    mContext = ctx;
-}
-
 ObjectFactory::iterator ObjectFactory::begin() {
     return mObjectIDs.begin();
 }
@@ -285,8 +283,10 @@ Object* ObjectFactory::object(const UUID& id) {
     mObjects[id] = new_obj;
     return new_obj;
 }
+#endif //OH_BUILD
 
-void ObjectFactory::tick() {
+void ObjectFactory::poll() {
+#ifdef OH_BUILD
     Time t = mContext->time;
     for(iterator it = begin(); it != end(); it++) {
         // Active objects receive a tick
@@ -301,8 +301,8 @@ void ObjectFactory::tick() {
             obj->connect();
         }
     }
-}
 #endif //OH_BUILD
+}
 
 void ObjectFactory::notifyDestroyed(const UUID& id) {
     assert( mObjectIDs.find(id) != mObjectIDs.end() );

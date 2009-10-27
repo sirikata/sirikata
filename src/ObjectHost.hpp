@@ -35,23 +35,22 @@
 
 #include "ObjectHostContext.hpp"
 #include "TimeProfiler.hpp"
-#include "sirikata/network/IOService.hpp"
 #include "QueueRouterElement.hpp"
 #include "BandwidthShaper.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
 class Object;
 class ServerIDMap;
 
-class ObjectHost {
+class ObjectHost : public PollingService {
 public:
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(ServerID)> ConnectedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
-    ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& epoch, const Time& curt);
-    ~ObjectHost();
+    ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap);
 
     const ObjectHostContext* context() const;
 
@@ -63,7 +62,7 @@ public:
     void sendTestMessage(const Time&t, float idealDistance);
     void ping(const Object *src, const UUID&dest, double distance=-0);
     void randomPing(const Time&t);
-    void tick(const Time& t);
+
     Object* randomObject();
     Object* randomObject(ServerID whichServer);
     Object * roundRobinObject(ServerID whichServer);
@@ -71,6 +70,8 @@ public:
 private:
     struct SpaceNodeConnection;
 
+    /** Work for each iteration of PollingService. */
+    virtual void poll();
 
     // Utility method to lookup the ServerID an object is connected to
     ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
@@ -137,12 +138,11 @@ private:
 
     ObjectHostContext* mContext;
     ServerIDMap* mServerIDMap;
-
-    Sirikata::Network::IOService *mIOService;
+    Duration mSimDuration;
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid);
+        SpaceNodeConnection(IOService& ios, ServerID sid);
         ~SpaceNodeConnection();
 
         ServerID server;
@@ -183,9 +183,6 @@ private:
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
     uint64 mPingId;
-
-    TimeProfiler mProfiler;
-
 }; // class ObjectHost
 
 } // namespace CBR

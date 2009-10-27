@@ -47,6 +47,10 @@
 #include <sirikata/util/AtomicTypes.hpp>
 #include <sirikata/util/ThreadSafeQueue.hpp>
 
+#include <sirikata/network/IOService.hpp>
+#include <sirikata/network/IOServiceFactory.hpp>
+#include <sirikata/network/IOStrand.hpp>
+
 namespace CBR {
 
 typedef Sirikata::int8 int8;
@@ -92,6 +96,10 @@ typedef Sirikata::InitializeClassOptions InitializeOptions;
 
 typedef Sirikata::Time Time;
 typedef Sirikata::Task::DeltaTime Duration;
+
+typedef Sirikata::Network::IOService IOService;
+typedef Sirikata::Network::IOServiceFactory IOServiceFactory;
+typedef Sirikata::Network::IOStrand IOStrand;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */
 

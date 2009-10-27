@@ -179,7 +179,11 @@ void *main_loop(void *) {
 
     Forwarder* forwarder = new Forwarder(space_context);
 
-    ObjectFactory* obj_factory = new ObjectFactory(region, duration);
+    // FIXME we shouldn't need to instantiate these for space, only needed for analysis
+    IOService* ios = IOServiceFactory::makeIOService();
+    IOStrand* mainStrand = ios->createStrand();
+    ObjectHostContext* oh_ctx = new ObjectHostContext(0, ios, mainStrand, NULL, Time::null(), Time::null(), duration);
+    ObjectFactory* obj_factory = new ObjectFactory(oh_ctx, region, duration);
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();

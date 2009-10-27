@@ -34,8 +34,6 @@
 #include "Statistics.hpp"
 #include "Object.hpp"
 #include "ObjectFactory.hpp"
-#include "sirikata/network/IOService.hpp"
-#include "sirikata/network/IOServiceFactory.hpp"
 #include "sirikata/network/StreamFactory.hpp"
 #include "sirikata/network/Stream.hpp"
 #include "sirikata/util/PluginManager.hpp"
@@ -51,7 +49,7 @@ using namespace Sirikata::Network;
 
 namespace CBR {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, ServerID sid)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(IOService& ios, ServerID sid)
  : server(sid),
    queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1)),
    rateLimiter(1024*1024)
@@ -83,28 +81,14 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
 }
 
 
-ObjectHost::ObjectHost(ObjectHostID _id, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap, const Time& epoch, const Time& curt)
-    : mContext( new ObjectHostContext(_id, epoch, curt) ),
-     mServerIDMap(sidmap),
-     mIOService(Sirikata::Network::IOServiceFactory::makeIOService()),
-     mProfiler("Object Host Loop")
+ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap)
+ : PollingService(ctx->mainStrand),
+   mContext( ctx ),
+   mServerIDMap(sidmap)
 {
     mLastRRObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
-    mContext->objectFactory = obj_factory;
-    mContext->trace = trace;
-
-    mProfiler.addStage("Object Factory Tick");
-    mProfiler.addStage("Start Connections Writing");
-    mProfiler.addStage("IOService");
-}
-
-ObjectHost::~ObjectHost() {
-    if (GetOption(PROFILE)->as<bool>())
-        mProfiler.report();
-    Sirikata::Network::IOServiceFactory::destroyIOService(mIOService);
-    delete mContext;
 }
 
 const ObjectHostContext* ObjectHost::context() const {
@@ -340,16 +324,11 @@ void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
     if (!destObject) return;
     ping(corner->object,destObject->object->uuid(),bestDistance);
 }
-void ObjectHost::tick(const Time& t) {
-    mProfiler.startIteration();
 
-    mContext->lastTime = mContext->time;
-    mContext->time = t;
-
-    mContext->objectFactory->tick(); mProfiler.finishedStage();
+void ObjectHost::poll() {
     //sendTestMessage(t,400.);
     //if (rand()<(RAND_MAX/100.))
-        randomPing(t);
+        randomPing(mContext->time);
 /*
     randomPing(t);
     randomPing(t);
@@ -370,13 +349,6 @@ floods the console with too much noise
         SpaceNodeConnection* conn = it->second;
         startWriting(conn);
     }
-    mProfiler.finishedStage();
-
-    // Service the IOService.
-    // This will allow both the readers and writers to make progress.
-    mIOService->poll(); mProfiler.finishedStage();
-    //if (mOutgoingQueue.size() > 1000)
-    //    SILOG(oh,warn,"[OH] Warning: outgoing queue size > 1000: " << mOutgoingQueue.size());
 }
 
 
@@ -421,7 +393,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
 
-    SpaceNodeConnection* conn = new SpaceNodeConnection(*mIOService, server);
+    SpaceNodeConnection* conn = new SpaceNodeConnection(*(mContext->ioService), server);
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 

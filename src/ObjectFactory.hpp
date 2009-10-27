@@ -31,6 +31,7 @@
  */
 
 #include "Utility.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 class MotionPath;
@@ -43,7 +44,7 @@ class ObjectHostContext;
  *  system.  Second, when requested, it should generate an Object for performing
  *  full simulation of the object on the local server.
  */
-class ObjectFactory {
+class ObjectFactory : public PollingService {
     typedef std::set<UUID> ObjectIDSet;
     struct ObjectInputs {
         uint32 localID;
@@ -60,10 +61,8 @@ public:
     typedef ObjectIDSet::iterator iterator;
     typedef ObjectIDSet::const_iterator const_iterator;
 
-    ObjectFactory(const BoundingBox3f& region, const Duration& duration);
+    ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region, const Duration& duration);
     ~ObjectFactory();
-
-    void initialize(const ObjectHostContext* ctx);
 
     iterator begin();
     const_iterator begin() const;
@@ -76,10 +75,11 @@ public:
 
 #ifdef OH_BUILD // These should only ever be used by the object host
     Object* object(const UUID& id);
-    void tick();
 #endif //OH_BUILD
 
 private:
+    virtual void poll();
+
     void generateRandomObjects(const BoundingBox3f& region, const Duration& duration);
     void generatePackObjects(const BoundingBox3f& region, const Duration& duration);
     // Generates connection initiation times for all objects *after* they have been created
@@ -94,7 +94,7 @@ private:
     friend class Object;
     void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
 
-    const ObjectHostContext* mContext;
+    ObjectHostContext* mContext;
     uint32 mLocalIDSource;
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;

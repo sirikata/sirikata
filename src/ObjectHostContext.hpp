@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "Message.hpp"
 #include "Timer.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
@@ -45,19 +46,22 @@ class Trace;
 
 typedef uint64 ObjectHostID;
 
-class ObjectHostContext {
+class ObjectHostContext : public PollingService {
 public:
-    ObjectHostContext(ObjectHostID _id, const Time& epoch, const Time& curtime)
-     : id(_id),
+    ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Time& curtime, const Duration& simlen)
+     : PollingService(strand),
+       id(_id),
+       ioService(ios),
+       mainStrand(strand),
        objectHost(NULL),
        objectFactory(NULL),
        lastTime(curtime),
        time(curtime),
-       trace(NULL),
-       mEpoch(epoch)
+       trace(_trace),
+       mEpoch(epoch),
+       mSimDuration(simlen)
     {
     }
-
 
     Time epoch() const {
         return mEpoch.read();
@@ -76,15 +80,36 @@ public:
         return simTime( Timer::now() );
     }
 
+    void add(PollingService* ps) {
+        mPollingServices.push_back(ps);
+        ps->start();
+    }
 
     ObjectHostID id;
+    IOService* ioService;
+    IOStrand* mainStrand;
     ObjectHost* objectHost;
     ObjectFactory* objectFactory;
     Time lastTime;
     Time time;
     Trace* trace;
 private:
+    virtual void poll() {
+        Duration elapsed = Timer::now() - epoch();
+
+        if (elapsed > mSimDuration) {
+            this->stop();
+            for(std::vector<PollingService*>::iterator it = mPollingServices.begin(); it != mPollingServices.end(); it++)
+                (*it)->stop();
+        }
+
+        lastTime = time;
+        time = Time::null() + elapsed;
+    }
+
     Sirikata::AtomicValue<Time> mEpoch;
+    Duration mSimDuration;
+    std::vector<PollingService*> mPollingServices;
 }; // class ObjectHostContext
 
 } // namespace CBR
