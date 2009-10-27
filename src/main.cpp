@@ -159,10 +159,6 @@ void *main_loop(void *) {
 
     Duration duration = GetOption("duration")->as<Duration>();
 
-    float time_dilation = GetOption("time-dilation")->as<float>();
-    float inv_time_dilation = 1.f / time_dilation;
-
-
     srand( GetOption("rand-seed")->as<uint32>() );
 
 
@@ -174,7 +170,7 @@ void *main_loop(void *) {
 
     ServerID server_id = GetOption("id")->as<ServerID>();
 
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time) * inv_time_dilation;
+    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
     SpaceContext* space_context = new SpaceContext(server_id, start_time, init_space_ctx_time, gTrace);
 
     Forwarder* forwarder = new Forwarder(space_context);
@@ -637,7 +633,7 @@ void *main_loop(void *) {
       srand(time(NULL));
 
       while( true ) {
-        Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
+        Duration elapsed = Timer::now() - start_time;
 
         space_context->tick(tbegin + elapsed);
         cseg->service();
@@ -662,7 +658,7 @@ void *main_loop(void *) {
     profiler.addStage("Server Service");
 
     while( true ) {
-        Duration elapsed = (Timer::now() - start_time) * inv_time_dilation;
+        Duration elapsed = Timer::now() - start_time;
         if (elapsed > duration)
             break;
 
