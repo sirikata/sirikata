@@ -50,11 +50,15 @@ private:
     static void startAccept(DataPtr& data);
     static void handleAccept(DataPtr& data, const boost::system::error_code& error);
 public:
-    Data(IOService& io)
+    Data(IOService& io, 
+         unsigned char maxSimultaneousSockets,
+         unsigned int sendBufferSize)
      : ios(io),
        acceptor(NULL),
        socket(NULL),
-       cb(0)
+       cb(0),
+       mMaxSimultaneousSockets(maxSimultaneousSockets),
+       mSendBufferSize(sendBufferSize)
     {
         strand = ios.createStrand();
     }
@@ -78,6 +82,9 @@ public:
     TCPListener* acceptor;
     TCPSocket* socket;
     Stream::SubstreamCallback cb;
+    unsigned char mMaxSimultaneousSockets;
+    unsigned char mSendBufferSize;
+
 };
 
 // All the real work happens here in these methods
@@ -107,16 +114,23 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
     data->socket = NULL;
 
     // Hand off the new connection for sessions initiation
-    ASIOStreamBuilder::beginNewStream(newSocket, &(data->ios), data->cb);
+    ASIOStreamBuilder::beginNewStream(newSocket, &(data->ios), data->cb, data->mMaxSimultaneousSockets, data->mSendBufferSize);
 
     // Continue listening
     startAccept(data);
 }
 
 
-TCPStreamListener::TCPStreamListener(IOService& io)
- : mData(new Data(io))
+TCPStreamListener::TCPStreamListener(IOService& io, OptionSet*options)
 {
+    OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
+    OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
+    assert(maxSimultSockets&&sendBufferSize);
+    mMaxSimultaneousSockets=(unsigned char)maxSimultSockets->as<unsigned int>();
+    assert(mMaxSimultaneousSockets);
+    mSendBufferSize=sendBufferSize->as<unsigned int>();
+    DataPtr data (new Data(io,mMaxSimultaneousSockets,mSendBufferSize));
+    mData=data;
 }
 
 TCPStreamListener::~TCPStreamListener() {

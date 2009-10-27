@@ -118,6 +118,12 @@ private:
     };
     ///incremented while sending: or'd in SendStatusClosing when close function triggered so no further packets will be sent using old ID.
     std::tr1::shared_ptr<AtomicValue<int> >mSendStatus;
+    unsigned char mNumSimultaneousSockets;
+    unsigned int mSendBufferSize;
+    ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone() called internally from factory
+    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize);
+
+
 public:
     ///Atomically sets the sendStatus for this socket to closed. FIXME: should use atomic compare and swap for |= instead of += right now only supports 2 non-io threads closing at once
     static bool closeSendStatus(AtomicValue<int>&vSendStatus);
@@ -144,7 +150,7 @@ public:
         }
     };
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone()
-    TCPStream(IOService&);
+    TCPStream(IOService&, OptionSet*);
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
     TCPStream(const MultiplexedSocketPtr &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
@@ -187,8 +193,8 @@ public:
     virtual void connect(
         const Address& addy);
 
-    static TCPStream* construct(Network::IOService*io) {
-        return new TCPStream(*io);
+    static TCPStream* construct(Network::IOService*io, OptionSet*options) {
+        return new TCPStream(*io,options);
     }
     ///Creates a new substream on this connection
     virtual Stream* clone(const SubstreamCallback&cb);

@@ -42,8 +42,8 @@
 
 #include <boost/thread.hpp>
 
-#define ASIO_SEND_BUFFER_SIZE 1440
-#define MAX_ASIO_ENQUEUED_SEND_SIZE 0
+#define ASIO_SEND_BUFFER_SIZE 1500
+
 
 namespace Sirikata {
 namespace Network {
@@ -233,13 +233,13 @@ Stream::StreamID MultiplexedSocket::getNewID() {
 MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback)
+MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size)
     :ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
     mSocketConnectionPhase=PRECONNECTION;
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
-        mSockets.push_back(ASIOSocketWrapper(sockets[i],MAX_ASIO_ENQUEUED_SEND_SIZE,ASIO_SEND_BUFFER_SIZE));
+        mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,ASIO_SEND_BUFFER_SIZE));
     }
 }
 void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID) {
@@ -406,18 +406,18 @@ void MultiplexedSocket::hostDisconnectedCallback(unsigned int whichSocket, const
 }
 
 
-void MultiplexedSocket::prepareConnect(unsigned int numSockets) {
+void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enqueued_send_size) {
     mSocketConnectionPhase=PRECONNECTION;
     unsigned int oldSize=(unsigned int)mSockets.size();
     if (numSockets>mSockets.size()) {
         for (unsigned int i=oldSize;i<numSockets;++i) {
-            mSockets.push_back(ASIOSocketWrapper(MAX_ASIO_ENQUEUED_SEND_SIZE,ASIO_SEND_BUFFER_SIZE));
+            mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, ASIO_SEND_BUFFER_SIZE));
             mSockets.back().createSocket(getASIOService());
         }
     }
 }
-void MultiplexedSocket::connect(const Address&address, unsigned int numSockets) {
-    prepareConnect(numSockets);
+void MultiplexedSocket::connect(const Address&address, unsigned int numSockets, size_t max_enqueued_send_size) {
+    prepareConnect(numSockets,max_enqueued_send_size);
     ASIOConnectAndHandshakePtr
         headerCheck(new ASIOConnectAndHandshake(getSharedPtr(),
                                                 UUID::random()));

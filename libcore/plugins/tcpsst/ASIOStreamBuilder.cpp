@@ -60,6 +60,8 @@ void buildStream(TcpSstHeaderArray *buffer,
                  TCPSocket *socket,
                  IOService *ioService,
                  Stream::SubstreamCallback callback,
+                 unsigned char maxSimultaneousSockets,
+                 unsigned int sendBufferSize,
                  const boost::system::error_code &error,
                  std::size_t bytes_transferred) {
     if (error || std::memcmp(buffer->begin(),TCPStream::STRING_PREFIX(),TCPStream::STRING_PREFIX_LENGTH)!=0) {
@@ -68,7 +70,7 @@ void buildStream(TcpSstHeaderArray *buffer,
         UUID context=UUID(buffer->begin()+(TCPStream::TcpSstHeaderSize-16),16);
         IncompleteStreamMap::iterator where=sIncompleteStreams.find(context);
         unsigned int numConnections=(((*buffer)[TCPStream::STRING_PREFIX_LENGTH]-'0')%10)*10+(((*buffer)[TCPStream::STRING_PREFIX_LENGTH+1]-'0')%10);
-        if (numConnections>99) numConnections=99;//FIXME: some option in options
+        if (numConnections>maxSimultaneousSockets) numConnections=maxSimultaneousSockets;
         if (where==sIncompleteStreams.end()){
             sIncompleteStreams[context].mNumSockets=numConnections;
             where=sIncompleteStreams.find(context);
@@ -81,7 +83,7 @@ void buildStream(TcpSstHeaderArray *buffer,
             where->second.mSockets.push_back(socket);
             if (numConnections==(unsigned int)where->second.mSockets.size()) {
                 MultiplexedSocketPtr shared_socket(
-                    MultiplexedSocket::construct<MultiplexedSocket>(ioService,context,where->second.mSockets,callback));
+                    MultiplexedSocket::construct<MultiplexedSocket>(ioService,context,where->second.mSockets,callback,sendBufferSize));
                 MultiplexedSocket::sendAllProtocolHeaders(shared_socket,UUID::random());
                 sIncompleteStreams.erase(where);
                 Stream::StreamID newID=Stream::StreamID(1);
@@ -101,13 +103,13 @@ void buildStream(TcpSstHeaderArray *buffer,
     delete buffer;
 }
 
-void beginNewStream(TCPSocket* socket, IOService* ioService, const Stream::SubstreamCallback& cb) {
+void beginNewStream(TCPSocket* socket, IOService* ioService, const Stream::SubstreamCallback& cb, unsigned char maxSimultaneousSockets, unsigned int sendBufferSize) {
     TcpSstHeaderArray *buffer = new TcpSstHeaderArray;
 
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),TCPStream::TcpSstHeaderSize),
                             boost::asio::transfer_at_least(TCPStream::TcpSstHeaderSize),
-                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,_1,_2));
+                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,ioService,cb,maxSimultaneousSockets,sendBufferSize,_1,_2));
 }
 
 } // namespace ASIOStreamBuilder

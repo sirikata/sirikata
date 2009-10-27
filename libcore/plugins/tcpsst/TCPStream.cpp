@@ -41,12 +41,15 @@
 #include "TCPSetCallbacks.hpp"
 #include "network/IOServiceFactory.hpp"
 #include "network/IOService.hpp"
+#include "options/Options.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Network {
 
 using namespace boost::asio::ip;
 TCPStream::TCPStream(const MultiplexedSocketPtr&shared_socket,const Stream::StreamID&sid):mSocket(shared_socket),mID(sid),mSendStatus(new AtomicValue<int>(0)) {
-
+    mNumSimultaneousSockets=shared_socket->numSockets();
+    assert(mNumSimultaneousSockets);
+    mSendBufferSize=shared_socket->getASIOSocketWrapper(0).getResourceMonitor().maxSize();
 }
 
 void TCPStream::readyRead() {
@@ -170,10 +173,22 @@ void TCPStream::close() {
 TCPStream::~TCPStream() {
     close();
 }
-TCPStream::TCPStream(IOService&io):mIO(&io),mSendStatus(new AtomicValue<int>(0)) {
+TCPStream::TCPStream(IOService&io,OptionSet*options):mSendStatus(new AtomicValue<int>(0)) {
+    mIO=&io;
+    OptionValue *numSimultSockets=options->referenceOption("parallel-sockets");
+    OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
+    assert(numSimultSockets&&sendBufferSize);
+    mNumSimultaneousSockets=(unsigned char)numSimultSockets->as<unsigned int>();
+    assert(mNumSimultaneousSockets);
+    mSendBufferSize=sendBufferSize->as<unsigned int>();
 }
 
-#define NUM_SIMULANEOUS_CONNECTIONS 3 //is a good number here.
+TCPStream::TCPStream(IOService&io,unsigned char numSimultSockets,unsigned int sendBufferSize):mSendStatus(new AtomicValue<int>(0)) {
+    mIO=&io;
+    mNumSimultaneousSockets=(unsigned char)numSimultSockets;
+    assert(mNumSimultaneousSockets);
+    mSendBufferSize=sendBufferSize;
+}
 
 void TCPStream::connect(const Address&addy,
                         const SubstreamCallback &substreamCallback,
@@ -187,7 +202,7 @@ void TCPStream::connect(const Address&addy,
                                                 bytesReceivedCallback,
                                                 readySendCallback,
                                                 mSendStatus));
-    mSocket->connect(addy,NUM_SIMULANEOUS_CONNECTIONS);
+    mSocket->connect(addy,mNumSimultaneousSockets,mSendBufferSize);
 }
 
 void TCPStream::prepareOutboundConnection(
@@ -202,21 +217,21 @@ void TCPStream::prepareOutboundConnection(
                                                 bytesReceivedCallback,
                                                 readySendCallback,
                                                 mSendStatus));
-    mSocket->prepareConnect(NUM_SIMULANEOUS_CONNECTIONS);
+    mSocket->prepareConnect(mNumSimultaneousSockets,mSendBufferSize);
 }
 void TCPStream::connect(const Address&addy) {
     assert(mSocket);
-    mSocket->connect(addy,0);
+    mSocket->connect(addy,0,mSendBufferSize);
 }
 
 Stream*TCPStream::factory(){
-    return new TCPStream(*mIO);
+    return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
 }
 Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
     if (!mSocket) {
         return NULL;
     }
-    TCPStream *retval=new TCPStream(*mIO);
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
     retval->mSocket=mSocket;
 
     StreamID newID=mSocket->getNewID();
@@ -232,7 +247,7 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
     if (!mSocket) {
         return NULL;
     }
-    TCPStream *retval=new TCPStream(*mIO);
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
     retval->mSocket=mSocket;
 
     StreamID newID=mSocket->getNewID();

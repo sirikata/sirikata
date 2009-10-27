@@ -167,7 +167,7 @@ public:
     ///Constructor for a connecting stream
     MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
-    MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback);
+    MultiplexedSocket(IOService*io, const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t maxSendBufferSize);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
     static void sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,const UUID&syncedUUID);
     ///erase all sockets and callbacks since the refcount is now zero;
@@ -253,14 +253,14 @@ public:
  * \param address is a protocol-agnostic string of endpoint and service ID
  * \param numSockets indicates how many TCP sockets should manage the orderlessness of this connection
  */
-    void connect(const Address&address, unsigned int numSockets);
+    void connect(const Address&address, unsigned int numSockets, size_t maxEnqueuedSendSize);
 
 /**
  *  Prepare a socket for an outbound connection.
  *  After this call messages may be queued and number of redundant connections set
  *  Additionally this socket may now be cloned
  */
-    void prepareConnect(unsigned int numSockets);
+    void prepareConnect(unsigned int numSockets, size_t maxEnqueuedSendSize);
 
     unsigned int numSockets() const {
         return mSockets.size();

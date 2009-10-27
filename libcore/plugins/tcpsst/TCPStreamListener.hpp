@@ -45,11 +45,11 @@ namespace Network {
  */
 class TCPStreamListener : public StreamListener {
 public:
-    TCPStreamListener(IOService&);
+    TCPStreamListener(IOService&, OptionSet*);
     virtual ~TCPStreamListener();
 
-    static TCPStreamListener* construct(Network::IOService*io) {
-        return new TCPStreamListener(*io);
+    static TCPStreamListener* construct(Network::IOService*io, OptionSet*options) {
+        return new TCPStreamListener(*io,options);
     }
 
     virtual bool listen(const Address&addr, const Stream::SubstreamCallback&newStreamCallback);
@@ -61,6 +61,8 @@ private:
     struct Data; // Data which may be needed in callbacks, so is stored separately in shared_ptr
     typedef std::tr1::shared_ptr<Data> DataPtr;
     DataPtr mData;
+    unsigned char mMaxSimultaneousSockets;
+    unsigned char mSendBufferSize;
 };
 
 } // namespace Network
