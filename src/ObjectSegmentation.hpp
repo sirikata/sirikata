@@ -26,17 +26,18 @@ namespace CBR
 
   protected:
     SpaceContext* mContext;
-
+      TimeProfiler::Stage* mServiceStage;
 
   public:
-        
+
     ObjectSegmentation(SpaceContext* ctx)
       : mContext(ctx)
     {
+        mServiceStage = mContext->profiler->addStage("OSeg");
     }
 
 
-    
+
     virtual ~ObjectSegmentation() {}
 
     virtual ServerID lookup(const UUID& obj_id) = 0;
@@ -47,7 +48,7 @@ namespace CBR
     virtual bool clearToMigrate(const UUID& obj_id) = 0; //
     virtual int getOSegType() = 0;
 
-    
+
   };
 }
 #endif

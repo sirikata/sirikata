@@ -37,6 +37,7 @@
 #include "Message.hpp"
 #include "Timer.hpp"
 #include "PollingService.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR {
 
@@ -58,6 +59,7 @@ public:
        lastTime(curtime),
        time(curtime),
        trace(_trace),
+       profiler( new TimeProfiler("Object Host") ),
        mEpoch(epoch),
        mSimDuration(simlen)
     {
@@ -93,6 +95,7 @@ public:
     Time lastTime;
     Time time;
     Trace* trace;
+    TimeProfiler* profiler;
 private:
     virtual void poll() {
         Duration elapsed = Timer::now() - epoch();

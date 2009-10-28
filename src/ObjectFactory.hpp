@@ -32,6 +32,7 @@
 
 #include "Utility.hpp"
 #include "PollingService.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR {
 class MotionPath;
@@ -95,6 +96,7 @@ private:
     void notifyDestroyed(const UUID& id); // called by objects when they are destroyed
 
     ObjectHostContext* mContext;
+    TimeProfiler::Stage* mProfiler;
     uint32 mLocalIDSource;
     ObjectIDSet mObjectIDs;
     ObjectInputsMap mInputs;

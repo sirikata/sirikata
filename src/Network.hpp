@@ -1,6 +1,7 @@
 #ifndef _CBR_NETWORK_HPP_
 #define _CBR_NETWORK_HPP_
 #include "Utility.hpp"
+#include "SpaceContext.hpp"
 #include "sirikata/util/Platform.hpp"
 #include "sirikata/network/Stream.hpp"
 
@@ -63,6 +64,12 @@ public:
     virtual void service(const Time& t) {}
 
     virtual void reportQueueInfo(const Time& t) const = 0;
+
+protected:
+    Network(SpaceContext* ctx);
+
+    SpaceContext* mContext;
+    TimeProfiler::Stage* mProfiler;
 };
 }
 #endif //_CBR_NETWORK_HPP_

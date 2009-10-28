@@ -37,54 +37,104 @@
 
 namespace CBR {
 
-TimeProfiler::StageInfo::StageInfo()
- : minimum( Duration::seconds(100000) ),
-   maximum( Duration::zero() ),
-   sum( Duration::zero() ),
-   its(0)
+TimeProfiler::Stage::Stage(const String& name)
+ : mName(name),
+   mStartTime( Time::null() ),
+   mMinimum( Duration::seconds(100000) ),
+   mMaximum( Duration::zero() ),
+   mSum( Duration::zero() ),
+   mIts(0)
 {
+}
+
+void TimeProfiler::Stage::started() {
+    mStartTime = Timer::now();
+}
+
+void TimeProfiler::Stage::finished() {
+    Time now = Timer::now();
+    Duration dur = now - mStartTime;
+
+    if (dur < mMinimum)
+        mMinimum = dur;
+
+    if (dur > mMaximum)
+        mMaximum = dur;
+
+    mSum += dur;
+    mIts++;
+}
+
+String TimeProfiler::Stage::name() const {
+    return mName;
+}
+
+Duration TimeProfiler::Stage::avg() const {
+    return (mSum / (float64)mIts);
+}
+
+Duration TimeProfiler::Stage::minimum() const {
+    return mMinimum;
+}
+
+Duration TimeProfiler::Stage::maximum() const {
+    return mMaximum;
+}
+
+uint64 TimeProfiler::Stage::its() const {
+    return mIts;
+}
+
+void TimeProfiler::Stage::report(const String& indent) const {
+    PROFILER_LOG(info,"Stage: " << indent << name() << " -- Avg: " << avg() << " Min: " << minimum() << " Max:" << maximum());
 }
 
 TimeProfiler::TimeProfiler(const String& name)
- : mName(name),
-   mLastFinishTime(Time::null()),
-   mCurrentStage(0)
+ : mName(name)
 {
 }
 
-void TimeProfiler::addStage(const String& name) {
-    StageInfo sinfo;
-    sinfo.name = name;
-    mStages.push_back(sinfo);
+TimeProfiler::~TimeProfiler() {
+    for(GroupMap::iterator git = mGroups.begin(); git != mGroups.end(); git++) {
+        StageList& stages = git->second;
+        for(StageList::iterator it = stages.begin(); it != stages.end(); it++)
+            delete *it;
+    }
+
+    for(StageList::iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++)
+        delete *it;
 }
 
-void TimeProfiler::startIteration() {
-    mLastFinishTime = Timer::now();
-    mCurrentStage = 0;
+TimeProfiler::Stage* TimeProfiler::addStage(const String& name) {
+    Stage* sinfo = new Stage(name);
+    mFreeStages.push_back(sinfo);
+    return sinfo;
 }
 
-void TimeProfiler::finishedStage() {
-    Time now = Timer::now();
-    Duration dur = now - mLastFinishTime;
-
-    if (dur < mStages[mCurrentStage].minimum)
-        mStages[mCurrentStage].minimum = dur;
-
-    if (dur > mStages[mCurrentStage].maximum)
-        mStages[mCurrentStage].maximum = dur;
-
-    mStages[mCurrentStage].sum += dur;
-    mStages[mCurrentStage].its++;
-
-
-    mLastFinishTime = now;
-    mCurrentStage++;
+TimeProfiler::Stage* TimeProfiler::addStage(const String& group_name, const String& name) {
+    Stage* sinfo = new Stage(name);
+    mGroups[group_name].push_back(sinfo);
+    return sinfo;
 }
 
 void TimeProfiler::report() const {
     PROFILER_LOG(info,"Profiler report: " << mName);
-    for(StageList::const_iterator it = mStages.begin(); it != mStages.end(); it++) {
-        PROFILER_LOG(info,"Stage: " << it->name << " -- Avg: " << (it->sum / (float64)it->its).toSeconds() << "s Min: " << it->minimum.toSeconds() << "s Max:" << it->maximum.toSeconds() << "s");
+
+    // Group stages
+    for(GroupMap::const_iterator git = mGroups.begin(); git != mGroups.end(); git++) {
+        String group_name = git->first;
+        const StageList& stages = git->second;
+        PROFILER_LOG(info,"Group: " << group_name);
+        for(StageList::const_iterator it = stages.begin(); it != stages.end(); it++) {
+            Stage* stage = *it;
+            stage->report("-");
+        }
+    }
+
+    // Free stages
+    for(StageList::const_iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++) {
+        Stage* stage = *it;
+        stage->report("");
     }
 }
 

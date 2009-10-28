@@ -86,8 +86,9 @@ private:
     typedef std::map<UUID,ListServersUpdate> ObjectServerUpdateMap;
     ObjectServerUpdateMap mServersToUpdate; // Map of object id -> servers which should be notified of new result
 
-    TimeProfiler mProfiler;
-
+    TimeProfiler::Stage* mNoiseStage;
+    TimeProfiler::Stage* mForwarderQueueStage;
+    TimeProfiler::Stage* mReceiveStage;
 
     void processChunk(Message* msg, bool forwarded_self_msg);
 protected:

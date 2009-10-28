@@ -45,6 +45,7 @@ public:
        mNetwork(net),
        mServerIDMap(sidmap)
     {
+        mProfiler = mContext->profiler->addStage("Server Message Queue");
         // start the network listening
         Address4* listen_addy = mServerIDMap->lookupInternal(mContext->id());
         assert(listen_addy != NULL);
@@ -93,6 +94,7 @@ protected:
     SpaceContext* mContext;
     Network* mNetwork;
     ServerIDMap* mServerIDMap;
+    TimeProfiler::Stage* mProfiler;
 };
 }
 

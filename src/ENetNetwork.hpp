@@ -7,7 +7,6 @@
 namespace CBR {
 class Trace;
 class ENetNetwork :public Network{
-    Trace*mTrace;
     ENetHost *mSendHost;
     ENetHost *mRecvHost;
     struct BufferSizeStats{
@@ -35,7 +34,7 @@ class ENetNetwork :public Network{
     bool internalSend(const Address4&,const Chunk&, bool reliable, bool ordered, int priority, bool force);
 public:
 
-    ENetNetwork(Trace* trace, size_t mPeerSendBufferSize, uint32 icomingBandwidth,uint32 outgoingBandwidth);
+    ENetNetwork(SpaceContext* ctx, size_t mPeerSendBufferSize, uint32 icomingBandwidth,uint32 outgoingBandwidth);
     virtual ~ENetNetwork();
 
     virtual void init(void*(*)(void*));

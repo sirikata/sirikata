@@ -11,20 +11,21 @@ using namespace Sirikata;
 
 namespace CBR {
 void noop(){}
-TCPNetwork::TCPNetwork(Trace* trace, uint32 incomingBufferLength, uint32 incomingBandwidth, uint32 outgoingBandwidth) {
+TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 incomingBandwidth, uint32 outgoingBandwidth)
+ : Network(ctx)
+{
     mIncomingBandwidth=incomingBandwidth;
     mOutgoingBandwidth=outgoingBandwidth;
     mIncomingBufferLength=incomingBufferLength;
-    mTrace=trace;
     mStreamPlugin=GetOption("spacestreamlib")->as<String>();
     mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
     mListenOptions=StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
-    mSendOptions=StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());    
+    mSendOptions=StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
     mIOService=IOServiceFactory::makeIOService();
     mIOService->post(Duration::seconds(60*60*24*365*68),&noop);
     mListener=StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
     mThread= new boost::thread(std::tr1::bind(&IOService::run,mIOService));
-    //mThread= new boost::thread(&noop);//std::tr1::bind(&IOServiceFactory::runService,mIOService));    
+    //mThread= new boost::thread(&noop);//std::tr1::bind(&IOServiceFactory::runService,mIOService));
 
 }
 
@@ -122,7 +123,7 @@ bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, boo
     if (where->second.connected==false) {
         processNewConnectionsOnMainThread();
     }
-    if (where->second.connected && 
+    if (where->second.connected &&
         where->second.stream->send(data,reliable&&ordered?ReliableOrdered:ReliableUnordered)) {
         //hexPrint("Sent",data);
         return true;
@@ -197,7 +198,9 @@ std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&ad
 }
 void TCPNetwork::reportQueueInfo(const Time&)const {}
 void TCPNetwork::service(const Time&){
+    mProfiler->started();
 //    mIOService->poll();
+    mProfiler->finished();
 }
 Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));
@@ -250,7 +253,7 @@ Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
 bool TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chunk&data){
     dbl_ptr_queue queue(weak_queue.lock());
     if (queue&&*queue){
-        
+
         Chunk * tmp=new Chunk;
         tmp->swap(data);
         //std::cout<<"Pushing "<<tmp->size()<<"to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';

@@ -47,33 +47,43 @@ namespace CBR {
  */
 class TimeProfiler {
 public:
-    TimeProfiler(const String& name);
+    struct Stage {
+        Stage(const String& name);
 
-    void addStage(const String& name);
+        void started();
+        void finished();
 
-    void startIteration();
-    void finishedStage();
+        String name() const;
+        Duration avg() const;
+        Duration minimum() const;
+        Duration maximum() const;
+        uint64 its() const;
 
-    void report() const;
+        void report(const String& indent) const;
+    private:
+        String mName;
 
-private:
-    struct StageInfo {
-        StageInfo();
+        Time mStartTime;
 
-        String name;
-        Duration minimum;
-        Duration maximum;
-        Duration sum;
-        uint64 its;
+        Duration mMinimum;
+        Duration mMaximum;
+        Duration mSum;
+        uint64 mIts;
     };
 
+    TimeProfiler(const String& name);
+    ~TimeProfiler();
+
+    Stage* addStage(const String& name);
+    Stage* addStage(const String& group_name, const String& name);
+
+    void report() const;
+private:
     String mName;
-
-    typedef std::vector<StageInfo> StageList;
-    StageList mStages;
-
-    Time mLastFinishTime;
-    uint32 mCurrentStage;
+    typedef std::vector<Stage*> StageList;
+    typedef std::map<String, StageList> GroupMap;
+    GroupMap mGroups;
+    StageList mFreeStages;
 }; // class TimeProfiler
 
 } // namespace CBR

@@ -90,8 +90,11 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
-    
+
     mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
+
+    mProfiler = mContext->profiler->addStage("Object Host Tick");
+
     mLastRRObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
@@ -332,6 +335,8 @@ void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
 }
 
 void ObjectHost::poll() {
+    mProfiler->started();
+
     //sendTestMessage(t,400.);
     //if (rand()<(RAND_MAX/100.))
         randomPing(mContext->time);
@@ -355,6 +360,8 @@ floods the console with too much noise
         SpaceNodeConnection* conn = it->second;
         startWriting(conn);
     }
+
+    mProfiler->finished();
 }
 
 

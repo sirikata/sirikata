@@ -10,7 +10,7 @@ class Trace;
 
 class SSTNetwork : public Network {
 public:
-    SSTNetwork(Trace* trace);
+    SSTNetwork(SpaceContext* ctx);
     virtual ~SSTNetwork();
 
     // Checks if this chunk, when passed to send, would be successfully pushed.

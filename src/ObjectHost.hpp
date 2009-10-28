@@ -38,6 +38,7 @@
 #include "QueueRouterElement.hpp"
 #include "BandwidthShaper.hpp"
 #include "PollingService.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR {
 
@@ -140,6 +141,7 @@ private:
     ObjectHostContext* mContext;
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
+    TimeProfiler::Stage* mProfiler;
 
     // Connections to servers
     struct SpaceNodeConnection {

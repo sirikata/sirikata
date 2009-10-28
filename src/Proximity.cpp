@@ -172,8 +172,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mServerQueryHandler(NULL),
    mObjectQueries(),
    mGlobalLocCache(NULL),
-   mObjectQueryHandler(NULL),
-   mProfiler("Proximity Thread")
+   mObjectQueryHandler(NULL)
 {
     // Server Queries
     mLocalLocCache = new CBRLocationServiceCache(locservice, false);
@@ -188,6 +187,15 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mLocService->addListener(this);
 
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
+
+    String group_name = "Proximity";
+    mInputEventsStage = mContext->profiler->addStage(group_name, "Handle Input Events");
+    mLocalLocCacheStage = mContext->profiler->addStage(group_name, "Local Loc Cache");
+    mGlobalLocCacheStage = mContext->profiler->addStage(group_name, "Global Loc Cache");
+    mServerQueriesStage = mContext->profiler->addStage(group_name, "Server Queries");
+    mObjectQueriesStage = mContext->profiler->addStage(group_name, "Object Queries");
+    mServerQueryEventsStage = mContext->profiler->addStage(group_name, "Generate Server Query Events");
+    mObjectQueryEventsStage = mContext->profiler->addStage(group_name, "Generate Object Query Events");
 
     // Start the processing thread
     mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
@@ -513,38 +521,44 @@ void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vec
 
 // The main loop for the prox processing thread
 void Proximity::proxThreadMain() {
-    mProfiler.addStage("Handle Input Events");
-    mProfiler.addStage("Local Loc Cache");
-    mProfiler.addStage("Global Loc Cache");
-    mProfiler.addStage("Server Queries");
-    mProfiler.addStage("Object Queries");
-    mProfiler.addStage("Generate Server Query Events");
-    mProfiler.addStage("Generate Object Query Events");
-
     while( !mShutdownProxThread ) {
         Time tstart = Timer::now();
 
         Time simT = mContext->simTime(tstart);
 
-        mProfiler.startIteration();
-
         // Service input events
+        mInputEventsStage->started();
         std::deque<ProximityInputEvent> inputEvents;
         mInputEvents.swap(inputEvents);
         for(std::deque<ProximityInputEvent>::iterator it = inputEvents.begin(); it != inputEvents.end(); it++)
             handleInputEvent( *it );
-        mProfiler.finishedStage();
+        mInputEventsStage->finished();
 
         // Service location caches
-        mLocalLocCache->serviceListeners();    mProfiler.finishedStage();
-        mGlobalLocCache->serviceListeners();   mProfiler.finishedStage();
+        mLocalLocCacheStage->started();
+        mLocalLocCache->serviceListeners();
+        mLocalLocCacheStage->finished();
+
+        mGlobalLocCacheStage->started();
+        mGlobalLocCache->serviceListeners();
+        mGlobalLocCacheStage->finished();
 
         // Service query handlers
-        mServerQueryHandler->tick(simT);       mProfiler.finishedStage();
-        mObjectQueryHandler->tick(simT);       mProfiler.finishedStage();
+        mServerQueriesStage->started();
+        mServerQueryHandler->tick(simT);
+        mServerQueriesStage->finished();
 
-        generateServerQueryEvents(simT);       mProfiler.finishedStage();
-        generateObjectQueryEvents();           mProfiler.finishedStage();
+        mObjectQueriesStage->started();
+        mObjectQueryHandler->tick(simT);
+        mObjectQueriesStage->finished();
+
+        mServerQueryEventsStage->started();
+        generateServerQueryEvents(simT);
+        mServerQueryEventsStage->finished();
+
+        mObjectQueryEventsStage->started();
+        generateObjectQueryEvents();
+        mObjectQueryEventsStage->finished();
 
         Time tend = Timer::now();
 
@@ -553,9 +567,6 @@ void Proximity::proxThreadMain() {
         if (since_start < MIN_ITERATION_TIME)
             usleep( (MIN_ITERATION_TIME - since_start).toMicroseconds() );
     }
-
-    if (GetOption(PROFILE)->as<bool>())
-        mProfiler.report();
 }
 
 void Proximity::generateServerQueryEvents(const Time& t) {

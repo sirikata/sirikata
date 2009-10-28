@@ -169,6 +169,7 @@ protected:
     void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
 
     SpaceContext* mContext;
+    TimeProfiler::Stage* mProfiler;
 
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;

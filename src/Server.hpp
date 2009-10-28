@@ -124,8 +124,8 @@ private:
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
 
-
-    TimeProfiler mProfiler;
+      TimeProfiler::Stage* mCheckMigrationsStage;
+      TimeProfiler::Stage* mObjectHostsStage;
 }; // class Server
 
 } // namespace CBR

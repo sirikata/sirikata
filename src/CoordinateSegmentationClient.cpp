@@ -231,7 +231,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   boost::asio::io_service io_service;
 
-  
+
   tcp::resolver resolver(io_service);
 
   tcp::resolver::query query(tcp::v4(), GetOption("cseg-service-host")->as<String>(),
@@ -241,7 +241,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
 
   tcp::resolver::iterator end;
 
-  
+
   tcp::socket socket(io_service);
   boost::system::error_code error = boost::asio::error::host_not_found;
   while (error && endpoint_iterator != end)
@@ -258,7 +258,7 @@ ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
                      boost::asio::buffer((const void*)&lookupMessage,sizeof (lookupMessage)),
                      boost::asio::transfer_all() );
 
-  
+
 
   uint8* dataReceived = NULL;
   uint32 bytesReceived = 0;
@@ -586,9 +586,11 @@ uint32 CoordinateSegmentationClient::numServers()  {
 }
 
 void CoordinateSegmentationClient::service() {
+    mServiceStage->started();
 
   mIOService.poll_one();
 
+    mServiceStage->finished();
 }
 
 void CoordinateSegmentationClient::receiveMessage(Message* msg) {

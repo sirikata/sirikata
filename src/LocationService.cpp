@@ -51,6 +51,8 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 LocationService::LocationService(SpaceContext* ctx)
  : mContext(ctx)
 {
+    mProfiler = mContext->profiler->addStage("Location Service");
+
     mUpdatePolicy = new AlwaysLocationUpdatePolicy(this);
 
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_LOCATION, this);

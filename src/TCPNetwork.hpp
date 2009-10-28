@@ -11,7 +11,6 @@ class StreamListener;
 namespace CBR {
 class Trace;
 class TCPNetwork :public Network{
-    Trace*mTrace;
     struct SendStream {
         Sirikata::Network::Stream* stream;
         bool connected;
@@ -60,7 +59,7 @@ class TCPNetwork :public Network{
     String mStreamPlugin;
 public:
 
-    TCPNetwork(Trace* trace, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
+    TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
     virtual ~TCPNetwork();
 
     virtual void init(void*(*)(void*));

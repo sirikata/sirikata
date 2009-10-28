@@ -100,9 +100,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    //TimeProfiler whole_profiler("Whole Main Loop");
-    //whole_profiler.addStage("Loop");
-
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
     ctx->add(obj_host);
@@ -110,7 +107,7 @@ int main(int argc, char** argv) {
     ctx->ioService->run();
 
     if (GetOption(PROFILE)->as<bool>()) {
-        //whole_profiler.report();
+        ctx->profiler->report();
     }
 
     gTrace->prepareShutdown();

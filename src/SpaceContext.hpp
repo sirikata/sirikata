@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
 #include "Timer.hpp"
+#include "TimeProfiler.hpp"
 
 namespace CBR {
 
@@ -55,6 +56,7 @@ public:
      : lastTime(curtime),
        time(curtime),
        sinceLast(Duration::seconds(0)),
+       profiler( new TimeProfiler("Space") ),
        mID(_id),
        mEpoch(epoch),
        mRouter(NULL),
@@ -109,6 +111,7 @@ public:
     Time time;
     Duration sinceLast;
 
+    TimeProfiler* profiler;
 private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
 

@@ -69,6 +69,8 @@ bool FairServerMessageQueue::receive(Message** msg_out) {
 
 
 void FairServerMessageQueue::service(){
+    mProfiler->started();
+
     uint64 send_bytes = mContext->sinceLast.toSeconds() * mRate + mRemainderSendBytes;
     uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
@@ -158,6 +160,7 @@ void FairServerMessageQueue::service(){
         //mLastReceiveEndTime = already recorded, last end receive time
     }
 
+    mProfiler->finished();
 }
 
 void FairServerMessageQueue::setServerWeight(ServerID sid, float weight) {

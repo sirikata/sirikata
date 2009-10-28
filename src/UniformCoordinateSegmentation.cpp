@@ -87,7 +87,7 @@ UniformCoordinateSegmentation::UniformCoordinateSegmentation(SpaceContext* ctx, 
 
     std::istringstream is(layoutAsStr);
     is >> vec;
-    
+
     LayoutChangeEntry lce;
     lce.time = time_val;
     lce.layout = vec;
@@ -156,9 +156,11 @@ uint32 UniformCoordinateSegmentation::numServers()  {
 }
 
 void UniformCoordinateSegmentation::service() {
+    mServiceStage->started();
   /* Short-circuited the code for changing the layout at run-time for now
      but its been tested and it works.
    */
+    mServiceStage->finished();
   return;
 
   Time t = mContext->time;
@@ -193,6 +195,7 @@ void UniformCoordinateSegmentation::service() {
       break;
     }
   }
+  mServiceStage->finished();
 }
 
 void UniformCoordinateSegmentation::receiveMessage(Message* msg) {

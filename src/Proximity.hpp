@@ -170,10 +170,15 @@ private:
     CBRLocationServiceCache* mGlobalLocCache;
     Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
 
-    // For profiling performance of the prox thread
-    TimeProfiler mProfiler;
+    TimeProfiler::Stage* mInputEventsStage;
+    TimeProfiler::Stage* mLocalLocCacheStage;
+    TimeProfiler::Stage* mGlobalLocCacheStage;
+    TimeProfiler::Stage* mServerQueriesStage;
+    TimeProfiler::Stage* mObjectQueriesStage;
+    TimeProfiler::Stage* mServerQueryEventsStage;
+    TimeProfiler::Stage* mObjectQueryEventsStage;
 
-    // BOTH Threads: Thread-safe data used for exchange between threads
+    // Threads: Thread-safe data used for exchange between threads
 
     Sirikata::ThreadSafeQueue<ProximityInputEvent> mInputEvents; // events from main thread that need to be handled in prox thread
     Sirikata::ThreadSafeQueue<ProximityOutputEvent> mOutputEvents; // events from prox thread that need to be handled in main thread

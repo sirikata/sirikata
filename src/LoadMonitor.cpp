@@ -55,6 +55,7 @@ LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, 
    mAveragedLoadReading(0)
 {
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
+    mProfiler = mContext->profiler->addStage("Load Monitor");
 }
 
 LoadMonitor::~LoadMonitor() {
@@ -142,6 +143,7 @@ void LoadMonitor::loadStatusMessage(const ServerID source, const CBR::Protocol::
 }
 
 void LoadMonitor::service() {
+    mProfiler->started();
   if (GetOption("monitor-load")->as<bool>() &&
       mContext->time - mLastReadingTime > Duration::seconds(5))
   {
@@ -149,6 +151,7 @@ void LoadMonitor::service() {
 
     mLastReadingTime = mContext->time;
   }
+    mProfiler->finished();
 }
 
 bool LoadMonitor::handlesAdjacentRegion(ServerID server_id) {

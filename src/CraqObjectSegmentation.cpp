@@ -594,6 +594,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
   */
   void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
   {
+      mServiceStage->started();
 
     Time start_time= Timer::now();
 
@@ -696,6 +697,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 //       lastTimerDur = mServiceTimer.elapsed();
 //     }
 
+      mServiceStage->finished();
   }
 
 

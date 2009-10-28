@@ -33,8 +33,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mForwarder(forwarder),
    mMigrationMonitor(),
    mLoadMonitor(lm),
-   mObjectHostConnectionManager(NULL),
-   mProfiler("Server Loop")
+   mObjectHostConnectionManager(NULL)
 {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
@@ -47,21 +46,14 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
         std::tr1::bind(&Server::handleObjectHostMessage, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)
     );
 
-    mProfiler.addStage("Loc");
-    mProfiler.addStage("Prox");
-    mProfiler.addStage("Object Hosts");
-    mProfiler.addStage("Forwarder");
-    mProfiler.addStage("Load Monitor");
-    mProfiler.addStage("Migration Monitor");
-
     mMigrationTimer.start();
+
+    mCheckMigrationsStage = mContext->profiler->addStage("Check Object Migrations");
+    mObjectHostsStage = mContext->profiler->addStage("Service Object Host Connection");
 }
 
 Server::~Server()
 {
-    if (GetOption(PROFILE)->as<bool>())
-        mProfiler.report();
-
     delete mObjectHostConnectionManager;
 
     mForwarder->unregisterMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -99,6 +91,8 @@ ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
 }
 
 void Server::serviceObjectHostNetwork() {
+    mObjectHostsStage->started();
+
     mObjectHostConnectionManager->service();
 
   // Tick all active connections
@@ -131,6 +125,8 @@ void Server::serviceObjectHostNetwork() {
           persistingConnections.insert(conn);
   }
   mClosingConnections.swap(persistingConnections);
+
+    mObjectHostsStage->finished();
 }
 
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -593,18 +589,16 @@ void Server::handleMigration(const UUID& obj_id)
 }
 
 void Server::service() {
-    mProfiler.startIteration();
-
-    mLocationService->service();  mProfiler.finishedStage();
-    mProximity->service();        mProfiler.finishedStage();
+    mLocationService->service();
+    mProximity->service();
 
     //FOrwarder analysis
     Time start_time_forwarder = Timer::now();
 
     // Note, object hosts must be serviced before Forwarder so they can
     // push object messages on the queue before noise is generated
-    serviceObjectHostNetwork();   mProfiler.finishedStage();
-    mForwarder->service();        mProfiler.finishedStage();
+    serviceObjectHostNetwork();
+    mForwarder->service();
 
 
     if (mContext->simTime().raw()/1000 > 100000)
@@ -621,13 +615,10 @@ void Server::service() {
     }
 
 
-
-    mLoadMonitor->service();      mProfiler.finishedStage();
+    mLoadMonitor->service();
 
 
     Time start_time = Timer::now();
-
-    serviceObjectHostNetwork();   mProfiler.finishedStage();
 
     if (mContext->simTime().raw()/1000 > 100000)
     {
@@ -643,12 +634,14 @@ void Server::service() {
     }
 
 
-    checkObjectMigrations();      mProfiler.finishedStage();
+    checkObjectMigrations();
 }
 
 //this is called by the server that is sending an object to another server.
 void Server::checkObjectMigrations()
 {
+    mCheckMigrationsStage->started();
+
     // * check for objects crossing server boundaries
     // * wrap up state and send message to other server
     //     to reinstantiate the object there
@@ -759,6 +752,8 @@ void Server::checkObjectMigrations()
             break;
         mMigrateMessages.pop();
     }
+
+    mCheckMigrationsStage->finished();
 }
 
 

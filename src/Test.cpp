@@ -8,7 +8,8 @@ namespace CBR {
 void testAny(const char * listenport, const char* hostname, const char* port, bool server) {
     std::stringstream strst( std::string(hostname) + ":" + std::string(listenport) + std::string("\n") );
     Trace trace("test.trace");
-    ENetNetwork rn(&trace, 65536, 1000000, 1000000);
+    SpaceContext ctx(0, Time::null(), Time::null(), &trace);
+    ENetNetwork rn(&ctx, 65536, 1000000, 1000000);
     rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")));
     bool canSend=!server;
     unsigned int mine=0;

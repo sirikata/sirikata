@@ -17,11 +17,12 @@ Address4 ENetNetwork::fromENetAddress(const ENetAddress&addy){
     retval.port=addy.port;
     return retval;
 }
-ENetNetwork::ENetNetwork(Trace* trace, size_t peerSendBufferSize, uint32 incomingBandwidth, uint32 outgoingBandwidth){
+ENetNetwork::ENetNetwork(SpaceContext* ctx, size_t peerSendBufferSize, uint32 incomingBandwidth, uint32 outgoingBandwidth)
+ : Network(ctx)
+{
     mIncomingBandwidth=incomingBandwidth;
     mOutgoingBandwidth=outgoingBandwidth;
     mSendBufferSize=peerSendBufferSize;
-    mTrace=trace;
     mSendHost=NULL;
     mRecvHost=NULL;
 }
@@ -202,6 +203,8 @@ void ENetNetwork::processOutboundEvent(ENetEvent&event) {
     }
 }
 void ENetNetwork::service(const Time& t){
+    mProfiler->started();
+
     PeerMap::iterator senditer,recviter;
     std::vector<std::pair<Address4,size_t> > sendBufferSizes(mSendPeers.size());
     std::vector<std::pair<Address4,size_t> > recvBufferSizes(mRecvPeers.size());
@@ -237,7 +240,7 @@ void ENetNetwork::service(const Time& t){
             ptrdiff_t diff=sendBufferSizes[i].second-(senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size);
             mBufferSizes[sendBufferSizes[i].first].mSendSize=senditer->second->outgoingReliableCommands.byte_size+senditer->second->outgoingUnreliableCommands.byte_size;
             if (diff>0) {
-                mTrace->packetSent(t,sendBufferSizes[i].first,diff);
+                mContext->trace()->packetSent(t,sendBufferSizes[i].first,diff);
             }
         }
     }
@@ -251,14 +254,16 @@ void ENetNetwork::service(const Time& t){
             mBufferSizes[recvBufferSizes[i].first].mRecvSize=recvBufferSizes[i].second;
             ptrdiff_t diff=curincoming-recvBufferSizes[i].second;
             if (diff>0) {
-                mTrace->packetReceived(t,recvBufferSizes[i].first,diff);
+                mContext->trace()->packetReceived(t,recvBufferSizes[i].first,diff);
             }
         }
 
     }
     for(std::tr1::unordered_map<Address4,BufferSizeStats>::iterator i=mBufferSizes.begin(),ie=mBufferSizes.end();i!=ie;++i){
-        mTrace->packetQueueInfo(t,i->first,mSendBufferSize,i->second.mSendSize,i->second.mSendWeight,ENET_PEER_WINDOW_SIZE_SCALE,i->second.mRecvSize,i->second.mRecvWeight);
+        mContext->trace()->packetQueueInfo(t,i->first,mSendBufferSize,i->second.mSendSize,i->second.mSendWeight,ENET_PEER_WINDOW_SIZE_SCALE,i->second.mRecvSize,i->second.mRecvWeight);
     }
+
+    mProfiler->finished();
 }
 
 void ENetNetwork::reportQueueInfo(const Time& t) const{

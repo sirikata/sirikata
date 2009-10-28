@@ -33,4 +33,10 @@ Address convertAddress4ToSirikata(const Address4&addy) {
     return Address(hostname.str(),port.str());
 }
 
+Network::Network(SpaceContext* ctx)
+ : mContext(ctx)
+{
+    mProfiler = mContext->profiler->addStage("Network");
+}
+
 }

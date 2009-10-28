@@ -51,10 +51,7 @@ typedef struct ServerLoadInfo{
   ServerLoadInfo(ServerID svrID, float load, float capacity)
     : mServerID(svrID), mLoadReading(load), mNetworkCapacity(capacity)
   {
-
   }
-
-
 
 } ServerLoadInfo;
 
@@ -96,6 +93,8 @@ private:
     SpaceContext* mContext;
     ServerMessageQueue* mServerMsgQueue;
     CoordinateSegmentation* mCoordinateSegmentation;
+
+    TimeProfiler::Stage* mProfiler;
 
     Time mLastReadingTime;
 

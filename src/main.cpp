@@ -74,6 +74,8 @@
 namespace {
 CBR::Network* gNetwork = NULL;
 CBR::Trace* gTrace = NULL;
+CBR::SpaceContext* gSpaceContext = NULL;
+CBR::Time g_start_time( CBR::Time::null() );
 }
 
 
@@ -116,13 +118,23 @@ int main(int argc, char** argv) {
     String trace_file = is_analysis() ? "analysis.trace" : GetPerServerFile(STATS_TRACE_FILE, server_id);
     gTrace = new Trace(trace_file);
 
+    // Compute the starting date/time
+    String start_time_str = GetOption("wait-until")->as<String>();
+    g_start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
+    Time start_time = g_start_time;
+    start_time += GetOption("wait-additional")->as<Duration>();
+
+    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
+    SpaceContext* space_context = new SpaceContext(server_id, start_time, init_space_ctx_time, gTrace);
+    gSpaceContext = space_context;
+
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "sst")
-        gNetwork = new SSTNetwork(gTrace);
+        gNetwork = new SSTNetwork(space_context);
     else if (network_type == "enet")
-        gNetwork = new ENetNetwork(gTrace,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+        gNetwork = new ENetNetwork(space_context,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (network_type == "tcp")
-        gNetwork = new TCPNetwork(gTrace,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
+        gNetwork = new TCPNetwork(space_context,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     gNetwork->init(&main_loop);
 
     sync.stop();
@@ -131,6 +143,8 @@ int main(int argc, char** argv) {
 }
 void *main_loop(void *) {
     using namespace CBR;
+
+    ServerID server_id = GetOption("id")->as<ServerID>();
 
     String test_mode = GetOption("test")->as<String>();
     if (test_mode != "none") {
@@ -161,18 +175,7 @@ void *main_loop(void *) {
 
     srand( GetOption("rand-seed")->as<uint32>() );
 
-
-    // Compute the starting date/time
-    String start_time_str = GetOption("wait-until")->as<String>();
-    Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
-    start_time += GetOption("wait-additional")->as<Duration>();
-
-
-    ServerID server_id = GetOption("id")->as<ServerID>();
-
-    Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, start_time, init_space_ctx_time, gTrace);
-
+    SpaceContext* space_context = gSpaceContext;
     Forwarder* forwarder = new Forwarder(space_context);
 
     // FIXME we shouldn't need to instantiate these for space, only needed for analysis
@@ -608,6 +611,7 @@ void *main_loop(void *) {
       // and are only maintaining ObjectFactory for analysis, visualization, and oracle purposes.
       //obj_factory->initialize(obj_host->context());
 
+      Time start_time = g_start_time;
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {
         Time now_time = Timer::now();
@@ -645,18 +649,6 @@ void *main_loop(void *) {
 
     gNetwork->start();
 
-    TimeProfiler whole_profiler("Whole Main Loop");
-    whole_profiler.addStage("Loop");
-
-    TimeProfiler profiler("Main Loop");
-    profiler.addStage("Context Update");
-    profiler.addStage("External OSeg I");
-    profiler.addStage("Network Service");
-    profiler.addStage("External OSeg II");
-    profiler.addStage("CSeg Service");
-    profiler.addStage("External OSeg III");
-    profiler.addStage("Server Service");
-
     while( true ) {
         Duration elapsed = Timer::now() - start_time;
         if (elapsed > duration)
@@ -669,29 +661,14 @@ void *main_loop(void *) {
             last_sample_time = last_sample_time + stats_sample_rate;
         }
 
-        whole_profiler.startIteration();
-        profiler.startIteration();
-
-        space_context->tick(curt); profiler.finishedStage();
-
-        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-
-        gNetwork->service(curt); profiler.finishedStage();
-
-        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-
-        cseg->service(); profiler.finishedStage();
-
-        forwarder->tickOSeg(Time::null()); profiler.finishedStage(); //bftm added
-
-        server->service(); profiler.finishedStage();
-
-        whole_profiler.finishedStage();
+        space_context->tick(curt);
+        gNetwork->service(curt);
+        cseg->service();
+        server->service();
     }
 
     if (GetOption(PROFILE)->as<bool>()) {
-        whole_profiler.report();
-        profiler.report();
+        space_context->profiler->report();
     }
 
     gTrace->prepareShutdown();

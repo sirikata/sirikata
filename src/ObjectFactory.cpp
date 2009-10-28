@@ -69,6 +69,7 @@ ObjectFactory::ObjectFactory(ObjectHostContext* ctx, const BoundingBox3f& region
    mLocalIDSource(0)
 {
     mContext->objectFactory = this;
+    mProfiler = mContext->profiler->addStage("Object Factory Tick");
     // Note: we do random second in order make sure they get later connect times
     generatePackObjects(region, duration);
     generateRandomObjects(region, duration);
@@ -287,6 +288,8 @@ Object* ObjectFactory::object(const UUID& id) {
 
 void ObjectFactory::poll() {
 #ifdef OH_BUILD
+    mProfiler->started();
+
     Time t = mContext->time;
     for(iterator it = begin(); it != end(); it++) {
         // Active objects receive a tick
@@ -301,6 +304,8 @@ void ObjectFactory::poll() {
             obj->connect();
         }
     }
+
+    mProfiler->finished();
 #endif //OH_BUILD
 }
 

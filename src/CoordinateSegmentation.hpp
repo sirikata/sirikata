@@ -82,6 +82,7 @@ protected:
     void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
+    TimeProfiler::Stage* mServiceStage;
 private:
     CoordinateSegmentation();
 

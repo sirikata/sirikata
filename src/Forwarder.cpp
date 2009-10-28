@@ -41,8 +41,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mOSegLookups(NULL),
    mLastSampleTime(Time::null()),
    mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
-   mUniqueConnIDs(0),
-   mProfiler("Forwarder Loop")
+   mUniqueConnIDs(0)
 {
     //no need to initialize mOutgoingMessages.
 
@@ -55,24 +54,16 @@ Forwarder::Forwarder(SpaceContext* ctx)
     this->registerMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
     this->registerMessageRecipient(SERVER_PORT_NOISE, this);
 
-    mProfiler.addStage("OSeg");
-    mProfiler.addStage("Noise");
-    mProfiler.addStage("Forwarder Queue => Server Message Queue");
-    mProfiler.addStage("Server Message Queue");
-    mProfiler.addStage("OSegII");
-    mProfiler.addStage("Server Message Queue Receive");
-
-
+    mNoiseStage = mContext->profiler->addStage("Noise");
+    mForwarderQueueStage = mContext->profiler->addStage("Forwarder Queue");
+    mReceiveStage = mContext->profiler->addStage("Forwarder Receive");
 }
 
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-    if (GetOption(PROFILE)->as<bool>())
-        mProfiler.report();
-
-    this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
-    this->unregisterMessageRecipient(SERVER_PORT_NOISE, this);
+      this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
+      this->unregisterMessageRecipient(SERVER_PORT_NOISE, this);
   }
 
   /*
@@ -104,10 +95,9 @@ void Forwarder::service()
           mLastSampleTime = t;
     }
 
-    mProfiler.startIteration();
+    tickOSeg(t);
 
-    tickOSeg(t);  mProfiler.finishedStage();
-
+    mNoiseStage->started();
     if (GetOption(NOISE)->as<bool>()) {
         for(ServerMessageQueue::KnownServerIterator it = mServerMessageQueue->knownServersBegin(); it != mServerMessageQueue->knownServersEnd(); it++) {
             ServerID sid = *it;
@@ -127,8 +117,9 @@ void Forwarder::service()
             }
         }
     }
-    mProfiler.finishedStage();
+    mNoiseStage->finished();
 
+    mForwarderQueueStage->started();
     for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
         while(true)
         {
@@ -154,18 +145,17 @@ void Forwarder::service()
             assert(pop_msg == next_msg);
         }
     }
-    mProfiler.finishedStage();
+    mForwarderQueueStage->finished();
 
     // Try to push things from the server message queues down to the network
-    mServerMessageQueue->service(); mProfiler.finishedStage();
+    mServerMessageQueue->service();
 
-    tickOSeg(t);  mProfiler.finishedStage();
-
+    mReceiveStage->started();
     Message* next_msg = NULL;
     while(mServerMessageQueue->receive(&next_msg)) {
         processChunk(next_msg, false);
     }
-    mProfiler.finishedStage();
+    mReceiveStage->finished();
   }
 
 

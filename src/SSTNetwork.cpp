@@ -3,10 +3,10 @@
 
 namespace CBR {
 
-SSTNetwork::SSTNetwork(Trace* trace)
- : Network()
+SSTNetwork::SSTNetwork(SpaceContext* ctx)
+ : Network(ctx)
 {
-    mImpl = new CBRSST(trace);
+    mImpl = new CBRSST(ctx->trace());
 }
 
 SSTNetwork::~SSTNetwork() {
@@ -34,7 +34,9 @@ Network::Chunk* SSTNetwork::receiveOne(const Address4& from, uint32 max_size) {
 }
 
 void SSTNetwork::service(const Time& t) {
+    mProfiler->started();
     mImpl->service();
+    mProfiler->finished();
 }
 
 void SSTNetwork::init(void* (*x)(void*)){
