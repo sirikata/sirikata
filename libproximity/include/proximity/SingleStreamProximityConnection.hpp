@@ -52,7 +52,7 @@ class SIRIKATA_PROXIMITY_EXPORT SingleStreamProximityConnection :public Proximit
 public:
     static ProximityConnection* create(Network::IOService*, const String&);
     void streamDisconnected();
-    SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&);
+    SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&, const String&streamlib, const String&streamoptions);
     bool forwardMessagesTo(MessageService*parent);
     bool endForwardingMessagesTo(MessageService*parent);
     ~SingleStreamProximityConnection();

@@ -39,20 +39,36 @@ namespace Sirikata { namespace Network {
 class Address {
     String mName;
     String mService;
+    String mProtocol;
 public:
     static Any lexical_cast(const std::string&value) {
         std::string::size_type where=value.rfind(':');
         if (where==std::string::npos) {
             throw std::invalid_argument("Address does not contain a port");
         }
-        Address retval(value.substr(0,where),
-                       value.substr(where+1));
-        return retval;
+        std::string::size_type protowhere;
+        const char *separator="://";
+        if ((protowhere=value.find(separator))!=std::string::npos) {
+            
+            Address retval(value.substr(protowhere+strlen(separator),where-protowhere-strlen(separator)),value.substr(where+1));
+            retval.setProtocol(value.substr(0,protowhere));
+            return retval;
+        }else {
+            Address retval(value.substr(0,where),
+                           value.substr(where+1));
+            return retval;
+        }
     }
     String toString()const{
         return getHostName()+':'+getService();
     }
-
+    void setProtocol(const String&str) {
+        mProtocol=str;
+    }
+    
+    const String &getProtocol()const {
+        return mProtocol;
+    }
     const String &getHostName()const {
         return mName;
     }
@@ -63,19 +79,26 @@ public:
         return Address(String(),String());
     }
     bool operator==(const Address&other) const{
-        return other.mName==mName&&other.mService==mService;
+        return other.mName==mName&&other.mService==mService&&other.mProtocol==mProtocol;
     }
     bool operator<(const Address&other) const{
-        return other.mName==mName?mService<other.mService:mName<other.mName;
+        return other.mName==mName?(mService==other.mService?mProtocol<other.mProtocol:mService<other.mService):mName<other.mName;
     }
     Address(const String& name, 
             const String& service) {
         mName=name;
         mService=service;
     }
+    Address(const String& name, 
+            const String& service,
+            const String&protocol) {
+        mName=name;
+        mService=service;
+        mProtocol=protocol;
+    }
     class Hasher {public:
         size_t operator()(const Address&addy)const {
-            return std::tr1::hash<std::string>()(addy.mName)^std::tr1::hash<std::string>()(addy.mService);
+            return std::tr1::hash<std::string>()(addy.mName)^std::tr1::hash<std::string>()(addy.mService)^std::tr1::hash<std::string>()(addy.mProtocol);
         }
     };
 };

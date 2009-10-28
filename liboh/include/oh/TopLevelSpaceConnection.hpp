@@ -56,7 +56,7 @@ class SIRIKATA_OH_EXPORT TopLevelSpaceConnection :public ObjectHostProxyManager 
     static void connectToAddress(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thus,ObjectHost*oh,const Network::Address*addy);
     std::tr1::shared_ptr<Network::TimeSync> mTimeSync;
   public:
-    TopLevelSpaceConnection(Network::IOService*);
+    TopLevelSpaceConnection(Network::IOService*, const String&protocol, OptionSet *protocolOptions);
     ~TopLevelSpaceConnection();
     Network::Stream *topLevelStream(){
         return mTopLevelStream;

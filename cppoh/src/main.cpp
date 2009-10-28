@@ -55,6 +55,7 @@
 #include <ObjectHostBinary_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
+#include <options/Options.hpp>
 namespace Sirikata {
 
 using Task::GenEventManager;
@@ -159,6 +160,18 @@ int main ( int argc,const char**argv ) {
     myargv[argc+1] = "transfer=fatal,ogre=fatal,task=fatal,resource=fatal";
 
     using namespace Sirikata;
+    OptionValue *ohOption;
+    OptionValue *spaceIdMapOption;
+    OptionValue *mainSpaceOption;
+    InitializeGlobalOptions gbo("",
+                                ohOption=new OptionValue("objecthost","",OptionValueType<String>(),"Options passed to the object host"),
+                                mainSpaceOption=new OptionValue("mainspace","12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"),
+                                spaceIdMapOption=new OptionValue("spaceidmap",
+                                                                 "12345678-1111-1111-1111-DEFA01759ACE:{127.0.0.1:5943}",
+                                                                 OptionValueType<std::map<std::string,std::string> >(),
+                                                                 "Map between space ID's and tcpsst ip's"),
+                                NULL);
+
     PluginManager plugins;
     const char* pluginNames[] = { "tcpsst", "monoscript", "sqlite", "ogregraphics", "bulletphysics", "colladamodels", NULL};
     for(const char** plugin_name = pluginNames; *plugin_name != NULL; plugin_name++)
@@ -187,10 +200,15 @@ int main ( int argc,const char**argv ) {
     Network::IOService *ioServ = Network::IOServiceFactory::makeIOService();
     Task::WorkQueue *workQueue = new Task::LockFreeWorkQueue;
     Task::GenEventManager *eventManager = new Task::GenEventManager(workQueue);
-
-    SpaceID mainSpace(UUID("12345678-1111-1111-1111-DEFA01759ACE",UUID::HumanReadable()));
     SpaceIDMap *spaceMap = new SpaceIDMap;
-    spaceMap->insert(mainSpace, Network::Address(host->as<String>(),"5943"));
+    SpaceID mainSpace(mainSpaceOption->as<UUID>());
+    for (std::map<std::string,std::string>::iterator i=spaceIdMapOption->as<std::map<std::string,std::string> >().begin(),
+             ie=spaceIdMapOption->as<std::map<std::string,std::string> >().end();
+         i!=ie;
+         ++i) {
+        SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
+        spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
+    }
     String localDbFile=dbFile->as<String>();
     if (localDbFile.length()&&localDbFile[0]!='/'&&localDbFile[0]!='\\') {
         FILE * fp=fopen(localDbFile.c_str(),"rb");
@@ -204,7 +222,7 @@ int main ( int argc,const char**argv ) {
     Persistence::ReadWriteHandler *database=Persistence::ReadWriteHandlerFactory::getSingleton()
         .getConstructor("sqlite")(String("--databasefile ")+localDbFile);
 
-    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ);
+    ObjectHost *oh = new ObjectHost(spaceMap, workQueue, ioServ, "");
     oh->registerService(Services::PERSISTENCE, database);
 
     {

@@ -44,6 +44,7 @@ class SIRIKATA_SUBSCRIPTION_EXPORT Broadcast {
     std::tr1::unordered_map<Network::Address,std::tr1::weak_ptr<Network::Stream>,Network::Address::Hasher > mTopLevelStreams;
     class UniqueLock;
     UniqueLock* mUniqueLock;    
+    std::tr1::unordered_map<String,OptionSet*> mProtocolOptions;
 public:
     class BroadcastStreamCallbacks;
     class SIRIKATA_SUBSCRIPTION_EXPORT BroadcastStream :Noncopyable{
@@ -74,7 +75,7 @@ public:
                                                                    const std::tr1::function<void(const std::tr1::weak_ptr<BroadcastStream>&,
                                                                                                  Network::Stream::ConnectionStatus, 
                                                                                                  const std::string&reason)>& cb);
-    Broadcast(Network::IOService*service);
+    Broadcast(Network::IOService*service, const String&options);
     ~Broadcast();
 };
 

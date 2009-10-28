@@ -41,7 +41,7 @@ class Stream;
 class IOService;
 
 
-class SIRIKATA_EXPORT StreamFactory: public Factory1<Stream*,IOService*>,public AutoSingleton<StreamFactory> {
+class SIRIKATA_EXPORT StreamFactory: public FactoryWithOptions2<Stream*,IOService*, OptionSet*>,public AutoSingleton<StreamFactory> {
   public:
     static StreamFactory& getSingleton();
     static void destroy();

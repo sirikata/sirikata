@@ -36,8 +36,26 @@
 #include "network/StreamListenerFactory.hpp"
 #include "TCPStream.hpp"
 #include "TCPStreamListener.hpp"
+#include "options/Options.hpp"
 static int core_plugin_refcount = 0;
 
+namespace Sirikata {
+static OptionSet*optionParser(const String&str) {
+    OptionValue *numSockets=new OptionValue("parallel-sockets","3",OptionValueType<unsigned int>(),"Number of parallel streams used to avoid head of line blocking");
+    OptionValue *maxSockets=new OptionValue("max-parallel-sockets","8",OptionValueType<unsigned int>(),"Maximum number of parallel streams accepted used to avoid head of line blocking");
+    OptionValue *sendBufferSize=new OptionValue("send-buffer-size","0",OptionValueType<unsigned int>(),"Size of send buffer used to accumulate packets during an outgoing send. 0 for unlimited buffer.");
+    
+    
+    InitializeClassOptions("tcpsstoptions",numSockets,
+                     numSockets,
+                     maxSockets,
+                     sendBufferSize,
+                     NULL);
+    OptionSet*retval=OptionSet::getOptions("tcpsstoptions",numSockets);
+    retval->parse(str);
+    return retval;
+}
+}
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     if (core_plugin_refcount==0) {
@@ -46,10 +64,12 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         Sirikata::Network::StreamFactory::getSingleton()
             .registerConstructor("tcpsst",
                                  &Network::TCPStream::construct,
+                                 &Sirikata::optionParser,
                                  true);
         Sirikata::Network::StreamListenerFactory::getSingleton()
             .registerConstructor("tcpsst",
                                  &Network::TCPStreamListener::construct,
+                                 &Sirikata::optionParser,
                                  true);
 
     }
@@ -70,8 +90,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            Sirikata::Network::StreamListenerFactory::getSingleton().unregisterConstructor("tcpsst",true);
-            Sirikata::Network::StreamFactory::getSingleton().unregisterConstructor("tcpsst",true);
+            Sirikata::Network::StreamListenerFactory::getSingleton().unregisterConstructor("tcpsst");
+            Sirikata::Network::StreamFactory::getSingleton().unregisterConstructor("tcpsst");
         }
     }
 }

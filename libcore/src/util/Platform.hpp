@@ -270,12 +270,13 @@ class ThreadIdCheck { public:
 class RoutableMessageHeader;
 class RoutableMessage;
 class RoutableMessageBody;
+class OptionSet;
 } // namespace Sirikata
 #include "MemoryReference.hpp"
 #include "MessageService.hpp"
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
-#include "Factory.hpp"
+#include "FactoryWithOptions.hpp"
 #include "Vector2.hpp"
 #include "Vector3.hpp"
 #include "Vector4.hpp"

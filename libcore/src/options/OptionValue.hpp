@@ -36,6 +36,40 @@
 #include "util/Any.hpp"
 namespace Sirikata {
 class OptionSet;
+
+template <class T> class OptionValueMap {public:
+    /// makes a map out of an option like  "a:{b},c:{d}" mapping a->b c->d 
+    static Any lexical_cast(const std::string &value){
+        T retval;
+        std::string::size_type where=0,oldwhere=0;
+        while((where=value.find(':',oldwhere))!=std::string::npos) {
+            std::string key=value.substr(oldwhere,where-oldwhere);
+            oldwhere=where+1;
+            where=value.find('{',oldwhere);
+            if (where!=std::string::npos) {
+                int count=1;
+                std::string::size_type value_begin=oldwhere=where+1;
+                while ((where=value.find_first_of("{}",oldwhere))!=std::string::npos) {
+                    if (value[where]=='}')
+                        --count;
+                    else
+                        ++count;
+                    oldwhere=where+1;
+                    if (count==0){
+                        std::string val=value.substr(value_begin,where-value_begin);
+                        retval[key]=val;
+                        break;
+                    }
+                }
+            }
+            where=value.find(',',oldwhere);
+            if (where==std::string::npos) break;
+            oldwhere=where+1;
+        }
+        return retval;
+    }
+};
+
 template <class T> class OptionValueType {public:
     static Any lexical_cast(const std::string &value){
         T retval=T();
@@ -48,6 +82,11 @@ template <> class OptionValueType<std::string> {public:
     static Any lexical_cast(const std::string &value){
         return value;
     }
+};
+
+template <> class OptionValueType<std::map<std::string,std::string> > :public OptionValueMap<std::map<std::string,std::string> > {public:
+};
+template <> class OptionValueType<std::tr1::unordered_map<std::string,std::string> > :public OptionValueMap<std::tr1::unordered_map<std::string,std::string> > {public:
 };
 template <> class OptionValueType<bool> {public:
     static Any lexical_cast(const std::string &value){

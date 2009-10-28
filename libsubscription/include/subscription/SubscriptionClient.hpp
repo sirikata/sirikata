@@ -124,9 +124,9 @@ protected:
                                        const Network::Stream::ConnectionStatus,
                                        const String&reason);
     };
-
+    std::tr1::unordered_map<String,OptionSet*> mProtocolOptions;
 public:
-    SubscriptionClient(Network::IOService*mService);
+    SubscriptionClient(Network::IOService*mService, const String&options);
     ~SubscriptionClient();
 
     std::tr1::shared_ptr<IndividualSubscription> subscribe(const Network::Address&,

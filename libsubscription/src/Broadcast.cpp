@@ -36,6 +36,7 @@
 #include "network/Stream.hpp"
 #include "network/StreamFactory.hpp"
 #include "Subscription_Subscription.pbj.hpp"
+#include "options/Options.hpp"
 namespace Sirikata { namespace Subscription {
 
 class Broadcast::UniqueLock: public boost::mutex {};
@@ -46,8 +47,19 @@ Broadcast::BroadcastStream::BroadcastStream(const std::tr1::shared_ptr<Network::
 Broadcast::BroadcastStream::~BroadcastStream(){
     delete mStream;
 }
-Broadcast::Broadcast(Network::IOService*service):mIOService(service) {
+Broadcast::Broadcast(Network::IOService*service, const String&options):mIOService(service) {
     mUniqueLock=new UniqueLock;
+    OptionValue*protocolOptions;
+    InitializeClassOptions ico("broadcast",this,
+                               protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
+                           NULL);
+    OptionSet::getOptions("broadcast",this)->parse(options);
+    {
+        std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
+        for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
+            mProtocolOptions[i->first]=Network::StreamFactory::getSingleton().getOptionParser(i->first)(i->second);
+        }
+    }
 }
 class Broadcast::BroadcastStreamCallbacks {
 public:
@@ -101,7 +113,16 @@ std::tr1::shared_ptr<Broadcast::BroadcastStream> Broadcast::establishSharedBroad
         std::tr1::shared_ptr<Network::Stream> topLevelStream;
         if ((topLevelStream=weak_topLevelStream->lock())) {
         }else{
-            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getDefaultConstructor()(mIOService));
+            String protocol(addy.getProtocol());
+            if (protocol.empty()) {
+                protocol=Network::StreamFactory::getSingleton().getDefault();
+            }
+            OptionSet**options=&mProtocolOptions[protocol];
+            if (*options==NULL) {
+                *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
+            }
+
+            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getConstructor(protocol)(mIOService,*options));
             (topLevelStream=tlstemp)->connect(addy,
                                               &Network::Stream::ignoreSubstreamCallback,
                                               &Network::Stream::ignoreConnectionStatus,
@@ -144,7 +165,16 @@ Broadcast::BroadcastStream *Broadcast::establishBroadcast(const Network::Address
         std::tr1::shared_ptr<Network::Stream> topLevelStream;
         if ((topLevelStream=weak_topLevelStream->lock())) {
         }else{
-            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getDefaultConstructor()(mIOService));
+
+            String protocol(addy.getProtocol());
+            if (protocol.empty()) {
+                protocol=Network::StreamFactory::getSingleton().getDefault();
+            }
+            OptionSet**options=&mProtocolOptions[protocol];
+            if (*options==NULL) {
+                *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
+            }
+            std::tr1::shared_ptr<Network::Stream> tlstemp(Network::StreamFactory::getSingleton().getConstructor(protocol)(mIOService,*options));
             (topLevelStream=tlstemp)->connect(addy,&Network::Stream::ignoreSubstreamCallback,&Network::Stream::ignoreConnectionStatus,&Network::Stream::ignoreBytesReceived,&Network::Stream::ignoreReadySend);
             *weak_topLevelStream=tlstemp;
         }

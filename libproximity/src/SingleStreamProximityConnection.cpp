@@ -83,25 +83,30 @@ ProximityConnection* SingleStreamProximityConnection::create(Network::IOService*
     OptionValue*address=new OptionValue("address","localhost:6408",Network::Address("localhost","6408"),"sets the fully qualified address that runs the proximity manager.");
     OptionValue*host;
     OptionValue*port;
+    OptionValue*streamlib;
+    OptionValue*streamoptions;
     InitializeClassOptions("proximityconnection",address,
                            address,
                            host=new OptionValue("host","",OptionValueType<String>(),"sets the hostname that runs the proximity manager."),
                            port=new OptionValue("port","",OptionValueType<String>(),"sets the port that runs the proximity manager."),
+                           streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to connect"),
+                           streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created stream"),
 						   NULL);
+    OptionSet::getOptions("proximityconnection",address)->parse(options);
     if (host->as<String>().empty()||port->as<String>().empty()) {
-        return new SingleStreamProximityConnection(address->as<Network::Address>(),*io);
+        return new SingleStreamProximityConnection(address->as<Network::Address>(),*io,streamlib->as<String>(),streamoptions->as<String>());
     }
-    return new SingleStreamProximityConnection(Network::Address(host->as<String>(),port->as<String>()),*io);    
-                           
+    return new SingleStreamProximityConnection(Network::Address(host->as<String>(),port->as<String>()),*io,streamlib->as<String>(),streamoptions->as<String>());
+                              
 }
-SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&io):mParent(NULL),mConnectionStream(Network::StreamFactory::getSingleton().getDefaultConstructor()(&io)) {
+SingleStreamProximityConnection::SingleStreamProximityConnection(const Network::Address&addy, Network::IOService&io,const String&streamlib, const String&streamoptions):mParent(NULL),mConnectionStream(Network::StreamFactory::getSingleton().getConstructor(streamlib)(&io,Network::StreamFactory::getSingleton().getOptionParser(streamlib)(streamoptions))) {
         mConnectionStream->connect(addy,
                                    &Network::Stream::ignoreSubstreamCallback,
                                    std::tr1::bind(&connectionCallback,this,_1,_2),
                                    &Network::Stream::ignoreBytesReceived,
                                    &Network::Stream::ignoreReadySend);
     
-}
+    }
 void SingleStreamProximityConnection::streamDisconnected() {
     SILOG(proximity,error,"Lost connection with proximity manager");
 }

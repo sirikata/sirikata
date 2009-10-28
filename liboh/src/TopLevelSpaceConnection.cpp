@@ -54,10 +54,10 @@ void connectionStatus(const std::tr1::weak_ptr<TopLevelSpaceConnection>&weak_thu
 }
 }
 
-TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io):mRegisteredAddress(Network::Address::null()) {
+TopLevelSpaceConnection::TopLevelSpaceConnection(Network::IOService*io, const String&protocol, OptionSet *protocolOptions):mRegisteredAddress(Network::Address::null()) {
     mParent=NULL;
     mIOService=io;
-    mTopLevelStream=Network::StreamFactory::getSingleton().getDefaultConstructor()(io);
+    mTopLevelStream=Network::StreamFactory::getSingleton().getConstructor(protocol)(io,protocolOptions);
     ObjectHostProxyManager::initialize();
 }
 void TopLevelSpaceConnection::connect(const std::tr1::weak_ptr<TopLevelSpaceConnection>&thus, ObjectHost * oh,  const SpaceID & id) {

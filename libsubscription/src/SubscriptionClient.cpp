@@ -37,6 +37,7 @@
 #include "network/Stream.hpp"
 #include "network/StreamFactory.hpp"
 #include "Subscription_Subscription.pbj.hpp"
+#include "options/Options.hpp"
 #include <boost/thread.hpp>
 namespace Sirikata { namespace Subscription {
 class SubscriptionClient::UniqueLock : public boost::mutex {
@@ -105,8 +106,20 @@ void SubscriptionClient::addSubscriber(const std::tr1::weak_ptr<IndividualSubscr
                                               individual,
                                               sendIntroMessage));
 }
-SubscriptionClient::SubscriptionClient(Network::IOService*service):mService(service){
+SubscriptionClient::SubscriptionClient(Network::IOService*service,const String&options):mService(service){
     mMapLock = new UniqueLock;
+    OptionValue*protocolOptions;
+    InitializeClassOptions ico("subscriptionclient",this,
+                               protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
+                           NULL);
+    OptionSet::getOptions("subscriptionclient",this)->parse(options);
+    {
+        std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
+        for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
+            mProtocolOptions[i->first]=Network::StreamFactory::getSingleton().getOptionParser(i->first)(i->second);
+        }
+    }
+    
 }
 SubscriptionClient::~SubscriptionClient(){
     delete mMapLock;
@@ -312,7 +325,16 @@ std::tr1::shared_ptr<SubscriptionClient::IndividualSubscription>
             }
         }
         if (!retval) {//make a new connection
-            std::tr1::shared_ptr<Network::Stream> topLevelStream (Network::StreamFactory::getSingleton().getDefaultConstructor()(mService));
+            String protocol(address.getProtocol());
+            if (protocol.empty()) {
+                protocol=Network::StreamFactory::getSingleton().getDefault();
+            }
+            OptionSet**options=&mProtocolOptions[protocol];
+            if (*options==NULL) {
+                *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
+            }
+            
+            std::tr1::shared_ptr<Network::Stream> topLevelStream (Network::StreamFactory::getSingleton().getConstructor(protocol)(mService,*options));
 
             topLevelStream->connect(address,
                                     &Network::Stream::ignoreSubstreamCallback,

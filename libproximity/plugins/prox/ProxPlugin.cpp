@@ -69,8 +69,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            ProximitySystemFactory::getSingleton().unregisterConstructor("bruteforceprox",true);
-            ProximityConnectionFactory::getSingleton().unregisterConstructor("bruteforceprox",true);
+            ProximitySystemFactory::getSingleton().unregisterConstructor("bruteforceprox");
+            ProximityConnectionFactory::getSingleton().unregisterConstructor("bruteforceprox");
         }
     }
 }

@@ -45,7 +45,8 @@
 #include "oh/ObjectScriptManager.hpp"
 #include "oh/ObjectScript.hpp"
 #include "oh/ObjectScriptManagerFactory.hpp"
-
+#include "network/StreamFactory.hpp"
+#include "options/Options.hpp"
 
 namespace Sirikata {
 
@@ -59,7 +60,7 @@ struct ObjectHost::AtomicInt : public AtomicValue<int> {
 };
 
 
-ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ) {
+ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Network::IOService *ioServ, const String&options) {
     mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
     mMessageQueue = messageQueue;
@@ -68,6 +69,17 @@ ObjectHost::ObjectHost(SpaceIDMap *spaceMap, Task::WorkQueue *messageQueue, Netw
     mEnqueuers = new AtomicInt(0,gEnqueuers);
     std::auto_ptr<AtomicInt> tmp(mEnqueuers);
     gEnqueuers=tmp;
+    OptionValue *protocolOptions;
+    InitializeClassOptions ico("objecthost",this,
+                           protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
+                           NULL);
+    {
+        std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
+        for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
+            mSpaceConnectionProtocolOptions[i->first]=Network::StreamFactory::getSingleton().getOptionParser(i->first)(i->second);
+        }
+    }
+
 }
 
 ObjectHost::~ObjectHost() {
@@ -224,7 +236,13 @@ std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpace(const S
         boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
         SpaceConnectionMap::iterator where=mSpaceConnections.find(id);
         if ((where==mSpaceConnections.end())||((retval=where->second.lock())==NULL)) {
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO));
+            const String &defaultStreamPlugin =Network::StreamFactory::getSingleton().getDefault();
+            OptionSet * defaultOptions=mSpaceConnectionProtocolOptions[defaultStreamPlugin];
+            if (!defaultOptions) {
+                defaultOptions=mSpaceConnectionProtocolOptions[defaultStreamPlugin]
+                    = Network::StreamFactory::getSingleton().getOptionParser(defaultStreamPlugin)(String());
+            }
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO,defaultStreamPlugin,defaultOptions));
             temp->connect(temp,this,id);//inserts into mSpaceConnections and eventuallly mAddressConnections
             retval = temp;
             if (where==mSpaceConnections.end()) {
@@ -245,7 +263,15 @@ std::tr1::shared_ptr<TopLevelSpaceConnection> ObjectHost::connectToSpaceAddress(
         boost::recursive_mutex::scoped_lock uniqMap(gSpaceConnectionMapLock);
         AddressConnectionMap::iterator where=mAddressConnections.find(addy);
         if ((where==mAddressConnections.end())||(!(retval=where->second.lock()))) {
-            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO));
+            String protocol(addy.getProtocol());
+            if (protocol.empty()) {
+                protocol=Network::StreamFactory::getSingleton().getDefault();
+            }
+            OptionSet**options=&mSpaceConnectionProtocolOptions[protocol];
+            if (*options==NULL) {
+                *options=Network::StreamFactory::getSingleton().getOptionParser(protocol)(String());
+            }
+            std::tr1::shared_ptr<TopLevelSpaceConnection> temp(new TopLevelSpaceConnection(mSpaceConnectionIO,protocol,*options));
             temp->connect(temp,this,id,addy);//inserts into mSpaceConnections and eventuallly mAddressConnections
             retval = temp;
             if (where==mAddressConnections.end()) {

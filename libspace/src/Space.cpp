@@ -47,7 +47,7 @@
 #include <proximity/ProximityConnection.hpp>
 #include <proximity/ProximityConnectionFactory.hpp>
 #include <proximity/BridgeProximitySystem.hpp>
-
+#include "options/Options.hpp"
 #include <space/Loc.hpp>
 #include <space/Registration.hpp>
 #include <space/Router.hpp>
@@ -55,7 +55,7 @@ namespace Sirikata {
 Time Space::now()const{
     return Time::now(Duration::zero());//FIXME for distribution
 }
-Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOService()) {
+Space::Space(const SpaceID&id, const String&options):mID(id),mIO(Network::IOServiceFactory::makeIOService()) {
     unsigned int rsi=Services::REGISTRATION;
     unsigned int lsi=Services::LOC;
     unsigned int gsi=Services::GEOM;
@@ -80,11 +80,27 @@ Space::Space(const SpaceID&id):mID(id),mIO(Network::IOServiceFactory::makeIOServ
     mRouter=NULL;
     mCoordinateSegmentation=NULL;
     mObjectSegmentation=NULL;
-    String port="5943";
+    OptionValue*host;
+    OptionValue*port;
+
     String spaceServicesString;
     spaceServices.SerializeToString(&spaceServicesString);
-    mObjectConnections=new ObjectConnections(Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(mIO),
-                                             Network::Address("0.0.0.0",port)
+
+    OptionValue*streamlib;
+    OptionValue*streamoptions;
+    InitializeClassOptions("space",this,
+                           host=new OptionValue("host","0.0.0.0",OptionValueType<String>(),"sets the hostname that runs the space."),
+                           port=new OptionValue("port","5943",OptionValueType<String>(),"sets the port that runs the space."),
+                           streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to listen upon"),
+                           streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created listener"),
+						   NULL);
+    OptionSet::getOptions("space",this)->parse(options);
+
+    mObjectConnections=new ObjectConnections(Network::StreamListenerFactory::getSingleton()
+                                                .getConstructor(streamlib->as<String>())(mIO,
+                                                                                         Network::StreamListenerFactory::getSingleton()
+                                                                                         .getOptionParser(streamlib->as<String>())(streamoptions->as<String>())),
+                                             Network::Address(host->as<String>(),port->as<String>(),streamlib->as<String>())
                                              //spaceServicesString
                                              );
     mObjectConnections->forwardMessagesTo(this);

@@ -84,7 +84,7 @@ public:
     void processMessage(const RoutableMessageHeader&header,
                         MemoryReference message_body);
 
-    Space(const SpaceID&);
+    Space(const SpaceID&, const String&options);
     ~Space();
     ///hands control off to mIO and never returns
     void run();

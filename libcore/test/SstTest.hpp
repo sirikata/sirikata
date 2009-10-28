@@ -225,7 +225,7 @@ public:
 
         mServicePool = new IOServicePool(1);
 
-        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServicePool->service());
+        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServicePool->service(),StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
@@ -455,7 +455,7 @@ public:
         Stream*z=NULL;
         bool doSubstreams=true;
         {
-            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServicePool->service());
+            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServicePool->service(),StreamFactory::getSingleton().getDefaultOptionParser()(String()));
             simpleConnect(r,Address("127.0.0.1",mPort));
             runRoutine(r);
             if (doSubstreams) {

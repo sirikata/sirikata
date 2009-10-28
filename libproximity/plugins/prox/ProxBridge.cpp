@@ -91,15 +91,24 @@ bool ProxBridge::endForwardingMessagesTo(MessageService*ms){
     return false;
 }
 
-ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mListener(Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(&io)),mQueryHandler(handler),mCallback(cb) {
+ProxBridge::ProxBridge(Network::IOService&io,const String&options, Prox::QueryHandler*handler, const Callback&cb):mIO(&io),mQueryHandler(handler),mCallback(cb) {
     std::memset(mMessageServices,0,sMaxMessageServices*sizeof(MessageService*));
     OptionValue*port;
     OptionValue*updateDuration;
+    OptionValue*streamlib;
+    OptionValue*streamoptions;
     InitializeClassOptions("proxbridge",this,
                           port=new OptionValue("port","6408",OptionValueType<String>(),"sets the port that the proximity bridge should listen on"),
                           updateDuration=new OptionValue("updateDuration","60ms",OptionValueType<Duration>(),"sets the ammt of time between proximity updates"),
+                          streamlib=new OptionValue("protocol","",OptionValueType<String>(),"Sets the stream library to connect"),
+                          streamoptions=new OptionValue("options","",OptionValueType<String>(),"Options for the created stream"),
+                           
 						  NULL);
     (mOptions=OptionSet::getOptions("proxbridge",this))->parse(options);
+    mListener=Network::StreamListenerFactory::getSingleton()
+        .getConstructor(streamlib->as<String>())(&io,
+                                                 Network::StreamListenerFactory::getSingleton()
+                                                     .getOptionParser(streamlib->as<String>())(streamoptions->as<String>()));
     std::tr1::weak_ptr<Prox::QueryHandler> phandler=mQueryHandler;
     io.post(updateDuration->as<Duration>(),std::tr1::bind(&ProxBridge::update,this,updateDuration->as<Duration>(),phandler));
     mListener->listen(Network::Address("127.0.0.1",port->as<String>()),

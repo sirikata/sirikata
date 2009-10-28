@@ -120,7 +120,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monoscript",true);
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monoscript");
             delete mono_system;
         }
     }

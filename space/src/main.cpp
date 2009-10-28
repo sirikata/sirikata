@@ -43,12 +43,14 @@ namespace Sirikata {
 
 int main(int argc,const char**argv) {
     using namespace Sirikata;
-        Sirikata::PluginManager plugins;
-        plugins.load( DynamicLibrary::filename("tcpsst") );
-        plugins.load( DynamicLibrary::filename("prox") );
+    Sirikata::PluginManager plugins;
+    plugins.load( DynamicLibrary::filename("tcpsst") );
+    plugins.load( DynamicLibrary::filename("prox") );
+    OptionValue *spaceOption;
+    InitializeGlobalOptions gbo("",spaceOption=new OptionValue("space","",OptionValueType<String>(),"Options passed to the space"),NULL);
 
     OptionSet::getOptions("")->parse(argc,argv);
-    Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())));
+    Space space(SpaceID(UUID("12345678-1111-1111-1111-DEFA01759ACE", UUID::HumanReadable())),spaceOption->as<String>());
     space.run();
     return 0;
 }

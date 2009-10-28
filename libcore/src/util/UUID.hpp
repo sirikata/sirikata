@@ -94,6 +94,11 @@ public:
     }
 };
 
+template <> class OptionValueType<UUID> {public:
+    static Any lexical_cast(const std::string &value){
+        return UUID(value,UUID::HumanReadable());
+    }
+};
 }
 SIRIKATA_FUNCTION_EXPORT std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
 SIRIKATA_FUNCTION_EXPORT std::ostream &  operator<<(std::ostream & os, const Sirikata::UUID & uuid);

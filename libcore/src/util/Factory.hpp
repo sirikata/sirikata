@@ -50,18 +50,17 @@ class FactoryImpl {
         return noop(temp);
     }
     Ftype mNoop;
+    String mDefault;
 public:
 	FactoryImpl():mNoop(std::tr1::bind(&FactoryImpl<T,Ftype>::staticNoop)){}
-    bool unregisterConstructor(const String& name, bool isDefault=false) {
+    bool unregisterConstructor(const String& name) {
+
         typename ConstructorMap::iterator where=mConstructors.find(name);
         if (where==mConstructors.end())
             return false;
         mConstructors.erase(where);
-        if (isDefault) {
-            where=mConstructors.find(String());
-            if (where==mConstructors.end())
-                return false;
-            mConstructors.erase(where);
+        if (mDefault==name) {
+            mDefault=String();
         }
         return true;
     }
@@ -71,21 +70,29 @@ public:
         if (mConstructors.find(name)!=mConstructors.end())
             return false;
         mConstructors[name]=constructor;
-        if (isDefault)
-            mConstructors[String()]=constructor;
+        if (isDefault) {
+            mDefault=name;
+        }
         return true;
+    }
+    const String& getDefault() const {
+        return mDefault;
     }
     bool hasConstructor(const String&name)const {
         return mConstructors.find(name)==mConstructors.end();
     }
     const Ftype &getConstructor(const String&name)const{
         typename ConstructorMap::const_iterator where=mConstructors.find(name);
-        if (where==mConstructors.end())
+        if (where==mConstructors.end()) {
+            if (name.length()==0&&mDefault.length()) {
+                return getConstructor(mDefault);
+            }
             return mNoop;
+        }
         return where->second;
     }
     const Ftype& getDefaultConstructor()const{
-        return getConstructor(String());
+        return getConstructor(mDefault);
     }
 };
 

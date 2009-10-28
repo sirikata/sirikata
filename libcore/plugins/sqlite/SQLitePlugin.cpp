@@ -69,8 +69,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
         core_plugin_refcount--;
         assert(core_plugin_refcount==0);
         if (core_plugin_refcount==0) {
-            Persistence::MinitransactionHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
-            Persistence::ReadWriteHandlerFactory::getSingleton().unregisterConstructor("sqlite",true);
+            Persistence::MinitransactionHandlerFactory::getSingleton().unregisterConstructor("sqlite");
+            Persistence::ReadWriteHandlerFactory::getSingleton().unregisterConstructor("sqlite");
         }
     }
 }

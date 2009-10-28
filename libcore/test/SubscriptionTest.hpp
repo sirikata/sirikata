@@ -111,14 +111,15 @@ public:
         oBroadcast=tBroadcast=NULL;
         mSubIO=Network::IOServiceFactory::makeIOService();
         mBroadIO=Network::IOServiceFactory::makeIOService();
-        mBroad = new Subscription::Broadcast(mBroadIO);
-        mSub = new Subscription::SubscriptionClient(mSubIO);
+        mBroad = new Subscription::Broadcast(mBroadIO,"");
+        mSub = new Subscription::SubscriptionClient(mSubIO,"");
+        OptionSet*options=StreamListenerFactory::getSingleton().getDefaultOptionParser()(String());
         std::tr1::shared_ptr<Subscription::Server> tempServer(new Subscription::Server(mBroadIO,
                                                                                        Network::StreamListenerFactory::getSingleton()
-                                                                                         .getDefaultConstructor()(mBroadIO),
+                                                                                         .getDefaultConstructor()(mBroadIO,options),
                                                                                        mBroadcastAddress,
                                                                                        Network::StreamListenerFactory::getSingleton()
-                                                                                         .getDefaultConstructor()(mSubIO),
+                                                                                         .getDefaultConstructor()(mSubIO,options),
                                                                                        mSubscriptionAddress,
                                                                                        Duration::seconds(3.0),
                                                                                        1024*1024));

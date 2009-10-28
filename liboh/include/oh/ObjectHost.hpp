@@ -73,6 +73,7 @@ class SIRIKATA_OH_EXPORT ObjectHost :public MessageService{
     HostedObjectMap mHostedObjects;
     ServicesMap mServices;
     PluginManager *mScriptPlugins;
+    std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 public:
 
     /** Caller is responsible for starting a thread
@@ -81,7 +82,7 @@ public:
      *
      * Destroy it with Network::IOServiceFactory::destroyIOService(ioServ);
      */
-    ObjectHost(SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ);
+    ObjectHost(SpaceIDMap *spaceIDMap, Task::WorkQueue *messageQueue, Network::IOService*ioServ, const String&options);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
     ///ObjectHost does not forward messages to other services, only to objects it owns
