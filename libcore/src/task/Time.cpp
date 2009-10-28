@@ -65,7 +65,20 @@ Sirikata::Task::LocalTime Sirikata::Task::LocalTime::now() {
 namespace Sirikata { namespace Task {
 
 std::ostream& operator<<(std::ostream& os, const DeltaTime& rhs) {
-    os << rhs.toMilliseconds() << "ms";
+    uint64 micros = rhs.toMicroseconds();
+    float32 val = (float32)micros;
+    const char* units = "us";
+
+    if (micros > 1000000) {
+        val = rhs.toSeconds();
+        units = "s";
+    }
+    else if (micros > 1000) {
+        val = micros / 1000.; // because toMilliseconds returns uint64
+        units = "ms";
+    }
+
+    os << val << units;
     return os;
 }
 
