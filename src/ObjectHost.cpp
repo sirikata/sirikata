@@ -49,12 +49,12 @@ using namespace Sirikata::Network;
 
 namespace CBR {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(IOService& ios, ServerID sid)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, OptionSet* streamOptions, ServerID sid)
  : server(sid),
    queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1)),
    rateLimiter(1024*1024)
 {
-    socket=Sirikata::Network::StreamFactory::getSingleton().getDefaultConstructor()(&ios);
+    socket=Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ios,streamOptions);
     connecting = false;
 
     queue.connect(0, &rateLimiter, 0);
@@ -86,6 +86,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace
    mContext( ctx ),
    mServerIDMap(sidmap)
 {
+    mStreamOptions=Sirikata::Network::StreamFactory::getSingleton().getOptionParser(GetOption("ohstreamlib")->as<String>())(GetOption("ohstreamoptions")->as<String>());
     mLastRRObject=UUID::null();
     mPingId=0;
     mContext->objectHost = this;
@@ -391,9 +392,9 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     using std::tr1::placeholders::_2;
 
     static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
+    static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
 
-    SpaceNodeConnection* conn = new SpaceNodeConnection(*(mContext->ioService), server);
+    SpaceNodeConnection* conn = new SpaceNodeConnection(*(mContext->ioService), mStreamOptions, server);
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 

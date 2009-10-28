@@ -5,6 +5,7 @@
 #include "sirikata/network/StreamListenerFactory.hpp"
 #include "sirikata/network/StreamListener.hpp"
 #include "boost/thread.hpp"
+#include "Options.hpp"
 using namespace Sirikata::Network;
 using namespace Sirikata;
 
@@ -15,10 +16,13 @@ TCPNetwork::TCPNetwork(Trace* trace, uint32 incomingBufferLength, uint32 incomin
     mOutgoingBandwidth=outgoingBandwidth;
     mIncomingBufferLength=incomingBufferLength;
     mTrace=trace;
-    mPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst"));
+    mStreamPlugin=GetOption("spacestreamlib")->as<String>();
+    mPluginManager.load(Sirikata::DynamicLibrary::filename(mStreamPlugin));
+    mListenOptions=StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());
+    mSendOptions=StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOption("spacestreamoptions")->as<String>());    
     mIOService=IOServiceFactory::makeIOService();
     mIOService->post(Duration::seconds(60*60*24*365*68),&noop);
-    mListener=StreamListenerFactory::getSingleton().getDefaultConstructor()(mIOService);
+    mListener=StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
     mThread= new boost::thread(std::tr1::bind(&IOService::run,mIOService));
     //mThread= new boost::thread(&noop);//std::tr1::bind(&IOServiceFactory::runService,mIOService));    
 
@@ -72,7 +76,7 @@ bool TCPNetwork::canSend(const Address4&addy,uint32 size, bool reliable, bool or
     return false;
 }
 char toHex(unsigned char u) {
-    if (u>=0&&u<=9) return '0'+u;
+    if (u<=9) return '0'+u;
     return 'A'+(u-10);
 }
 void hexPrint(const char *name, const Chunk&data) {
@@ -100,7 +104,7 @@ bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, boo
 
     std::tr1::unordered_map<Address4,SendStream>::iterator where;
     if ((where=mSendStreams.find(addy))==mSendStreams.end()) {
-        mSendStreams.insert(std::pair<Address4,SendStream>(addy,SendStream(StreamFactory::getSingleton().getDefaultConstructor()(mIOService))));
+        mSendStreams.insert(std::pair<Address4,SendStream>(addy,SendStream(StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions))));
         where=mSendStreams.find(addy);
 
         Stream::ConnectionCallback connectionCallback(std::tr1::bind(&TCPNetwork::sendStreamConnectionCallback,this,addy,_1,_2));

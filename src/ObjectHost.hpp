@@ -67,6 +67,7 @@ public:
     Object* randomObject(ServerID whichServer);
     Object * roundRobinObject(ServerID whichServer);
     UUID mLastRRObject;
+    OptionSet*mStreamOptions;
 private:
     struct SpaceNodeConnection;
 
@@ -142,7 +143,7 @@ private:
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(IOService& ios, ServerID sid);
+        SpaceNodeConnection(Sirikata::Network::IOService& ios, OptionSet *streamOptions, ServerID sid);
         ~SpaceNodeConnection();
 
         ServerID server;

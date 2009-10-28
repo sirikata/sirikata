@@ -31,6 +31,7 @@
  */
 
 #include "ObjectHostConnectionManager.hpp"
+#include "Options.hpp"
 #include "Message.hpp"
 #include <sirikata/network/IOService.hpp>
 #include <sirikata/network/IOServiceFactory.hpp>
@@ -101,7 +102,12 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename("tcpsst")),0);
 
     assert(mAcceptor == NULL);
-    mAcceptor = Sirikata::Network::StreamListenerFactory::getSingleton().getDefaultConstructor()(mIOService);
+    mAcceptor=Sirikata::Network::StreamListenerFactory::getSingleton()
+        .getConstructor(GetOption("ohstreamlib")->as<String>())
+          (mIOService,
+           Sirikata::Network::StreamListenerFactory::getSingleton()
+            .getOptionParser(GetOption("ohstreamlib")->as<String>())
+               (GetOption("ohstreamoptions")->as<String>()));
     Sirikata::Network::Address addr(convertAddress4ToSirikata(listen_addr));
     mAcceptor->listen(
         addr,

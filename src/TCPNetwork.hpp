@@ -55,6 +55,9 @@ class TCPNetwork :public Network{
     std::tr1::unordered_map<Address4,dbl_ptr_queue,Address4::Hasher>mReceiveBuffers;
     Sirikata::ThreadSafeQueue<std::pair<Address4,dbl_ptr_queue> > mNewReceiveBuffers;
     std::tr1::shared_ptr<TSQueue> getQueue(const Address4&);
+    Sirikata::OptionSet*mListenOptions;
+    Sirikata::OptionSet*mSendOptions;
+    String mStreamPlugin;
 public:
 
     TCPNetwork(Trace* trace, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
