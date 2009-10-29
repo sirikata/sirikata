@@ -115,27 +115,6 @@ void Forwarder::poll()
 {
     tickOSeg();
 
-    mNoiseStage->started();
-    if (GetOption(NOISE)->as<bool>()) {
-        for(ServerMessageQueue::KnownServerIterator it = mServerMessageQueue->knownServersBegin(); it != mServerMessageQueue->knownServersEnd(); it++) {
-            ServerID sid = *it;
-            if (sid == mContext->id()) continue;
-            while(true) {
-                std::string randnoise;
-                randnoise.resize((size_t)(50 + 200*randFloat()));
-                Message* noise_msg = new Message(mContext->id(),SERVER_PORT_NOISE,sid, SERVER_PORT_NOISE, randnoise); // FIXME control size from options?
-
-                bool sent_success = mServerMessageQueue->addMessage(noise_msg);
-                if (sent_success) {
-                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), 0);
-                }else {
-                    delete noise_msg;
-                }
-                if (!sent_success) break;
-            }
-        }
-    }
-    mNoiseStage->finished();
 
     mForwarderQueueStage->started();
     for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
@@ -165,6 +144,27 @@ void Forwarder::poll()
     }
     mForwarderQueueStage->finished();
 
+    mNoiseStage->started();
+    if (GetOption(NOISE)->as<bool>()) {
+        for(ServerMessageQueue::KnownServerIterator it = mServerMessageQueue->knownServersBegin(); it != mServerMessageQueue->knownServersEnd(); it++) {
+            ServerID sid = *it;
+            if (sid == mContext->id()) continue;
+            while(true) {
+                std::string randnoise;
+                randnoise.resize((size_t)(50 + 200*randFloat()));
+                Message* noise_msg = new Message(mContext->id(),SERVER_PORT_NOISE,sid, SERVER_PORT_NOISE, randnoise); // FIXME control size from options?
+
+                bool sent_success = mServerMessageQueue->addMessage(noise_msg);
+                if (sent_success) {
+                        mContext->trace()->serverDatagramQueued(mContext->time, sid, noise_msg->id(), 0);
+                }else {
+                    delete noise_msg;
+                }
+                if (!sent_success) break;
+            }
+        }
+    }
+    mNoiseStage->finished();
     // Try to push things from the server message queues down to the network
     mServerMessageQueue->service();
 

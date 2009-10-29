@@ -270,7 +270,7 @@ class ClusterSim:
         cmd_seq.extend(debug_params)
         cmd_seq.extend( [
                 "--id=%(node)d",
-#                "--net=tcp",
+                "--net=tcp",
                 "--layout=" + self.settings.layout(),
                 "--num-oh=" + str(self.settings.num_oh),
                 "--region=" + self.settings.region(),
