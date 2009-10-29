@@ -90,13 +90,17 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
     if (setConnectedStatus||!mCallbackRegistration.empty()) {
         if (status==CONNECTED) {
             //do a little house cleaning and empty as many new requests as possible
-            std::vector<RawRequest> newRequests;
+            std::deque<RawRequest> newRequests;
             {
                 boost::lock_guard<boost::mutex> connecting_mutex(sConnectingMutex);
-                newRequests.swap(mNewRequests);
+                if (mNewRequests) {
+                    mNewRequests->popAll(&newRequests);
+                    delete mNewRequests;
+                    mNewRequests=NULL;
+                }
             }
-            for (size_t i=0,ie=newRequests.size();i<ie;++i) {
-                sendBytesNow(getSharedPtr(),newRequests[i], true/*force since we promised to send them out*/);
+            for (std::deque<RawRequest>::iterator i=newRequests.begin(),ie=newRequests.end();i!=ie;++i) {
+                sendBytesNow(getSharedPtr(),*i, true/*force since we promised to send them out*/);
             }
 
         }
@@ -107,10 +111,19 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
                 mSocketConnectionPhase=status;
             } else {
                 mSocketConnectionPhase=WAITCONNECTING;
-                for (size_t i=0,ie=mNewRequests.size();i<ie;++i) {
-                    sendBytesNow(getSharedPtr(),mNewRequests[i],true);
+                std::deque<RawRequest> newRequests;
+                {
+                    if (mNewRequests) {
+                        mNewRequests->popAll(&newRequests);
+                        delete mNewRequests;
+                        mNewRequests=NULL;
+                    }
                 }
-                mNewRequests.clear();
+                for (std::deque<RawRequest>::iterator i=newRequests.begin(),ie=newRequests.end();i!=ie;++i) {
+                    sendBytesNow(getSharedPtr(),*i, true/*force since we promised to send them out*/);
+                }
+                delete mNewRequests;
+                mNewRequests=NULL;
                 mSocketConnectionPhase=CONNECTED;
             }
         }
@@ -181,7 +194,7 @@ bool MultiplexedSocket::canSendBytes(Stream::StreamID originStream,size_t dataSi
     }
 }
 
-bool MultiplexedSocket::sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data) {
+bool MultiplexedSocket::sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data, unsigned int maxQueueSize) {
     bool retval=false;
     if (thus->mSocketConnectionPhase==CONNECTED) {
         retval=sendBytesNow(thus,data,false);
@@ -201,8 +214,10 @@ bool MultiplexedSocket::sendBytes(const MultiplexedSocketPtr& thus,const RawRequ
                 assert(thus->mSocketConnectionPhase==PRECONNECTION);
                 TCPSSTLOG(this,"sendl8r",&*data.data->begin(),data.data->size(),false);
                 TCPSSTLOG(this,"sendl8r","\n",1,false);
-                thus->mNewRequests.push_back(data);
-                retval=true;
+                if (thus->mNewRequests==NULL) {
+                    thus->mNewRequests=new SizedThreadSafeQueue<RawRequest,SizedPointerResourceMonitor>(SizedPointerResourceMonitor(maxQueueSize));
+                }
+                retval=thus->mNewRequests->push(data,false);
             }
         }
         if (lockCheckConnected) {
@@ -231,12 +246,14 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     return Stream::StreamID(retval);
 }
 MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
+    mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
 MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size)
     :ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
+    mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
     for (unsigned int i=0;i<(unsigned int)sockets.size();++i) {
         mSockets.push_back(ASIOSocketWrapper(sockets[i],max_send_buffer_size,ASIO_SEND_BUFFER_SIZE));
@@ -252,7 +269,7 @@ void MultiplexedSocket::sendAllProtocolHeaders(const MultiplexedSocketPtr& thus,
     for (unsigned int i=0,ie=thus->mSockets.size();i!=ie;++i) {
         MakeASIOReadBuffer(thus,i);
     }
-    assert (thus->mNewRequests.size()==0);//would otherwise need to empty out new requests--but no one should have a reference to us here
+    assert (thus->mNewRequests==NULL||thus->mNewRequests->probablyEmpty());//would otherwise need to empty out new requests--but no one should have a reference to us here
 }
 ///erase all sockets and callbacks since the refcount is now zero;
 MultiplexedSocket::~MultiplexedSocket() {
@@ -273,10 +290,15 @@ MultiplexedSocket::~MultiplexedSocket() {
         delete mCallbackRegistration.front().mCallback;
         mCallbackRegistration.pop_front();
     }
-    for (size_t i=0;i<mNewRequests.size();++i) {
-        delete mNewRequests[i].data;
+    if (mNewRequests) {
+        std::deque<RawRequest> newRequests;
+        mNewRequests->popAll(&newRequests);
+        for (std::deque<RawRequest>::iterator i=newRequests.begin(),ie=newRequests.end();i!=ie;++i) {
+            delete i->data;
+        }
+        delete mNewRequests;
+        mNewRequests=NULL;
     }
-    mNewRequests.clear();
     while(!mCallbacks.empty()) {
         delete mCallbacks.begin()->second;
         mCallbacks.erase(mCallbacks.begin());

@@ -52,6 +52,12 @@ public:
         bool unreliable;
         Stream::StreamID originStream;
         Chunk * data;
+        Chunk*operator ->()const {
+            return data;
+        }
+        Chunk&operator *()const {
+            return *data;
+        }
     };
     enum SocketConnectionPhase{
         PRECONNECTION,
@@ -85,7 +91,7 @@ private:
     /// these next items (mCallbackRegistration, mNewRequests, mSocketConnectionPhase) are synced together take the lock, check for preconnection,,, if connected, don't take lock...otherwise take lock and push data onto the new requests queue
     static boost::mutex sConnectingMutex;
     ///list of packets that must be sent before mSocketConnectionPhase switches to CONNECTION
-    std::vector<RawRequest> mNewRequests;
+    SizedThreadSafeQueue<RawRequest,SizedPointerResourceMonitor>* mNewRequests;
     ///must be set to PRECONNECTION when items are being placed on mNewRequests queue and WAITCONNECTING when it is emptying the queue (with lock held) and finally CONNECTED when the user can send directly to the socket.  DISCONNECTED must be set as soon as the socket fails to write or read
     volatile SocketConnectionPhase mSocketConnectionPhase;
     ///This is a list of items for callback registration so that when packets are received by those streamIDs the appropriate callback may be called
@@ -152,7 +158,7 @@ public:
      * Either sends or queues bytes in the data request depending on the connection state
      * if the state is not connected then it must take a lock and place them on the mNewRequests queue
      */
-    static bool sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data);
+    static bool sendBytes(const MultiplexedSocketPtr& thus,const RawRequest&data, unsigned int maxSendQueueSize=2147483647);
     /**
      * Finds if there is enough space to enqueue the particular bytes at this moment.
      */

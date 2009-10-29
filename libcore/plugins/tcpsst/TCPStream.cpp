@@ -134,7 +134,7 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
     //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);
     if ((sendStatus&(3*SendStatusClosing))==0) {///max of 3 entities can close the stream at once (FIXME: should implement |= on atomic ints), but as of now at most the recv thread the sender responsible and a user close() is all that is allowed at once...so 3 is fine)
-        didsend=MultiplexedSocket::sendBytes(mSocket,toBeSent);
+        didsend=MultiplexedSocket::sendBytes(mSocket,toBeSent,mSendBufferSize);
     }
     //relinquish control to a potential closer
     --(*mSendStatus);

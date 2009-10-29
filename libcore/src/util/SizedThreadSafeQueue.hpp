@@ -54,18 +54,18 @@ public:
     SizedPointerResourceMonitor(uint32 limit):mSize(0),mLimit((int32)limit){
         assert(mLimit>=0);
     }
-    template <class T>bool preIncrement(T *value, bool force) {
+    template <class T>bool preIncrement(T value, bool force) {
         if ((mSize+=(int32)value->size())>=mLimit&&mLimit&&!force) {
             mSize-=value->size();
             return false;
         }
         return true;
     }
-    template <class T> void postDecrement(T *value) {      
+    template <class T> void postDecrement(T value) {      
         int32 check=(mSize-=(int32)value->size());
         assert(check>=0);        
     }
-    template <class T> bool probablyCanPush(T*t) {
+    template <class T> bool probablyCanPush(T t) {
         return mSize.read()+(uint32)t->size()<=mLimit||!mLimit;
     }
     bool probablyCanPush(size_t size) {

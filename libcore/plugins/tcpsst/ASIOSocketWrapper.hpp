@@ -56,7 +56,7 @@ class ASIOSocketWrapper {
 		QUEUE_CHECK_FLAG=(1<<30),
 
 	};
-    size_t PACKET_BUFFER_SIZE;
+    unsigned int PACKET_BUFFER_SIZE;
     uint8 *mBuffer;
 
     std::vector<Stream::StreamID> mPausedSendStreams;
