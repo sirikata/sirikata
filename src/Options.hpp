@@ -89,7 +89,6 @@
 
 #define OSEG                       "oseg"
 #define OSEG_OPTION_CRAQ           "oseg_craq"
-#define OSEG_OPTION_LOC            "oseg_loc"
 #define OSEG_UNIQUE_CRAQ_PREFIX    "oseg_unique_craq_prefix"
 #define OBJECT_DRIFT_X             "object_drift_x"
 #define OBJECT_DRIFT_Y             "object_drift_y"

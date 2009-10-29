@@ -118,7 +118,7 @@ void InitOptions() {
         .addOption(new OptionValue("monitor-load", "false", Sirikata::OptionValueType<bool>(), "Does the LoadMonitor monitor queue sizes?"))
 
 
-      .addOption(new OptionValue(OSEG,OSEG_OPTION_LOC,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
+      .addOption(new OptionValue(OSEG,OSEG_OPTION_CRAQ,Sirikata::OptionValueType<String>(),"Specifies which type of oseg to use."))
 
       .addOption(new OptionValue(OSEG_UNIQUE_CRAQ_PREFIX,"G",Sirikata::OptionValueType<String>(),"Specifies a unique character prepended to Craq lookup calls.  Note: takes in type string.  Will only select the first character in the string.  Also note that it acceptable values range from g to z, and are case sensitive."))
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))

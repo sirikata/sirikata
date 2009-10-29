@@ -63,7 +63,6 @@
 #include "DistributedCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
-#include "LocObjectSegmentation.hpp"
 #include "CraqObjectSegmentation.hpp"
 
 
@@ -508,26 +507,7 @@ void *main_loop(void *) {
     //Create OSeg
     std::string oseg_type=GetOption(OSEG)->as<String>();
 
-    ObjectSegmentation* oseg;
-
-    if (oseg_type == OSEG_OPTION_LOC && cseg_type != "distributed")
-    {
-      //using loc approach
-      std::map<UUID,ServerID> dummyObjectToServerMap; //bftm note: this should be filled in later with a list of object ids and where they are located
-
-      //Trying to populate objectToServerMap
-      // FIXME this needs to go away, we can't rely on the object factory being there
-      for(ObjectFactory::iterator it = obj_factory->begin(); it != obj_factory->end(); it++)
-      {
-        UUID obj_id = *it;
-        Vector3f start_pos = obj_factory->motion(obj_id)->initial().extrapolate(Time::null()).position();
-        dummyObjectToServerMap[obj_id] = cseg->lookup(start_pos);
-      }
-
-      //      ObjectSegmentation* oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap);
-      oseg = new LocObjectSegmentation(space_context, cseg,loc_service,dummyObjectToServerMap,forwarder);
-    }
-
+    ObjectSegmentation* oseg = NULL;
     if (oseg_type == OSEG_OPTION_CRAQ && cseg_type != "distributed")
     {
       //using craq approach
