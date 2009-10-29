@@ -136,7 +136,7 @@ void SentMessage::setTimeout(const Duration& timeout) {
         Network::IOService *io = mTracker->getIOService();
         if (io) {
             Network::IOTimerWPtr tmp(mTimerHandle);
-            mTimerHandle.reset(new Network::IOTimer(io));
+            mTimerHandle = Network::IOTimer::create(io);
             assert("Unsetting timeout should have destroyed the timeout"&&!tmp.lock());
 
             mTimerHandle->setCallback(std::tr1::bind(&SentMessage::timedOut, this));

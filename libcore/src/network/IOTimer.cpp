@@ -45,9 +45,9 @@ class IOTimer::TimedOut {
 public:
     static void timedOut(
             const boost::system::error_code &error,
-            std::tr1::weak_ptr<IOTimer> wthis)
+            IOTimerWPtr wthis)
     {
-        std::tr1::shared_ptr<IOTimer> sharedThis (wthis.lock());
+        IOTimerPtr sharedThis (wthis.lock());
         if (!sharedThis) {
             return; // we've been deleted already.
         }
@@ -58,22 +58,29 @@ public:
     }
 };
 
-IOTimer::IOTimer(IOService* io) {
-    mTimer = new DeadlineTimer(*io);
-}
-
 IOTimer::IOTimer(IOService& io) {
     mTimer = new DeadlineTimer(io);
-}
-
-IOTimer::IOTimer(IOService* io, const IOCallback& cb) {
-    mTimer = new DeadlineTimer(*io);
-    setCallback(cb);
 }
 
 IOTimer::IOTimer(IOService& io, const IOCallback& cb) {
     mTimer = new DeadlineTimer(io);
     setCallback(cb);
+}
+
+IOTimerPtr IOTimer::create(IOService* io) {
+    return IOTimerPtr(new IOTimer(*io));
+}
+
+IOTimerPtr IOTimer::create(IOService& io) {
+    return IOTimerPtr(new IOTimer(io));
+}
+
+IOTimerPtr IOTimer::create(IOService* io, const IOCallback& cb) {
+    return IOTimerPtr(new IOTimer(*io, cb));
+}
+
+IOTimerPtr IOTimer::create(IOService& io, const IOCallback& cb) {
+    return IOTimerPtr(new IOTimer(io, cb));
 }
 
 IOTimer::~IOTimer() {
@@ -86,7 +93,7 @@ IOService IOTimer::service() const {
 
 void IOTimer::wait(const Duration &num_seconds) {
     mTimer->expires_from_now(boost::posix_time::microseconds(num_seconds.toMicroseconds()));
-    std::tr1::weak_ptr<IOTimer> weakThisPtr(this->shared_from_this());
+    IOTimerWPtr weakThisPtr(this->shared_from_this());
     mTimer->async_wait(
         boost::bind(
             &IOTimer::TimedOut::timedOut,
