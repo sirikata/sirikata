@@ -97,8 +97,6 @@ private:
 
     TimeProfiler::Stage* mProfiler;
 
-    Time mLastReadingTime;
-
     float mCurrentLoadReading;
     float mAveragedLoadReading;
 

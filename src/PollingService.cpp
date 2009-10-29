@@ -1,5 +1,5 @@
 /*  cbr
- *  PollingService.hpp
+ *  PollingService.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,43 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _CBR_POLLING_SERVICE_HPP_
-#define _CBR_POLLING_SERVICE_HPP_
-
-#include "Utility.hpp"
+#include "PollingService.hpp"
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR {
 
-/** A service which needs to be polled periodically.  This class handles
- *  scheduling and polling the service.
- */
-class PollingService {
-public:
-    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0));
+PollingService::PollingService(IOStrand* str, const Duration& max_rate)
+ : mStrand(str),
+   mTimer( IOTimer::create(str->service()) ),
+   mMaxRate(max_rate),
+   mUnschedule(false),
+   mCB( mStrand->wrap(std::tr1::bind(&PollingService::handleExec, this)) )
+{
+    mTimer->setCallback(mCB);
+}
 
-    /** Start polling this service on this strand at the given maximum rate. */
-    void start();
+void PollingService::start() {
+    if (mMaxRate != Duration::microseconds(0)) {
+        mTimer->wait(mMaxRate);
+    }
+    else {
+        mStrand->post( std::tr1::bind(&PollingService::handleExec, this) );
+    }
+}
 
-    /** Stop scheduling this service. Note that this does not immediately
-     *  stop the service, it simply guarantees the service will not
-     *  be scheduled again.  This allows outstanding events to be handled
-     *  properly.
-     */
-    void stop();
-protected:
-    /** Override this method to specify the work to be done when polling. */
-    virtual void poll() = 0;
+void PollingService::stop() {
+    mUnschedule = true;
+}
 
-private:
-    void handleExec();
+void PollingService::handleExec() {
+    this->poll();
 
-    IOStrand* mStrand;
-    IOTimerPtr mTimer;
-    Duration mMaxRate;
-    bool mUnschedule;
-    IOCallback mCB;
-};
+    if (!mUnschedule)
+        start();
+}
 
 } // namespace CBR
-
-#endif //_CBR_POLLING_SERVICE_HPP_

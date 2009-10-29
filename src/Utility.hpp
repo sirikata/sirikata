@@ -50,6 +50,7 @@
 #include <sirikata/network/IOService.hpp>
 #include <sirikata/network/IOServiceFactory.hpp>
 #include <sirikata/network/IOStrand.hpp>
+#include <sirikata/network/IOTimer.hpp>
 
 namespace CBR {
 
@@ -100,6 +101,9 @@ typedef Sirikata::Task::DeltaTime Duration;
 typedef Sirikata::Network::IOService IOService;
 typedef Sirikata::Network::IOServiceFactory IOServiceFactory;
 typedef Sirikata::Network::IOStrand IOStrand;
+typedef Sirikata::Network::IOTimer IOTimer;
+typedef Sirikata::Network::IOTimerPtr IOTimerPtr;
+typedef Sirikata::Network::IOCallback IOCallback;
 
 /* CBR Derivations of TemporalValue and Extrapolator classes, using our Time and Duration classes. */
 
