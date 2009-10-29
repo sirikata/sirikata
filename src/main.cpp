@@ -50,7 +50,6 @@
 #include "Statistics.hpp"
 #include "Analysis.hpp"
 #include "Visualization.hpp"
-#include "OracleLocationService.hpp"
 #include "StandardLocationService.hpp"
 #include "Test.hpp"
 #include "SSTNetwork.hpp"
@@ -188,9 +187,7 @@ void *main_loop(void *) {
 
     LocationService* loc_service = NULL;
     String loc_service_type = GetOption(LOC)->as<String>();
-    if (loc_service_type == "oracle")
-        loc_service = new OracleLocationService(space_context, obj_factory);
-    else if (loc_service_type == "standard")
+    if (loc_service_type == "standard")
         loc_service = new StandardLocationService(space_context);
     else
         assert(false);
