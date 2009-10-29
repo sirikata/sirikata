@@ -1,5 +1,5 @@
 #include "Test.hpp"
-#include "ENetNetwork.hpp"
+#include "TCPNetwork.hpp"
 #include "TabularServerIDMap.hpp"
 #include "Statistics.hpp"
 #include <arpa/inet.h>
@@ -13,7 +13,7 @@ void testAny(const char * listenport, const char* hostname, const char* port, bo
     IOStrand* mainStrand = ios->createStrand();
 
     SpaceContext ctx(0, ios, mainStrand, Time::null(), Time::null(), &trace, Duration::seconds(0));
-    ENetNetwork rn(&ctx, 65536, 1000000, 1000000);
+    TCPNetwork rn(&ctx, 65536, 1000000, 1000000);
     rn.listen(Address4(Sirikata::Network::Address("localhost", "6666")));
     bool canSend=!server;
     unsigned int mine=0;

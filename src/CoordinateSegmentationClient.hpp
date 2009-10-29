@@ -39,11 +39,6 @@
 #include "CoordinateSegmentation.hpp"
 
 #include "SegmentedRegion.hpp"
-#include <enet/enet.h>
-
-
-
-#include <enet/enet.h>
 
 typedef boost::asio::ip::tcp tcp;
 
@@ -79,10 +74,6 @@ private:
     bool mBSPTreeValid;
 
     Trace* mTrace;
-
-    ENetHost * client;
-    ENetPeer *peer;
-    ENetHost * mSubscriptionClient;
 
     std::map<ServerID, BoundingBoxList> mServerRegionCache;
 

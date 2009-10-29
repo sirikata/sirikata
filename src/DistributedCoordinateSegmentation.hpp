@@ -38,7 +38,6 @@
 
 #include "CoordinateSegmentation.hpp"
 #include "SegmentedRegion.hpp"
-#include <enet/enet.h>
 
 typedef boost::asio::ip::tcp tcp;
 
@@ -96,7 +95,6 @@ private:
     SegmentedRegion mTopLevelRegion;
     Time mLastUpdateTime;
 
-    ENetHost * server;
     std::vector<SegmentationChangeListener> mSpacePeers;
     std::vector<ServerAvailability> mAvailableServers;
 
@@ -113,16 +111,16 @@ private:
     std::map<String, SegmentedRegion*> mLowerLevelTrees;
 
     int mAvailableCSEGServers;
-    
+
     void accept_handler();
 
     void acceptLLTreeRequestHandler();
 
     void subdivideTopLevelRegion(SegmentedRegion* region,
-				 Vector3ui32 perdim, 
+				 Vector3ui32 perdim,
 				 int& numServersAssigned);
 
-    
+
     void generateHierarchicalTrees(SegmentedRegion* region, int depth, int& numLLTreesSoFar);
 
     ServerID callLowerLevelCSEGServer(ServerID, const Vector3f& searchVec, const BoundingBox3f& boundingBox);
@@ -138,7 +136,7 @@ private:
 
     uint32 getAvailableServerIndex();
 
-    void getRandomLeafParentSibling(SegmentedRegion** randomLeaf, 
+    void getRandomLeafParentSibling(SegmentedRegion** randomLeaf,
 				    SegmentedRegion** sibling,
 				    SegmentedRegion** parent);
 
@@ -146,10 +144,10 @@ private:
 
     uint32 readFromSocket(boost::shared_ptr<tcp::socket> socket,
 			  uint8** dataReceived, bool readTillEOF);
-  
+
     boost::shared_ptr<tcp::socket> getSocketToCSEGServer(ServerID server_id);
 
-      
+
     ServerIDMap *  mSidMap;
 
     std::map<ServerID, BoundingBoxList > mWholeTreeServerRegionMap;

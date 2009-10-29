@@ -54,7 +54,6 @@
 #include "StandardLocationService.hpp"
 #include "Test.hpp"
 #include "SSTNetwork.hpp"
-#include "ENetNetwork.hpp"
 #include "TCPNetwork.hpp"
 #include "FIFOServerMessageQueue.hpp"
 #include "FairServerMessageQueue.hpp"
@@ -136,8 +135,6 @@ int main(int argc, char** argv) {
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
     if (network_type == "sst")
         gNetwork = new SSTNetwork(space_context);
-    else if (network_type == "enet")
-        gNetwork = new ENetNetwork(space_context,65536,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     else if (network_type == "tcp")
         gNetwork = new TCPNetwork(space_context,4096,GetOption(RECEIVE_BANDWIDTH)->as<uint32>(),GetOption(SEND_BANDWIDTH)->as<uint32>());
     gNetwork->init(&main_loop);

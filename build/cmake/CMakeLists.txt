@@ -156,14 +156,6 @@ IF(NOT GLUT_FOUND)
   MESSAGE(SEND_ERROR "Couldn't find GLUT.")
 ENDIF(NOT GLUT_FOUND)
 
-#dependency: enet core
-IF(EXISTS ${DEPENDENCIES_ROOT}/installed-enet)
-  SET(Enet_ROOT ${DEPENDENCIES_ROOT}/installed-enet)
-ELSE()
-  SET(Enet_ROOT ${DEPENDENCIES_ROOT})
-ENDIF()
-FIND_PACKAGE(Enet REQUIRED)
-
 #dependency: qt
 IF(EXISTS ${DEPENDENCIES_ROOT}/qt/qt)
   SET(Qt4_ROOT ${DEPENDENCIES_ROOT}/qt/qt)
@@ -209,7 +201,6 @@ INCLUDE_DIRECTORIES(BEFORE
         ${Sirikata_INCLUDE_DIR}
         ${Sirikata_INCLUDE_DIR}/sirikata #FIXME libcore doesn't have a proper library layout yet
         ${Sirikata_PBJ_ROOT}
-        ${Enet_INCLUDE_DIRS}
         ${QT_INCLUDES}
         ${GSL_INCLUDE_DIR}
         ${SST_INCLUDE_DIRS}
@@ -270,7 +261,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/TCPNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetwork.cpp
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
-  ${CBR_SOURCE_DIR}/ENetNetwork.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
@@ -344,7 +334,6 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_REGEX_LIBRARY}
         ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
-        ${Enet_LIBRARIES}
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
