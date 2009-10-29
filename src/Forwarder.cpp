@@ -30,6 +30,28 @@ void tryTimestampObjectMessage(Trace* trace, const Time& t, Message* next_msg, T
 }
 
 bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
+
+
+/** Automatically samples and logs current queue information for the ServerMessageQueue. */
+class ForwarderSampler : public PollingService {
+public:
+    ForwarderSampler(SpaceContext* ctx, const Duration& rate, ServerMessageQueue* smq)
+     : PollingService(ctx->mainStrand, rate),
+       mContext(ctx),
+       mServerMessageQueue(smq)
+    {
+    }
+private:
+    virtual void poll() {
+        mServerMessageQueue->reportQueueInfo(mContext->time);
+    }
+
+    SpaceContext* mContext;
+    ServerMessageQueue* mServerMessageQueue;
+}; // class Sampler
+
+
+
   /*
     Constructor for Forwarder
   */
@@ -39,8 +61,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
    mOutgoingMessages(NULL),
    mServerMessageQueue(NULL),
    mOSegLookups(NULL),
-   mLastSampleTime(Time::null()),
-   mSampleRate( GetOption(STATS_SAMPLE_RATE)->as<Duration>() ),
+   mSampler(NULL),
    mUniqueConnIDs(0)
 {
     //no need to initialize mOutgoingMessages.
@@ -62,6 +83,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
+      delete mSampler;
+
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
       this->unregisterMessageRecipient(SERVER_PORT_NOISE, this);
   }
@@ -74,6 +97,9 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
     mOSegLookups = new OSegLookupQueue(oseg, &AlwaysPush);
     mServerMessageQueue = smq;
     mOutgoingMessages = new ForwarderQueue(smq,16384);
+
+    Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
+    mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
 }
 
   /*
@@ -87,14 +113,6 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
 
 void Forwarder::poll()
 {
-    Time t = mContext->time;
-
-    if (t - mLastSampleTime > mSampleRate)
-    {
-          mServerMessageQueue->reportQueueInfo(t);
-          mLastSampleTime = t;
-    }
-
     tickOSeg();
 
     mNoiseStage->started();
