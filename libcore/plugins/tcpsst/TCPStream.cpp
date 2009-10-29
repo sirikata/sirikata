@@ -141,7 +141,9 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
     if (!didsend) {
         //if the data was not sent, its our job to clean it up
         delete toBeSent.data;
-        SILOG(tcpsst,debug,"printing to closed stream id "<<getID().read());
+        if ((mSendStatus->read()&(3*SendStatusClosing))!=0) {///max of 3 entities can close the stream at once (FIXME: should implement |= on atomic ints), but as of now at most the recv thread the sender responsible and a user close() is all that is allowed at once...so 3 is fine)
+            SILOG(tcpsst,debug,"printing to closed stream id "<<getID().read());
+        }
     }
     return didsend;
 }
