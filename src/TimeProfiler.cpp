@@ -86,7 +86,7 @@ uint64 TimeProfiler::Stage::its() const {
 }
 
 void TimeProfiler::Stage::report(const String& indent) const {
-    PROFILER_LOG(info,"Stage: " << indent << name() << " -- Avg: " << avg() << " Min: " << minimum() << " Max:" << maximum());
+    PROFILER_LOG(info,"Stage: " << indent << name() << " -- Avg: " << avg() << " Min: " << minimum() << " Max:" << maximum() << "  Its: " << its());
 }
 
 TimeProfiler::TimeProfiler(const String& name)
