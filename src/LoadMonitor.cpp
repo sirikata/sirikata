@@ -47,7 +47,8 @@ bool loadInfoComparator(const ServerLoadInfo sli1, const ServerLoadInfo sli2) {
 }
 
 LoadMonitor::LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg)
- : mContext(ctx),
+ : PollingService(ctx->mainStrand),
+   mContext(ctx),
    mServerMsgQueue(serverMsgQueue),
    mCoordinateSegmentation(cseg),
    mLastReadingTime(Time::null()),
@@ -142,7 +143,7 @@ void LoadMonitor::loadStatusMessage(const ServerID source, const CBR::Protocol::
   mRemoteLoadReadings[source] = load_msg.load();
 }
 
-void LoadMonitor::service() {
+void LoadMonitor::poll() {
     mProfiler->started();
   if (GetOption("monitor-load")->as<bool>() &&
       mContext->time - mLastReadingTime > Duration::seconds(5))

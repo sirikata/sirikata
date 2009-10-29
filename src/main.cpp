@@ -124,8 +124,13 @@ int main(int argc, char** argv) {
     Time start_time = g_start_time;
     start_time += GetOption("wait-additional")->as<Duration>();
 
+    Duration duration = GetOption("duration")->as<Duration>();
+
+    IOService* ios = IOServiceFactory::makeIOService();
+    IOStrand* mainStrand = ios->createStrand();
+
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, start_time, init_space_ctx_time, gTrace);
+    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
@@ -179,9 +184,9 @@ void *main_loop(void *) {
     Forwarder* forwarder = new Forwarder(space_context);
 
     // FIXME we shouldn't need to instantiate these for space, only needed for analysis
-    IOService* ios = IOServiceFactory::makeIOService();
-    IOStrand* mainStrand = ios->createStrand();
-    ObjectHostContext* oh_ctx = new ObjectHostContext(0, ios, mainStrand, NULL, Time::null(), Time::null(), duration);
+    IOService* oh_ios = IOServiceFactory::makeIOService();
+    IOStrand* oh_mainStrand = oh_ios->createStrand();
+    ObjectHostContext* oh_ctx = new ObjectHostContext(0, oh_ios, oh_mainStrand, NULL, Time::null(), Time::null(), duration);
     ObjectFactory* obj_factory = new ObjectFactory(oh_ctx, region, duration);
 
     LocationService* loc_service = NULL;
@@ -603,7 +608,7 @@ void *main_loop(void *) {
     Proximity* prox = new Proximity(space_context, loc_service);
 
 
-    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, loadMonitor, oseg, server_id_map->lookupExternal(space_context->id()));
+    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
 
       prox->initialize(cseg);
 
@@ -624,24 +629,16 @@ void *main_loop(void *) {
 
     ///////////Go go go!! start of simulation/////////////////////
 
-    Time tbegin = Time::null();
-    Time tend = tbegin + duration;
-
-    Duration stats_sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
-    Time last_sample_time = Time::null();
-
-
     // FIXME we have a special case for the distributed cseg server, this should be
     // turned into a separate binary
     if (cseg_type == "distributed") {
       srand(time(NULL));
 
-      while( true ) {
-        Duration elapsed = Timer::now() - start_time;
 
-        space_context->tick(tbegin + elapsed);
-        cseg->service();
-      }
+      space_context->add(space_context);
+      space_context->add(cseg);
+
+      space_context->ioService->run();
 
       exit(0);
     }
@@ -649,23 +646,17 @@ void *main_loop(void *) {
 
     gNetwork->start();
 
-    while( true ) {
-        Duration elapsed = Timer::now() - start_time;
-        if (elapsed > duration)
-            break;
+    space_context->add(space_context);
+    space_context->add(gNetwork);
+    space_context->add(cseg);
+    space_context->add(loc_service);
+    space_context->add(prox);
+    space_context->add(server);
+    space_context->add(forwarder);
+    space_context->add(loadMonitor);
 
-        Time curt = tbegin + elapsed;
-        Duration since_last_sample = curt - last_sample_time;
-        if (since_last_sample > stats_sample_rate) {
-            gNetwork->reportQueueInfo(curt);
-            last_sample_time = last_sample_time + stats_sample_rate;
-        }
+    space_context->ioService->run();
 
-        space_context->tick(curt);
-        gNetwork->service(curt);
-        cseg->service();
-        server->service();
-    }
 
     if (GetOption(PROFILE)->as<bool>()) {
         space_context->profiler->report();
@@ -695,8 +686,14 @@ void *main_loop(void *) {
     delete gTrace;
     gTrace = NULL;
 
+    IOStrand* mainStrand = space_context->mainStrand;
+    IOService* ios = space_context->ioService;
+
     delete space_context;
     space_context = NULL;
+
+    delete mainStrand;
+    IOServiceFactory::destroyIOService(ios);
 
     return 0;
 }

@@ -586,11 +586,7 @@ uint32 CoordinateSegmentationClient::numServers()  {
 }
 
 void CoordinateSegmentationClient::service() {
-    mServiceStage->started();
-
-  mIOService.poll_one();
-
-    mServiceStage->finished();
+    mIOService.poll_one();
 }
 
 void CoordinateSegmentationClient::receiveMessage(Message* msg) {

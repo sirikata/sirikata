@@ -36,6 +36,7 @@
 
 #include "ServerMessageQueue.hpp"
 #include "Message.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
@@ -57,7 +58,7 @@ typedef struct ServerLoadInfo{
 
 
 
-class LoadMonitor : public MessageRecipient {
+class LoadMonitor : public MessageRecipient, public PollingService {
 public:
     LoadMonitor(SpaceContext* ctx, ServerMessageQueue* serverMsgQueue, CoordinateSegmentation* cseg);
     ~LoadMonitor();
@@ -73,9 +74,9 @@ public:
     // From MessageRecipient
     void receiveMessage(Message* msg);
 
-    void service();
-
 private:
+    virtual void poll();
+
     void loadStatusMessage(const ServerID source, const CBR::Protocol::CSeg::LoadMessage& load_status_msg);
 
   enum {

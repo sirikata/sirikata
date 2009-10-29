@@ -13,6 +13,7 @@ FIFOServerMessageQueue::FIFOServerMessageQueue(SpaceContext* ctx, Network* net, 
  : ServerMessageQueue(ctx, net, sidmap),
    mQueue(GetOption(SERVER_QUEUE_LENGTH)->as<uint32>() * 32), //FIXME * nobjects?
    mReceiveQueues(),
+   mLastServiceTime(ctx->time),
    mSendRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
@@ -68,8 +69,9 @@ bool FIFOServerMessageQueue::receive(Message** msg_out) {
 }
 
 void FIFOServerMessageQueue::service(){
-    uint64 send_bytes = mContext->sinceLast.toSeconds() * mSendRate + mRemainderSendBytes;
-    uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderRecvBytes;
+    Duration since_last = mContext->time - mLastServiceTime;
+    uint64 send_bytes = since_last.toSeconds() * mSendRate + mRemainderSendBytes;
+    uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderRecvBytes;
 
     // Send
 

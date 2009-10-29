@@ -13,6 +13,8 @@ class FIFOServerMessageQueue:public ServerMessageQueue {
     // Doing round robin would be an alternative.
     FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
+    Time mLastServiceTime;
+
     uint32 mSendRate;
     uint32 mRecvRate;
     uint32 mRemainderSendBytes;

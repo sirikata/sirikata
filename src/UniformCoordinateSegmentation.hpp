@@ -55,11 +55,11 @@ public:
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
 
-    virtual void service();
-
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
 private:
+    virtual void service();
+
     BoundingBox3f mRegion;
     Vector3ui32 mServersPerDim;
 

@@ -62,14 +62,14 @@ public:
     virtual BoundingBox3f region() ;
     virtual uint32 numServers() ;
 
-    virtual void service();
-
     // From MessageRecipient
     virtual void receiveMessage(Message* msg);
 
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo );
 
 private:
+    virtual void service();
+
     BoundingBox3f mRegion;
     void csegChangeMessage(CBR::Protocol::CSeg::ChangeMessage* ccMsg);
 

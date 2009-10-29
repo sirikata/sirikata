@@ -36,6 +36,7 @@
 #include "Utility.hpp"
 #include "SpaceContext.hpp"
 #include "LoadMonitor.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
@@ -46,7 +47,7 @@ typedef std::vector<BoundingBox3f> BoundingBoxList;
  *   position -> ServerID
  *   ServerID -> region
  */
-class CoordinateSegmentation : public MessageRecipient {
+class CoordinateSegmentation : public MessageRecipient, public PollingService {
 public:
     /** Listens for updates about the coordinate segmentation. */
     class Listener {
@@ -74,18 +75,21 @@ public:
     // Callback from MessageDispatcher
     virtual void receiveMessage(Message* msg) = 0;
 
-    virtual void service() = 0;
-
     virtual void migrationHint( std::vector<ServerLoadInfo>& svrLoadInfo ) {  }
 
+    // FIXME this should be private but vis needs it for now
+    virtual void service() = 0;
+
 protected:
+    virtual void poll();
+
     void notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation);
 
     SpaceContext* mContext;
-    TimeProfiler::Stage* mServiceStage;
 private:
     CoordinateSegmentation();
 
+    TimeProfiler::Stage* mServiceStage;
     std::set<Listener*> mListeners;
 }; // class CoordinateSegmentation
 

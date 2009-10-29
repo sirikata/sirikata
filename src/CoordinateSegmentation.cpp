@@ -35,7 +35,8 @@
 namespace CBR {
 
 CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
- : mContext(ctx)
+ : PollingService(ctx->mainStrand),
+   mContext(ctx)
 {
     mServiceStage = mContext->profiler->addStage("CSeg");
 }
@@ -52,6 +53,12 @@ void CoordinateSegmentation::removeListener(Listener* listener) {
 void CoordinateSegmentation::notifyListeners(const std::vector<Listener::SegmentationInfo>& new_segmentation) {
     for( std::set<Listener*>::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->updatedSegmentation(this, new_segmentation);
+}
+
+void CoordinateSegmentation::poll() {
+    mServiceStage->started();
+    this->service();
+    mServiceStage->finished();
 }
 
 } // namespace CBR

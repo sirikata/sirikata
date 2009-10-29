@@ -37,6 +37,7 @@
 #include "SpaceContext.hpp"
 #include "MotionVector.hpp"
 #include "Message.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
@@ -100,7 +101,7 @@ protected:
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class LocationService : public MessageRecipient, public ObjectMessageRecipient {
+class LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
 public:
     enum TrackingType {
         NotTracking,
@@ -114,8 +115,6 @@ public:
     const SpaceContext* context() const {
         return mContext;
     }
-
-    virtual void service() = 0;
 
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
@@ -157,6 +156,9 @@ public:
     /** ObjectMessageRecipient Interface. */
     virtual void receiveMessage(const CBR::Protocol::Object::ObjectMessage& msg) = 0;
 protected:
+    virtual void poll();
+    virtual void service() = 0;
+
     void notifyLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) const;
     void notifyLocalObjectRemoved(const UUID& uuid) const;
     void notifyLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const;
@@ -169,8 +171,9 @@ protected:
     void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
 
     SpaceContext* mContext;
+private:
     TimeProfiler::Stage* mProfiler;
-
+protected:
     typedef std::set<LocationServiceListener*> ListenerList;
     ListenerList mListeners;
 

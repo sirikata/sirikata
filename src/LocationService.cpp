@@ -49,7 +49,8 @@ LocationUpdatePolicy::~LocationUpdatePolicy() {
 
 
 LocationService::LocationService(SpaceContext* ctx)
- : mContext(ctx)
+ : PollingService(ctx->mainStrand),
+   mContext(ctx)
 {
     mProfiler = mContext->profiler->addStage("Location Service");
 
@@ -64,6 +65,12 @@ LocationService::~LocationService() {
 
     mContext->dispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
     mContext->dispatcher()->unregisterObjectMessageRecipient(OBJECT_PORT_LOCATION, this);
+}
+
+void LocationService::poll() {
+    mProfiler->started();
+    service();
+    mProfiler->finished();
 }
 
 void LocationService::addListener(LocationServiceListener* listener) {

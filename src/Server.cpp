@@ -5,7 +5,6 @@
 #include "Message.hpp"
 #include "Statistics.hpp"
 #include "Options.hpp"
-#include "LoadMonitor.hpp"
 #include "Forwarder.hpp"
 #include "MigrationMonitor.hpp"
 
@@ -24,15 +23,15 @@
 namespace CBR
 {
 
-Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, LoadMonitor* lm, ObjectSegmentation* oseg, Address4* oh_listen_addr)
- : mContext(ctx),
+Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
+ : PollingService(ctx->mainStrand),
+   mContext(ctx),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
    mOSeg(oseg),
    mForwarder(forwarder),
    mMigrationMonitor(),
-   mLoadMonitor(lm),
    mObjectHostConnectionManager(NULL)
 {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -588,51 +587,10 @@ void Server::handleMigration(const UUID& obj_id)
     obj_conn->send( obj_response );
 }
 
-void Server::service() {
-    mLocationService->service();
-    mProximity->service();
-
-    //FOrwarder analysis
-    Time start_time_forwarder = Timer::now();
-
+void Server::poll() {
     // Note, object hosts must be serviced before Forwarder so they can
     // push object messages on the queue before noise is generated
     serviceObjectHostNetwork();
-    mForwarder->service();
-
-
-    if (mContext->simTime().raw()/1000 > 100000)
-    {
-      Duration tmpDur = Timer::now() - start_time_forwarder;
-      if (tmpDur.toMilliseconds() > 50)
-      {
-        //        printf("\n\nHUGEFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
-      }
-      else
-      {
-        //        printf("\n\nTINYFORWARDER duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
-      }
-    }
-
-
-    mLoadMonitor->service();
-
-
-    Time start_time = Timer::now();
-
-    if (mContext->simTime().raw()/1000 > 100000)
-    {
-      Duration tmpDur = Timer::now() - start_time;
-      if (tmpDur.toMilliseconds() > 50)
-      {
-        //        printf("\n\nHUGEOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
-      }
-      else
-      {
-        //        printf("\n\nTINYOBJECTHOST duration object hosts: %i\n\n",(int)tmpDur.toMilliseconds());
-      }
-    }
-
 
     checkObjectMigrations();
 }

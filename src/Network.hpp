@@ -4,6 +4,7 @@
 #include "SpaceContext.hpp"
 #include "sirikata/util/Platform.hpp"
 #include "sirikata/network/Stream.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 class Network;
@@ -44,7 +45,7 @@ Sirikata::Network::Address convertAddress4ToSirikata(const Address4&addy);
 inline size_t hash_value(const Address4&addy) {
     return std::tr1::hash<unsigned int>()(addy.ip)^std::tr1::hash<unsigned short>()(addy.port);
 }
-class Network {
+class Network : public PollingService {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
@@ -61,15 +62,21 @@ public:
     virtual void listen (const Address4&)=0;
     virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
-    virtual void service(const Time& t) {}
 
     virtual void reportQueueInfo(const Time& t) const = 0;
 
 protected:
+    virtual void service() = 0;
+
     Network(SpaceContext* ctx);
 
     SpaceContext* mContext;
+private:
+    virtual void poll();
     TimeProfiler::Stage* mProfiler;
+
+    Duration mStatsSampleRate;
+    Time mLastStatsSample;
 };
 }
 #endif //_CBR_NETWORK_HPP_

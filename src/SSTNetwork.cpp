@@ -33,10 +33,8 @@ Network::Chunk* SSTNetwork::receiveOne(const Address4& from, uint32 max_size) {
     return mImpl->receiveOne(from, max_size);
 }
 
-void SSTNetwork::service(const Time& t) {
-    mProfiler->started();
+void SSTNetwork::service() {
     mImpl->service();
-    mProfiler->finished();
 }
 
 void SSTNetwork::init(void* (*x)(void*)){

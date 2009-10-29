@@ -14,6 +14,8 @@
 
 #include "TimeProfiler.hpp"
 
+#include "PollingService.hpp"
+
 namespace CBR
 {
   class Object;
@@ -60,7 +62,7 @@ public:
     }
 };
 
-class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient
+class Forwarder : public MessageDispatcher, public MessageRouter, public MessageRecipient, public PollingService
 {
 private:
     SpaceContext* mContext;
@@ -90,6 +92,8 @@ private:
     TimeProfiler::Stage* mForwarderQueueStage;
     TimeProfiler::Stage* mReceiveStage;
 
+    virtual void poll();
+
     void processChunk(Message* msg, bool forwarded_self_msg);
 protected:
     virtual void dispatchMessage(Message* msg) const;
@@ -100,9 +104,7 @@ protected:
       ~Forwarder();
       void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq);
 
-      void service();
-
-      void tickOSeg(const Time&t);
+      void tickOSeg();
 
 
       // Routing interface for servers.  This is used to route messages that originate from

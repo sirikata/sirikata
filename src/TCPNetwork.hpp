@@ -57,6 +57,8 @@ class TCPNetwork :public Network{
     Sirikata::OptionSet*mListenOptions;
     Sirikata::OptionSet*mSendOptions;
     String mStreamPlugin;
+
+    virtual void service();
 public:
 
     TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);
@@ -73,7 +75,6 @@ public:
     virtual void listen (const Address4&);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
-    virtual void service(const Time& t);
     virtual void reportQueueInfo(const Time& t) const;
 };
 }

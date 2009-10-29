@@ -57,9 +57,7 @@ LocationService::TrackingType StandardLocationService::type(const UUID& uuid) co
 
 
 void StandardLocationService::service() {
-    mProfiler->started();
     mUpdatePolicy->service();
-    mProfiler->finished();
 }
 
 TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {

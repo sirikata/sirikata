@@ -12,6 +12,8 @@ protected:
     FairQueue<Message, ServerID, Queue<Message*> > mServerQueues;
     FairQueue<Message, ServerID, NetworkQueueWrapper > mReceiveQueues;
 
+    Time mLastServiceTime;
+
     uint32 mRate;
     uint32 mRecvRate;
     uint32 mRemainderSendBytes;

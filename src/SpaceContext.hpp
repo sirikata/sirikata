@@ -37,6 +37,7 @@
 #include "ServerNetwork.hpp"
 #include "Timer.hpp"
 #include "TimeProfiler.hpp"
+#include "PollingService.hpp"
 
 namespace CBR {
 
@@ -50,28 +51,23 @@ class Forwarder;
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
  *  from messages), and a Trace object.
  */
-class SpaceContext {
+class SpaceContext : public PollingService {
 public:
-    SpaceContext(ServerID _id, const Time& epoch, const Time& curtime, Trace* _trace)
-     : lastTime(curtime),
+    SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
+     : PollingService(strand),
+       ioService(ios),
+       mainStrand(strand),
+       lastTime(curtime),
        time(curtime),
-       sinceLast(Duration::seconds(0)),
        profiler( new TimeProfiler("Space") ),
        mID(_id),
        mEpoch(epoch),
+       mSimDuration(duration),
        mRouter(NULL),
        mDispatcher(NULL),
        mTrace(_trace)
     {
     }
-
-    // NOTE: not atomic, should only be used from the main thread currently
-    void tick(const Time& t) {
-        lastTime = time;
-        time = t;
-        sinceLast = time - lastTime;
-    }
-
 
     ServerID id() const {
         return mID.read();
@@ -105,24 +101,54 @@ public:
         return mTrace.read();
     }
 
+    // FIXME only used by vis code because it is out of date and horrible
+    void tick(const Time& t) {
+        lastTime = time;
+        time = t;
+    }
+
+
+    void add(PollingService* ps) {
+        mPollingServices.push_back(ps);
+        ps->start();
+    }
+
+    IOService* ioService;
+    IOStrand* mainStrand;
 
     // NOTE: these are not thread-safe, should only be used from the main thread
     Time lastTime;
     Time time;
-    Duration sinceLast;
 
     TimeProfiler* profiler;
 private:
+    virtual void poll() {
+        Duration elapsed = Timer::now() - epoch();
+
+        if (elapsed > mSimDuration) {
+            this->stop();
+            for(std::vector<PollingService*>::iterator it = mPollingServices.begin(); it != mPollingServices.end(); it++)
+                (*it)->stop();
+        }
+
+        lastTime = time;
+        time = Time::null() + elapsed;
+    }
+
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
 
     Sirikata::AtomicValue<ServerID> mID;
 
     Sirikata::AtomicValue<Time> mEpoch;
 
+    Duration mSimDuration;
+
     Sirikata::AtomicValue<MessageRouter*> mRouter;
     Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;
 
     Sirikata::AtomicValue<Trace*> mTrace;
+
+    std::vector<PollingService*> mPollingServices;
 }; // class SpaceContext
 
 } // namespace CBR

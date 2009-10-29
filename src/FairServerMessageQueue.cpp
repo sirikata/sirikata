@@ -12,6 +12,7 @@ FairServerMessageQueue::FairServerMessageQueue(SpaceContext* ctx, Network* net, 
  : ServerMessageQueue(ctx, net, sidmap),
    mServerQueues(),
    mReceiveQueues(),
+   mLastServiceTime(ctx->time),
    mRate(send_bytes_per_second),
    mRecvRate(recv_bytes_per_second),
    mRemainderSendBytes(0),
@@ -71,8 +72,9 @@ bool FairServerMessageQueue::receive(Message** msg_out) {
 void FairServerMessageQueue::service(){
     mProfiler->started();
 
-    uint64 send_bytes = mContext->sinceLast.toSeconds() * mRate + mRemainderSendBytes;
-    uint64 recv_bytes = mContext->sinceLast.toSeconds() * mRecvRate + mRemainderReceiveBytes;
+    Duration since_last = mContext->time - mLastServiceTime;
+    uint64 send_bytes = since_last.toSeconds() * mRate + mRemainderSendBytes;
+    uint64 recv_bytes = since_last.toSeconds() * mRecvRate + mRemainderReceiveBytes;
 
     // Send
 
@@ -129,7 +131,6 @@ void FairServerMessageQueue::service(){
             mLastSendEndTime = mContext->time;
         }
     }
-
 
     // Receive
     Message* next_recv_msg = NULL;

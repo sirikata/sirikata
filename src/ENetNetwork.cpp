@@ -202,9 +202,8 @@ void ENetNetwork::processOutboundEvent(ENetEvent&event) {
           break;
     }
 }
-void ENetNetwork::service(const Time& t){
-    mProfiler->started();
-
+void ENetNetwork::service(){
+    Time t = mContext->time;
     PeerMap::iterator senditer,recviter;
     std::vector<std::pair<Address4,size_t> > sendBufferSizes(mSendPeers.size());
     std::vector<std::pair<Address4,size_t> > recvBufferSizes(mRecvPeers.size());
@@ -262,8 +261,6 @@ void ENetNetwork::service(const Time& t){
     for(std::tr1::unordered_map<Address4,BufferSizeStats>::iterator i=mBufferSizes.begin(),ie=mBufferSizes.end();i!=ie;++i){
         mContext->trace()->packetQueueInfo(t,i->first,mSendBufferSize,i->second.mSendSize,i->second.mSendWeight,ENET_PEER_WINDOW_SIZE_SCALE,i->second.mRecvSize,i->second.mRecvWeight);
     }
-
-    mProfiler->finished();
 }
 
 void ENetNetwork::reportQueueInfo(const Time& t) const{

@@ -32,6 +32,8 @@ class ENetNetwork :public Network{
     static Address4 fromENetAddress(const ENetAddress&addy);
     void processOutboundEvent(ENetEvent&event);
     bool internalSend(const Address4&,const Chunk&, bool reliable, bool ordered, int priority, bool force);
+
+    virtual void service();
 public:
 
     ENetNetwork(SpaceContext* ctx, size_t mPeerSendBufferSize, uint32 icomingBandwidth,uint32 outgoingBandwidth);
@@ -48,7 +50,6 @@ public:
     virtual void listen (const Address4&);
     virtual Chunk* front(const Address4& from, uint32 max_size);
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size);
-    virtual void service(const Time& t);
 
     virtual void reportQueueInfo(const Time& t) const;
 };

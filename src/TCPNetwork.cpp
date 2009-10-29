@@ -197,10 +197,8 @@ std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&ad
     return std::tr1::shared_ptr<TSQueue>();
 }
 void TCPNetwork::reportQueueInfo(const Time&)const {}
-void TCPNetwork::service(const Time&){
-    mProfiler->started();
+void TCPNetwork::service(){
 //    mIOService->poll();
-    mProfiler->finished();
 }
 Chunk* TCPNetwork::front(const Address4&from, uint32 max_size) {
     std::tr1::shared_ptr<TSQueue> front(getQueue(from));

@@ -7,6 +7,7 @@
 
 #include "ObjectHostConnectionManager.hpp"
 #include "TimeProfiler.hpp"
+#include "PollingService.hpp"
 
 namespace CBR
 {
@@ -19,8 +20,6 @@ class MigrationMonitor;
 class CoordinateSegmentation;
 class ObjectSegmentation;
 
-class LoadMonitor;
-
 class ObjectConnection;
 class ObjectHostConnectionManager;
 
@@ -31,16 +30,16 @@ class ServerIDMap;
    *  object -> server mapping.  This is a singleton for each simulated
    *  server.  Other servers are referenced by their ServerID.
    */
-class Server : public MessageRecipient
+class Server : public MessageRecipient, public PollingService
   {
   public:
-      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, LoadMonitor* lm, ObjectSegmentation* oseg, Address4* oh_listen_addr);
+      Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr);
     ~Server();
-
-      void service();
 
       virtual void receiveMessage(Message* msg);
 private:
+      void poll();
+
     // Methods for periodic servicing
     void serviceObjectHostNetwork();
     void checkObjectMigrations();
@@ -78,7 +77,6 @@ private:
     ObjectSegmentation* mOSeg;
     Forwarder* mForwarder;
     MigrationMonitor* mMigrationMonitor;
-    LoadMonitor* mLoadMonitor;
 
 
     ObjectHostConnectionManager* mObjectHostConnectionManager;

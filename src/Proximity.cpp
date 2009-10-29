@@ -161,7 +161,8 @@ struct ProximityOutputEvent {
 
 
 Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
- : mContext(ctx),
+ : PollingService(ctx->mainStrand),
+   mContext(ctx),
    mLocService(locservice),
    mCSeg(NULL),
    mMinObjectQueryAngle(SolidAngle::Max),
@@ -425,7 +426,7 @@ void Proximity::removeQuery(UUID obj) {
     }
 }
 
-void Proximity::service() {
+void Proximity::poll() {
     // Update server-to-server angles if necessary
     sendQueryRequests();
 

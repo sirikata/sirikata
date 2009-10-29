@@ -34,7 +34,7 @@ bool AlwaysPush(const UUID&, size_t cursize , size_t totsize) {return true;}
     Constructor for Forwarder
   */
 Forwarder::Forwarder(SpaceContext* ctx)
- :
+ : PollingService(ctx->mainStrand),
    mContext(ctx),
    mOutgoingMessages(NULL),
    mServerMessageQueue(NULL),
@@ -79,13 +79,13 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
   /*
     Sends a tick to OSeg.  Receives messages from oseg.  Adds them to mOutgoingQueue.
   */
-  void Forwarder::tickOSeg(const Time&t)
+  void Forwarder::tickOSeg()
   {
       mOSegLookups->service();
   }
 
 
-void Forwarder::service()
+void Forwarder::poll()
 {
     Time t = mContext->time;
 
@@ -95,7 +95,7 @@ void Forwarder::service()
           mLastSampleTime = t;
     }
 
-    tickOSeg(t);
+    tickOSeg();
 
     mNoiseStage->started();
     if (GetOption(NOISE)->as<bool>()) {
