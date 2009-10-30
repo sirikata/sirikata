@@ -34,9 +34,10 @@
 
 namespace CBR {
 
-CBRLocationServiceCache::CBRLocationServiceCache(LocationService* locservice, bool replicas)
+CBRLocationServiceCache::CBRLocationServiceCache(IOStrand* strand, LocationService* locservice, bool replicas)
  : Prox::LocationServiceCache<ProxSimulationTraits>(),
    LocationServiceListener(),
+   mStrand(strand),
    mLoc(locservice),
    mListeners(),
    mObjects(),
@@ -138,38 +139,15 @@ void CBRLocationServiceCache::replicaBoundsUpdated(const UUID& uuid, const Bound
 }
 
 
+
 void CBRLocationServiceCache::objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
-    ObjectUpdateData update;
-    update.type = ObjectUpdateData::Addition;
-    update.object = uuid;
-    update.loc = loc;
-    update.bounds = bounds;
-    mObjectUpdates.push(update);
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processObjectAdded, this,
+            uuid, loc, bounds
+        )
+    );
 }
-
-void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
-    ObjectUpdateData update;
-    update.type = ObjectUpdateData::Removal;
-    update.object = uuid;
-    mObjectUpdates.push(update);
-}
-
-void CBRLocationServiceCache::locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
-    ObjectUpdateData update;
-    update.type = ObjectUpdateData::Location;
-    update.object = uuid;
-    update.loc = newval;
-    mObjectUpdates.push(update);
-}
-
-void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
-    ObjectUpdateData update;
-    update.type = ObjectUpdateData::Bounds;
-    update.object = uuid;
-    update.bounds = newval;
-    mObjectUpdates.push(update);
-}
-
 
 void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
     if (mObjects.find(uuid) != mObjects.end())
@@ -185,6 +163,15 @@ void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, const TimedMo
         (*it)->locationConnected(uuid, loc, bounds);
 }
 
+void CBRLocationServiceCache::objectRemoved(const UUID& uuid) {
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processObjectRemoved, this,
+            uuid
+        )
+    );
+}
+
 void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid) {
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
     if (data_it == mObjects.end()) return;
@@ -196,6 +183,14 @@ void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid) {
         (*it)->locationDisconnected(uuid);
 }
 
+void CBRLocationServiceCache::locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processLocationUpdated, this,
+            uuid, newval
+        )
+    );
+}
 
 void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
@@ -208,6 +203,15 @@ void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, const Tim
         (*it)->locationPositionUpdated(uuid, oldval, newval);
 }
 
+void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
+    mStrand->post(
+        std::tr1::bind(
+            &CBRLocationServiceCache::processBoundsUpdated, this,
+            uuid, newval
+        )
+    );
+}
+
 void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
@@ -217,34 +221,6 @@ void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, const Bound
 
     for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
         (*it)->locationBoundsUpdated(uuid, oldval, newval);
-}
-
-
-void CBRLocationServiceCache::serviceListeners() {
-    std::deque<ObjectUpdateData> updates;
-
-    mObjectUpdates.swap(updates);
-
-    for( std::deque<ObjectUpdateData>::iterator upit = updates.begin(); upit != updates.end(); upit++) {
-        switch( upit->type ) {
-          case ObjectUpdateData::Addition:
-            processObjectAdded(upit->object, upit->loc, upit->bounds);
-            break;
-          case ObjectUpdateData::Removal:
-            processObjectRemoved(upit->object);
-            break;
-          case ObjectUpdateData::Location:
-            processLocationUpdated(upit->object, upit->loc);
-            break;
-          case ObjectUpdateData::Bounds:
-            processBoundsUpdated(upit->object, upit->bounds);
-            break;
-          default:
-            SILOG(loccache,error,"Got unknown internal update type: " << upit->type);
-            break;
-        }
-    }
-    updates.clear();
 }
 
 } // namespace CBR

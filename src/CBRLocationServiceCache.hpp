@@ -55,7 +55,7 @@ public:
      *  replicas is true, then it caches replica entries from locservice, in addition
      *  to the local entries it always caches.
      */
-    CBRLocationServiceCache(LocationService* locservice, bool replicas);
+    CBRLocationServiceCache(IOStrand* strand, LocationService* locservice, bool replicas);
     virtual ~CBRLocationServiceCache();
 
     /* LocationServiceCache members. */
@@ -80,9 +80,6 @@ public:
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 
-    // Sends updates to listeners.  This should be called from the same thread that listeners are
-    // running in, i.e. not the main thread.
-    void serviceListeners();
 private:
     // These generate and queue up updates from the main thread
     void objectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
@@ -99,6 +96,7 @@ private:
 
     CBRLocationServiceCache();
 
+    IOStrand* mStrand;
     LocationService* mLoc;
 
     typedef std::set<LocationUpdateListener*> ListenerSet;
@@ -115,25 +113,6 @@ private:
     typedef std::map<UUID, ObjectData> ObjectDataMap;
     ObjectDataMap mObjects;
     bool mWithReplicas;
-
-
-    // The following are the structs to hold information for, and lists of,
-    // updates that occurred but have not been dispatched yet. This is where
-    // data is passed from the main thread to the prox thread.
-    struct ObjectUpdateData {
-        enum UpdateType {
-            Addition,
-            Removal,
-            Location,
-            Bounds
-        };
-
-        UpdateType type;
-        UUID object;
-        TimedMotionVector3f loc;
-        BoundingSphere3f bounds;
-    };
-    Sirikata::ThreadSafeQueue<ObjectUpdateData> mObjectUpdates;
 };
 
 } // namespace CBR
