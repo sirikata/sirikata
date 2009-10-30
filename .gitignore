@@ -9,6 +9,8 @@ build/cmake/cmake_install.cmake
 build/cmake/libcbr-core.a
 build/cmake/cbr
 build/cmake/oh
+build/cmake/analysis
+build/cmake/cseg
 
 # config files
 build/cmake/serverip*
@@ -27,7 +29,8 @@ scripts/*.ps
 scripts/distance_latency_histogram.csv
 scripts/loc_latency*.txt
 scripts/prox.log
-
+# profiling files
+scripts/gprof*.txt
 
 # moc files
 build/cmake/moc*
