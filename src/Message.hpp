@@ -235,12 +235,11 @@ public:
 
     virtual ~MessageRouter() {}
 
-    __attribute__ ((warn_unused_result))
+    WARN_UNUSED
     virtual bool route(SERVICES svc, Message* msg, bool is_forward = false) = 0;
 
-    __attribute__ ((warn_unused_result))
-  virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
-
+    WARN_UNUSED
+    virtual bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward, ServerID forwardFrom = NullServerID) = 0;
 };
 
 

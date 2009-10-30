@@ -112,17 +112,17 @@ protected:
       // for either servers or objects.  The second form will simply automatically do the destination
       // server lookup.
       // if forwarding is true the message will be stuck onto a queue no matter what, otherwise it may be delivered directly
-    __attribute__ ((warn_unused_result))
+    WARN_UNUSED
     bool route(MessageRouter::SERVICES svc, Message* msg, bool is_forward = false);
 
     //note: whenever we're forwarding a message from another object, we'll want to include the forwardFrom ServerID so that we can send an oseg update message to the server with
     //the stale cache value.
-    __attribute__ ((warn_unused_result))
+    WARN_UNUSED
      bool route(CBR::Protocol::Object::ObjectMessage* msg, bool is_forward = false, ServerID forwardFrom = NullServerID);
 
 private:
       // This version is provided if you already know which server the message should be sent to
-    __attribute__ ((warn_unused_result))
+    WARN_UNUSED
     bool routeObjectMessageToServer(CBR::Protocol::Object::ObjectMessage* msg, ServerID dest_serv, bool is_forward=false, ServerID forwardFrom = NullServerID);
   public:
       bool routeObjectHostMessage(CBR::Protocol::Object::ObjectMessage* obj_msg);
