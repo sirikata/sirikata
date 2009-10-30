@@ -592,9 +592,11 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 
     may also need to add a message to send queue
   */
-  void CraqObjectSegmentation::service(std::map<UUID,ServerID>& updated)
+  void CraqObjectSegmentation::poll()
   {
       mServiceStage->started();
+
+      std::map<UUID,ServerID> updated;
 
     Time start_time= Timer::now();
 
@@ -696,6 +698,11 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
 
 //       lastTimerDur = mServiceTimer.elapsed();
 //     }
+
+    if (mListener) {
+        for(std::map<UUID,ServerID>::iterator it = updated.begin(); it != updated.end(); it++)
+            mListener->osegLookupCompleted( it->first, it->second );
+    }
 
       mServiceStage->finished();
   }

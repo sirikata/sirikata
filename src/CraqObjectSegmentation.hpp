@@ -143,6 +143,7 @@ namespace CBR
     std::vector<Message*> reTryKillConnMessage;
     //end redundant message vectors in case a send fails
 
+    virtual void poll();
 
   public:
     CraqObjectSegmentation (SpaceContext* ctx, CoordinateSegmentation* cseg, std::vector<UUID> vectorOfObjectsInitializedOnThisServer, std::vector<CraqInitializeArgs> getInitArgs, std::vector<CraqInitializeArgs> setInitArgs, char prefixID);
@@ -151,7 +152,6 @@ namespace CBR
 
     virtual ~CraqObjectSegmentation();
     virtual ServerID lookup(const UUID& obj_id);
-    virtual void service(std::map<UUID,ServerID>& updated);
     virtual void migrateObject(const UUID& obj_id, const ServerID new_server_id);
     virtual void addObject(const UUID& obj_id, const ServerID idServerAckTo, bool);
     virtual void receiveMessage(Message* msg);

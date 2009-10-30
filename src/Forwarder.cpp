@@ -94,7 +94,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
   */
 void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
 {
-    mOSegLookups = new OSegLookupQueue(oseg, &AlwaysPush);
+    mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg, &AlwaysPush);
     mServerMessageQueue = smq;
     mOutgoingMessages = new ForwarderQueue(smq,16384);
 
@@ -102,20 +102,8 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
     mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
 }
 
-  /*
-    Sends a tick to OSeg.  Receives messages from oseg.  Adds them to mOutgoingQueue.
-  */
-  void Forwarder::tickOSeg()
-  {
-      mOSegLookups->service();
-  }
-
-
 void Forwarder::poll()
 {
-    tickOSeg();
-
-
     mForwarderQueueStage->started();
     for (uint32 sid=0;sid<mOutgoingMessages->numServerQueues();++sid) {
         while(true)

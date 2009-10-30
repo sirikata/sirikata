@@ -65,11 +65,13 @@ OSegLookupQueue::OSegLookupList::iterator OSegLookupQueue::OSegLookupList::end()
 
 // OSegLookupQueue Implementation
 
-OSegLookupQueue::OSegLookupQueue(ObjectSegmentation* oseg, const PushPredicate& pred)
- : mOSeg(oseg),
+OSegLookupQueue::OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred)
+ : mNetworkStrand(net_strand),
+   mOSeg(oseg),
    mPredicate(pred),
    mTotalSize(0)
 {
+    mOSeg->setListener(this);
 }
 
 bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb) {
@@ -100,29 +102,24 @@ bool OSegLookupQueue::lookup(CBR::Protocol::Object::ObjectMessage* msg, const Lo
     return true;
 }
 
-void OSegLookupQueue::service() {
-    std::map<UUID,ServerID> updatedObjectLocations;
-    mOSeg->service(updatedObjectLocations);
+void OSegLookupQueue::osegLookupCompleted(const UUID& id, const ServerID& dest) {
+    mNetworkStrand->post(
+        std::tr1::bind(&OSegLookupQueue::handleLookupCompleted, this, id, dest)
+    );
+}
 
-    // Check all returned results for lookups waiting for them to finish
-    std::map<UUID,ServerID>::iterator iter;
-    for (iter = updatedObjectLocations.begin();  iter != updatedObjectLocations.end(); ++iter)
-    {
-        ServerID dest_server = iter->second;
+void OSegLookupQueue::handleLookupCompleted(const UUID& id, const ServerID& dest) {
+    //Now sending messages that we had saved up from oseg lookup calls.
+    LookupMap::iterator iterQueueMap = mLookups.find(id);
+    if (iterQueueMap == mLookups.end())
+        return;
 
-        //Now sending messages that we had saved up from oseg lookup calls.
-        LookupMap::iterator iterQueueMap = mLookups.find(iter->first);
-        if (iterQueueMap == mLookups.end())
-            continue;
-
-        for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s)
-        {
-            const OSegLookup& lu = (iterQueueMap->second[s]);
-            mTotalSize -= lu.msg->ByteSize();
-            lu.cb(lu.msg, dest_server);
-        }
-        mLookups.erase(iterQueueMap);
+    for (int s=0; s < (signed) ((iterQueueMap->second).size()); ++ s) {
+        const OSegLookup& lu = (iterQueueMap->second[s]);
+        mTotalSize -= lu.msg->ByteSize();
+        lu.cb(lu.msg, dest);
     }
+    mLookups.erase(iterQueueMap);
 }
 
 } // namespace CBR

@@ -626,6 +626,7 @@ void *main_loop(void *) {
     space_context->add(loc_service);
     space_context->add(prox);
     space_context->add(server);
+    space_context->add(oseg);
     space_context->add(forwarder);
     space_context->add(loadMonitor);
 

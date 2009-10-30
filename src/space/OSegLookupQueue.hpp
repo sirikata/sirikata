@@ -35,10 +35,9 @@
 
 #include "Utility.hpp"
 #include "Message.hpp"
+#include "ObjectSegmentation.hpp"
 
 namespace CBR {
-
-class ObjectSegmentation;
 
 /** OSegLookupQueue manages outstanding OSeg lookups.  Lookups are submitted
  *  and either accepted and we commit to finishing them or rejected immediately.
@@ -46,7 +45,7 @@ class ObjectSegmentation;
  *  on a total number of outstanding lookups, a total number of bytes in messages
  *  for outstanding lookups, etc.
  */
-class OSegLookupQueue {
+class OSegLookupQueue : public OSegListener {
 public:
     /** Predicate which determines whether a message will be admitted for a destination object lookup.
      *  \param object the object the lookup is being performed on
@@ -83,18 +82,26 @@ private:
     typedef std::tr1::unordered_map<UUID, OSegLookupList, UUID::Hasher> LookupMap;
 
 
+    IOStrand* mNetworkStrand;
     ObjectSegmentation* mOSeg; // The OSeg that does the heavy lifting
 
     LookupMap mLookups; // Map of object id being queried -> msgs destined for that object
     PushPredicate mPredicate; // Predicate determining entry to the queue
     int32 mTotalSize;
+
+    /* OSegListener Interface */
+    virtual void osegLookupCompleted(const UUID& id, const ServerID& dest);
+    /* Main thread handler for lookups. */
+    void handleLookupCompleted(const UUID& id, const ServerID& dest);
 public:
     /** Create an OSegLookupQueue which uses the specified ObjectSegmentation to resolve queries and
      *  the specified predicate to determine if new lookups are accepted.
+     *  \param net_strand the strand used for networking, i.e. the one which should handle lookup
+     *                    results
      *  \param oseg the ObjectSegmentation which resolves queries
      *  \param pred the predicate which controls whether new lookups are admitted
      */
-    OSegLookupQueue(ObjectSegmentation* oseg, const PushPredicate& pred);
+    OSegLookupQueue(IOStrand* net_strand, ObjectSegmentation* oseg, const PushPredicate& pred);
 
     /** Perform an OSeg lookup, calling the specified callback when the result is available.
      *  If the result is available immediately, the callback may be triggered during this
@@ -106,9 +113,6 @@ public:
      *  \returns true if the lookup was accepted, false if it was rejected (due to the push predicate).
      */
     bool lookup(CBR::Protocol::Object::ObjectMessage* msg, const LookupCallback& cb);
-
-    /** Allow the lookup queue to process events, possibly firing lookup callbacks as a result. */
-    void service();
 };
 
 } // namespace CBR
