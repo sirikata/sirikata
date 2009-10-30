@@ -119,7 +119,7 @@
 # if defined(__GNUC__) && __GNUC__ >= 4  // This is conservative, maybe be available with earlier versions
 #  define WARN_UNUSED __attribute__((warn_unused_result))
 # else
-#  define WARN_UNUSUED
+#  define WARN_UNUSED
 # endif
 #endif
 
