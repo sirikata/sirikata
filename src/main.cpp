@@ -60,7 +60,6 @@
 #include "ExpIntegral.hpp"
 #include "SqrIntegral.hpp"
 #include "UniformCoordinateSegmentation.hpp"
-#include "DistributedCoordinateSegmentation.hpp"
 #include "CoordinateSegmentationClient.hpp"
 #include "LoadMonitor.hpp"
 #include "CraqObjectSegmentation.hpp"
@@ -107,8 +106,7 @@ int main(int argc, char** argv) {
     std::string time_server=GetOption("time-server")->as<String>();
     TimeSync sync;
 
-    if (GetOption("cseg")->as<String>() != "distributed")
-      sync.start(time_server);
+    sync.start(time_server);
 
 
     ServerID server_id = GetOption("id")->as<ServerID>();
@@ -214,9 +212,6 @@ void *main_loop(void *) {
     CoordinateSegmentation* cseg = NULL;
     if (cseg_type == "uniform")
         cseg = new UniformCoordinateSegmentation(space_context, region, layout);
-    else if (cseg_type == "distributed") {
-      cseg = new DistributedCoordinateSegmentation(space_context, region, layout, max_space_servers, server_id_map);
-    }
     else if (cseg_type == "client") {
       cseg = new CoordinateSegmentationClient(space_context, region, layout, server_id_map);
     }
@@ -508,7 +503,7 @@ void *main_loop(void *) {
     std::string oseg_type=GetOption(OSEG)->as<String>();
 
     ObjectSegmentation* oseg = NULL;
-    if (oseg_type == OSEG_OPTION_CRAQ && cseg_type != "distributed")
+    if (oseg_type == OSEG_OPTION_CRAQ)
     {
       //using craq approach
       std::vector<UUID> initServObjVec;
@@ -548,32 +543,30 @@ void *main_loop(void *) {
 
 
     ServerWeightCalculator* weight_calc = NULL;
-    if (cseg_type != "distributed") {
-      if (GetOption("gaussian")->as<bool>()) {
+    if (GetOption("gaussian")->as<bool>()) {
         weight_calc =
-        new ServerWeightCalculator(
-            server_id,
-            cseg,
+            new ServerWeightCalculator(
+                server_id,
+                cseg,
 
-            std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
-                           std::tr1::placeholders::_1,
-                           std::tr1::placeholders::_2,
-                           std::tr1::placeholders::_3,
-                           std::tr1::placeholders::_4),
-            sq
-        );
-      }else {
+                std::tr1::bind(&integralExpFunction,GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4),
+                sq
+            );
+    }else {
         weight_calc =
-        new ServerWeightCalculator(
-            server_id,
-            cseg,
-            std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
-                std::tr1::placeholders::_1,
-                std::tr1::placeholders::_2,
-                std::tr1::placeholders::_3,
-                           std::tr1::placeholders::_4),
-            sq);
-      }
+            new ServerWeightCalculator(
+                server_id,
+                cseg,
+                std::tr1::bind(SqrIntegral(false),GetOption("const-cutoff")->as<double>(),GetOption("flatness")->as<double>(),
+                    std::tr1::placeholders::_1,
+                    std::tr1::placeholders::_2,
+                    std::tr1::placeholders::_3,
+                    std::tr1::placeholders::_4),
+                sq);
     }
 
     // We have all the info to initialize the forwarder now
@@ -602,21 +595,6 @@ void *main_loop(void *) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-
-    // FIXME we have a special case for the distributed cseg server, this should be
-    // turned into a separate binary
-    if (cseg_type == "distributed") {
-      srand(time(NULL));
-
-
-      space_context->add(space_context);
-      space_context->add(cseg);
-
-      space_context->ioService->run();
-
-      exit(0);
-    }
-
 
     gNetwork->start();
 

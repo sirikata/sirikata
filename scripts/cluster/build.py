@@ -287,7 +287,7 @@ if __name__ == "__main__":
             retval = cluster_build.revert_patchset()
         elif cmd == 'profile':
             profile_binary = 'cbr'
-            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['cbr', 'oh']):
+            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['cbr', 'oh', 'cseg']):
                 profile_binary = sys.argv[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.profile(profile_binary)

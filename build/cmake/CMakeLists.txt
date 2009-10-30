@@ -254,6 +254,7 @@ INCLUDE_DIRECTORIES(BEFORE
 
 #source files
 SET(CBR_CORE_SOURCES
+  ${CBR_SOURCE_DIR}/Address4.cpp
   ${CBR_SOURCE_DIR}/Message.cpp
   ${CBR_SOURCE_DIR}/Options.cpp
   ${CBR_SOURCE_DIR}/RouterElement.cpp
@@ -277,7 +278,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
   ${CBR_SOURCE_DIR}/CraqObjectSegmentation.cpp
   ${CBR_SOURCE_DIR}/CraqCacheGood.cpp
-  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncCraq.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncConnection.cpp
   ${CBR_SOURCE_DIR}/craq_oseg/asyncUtil.cpp
@@ -306,7 +306,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/Visualization.cpp
-  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
 
@@ -316,6 +315,13 @@ SET(OH_SOURCES
   ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/ObjectHost.cpp
   ${CBR_SOURCE_DIR}/oh/main.cpp
+)
+
+SET(CSEG_SOURCES
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
+  ${CBR_SOURCE_DIR}/cseg/main.cpp
 )
 
 SET(CBR_MOC_HEADERS
@@ -392,3 +398,15 @@ TARGET_LINK_LIBRARIES(oh
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 SET_TARGET_PROPERTIES(oh PROPERTIES COMPILE_FLAGS "-DOH_BUILD")
+
+
+ADD_EXECUTABLE(cseg ${CSEG_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(cseg
+  cbr-core
+        ${Boost_THREAD_LIBRARY}
+        ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
+        ${SirikataCore_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
