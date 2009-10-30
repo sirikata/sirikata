@@ -20,6 +20,9 @@ class ClusterBuild:
     def cd_to_build(self):
         return "cd build/cmake"
 
+    def cd_to_scripts(self):
+        return "cd scripts"
+
     def cd_to_sst_build(self):
         return ClusterRunConcatCommands( [self.cd_to_code(), "cd dependencies/sst"] )
 
@@ -194,6 +197,16 @@ class ClusterBuild:
         update_ret = self.update()
         return update_ret
 
+    def profile(self, binary):
+        cd_code_cmd = self.cd_to_code()
+        cd_scripts_cmd = self.cd_to_scripts()
+        prof_cmd = "gprof ../build/cmake/%s > gprof.out" % (binary)
+        retcodes = ClusterRun(self.config, ClusterRunConcatCommands([cd_code_cmd, cd_scripts_cmd, prof_cmd]))
+
+        gprof_pattern = "gprof-%(node)04d.txt"
+        ClusterSCP(self.config, ["remote:"+self.config.code_dir+"/scripts/gprof.out", gprof_pattern])
+
+        return ClusterRunSummaryCode(retcodes)
 
 
 if __name__ == "__main__":
@@ -234,7 +247,7 @@ if __name__ == "__main__":
             retval = cluster_build.patch_build_sst(patch_file)
         elif cmd == 'build':
             build_type = 'Debug'
-            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo']):
+            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile']):
                 build_type = sys.argv[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.build(build_type)
@@ -272,6 +285,12 @@ if __name__ == "__main__":
             retval = cluster_build.apply_patchset()
         elif cmd == 'patchset_revert':
             retval = cluster_build.revert_patchset()
+        elif cmd == 'profile':
+            profile_binary = 'cbr'
+            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['cbr', 'oh']):
+                profile_binary = sys.argv[cur_arg_idx]
+                cur_arg_idx += 1
+            retval = cluster_build.profile(profile_binary)
         else:
             print "Unknown command: ", cmd
             exit(-1)
