@@ -167,7 +167,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mCSeg(NULL),
    mMinObjectQueryAngle(SolidAngle::Max),
    mProxThread(NULL),
-   mShutdownProxThread(false),
+   mProxService(NULL),
+   mProxStrand(NULL),
    mServerQueries(),
    mLocalLocCache(NULL),
    mServerQueryHandler(NULL),
@@ -188,15 +189,6 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mLocService->addListener(this);
 
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
-
-    String group_name = "Proximity";
-    mInputEventsStage = mContext->profiler->addStage(group_name, "Handle Input Events");
-    mLocalLocCacheStage = mContext->profiler->addStage(group_name, "Local Loc Cache");
-    mGlobalLocCacheStage = mContext->profiler->addStage(group_name, "Global Loc Cache");
-    mServerQueriesStage = mContext->profiler->addStage(group_name, "Server Queries");
-    mObjectQueriesStage = mContext->profiler->addStage(group_name, "Object Queries");
-    mServerQueryEventsStage = mContext->profiler->addStage(group_name, "Generate Server Query Events");
-    mObjectQueryEventsStage = mContext->profiler->addStage(group_name, "Generate Object Query Events");
 
     // Start the processing thread
     mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
@@ -223,8 +215,11 @@ void Proximity::initialize(CoordinateSegmentation* cseg) {
 
 void Proximity::shutdown() {
     // Shut down the main processing thread
-    mShutdownProxThread = true;
-    mProxThread->join(); // FIXME this should probably be a timed_join
+    if (mProxThread != NULL) {
+        if (mProxService != NULL)
+            mProxService->stop();
+        mProxThread->join();
+    }
 }
 
 void Proximity::addAllServersForUpdate() {
@@ -522,57 +517,43 @@ void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vec
 
 // The main loop for the prox processing thread
 void Proximity::proxThreadMain() {
-    while( !mShutdownProxThread ) {
-        Time tstart = Timer::now();
+    mProxService = IOServiceFactory::makeIOService();
+    mProxStrand = mProxService->createStrand();
 
-        Time simT = mContext->simTime(tstart);
+    Duration max_rate = Duration::milliseconds((int64)100);
 
-        // Service input events
-        mInputEventsStage->started();
-        std::deque<ProximityInputEvent> inputEvents;
-        mInputEvents.swap(inputEvents);
-        for(std::deque<ProximityInputEvent>::iterator it = inputEvents.begin(); it != inputEvents.end(); it++)
-            handleInputEvent( *it );
-        mInputEventsStage->finished();
+    Poller mInputEventsPoller(mProxStrand, std::tr1::bind(&Proximity::handleInputEvents, this), max_rate);
+    Poller mLocalLocCachePoller(mProxStrand, std::tr1::bind(&CBRLocationServiceCache::serviceListeners, mLocalLocCache), max_rate);
+    Poller mGlobalLocCachPoller(mProxStrand, std::tr1::bind(&CBRLocationServiceCache::serviceListeners, mGlobalLocCache), max_rate);
+    Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
+    Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
+    Poller mServerEventsPoller(mProxStrand, std::tr1::bind(&Proximity::generateServerQueryEvents, this), max_rate);
+    Poller mObjectEventsPoller(mProxStrand, std::tr1::bind(&Proximity::generateObjectQueryEvents, this), max_rate);
 
-        // Service location caches
-        mLocalLocCacheStage->started();
-        mLocalLocCache->serviceListeners();
-        mLocalLocCacheStage->finished();
+    mInputEventsPoller.start();
+    mLocalLocCachePoller.start();
+    mGlobalLocCachPoller.start();
+    mServerHandlerPoller.start();
+    mObjectHandlerPoller.start();
+    mServerEventsPoller.start();
+    mObjectEventsPoller.start();
 
-        mGlobalLocCacheStage->started();
-        mGlobalLocCache->serviceListeners();
-        mGlobalLocCacheStage->finished();
+    mProxService->run();
 
-        // Service query handlers
-        mServerQueriesStage->started();
-        mServerQueryHandler->tick(simT);
-        mServerQueriesStage->finished();
-
-        mObjectQueriesStage->started();
-        mObjectQueryHandler->tick(simT);
-        mObjectQueriesStage->finished();
-
-        mServerQueryEventsStage->started();
-        generateServerQueryEvents(simT);
-        mServerQueryEventsStage->finished();
-
-        mObjectQueryEventsStage->started();
-        generateObjectQueryEvents();
-        mObjectQueryEventsStage->finished();
-
-        Time tend = Timer::now();
-
-#define MIN_ITERATION_TIME Duration::milliseconds((int64)100)
-        Duration since_start = tend - tstart;
-        if (since_start < MIN_ITERATION_TIME)
-            usleep( (MIN_ITERATION_TIME - since_start).toMicroseconds() );
-    }
+    delete mProxStrand;
+    IOServiceFactory::destroyIOService(mProxService);
+    mProxService = NULL;
 }
 
-void Proximity::generateServerQueryEvents(const Time& t) {
+void Proximity::tickQueryHandler(ProxQueryHandler* qh) {
+    Time simT = mContext->simTime();
+    qh->tick(simT);
+}
+
+void Proximity::generateServerQueryEvents() {
     typedef std::deque<QueryEvent> QueryEventList;
 
+    Time t = mContext->simTime();
     uint32 max_count = GetOption(PROX_MAX_PER_RESULT)->as<uint32>();
 
     for(ServerQueryMap::iterator query_it = mServerQueries.begin(); query_it != mServerQueries.end(); query_it++) {
@@ -588,23 +569,27 @@ void Proximity::generateServerQueryEvents(const Time& t) {
             contents.set_t(t);
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
-                count++;
                 const QueryEvent& evt = evts.front();
                 if (evt.type() == QueryEvent::Added) {
-                    mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt.id()) );
+                    if (mLocalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
+                        count++;
 
-                    CBR::Protocol::Prox::IObjectAddition addition = contents.add_addition();
-                    addition.set_object( evt.id() );
+                        mOutputEvents.push( ProximityOutputEvent::AddServerLocSubscriptionEvent(sid, evt.id()) );
 
-                    TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
-                    CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
-                    msg_loc.set_t(loc.updateTime());
-                    msg_loc.set_position(loc.position());
-                    msg_loc.set_velocity(loc.velocity());
+                        CBR::Protocol::Prox::IObjectAddition addition = contents.add_addition();
+                        addition.set_object( evt.id() );
 
-                    addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
+                        TimedMotionVector3f loc = mLocalLocCache->location(evt.id());
+                        CBR::Protocol::Prox::ITimedMotionVector msg_loc = addition.mutable_location();
+                        msg_loc.set_t(loc.updateTime());
+                        msg_loc.set_position(loc.position());
+                        msg_loc.set_velocity(loc.velocity());
+
+                        addition.set_bounds( mLocalLocCache->bounds(evt.id()) );
+                    }
                 }
                 else {
+                    count++;
                     mOutputEvents.push( ProximityOutputEvent::RemoveServerLocSubscriptionEvent(sid, evt.id()) );
                     CBR::Protocol::Prox::IObjectRemoval removal = contents.add_removal();
                     removal.set_object( evt.id() );
@@ -645,24 +630,27 @@ void Proximity::generateObjectQueryEvents() {
 
             uint32 count = 0;
             while(count < max_count && !evts.empty()) {
-                count++;
                 const QueryEvent& evt = evts.front();
 
                 if (evt.type() == QueryEvent::Added) {
-                    mOutputEvents.push( ProximityOutputEvent::AddObjectLocSubscriptionEvent(query_id, evt.id()) );
+                    if (mGlobalLocCache->tracking(evt.id())) { // If the cache already lost it, we can't do anything
+                        count++;
+                        mOutputEvents.push( ProximityOutputEvent::AddObjectLocSubscriptionEvent(query_id, evt.id()) );
 
-                    CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
-                    addition.set_object( evt.id() );
+                        CBR::Protocol::Prox::IObjectAddition addition = prox_results.add_addition();
+                        addition.set_object( evt.id() );
 
-                    CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
-                    TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
-                    motion.set_t(loc.updateTime());
-                    motion.set_position(loc.position());
-                    motion.set_velocity(loc.velocity());
+                        CBR::Protocol::Prox::ITimedMotionVector motion = addition.mutable_location();
+                        TimedMotionVector3f loc = mGlobalLocCache->location(evt.id());
+                        motion.set_t(loc.updateTime());
+                        motion.set_position(loc.position());
+                        motion.set_velocity(loc.velocity());
 
-                    addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
+                        addition.set_bounds( mGlobalLocCache->bounds(evt.id()) );
+                    }
                 }
                 else {
+                    count++;
                     mOutputEvents.push( ProximityOutputEvent::RemoveObjectLocSubscriptionEvent(query_id, evt.id()) );
 
                     CBR::Protocol::Prox::IObjectRemoval removal = prox_results.add_removal();
@@ -688,6 +676,14 @@ void Proximity::generateObjectQueryEvents() {
 
 
 // Prox Thread Event Handling
+void Proximity::handleInputEvents() {
+    // Service input events
+    std::deque<ProximityInputEvent> inputEvents;
+    mInputEvents.swap(inputEvents);
+    for(std::deque<ProximityInputEvent>::iterator it = inputEvents.begin(); it != inputEvents.end(); it++)
+        handleInputEvent( *it );
+}
+
 void Proximity::handleInputEvent(const ProximityInputEvent& evt) {
     switch(evt.type) {
       case ProximityInputEvent::UpdateServerQuery:

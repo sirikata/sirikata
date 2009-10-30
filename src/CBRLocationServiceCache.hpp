@@ -62,6 +62,8 @@ public:
     virtual void startTracking(const ObjectID& id);
     virtual void stopTracking(const ObjectID& id);
 
+    bool tracking(const ObjectID& id) const;
+
     virtual const TimedMotionVector3f& location(const ObjectID& id) const;
     virtual const BoundingSphere3f& bounds(const ObjectID& id) const;
 

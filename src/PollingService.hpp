@@ -37,12 +37,14 @@
 
 namespace CBR {
 
-/** A service which needs to be polled periodically.  This class handles
- *  scheduling and polling the service.
+/** Poller allows you to generate a callback periodically without having
+ *  to inherit from the PollingService class.  It serves the same function
+ *  but requires a new object for every callback instead of using an existing
+ *  service.
  */
-class PollingService {
+class Poller {
 public:
-    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0));
+    Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
 
     /** Start polling this service on this strand at the given maximum rate. */
     void start();
@@ -53,10 +55,6 @@ public:
      *  properly.
      */
     void stop();
-protected:
-    /** Override this method to specify the work to be done when polling. */
-    virtual void poll() = 0;
-
 private:
     void handleExec();
 
@@ -64,7 +62,20 @@ private:
     IOTimerPtr mTimer;
     Duration mMaxRate;
     bool mUnschedule;
-    IOCallback mCB;
+    IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
+    IOCallback mUserCB; // The user's callback
+}; // class Poller
+
+/** A service which needs to be polled periodically.  This class handles
+ *  scheduling and polling the service.
+ */
+class PollingService : public Poller {
+public:
+    PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0));
+
+protected:
+    /** Override this method to specify the work to be done when polling. */
+    virtual void poll() = 0;
 };
 
 } // namespace CBR

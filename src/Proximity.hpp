@@ -119,10 +119,12 @@ private:
     // PROX Thread: These are utility methods which should only be called from the prox thread.
     // The main loop for the prox processing thread
     void proxThreadMain();
+    // Checks all inputs from main thread
+    void handleInputEvents();
     // Handles events in the prox thread
     void handleInputEvent(const ProximityInputEvent& evt);
     // Generate query events based on results collected from query handlers
-    void generateServerQueryEvents(const Time& t);
+    void generateServerQueryEvents();
     void generateObjectQueryEvents();
 
     typedef std::set<UUID> ObjectSet;
@@ -157,28 +159,25 @@ private:
 
     // PROX Thread - Should only be accessed in methods used by the main thread
 
+    typedef Prox::QueryHandler<ProxSimulationTraits> ProxQueryHandler;
+    void tickQueryHandler(ProxQueryHandler* qh);
+
     boost::thread* mProxThread;
+    IOService* mProxService;
+    IOStrand* mProxStrand;
     Sirikata::AtomicValue<bool> mShutdownProxThread;
 
     // These track local objects and answer queries from other
     // servers.
     ServerQueryMap mServerQueries;
     CBRLocationServiceCache* mLocalLocCache;
-    Prox::QueryHandler<ProxSimulationTraits>* mServerQueryHandler;
+    ProxQueryHandler* mServerQueryHandler;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
     ObjectQueryMap mObjectQueries;
     CBRLocationServiceCache* mGlobalLocCache;
-    Prox::QueryHandler<ProxSimulationTraits>* mObjectQueryHandler;
-
-    TimeProfiler::Stage* mInputEventsStage;
-    TimeProfiler::Stage* mLocalLocCacheStage;
-    TimeProfiler::Stage* mGlobalLocCacheStage;
-    TimeProfiler::Stage* mServerQueriesStage;
-    TimeProfiler::Stage* mObjectQueriesStage;
-    TimeProfiler::Stage* mServerQueryEventsStage;
-    TimeProfiler::Stage* mObjectQueryEventsStage;
+    ProxQueryHandler* mObjectQueryHandler;
 
     // Threads: Thread-safe data used for exchange between threads
 

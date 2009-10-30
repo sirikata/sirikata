@@ -35,34 +35,42 @@
 
 namespace CBR {
 
-PollingService::PollingService(IOStrand* str, const Duration& max_rate)
+Poller::Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate)
  : mStrand(str),
    mTimer( IOTimer::create(str->service()) ),
    mMaxRate(max_rate),
    mUnschedule(false),
-   mCB( mStrand->wrap(std::tr1::bind(&PollingService::handleExec, this)) )
+   mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
+   mUserCB(cb)
 {
     mTimer->setCallback(mCB);
 }
 
-void PollingService::start() {
+void Poller::start() {
     if (mMaxRate != Duration::microseconds(0)) {
         mTimer->wait(mMaxRate);
     }
     else {
-        mStrand->post( std::tr1::bind(&PollingService::handleExec, this) );
+        mStrand->post( mCB );
     }
 }
 
-void PollingService::stop() {
+void Poller::stop() {
     mUnschedule = true;
 }
 
-void PollingService::handleExec() {
-    this->poll();
+void Poller::handleExec() {
+    mUserCB();
 
     if (!mUnschedule)
         start();
+}
+
+
+
+PollingService::PollingService(IOStrand* str, const Duration& max_rate)
+ : Poller(str, std::tr1::bind(&PollingService::poll, this), max_rate)
+{
 }
 
 } // namespace CBR

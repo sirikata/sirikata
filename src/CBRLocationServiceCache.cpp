@@ -71,6 +71,10 @@ void CBRLocationServiceCache::stopTracking(const UUID& id) {
     mObjects.erase(it);
 }
 
+bool CBRLocationServiceCache::tracking(const UUID& id) const {
+    return (mObjects.find(id) != mObjects.end());
+}
+
 
 const TimedMotionVector3f& CBRLocationServiceCache::location(const UUID& id) const {
     // NOTE: should only be accessed by prox thread, shouldn't need lock
