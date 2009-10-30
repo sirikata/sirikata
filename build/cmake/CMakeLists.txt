@@ -32,7 +32,7 @@ SET(CMAKE_VERBOSE_MAKEFILE OFF)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Default CACHE STRING
-      "Build types include: Default Debug Release None RelWithDebInfo Profile." FORCE
+      "Build types include: Default Debug Release None RelWithDebInfo Profile Coverage." FORCE
       )
 ENDIF()
 
@@ -80,6 +80,27 @@ MARK_AS_ADVANCED(
     CMAKE_C_FLAGS_PROFILE
     CMAKE_EXE_LINKER_FLAGS_PROFILE
     CMAKE_SHARED_LINKER_FLAGS_PROFILE )
+
+# Coverage build target
+SET(CMAKE_CXX_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cxxflags with default settings."
+    FORCE )
+SET( CMAKE_C_FLAGS_COVERAGE "-g2 -fprofile-arcs -ftest-coverage ${CBR_DEFAULT_COMPILE_FLAGS}" CACHE STRING
+    "Built cflags with default settings."
+    FORCE )
+SET( CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    "-fprofile-arcs -ftest-coverage" CACHE STRING
+    "Linking binaries with default settings."
+    FORCE )
+SET( CMAKE_SHARED_LINKER_FLAGS_COVERAGE
+    "-fprofile-arcs -ftest-coverage" CACHE STRING
+    "Building shared libraries with default settings."
+    FORCE )
+MARK_AS_ADVANCED(
+    CMAKE_CXX_FLAGS_COVERAGE
+    CMAKE_C_FLAGS_COVERAGE
+    CMAKE_EXE_LINKER_FLAGS_COVERAGE
+    CMAKE_SHARED_LINKER_FLAGS_COVERAGE )
 
 #project global flags
 

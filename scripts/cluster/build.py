@@ -247,7 +247,7 @@ if __name__ == "__main__":
             retval = cluster_build.patch_build_sst(patch_file)
         elif cmd == 'build':
             build_type = 'Debug'
-            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile']):
+            if (cur_arg_idx < len(sys.argv) and sys.argv[cur_arg_idx] in ['Debug', 'Release', 'RelWithDebInfo', 'Profile', 'Coverage']):
                 build_type = sys.argv[cur_arg_idx]
                 cur_arg_idx += 1
             retval = cluster_build.build(build_type)
