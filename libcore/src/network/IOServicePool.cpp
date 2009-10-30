@@ -33,8 +33,7 @@
 #include "IOServicePool.hpp"
 #include "IOService.hpp"
 #include "IOServiceFactory.hpp"
-
-#include <boost/thread/thread.hpp>
+#include "util/Thread.hpp"
 
 namespace Sirikata {
 namespace Network {
@@ -57,7 +56,7 @@ IOServicePool::~IOServicePool() {
 
 void IOServicePool::run() {
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        it->thread = new boost::thread( std::tr1::bind(&IOService::run, it->ios) );
+        it->thread = new Thread( std::tr1::bind(&IOService::run, it->ios) );
 }
 
 void IOServicePool::join() {

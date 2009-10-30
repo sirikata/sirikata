@@ -33,6 +33,7 @@
 
 #include <cxxtest/TestSuite.h>
 
+#include "util/Thread.hpp"
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
 #include "task/WorkQueue.hpp"
@@ -68,7 +69,7 @@ class UploadTest : public CxxTest::TestSuite {
 
 	Task::GenEventManager *mEventSystem;
 
-	boost::thread *mEventProcessThread;
+	Thread *mEventProcessThread;
 
 	int finishedTest;
 	boost::mutex wakeMutex;
@@ -115,7 +116,7 @@ class UploadTest : public CxxTest::TestSuite {
 		mDestroyEventManager = false;
 		mWorkQueue = new Task::ThreadSafeWorkQueue;
 		mEventSystem = new Task::GenEventManager(mWorkQueue);
-		mEventProcessThread = new boost::thread(std::tr1::bind(
+		mEventProcessThread = new Thread(std::tr1::bind(
 			&UploadTest::sleep_processEventQueue, this));
 
 		mDownNameService = new Transfer::CachedServiceLookup;

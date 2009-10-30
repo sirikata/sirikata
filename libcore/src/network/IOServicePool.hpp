@@ -35,12 +35,10 @@
 #include "IODefs.hpp"
 #include "IOService.hpp"
 
-namespace boost {
-class thread;
-} // namespace boost
-
-
 namespace Sirikata {
+
+class Thread;
+
 namespace Network {
 
 /** IOServicePool creates a pool of IOService threads for handling
@@ -66,7 +64,7 @@ class SIRIKATA_EXPORT IOServicePool {
 
   private:
     struct ThreadData {
-        boost::thread* thread;
+        Thread* thread;
         IOService* ios;
     };
     typedef std::vector<ThreadData> ThreadList;

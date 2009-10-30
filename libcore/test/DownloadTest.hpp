@@ -32,6 +32,7 @@
 /*  Created on: Feb 17, 2009 */
 
 #include <cxxtest/TestSuite.h>
+#include "util/Thread.hpp"
 #include "transfer/EventTransferManager.hpp"
 #include "task/EventManager.hpp"
 #include "task/WorkQueue.hpp"
@@ -72,7 +73,7 @@ class DownloadTest : public CxxTest::TestSuite {
 	Task::WorkQueue *mWorkQueue;
 	Task::GenEventManager *mEventSystem;
 
-	boost::thread *mEventProcessThread;
+	Thread *mEventProcessThread;
 
 	int finishedTest;
 	boost::mutex wakeMutex;
@@ -116,7 +117,7 @@ public:
 
 		mWorkQueue = new Task::ThreadSafeWorkQueue;
 		mEventSystem = new Task::GenEventManager(mWorkQueue);
-		mEventProcessThread = new boost::thread(std::tr1::bind(
+		mEventProcessThread = new Thread(std::tr1::bind(
 			&DownloadTest::sleep_processEventQueue, this));
 
 		mNameService = new Transfer::CachedServiceLookup;

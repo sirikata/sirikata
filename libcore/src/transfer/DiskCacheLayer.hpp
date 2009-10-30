@@ -40,6 +40,7 @@
 #include "CacheLayer.hpp"
 #include "CacheMap.hpp"
 #include "util/ThreadSafeQueue.hpp"
+#include "util/Thread.hpp"
 
 namespace Sirikata {
 namespace Transfer {
@@ -68,7 +69,7 @@ private:
 
 	struct DiskRequest;
 	ThreadSafeQueue<std::tr1::shared_ptr<DiskRequest> > mRequestQueue; // must be initialized before the thread.
-	boost::thread *mWorkerThread;
+	Thread *mWorkerThread;
 
 	CacheMap mFiles;
 
@@ -173,7 +174,7 @@ public:
 			mPrefix(prefix+"/"),
 			mCleaningUp(false) {
 		mFiles.setOwner(this);
-		mWorkerThread=new boost::thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
+		mWorkerThread=new Thread(std::tr1::bind(&DiskCacheLayer::workerThread, this));
 		try {
 			unserialize();
 		} catch (...) {

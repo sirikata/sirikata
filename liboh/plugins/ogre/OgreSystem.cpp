@@ -31,6 +31,8 @@
  */
 #include <oh/Platform.hpp>
 
+#include <util/Thread.hpp>
+
 #include "options/Options.hpp"
 #include "OgreSystem.hpp"
 #include "OgrePlugin.hpp"
@@ -472,7 +474,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                 SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<rw->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<rw->getHeight()<<'\n');
                 *mWindowWidth->get()=Any(rw->getWidth());
-                *mWindowHeight->get()=Any(rw->getHeight());                
+                *mWindowHeight->get()=Any(rw->getHeight());
                 rw->setVisible(true);
 
             }
@@ -929,7 +931,7 @@ Task::EventResponse OgreSystem::performUpload(Task::EventPtr ev) {
 	}
     uploadreq->parent = this;
     uploadreq->mTransferManager = mTransferManager;
-    boost::thread th(std::tr1::bind(&UploadRequest::perform, uploadreq));
+    Thread th(std::tr1::bind(&UploadRequest::perform, uploadreq));
     th.detach(); // let it do processing in the background.
     return Task::EventResponse::nop();
 }

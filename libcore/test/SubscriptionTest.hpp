@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "util/Thread.hpp"
 #include "network/Stream.hpp"
 #include "network/StreamListener.hpp"
 #include "network/StreamFactory.hpp"
@@ -46,7 +47,6 @@
 #include "subscription/SubscriptionClient.hpp"
 #include "subscription/Broadcast.hpp"
 #include <cxxtest/TestSuite.h>
-#include <boost/thread.hpp>
 #include <time.h>
 using namespace Sirikata;
 using namespace Sirikata::Network;
@@ -75,8 +75,8 @@ class SubscriptionTest : public CxxTest::TestSuite
     std::tr1::shared_ptr<Subscription::Server>mServer;
     Subscription::SubscriptionClient *mSub;
     Subscription::Broadcast *mBroad;
-    boost::thread *mSubThread;
-    boost::thread *mBroadThread;
+    Thread *mSubThread;
+    Thread *mBroadThread;
     UUID tBroadcastUUID;
     Subscription::Broadcast::BroadcastStream *tBroadcast;
     UUID oBroadcastUUID;
@@ -124,8 +124,8 @@ public:
                                                                                        Duration::seconds(3.0),
                                                                                        1024*1024));
         mServer=tempServer;
-        mSubThread=new boost::thread(std::tr1::bind(&SubscriptionTest::subscriptionThread,this));
-        mBroadThread=new boost::thread(std::tr1::bind(&SubscriptionTest::broadcastThread,this));
+        mSubThread=new Thread(std::tr1::bind(&SubscriptionTest::subscriptionThread,this));
+        mBroadThread=new Thread(std::tr1::bind(&SubscriptionTest::broadcastThread,this));
         mSubscriptionMessage.mutable_broadcast_address().set_hostname(mSubscriptionAddress.getHostName());
         mSubscriptionMessage.mutable_broadcast_address().set_service(mSubscriptionAddress.getService());
         mSubscriptionMessage.set_broadcast_name(tBroadcastUUID);

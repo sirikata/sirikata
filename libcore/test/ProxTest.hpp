@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "util/Thread.hpp"
 #include "network/Stream.hpp"
 #include "network/StreamListener.hpp"
 #include "network/StreamFactory.hpp"
@@ -46,7 +47,6 @@
 #include "proximity/ProximitySystemFactory.hpp"
 #include "proximity/ProximityConnectionFactory.hpp"
 #include <cxxtest/TestSuite.h>
-#include <boost/thread.hpp>
 #include <time.h>
 using namespace Sirikata;
 using namespace Sirikata::Network;
@@ -69,8 +69,8 @@ class ProxTest : public CxxTest::TestSuite         , MessageService
     Proximity::ProximitySystem* mLocalProxSystem;
     Network::IOService *mIO;
     Network::IOService *mProxIO;
-    boost::thread*mProxThread;
-    boost::thread*mThread;
+    Thread*mProxThread;
+    Thread*mThread;
     AtomicValue<int>mSend;
     volatile bool mAbortTest;
     volatile bool mReadyToConnect;
@@ -85,15 +85,15 @@ public:
             mObjectId[i]=UUID::random();
             mDeliver[i]=0;
         }
-        
+
         plugins.load(DynamicLibrary::filename("prox"));
 
-        mProxThread= new boost::thread(std::tr1::bind(&ProxTest::ioThread,this));
+        mProxThread= new Thread(std::tr1::bind(&ProxTest::ioThread,this));
         while (!mReadyToConnect) {}
         Proximity::ProximityConnection*proxCon=Proximity::ProximityConnectionFactory::getSingleton().getDefaultConstructor()(mIO,"");
         mLocalProxSystem=new Proximity::BridgeProximitySystem(proxCon,1);
         mLocalProxSystem->forwardMessagesTo(this);
-        mThread=new boost::thread(std::tr1::bind(&ProxTest::pcThread,this));
+        mThread=new Thread(std::tr1::bind(&ProxTest::pcThread,this));
 
     }
     static ProxTest*createSuite() {

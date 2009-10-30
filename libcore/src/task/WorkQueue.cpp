@@ -36,7 +36,7 @@
 #include "Time.hpp"
 #include "util/ThreadSafeQueue.hpp"
 #include "util/LockFreeQueue.hpp"
-#include <boost/thread.hpp>
+#include "util/Thread.hpp"
 
 namespace Sirikata {
 namespace Task {
@@ -79,14 +79,14 @@ void workQueueWorkerThread(WorkQueue *queue) {
 
 class WorkQueueThread {
 public:
-	std::vector<boost::thread*> mThreads;
+	std::vector<Thread*> mThreads;
 };
 
 WorkQueueThread *WorkQueue::createWorkerThreads(int count) {
 	WorkQueueThread *threads = new WorkQueueThread;
 	for (int i = 0; i < count; ++i) {
 		threads->mThreads.push_back(
-			new boost::thread(std::tr1::bind(&workQueueWorkerThread, this)));
+			new Thread(std::tr1::bind(&workQueueWorkerThread, this)));
 	}
 	return threads;
 }

@@ -35,8 +35,8 @@
 #include "HTTPRequest.hpp"
 #include "TransferData.hpp"
 #include "util/ThreadSafeQueue.hpp"
+#include "util/Thread.hpp"
 
-#include <boost/thread.hpp>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -215,7 +215,7 @@ namespace {
 	//static ThreadSafeQueue<HTTPRequest*> requestQueue;
 	struct CurlGlobals {
 		boost::mutex http_lock;
-		boost::thread *main_loop;
+		Thread *main_loop;
 		volatile bool cleaningUp;
 
 		boost::mutex fd_lock;
@@ -363,7 +363,7 @@ void HTTPRequest::initCurl () {
 	// CURLOPT_PROGRESSFUNCTION may be useful for determining whether to timeout during an active connection.
 	parent_easy_curl = allocDefaultCurl();
 
-	globals.main_loop = new boost::thread(&curlLoop);
+	globals.main_loop = new Thread(&curlLoop);
 
 }
 
