@@ -45,6 +45,7 @@ class MessageRouter;
 class MessageDispatcher;
 class Trace;
 class Forwarder;
+class MockForwarder;
 
 /** SpaceContext holds a number of useful items that are effectively global
  *  for each space node and used throughout the system -- ServerID, time information,
@@ -136,6 +137,7 @@ private:
     }
 
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
+    friend class MockForwarder; // Same for mock forwarder
 
     Sirikata::AtomicValue<ServerID> mID;
 

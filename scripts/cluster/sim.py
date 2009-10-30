@@ -250,7 +250,7 @@ class ClusterSim:
                 elif (node_type == 'oh'):
                     node_params['binary'].append('oh')
                 elif (node_type == 'vis'):
-                    node_params['binary'].append('cbr')
+                    node_params['binary'].append('analysis')
                 else:
                     node_params['binary'].append('')
                 self.fill_parameters(node_params, debug_param_functor_dict, node_type, x)
@@ -350,8 +350,8 @@ class ClusterSim:
         ClusterSCP(self.config, [trace_file_pattern, "."])
 
     def bandwidth_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=packet', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.windowed-bandwidth=datagram', '--analysis.windowed-bandwidth.rate=100ms', '--max-servers=' + str(self.max_space_servers()) ])
 
         GraphWindowedBandwidth('windowed_bandwidth_packet_send.dat')
         GraphWindowedBandwidth('windowed_bandwidth_packet_receive.dat')
@@ -370,23 +370,23 @@ class ClusterSim:
 
 
     def latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
     def object_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.object.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
     def message_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.message.latency=true', '--max-servers=' + str(self.max_space_servers())])
 
 
     def oseg_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.oseg=true' ])
 
     def loc_latency_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--debug', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.loc.latency=true', '--max-servers=' + str(self.max_space_servers()) ])
 
     def prox_dump_analysis(self):
-        subprocess.call([CBR_WRAPPER, '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
+        subprocess.call([CBR_WRAPPER, 'analysis', '--id=1', "--layout=" + self.settings.layout(), "--num-oh=" + str(self.settings.num_oh), "--serverips=" + self.ip_file(), "--duration=" + self.settings.duration, '--analysis.prox.dump=prox.log', '--max-servers=' + str(self.max_space_servers()) ])
 
 
 

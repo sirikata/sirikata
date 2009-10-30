@@ -272,7 +272,6 @@ SET(CBR_CORE_SOURCES
 
 SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/AlwaysLocationUpdatePolicy.cpp
-  ${CBR_SOURCE_DIR}/Analysis.cpp
   ${CBR_SOURCE_DIR}/CBRLocationServiceCache.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
@@ -291,7 +290,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/LocationService.cpp
   ${CBR_SOURCE_DIR}/space/MigrationMonitor.cpp
   ${CBR_SOURCE_DIR}/ObjectConnection.cpp
-  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
   ${CBR_SOURCE_DIR}/space/ObjectHostConnectionManager.cpp
   ${CBR_SOURCE_DIR}/OSegHasher.cpp
   ${CBR_SOURCE_DIR}/space/OSegLookupQueue.cpp
@@ -305,7 +303,6 @@ SET(CBR_SOURCES
   ${CBR_SOURCE_DIR}/SSTNetworkImpl.cpp
   ${CBR_SOURCE_DIR}/Test.cpp
   ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
-  ${CBR_SOURCE_DIR}/Visualization.cpp
   ${CBR_SOURCE_DIR}/main.cpp
 )
 
@@ -322,6 +319,16 @@ SET(CSEG_SOURCES
   ${CBR_SOURCE_DIR}/DistributedCoordinateSegmentation.cpp
   ${CBR_SOURCE_DIR}/WorldPopulationBSPTree.cpp
   ${CBR_SOURCE_DIR}/cseg/main.cpp
+)
+
+SET(ANALYSIS_SOURCES
+  ${CBR_SOURCE_DIR}/Analysis.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/UniformCoordinateSegmentation.cpp
+  ${CBR_SOURCE_DIR}/CoordinateSegmentationClient.cpp
+  ${CBR_SOURCE_DIR}/ObjectFactory.cpp
+  ${CBR_SOURCE_DIR}/Visualization.cpp
+  ${CBR_SOURCE_DIR}/analysis/main.cpp
 )
 
 SET(CBR_MOC_HEADERS
@@ -380,7 +387,6 @@ TARGET_LINK_LIBRARIES(cbr
         ${Boost_DATE_TIME_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY}
         ${Boost_REGEX_LIBRARY}
-        ${GLUT_LIBRARIES}
         ${SirikataCore_LIBRARIES}
         ${QT_QTCORE_LIBRARY} ${QT_QTNETWORK_LIBRARY} ${QT_QTGUI_LIBRARY}
         ${SST_LIBRARIES}
@@ -409,4 +415,16 @@ TARGET_LINK_LIBRARIES(cseg
         ${Boost_REGEX_LIBRARY}
         ${SirikataCore_LIBRARIES}
         ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
+ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES} ${CBR_PROTOCOL_SOURCES})
+TARGET_LINK_LIBRARIES(analysis
+  cbr-core
+        ${Boost_THREAD_LIBRARY}
+        ${Boost_DATE_TIME_LIBRARY}
+        ${Boost_PROGRAM_OPTIONS_LIBRARY}
+        ${Boost_REGEX_LIBRARY}
+        ${SirikataCore_LIBRARIES}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        ${GLUT_LIBRARIES}
         )
