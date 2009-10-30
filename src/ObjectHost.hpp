@@ -183,6 +183,8 @@ private:
         // Server we're trying to migrate to
         ServerID migratingTo;
     };
+    typedef std::map<ServerID, std::set<UUID> > ObjectServerMap;
+    ObjectServerMap mObjectServerMap;
     typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
     uint64 mPingId;
