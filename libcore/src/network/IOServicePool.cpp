@@ -54,9 +54,15 @@ IOServicePool::~IOServicePool() {
     }
 }
 
+namespace {
+void runWrapper(IOService* ios) {
+    ios->run();
+}
+}
+
 void IOServicePool::run() {
     for(ThreadList::iterator it = mThreads.begin(); it != mThreads.end(); it++)
-        it->thread = new Thread( std::tr1::bind(&IOService::run, it->ios) );
+        it->thread = new Thread( std::tr1::bind(runWrapper, it->ios) );
 }
 
 void IOServicePool::join() {
