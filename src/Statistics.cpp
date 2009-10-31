@@ -135,7 +135,7 @@ Trace::Trace(const String& filename)
    mStorageThread(NULL),
    mFinishStorage(false)
 {
-    mStorageThread = new boost::thread( std::tr1::bind(&Trace::storageThread, this, filename) );
+    mStorageThread = new Thread( std::tr1::bind(&Trace::storageThread, this, filename) );
 }
 
 void Trace::setServerIDMap(ServerIDMap* sidmap) {

@@ -32,7 +32,6 @@
 
 #include "TimeSync.hpp"
 #include "Timer.hpp"
-#include <boost/thread.hpp>
 
 #define STDIN 0
 #define STDOUT 1
@@ -118,12 +117,14 @@ void TimeSync::start(const String& server) {
         mSyncedOnce = false;
 
         // Start off the syncing thread
-        mSyncThread = new boost::thread(
+        mSyncThread = new Thread(
+            std::tr1::bind(
             TimeSync_sync_thread,
             ntp_ctl_pipes,
             ntp_data_pipes,
             &mSyncedOnce,
             &mDone
+            )
         );
 
         // Wait for it to sync at least once

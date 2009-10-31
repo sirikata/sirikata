@@ -27,7 +27,7 @@ class TCPNetwork :public Network{
     uint32 mOutgoingBandwidth;
     Sirikata::PluginManager mPluginManager;
     Sirikata::Network::IOService *mIOService;
-    void * mThread;
+    Thread* mThread;
     void processNewConnectionsOnMainThread();
     class TSQueue {
     public:

@@ -4,7 +4,6 @@
 #include "sirikata/network/StreamFactory.hpp"
 #include "sirikata/network/StreamListenerFactory.hpp"
 #include "sirikata/network/StreamListener.hpp"
-#include "boost/thread.hpp"
 #include "Options.hpp"
 using namespace Sirikata::Network;
 using namespace Sirikata;
@@ -24,9 +23,7 @@ TCPNetwork::TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 in
     mIOService=IOServiceFactory::makeIOService();
     mIOService->post(Duration::seconds(60*60*24*365*68),&noop);
     mListener=StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
-    mThread= new boost::thread(std::tr1::bind(&IOService::run,mIOService));
-    //mThread= new boost::thread(&noop);//std::tr1::bind(&IOServiceFactory::runService,mIOService));
-
+    mThread= new Thread(std::tr1::bind(&IOService::run,mIOService));
 }
 
 
@@ -145,8 +142,8 @@ void TCPNetwork::init(void *(*x)(void*data)) {
 }
 TCPNetwork::~TCPNetwork() {
     mIOService->stop();
-    ((boost::thread*)mThread)->join();
-    delete (boost::thread*)mThread;
+    mThread->join();
+    delete mThread;
     IOServiceFactory::destroyIOService(mIOService);
     mIOService=NULL;
 }

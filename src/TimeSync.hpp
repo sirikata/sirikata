@@ -35,10 +35,6 @@
 
 #include "Utility.hpp"
 
-namespace boost {
-class thread;
-}
-
 namespace CBR {
 
 /** Handles synchronization with a central server. */
@@ -54,7 +50,7 @@ private:
     bool mDone;
     int ntp_ctl_pipes[2]; // Control data from cbr -> sync.py
     int ntp_data_pipes[2]; // Offset data from sync.py -> cbr
-    boost::thread* mSyncThread;
+    Thread* mSyncThread;
 }; // class TimeSync
 
 } // namespace CBR

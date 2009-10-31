@@ -38,7 +38,6 @@
 #include "Network.hpp"
 #include "ServerNetwork.hpp"
 #include "Message.hpp"
-#include <boost/thread.hpp>
 
 namespace CBR {
 
@@ -178,7 +177,7 @@ private:
     ServerIDMap* mServerIDMap;
     bool mShuttingDown;
 
-    boost::thread* mStorageThread;
+    Thread* mStorageThread;
     Sirikata::AtomicValue<bool> mFinishStorage;
 }; // class Trace
 

@@ -169,7 +169,7 @@ private:
     typedef Prox::QueryHandler<ProxSimulationTraits> ProxQueryHandler;
     void tickQueryHandler(ProxQueryHandler* qh);
 
-    boost::thread* mProxThread;
+    Thread* mProxThread;
     IOService* mProxService;
     IOStrand* mProxStrand;
     Sirikata::AtomicValue<bool> mShutdownProxThread;

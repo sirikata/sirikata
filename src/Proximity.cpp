@@ -80,7 +80,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_PROX, this);
 
     // Start the processing thread
-    mProxThread = new boost::thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
+    mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
 
 Proximity::~Proximity() {
