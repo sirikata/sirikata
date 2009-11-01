@@ -45,7 +45,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
     if ( core_plugin_refcount == 0 )
         ColladaSystemFactory::getSingleton ().registerConstructor
             ( name (), &ColladaSystem::create, true );
-    
+
     ++core_plugin_refcount;
 }
 
@@ -64,7 +64,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
 {
 //    using namespace Sirikata;
     using namespace Sirikata::Models;
-    
+
     if ( core_plugin_refcount > 0 )
     {
         --core_plugin_refcount;
@@ -72,7 +72,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
         assert ( core_plugin_refcount == 0 );
 
         if ( core_plugin_refcount == 0 )
-            ColladaSystemFactory::getSingleton ().unregisterConstructor ( name (), true );
+            ColladaSystemFactory::getSingleton ().unregisterConstructor ( name () );
     }
 }
 
