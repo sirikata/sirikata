@@ -1150,6 +1150,15 @@ void WebView::onWidgetPaint(
     SILOG(webview,debug,"onWidgetPaint");
 }
 
+void WebView::onChromeSend(Berkelium::Window *win, const std::string &name, const std::vector<std::string> &args) {
+#ifdef HAVE_BERKELIUM
+	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(name);
+
+	if(i != delegateMap.end()) {
+		i->second(this, args);
+	}
+#endif
+}
 
 
 }

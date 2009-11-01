@@ -41,9 +41,11 @@
 
 #ifdef HAVE_AWESOMIUM
 #include "WebCore.h"
+typedef Awesomium::JSArguments JSArguments;
 #else
+typedef std::vector<std::string> JSArguments;
 namespace Awesomium {
-  struct JSArguments;
+  typedef ::JSArguments JSArguments;
   struct WebCore;
 }
 #endif

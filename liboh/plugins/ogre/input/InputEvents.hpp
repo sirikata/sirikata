@@ -41,10 +41,9 @@ namespace Awesomium {
 class JSValue;
 typedef std::vector<JSValue> JSArguments;
 }
+typedef Awesomium::JSArguments JSArguments;
 #else
-namespace Awesomium {
-class JSArguments;
-}
+typedef std::vector<std::string> JSArguments;
 #endif
 
 namespace Sirikata {
@@ -472,9 +471,9 @@ public:
 
     WebView* webview;
     String name;
-    Awesomium::JSArguments* args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes
+    JSArguments* args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes
 
-    WebViewEvent(WebView* wv, const String& name, const Awesomium::JSArguments& args);
+    WebViewEvent(WebView* wv, const String& name, const JSArguments& args);
     virtual ~WebViewEvent();
 
     virtual EventDescriptor getDescriptor() const;

@@ -64,7 +64,7 @@ namespace Graphics {
 
 	class WebView;
 
-	typedef std::tr1::function<void (WebView*, const Awesomium::JSArguments&)> JSDelegate;
+	typedef std::tr1::function<void (WebView*, const JSArguments&)> JSDelegate;
 
 	/**
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
@@ -112,7 +112,7 @@ namespace Graphics {
 		*/
 		void evaluateJS(const std::string& javascript);
 
-		void evaluateJS(const std::string& javascript, const Awesomium::JSArguments& args);
+		void evaluateJS(const std::string& javascript, const JSArguments& args);
 
 		Awesomium::FutureJSValue evaluateJSWithResult(const std::string& javascript);
 
@@ -475,6 +475,8 @@ namespace Graphics {
         void onResponsive(Berkelium::Window*);
         void onUnresponsive(Berkelium::Window*);
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
+
+    void onChromeSend(Berkelium::Window *win, const std::string &msg, const std::vector<std::string> &str);
 
     /** Linux only. uses an OpenGL texture.
      * If not using OpenGL, each srcRect will get its own call to 'onPaint'
