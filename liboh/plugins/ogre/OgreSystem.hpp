@@ -118,6 +118,12 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     ///all the things that should happen once the frame finishes
     void postFrame(Task::LocalTime, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
+
+    // Initiate quiting by indicating to the main loop that we want to shut down
+    void quit();
+
+    bool mQuitRequested;
+
     Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
     Vector3d mFloatingPointOffset;
     Ogre::RaySceneQuery* mRayQuery;

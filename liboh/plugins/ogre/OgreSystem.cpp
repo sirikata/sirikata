@@ -129,7 +129,11 @@ Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
-OgreSystem::OgreSystem():mLastFrameTime(Task::LocalTime::now()),mFloatingPointOffset(0,0,0),mPrimaryCamera(NULL)
+OgreSystem::OgreSystem()
+    : mLastFrameTime(Task::LocalTime::now()),
+     mQuitRequested(false),
+     mFloatingPointOffset(0,0,0),
+     mPrimaryCamera(NULL)
 {
     increfcount();
     mCubeMap=NULL;
@@ -228,6 +232,9 @@ void OgreSystem::destroyRenderTarget(const String&name) {
 }
 void OgreSystem::destroyRenderTarget(Ogre::ResourcePtr&name) {
     Ogre::TextureManager::getSingleton().remove(name);
+}
+void OgreSystem::quit() {
+    mQuitRequested = true;
 }
 Ogre::RenderTarget*OgreSystem::createRenderTarget(String name, uint32 width, uint32 height) {
     if (name.length()==0&&mRenderTarget)
@@ -995,6 +1002,9 @@ bool OgreSystem::tick(){
 
     Meru::SequentialWorkQueue::getSingleton().dequeuePoll();
     Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
+
+    if (mQuitRequested)
+        continueRendering = false;
 
     return continueRendering;
 }

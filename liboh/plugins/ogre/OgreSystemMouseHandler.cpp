@@ -80,7 +80,7 @@ using namespace std;
 #endif
 
 bool compareEntity (const Entity* one, const Entity* two) {
-    
+
     ProxyObject *pp = one->getProxyPtr().get();
 
     ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
@@ -216,6 +216,11 @@ public:
         mSelectedObjects.clear();
     }
 private:
+
+    void quitAction() {
+        mParent->quit();
+    }
+
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY) {
         float delx = x-*lastX;
         float dely = y-*lastY;
@@ -600,17 +605,17 @@ private:
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
-        
+
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
         Location loc = cam->extrapolateLocation(now);
         const Quaternion &orient = loc.getOrientation();
         Protocol::ObjLoc rloc;
         rloc.set_velocity((orient * dir) * amount * WORLD_SCALE * .5);
-        rloc.set_angular_speed(0);        
+        rloc.set_angular_speed(0);
         cam->requestLocation(now, rloc);
     }
     void rotateAction(Vector3f about, float amount) {
-        
+
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
@@ -626,7 +631,7 @@ private:
     }
 
     void stableRotateAction(float dir, float amount) {
-        
+
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
@@ -641,7 +646,7 @@ private:
         raxis.x = 0;
         raxis.y = std::cos(p*DEG2RAD);
         raxis.z = -std::sin(p*DEG2RAD);
-        
+
         Protocol::ObjLoc rloc;
         rloc.set_rotational_axis(raxis);
         rloc.set_angular_speed(dir*amount);
@@ -775,10 +780,10 @@ private:
             temp << loc.getOrientation().w;
             w = temp.str();
         }
-        
+
         Vector3f angAxis(loc.getAxisOfRotation());
         float angSpeed(loc.getAngularSpeed());
-        
+
         string parent;
         ProxyObjectPtr parentObj = pp->getParentProxy();
         if (parentObj) {
@@ -802,7 +807,7 @@ private:
             fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-            
+
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
                     linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
                     linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
@@ -1037,7 +1042,7 @@ private:
 
     /// Camera Path Utilities
     void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
-        if (!mParent||!mParent->mPrimaryCamera) return;        
+        if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
         if (!cam) return;
         Time now(SpaceTimeOffsetManager::getSingleton().now(cam->getObjectReference().space()));
@@ -1231,6 +1236,8 @@ public:
                 WebViewEvent::Id,
                 std::tr1::bind(&MouseHandler::webviewHandler, this, _1)));
 
+        mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::quitAction, this));
+
         mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
         mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
         mInputResponses["moveLeft"] = new FloatToggleInputResponse(std::tr1::bind(&MouseHandler::moveAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
@@ -1288,6 +1295,9 @@ public:
         mInputResponses["webGo"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateGo, _1));
 
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
+
+        // Session
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["quit"]);
 
         // Movement
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
