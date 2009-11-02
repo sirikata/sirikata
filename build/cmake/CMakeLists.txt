@@ -477,6 +477,10 @@ ENDIF()
 GET_FILENAME_COMPONENT(BERKELIUM_ROOT ${BERKELIUM_ROOT} ABSOLUTE)
 IF(NOT DISABLE_BERKELIUM)
   FIND_PACKAGE(Berkelium)
+  IF(NOT BERKELIUM_FOUND)
+    SET(BERKELIUM_ROOT ${TOP_LEVEL}/externals/berkelium)
+    FIND_PACKAGE(Berkelium)
+  ENDIF()
   IF(BERKELIUM_FOUND)
     SET(DISABLE_AWESOMIUM TRUE)
   ENDIF()
@@ -1553,25 +1557,26 @@ IF(OGRE_FOUND)
      ENDFOREACH()
 
   ENDIF()
-  IF(AWESOMIUM_ROOT)
-    IF(WIN32)
-      INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/
-              FILE_PERMISSIONS ${EXEC_PERMS}
-              DESTINATION bin/
-              PATTERN "*.a" EXCLUDE
-              PATTERN "*.la" EXCLUDE
-	      PATTERN "*.h" EXCLUDE
-	      PATTERN "*.lib" EXCLUDE
-              #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-              PATTERN "*.exe" EXCLUDE)
-    ELSE()
-      INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/lib/
-              FILE_PERMISSIONS ${EXEC_PERMS}
-              DESTINATION lib/
-              #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
+  IF(NOT DISABLE_AWESOMIUM)
+    IF(AWESOMIUM_ROOT)
+      IF(WIN32)
+        INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/
+                FILE_PERMISSIONS ${EXEC_PERMS}
+                DESTINATION bin/
+                PATTERN "*.a" EXCLUDE
+                PATTERN "*.la" EXCLUDE
+	        PATTERN "*.h" EXCLUDE
+                PATTERN "*.lib" EXCLUDE
+                #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+                PATTERN "*.exe" EXCLUDE)
+      ELSE()
+        INSTALL(DIRECTORY ${AWESOMIUM_ROOT}/lib/
+                FILE_PERMISSIONS ${EXEC_PERMS}
+                DESTINATION lib/
+                #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+                PATTERN "*.exe" EXCLUDE)
+      ENDIF()
     ENDIF()
-
     # data for web views
     INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/ogre/data/
       DESTINATION share/ogre/data/
@@ -1582,7 +1587,7 @@ ENDIF()
 #install boost
 IF(BOOST_ROOT)
   IF(WIN32)
-    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}installed-boost/lib)
+    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}/boost_1_37_0/bin ${PLATFORM_LIBS}/installed-boost/lib)
       IF(EXISTS ${Boost_LIBRARY_DIR})
       INSTALL(DIRECTORY ${Boost_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
@@ -1607,6 +1612,16 @@ IF(BOOST_ROOT)
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
+ENDIF()
+
+#install berkelium
+IF(BERKELIUM_FOUND)
+IF(WIN32)  
+  INSTALL(DIRECTORY ${BERKELIUM_ROOT}/bin/ 
+          FILE_PERMISSIONS ${EXEC_PERMS} 
+          DESTINATION bin/ )
+ENDIF()
+          
 ENDIF()
 
 IF(MONO_FOUND)

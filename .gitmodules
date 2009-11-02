@@ -10,3 +10,6 @@
 [submodule "externals/cxxtest"]
 	path = externals/cxxtest
 	url = git://github.com/danielrh/cxxtest.git
+[submodule "externals/berkelium"]
+	path = externals/berkelium
+	url = git://github.com/sirikata/berkelium.git
