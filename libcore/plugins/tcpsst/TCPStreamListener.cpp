@@ -50,7 +50,7 @@ private:
     static void startAccept(DataPtr& data);
     static void handleAccept(DataPtr& data, const boost::system::error_code& error);
 public:
-    Data(IOService& io, 
+    Data(IOService& io,
          unsigned char maxSimultaneousSockets,
          unsigned int sendBufferSize)
      : ios(io),
@@ -139,9 +139,12 @@ TCPStreamListener::~TCPStreamListener() {
 
 bool TCPStreamListener::listen (const Address&address,
                                 const Stream::SubstreamCallback&newStreamCallback) {
+    close();
+
     mData->acceptor = new TCPListener(mData->ios,tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
     mData->cb = newStreamCallback;
     mData->start(mData);
+
     return true;
 }
 
@@ -162,6 +165,10 @@ void TCPStreamListener::close(){
     if (mData->acceptor != NULL) {
         mData->acceptor->cancel();
         mData->acceptor->close();
+
+        delete mData->acceptor;
+        mData->acceptor = NULL;
+        mData->cb = 0;
     }
 }
 
