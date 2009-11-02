@@ -879,12 +879,6 @@ void CraqObjectSegmentation::checkReSends()
 }
 
 
-int CraqObjectSegmentation::getOSegType()
-{
-  return CRAQ_OSEG;
-}
-
-
 //this function tells us what to do with all the ids that just weren't found in craq.
 void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
 {

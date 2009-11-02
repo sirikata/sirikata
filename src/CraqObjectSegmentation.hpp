@@ -157,7 +157,6 @@ namespace CBR
     virtual void receiveMessage(Message* msg);
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void newObjectAdd(const UUID& obj_id);
-    virtual int getOSegType();
 
       CBR::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id,ServerID sID_to);
       void processMigrateMessageAcknowledge(const CBR::Protocol::OSeg::MigrateMessageAcknowledge& msg);

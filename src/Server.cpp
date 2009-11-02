@@ -191,11 +191,7 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
     if (session_msg.has_connect()) {
         if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Fresh)
         {
-            if (mOSeg->getOSegType() == LOC_OSEG)
-              handleConnect(oh_conn_id, msg, session_msg.connect());
-
-            if(mOSeg->getOSegType() == CRAQ_OSEG)
-              handleConnect2(oh_conn_id, msg, session_msg.connect());
+            handleConnect(oh_conn_id, msg, session_msg.connect());
         }
         else if (session_msg.connect().type() == CBR::Protocol::Session::Connect::Migration)
         {
@@ -212,106 +208,6 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
 
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
-    UUID obj_id = container.source_object();
-    assert( getObjectConnection(obj_id) == NULL );
-
-    std::cout<<"\n\nbftm debug: received a handleconnect message\n\n";
-
-
-    // If the requested location isn't on this server, redirect
-    TimedMotionVector3f loc( connect_msg.loc().t(), MotionVector3f(connect_msg.loc().position(), connect_msg.loc().velocity()) );
-    Vector3f curpos = loc.extrapolate(mContext->time).position();
-    bool in_server_region = mMigrationMonitor->onThisServer(curpos);
-    ServerID loc_server = mCSeg->lookup(curpos);
-
-    if(loc_server == NullServerID || (loc_server == mContext->id() && !in_server_region)) {
-        // Either CSeg says no server handles the specified region or
-        // that we should, but it doesn't actually land in our region
-        // (i.e. things were probably clamped invalidly)
-
-        // Create and send redirect reply
-        CBR::Protocol::Session::Container response_container;
-        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-        response.set_response( CBR::Protocol::Session::ConnectResponse::Error );
-
-        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-            mContext->id(),
-            UUID::null(), OBJECT_PORT_SESSION,
-            obj_id, OBJECT_PORT_SESSION,
-            serializePBJMessage(response_container)
-        );
-        // Sent directly via object host connection manager because we don't have an ObjectConnection
-        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
-        return;
-    }
-
-    if (loc_server != mContext->id()) {
-        // Since we passed the previous test, this just means they tried to connect
-        // to the wrong server => redirect
-
-        // Create and send redirect reply
-        CBR::Protocol::Session::Container response_container;
-        CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-        response.set_response( CBR::Protocol::Session::ConnectResponse::Redirect );
-        response.set_redirect(loc_server);
-
-        CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-            mContext->id(),
-            UUID::null(), OBJECT_PORT_SESSION,
-            obj_id, OBJECT_PORT_SESSION,
-            serializePBJMessage(response_container)
-        );
-        // Sent directly via object host connection manager because we don't have an ObjectConnection
-        mObjectHostConnectionManager->send( oh_conn_id, obj_response );
-        return;
-    }
-
-    // FIXME sanity check the new connection
-    // -- authentication
-    // -- verify object may connect, i.e. not already in system (e.g. check oseg)
-
-    //update our oseg to show that we know that we have this object now.
-    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
-
-
-    // Create and store the connection
-    ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, oh_conn_id);
-    mObjects[obj_id] = conn;
-
-
-
-    // Add object as local object to LocationService
-    mLocationService->addLocalObject(obj_id, loc, connect_msg.bounds());
-
-
-
-    // Register proximity query
-    if (connect_msg.has_query_angle())
-        mProximity->addQuery(obj_id, SolidAngle(connect_msg.query_angle()));
-    // Allow the forwarder to send to ship messages to this connection
-    mForwarder->addObjectConnection(obj_id, conn);
-
-    // Send reply back indicating that the connection was successful
-    CBR::Protocol::Session::Container response_container;
-    CBR::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-    response.set_response( CBR::Protocol::Session::ConnectResponse::Success );
-
-    CBR::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-        mContext->id(),
-        UUID::null(), OBJECT_PORT_SESSION,
-        obj_id, OBJECT_PORT_SESSION,
-        serializePBJMessage(response_container)
-    );
-
-    conn->send( obj_response );
-}
-
-
-
-
-
-// Handle Connect message from object
-void Server::handleConnect2(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const CBR::Protocol::Object::ObjectMessage& container, const CBR::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
     assert( getObjectConnection(obj_id) == NULL );
 
@@ -667,27 +563,22 @@ void Server::checkObjectMigrations()
             // connection, destroy said connection
 
             //bftm: candidate for multiple obj connections
-            if (mOSeg->getOSegType() == LOC_OSEG)
-            {
-                ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-                mClosingConnections.insert(migrated_conn);
-            }
-            if(mOSeg->getOSegType() == CRAQ_OSEG)
-            {
-              //end bftm change
-              //  mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
-              MigratingObjectConnectionsData mocd;
 
-              mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id, mocd.uniqueConnId);
-              Duration migrateStartDur  =                 mMigrationTimer.elapsed();
-              mocd.milliseconds         =          migrateStartDur.toMilliseconds();
-              mocd.migratingTo          =                             new_server_id;
-              mocd.loc                  =        mLocationService->location(obj_id);
-              mocd.bnds                 =          mLocationService->bounds(obj_id);
-              mocd.serviceConnection    =                                      true;
+            //end bftm change
+            //  mMigratingConnections[obj_id] = mForwarder->getObjectConnection(obj_id);
+            MigratingObjectConnectionsData mocd;
 
-              mMigratingConnections[obj_id] = mocd;
-            }
+            mocd.obj_conner           =   mForwarder->getObjectConnection(obj_id, mocd.uniqueConnId);
+            Duration migrateStartDur  =                 mMigrationTimer.elapsed();
+            mocd.milliseconds         =          migrateStartDur.toMilliseconds();
+            mocd.migratingTo          =                             new_server_id;
+            mocd.loc                  =        mLocationService->location(obj_id);
+            mocd.bnds                 =          mLocationService->bounds(obj_id);
+            mocd.serviceConnection    =                                      true;
+
+            mMigratingConnections[obj_id] = mocd;
+
+
 
             // Stop tracking the object locally
             mLocationService->removeLocalObject(obj_id);
@@ -819,15 +710,6 @@ bool Server::checkAlreadyMigrating(const UUID& obj_id)
 //This shouldn't get called yet.
 void Server::killObjectConnection(const UUID& obj_id)
 {
-  if (mOSeg->getOSegType() == LOC_OSEG)
-  {
-    return;
-  }
-  //the rest assumes that we are dealing with a non-dummy implementation.
-  //(For example, a craq implementation.)
-
-
-
   MigConnectionsMap::iterator objConMapIt = mMigratingConnections.find(obj_id);
 
   if (objConMapIt != mMigratingConnections.end())
