@@ -39,10 +39,14 @@ distributions:
 			if [ x = x"$(VCVER)" ]; then \
 				echo To force a specific version of visual studio, set VCVER to 8 or 9 ; \
 				[ -e c:/Program\ Files/Microsoft\ Visual\ Studio\ 9*/VC/bin ] && \
-					svn co http://sirikata.googlecode.com/svn/trunk/win32vc9 dependencies || \
+					svn co http://sirikatawin32.googlecode.com/svn/trunk dependencies || \
 					svn co http://sirikata.googlecode.com/svn/trunk/win32vc8 dependencies ; \
 			else \
-				svn co http://sirikata.googlecode.com/svn/trunk/win32vc$(VCVER) dependencies ; \
+				if [ x"9" = x"$(VCVER)" ]; then \
+					svn co http://sirikatawin32.googlecode.com/svn/trunk dependencies ; \
+				else \
+					svn co http://sirikata.googlecode.com/svn/trunk/win32vc$(VCVER) dependencies ; \
+				fi \
 			fi \
 			;; \
 		*) \
