@@ -54,7 +54,6 @@ ObjectHostConnectionManager::ObjectHostConnection::~ObjectHostConnection() {
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb)
  : mContext(ctx),
-   mIOService(Sirikata::Network::IOServiceFactory::makeIOService()),
    mAcceptor(NULL),
    mMessageReceivedCallback(cb)
 {
@@ -71,12 +70,6 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::getNewCon
     static ConnectionID src = 0;
 
     return ++src;
-}
-
-void ObjectHostConnectionManager::service() {
-    // Service the IOService.
-    // This will allow both the readers and writers to make progress.
-    mIOService->poll();
 }
 
 void ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
@@ -104,7 +97,7 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     assert(mAcceptor == NULL);
     mAcceptor=Sirikata::Network::StreamListenerFactory::getSingleton()
         .getConstructor(GetOption("ohstreamlib")->as<String>())
-          (mIOService,
+          (mContext->ioService,
            Sirikata::Network::StreamListenerFactory::getSingleton()
             .getOptionParser(GetOption("ohstreamlib")->as<String>())
                (GetOption("ohstreamoptions")->as<String>()));
@@ -113,6 +106,17 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
         addr,
         std::tr1::bind(&ObjectHostConnectionManager::handleNewConnection,this,_1,_2)
     );
+}
+
+void ObjectHostConnectionManager::shutdown() {
+    // Shut down the listener
+    mAcceptor->close();
+
+    // Close each connection
+    for(ObjectHostConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
+        ObjectHostConnection* conn = it->second;
+        conn->socket->close();
+    }
 }
 
 void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& set_callbacks) {

@@ -54,13 +54,12 @@ public:
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
 
-    void service();
-
     void send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+
+    void shutdown();
 private:
     SpaceContext* mContext;
 
-    Sirikata::Network::IOService* mIOService;
     Sirikata::Network::StreamListener* mAcceptor;
 
     struct ObjectHostConnection {

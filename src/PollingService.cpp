@@ -73,4 +73,9 @@ PollingService::PollingService(IOStrand* str, const Duration& max_rate)
 {
 }
 
+void PollingService::stop() {
+    shutdown();
+    Poller::stop();
+}
+
 } // namespace CBR

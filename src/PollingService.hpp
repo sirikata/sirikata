@@ -54,7 +54,7 @@ public:
      *  be scheduled again.  This allows outstanding events to be handled
      *  properly.
      */
-    void stop();
+    virtual void stop();
 private:
     void handleExec();
 
@@ -73,9 +73,12 @@ class PollingService : public Poller {
 public:
     PollingService(IOStrand* str, const Duration& max_rate = Duration::microseconds(0));
 
+    virtual void stop();
 protected:
     /** Override this method to specify the work to be done when polling. */
     virtual void poll() = 0;
+    /** Override this method to clean up when a shutdown is requested. */
+    virtual void shutdown() {}
 };
 
 } // namespace CBR

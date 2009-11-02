@@ -38,7 +38,10 @@ class Server : public MessageRecipient, public PollingService
 
       virtual void receiveMessage(Message* msg);
 private:
-      void poll();
+
+    // PollingService Implementation
+    virtual void poll();
+    virtual void shutdown();
 
     // Methods for periodic servicing
     void serviceObjectHostNetwork();
@@ -121,9 +124,6 @@ private:
 
     typedef std::map<UUID, StoredConnection> StoredConnectionMap;
     StoredConnectionMap  mStoredConnectionData;
-
-      TimeProfiler::Stage* mCheckMigrationsStage;
-      TimeProfiler::Stage* mObjectHostsStage;
 }; // class Server
 
 } // namespace CBR

@@ -46,9 +46,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     );
 
     mMigrationTimer.start();
-
-    mCheckMigrationsStage = mContext->profiler->addStage("Check Object Migrations");
-    mObjectHostsStage = mContext->profiler->addStage("Service Object Host Connection");
 }
 
 Server::~Server()
@@ -90,9 +87,6 @@ ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
 }
 
 void Server::serviceObjectHostNetwork() {
-    mObjectHostsStage->started();
-
-    mObjectHostConnectionManager->service();
 
   // Tick all active connections
   for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
@@ -124,8 +118,6 @@ void Server::serviceObjectHostNetwork() {
           persistingConnections.insert(conn);
   }
   mClosingConnections.swap(persistingConnections);
-
-    mObjectHostsStage->finished();
 }
 
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -595,11 +587,13 @@ void Server::poll() {
     checkObjectMigrations();
 }
 
+void Server::shutdown() {
+    mObjectHostConnectionManager->shutdown();
+}
+
 //this is called by the server that is sending an object to another server.
 void Server::checkObjectMigrations()
 {
-    mCheckMigrationsStage->started();
-
     // * check for objects crossing server boundaries
     // * wrap up state and send message to other server
     //     to reinstantiate the object there
@@ -710,8 +704,6 @@ void Server::checkObjectMigrations()
             break;
         mMigrateMessages.pop();
     }
-
-    mCheckMigrationsStage->finished();
 }
 
 
