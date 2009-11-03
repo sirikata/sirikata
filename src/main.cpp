@@ -286,7 +286,7 @@ void *main_loop(void *) {
 
     ///////////Go go go!! start of simulation/////////////////////
 
-    gNetwork->start();
+    gNetwork->begin();
 
     space_context->add(space_context);
     space_context->add(gNetwork);

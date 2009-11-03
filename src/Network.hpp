@@ -13,11 +13,11 @@ class Network : public PollingService {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
-    virtual ~Network() {}
+    virtual ~Network();
 
     virtual void init(void*(*)(void*))=0;
     // Called right before we start the simulation, useful for syncing network timing info to Time(0)
-    virtual void start() = 0;
+    virtual void begin() = 0;
 
     // Checks if this chunk, when passed to send, would be successfully pushed.
     virtual bool canSend(const Address4&,uint32 size, bool reliable, bool ordered, int priority)=0;
@@ -27,7 +27,7 @@ public:
     virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
 
-    virtual void reportQueueInfo(const Time& t) const = 0;
+    virtual void reportQueueInfo() const = 0;
 
 protected:
     virtual void service() = 0;
@@ -36,11 +36,12 @@ protected:
 
     SpaceContext* mContext;
 private:
+    // PollingService Interface
     virtual void poll();
+    virtual void shutdown();
     TimeProfiler::Stage* mProfiler;
 
-    Duration mStatsSampleRate;
-    Time mLastStatsSample;
+    Poller* mStatsPoller;
 };
 }
 #endif //_CBR_NETWORK_HPP_

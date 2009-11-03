@@ -41,12 +41,12 @@ void SSTNetwork::init(void* (*x)(void*)){
     mImpl->init(x);
 }
 
-void SSTNetwork::start() {
+void SSTNetwork::begin() {
     mImpl->start();
 }
 
-void SSTNetwork::reportQueueInfo(const Time& t) const {
-    mImpl->reportQueueInfo(t);
+void SSTNetwork::reportQueueInfo() const {
+    mImpl->reportQueueInfo(mContext->time);
 }
 
 } // namespace CBR

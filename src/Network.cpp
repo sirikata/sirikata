@@ -6,26 +6,30 @@ namespace CBR{
 
 Network::Network(SpaceContext* ctx)
  : PollingService(ctx->mainStrand),
-   mContext(ctx),
-   mLastStatsSample(Time::null())
+   mContext(ctx)
 {
-    mStatsSampleRate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
-
     mProfiler = mContext->profiler->addStage("Network");
+
+    mStatsPoller = new Poller(
+       ctx->mainStrand,
+       std::tr1::bind(&Network::reportQueueInfo, this),
+       GetOption(STATS_SAMPLE_RATE)->as<Duration>()
+    );
+    mStatsPoller->start();
+}
+
+Network::~Network() {
+    delete mStatsPoller;
 }
 
 void Network::poll() {
     mProfiler->started();
     service();
-
-    Time curt = mContext->time;
-    Duration since_last_sample = curt - mLastStatsSample;
-    if (since_last_sample > mStatsSampleRate) {
-        this->reportQueueInfo(curt);
-        mLastStatsSample = mContext->time;
-    }
-
     mProfiler->finished();
+}
+
+void Network::shutdown() {
+    mStatsPoller->stop();
 }
 
 }

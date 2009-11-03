@@ -147,7 +147,7 @@ TCPNetwork::~TCPNetwork() {
     IOServiceFactory::destroyIOService(mIOService);
     mIOService=NULL;
 }
-void TCPNetwork::start() {
+void TCPNetwork::begin() {
 
 }
 static Address4 zeroPort(Address4 addy) {
@@ -193,7 +193,7 @@ std::tr1::shared_ptr<TCPNetwork::TSQueue> TCPNetwork::getQueue(const Address4&ad
     if (found) goto get_queue;
     return std::tr1::shared_ptr<TSQueue>();
 }
-void TCPNetwork::reportQueueInfo(const Time&)const {}
+void TCPNetwork::reportQueueInfo()const {}
 void TCPNetwork::service(){
 //    mIOService->poll();
 }
