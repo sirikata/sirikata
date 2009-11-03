@@ -37,6 +37,7 @@
 #include "TimeProfiler.hpp"
 #include "QueueRouterElement.hpp"
 #include "BandwidthShaper.hpp"
+#include "StreamTxElement.hpp"
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
 
@@ -135,9 +136,6 @@ private:
     // Handle async reading callbacks for this connection
     bool handleConnectionRead(SpaceNodeConnection* conn,Sirikata::Network::Chunk& chunk);
 
-    // Start async writing for this connection if it has data to be sent
-    void startWriting(SpaceNodeConnection* conn);
-
 
     ObjectHostContext* mContext;
     ServerIDMap* mServerIDMap;
@@ -146,7 +144,7 @@ private:
 
     // Connections to servers
     struct SpaceNodeConnection {
-        SpaceNodeConnection(Sirikata::Network::IOService& ios, OptionSet *streamOptions, ServerID sid);
+        SpaceNodeConnection(ObjectHostContext* ctx, OptionSet *streamOptions, ServerID sid);
         ~SpaceNodeConnection();
 
         ServerID server;
@@ -156,6 +154,7 @@ private:
 
         QueueRouterElement<std::string> queue;
         BandwidthShaper<std::string> rateLimiter;
+        StreamTxElement<std::string> streamTx;
         bool connecting;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;

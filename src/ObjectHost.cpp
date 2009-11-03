@@ -49,17 +49,20 @@ using namespace Sirikata::Network;
 
 namespace CBR {
 
-ObjectHost::SpaceNodeConnection::SpaceNodeConnection(Sirikata::Network::IOService& ios, OptionSet* streamOptions, ServerID sid)
+ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, OptionSet* streamOptions, ServerID sid)
  : server(sid),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(ctx->ioService,streamOptions)),
    queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1)),
-   rateLimiter(1024*1024)
+   rateLimiter(1024*1024),
+   streamTx(socket, ctx->mainStrand, Duration::milliseconds((int64)0))
 {
     static Sirikata::PluginManager sPluginManager;
     static int tcpSstLoaded=(sPluginManager.load(Sirikata::DynamicLibrary::filename(GetOption("ohstreamlib")->as<String>())),0);
-    socket=Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(&ios,streamOptions);
+
     connecting = false;
 
     queue.connect(0, &rateLimiter, 0);
+    rateLimiter.connect(0, &streamTx, 0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -257,7 +260,7 @@ Object*ObjectHost::roundRobinObject(ServerID whichServer) {
     if (mObjectInfo.size()==0) return NULL;
     UUID myrand(mLastRRObject);
     ObjectInfoMap::iterator i=mObjectInfo.end();
-    if (whichServer==NullServerID){ 
+    if (whichServer==NullServerID){
         i=mObjectInfo.find(myrand);
         if (i!=mObjectInfo.end()) ++i;
         if (i==mObjectInfo.end()) i=mObjectInfo.begin();
@@ -356,29 +359,8 @@ void ObjectHost::poll() {
     mProfiler->started();
 
     //sendTestMessage(t,400.);
-    //if (rand()<(RAND_MAX/100.))
     for (int i=0;i<100;++i)
         randomPing(mContext->time);
-/*
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-    randomPing(t);
-floods the console with too much noise
-*/
-
-    // Set up writers which are not writing yet
-    for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
-        SpaceNodeConnection* conn = it->second;
-        startWriting(conn);
-    }
 
     mProfiler->finished();
 }
@@ -422,10 +404,7 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-
-
-
-    SpaceNodeConnection* conn = new SpaceNodeConnection(*(mContext->ioService), mStreamOptions, server);
+    SpaceNodeConnection* conn = new SpaceNodeConnection(mContext, mStreamOptions, server);
     conn->connectCallbacks.push_back(cb);
     mConnections[server] = conn;
 
@@ -566,19 +545,5 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
 
     delete msg;
 }
-
-// Start async writing for this connection if it has data to be sent
-void ObjectHost::startWriting(SpaceNodeConnection* conn) {
-    // Push stuff onto the stream, if we're not still in the middle of an async_write
-    std::string* msg = NULL;
-    while( (msg = conn->rateLimiter.pull()) != NULL) {
-        bool success = conn->socket->send(Sirikata::MemoryReference(&((*msg)[0]), msg->size()),Sirikata::Network::ReliableOrdered);
-        // FIXME do we need some way to check whether we'll be able to send it first?
-        delete msg;
-        if (!success)
-            break;
-    }
-}
-
 
 } // namespace CBR
