@@ -55,8 +55,8 @@ class ObjectFactory : public PollingService {
         SolidAngle queryAngle;
         Duration connectAt;
     };
-    typedef std::map<UUID, ObjectInputs*> ObjectInputsMap;
-    typedef std::map<UUID, Object*> ObjectMap;
+    typedef std::tr1::unordered_map<UUID, ObjectInputs*,UUID::Hasher> ObjectInputsMap;
+    typedef std::tr1::unordered_map<UUID, Object*,UUID::Hasher> ObjectMap;
 
 public:
     typedef ObjectIDSet::iterator iterator;

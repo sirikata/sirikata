@@ -68,6 +68,7 @@ public:
     Object* randomObject(ServerID whichServer);
     Object * roundRobinObject(ServerID whichServer);
     UUID mLastRRObject;
+    size_t mLastRRIndex;
     OptionSet*mStreamOptions;
 private:
     struct SpaceNodeConnection;
@@ -183,9 +184,9 @@ private:
         // Server we're trying to migrate to
         ServerID migratingTo;
     };
-    typedef std::map<ServerID, std::set<UUID> > ObjectServerMap;
+    typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
     ObjectServerMap mObjectServerMap;
-    typedef std::map<UUID, ObjectInfo> ObjectInfoMap;
+    typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
     ObjectInfoMap mObjectInfo;
     uint64 mPingId;
 }; // class ObjectHost

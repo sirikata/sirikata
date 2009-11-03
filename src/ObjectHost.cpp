@@ -171,7 +171,8 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
     OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
     mObjectInfo[obj_id].migratingTo = sid;
-    mObjectServerMap[mObjectInfo[obj_id].connectedTo].erase(obj_id);
+    std::vector<UUID>*objects=&mObjectServerMap[mObjectInfo[obj_id].connectedTo];
+    objects->erase(std::find(objects->begin(),objects->end(),obj_id));
     // Get or start the connection we need to start this migration
     getSpaceConnection(
         sid,
@@ -255,17 +256,20 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
 Object*ObjectHost::roundRobinObject(ServerID whichServer) {
     if (mObjectInfo.size()==0) return NULL;
     UUID myrand(mLastRRObject);
-    ObjectInfoMap::iterator i;
+    ObjectInfoMap::iterator i=mObjectInfo.end();
     if (whichServer==NullServerID){ 
-        i=mObjectInfo.lower_bound(myrand);
+        i=mObjectInfo.find(myrand);
         if (i!=mObjectInfo.end()) ++i;
         if (i==mObjectInfo.end()) i=mObjectInfo.begin();
     }else {
-        std::set<UUID> *osm=&mObjectServerMap[whichServer];
-        std::set<UUID>::iterator j=osm->lower_bound(myrand);
-        if (j!=osm->end()) ++j;
-        if(j==osm->end()) j=osm->begin();
-        i=mObjectInfo.find(*j);        
+        std::vector<UUID> *osm=&mObjectServerMap[whichServer];
+        ++mLastRRIndex;
+        if (mLastRRIndex>=osm->size()) {
+            mLastRRIndex=0;
+        }
+        if (osm->size()) {
+            i=mObjectInfo.find((*osm)[mLastRRIndex]);
+        }
     }
     if (i!=mObjectInfo.end()) {
         mLastRRObject=i->first;
@@ -274,23 +278,31 @@ Object*ObjectHost::roundRobinObject(ServerID whichServer) {
     return NULL;
 }
 Object* ObjectHost::randomObject () {
-    if (mObjectInfo.size()==0) return NULL;
-    UUID myrand=UUID::random();
-    ObjectInfoMap::iterator i=mObjectInfo.lower_bound(myrand);
-    if (i==mObjectInfo.end()) --i;
-    return i->second.object;
+    if (mObjectServerMap.size()==0) return NULL;
+    int iteratorLevel=rand()%mObjectServerMap.size();
+    ObjectServerMap::iterator i=mObjectServerMap.begin();
+    for (int index=0;index<iteratorLevel;++index,++i) {
+    }
+    std::vector<UUID> *uuidMap=&i->second;
+    if (uuidMap->size()) {
+        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
+        if (i!=mObjectInfo.end())
+            return i->second.object;
+    }
+    return NULL;
 }
 
 Object* ObjectHost::randomObject (ServerID whichServer) {
     if (whichServer==NullServerID) return randomObject();
-    
-    UUID myrand=UUID::random();
-    std::set<UUID> *osm=&mObjectServerMap[whichServer];
-    std::set<UUID>::iterator j=osm->lower_bound(myrand);
-    if (j==osm->end()) j=osm->begin();
-    if (j==osm->end()) return NULL;
-    ObjectInfoMap::iterator i=mObjectInfo.find(*j);
-    if (i!=mObjectInfo.end()) return i->second.object;
+    ObjectServerMap::iterator i=mObjectServerMap.find(whichServer);
+    if (i==mObjectServerMap.end())
+        return NULL;
+    std::vector<UUID> *uuidMap=&i->second;
+    if (uuidMap->size()) {
+        ObjectInfoMap::iterator i=mObjectInfo.find((*uuidMap)[rand()%uuidMap->size()]);
+        if (i!=mObjectInfo.end())
+            return i->second.object;
+    }
     return NULL;
 }
 void ObjectHost::randomPing(const Time&t) {
@@ -345,6 +357,7 @@ void ObjectHost::poll() {
 
     //sendTestMessage(t,400.);
     //if (rand()<(RAND_MAX/100.))
+    for (int i=0;i<100;++i)
         randomPing(mContext->time);
 /*
     randomPing(t);
@@ -511,14 +524,14 @@ void ObjectHost::handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg)
                 mObjectInfo[obj].connectingTo = NullServerID;
                 mObjectInfo[obj].connecting.cb(connectedTo);
                 mObjectInfo[obj].connecting.cb = NULL;
-                mObjectServerMap[connectedTo].insert(obj);
+                mObjectServerMap[connectedTo].push_back(obj);
             }
             else if (mObjectInfo[obj].migratingTo != NullServerID) { // We were migrating
                 ServerID migratedTo = mObjectInfo[obj].migratingTo;
                 OH_LOG(debug,"Successfully migrated " << obj.toString() << " to space node " << migratedTo);
                 mObjectInfo[obj].connectedTo = migratedTo;
                 mObjectInfo[obj].migratingTo = NullServerID;
-                mObjectServerMap[migratedTo].insert(obj);
+                mObjectServerMap[migratedTo].push_back(obj);
             }
             else { // What were we doing?
                 OH_LOG(error,"Got connection response with no outstanding requests.");
