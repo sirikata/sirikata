@@ -69,7 +69,7 @@ Server::~Server()
         // Stop Forwarder from delivering via this Object's
         // connection, destroy said connection
         ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-        mClosingConnections.insert(migrated_conn);
+        delete migrated_conn;
 
         // FIXME there's probably quite a bit more cleanup to do here
     }
@@ -84,40 +84,6 @@ ObjectConnection* Server::getObjectConnection(const UUID& object_id) const {
     // XXX FIXME migrating objects?
 
     return NULL;
-}
-
-void Server::serviceObjectHostNetwork() {
-
-  // Tick all active connections
-  for(ObjectConnectionMap::iterator it = mObjects.begin(); it != mObjects.end(); it++) {
-      ObjectConnection* conn = it->second;
-      conn->service();
-  }
-
-
-  //bftm add
-
-  for (MigConnectionsMap::iterator it = mMigratingConnections.begin(); it != mMigratingConnections.end(); ++it)
-  {
-    if (it->second.serviceConnection) //the connections this isn't true for are associated with objects that have already migrated back to this server and are serviced above, in mObjects
-    {
-      ObjectConnection* conn = it->second.obj_conner;
-      conn->service();
-    }
-  }
-
-
-  // Tick closing object connections, deleting them when they are
-  ObjectConnectionSet persistingConnections;
-  for(ObjectConnectionSet::iterator it = mClosingConnections.begin(); it != mClosingConnections.end(); it++) {
-      ObjectConnection* conn = *it;
-      conn->service();
-      if (conn->empty())
-          delete conn;
-      else
-          persistingConnections.insert(conn);
-  }
-  mClosingConnections.swap(persistingConnections);
 }
 
 void Server::handleObjectHostMessage(const ObjectHostConnectionManager::ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* obj_msg) {
@@ -476,10 +442,6 @@ void Server::handleMigration(const UUID& obj_id)
 }
 
 void Server::poll() {
-    // Note, object hosts must be serviced before Forwarder so they can
-    // push object messages on the queue before noise is generated
-    serviceObjectHostNetwork();
-
     checkObjectMigrations();
 }
 
@@ -665,7 +627,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
     //remove the forwarding connection that already exists for that object
     ObjectConnection* migrated_conn_old = mForwarder->removeObjectConnection(obj_id);
-    mClosingConnections.insert(migrated_conn_old);
+    delete migrated_conn_old;
 
  //change the boolean value associated with object so that you know not to keep servicing the connection associated with this object in mMigratingConnections
    mMigratingConnections[obj_id].serviceConnection = false;
@@ -721,7 +683,7 @@ void Server::killObjectConnection(const UUID& obj_id)
     {
       //means that the object did not undergo an intermediate migrate.  Should go ahead and remove this connection from forwarder
       ObjectConnection* migrated_conn = mForwarder->removeObjectConnection(obj_id);
-      mClosingConnections.insert(migrated_conn);
+      delete migrated_conn;
     }
     else
     {

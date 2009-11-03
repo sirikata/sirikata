@@ -48,25 +48,17 @@ class Trace;
 class ObjectConnection {
 public:
     ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id);
-    ~ObjectConnection();
 
     // Get the UUID of the object associated with this connection.
     UUID id() const;
 
-    void send(CBR::Protocol::Object::ObjectMessage* msg);
-
-    void service();
-
-    // Returns true if no messages are waiting to be delivered
-    bool empty() const { return mReceiveQueue.empty(); }
+    WARN_UNUSED
+    bool send(CBR::Protocol::Object::ObjectMessage* msg);
 
 private:
     UUID mID;
     ObjectHostConnectionManager* mConnectionManager;
     ObjectHostConnectionManager::ConnectionID mOHConnection;
-
-    typedef std::vector<CBR::Protocol::Object::ObjectMessage*> MessageQueue;
-    MessageQueue mReceiveQueue;
 };
 
 } // namespace CBR

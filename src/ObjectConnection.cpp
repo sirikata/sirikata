@@ -40,32 +40,16 @@ namespace CBR {
 ObjectConnection::ObjectConnection(const UUID& _id, ObjectHostConnectionManager* conn_mgr, const ObjectHostConnectionManager::ConnectionID& conn_id)
  : mID(_id),
    mConnectionManager(conn_mgr),
-   mOHConnection(conn_id),
-   mReceiveQueue()
+   mOHConnection(conn_id)
 {
-}
-
-ObjectConnection::~ObjectConnection() {
-    // FIXME is it really ok to just drop these messages
-    for(MessageQueue::iterator it = mReceiveQueue.begin(); it != mReceiveQueue.end(); it++)
-        delete *it;
-    mReceiveQueue.clear();
 }
 
 UUID ObjectConnection::id() const {
     return mID;
 }
 
-void ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
-    mReceiveQueue.push_back( msg );
-}
-
-void ObjectConnection::service() {
-    for(MessageQueue::iterator msg_it = mReceiveQueue.begin(); msg_it != mReceiveQueue.end(); msg_it++) {
-        CBR::Protocol::Object::ObjectMessage* msg = (*msg_it);
-        mConnectionManager->send(mOHConnection, msg);
-    }
-    mReceiveQueue.clear();
+bool ObjectConnection::send(CBR::Protocol::Object::ObjectMessage* msg) {
+    return mConnectionManager->send(mOHConnection, msg);
 }
 
 } // namespace CBR

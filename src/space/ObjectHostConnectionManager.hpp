@@ -54,7 +54,8 @@ public:
     ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback cb);
     ~ObjectHostConnectionManager();
 
-    void send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
+    WARN_UNUSED
+    bool send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);
 
     void shutdown();
 private:

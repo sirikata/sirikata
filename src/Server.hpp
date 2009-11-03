@@ -44,7 +44,6 @@ private:
     virtual void shutdown();
 
     // Methods for periodic servicing
-    void serviceObjectHostNetwork();
     void checkObjectMigrations();
 
     // Finds the ObjectConnection associated with the given object, returns NULL if the object isn't available.

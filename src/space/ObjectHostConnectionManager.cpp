@@ -72,19 +72,21 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::getNewCon
     return ++src;
 }
 
-void ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
+bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {
     ObjectHostConnectionMap::iterator conn_it = mConnections.find(conn_id);
     if (conn_it == mConnections.end()) {
 
         SPACE_LOG(error,"Tried to send to unconnected object host.");
-        return;
+        return false;
     }
 
     ObjectHostConnection* conn = conn_it->second;
     String* data = serializeObjectHostMessage(*msg);
-    conn->socket->send( Sirikata::MemoryReference( &((*data)[0]), data->size() ), Sirikata::Network::ReliableOrdered );
+    bool sent = conn->socket->send( Sirikata::MemoryReference( &((*data)[0]), data->size() ), Sirikata::Network::ReliableOrdered );
     delete data;
-    delete msg;
+    if (sent)
+        delete msg;
+    return sent;
 }
 
 void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
