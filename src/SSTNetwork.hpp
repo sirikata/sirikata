@@ -25,9 +25,13 @@ public:
 
     virtual void reportQueueInfo() const;
 private:
+    virtual void start();
+    virtual void stop();
+
     virtual void service();
 
     CBRSST* mImpl;
+    Poller* mServicePoller;
 };
 
 } // namespace CBR

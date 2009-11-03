@@ -7,9 +7,14 @@ SSTNetwork::SSTNetwork(SpaceContext* ctx)
  : Network(ctx)
 {
     mImpl = new CBRSST(ctx->trace());
+    mServicePoller = new Poller(
+        ctx->mainStrand,
+        std::tr1::bind(&SSTNetwork::service, this)
+    );
 }
 
 SSTNetwork::~SSTNetwork() {
+    delete mServicePoller;
     delete mImpl;
 }
 
@@ -31,6 +36,16 @@ Network::Chunk* SSTNetwork::front(const Address4& from, uint32 max_size) {
 
 Network::Chunk* SSTNetwork::receiveOne(const Address4& from, uint32 max_size) {
     return mImpl->receiveOne(from, max_size);
+}
+
+void SSTNetwork::start() {
+    Network::start();
+    mServicePoller->start();
+}
+
+void SSTNetwork::stop() {
+    mServicePoller->stop();
+    Network::stop();
 }
 
 void SSTNetwork::service() {

@@ -57,8 +57,6 @@ class TCPNetwork :public Network{
     Sirikata::OptionSet*mListenOptions;
     Sirikata::OptionSet*mSendOptions;
     String mStreamPlugin;
-
-    virtual void service();
 public:
 
     TCPNetwork(SpaceContext* ctx, uint32 incomingBufferLength, uint32 icomingBandwidth,uint32 outgoingBandwidth);

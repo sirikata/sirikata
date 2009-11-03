@@ -9,7 +9,7 @@
 
 namespace CBR {
 
-class Network : public PollingService {
+class Network : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
@@ -27,20 +27,17 @@ public:
     virtual Chunk* front(const Address4& from, uint32 max_size)=0;
     virtual Chunk* receiveOne(const Address4& from, uint32 max_size)=0;
 
+protected:
+    Network(SpaceContext* ctx);
+
     virtual void reportQueueInfo() const = 0;
 
-protected:
-    virtual void service() = 0;
-
-    Network(SpaceContext* ctx);
+    // Service Interface
+    virtual void start();
+    virtual void stop();
 
     SpaceContext* mContext;
 private:
-    // PollingService Interface
-    virtual void poll();
-    virtual void shutdown();
-    TimeProfiler::Stage* mProfiler;
-
     Poller* mStatsPoller;
 };
 }
