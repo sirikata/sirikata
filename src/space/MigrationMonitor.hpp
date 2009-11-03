@@ -50,15 +50,23 @@ namespace CBR {
  */
 class MigrationMonitor : public LocationServiceListener, public CoordinateSegmentation::Listener {
 public:
-    MigrationMonitor(LocationService* locservice, CoordinateSegmentation* cseg);
+    typedef std::tr1::function<void(const UUID&)> MigrationCallback;
+
+    /** Create a new MigrationMonitor.  The MigrationCallback is called any time a migration is detected.  Note that
+     *  it may be called from a thread other than the main thread, so it should be thread safe.
+     *  \param ctx SpaceContext for this simulation
+     *  \param locservice location service for this server
+     *  \param cseg coordinate segmentation used for this server
+     *  \param cb callback to be invoked when a migration is detected
+     */
+    MigrationMonitor(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, MigrationCallback cb);
     ~MigrationMonitor();
 
     // Indicates whether the given position is on this server, useful to check if object should be
     // permitted to join this server.
     bool onThisServer(const Vector3f& pos) const;
 
-    // Service the migration monitor, return a set of objects for which migrations should be started
-    std::set<UUID> service();
+private:
 
     /** LocationServiceListener Interface. */
     virtual void localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
@@ -70,14 +78,27 @@ public:
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
 
+    // Handlers for location events we care about.  These are handled in our internal strand
+    void handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds);
+    void handleLocalObjectRemoved(const UUID& uuid);
+    void handleLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
+
     /** CoordinateSegmentation::Listener Interface. */
     virtual void updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
+    void handleUpdatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation);
 
-private:
+    // Given our current information, sets up the next timeout, cancelling any outstanding timeouts.
+    // This is conservative -- it will only replace the timer if the earliest event time changed
+    void waitForNextEvent();
+
+    // Service the migration monitor, return a set of objects for which migrations should be started
+    void service();
+
     bool inRegion(const Vector3f& pos) const;
 
     Time computeNextEventTime(const UUID& obj, const TimedMotionVector3f& newloc);
 
+    SpaceContext* mContext;
     LocationService* mLocService;
     CoordinateSegmentation* mCSeg;
     BoundingBoxList mBoundingRegions;
@@ -109,8 +130,14 @@ private:
 
     static void changeNextEventTime(ObjectInfo& objinfo, const Time& newt);
 
-
     ObjectInfoSet mObjectInfo;
+
+    IOStrand* mStrand;
+    IOTimerPtr mTimer;
+
+    Time mMinEventTime;
+
+    MigrationCallback mCB;
 };
 
 } // namespace CBR

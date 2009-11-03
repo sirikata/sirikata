@@ -37,17 +37,29 @@
 
 namespace CBR {
 
+/** A Service is simply something that runs during the main loop.
+ *  It must implement methods which allow it to start and indicate
+ *  when it must start shutting down.
+ */
+class Service {
+public:
+    virtual ~Service() {}
+
+    virtual void start() = 0;
+    virtual void stop() = 0;
+};
+
 /** Poller allows you to generate a callback periodically without having
  *  to inherit from the PollingService class.  It serves the same function
  *  but requires a new object for every callback instead of using an existing
  *  service.
  */
-class Poller {
+class Poller : public Service {
 public:
     Poller(IOStrand* str, const IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
 
     /** Start polling this service on this strand at the given maximum rate. */
-    void start();
+    virtual void start();
 
     /** Stop scheduling this service. Note that this does not immediately
      *  stop the service, it simply guarantees the service will not

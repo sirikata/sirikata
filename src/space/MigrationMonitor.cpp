@@ -34,9 +34,14 @@
 
 namespace CBR {
 
-MigrationMonitor::MigrationMonitor(LocationService* locservice, CoordinateSegmentation* cseg)
- : mLocService(locservice),
-   mCSeg(cseg)
+MigrationMonitor::MigrationMonitor(SpaceContext* ctx, LocationService* locservice, CoordinateSegmentation* cseg, MigrationCallback cb)
+ : mContext(ctx),
+   mLocService(locservice),
+   mCSeg(cseg),
+   mStrand(ctx->mainStrand), // NOTE: All uses of Loc, CSeg, and mBoundingRegions need to be thread safe before this is its own strand
+   mTimer( IOTimer::create(ctx->ioService, std::tr1::bind(&MigrationMonitor::service, this)) ),
+   mMinEventTime(Time::null()),
+   mCB(cb)
 {
     mLocService->addListener(this);
     mCSeg->addListener(this);
@@ -47,12 +52,31 @@ MigrationMonitor::MigrationMonitor(LocationService* locservice, CoordinateSegmen
 MigrationMonitor::~MigrationMonitor() {
     mCSeg->removeListener(this);
     mLocService->removeListener(this);
+
+    delete mStrand;
 }
 
+void MigrationMonitor::waitForNextEvent() {
+    if (mObjectInfo.empty())
+        return;
 
-std::set<UUID> MigrationMonitor::service() {
+    ObjectInfoByNextEvent::iterator first_it = mObjectInfo.get<nextevent>().begin();
+    const ObjectInfo& earliest_event = *first_it;
+
+    if (earliest_event.nextEvent == mMinEventTime)
+        return;
+
+    mMinEventTime = earliest_event.nextEvent;
+
+    Time now = mContext->simTime();
+    Duration tdiff =
+        (mMinEventTime <= now) ? Duration::microseconds(0) : (mMinEventTime - now);
+    mTimer->cancel();
+    mTimer->wait(tdiff);
+}
+
+void MigrationMonitor::service() {
     std::set<UUID> considered;
-    std::set<UUID> results;
 
     Time curt = mLocService->context()->time;
     for(ObjectInfoByNextEvent::iterator it = mObjectInfo.get<nextevent>().begin();
@@ -67,7 +91,7 @@ std::set<UUID> MigrationMonitor::service() {
         // which is not properly handled by Loc yet.  Therefore we have secondary check which
         // ensures the object has moved into *some other server's* region as well as out of ours.
         if (mCSeg->region().contains(obj_pos, 0.0f))
-            results.insert(it->objid);
+            mCB(it->objid);
 
         // NOTE: Objects stay in the index until they are removed by an actual migration --
         // i.e. the Server may reject this MigrationMonitor's suggestion.  Updates to the
@@ -85,7 +109,7 @@ std::set<UUID> MigrationMonitor::service() {
         );
     }
 
-    return results;
+    waitForNextEvent();
 }
 
 bool MigrationMonitor::onThisServer(const Vector3f& pos) const {
@@ -168,16 +192,36 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 /** LocationServiceListener Interface. */
 
 void MigrationMonitor::localObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
+    mStrand->post(
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
+    );
+}
+
+void MigrationMonitor::handleLocalObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds) {
     assert( mObjectInfo.get<objid>().find(uuid) == mObjectInfo.get<objid>().end());
 
     mObjectInfo.insert( ObjectInfo(uuid, computeNextEventTime(uuid, loc)) );
+    waitForNextEvent();
 }
 
 void MigrationMonitor::localObjectRemoved(const UUID& uuid) {
+    mStrand->post(
+        std::tr1::bind(&MigrationMonitor::handleLocalObjectRemoved, this, uuid)
+    );
+}
+
+void MigrationMonitor::handleLocalObjectRemoved(const UUID& uuid) {
     mObjectInfo.get<objid>().erase(uuid);
+    waitForNextEvent();
 }
 
 void MigrationMonitor::localLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
+    mStrand->post(
+        std::tr1::bind(&MigrationMonitor::handleLocalLocationUpdated, this, uuid, newval)
+    );
+}
+
+void MigrationMonitor::handleLocalLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) {
     assert( mObjectInfo.get<objid>().find(uuid) != mObjectInfo.get<objid>().end());
 
     ObjectInfoByID& by_id = mObjectInfo.get<objid>();
@@ -185,6 +229,8 @@ void MigrationMonitor::localLocationUpdated(const UUID& uuid, const TimedMotionV
         by_id.find(uuid),
         std::tr1::bind(&MigrationMonitor::changeNextEventTime, std::tr1::placeholders::_1, computeNextEventTime(uuid, newval))
     );
+
+    waitForNextEvent();
 }
 
 void MigrationMonitor::localBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
@@ -206,6 +252,12 @@ void MigrationMonitor::replicaBoundsUpdated(const UUID& uuid, const BoundingSphe
 
 /** CoordinateSegmentation::Listener Interface. */
 void MigrationMonitor::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
+    mStrand->post(
+        std::tr1::bind(&MigrationMonitor::handleUpdatedSegmentation, this, cseg, new_segmentation)
+    );
+}
+
+void MigrationMonitor::handleUpdatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {
     for(std::vector<SegmentationInfo>::const_iterator it = new_segmentation.begin(); it != new_segmentation.end(); it++) {
         if (it->server == mLocService->context()->id()) {
             mBoundingRegions = it->region;
@@ -225,6 +277,8 @@ void MigrationMonitor::updatedSegmentation(CoordinateSegmentation* cseg, const s
             return;
         }
     }
+
+    waitForNextEvent();
 }
 
 } // namespace CBR

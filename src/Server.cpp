@@ -18,27 +18,33 @@
 #include <iostream>
 #include <iomanip>
 
-
+#include <sirikata/network/IOStrandImpl.hpp>
 
 namespace CBR
 {
 
 Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
- : PollingService(ctx->mainStrand),
-   mContext(ctx),
+ : mContext(ctx),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
    mOSeg(oseg),
    mForwarder(forwarder),
    mMigrationMonitor(),
+   mMigrationSendRunning(false),
+   mShutdownRequested(false),
    mObjectHostConnectionManager(NULL)
 {
       mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_KILL_OBJ_CONN, this);
       mForwarder->registerMessageRecipient(SERVER_PORT_OSEG_ADDED_OBJECT, this);
 
-      mMigrationMonitor = new MigrationMonitor(mLocationService, mCSeg);
+      mMigrationMonitor = new MigrationMonitor(
+          mContext, mLocationService, mCSeg,
+          mContext->mainStrand->wrap(
+              std::tr1::bind(&Server::handleMigrationEvent, this, std::tr1::placeholders::_1)
+          )
+      );
 
     mObjectHostConnectionManager = new ObjectHostConnectionManager(
         mContext, *oh_listen_addr,
@@ -441,41 +447,34 @@ void Server::handleMigration(const UUID& obj_id)
     obj_conn->send( obj_response );
 }
 
-void Server::poll() {
-    checkObjectMigrations();
+void Server::start() {
 }
 
-void Server::shutdown() {
+void Server::stop() {
     mObjectHostConnectionManager->shutdown();
+    mShutdownRequested = true;
 }
 
-//this is called by the server that is sending an object to another server.
-void Server::checkObjectMigrations()
-{
-    // * check for objects crossing server boundaries
+void Server::handleMigrationEvent(const UUID& obj_id) {
     // * wrap up state and send message to other server
     //     to reinstantiate the object there
     // * delete object on this side
 
-    std::set<UUID> to_migrate = mMigrationMonitor->service();
+    // Make sure we aren't getting an out of date event
+    // FIXME
 
 
-    for(std::set<UUID>::iterator it = to_migrate.begin(); it != to_migrate.end(); it++)
+    if (mOSeg->clearToMigrate(obj_id)) //needs to check whether migration to this server has finished before can begin migrating to another server.
     {
-        const UUID& obj_id = *it;
+        ObjectConnection* obj_conn = mObjects[obj_id];
 
-        if (mOSeg->clearToMigrate(obj_id)) //needs to check whether migration to this server has finished before can begin migrating to another server.
-        {
-            ObjectConnection* obj_conn = mObjects[obj_id];
+        Vector3f obj_pos = mLocationService->currentPosition(obj_id);
+        ServerID new_server_id = mCSeg->lookup(obj_pos);
 
-            Vector3f obj_pos = mLocationService->currentPosition(obj_id);
-            ServerID new_server_id = mCSeg->lookup(obj_pos);
-
-            // FIXME should be this
-            //assert(new_server_id != mContext->id());
-            // but I'm getting inconsistencies, so we have to just trust CSeg to have the final say
-            if (new_server_id == mContext->id()) continue;
-
+        // FIXME should be this
+        //assert(new_server_id != mContext->id());
+        // but I'm getting inconsistencies, so we have to just trust CSeg to have the final say
+        if (new_server_id != mContext->id()) {
 
             CBR::Protocol::Session::Container session_msg;
             CBR::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();
@@ -546,20 +545,43 @@ void Server::checkObjectMigrations()
             mLocationService->removeLocalObject(obj_id);
 
             mObjects.erase(obj_id);
-
         }
     }
 
-    // Try sending any outstanding migrate messages
+    startSendMigrationMessages();
+}
+
+void Server::startSendMigrationMessages() {
+    if (mMigrationSendRunning)
+        return;
+
+    trySendMigrationMessages();
+}
+void Server::trySendMigrationMessages() {
+    if (mShutdownRequested)
+        return;
+
+    mMigrationSendRunning = true;
+
+    // Send what we can right now
     while(!mMigrateMessages.empty()) {
         bool sent = mForwarder->route(MessageRouter::MIGRATES, mMigrateMessages.front());
         if (!sent)
             break;
         mMigrateMessages.pop();
     }
+
+    // If nothing is left, the call chain ends
+    if (mMigrateMessages.empty()) {
+        mMigrationSendRunning = false;
+        return;
+    }
+
+    // Otherwise, we need to set ourselves up to try again later
+    mContext->mainStrand->post(
+        std::tr1::bind(&Server::trySendMigrationMessages, this)
+    );
 }
-
-
 
 /*
   This function migrates an object to this server that was in the process of migrating away from this server (except the killconn message hasn't come yet.

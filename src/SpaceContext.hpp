@@ -109,8 +109,8 @@ public:
     }
 
 
-    void add(PollingService* ps) {
-        mPollingServices.push_back(ps);
+    void add(Service* ps) {
+        mServices.push_back(ps);
         ps->start();
     }
 
@@ -128,7 +128,7 @@ private:
 
         if (elapsed > mSimDuration) {
             this->stop();
-            for(std::vector<PollingService*>::iterator it = mPollingServices.begin(); it != mPollingServices.end(); it++)
+            for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
                 (*it)->stop();
         }
 
@@ -150,7 +150,7 @@ private:
 
     Sirikata::AtomicValue<Trace*> mTrace;
 
-    std::vector<PollingService*> mPollingServices;
+    std::vector<Service*> mServices;
 }; // class SpaceContext
 
 } // namespace CBR
