@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
 #define _SIRIKATA_TCPSST_MULTIPLEXED_SOCKET_HPP_
 
-#include "util/ThreadId.hpp"
+#include "SerializationCheck.hpp"
 #include <boost/thread.hpp>
 #include "TCPSSTDecls.hpp"
 
@@ -43,7 +43,7 @@ namespace Network {
 class ASIOReadBuffer;
 class ASIOSocketWrapper;
 
-class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>,ThreadIdCheck {
+class MultiplexedSocket:public SelfWeakPtr<MultiplexedSocket>, public SerializationCheck {
 public:
     friend class ASIOReadBuffer;
     class RawRequest {

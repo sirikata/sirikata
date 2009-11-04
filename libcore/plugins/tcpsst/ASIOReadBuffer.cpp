@@ -63,7 +63,8 @@ void ASIOReadBuffer::readIntoFixedBuffer(const MultiplexedSocketPtr &parentSocke
                                    _2));
 }
 void ASIOReadBuffer::ioReactorThreadResumeRead(MultiplexedSocketPtr&thus) {
-    assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+    SerializationCheck::Scoped ss(thus.get());
+
     switch(mReadStatus) {
       case PAUSED_FIXED_BUFFER:
         translateBuffer(thus);

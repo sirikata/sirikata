@@ -85,7 +85,8 @@ void MultiplexedSocket::ioReactorThreadCommitCallback(StreamIDCallbackPair& newc
 }
 
 bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &registration, SocketConnectionPhase status, bool setConnectedStatus) {
-    assertThreadGroup(*static_cast<const ThreadIdCheck*>(this));
+    SerializationCheck::Scoped ss(this);
+
     bool statusChanged=false;
     if (setConnectedStatus||!mCallbackRegistration.empty()) {
         if (status==CONNECTED) {
@@ -134,6 +135,7 @@ bool MultiplexedSocket::CommitCallbacks(std::deque<StreamIDCallbackPair> &regist
         ioReactorThreadCommitCallback(registration.front());
         registration.pop_front();
     }
+
     return statusChanged;
 }
 
@@ -245,12 +247,18 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback):ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),mNewSubstreamCallback(substreamCallback),mHighestStreamID(1) {
+MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback)
+ : SerializationCheck(),
+   mIO(io),
+   mNewSubstreamCallback(substreamCallback),
+   mHighestStreamID(1)
+{
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
 MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const std::vector<TCPSocket*>&sockets, const Stream::SubstreamCallback &substreamCallback, size_t max_send_buffer_size)
-    :ThreadIdCheck(ThreadId::registerThreadGroup(NULL)),mIO(io),
+ :SerializationCheck(),
+  mIO(io),
      mNewSubstreamCallback(substreamCallback),
      mHighestStreamID(0) {
     mNewRequests=NULL;
@@ -450,7 +458,7 @@ void MultiplexedSocket::connect(const Address&address, unsigned int numSockets, 
 void MultiplexedSocket::ioReactorThreadResumeRead(const MultiplexedSocketWPtr& weak_thus, Stream::StreamID sid){
     MultiplexedSocketPtr thus(weak_thus.lock());
     if (thus) {
-        assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+        SerializationCheck::Scoped ss(thus.get());
         for (std::vector<ASIOSocketWrapper>::iterator i=thus->mSockets.begin(),ie=thus->mSockets.end();i!=ie;++i) {
             if (i->getReadBuffer()) {
                 i->getReadBuffer()->ioReactorThreadResumeRead(thus);
@@ -462,7 +470,7 @@ void MultiplexedSocket::ioReactorThreadPauseSend(const MultiplexedSocketWPtr& we
     MultiplexedSocketPtr thus(weak_thus.lock());
     if (thus) {
         static Stream::StreamID::Hasher hasher;
-        assertThreadGroup(*static_cast<const ThreadIdCheck*>(&*thus));
+        SerializationCheck::Scoped ss(thus.get());
         size_t whichStream=hasher(sid)%thus->mSockets.size();
         thus->mSockets[whichStream].ioReactorThreadPauseStream(thus, sid);
     }
