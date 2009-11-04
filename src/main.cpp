@@ -298,7 +298,7 @@ void *main_loop(void *) {
     space_context->add(forwarder);
     space_context->add(loadMonitor);
 
-    space_context->ioService->run();
+    space_context->run(1);
 
 
     if (GetOption(PROFILE)->as<bool>()) {

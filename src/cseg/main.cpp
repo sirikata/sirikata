@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     space_context->add(space_context);
     space_context->add(cseg);
 
-    space_context->ioService->run();
+    space_context->run(1);
 
 
     if (GetOption(PROFILE)->as<bool>()) {

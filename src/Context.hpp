@@ -88,6 +88,27 @@ public:
         ps->start();
     }
 
+    void run(uint32 nthreads = 1) {
+        std::vector<Thread*> workerThreads;
+
+        // Start workers
+        for(uint32 i = 1; i < nthreads; i++) {
+            workerThreads.push_back(
+                new Thread( std::tr1::bind(&IOService::run, ioService) )
+            );
+        }
+
+        // Run
+        ioService->run();
+
+        // Wait for workers to finish
+        for(uint32 i = 0; i < workerThreads.size(); i++) {
+            workerThreads[i]->join();
+            delete workerThreads[i];
+        }
+        workerThreads.clear();
+    }
+
     Trace* trace() const {
         return mTrace;
     }

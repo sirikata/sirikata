@@ -60,18 +60,7 @@ public:
     void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb);
     void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb);
 
-    // FIXME should not be infinite queue and should report push error
     bool send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-    void sendTestMessage(const Time&t, float idealDistance);
-    void ping(const Object *src, const UUID&dest, double distance=-0);
-    void randomPing(const Time&t);
-
-    Object* randomObject();
-    Object* randomObject(ServerID whichServer);
-    Object * roundRobinObject(ServerID whichServer);
-    UUID mLastRRObject;
-    size_t mLastRRIndex;
-    OptionSet*mStreamOptions;
 private:
     struct SpaceNodeConnection;
 
@@ -138,7 +127,21 @@ private:
     bool handleConnectionRead(SpaceNodeConnection* conn,Sirikata::Network::Chunk& chunk);
 
 
+    /* Ping Utility Methods. */
+    void sendTestMessage(const Time&t, float idealDistance);
+    void ping(const Object *src, const UUID&dest, double distance=-0);
+    void randomPing(const Time&t);
+    Object* randomObject();
+    Object* randomObject(ServerID whichServer);
+    Object * roundRobinObject(ServerID whichServer);
+    UUID mLastRRObject;
+    size_t mLastRRIndex;
+
+    OptionSet* mStreamOptions;
+
+
     ObjectHostContext* mContext;
+    IOStrand* mIOStrand;
     ServerIDMap* mServerIDMap;
     Duration mSimDuration;
     TimeProfiler::Stage* mProfiler;

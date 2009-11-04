@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     ctx->add(ctx);
     ctx->add(obj_host);
     ctx->add(obj_factory);
-    ctx->ioService->run();
+    ctx->run(1);
 
     if (GetOption(PROFILE)->as<bool>()) {
         ctx->profiler->report();
