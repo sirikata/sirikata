@@ -40,6 +40,7 @@
 #include "StreamTxElement.hpp"
 #include "PollingService.hpp"
 #include "TimeProfiler.hpp"
+#include "Message.hpp"
 
 namespace CBR {
 

@@ -146,7 +146,7 @@ void Object::checkPositionUpdate() {
             serializePBJMessage(container)
         );
         // XXX FIXME do something on failure
-        mContext->trace->objectGenLoc(t, mID, mLocation);
+        mContext->trace()->objectGenLoc(t, mID, mLocation);
     }
 }
 
@@ -184,7 +184,7 @@ void Object::locationMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
         CBR::Protocol::Loc::TimedMotionVector update_loc = update.location();
         TimedMotionVector3f loc(update_loc.t(), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
-        mContext->trace->objectLoc(
+        mContext->trace()->objectLoc(
             mContext->time,
             msg.dest_object(),
             update.object(),
@@ -206,7 +206,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
 
         TimedMotionVector3f loc(addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
-        mContext->trace->prox(
+        mContext->trace()->prox(
             mContext->time,
             msg.dest_object(),
             addition.object(),
@@ -230,7 +230,7 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
 
-        mContext->trace->prox(
+        mContext->trace()->prox(
             mContext->time,
             msg.dest_object(),
             removal.object(),
@@ -258,7 +258,7 @@ void Object::subscriptionMessage(const CBR::Protocol::Object::ObjectMessage& msg
     bool parse_success = contents.ParseFromString(msg.payload());
     assert(parse_success);
 
-    mContext->trace->subscription(
+    mContext->trace()->subscription(
         mContext->time,
         msg.dest_object(),
         msg.source_object(),

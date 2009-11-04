@@ -34,85 +34,29 @@
 #define _CBR_OBJECT_HOST_CONTEXT_HPP_
 
 #include "Utility.hpp"
-#include "Message.hpp"
-#include "Timer.hpp"
-#include "PollingService.hpp"
-#include "TimeProfiler.hpp"
+#include "Context.hpp"
 
 namespace CBR {
 
 class ObjectFactory;
 class ObjectHost;
-class Trace;
 
 typedef uint64 ObjectHostID;
 
-class ObjectHostContext : public PollingService {
+class ObjectHostContext : public Context {
 public:
     ObjectHostContext(ObjectHostID _id, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Time& curtime, const Duration& simlen)
-     : PollingService(strand),
+     : Context("Object Host", ios, strand, _trace, epoch, curtime, simlen),
        id(_id),
-       ioService(ios),
-       mainStrand(strand),
        objectHost(NULL),
-       objectFactory(NULL),
-       lastTime(curtime),
-       time(curtime),
-       trace(_trace),
-       profiler( new TimeProfiler("Object Host") ),
-       mEpoch(epoch),
-       mSimDuration(simlen)
+       objectFactory(NULL)
     {
     }
 
-    Time epoch() const {
-        return mEpoch.read();
-    }
-    Duration sinceEpoch(const Time& rawtime) const {
-        return rawtime - mEpoch.read();
-    }
-    Time simTime(const Duration& sinceStart) const {
-        return Time::null() + sinceStart;
-    }
-    Time simTime(const Time& rawTime) const {
-        return simTime( sinceEpoch(rawTime) );
-    }
-    // WARNING: The evaluates Timer::now, which shouldn't be done too often
-    Time simTime() const {
-        return simTime( Timer::now() );
-    }
-
-    void add(PollingService* ps) {
-        mPollingServices.push_back(ps);
-        ps->start();
-    }
 
     ObjectHostID id;
-    IOService* ioService;
-    IOStrand* mainStrand;
     ObjectHost* objectHost;
     ObjectFactory* objectFactory;
-    Time lastTime;
-    Time time;
-    Trace* trace;
-    TimeProfiler* profiler;
-private:
-    virtual void poll() {
-        Duration elapsed = Timer::now() - epoch();
-
-        if (elapsed > mSimDuration) {
-            this->stop();
-            for(std::vector<PollingService*>::iterator it = mPollingServices.begin(); it != mPollingServices.end(); it++)
-                (*it)->stop();
-        }
-
-        lastTime = time;
-        time = Time::null() + elapsed;
-    }
-
-    Sirikata::AtomicValue<Time> mEpoch;
-    Duration mSimDuration;
-    std::vector<PollingService*> mPollingServices;
 }; // class ObjectHostContext
 
 } // namespace CBR

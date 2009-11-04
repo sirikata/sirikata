@@ -237,7 +237,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
 
     // FIXME would be nice not to have to do this alloc/dealloc
     CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
-    mContext->trace->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
+    mContext->trace()->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
     conn->queue.push( serializeObjectHostMessage(*obj_msg) );
     delete obj_msg;
 
@@ -462,7 +462,7 @@ bool ObjectHost::handleConnectionRead(SpaceNodeConnection* conn, Chunk& chunk) {
 
 void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::Object::ObjectMessage* msg) {
     // As a special case, messages dealing with sessions are handled by the object host
-    mContext->trace->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
+    mContext->trace()->timestampMessage(mContext->time,msg->unique(),Trace::DESTROYED,msg->source_port(),msg->dest_port());
     if (msg->source_object() == UUID::null() && msg->dest_port() == OBJECT_PORT_SESSION) {
         handleSessionMessage(msg);
         return;
@@ -471,7 +471,7 @@ void ObjectHost::handleServerMessage(SpaceNodeConnection* conn, CBR::Protocol::O
 
         CBR::Protocol::Object::Ping ping_msg;
         ping_msg.ParseFromString(msg->payload());
-        mContext->trace->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
+        mContext->trace()->ping(ping_msg.ping(),msg->source_object(),mContext->time,msg->dest_object(), ping_msg.has_id()?ping_msg.id():(uint64)-1,ping_msg.has_distance()?ping_msg.distance():-1,msg->unique());
         //std::cerr<<"Ping "<<ping_msg.ping()-Time::now()<<'\n';
 
         return;

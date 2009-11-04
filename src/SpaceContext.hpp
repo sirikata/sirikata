@@ -35,15 +35,12 @@
 
 #include "Utility.hpp"
 #include "ServerNetwork.hpp"
-#include "Timer.hpp"
-#include "TimeProfiler.hpp"
-#include "PollingService.hpp"
+#include "Context.hpp"
 
 namespace CBR {
 
 class MessageRouter;
 class MessageDispatcher;
-class Trace;
 class Forwarder;
 class MockForwarder;
 
@@ -52,43 +49,18 @@ class MockForwarder;
  *  MessageRouter (sending messages), MessageDispatcher (subscribe/unsubscribe
  *  from messages), and a Trace object.
  */
-class SpaceContext : public PollingService {
+class SpaceContext : public Context {
 public:
     SpaceContext(ServerID _id, IOService* ios, IOStrand* strand, const Time& epoch, const Time& curtime, Trace* _trace, const Duration& duration)
-     : PollingService(strand),
-       ioService(ios),
-       mainStrand(strand),
-       lastTime(curtime),
-       time(curtime),
-       profiler( new TimeProfiler("Space") ),
+     : Context("Space", ios, strand, _trace, epoch, curtime, duration),
        mID(_id),
-       mEpoch(epoch),
-       mSimDuration(duration),
        mRouter(NULL),
-       mDispatcher(NULL),
-       mTrace(_trace)
+       mDispatcher(NULL)
     {
     }
 
     ServerID id() const {
         return mID.read();
-    }
-
-    Time epoch() const {
-        return mEpoch.read();
-    }
-    Duration sinceEpoch(const Time& rawtime) const {
-        return rawtime - mEpoch.read();
-    }
-    Time simTime(const Duration& sinceStart) const {
-        return Time::null() + sinceStart;
-    }
-    Time simTime(const Time& rawTime) const {
-        return simTime( sinceEpoch(rawTime) );
-    }
-    // WARNING: The evaluates Timer::now, which shouldn't be done too often
-    Time simTime() const {
-        return simTime( Timer::now() );
     }
 
     MessageRouter* router() const {
@@ -98,59 +70,19 @@ public:
         return mDispatcher.read();
     }
 
-    Trace* trace() const {
-        return mTrace.read();
-    }
-
     // FIXME only used by vis code because it is out of date and horrible
     void tick(const Time& t) {
         lastTime = time;
         time = t;
     }
-
-
-    void add(Service* ps) {
-        mServices.push_back(ps);
-        ps->start();
-    }
-
-    IOService* ioService;
-    IOStrand* mainStrand;
-
-    // NOTE: these are not thread-safe, should only be used from the main thread
-    Time lastTime;
-    Time time;
-
-    TimeProfiler* profiler;
 private:
-    virtual void poll() {
-        Duration elapsed = Timer::now() - epoch();
-
-        if (elapsed > mSimDuration) {
-            this->stop();
-            for(std::vector<Service*>::iterator it = mServices.begin(); it != mServices.end(); it++)
-                (*it)->stop();
-        }
-
-        lastTime = time;
-        time = Time::null() + elapsed;
-    }
-
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
 
     Sirikata::AtomicValue<ServerID> mID;
 
-    Sirikata::AtomicValue<Time> mEpoch;
-
-    Duration mSimDuration;
-
     Sirikata::AtomicValue<MessageRouter*> mRouter;
     Sirikata::AtomicValue<MessageDispatcher*> mDispatcher;
-
-    Sirikata::AtomicValue<Trace*> mTrace;
-
-    std::vector<Service*> mServices;
 }; // class SpaceContext
 
 } // namespace CBR
