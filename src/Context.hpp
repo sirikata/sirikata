@@ -58,6 +58,12 @@ public:
        mEpoch(epoch),
        mSimDuration(simlen)
     {
+        mIterationProfiler = profiler->addStage("Context Iteration");
+        mIterationProfiler->started();
+    }
+
+    ~Context() {
+        delete mIterationProfiler;
     }
 
     Time epoch() const {
@@ -94,6 +100,9 @@ public:
 private:
     Trace* mTrace;
     virtual void poll() {
+
+        mIterationProfiler->finished();
+
         Duration elapsed = Timer::now() - epoch();
 
         if (elapsed > mSimDuration) {
@@ -104,11 +113,14 @@ private:
 
         lastTime = time;
         time = Time::null() + elapsed;
+
+        mIterationProfiler->started();
     }
 
     Sirikata::AtomicValue<Time> mEpoch;
     Duration mSimDuration;
     std::vector<Service*> mServices;
+    TimeProfiler::Stage* mIterationProfiler;
 }; // class ObjectHostContext
 
 } // namespace CBR
