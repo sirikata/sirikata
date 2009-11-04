@@ -75,6 +75,7 @@ if [ $want_debug -eq 1 ] ; then
       esac
   done
   echo "set args $args" > $tmpfile
+  echo "set breakpoint pending on" >> $tmpfile
   echo "run" >> $tmpfile
   if [ $want_interactive -ne 1 ] ; then
     echo "bt" >> $tmpfile
