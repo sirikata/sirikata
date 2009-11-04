@@ -153,9 +153,9 @@ private:
 
         std::vector<GotSpaceConnectionCallback> connectCallbacks;
 
-        QueueRouterElement<std::string> queue;
-        BandwidthShaper<std::string> rateLimiter;
-        StreamTxElement<std::string> streamTx;
+        QueueRouterElement<ObjectMessage> queue;
+        BandwidthShaper<ObjectMessage> rateLimiter;
+        StreamTxElement<ObjectMessage> streamTx;
         bool connecting;
     };
     typedef std::map<ServerID, SpaceNodeConnection*> ServerConnectionMap;

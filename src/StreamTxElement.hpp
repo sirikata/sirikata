@@ -67,6 +67,7 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
            mStrand(strand),
            mMaxRate(max_rate),
            mWaitingPacket(NULL),
+           mSerialized(NULL),
            mShutdown( false ),
            mTimer( IOTimer::create(strand->service()) )
         {
@@ -75,6 +76,8 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
         ~Impl() {
             if (mWaitingPacket != NULL)
                 delete mWaitingPacket;
+            if (mSerialized != NULL)
+                delete mSerialized;
         }
 
         void start() {
@@ -90,9 +93,11 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
 
     private:
         bool trySend(PacketType* next_pkt) {
+            std::string* data = next_pkt->serialize();
+
             // Try to push to the network
             bool success = mStream->send(
-                Sirikata::MemoryReference(&((*next_pkt)[0]), next_pkt->size()),
+                Sirikata::MemoryReference(&((*data)[0]), data->size()),
                 Sirikata::Network::ReliableOrdered
             );
 
@@ -100,11 +105,13 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
             // a callback when its ready again.
             if (!success) {
                 mWaitingPacket = next_pkt;
+                mSerialized = data;
                 return false;
             }
 
             // Otherwise the packet was handled and we can clean up and continue
             delete next_pkt;
+            delete data;
             return true;
         }
 
@@ -123,6 +130,7 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
             }
 
             mWaitingPacket = NULL;
+            mSerialized = NULL;
 
             while(sent) {
                 PacketType* next_pkt = mParent->input(0).pull();
@@ -157,6 +165,7 @@ class StreamTxElement : public DownstreamElementFixed<PacketType, 1> {
         IOStrand* mStrand;
         Duration mMaxRate;
         PacketType* mWaitingPacket;
+        std::string* mSerialized;
         bool mShutdown;
         IOTimerPtr mTimer;
     };

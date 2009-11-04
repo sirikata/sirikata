@@ -122,7 +122,6 @@ std::string* serializeObjectHostMessage(const CBR::Protocol::Object::ObjectMessa
 
 CBR::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
 
-
 /** Base class for messages that go over the network.  Must provide
  *  message type and serialization methods.
  */
@@ -188,6 +187,24 @@ public:
 
     virtual void receiveMessage(Message* msg) = 0;
 }; // class MessageRecipient
+
+
+// Wrapper class for Protocol::Object::Message which provides it some missing methods
+// that are useful, e.g. size().
+class ObjectMessage : public CBR::Protocol::Object::ObjectMessage {
+public:
+    uint32 size() {
+        return this->ByteSize();
+    }
+
+    std::string* serialize() {
+        return serializeObjectHostMessage(*this);
+    };
+}; // class ObjectMessage
+
+// FIXME get rid of this
+ObjectMessage* createObjectHostMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+
 
 /** Interface for classes that need to receive object messages, i.e. those that
  *  need to talk to objects/object hosts.

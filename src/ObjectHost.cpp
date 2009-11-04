@@ -52,7 +52,7 @@ namespace CBR {
 ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, OptionSet* streamOptions, ServerID sid)
  : server(sid),
    socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOption("ohstreamlib")->as<String>())(ctx->ioService,streamOptions)),
-   queue(16*1024 /* FIXME */, std::tr1::bind(&std::string::size, std::tr1::placeholders::_1)),
+   queue(16*1024 /* FIXME */, std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
    rateLimiter(1024*1024),
    streamTx(socket, ctx->mainStrand, Duration::milliseconds((int64)0))
 {
@@ -236,10 +236,9 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     SpaceNodeConnection* conn = it->second;
 
     // FIXME would be nice not to have to do this alloc/dealloc
-    CBR::Protocol::Object::ObjectMessage* obj_msg = createObjectMessage(mContext->id, src, src_port, dest, dest_port, payload);
+    ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace()->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
-    conn->queue.push( serializeObjectHostMessage(*obj_msg) );
-    delete obj_msg;
+    conn->queue.push( obj_msg );
 
     return true;
 }
