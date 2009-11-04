@@ -61,6 +61,7 @@ public:
     }
 
     const TimedMotionVector3f location() const;
+    const BoundingSphere3f bounds() const;
 
     void tick();
 
@@ -69,7 +70,11 @@ public:
 
     void receiveMessage(const CBR::Protocol::Object::ObjectMessage* msg);
 private:
+
     bool connected();
+
+    // Disconnects from the space if a connection has been established
+    void disconnect();
 
     void locationMessage(const CBR::Protocol::Object::ObjectMessage& msg);
     void proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg);
@@ -82,10 +87,11 @@ private:
 
     // Handle a new connection to a space -- initiate session
     void handleSpaceConnection(ServerID sid);
+    // Handle a migration to a new space server
+    void handleSpaceMigration(ServerID sid);
 
     UUID mID;
     const ObjectHostContext* mContext;
-    bool mGlobalIntroductions;
     MotionPath* mMotion;
     BoundingSphere3f mBounds; // FIXME Should probably be variable
     TimedMotionVector3f mLocation;

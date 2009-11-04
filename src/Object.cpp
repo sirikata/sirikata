@@ -46,7 +46,6 @@ float64 MaxDistUpdatePredicate::maxDist = 3.0;
 Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
-   mGlobalIntroductions(false),
    mMotion(motion),
    mBounds(bnds),
    mLocation(mMotion->initial()),
@@ -59,6 +58,7 @@ Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds,
 }
 
 Object::~Object() {
+    disconnect();
     mContext->objectFactory->notifyDestroyed(mID);
 }
 
@@ -82,26 +82,37 @@ const TimedMotionVector3f Object::location() const {
     return mLocation;
 }
 
+const BoundingSphere3f Object::bounds() const {
+    return mBounds;
+}
+
 void Object::connect() {
-    assert(!connected());
+    if (connected()) {
+        OBJ_LOG(warning,"Tried to connect when already connected " << mID.toString());
+        return;
+    }
 
     TimedMotionVector3f curMotion = mMotion->at(mContext->time);
 
     if (mRegisterQuery)
-        mContext->objectHost->openConnection(
+        mContext->objectHost->connect(
             this,
-            curMotion,
-            mBounds,
             mQueryAngle,
-            boost::bind(&Object::handleSpaceConnection, this, _1)
+            boost::bind(&Object::handleSpaceConnection, this, _1),
+            boost::bind(&Object::handleSpaceMigration, this, _1)
         );
     else
-        mContext->objectHost->openConnection(
+        mContext->objectHost->connect(
             this,
-            curMotion,
-            mBounds,
-            boost::bind(&Object::handleSpaceConnection, this, _1)
+            boost::bind(&Object::handleSpaceConnection, this, _1),
+            boost::bind(&Object::handleSpaceMigration, this, _1)
         );
+}
+
+void Object::disconnect() {
+    // FIXME send if a connection has been requested but not completed
+    if (connected())
+        mContext->objectHost->disconnect(this);
 }
 
 void Object::handleSpaceConnection(ServerID sid) {
@@ -112,8 +123,11 @@ void Object::handleSpaceConnection(ServerID sid) {
 
     OBJ_LOG(insane,"Got space connection callback");
     mConnectedTo = sid;
+}
 
-    TimedMotionVector3f curMotion = mMotion->at(mContext->time);
+void Object::handleSpaceMigration(ServerID sid) {
+    OBJ_LOG(insane,"Migrated to new space server: " << sid);
+    mConnectedTo = sid;
 }
 
 bool Object::connected() {
@@ -214,18 +228,16 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             loc
         );
 
-        if (!mGlobalIntroductions) {
-            CBR::Protocol::Subscription::SubscriptionMessage subs;
-            subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
+        CBR::Protocol::Subscription::SubscriptionMessage subs;
+        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Subscribe);
 
-            bool success = mContext->objectHost->send(
-                mContext->time,
-                this, OBJECT_PORT_SUBSCRIPTION,
-                addition.object(), OBJECT_PORT_SUBSCRIPTION,
-                serializePBJMessage(subs)
-            );
-            // FIXME do something on failure
-        }
+        bool success = mContext->objectHost->send(
+            mContext->time,
+            this, OBJECT_PORT_SUBSCRIPTION,
+            addition.object(), OBJECT_PORT_SUBSCRIPTION,
+            serializePBJMessage(subs)
+        );
+        // FIXME do something on failure
     }
     for(int32 idx = 0; idx < contents.removal_size(); idx++) {
         CBR::Protocol::Prox::ObjectRemoval removal = contents.removal(idx);
@@ -238,18 +250,16 @@ void Object::proximityMessage(const CBR::Protocol::Object::ObjectMessage& msg) {
             TimedMotionVector3f()
         );
 
-        if (!mGlobalIntroductions) {
-            CBR::Protocol::Subscription::SubscriptionMessage subs;
-            subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
+        CBR::Protocol::Subscription::SubscriptionMessage subs;
+        subs.set_action(CBR::Protocol::Subscription::SubscriptionMessage::Unsubscribe);
 
-            bool success = mContext->objectHost->send(
-                mContext->time,
-                this, OBJECT_PORT_SUBSCRIPTION,
-                removal.object(), OBJECT_PORT_SUBSCRIPTION,
-                serializePBJMessage(subs)
-            );
-            // FIXME do something on failure
-        }
+        bool success = mContext->objectHost->send(
+            mContext->time,
+            this, OBJECT_PORT_SUBSCRIPTION,
+            removal.object(), OBJECT_PORT_SUBSCRIPTION,
+            serializePBJMessage(subs)
+        );
+        // FIXME do something on failure
     }
 }
 

@@ -75,7 +75,15 @@ message InitiateMigration {
     required uint64 new_server = 1;
 }
 
-
+// Notification of disconnect - explicit ending of session
+// May be sent in either direction to notify that the
+// session is closed. Explicit notification is an
+// optimization -- both sides will eventually close sessions
+// due to timeouts
+message Disconnect {
+    required uuid object = 1;
+    optional string reason = 2;
+}
 
 // Container for session messages.
 message Container {
@@ -83,4 +91,6 @@ message Container {
     optional ConnectResponse connect_response = 2;
 
     optional InitiateMigration init_migration = 3;
+
+    optional Disconnect disconnect = 4;
 }

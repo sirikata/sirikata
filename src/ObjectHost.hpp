@@ -51,14 +51,21 @@ class ObjectHost : public PollingService {
 public:
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(ServerID)> ConnectedCallback;
+    // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
+    // as the object host starts the transition and no additional notification is given since, for all
+    // intents and purposes this is the point at which the transition happens
+    typedef std::tr1::function<void(ServerID)> MigratedCallback;
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, ObjectFactory* obj_factory, Trace* trace, ServerIDMap* sidmap);
 
     const ObjectHostContext* context() const;
 
-    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb);
-    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb);
+    /** Connect the object to the space with the given starting parameters. */
+    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb, MigratedCallback migrated_cb);
+    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb);
+    /** Disconnect the object from the space. */
+    void disconnect(Object* obj);
 
     bool send(const Time&t, const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
 private:
@@ -106,7 +113,7 @@ private:
     /** Object session initiation. */
 
     // Private utility method that the public versions all use to initialize connection struct
-    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback cb);
+    void openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regquery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb);
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
     void openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn);
@@ -186,6 +193,7 @@ private:
         ServerID connectedTo;
         // Server we're trying to migrate to
         ServerID migratingTo;
+        MigratedCallback migratedCB;
     };
     typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
     ObjectServerMap mObjectServerMap;

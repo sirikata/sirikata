@@ -72,7 +72,8 @@ ObjectHost::ObjectInfo::ObjectInfo()
  : object(NULL),
    connectingTo(0),
    connectedTo(0),
-   migratingTo(0)
+   migratingTo(0),
+   migratedCB(0)
 {
 }
 
@@ -80,7 +81,8 @@ ObjectHost::ObjectInfo::ObjectInfo(Object* obj)
  : object(obj),
    connectingTo(0),
    connectedTo(0),
-   migratingTo(0)
+   migratingTo(0),
+   migratedCB(0)
 {
 }
 
@@ -106,15 +108,45 @@ const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
-void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, const SolidAngle& init_sa, ConnectedCallback cb) {
-    openConnection(obj, init_loc, init_bounds, true, init_sa, cb);
+void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    TimedMotionVector3f init_loc = obj->location();
+    BoundingSphere3f init_bounds = obj->bounds();
+    openConnection(obj, init_loc, init_bounds, true, init_sa, connect_cb, migrate_cb);
 }
 
-void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, ConnectedCallback cb) {
-    openConnection(obj, init_loc, init_bounds, false, SolidAngle::Max, cb);
+void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
+    TimedMotionVector3f init_loc = obj->location();
+    BoundingSphere3f init_bounds = obj->bounds();
+    openConnection(obj, init_loc, init_bounds, false, SolidAngle::Max, connect_cb, migrate_cb);
 }
 
-void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, ConnectedCallback cb) {
+void ObjectHost::disconnect(Object* obj) {
+    UUID obj_id = obj->uuid();
+
+    // Construct and send disconnect message.  This has to happen first so we still have
+    // connection information so we know where to send the disconnect
+    CBR::Protocol::Session::Container session_msg;
+    CBR::Protocol::Session::IDisconnect disconnect_msg = session_msg.mutable_disconnect();
+    disconnect_msg.set_object(obj_id);
+    disconnect_msg.set_reason("Quit");
+
+    send(mContext->time,
+        obj, OBJECT_PORT_SESSION,
+        UUID::null(), OBJECT_PORT_SESSION,
+        serializePBJMessage(session_msg)
+    );
+    // FIXME do something on failure
+
+
+    // Update object indices
+    std::vector<UUID>& objects = mObjectServerMap[mObjectInfo[obj_id].connectedTo];
+    objects.erase(std::find(objects.begin(),objects.end(),obj_id));
+
+    // Remove from main object set
+    mObjectInfo.erase(obj_id);
+}
+
+void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc, const BoundingSphere3f& init_bounds, bool regQuery, const SolidAngle& init_sa, ConnectedCallback connect_cb, MigratedCallback migrate_cb) {
     using std::tr1::placeholders::_1;
 
     // Make sure we have this object's info stored
@@ -122,11 +154,13 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
     if (it == mObjectInfo.end()) {
         it = mObjectInfo.insert( ObjectInfoMap::value_type( obj->uuid(), ObjectInfo(obj) ) ).first;
     }
-    mObjectInfo[obj->uuid()].connecting.loc = init_loc;
-    mObjectInfo[obj->uuid()].connecting.bounds = init_bounds;
-    mObjectInfo[obj->uuid()].connecting.regQuery = regQuery;
-    mObjectInfo[obj->uuid()].connecting.queryAngle = init_sa;
-    mObjectInfo[obj->uuid()].connecting.cb = cb;
+    ObjectInfo& obj_info = it->second;
+    obj_info.connecting.loc = init_loc;
+    obj_info.connecting.bounds = init_bounds;
+    obj_info.connecting.regQuery = regQuery;
+    obj_info.connecting.queryAngle = init_sa;
+    obj_info.connecting.cb = connect_cb;
+    obj_info.migratedCB = migrate_cb;
 
     // Get a connection to request
     getAnySpaceConnection(
@@ -181,12 +215,18 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
     OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
     mObjectInfo[obj_id].migratingTo = sid;
+
+    // Update object indices
     std::vector<UUID>*objects=&mObjectServerMap[mObjectInfo[obj_id].connectedTo];
     std::vector<UUID>::iterator where=std::find(objects->begin(),objects->end(),obj_id);
     //assert(where!=objects->end());
     if (where!=objects->end()) {
         objects->erase(where);
     }
+
+    // Notify the object
+    mObjectInfo[obj_id].migratedCB(sid);
+
     // Get or start the connection we need to start this migration
     getSpaceConnection(
         sid,
@@ -339,9 +379,6 @@ Object* ObjectHost::randomObject (ServerID whichServer) {
     return NULL;
 }
 void ObjectHost::randomPing(const Time&t) {
-
-
-
     Object * a=randomObject();
     Object * b=randomObject();
 
