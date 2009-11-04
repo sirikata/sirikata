@@ -46,9 +46,9 @@ float64 MaxDistUpdatePredicate::maxDist = 3.0;
 Object::Object(const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx)
  : mID(id),
    mContext(ctx),
-   mMotion(motion),
    mBounds(bnds),
-   mLocation(mMotion->initial()),
+   mLocation(motion->initial()),
+   mMotion(motion),
    mLocationExtrapolator(mMotion->initial(), MaxDistUpdatePredicate()),
    mRegisterQuery(regQuery),
    mQueryAngle(queryAngle),
@@ -79,11 +79,11 @@ void Object::tick() {
 }
 
 const TimedMotionVector3f Object::location() const {
-    return mLocation;
+    return mLocation.read();
 }
 
 const BoundingSphere3f Object::bounds() const {
-    return mBounds;
+    return mBounds.read();
 }
 
 void Object::connect() {
@@ -137,22 +137,25 @@ bool Object::connected() {
 void Object::checkPositionUpdate() {
     const Time& t = mContext->time;
 
-    const TimedMotionVector3f* update = mMotion->nextUpdate(mLocation.time());
+    TimedMotionVector3f curLoc = location();
+    const TimedMotionVector3f* update = mMotion->nextUpdate(curLoc.time());
     while(update != NULL && update->time() <= t) {
-        mLocation = *update;
-        update = mMotion->nextUpdate(mLocation.time());
+        curLoc = *update;
+        update = mMotion->nextUpdate(curLoc.time());
     }
 
-    if (mLocationExtrapolator.needsUpdate(t, mLocation.extrapolate(t))) {
-        mLocationExtrapolator.updateValue(mLocation.time(), mLocation.value());
+    mLocation = curLoc;
+
+    if (mLocationExtrapolator.needsUpdate(t, curLoc.extrapolate(t))) {
+        mLocationExtrapolator.updateValue(curLoc.time(), curLoc.value());
 
         // Generate and send an update to Loc
         CBR::Protocol::Loc::Container container;
         CBR::Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
         CBR::Protocol::Loc::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t(mLocation.updateTime());
-        requested_loc.set_position(mLocation.position());
-        requested_loc.set_velocity(mLocation.velocity());
+        requested_loc.set_t(curLoc.updateTime());
+        requested_loc.set_position(curLoc.position());
+        requested_loc.set_velocity(curLoc.velocity());
         bool success = mContext->objectHost->send(
             t,
             this, OBJECT_PORT_LOCATION,
@@ -160,7 +163,7 @@ void Object::checkPositionUpdate() {
             serializePBJMessage(container)
         );
         // XXX FIXME do something on failure
-        mContext->trace()->objectGenLoc(t, mID, mLocation);
+        mContext->trace()->objectGenLoc(t, mID, curLoc);
     }
 }
 

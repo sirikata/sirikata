@@ -392,42 +392,10 @@ void ObjectHost::randomPing(const Time&t) {
         ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
     }
 }
-void ObjectHost::sendTestMessage(const Time&t, float idealDistance){
-    Vector3f minLocation(1.e6,1.e6,1.e6);
-    Vector3f maxLocation=minLocation;
-    ObjectInfo * corner=NULL;
-    for (ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
-         i!=ie;
-         ++i) {
-        Vector3f l=i->second.object->location().extrapolate(t).position();
-        if ((l-maxLocation).lengthSquared()>(minLocation-maxLocation).lengthSquared()) {
-            corner=&i->second;
-            minLocation=l;
-        }
-    }
-    if (!corner) return;
-    double distance=1.e30;
-    Vector3f cornerLocation=corner->object->location().extrapolate(t).position();
-    double bestDistance=1.e30;
-    ObjectInfo * destObject=NULL;
-    for (ObjectInfoMap::iterator i=mObjectInfo.begin(),ie=mObjectInfo.end();
-         i!=ie;
-         ++i) {
-        Vector3f l=i->second.object->location().extrapolate(t).position();
-        double curDistance=(l-cornerLocation).length();
-        if (i->second.object!=corner->object&&(destObject==NULL||fabs(curDistance-distance)<fabs(bestDistance-distance))) {
-            bestDistance=curDistance;
-            destObject=&i->second;
-        }
-    }
-    if (!destObject) return;
-    ping(corner->object,destObject->object->uuid(),bestDistance);
-}
 
 void ObjectHost::poll() {
     mProfiler->started();
 
-    //sendTestMessage(t,400.);
     for (int i=0;i<100;++i)
         randomPing(mContext->time);
 

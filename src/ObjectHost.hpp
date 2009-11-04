@@ -135,7 +135,6 @@ private:
 
 
     /* Ping Utility Methods. */
-    void sendTestMessage(const Time&t, float idealDistance);
     void ping(const Object *src, const UUID&dest, double distance=-0);
     void randomPing(const Time&t);
     Object* randomObject();

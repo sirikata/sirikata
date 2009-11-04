@@ -38,7 +38,48 @@
 #include "MotionPath.hpp"
 #include "ObjectHost.hpp"
 
+#include <boost/thread/shared_mutex.hpp>
+
 namespace CBR {
+
+/** A property shared between multiple threads. Guarantees thread safety
+ *  with a multi-reader, single writer lock.
+ */
+template<typename T>
+class SharedProperty {
+public:
+    SharedProperty() {
+        mutex = new boost::shared_mutex;
+    }
+
+    SharedProperty(const T& t)
+     : data(t)
+    {
+        mutex = new boost::shared_mutex;
+    }
+
+    ~SharedProperty() {
+        delete mutex;
+    }
+
+    T read() const {
+        boost::shared_lock<boost::shared_mutex> lck(*mutex);
+        return data;
+    }
+
+    void set(const T& t) {
+        boost::unique_lock<boost::shared_mutex> lck(*mutex);
+        data = t;
+    }
+
+    void operator=(const T& t) {
+        set(t);
+    }
+private:
+    T data;
+    boost::shared_mutex* mutex;
+}; // class SharedPropery
+
 
 typedef std::set<UUID> ObjectSet;
 
@@ -90,11 +131,20 @@ private:
     // Handle a migration to a new space server
     void handleSpaceMigration(ServerID sid);
 
-    UUID mID;
+
+    // THREAD SAFE:
+    // These are thread safe (they don't change after initialization)
+    const UUID mID;
     const ObjectHostContext* mContext;
+
+    // LOCK PROTECTED:
+    // These need to be accessed by multiple threads, protected by locks
+    SharedProperty<BoundingSphere3f> mBounds; // FIXME Should probably be variable
+    SharedProperty<TimedMotionVector3f> mLocation;
+
+    // OBJECT THREAD:
+    // Only accessed by object simulation operations
     MotionPath* mMotion;
-    BoundingSphere3f mBounds; // FIXME Should probably be variable
-    TimedMotionVector3f mLocation;
     SimpleExtrapolator<MotionVector3f, MaxDistUpdatePredicate> mLocationExtrapolator;
     ObjectSet mSubscribers;
     bool mRegisterQuery;
