@@ -1,4 +1,4 @@
-/*  Sirikata TCPSST
+/*  Sirikata
  *  SerializationCheck.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
