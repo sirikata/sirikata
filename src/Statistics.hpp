@@ -39,6 +39,8 @@
 #include "ServerNetwork.hpp"
 #include "Message.hpp"
 
+#include <boost/thread/recursive_mutex.hpp>
+
 namespace CBR {
 
 template<typename T>
@@ -72,7 +74,7 @@ public:
 private:
     typedef Batch<uint8> ByteBatch;
     ByteBatch* filling;
-    Sirikata::ThreadSafeQueue<ByteBatch*> batches;
+    std::deque<ByteBatch*> batches;
 };
 
 
@@ -179,6 +181,8 @@ private:
 
     Thread* mStorageThread;
     Sirikata::AtomicValue<bool> mFinishStorage;
+
+    boost::recursive_mutex mMutex;
 }; // class Trace
 
 } // namespace CBR

@@ -38,6 +38,7 @@
 
 #include "ServerIDMap.hpp"
 
+#include <boost/thread/locks.hpp>
 
 //#define TRACE_OBJECT
 //#define TRACE_LOCPROX
@@ -83,7 +84,10 @@ void BatchedBuffer::write(const void* buf, uint32 nbytes) {
 }
 
 void BatchedBuffer::flush() {
-    batches.push(filling);
+    if (filling == NULL)
+        return;
+
+    batches.push_back(filling);
     filling = NULL;
 }
 
@@ -98,6 +102,8 @@ void BatchedBuffer::store(FILE* os) {
         delete bb;
     }
 }
+
+
 const uint8 Trace::MessageTimestampTag;
 const uint8 Trace::ObjectPingTag;
 const uint8 Trace::ProximityTag;
@@ -147,9 +153,12 @@ void Trace::prepareShutdown() {
 }
 
 void Trace::shutdown() {
+    {
+        boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+        data.flush();
+    }
     mFinishStorage = true;
     mStorageThread->join();
-    data.flush();
     delete mStorageThread;
 }
 
@@ -157,12 +166,18 @@ void Trace::storageThread(const String& filename) {
     FILE* of = fopen(filename.c_str(), "wb");
 
     while( !mFinishStorage.read() ) {
-        data.store(of);
+        {
+            boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+            data.store(of);
+        }
         fflush(of);
 
         usleep( Duration::seconds(1).toMicroseconds() );
     }
-    data.store(of);
+    {
+        boost::lock_guard<boost::recursive_mutex> lck(mMutex);
+        data.store(of);
+    }
     fflush(of);
 
     fsync(fileno(of));
@@ -173,6 +188,7 @@ void Trace::prox(const Time& t, const UUID& receiver, const UUID& source, bool e
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ProximityTag, sizeof(ProximityTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -186,6 +202,7 @@ void Trace::objectGenLoc(const Time& t, const UUID& source, const TimedMotionVec
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ObjectGeneratedLocationTag, sizeof(ObjectGeneratedLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &source, sizeof(source) );
@@ -197,6 +214,7 @@ void Trace::objectLoc(const Time& t, const UUID& receiver, const UUID& source, c
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ObjectLocationTag, sizeof(ObjectLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -209,6 +227,7 @@ void Trace::subscription(const Time& t, const UUID& receiver, const UUID& source
 #ifdef TRACE_OBJECT
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &SubscriptionTag, sizeof(SubscriptionTag) );
     data.write( &t, sizeof(t) );
     data.write( &receiver, sizeof(receiver) );
@@ -238,6 +257,7 @@ void Trace::timestampMessage(const Time&sent, uint64 uid, MessagePath path, Obje
         return;
     }
 */
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &MessageTimestampTag, sizeof(MessageTimestampTag) );
     data.write( &sent, sizeof(sent) );
     data.write( &uid, sizeof(uid) );
@@ -252,6 +272,7 @@ void Trace::ping(const Time& src, const UUID&sender, const Time&dst, const UUID&
 #ifdef TRACE_PING
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ObjectPingTag, sizeof(ObjectPingTag) );
     data.write( &src, sizeof(src) );
     data.write( &sender, sizeof(sender) );
@@ -267,6 +288,7 @@ void Trace::serverLoc(const Time& t, const ServerID& sender, const ServerID& rec
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerLocationTag, sizeof(ServerLocationTag) );
     data.write( &t, sizeof(t) );
     data.write( &sender, sizeof(sender) );
@@ -280,6 +302,7 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
 #ifdef TRACE_LOCPROX
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerObjectEventTag, sizeof(ServerObjectEventTag) );
     data.write( &t, sizeof(t) );
     data.write( &source, sizeof(source) );
@@ -294,6 +317,8 @@ void Trace::serverObjectEvent(const Time& t, const ServerID& source, const Serve
 void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerDatagramQueueInfoTag, sizeof(ServerDatagramQueueInfoTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
@@ -309,6 +334,8 @@ void Trace::serverDatagramQueueInfo(const Time& t, const ServerID& dest, uint32 
 void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id, uint32 size) {
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerDatagramQueuedTag, sizeof(ServerDatagramQueuedTag) );
     data.write( &t, sizeof(t) );
     data.write( &dest, sizeof(dest) );
@@ -320,6 +347,8 @@ void Trace::serverDatagramQueued(const Time& t, const ServerID& dest, uint64 id,
 void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, float weight, const ServerID& dest, uint64 id, uint32 size) {
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerDatagramSentTag, sizeof(ServerDatagramSentTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &dest, sizeof(dest) );
@@ -334,6 +363,8 @@ void Trace::serverDatagramSent(const Time& start_time, const Time& end_time, flo
 void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time, const ServerID& src, uint64 id, uint32 size) {
 #ifdef TRACE_DATAGRAM
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &ServerDatagramReceivedTag, sizeof(ServerDatagramReceivedTag) );
     data.write( &start_time, sizeof(start_time) ); // using either start_time or end_time works since the ranges are guaranteed not to overlap
     data.write( &src, sizeof(src) );
@@ -347,6 +378,8 @@ void Trace::serverDatagramReceived(const Time& start_time, const Time& end_time,
 void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_size, uint32 send_queued, float send_weight, uint32 receive_size, uint32 receive_queued, float receive_weight) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketQueueInfoTag, sizeof(PacketQueueInfoTag) );
     data.write( &t, sizeof(t) );
     ServerID* dest_server_id = mServerIDMap->lookupInternal(dest);
@@ -364,6 +397,8 @@ void Trace::packetQueueInfo(const Time& t, const Address4& dest, uint32 send_siz
 void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketSentTag, sizeof(PacketSentTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
@@ -377,6 +412,8 @@ void Trace::packetSent(const Time& t, const Address4& dest, uint32 size) {
 void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
 #ifdef TRACE_PACKET
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &PacketReceivedTag, sizeof(PacketReceivedTag) );
     data.write( &t, sizeof(t) );
     assert(mServerIDMap);
@@ -390,6 +427,8 @@ void Trace::packetReceived(const Time& t, const Address4& src, uint32 size) {
 void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const ServerID& serverID){
 #ifdef TRACE_CSEG
     if (mShuttingDown) return;
+
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write( &SegmentationChangeTag, sizeof(SegmentationChangeTag) );
     data.write( &t, sizeof(t) );
     data.write( &bbox, sizeof(bbox) );
@@ -402,11 +441,9 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&ObjectBeginMigrateTag, sizeof(ObjectBeginMigrateTag));
     data.write(&t, sizeof(t));
-
-    //    printf("\n\n******In Statistics.cpp.  Have an object begin migrate message. \n\n");
-
     data.write(&obj_id, sizeof(obj_id));
     data.write(&migrate_from, sizeof(migrate_from));
     data.write(&migrate_to,sizeof(migrate_to));
@@ -414,13 +451,11 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
   void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID& acknowledge_from,const ServerID& acknowledge_to)
-  //  void Trace::objectAcknowledgeMigrate(const Time& t, const UUID& obj_id, const ServerID acknowledge_from, acknowledge_to)
   {
-
 #ifdef TRACE_MIGRATION
     if (mShuttingDown) return;
 
-    //    printf("\n\n******In Statistics.cpp.  Have an object ack migrate message. \n\n");
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&ObjectAcknowledgeMigrateTag, sizeof(ObjectAcknowledgeMigrateTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
@@ -433,10 +468,9 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   void Trace::objectSegmentationCraqLookupRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookupTo)
   {
 #ifdef TRACE_OSEG
-
     if (mShuttingDown) return;
 
-
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&ObjectSegmentationCraqLookupRequestAnalysisTag, sizeof(ObjectSegmentationCraqLookupRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
@@ -450,6 +484,7 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
 #ifdef TRACE_OSEG
     if (mShuttingDown) return;
 
+    boost::lock_guard<boost::recursive_mutex> lck(mMutex);
     data.write(&ObjectSegmentationProcessedRequestAnalysisTag, sizeof(ObjectSegmentationProcessedRequestAnalysisTag));
     data.write(&t, sizeof(t));
     data.write(&obj_id, sizeof(obj_id));
@@ -461,35 +496,32 @@ void Trace::segmentationChanged(const Time& t, const BoundingBox3f& bbox, const 
   }
 
 
-
-
 void Trace::objectMigrationRoundTrip(const Time& t, const UUID& obj_id, const ServerID &sID_migratingFrom, const ServerID& sID_migratingTo, int numMilliseconds)
 {
 #ifdef TRACE_ROUND_TRIP_MIGRATION_TIME
   if (mShuttingDown) return;
 
+  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
   data.write(&RoundTripMigrationTimeAnalysisTag, sizeof(RoundTripMigrationTimeAnalysisTag));
   data.write(&t, sizeof(t));
   data.write(&obj_id, sizeof(obj_id));
   data.write(&sID_migratingFrom, sizeof(sID_migratingFrom));
   data.write(&sID_migratingTo, sizeof(sID_migratingTo));
   data.write(&numMilliseconds, sizeof(numMilliseconds));
-
 #endif
 }
 
 void Trace::processOSegTrackedSetResults(const Time &t, const UUID& obj_id, const ServerID& sID_migratingTo, int numMilliseconds)
 {
 #ifdef TRACE_OSEG_TRACKED_SET_RESULTS
-
   if (mShuttingDown) return;
 
+  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
   data.write(&OSegTrackedSetResultAnalysisTag, sizeof(OSegTrackedSetResultAnalysisTag));
   data.write(&t, sizeof(t));
   data.write(&obj_id,sizeof(obj_id));
   data.write(&sID_migratingTo, sizeof(sID_migratingTo));
   data.write(&numMilliseconds, sizeof(numMilliseconds));
-
 #endif
 }
 
@@ -508,7 +540,7 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   std::cout<<"\tnum_migration_not_complete_yet:   "<< num_migration_not_complete_yet<<"\n\n";
   std::cout<<"***************************\n\n";
 
-
+  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
   data.write(&OSegShutdownEventTag, sizeof(OSegShutdownEventTag));
   data.write(&t,sizeof(t));
   data.write(&num_lookups,sizeof(num_lookups));
@@ -517,7 +549,6 @@ void Trace::processOSegShutdownEvents(const Time &t, const ServerID& sID, const 
   data.write(&num_craq_lookups,sizeof(num_craq_lookups));
   data.write(&num_time_elapsed_cache_eviction, sizeof(num_time_elapsed_cache_eviction));
   data.write(&num_migration_not_complete_yet, sizeof(num_migration_not_complete_yet));
-
 #endif
 }
 
@@ -527,11 +558,11 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
 #ifdef TRACE_OSEG_CACHE_RESPONSE
   if (mShuttingDown) return;
 
+  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
   data.write(&OSegCacheResponseTag, sizeof(OSegCacheResponseTag));
   data.write(&t, sizeof(t));
   data.write(&sID, sizeof(sID));
   data.write(&obj_id,sizeof(obj_id));
-
 #endif
 }
 
@@ -539,11 +570,9 @@ void Trace::osegCacheResponse(const Time &t, const ServerID& sID, const UUID& ob
 void Trace::objectSegmentationLookupNotOnServerRequest(const Time& t, const UUID& obj_id, const ServerID &sID_lookerupper)
 {
 #ifdef TRACE_OSEG_NOT_ON_SERVER_LOOKUP
-
-
   if (mShuttingDown) return;
 
-
+  boost::lock_guard<boost::recursive_mutex> lck(mMutex);
   data.write(&OSegLookupNotOnServerAnalysisTag, sizeof (OSegLookupNotOnServerAnalysisTag));
   data.write(&t, sizeof(t));
   data.write(&obj_id, sizeof(obj_id));
