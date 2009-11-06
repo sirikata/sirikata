@@ -1,5 +1,5 @@
 /*  Sirikata Network Utilities
- *  IODefs.hpp
+ *  IOWork.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -29,73 +29,23 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_NETWORK_IODEFS_HPP_
-#define _SIRIKATA_NETWORK_IODEFS_HPP_
 
-#include "util/Platform.hpp"
-
-
-// First we forward declare a bunch of Boost.Asio specific classes
-// so we can use them without including everything that Boost.Asio
-// includes indirectly
-namespace boost {
-
-namespace system {
-class error_code;
-class system_error;
-class error_condition;
-class error_category;
-}
-
-namespace asio {
-class io_service;
-
-namespace detail {
-template <typename Dispatcher, typename Handler>
-class wrapped_handler;
-} // namespace detail
-
-} // namespace asio
-} // namespace boost
-
-
+#include "util/Standard.hh"
+#include "IOWork.hpp"
+#include "Asio.hpp"
 
 namespace Sirikata {
 namespace Network {
 
-// Exposes internal implementation service, allowing implementations to hook,
-// directly in, but assumes that we could load alternative plugins with a
-// different implementation
-typedef boost::asio::io_service InternalIOService;
+IOWork::IOWork(IOService& service, const String& name)
+ : mImpl( new InternalIOWork(service, name) )
+{
+}
 
-// Useful typedefs used throughout the Network IO API
-typedef std::tr1::function<void()> IOCallback;
-
-// The real classes we provide which attempt to abstract the event queue / IO
-// services.
-class IOService;
-class IOServiceFactory;
-class IOTimer;
-class IOStrand;
-class IOWork;
-
-// Subclasses of internal classes, exposed to allow for safe cross-library
-// allocation and use.
-class InternalIOWork;
-class InternalIOStrand;
-class TCPSocket;
-class TCPListener;
-class TCPResolver;
-class UDPSocket;
-class UDPResolver;
-class DeadlineTimer;
-
-// Subclasses of internal classes which are wrapped by a strand, guaranteeing
-// serializability of their event handlers
-class StrandTCPSocket;
+IOWork::IOWork(IOService* service, const String& name)
+ : mImpl( new InternalIOWork(service, name) )
+{
+}
 
 } // namespace Network
 } // namespace Sirikata
-
-
-#endif //_SIRIKATA_NETWORK_IODEFS_HPP_

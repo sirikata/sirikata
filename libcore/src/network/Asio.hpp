@@ -45,6 +45,23 @@
 namespace Sirikata {
 namespace Network {
 
+/** Simple wrapper around Boost.Asio's io_service::work, allowing for safe,
+ *  cross-platform allocation and use.  Also adds a naming mechanism which
+ *  allows logging of allocation and destruction, making it easier to determine
+ *  which services are active and may be blocking shutdown.
+ */
+class InternalIOWork : public InternalIOService::work {
+public:
+    InternalIOWork(IOService& serv, const String& name = "");
+    InternalIOWork(IOService* serv, const String& name = "");
+
+    ~InternalIOWork();
+private:
+    void logEvent(const String& evt);
+
+    String mName;
+};
+
 /** Simple wrapper around Boost.Asio's io_service::strand, allowing for safe,
  *  cross-platform allocation and use. Normally we would prefer a typedef here,
  *  but strand is an internal class, so we can't make this work without forcing

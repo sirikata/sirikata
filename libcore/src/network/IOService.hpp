@@ -59,6 +59,7 @@ class SIRIKATA_EXPORT IOService {
   protected:
 
     friend class InternalIOStrand;
+    friend class InternalIOWork;
     friend class TCPSocket;
     friend class TCPListener;
     friend class TCPResolver;

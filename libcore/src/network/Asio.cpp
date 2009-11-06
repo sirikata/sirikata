@@ -5,6 +5,30 @@
 namespace Sirikata {
 namespace Network {
 
+InternalIOWork::InternalIOWork(IOService& serv, const String& name)
+ : InternalIOService::work(serv.asioService()),
+   mName(name)
+{
+    logEvent("created");
+}
+
+InternalIOWork::InternalIOWork(IOService* serv, const String& name)
+ : InternalIOService::work(serv->asioService()),
+   mName(name)
+{
+    logEvent("created");
+}
+
+InternalIOWork::~InternalIOWork() {
+    logEvent("destroyed");
+}
+
+void InternalIOWork::logEvent(const String& evt) {
+    if (mName != "")
+        SILOG(io,insane,"IOWork event: " << mName << " -> " << evt);
+}
+
+
 
 InternalIOStrand::InternalIOStrand(IOService &io)
  : boost::asio::io_service::strand(io.asioService())
