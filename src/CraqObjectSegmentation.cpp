@@ -588,16 +588,12 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     Fill the messageQueueToPushTo deque by pushing outgoing messages from destServers and osegMessages to it
     Then clear osegMessages and destServers.
 
-    may also need to add a message to send queue
   */
   void CraqObjectSegmentation::poll()
   {
-      mServiceStage->started();
+    mServiceStage->started();
 
-      std::map<UUID,ServerID> updated;
-
-    Time start_time= Timer::now();
-
+    std::map<UUID,ServerID> updated;
     ++numServices;
 
     //    checkNotFoundData(); //determines what to do with all the lookups that returned that the object wasn't found
@@ -606,32 +602,16 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
     std::vector<CraqOperationResult*> getResults;
     std::vector<CraqOperationResult*> trackedSetResults;
 
-    //    Duration currentishDur = mTimer.elapsed();
-    //    Duration iterWaitDurBegin = mTimer.elapsed();
-
     iteratedWait(5, getResults,trackedSetResults);
-    //    craqDht.tick(getResults,trackedSetResults); //if instead want to just tick forward a single time instant
-
-//      Duration iterWaitDurEnd = mTimer.elapsed();
-//      if (currentishDur.toMilliseconds() > 100000)
-//      {
-//        if (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds() > 1)
-//        {
-//          std::cout<<"\n\nHUGEITERWAIT :   "<< (iterWaitDurEnd.toMilliseconds() - iterWaitDurBegin.toMilliseconds())<<"  "<<getResults.size()<<"   "<<trackedSetResults.size() <<"\n\n";
-//        }
-//      }
-
 
     int numGetResults = (int) getResults.size();
     int numSetResults = (int) trackedSetResults.size();
 
     numLookingUpDebug = numLookingUpDebug - ((int)getResults.size());
 
-
     if (mFinishedMoveOrLookup.size() !=0)
-    {
       updated.swap(mFinishedMoveOrLookup);
-    }
+
 
     //run through all the get results first.
     for (unsigned int s=0; s < getResults.size(); ++s)
@@ -662,6 +642,7 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
         //        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (numServices - ((int)(iter->second.timeAdmitted))), (uint32) craqDhtGet.queueSize()  );
         //debug trace
 
+        
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {
           //means that after receiving a lookup request, we did not intermediarilly receive a migrate request.
@@ -680,29 +661,19 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
       delete getResults[s];
     }
 
-
     processCraqTrackedSetResults(trackedSetResults, updated);
 
     if( mFinishedMoveOrLookup.size() != 0)
       mFinishedMoveOrLookup.clear();
 
-//     if (currentishDur.toMilliseconds() > 100000)
-//     {
-//       Duration elapsedServiceTime = Timer::now() - start_time;
-//       if (elapsedServiceTime.toMilliseconds() >= 3)
-//       {
-//         printf("\n\nGreater than 1 ms in service of craq oseg:  %i,  %i,  %i\n\n", (int) elapsedServiceTime.toMilliseconds(), numGetResults, numSetResults);
-//       }
 
-//       lastTimerDur = mServiceTimer.elapsed();
-//     }
-
-    if (mListener) {
-        for(std::map<UUID,ServerID>::iterator it = updated.begin(); it != updated.end(); it++)
-            mListener->osegLookupCompleted( it->first, it->second );
+    if (mListener)
+    {
+      for(std::map<UUID,ServerID>::iterator it = updated.begin(); it != updated.end(); it++)
+        mListener->osegLookupCompleted( it->first, it->second );
     }
 
-      mServiceStage->finished();
+    mServiceStage->finished();
   }
 
 

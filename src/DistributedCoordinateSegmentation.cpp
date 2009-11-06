@@ -43,6 +43,7 @@
 #include "Message.hpp"
 #include "WorldPopulationBSPTree.hpp"
 
+
 namespace CBR {
 
 template<typename T>

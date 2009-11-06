@@ -27,7 +27,7 @@ namespace CBR
   class Network;
   class Trace;
   class ObjectConnection;
-class OSegLookupQueue;
+  class OSegLookupQueue;
 
 class ForwarderQueue{
 public:
