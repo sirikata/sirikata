@@ -53,21 +53,39 @@ TCPStream::TCPStream(const MultiplexedSocketPtr&shared_socket,const Stream::Stre
 }
 
 void TCPStream::readyRead() {
-    MultiplexedSocketWPtr mpsocket(mSocket);
-    mSocket->getASIOService().post(
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
+        SILOG(tcpsst,debug,"Called TCPStream::readyRead() on closed stream." << getID().read());
+        return;
+    }
+
+    MultiplexedSocketWPtr mpsocket(socket_copy);
+    socket_copy->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
                                               mID));
 }
 
 void TCPStream::pauseSend() {
-    MultiplexedSocketWPtr mpsocket(mSocket);
-    mSocket->getASIOService().post(
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
+        SILOG(tcpsst,debug,"Called TCPStream::pauseSend() on closed stream." << getID().read());
+        return;
+    }
+
+    MultiplexedSocketWPtr mpsocket(socket_copy);
+    socket_copy->getASIOService().post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,
                                               mID));
 }
 bool TCPStream::canSend(const size_t dataSize)const {
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
+        SILOG(tcpsst,debug,"Called TCPStream::canSend() on closed stream." << getID().read());
+        return false;
+    }
+
     uint8 serializedStreamId[StreamID::MAX_SERIALIZED_LENGTH];
     unsigned int streamIdLength=StreamID::MAX_SERIALIZED_LENGTH;
     unsigned int successLengthNeeded=mID.serialize(serializedStreamId,streamIdLength);
@@ -76,7 +94,7 @@ bool TCPStream::canSend(const size_t dataSize)const {
     uint8 packetLengthSerialized[vuint32::MAX_SERIALIZED_LENGTH];
     unsigned int packetHeaderLength=packetLength.serialize(packetLengthSerialized,vuint32::MAX_SERIALIZED_LENGTH);
     totalSize+=packetHeaderLength;
-    return mSocket->canSendBytes(mID,totalSize);
+    return socket_copy->canSendBytes(mID,totalSize);
 }
 bool TCPStream::send(const Chunk&data, StreamReliability reliability) {
     return send(MemoryReference(data),reliability);
@@ -134,7 +152,11 @@ bool TCPStream::send(MemoryReference firstChunk, MemoryReference secondChunk, St
     //indicate to other would-be TCPStream::close()ers that we are sending and they will have to wait until we give up control to actually ack the close and shut down the stream
     unsigned int sendStatus=++(*mSendStatus);
     if ((sendStatus&(3*SendStatusClosing))==0) {///max of 3 entities can close the stream at once (FIXME: should implement |= on atomic ints), but as of now at most the recv thread the sender responsible and a user close() is all that is allowed at once...so 3 is fine)
-        didsend=MultiplexedSocket::sendBytes(mSocket,toBeSent,mSendBufferSize);
+        MultiplexedSocketPtr socket_copy = mSocket;
+        if (socket_copy.get() == NULL)
+            didsend = false;
+        else
+            didsend=MultiplexedSocket::sendBytes(socket_copy,toBeSent,mSendBufferSize);
     }
     //relinquish control to a potential closer
     --(*mSendStatus);
@@ -163,14 +185,24 @@ bool TCPStream::closeSendStatus(AtomicValue<int>&vSendStatus) {
     return incd;
 }
 void TCPStream::close() {
-    //set the stream closed as soon as sends are done
+    // For thread safety, make a copy so we are ensured it is valid throughout this method
+    MultiplexedSocketPtr socket_copy(mSocket);
+
+    // If its already been closed, there's nothing to do
+    if (socket_copy.get() == NULL)
+        return;
+
+    //Otherwise, set the stream closed as soon as sends are done
     bool justClosed=closeSendStatus(*mSendStatus);
     if (justClosed) {
         //obliterate all incoming callback to this stream
-        mSocket->addCallbacks(getID(),NULL);
+        socket_copy->addCallbacks(getID(),NULL);
         //send out that the stream is now closed on all sockets
-        MultiplexedSocket::closeStream(mSocket,getID());
+        MultiplexedSocket::closeStream(socket_copy,getID());
     }
+
+    // And get rid of the reference to the socket so it can (maybe) be cleaned up
+    mSocket.reset();
 }
 TCPStream::~TCPStream() {
     close();
@@ -197,14 +229,15 @@ void TCPStream::connect(const Address&addy,
                         const ConnectionCallback &connectionCallback,
                         const BytesReceivedCallback&bytesReceivedCallback,
                         const ReadySendCallback&readySendCallback) {
-    mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
+    MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
+    mSocket = socket;
     *mSendStatus=0;
     mID=StreamID(1);
-    mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
+    socket->addCallbacks(getID(),new Callbacks(connectionCallback,
                                                 bytesReceivedCallback,
                                                 readySendCallback,
                                                 mSendStatus));
-    mSocket->connect(addy,mNumSimultaneousSockets,mSendBufferSize);
+    socket->connect(addy,mNumSimultaneousSockets,mSendBufferSize);
 }
 
 void TCPStream::prepareOutboundConnection(
@@ -212,14 +245,15 @@ void TCPStream::prepareOutboundConnection(
                         const ConnectionCallback &connectionCallback,
                         const BytesReceivedCallback&bytesReceivedCallback,
                         const ReadySendCallback&readySendCallback) {
-    mSocket=MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
+    MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback);
+    mSocket = socket;
     *mSendStatus=0;
     mID=StreamID(1);
-    mSocket->addCallbacks(getID(),new Callbacks(connectionCallback,
+    socket->addCallbacks(getID(),new Callbacks(connectionCallback,
                                                 bytesReceivedCallback,
                                                 readySendCallback,
                                                 mSendStatus));
-    mSocket->prepareConnect(mNumSimultaneousSockets,mSendBufferSize);
+    socket->prepareConnect(mNumSimultaneousSockets,mSendBufferSize);
 }
 void TCPStream::connect(const Address&addy) {
     assert(mSocket);
@@ -230,15 +264,17 @@ Stream*TCPStream::factory(){
     return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
 }
 Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
-    if (!mSocket) {
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
         return NULL;
     }
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
-    retval->mSocket=mSocket;
 
-    StreamID newID=mSocket->getNewID();
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
+    retval->mSocket = socket_copy;
+
+    StreamID newID = socket_copy->getNewID();
     retval->mID=newID;
-    TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
+    TCPSetCallbacks setCallbackFunctor(socket_copy.get(), retval);
     cloneCallback(retval,setCallbackFunctor);
     return retval;
 }
@@ -246,15 +282,17 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
 Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
                          const BytesReceivedCallback&chunkReceivedCallback,
                          const ReadySendCallback&readySendCallback) {
-    if (!mSocket) {
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
         return NULL;
     }
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
-    retval->mSocket=mSocket;
 
-    StreamID newID=mSocket->getNewID();
+    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize);
+    retval->mSocket = socket_copy;
+
+    StreamID newID = socket_copy->getNewID();
     retval->mID=newID;
-    TCPSetCallbacks setCallbackFunctor(&*mSocket,retval);
+    TCPSetCallbacks setCallbackFunctor(socket_copy.get(), retval);
     setCallbackFunctor(connectionCallback,chunkReceivedCallback, readySendCallback);
     return retval;
 }
@@ -262,11 +300,23 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
 
 ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
 Address TCPStream::getRemoteEndpoint() const{
-    return mSocket->getRemoteEndpoint(mID);
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
+        SILOG(tcpsst,debug,"Called TCPStream::getRemoveEndpoint() on closed stream." << getID().read());
+        return Address::null();
+    }
+
+    return socket_copy->getRemoteEndpoint(mID);
 }
 ///Only returns a legitimate address if ConnectionStatus called back, otherwise return Address::null()
 Address TCPStream::getLocalEndpoint() const{
-    return mSocket->getLocalEndpoint(mID);
+    MultiplexedSocketPtr socket_copy = mSocket;
+    if (socket_copy.get() == NULL) {
+        SILOG(tcpsst,debug,"Called TCPStream::getLocalEndpoint() on closed stream." << getID().read());
+        return Address::null();
+    }
+
+    return socket_copy->getLocalEndpoint(mID);
 }
 
 }  }
