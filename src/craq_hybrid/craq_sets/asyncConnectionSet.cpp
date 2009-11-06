@@ -161,6 +161,8 @@ bool AsyncConnectionSet::set(CraqDataKey dataToSet, int  dataToSetTo, bool track
   StreamCraqDataSetQuery dsQuery;    
   strncpy(dsQuery,query.c_str(), STREAM_CRAQ_DATA_SET_SIZE);
 
+  //  std::cout<<"\n\nThis is set query:  "<<query<<"\n\n";
+
   
   //creating callback for write function
   mSocket->async_write_some(boost::asio::buffer(dsQuery,STREAM_CRAQ_DATA_SET_SIZE -2),

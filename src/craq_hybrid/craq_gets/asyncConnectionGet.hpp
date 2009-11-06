@@ -14,6 +14,17 @@ static const int MAX_TIME_BETWEEN_RESULTS = 50000;
 
 class AsyncConnectionGet
 {
+private:
+  struct IndividualQueryData
+  {
+    enum GetOrSet {GET,SET};
+    GetOrSet gs;
+    CraqDataKey currentlySearchingFor;
+    int currentlySettingTo;
+    bool is_tracking;
+    int tracking_number;
+  };
+
   
 public:
 
@@ -26,7 +37,8 @@ public:
   AsyncConnectionGet::ConnectionState ready(); //tells the querier whether I'm processing a message or available for more information.
 
   bool set(CraqDataKey dataToSet, int  dataToSetTo, bool track, int trackNum);
-  bool get(CraqDataKey dataToGet);
+  bool get(const CraqDataKey& dataToGet);
+  bool getMulti( CraqDataKey& dataToGet);
   
   ~AsyncConnectionGet();
   AsyncConnectionGet();
@@ -36,23 +48,26 @@ public:
   void printOutstanding();
 
   int runReQuery(); //re-query everything remaining in outstanding results.
+  bool getMultiQuery(const std::vector<IndividualQueryData*>& dtg);
+  void printStatisticsTimesTaken();
+
+  int getRespCount();
+
   
 private:
 
+  int mAllResponseCount;
+  
+  std::vector<double> mTimesTaken;
+  
   int mTimesBetweenResults;
   bool mHandlerState;
   
   boost::asio::ip::tcp::socket* mSocket;
 
-  struct IndividualQueryData
-  {
-    enum GetOrSet {GET,SET};
-    GetOrSet gs;
-    CraqDataKey currentlySearchingFor;
-    int currentlySettingTo;
-    bool is_tracking;
-    int tracking_number;
-  };
+  bool getMultiQuery(const CraqDataKey& dataToGet);
+  
+
   typedef std::multimap<std::string, IndividualQueryData*> MultiOutstandingQueries;   //the string represents the obj id of the data.
   MultiOutstandingQueries allOutstandingQueries;  //we can be getting and setting so we need this to be a multimap
   
@@ -60,7 +75,7 @@ private:
   
   ConnectionState mReady;
 
-  bool getQuery(CraqDataKey dataToGet);
+  bool getQuery(const CraqDataKey& dataToGet);
   
   //this function is responsible for elegantly killing connections and telling the controlling asyncCraq that that's what it's doing.
   void killSequence();
@@ -107,7 +122,7 @@ private:
   
   std::string mPrevReadFrag;
 
-  
+  int countInstancesOf(const std::string& needle, const std::string& haystack);  
 
   //***********handlers**************
   

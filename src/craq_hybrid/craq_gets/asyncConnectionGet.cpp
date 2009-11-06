@@ -4,6 +4,11 @@
 #include <boost/bind.hpp>
 #include <map>
 #include <utility>
+#include <boost/asio.hpp>
+#include <boost/array.hpp>
+
+
+#define NUM_MULTI 1
 
 namespace CBR
 {
@@ -43,6 +48,13 @@ AsyncConnectionGet::ConnectionState AsyncConnectionGet::ready()
 void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets)
 {
 
+  if (mPrevReadFrag.size() > 2000)
+  {
+    std::cout<<"\n\n\n\nHUGE mPrevReadFrag:  "<<mPrevReadFrag<<"\n\n";
+    std::cout.flush();
+  }
+
+  
   if ((mOperationResultVector.size() !=0)||(mOperationResultErrorVector.size() !=0)||(mOperationResultTrackedSetsVector.size() !=0))
   {
     mTimesBetweenResults = 0;
@@ -55,12 +67,14 @@ void AsyncConnectionGet::tick(std::vector<CraqOperationResult*>&opResults_get, s
 
   if (mTimesBetweenResults >  MAX_TIME_BETWEEN_RESULTS)
   {
+    /*
     mSocket->close();
     delete mSocket;
     
     mReady = NEED_NEW_SOCKET;
     std::cout<<"\n\nReset: need new connection.  Times between: "<< mTimesBetweenResults <<" outstanding queries:  " <<allOutstandingQueries.size()  <<" \n\n\n";
     mTimesBetweenResults = 0;
+    */
   }
 
   
@@ -107,6 +121,8 @@ void AsyncConnectionGet::initialize( boost::asio::ip::tcp::socket* socket,    bo
   mPrevReadFrag = "";
 
   mTimesBetweenResults = 0;
+  mAllResponseCount = 0;
+  
 }
 
 
@@ -136,6 +152,94 @@ void AsyncConnectionGet::connect_handler(const boost::system::error_code& error)
   runReQuery();
 }
 
+
+
+//datakey should have a null termination character.
+//public interface for the get command
+bool AsyncConnectionGet::getMulti(CraqDataKey& dataToGet)
+{
+  static std::vector<IndividualQueryData*> tmpDataToGet;
+
+
+    
+  if (mReady != READY)
+  {
+    return false;
+  }
+
+  IndividualQueryData* iqd = new IndividualQueryData;
+  iqd->is_tracking = false;
+  iqd->tracking_number = 0;
+  std::string tmpString = dataToGet;
+  tmpString += STREAM_DATA_KEY_SUFFIX;
+  strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
+  iqd->gs = IndividualQueryData::GET;
+
+  //need to add the individual query data to allOutstandingQueries.
+  allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
+
+  tmpDataToGet.push_back(iqd);
+  if (tmpDataToGet.size() >= NUM_MULTI)
+  {
+    getMultiQuery(tmpDataToGet);
+    tmpDataToGet.clear();
+  }
+  return true;
+}
+
+
+
+//bool AsyncConnectionGet::getMultiQuery(const CraqDataKey& dataToGet)
+bool AsyncConnectionGet::getMultiQuery(const std::vector<IndividualQueryData*>& dtg)
+{
+  std::string query = "";
+
+  static bool first = true;
+  
+  for (int s=0; s < (int)dtg.size(); ++s)
+  {
+    query.append(CRAQ_DATA_KEY_QUERY_PREFIX);
+    query.append(dtg[s]->currentlySearchingFor); //this is the re
+    query.append(CRAQ_DATA_KEY_QUERY_SUFFIX);
+  }
+
+//   struct timeval before, after;
+//   gettimeofday(&before, NULL);
+
+  if (first)
+  {
+    std::cout<<"\n\n\n"<<query<<"\n\n\n";
+    first = false;
+  }
+  
+  
+  async_write((*mSocket),
+              boost::asio::buffer(query),
+              boost::bind(&AsyncConnectionGet::write_some_handler_get,this,_1,_2));
+
+//   gettimeofday(&after, NULL);
+//   double timeTaken = after.tv_sec - before.tv_sec;
+//   timeTaken = timeTaken + (((double)(after.tv_usec - before.tv_usec))/1000000.0);
+//   mTimesTaken.push_back(timeTaken);
+
+  
+  return true;
+}
+
+
+void AsyncConnectionGet::printStatisticsTimesTaken()
+{
+  double total = 0;
+
+  for (int s=0; s< (int) mTimesTaken.size(); ++s)
+  {
+    total += mTimesTaken[s];
+  }
+
+  std::cout<<"\n\n\nTHIS IS TOTAL:   "<<total<<"\n\n";
+  std::cout<<"\n\n\nTHIS IS AVG:     "<<total/((double) mTimesTaken.size())<<"\n\n";
+  
+}
 
 
 
@@ -241,7 +345,7 @@ int AsyncConnectionGet::runReQuery()
 
 //datakey should have a null termination character.
 //public interface for the get command
-bool AsyncConnectionGet::get(CraqDataKey dataToGet)
+bool AsyncConnectionGet::get(const CraqDataKey& dataToGet)
 {
   if (mReady != READY)
   {
@@ -263,7 +367,8 @@ bool AsyncConnectionGet::get(CraqDataKey dataToGet)
 }
 
 
-bool AsyncConnectionGet::getQuery(CraqDataKey dataToGet)
+
+bool AsyncConnectionGet::getQuery(const CraqDataKey& dataToGet)
 {
   //crafts query
   std::string query;
@@ -456,6 +561,9 @@ bool AsyncConnectionGet::checkNotFound(std::string& response)
     {
       //means that the smallest next
       notFoundPhrase = suffixed.substr(suffixNotFoundIndex, smallestNext);
+
+      std::cout<<"\n\n\t\tSuffixed:  "<<suffixed<<"\n\n";
+      
       suffixed = suffixed.substr(smallestNext);
 
 
@@ -615,8 +723,6 @@ bool AsyncConnectionGet::checkValue(std::string& response)
       else
       {
         response = response + valuePhrase + suffixed;
-        //        printf("\n\nOffending response: %s\n ",response.c_str() );
-        fflush(stdout);
         return false;
       }
     }
@@ -832,54 +938,53 @@ void AsyncConnectionGet::generic_read_stored_not_found_error_handler ( const boo
   std::string tmpLine;
   
   is >> tmpLine;
-
-  int numChecking = 0;
-
-
+  
   
   while (tmpLine.size() != 0)
   {
     response.append(tmpLine);
     tmpLine = "";
     is >> tmpLine;
-
-    ++numChecking;
-    
-    if (numChecking > 100)
-    {
-      std::cout<<"\n\nThis is response:  "<<response<<"\n\n\n";
-      std::cout.flush();
-      assert(false);
-    }
-    
   }
 
-  //  mAllResps += response + "\n";
+  //  std::cout<<"\n\n\n\nResponse:    "<<response<<"\n\n\n\n";
+  mAllResponseCount += countInstancesOf("VALUE",response);
+  response = "";
 
-  std::string tmp = mPrevReadFrag;
+
+  bool anything = true;
+  //bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
   
-  bool anything = processEntireResponse(response); //this will go through everything that we read out.  And sort it by errors, storeds, not_founds, and values.
-
   delete sBuff;
 
-
   prevReadFlag = response;
-  
-  if (!anything) //means that the response wasn't one that we could reasonably parse.
-  {
-    //    printf ("\n\nThis is response here:  %s\n\n", response.c_str());
-    //    printf ("\n\nThis is the fragment:  %s \n\n", tmp.c_str());
-    fflush(stdout);
-    //    killSequence();
-  }
 
   set_generic_stored_not_found_error_handler();
 }
 
 
+int AsyncConnectionGet::getRespCount()
+{
+  return mAllResponseCount;
+}
 
+//counts the number of instances of toFind in initialString
+int AsyncConnectionGet::countInstancesOf(const std::string& needle, const std::string& haystack)
+{
+  int returner   = 0;
+  int indexBegin = 0;
+  int sizeNeedle = needle.size();
+  
+  size_t index = haystack.find(needle,indexBegin);
+  while (index != std::string::npos)
+  {
+    indexBegin = ((int)index) + sizeNeedle;
+    index = haystack.find(needle,indexBegin);
+    ++returner;
+  }
 
-
+  return returner;
+}
 
 
 
@@ -997,6 +1102,10 @@ bool AsyncConnectionGet::checkError(std::string& response)
       errorPhrase = suffixed.substr(suffixErrorIndex, smallestNext);
       suffixed = suffixed.substr(smallestNext);
       returner = true;
+      
+      if ((prefixed.size() > 1000) || (suffixed.size() > 1000))
+        printf("\n\n******Long prefix/suffix:   %s \n\n\n %s\n\n\n",prefixed.c_str(),suffixed.c_str());
+      
       response = prefixed +suffixed;
     }
     else

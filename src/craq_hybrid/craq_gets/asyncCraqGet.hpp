@@ -38,6 +38,10 @@ public:
 
   int queueSize();
   int numStillProcessing();
+
+  int getMulti(CraqDataSetGet& dataToGet);
+  void tickMulti(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults);
+  int getRespCount();
   
 private:
   
@@ -56,6 +60,8 @@ private:
 
   void reInitializeNode(int s);
   void checkConnections(int s);
+  void checkConnectionsMulti(int s);
+
   
 };
 

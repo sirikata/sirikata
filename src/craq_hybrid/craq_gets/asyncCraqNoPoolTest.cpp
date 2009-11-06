@@ -13,11 +13,15 @@
 
 #include <sys/time.h>
 
-#define WHICH_SERVER  "localhost"
-#define WHICH_PORT        "10499"
+//#define WHICH_SERVER  "localhost"
+//#define WHICH_SERVER       "meru22"
 
+//#define WHICH_SERVER        "127.0.0.1"
+//#define WHICH_PORT          "10499"
 
-
+//#define WHICH_SERVER        "meru21"
+#define WHICH_SERVER        "localhost"
+#define WHICH_PORT          "10499"
 
 namespace CBR
 {
@@ -29,11 +33,23 @@ void basicWait(AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetR
 
 void iteratedWait(int numWaits,AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
 
+  
 void craftQueries(std::vector<CraqDataSetGet*>& vect);
 void runMultiUnLoadSpeed(int numTimesLoad);
 
+
+
+
+void basicWaitMulti(AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
+void iteratedWaitMulti(int numWaits,AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults);
+void runMultiUnLoadSpeedMulti(int numTimesLoad);
+
+  
+
+  
+
 //static const int numPuts = 400;
-static const int numPuts = 400;
+  static const int numPuts = 400;
 static const int numInit = 10;
 
 void runLoad();
@@ -46,17 +62,18 @@ void runMultiUnLoad(int numTimesLoad);
 int main (int argc, char** argv)
 {
   //  runLoad();
-
   //  runMultiUnLoad(200);
 
   std::cout<<"\n\nAbout to run\n\n";
   std::cout.flush();
-  CBR::runMultiUnLoadSpeed(200);
+  //CBR::runMultiUnLoadSpeed(400);
+    CBR::runMultiUnLoadSpeedMulti(400);
+    //  CBR::runMultiUnLoadSpeedMulti(400);
   std::cout<<"\n\nDONE\n\n";
+
   
   //  runMultiUnLoad(40);
   //  runUnLoad();
-
   
   return 0;
 }
@@ -67,8 +84,7 @@ namespace CBR
 
 void runLoad()
 {
- AsyncCraqGet myReader1;
-  
+  AsyncCraqGet myReader1;
   
   //declare craq args  
   std::vector<CraqInitializeArgs> craqArgs1;
@@ -76,9 +92,6 @@ void runLoad()
   cInitArgs.ipAdd   =     WHICH_SERVER;
   cInitArgs.port    =       WHICH_PORT;
 
-
-
-  
   craqArgs1.push_back(cInitArgs);
 
   std::vector<CraqOperationResult*> allGets;
@@ -89,13 +102,11 @@ void runLoad()
   std::cout.flush();
   myReader1.initialize(craqArgs1);
 
-
   for(int s=0; s < 10000; ++s)
   {
     iteratedWait(1,&myReader1,allGets, allTrackedSets);
     //    iteratedWait(1,&myReader2,allGets, allTrackedSets);    
   }
-  
 
   std::cout<<"\n\nAbout to perform first set of sets\n\n";
   std::cout.flush();
@@ -103,10 +114,8 @@ void runLoad()
   CraqDataKey cDK;
   std::string query;  
 
-
   struct timeval first_time, finished_time;
   gettimeofday(&first_time,NULL);
-
     
   for (int s=numInit; s < numInit+ numPuts; ++s)
   {
@@ -379,8 +388,9 @@ void runMultiUnLoad(int numTimesLoad)
       ++numgetting;
       if (numgetting %50 == 0)
         iteratedWait(1,&myReader1,allGets,allTrackedSets);
-      else 
-        usleep(1);
+      
+      //      else 
+      //        usleep(1);
 
     }
   }
@@ -428,8 +438,132 @@ void runMultiUnLoad(int numTimesLoad)
   double realTimeTakenSeconds = secondsElapsed + uSecondsElapsed/(1000000);
   std::cout<<"\n\nThis is timer final:  "<<realTimeTakenSeconds<<"\n\n";
   std::cout<<"\n\nThis is size of allGets:   "<<allGetsSize<<"\n\n";
+
+  std::cout<<"\n\nThis is response count:  ";
+  int counter = myReader1.getRespCount();
+  std::cout<<counter<<"\n\n\n\n";
+  
 }
 
+
+
+
+void runMultiUnLoadSpeedMulti(int numTimesLoad)
+{
+
+  //declare reader
+  AsyncCraqGet myReader1;
+  
+  
+  //declare craq args  
+  std::vector<CraqInitializeArgs> craqArgs1;
+  CraqInitializeArgs cInitArgs;
+  cInitArgs.ipAdd   =     WHICH_SERVER;
+  cInitArgs.port    =       WHICH_PORT;
+
+
+  
+  craqArgs1.push_back(cInitArgs);
+
+  std::vector<CraqOperationResult*> allGets;
+  std::vector<CraqOperationResult*> allTrackedSets;
+
+  
+  std::cout<<"\n\nAbout to perform reader initialization.\n\n";
+  myReader1.initialize(craqArgs1);
+
+  iteratedWait(10000,&myReader1,allGets, allTrackedSets);
+
+  std::cout<<"\n\nAbout to perform first set of sets\n\n";
+  //performing first sets
+
+  iteratedWait(200000,&myReader1,allGets, allTrackedSets);
+
+  //constructing queries
+  std::vector<CraqDataSetGet*> allQueries;
+  craftQueries(allQueries);
+
+
+  //about to perform gets
+  std::cout<<"\n\nAbout to perform a bunch of gets\n\n";
+  std::cout.flush();
+  int numgetting  = 0;
+
+  usleep(100);
+
+  
+  //initializing timer
+  struct timeval first_time, middle_time, finished_time;
+  gettimeofday(&first_time,NULL);
+   
+  for (int a = 0; a < numTimesLoad; ++a)
+  {
+    for (int s=numInit; s < numInit+ numPuts; ++s)
+    {
+      myReader1.getMulti(*(allQueries[s-numInit]));
+      
+      ++numgetting;
+      if (numgetting %50 == 0)
+      {
+        iteratedWaitMulti(1,&myReader1,allGets,allTrackedSets);
+      }
+
+      //      else
+      //      {
+      //        usleep(1);
+      //      }
+      
+    }
+  }
+
+  gettimeofday(&middle_time, NULL);
+  //  iteratedWait(10000,&myReader1,allGets, allTrackedSets);
+
+  int numIter = 0;
+  while ((numIter < 1000) && (myReader1.numStillProcessing() != 0))
+  {
+    std::cout<<"\n\nThis is numIter:  "<<numIter<<"\n";
+    std::cout<<"This is numStillProcessing:   "<<myReader1.numStillProcessing()<<"\n";
+    std::cout<<"This is the size of allGets:  "<<allGets.size()<<"\n\n\n";
+    std::cout.flush();
+
+    usleep(100);
+    
+    iteratedWait(1000,&myReader1,allGets, allTrackedSets);
+    ++numIter;
+  }
+  
+  int allGetsSize = (int) allGets.size();
+  std::cout<<"\n\nThis is size of allGets:   "<<allGets.size()<<"\n\n";
+  
+  std::cout<<"\n\nThis is response count:  ";
+  int counter = myReader1.getRespCount();
+  std::cout<<counter<<"\n\n\n\n";
+
+  
+  
+  gettimeofday(&finished_time,NULL);
+  double secondsElapsed  = finished_time.tv_sec - first_time.tv_sec;
+  double uSecondsElapsed = finished_time.tv_usec - first_time.tv_usec;
+  double realTimeTakenSeconds = secondsElapsed + uSecondsElapsed/(1000000);
+
+  double middleSecondsElapsed = middle_time.tv_sec - first_time.tv_sec;
+  double middleUSecondsElapsed = middle_time.tv_usec - first_time.tv_usec;
+  double middleRealTimeTakenSeconds = middleSecondsElapsed + middleUSecondsElapsed/(1000000);
+
+  
+  
+  //  for (int s=0; s < (int)allGets.size(); ++ s)
+  //  {
+  //    printResponse(allGets[s]);
+  //  }
+
+  
+  std::cout<<"\n\nThis is timer final:  "<<realTimeTakenSeconds<<"\n\n";
+  std::cout<<"\n\nThis is size of allGets:   "<<allGetsSize<<"\n\n";
+  std::cout<<"\n\nThis is the time it took to do the middle section:  "<<middleRealTimeTakenSeconds<<"\n\n\n";
+
+}
 
 
 void runMultiUnLoadSpeed(int numTimesLoad)
@@ -456,11 +590,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
   std::cout<<"\n\nAbout to perform reader initialization.\n\n";
   myReader1.initialize(craqArgs1);
 
-
-
   iteratedWait(10000,&myReader1,allGets, allTrackedSets);
-
-  
 
   std::cout<<"\n\nAbout to perform first set of sets\n\n";
   //performing first sets
@@ -471,18 +601,19 @@ void runMultiUnLoadSpeed(int numTimesLoad)
   std::vector<CraqDataSetGet*> allQueries;
   craftQueries(allQueries);
 
-  //initializing timer
-  struct timeval first_time, finished_time;
-  gettimeofday(&first_time,NULL);
-   
-  
+
   //about to perform gets
   std::cout<<"\n\nAbout to perform a bunch of gets\n\n";
   std::cout.flush();
   int numgetting  = 0;
 
   usleep(100);
+
   
+  //initializing timer
+  struct timeval first_time, middle_time, finished_time;
+  gettimeofday(&first_time,NULL);
+   
   for (int a = 0; a < numTimesLoad; ++a)
   {
     for (int s=numInit; s < numInit+ numPuts; ++s)
@@ -491,16 +622,20 @@ void runMultiUnLoadSpeed(int numTimesLoad)
       
       ++numgetting;
       if (numgetting %50 == 0)
+      {
         iteratedWait(1,&myReader1,allGets,allTrackedSets);
+      }
 
-      
-      //      else
+      //    else
+      //      {
       //        usleep(1);
+      //      }
       
     }
   }
-  
-  iteratedWait(10000,&myReader1,allGets, allTrackedSets);
+
+  gettimeofday(&middle_time, NULL);
+  //  iteratedWait(10000,&myReader1,allGets, allTrackedSets);
 
   int numIter = 0;
   while ((numIter < 1000) && (myReader1.numStillProcessing() != 0))
@@ -510,7 +645,7 @@ void runMultiUnLoadSpeed(int numTimesLoad)
     std::cout<<"This is the size of allGets:  "<<allGets.size()<<"\n\n\n";
     std::cout.flush();
 
-    usleep(30);
+    usleep(100);
     
     iteratedWait(1000,&myReader1,allGets, allTrackedSets);
     ++numIter;
@@ -520,17 +655,28 @@ void runMultiUnLoadSpeed(int numTimesLoad)
   std::cout<<"\n\nThis is size of allGets:   "<<allGets.size()<<"\n\n";
   
   
-  for (int s=0; s < (int)allGets.size(); ++ s)
-  {
-    printResponse(allGets[s]);
-  }
   
   gettimeofday(&finished_time,NULL);
   double secondsElapsed  = finished_time.tv_sec - first_time.tv_sec;
   double uSecondsElapsed = finished_time.tv_usec - first_time.tv_usec;
   double realTimeTakenSeconds = secondsElapsed + uSecondsElapsed/(1000000);
+
+  double middleSecondsElapsed = middle_time.tv_sec - first_time.tv_sec;
+  double middleUSecondsElapsed = middle_time.tv_usec - first_time.tv_usec;
+  double middleRealTimeTakenSeconds = middleSecondsElapsed + middleUSecondsElapsed/(1000000);
+
+  
+  
+  for (int s=0; s < (int)allGets.size(); ++ s)
+  {
+    printResponse(allGets[s]);
+  }
+
+  
   std::cout<<"\n\nThis is timer final:  "<<realTimeTakenSeconds<<"\n\n";
   std::cout<<"\n\nThis is size of allGets:   "<<allGetsSize<<"\n\n";
+  std::cout<<"\n\nThis is the time it took to do the middle section:  "<<middleRealTimeTakenSeconds<<"\n\n\n";
+
 }
 
 
@@ -571,7 +717,7 @@ void printResponse(CraqOperationResult* res)
     {
       std::cout<<"\n\nERROR value here serv:  "<< res->servID<<"\n\n\n";
 
-      assert(false);
+      //      assert(false);
     }
 
     for (int a=0; a < 33; ++a)
@@ -585,14 +731,14 @@ void printResponse(CraqOperationResult* res)
     }
 
 
-    
-    //    std::cout<<"GETTING: \n";
-    //    std::cout<<"\tObj ID:   "<<res->objID<<"      Server ID:  "<<res->servID<<"\n";
-    //    if (!res->succeeded)
-    //    {
-    //      std::cout<<"\n\nWARNING.  WARNING.  FAIL.  FAIL.\n\n\n\n";
-    //      exit(1);
-    //    }
+    //need to re-comment
+       std::cout<<"GETTING: \n";
+       std::cout<<"\tObj ID:   "<<res->objID<<"      Server ID:  "<<res->servID<<"\n";
+       if (!res->succeeded)
+       {
+         std::cout<<"\n\nWARNING.  WARNING.  FAIL.  FAIL.\n\n\n\n";
+         exit(1);
+       }
   }
   //  if(res.whichOperation == CraqOperationResult::SET)
   else
@@ -618,6 +764,21 @@ void iteratedWait(int numWaits,AsyncCraqGet* myReader,std::vector<CraqOperationR
 }
 
 
+
+void iteratedWaitMulti(int numWaits,AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
+{
+  for (int s=0; s < numWaits; ++s)
+  {
+    basicWaitMulti(myReader,allGetResults,allTrackedResults);
+  }
+}
+
+
+
+
+
+
+
 void basicWait(AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
 {
   std::vector<CraqOperationResult*> getResults;
@@ -630,6 +791,16 @@ void basicWait(AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetR
 }
 
 
+void basicWaitMulti(AsyncCraqGet* myReader,std::vector<CraqOperationResult*> &allGetResults,std::vector<CraqOperationResult*>&allTrackedResults)
+{
+  std::vector<CraqOperationResult*> getResults;
+  std::vector<CraqOperationResult*> trackedSetResults;
+
+  myReader -> tickMulti(getResults,trackedSetResults);
+
+  allGetResults.insert(allGetResults.end(), getResults.begin(), getResults.end());
+  allTrackedResults.insert(allTrackedResults.end(), trackedSetResults.begin(), trackedSetResults.end());
+}
 
 }
 

@@ -12,6 +12,9 @@
 
 #define WHICH_SERVER  "localhost"
 #define WHICH_PORT        "10499"
+//#define WHICH_SERVER  "bmistree.stanford.edu"
+//#define WHICH_PORT        "4999"
+
 
 namespace CBR
 {
@@ -121,11 +124,13 @@ namespace CBR
     int allGetsSize = (int) allGets.size();
     std::cout<<"\n\nThis is size of allGets:   "<<allGets.size()<<"\n\n";
     std::cout.flush();
-  
+
+    
     for (int s=0; s < (int)allGets.size(); ++ s)
     {
       printResponse(allGets[s]);
     }
+    
   
     gettimeofday(&finished_time,NULL);
     double secondsElapsed  = finished_time.tv_sec - first_time.tv_sec;

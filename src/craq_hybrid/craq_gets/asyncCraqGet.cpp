@@ -28,6 +28,18 @@ AsyncCraqGet::~AsyncCraqGet()
 }
 
 
+  int AsyncCraqGet::getRespCount()
+  {
+    int returner = 0;
+    for (int s=0; s < (int) mConnections.size(); ++s)
+    {
+      returner += mConnections[s]->getRespCount();
+    }
+
+    return returner;
+  }
+  
+
 //nothing to initialize
 AsyncCraqGet::AsyncCraqGet()
 {
@@ -141,7 +153,7 @@ int AsyncCraqGet::set(const CraqDataSetGet& dataToSet)
   mQueue.push(cdQuery);
   straightPoll();
   checkConnections(0);
-  usleep(1);
+  //  usleep(1);
 
   //  dataToSet.messageType = CraqDataSetGet::SET;
 
@@ -189,14 +201,40 @@ int AsyncCraqGet::numStillProcessing()
 
 
 
+int AsyncCraqGet::getMulti(CraqDataSetGet& dataToGet)
+{
+  CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
+
+  mQueue.push(cdQuery);
+  //  straightPoll();
+  checkConnectionsMulti(0);
+  //  usleep(1);
+
+  
+  //force this to be a set message.
+  //  dataToGet.messageType = CraqDataSetGet::GET;
+  //we got all the way through without finding a ready connection.  Need to add query to queue.
+  //  mQueue.push(dataToGet);
+
+  //  straightPoll();
+  //bftm added here.
+  //  checkConnections(0);
+  //  usleep(1);
+  
+  
+  return 0;
+}
+
+
+  
 int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
 {
   CraqDataSetGet* cdQuery = new CraqDataSetGet(dataToGet.dataKey,dataToGet.dataKeyValue,dataToGet.trackMessage,CraqDataSetGet::GET);
 
   mQueue.push(cdQuery);
-  straightPoll();
+  //  straightPoll();
   checkConnections(0);
-  usleep(1);
+  //  usleep(1);
 
   
   //force this to be a set message.
@@ -216,12 +254,20 @@ int AsyncCraqGet::get(const CraqDataSetGet& dataToGet)
 
 void AsyncCraqGet::straightPoll()
 {
-  int numHandled = io_service.poll();
+  //  static int numCalled = 0;
 
-  if (numHandled == 0)
-  {
-    io_service.reset();
-  }
+  //  ++numCalled;
+
+  //  if (numCalled > 1000)
+  //  {
+    int numHandled = io_service.poll();
+
+    if (numHandled == 0)
+    {
+      io_service.reset();
+    }
+    //    numCalled = 0;
+    //  }
 
 }
 
@@ -254,20 +300,73 @@ void AsyncCraqGet::tick(std::vector<CraqOperationResult*>&getResults, std::vecto
     //can optimize by setting separate tracks for 
     mConnections[s]->tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
 
-    for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
-    {
-      getResults.push_back(tickedMessages_getResults[t]);
-    }
-    for (int t= 0; t < (int) tickedMessages_trackedSetResults.size(); ++t)
-    {
-      trackedSetResults.push_back(tickedMessages_trackedSetResults[t]);
-    }
+
+    getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
+    trackedSetResults.insert(trackedSetResults.end(),tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
+    
+    //    for (int t= 0; t < (int) tickedMessages_getResults.size(); ++t)
+//     {
+//       getResults.push_back(tickedMessages_getResults[t]);
+//     }
+//     for (int t= 0; t < (int) tickedMessages_trackedSetResults.size(); ++t)
+//     {
+//       trackedSetResults.push_back(tickedMessages_trackedSetResults[t]);
+//     }
 
     processErrorResults(tickedMessages_errorResults);
     
     checkConnections(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
   }
 }
+
+
+
+
+
+
+/*
+  tick processes 
+  tick returns all the 
+*/
+void AsyncCraqGet::tickMulti(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
+{
+
+  straightPoll();
+  
+  std::vector<CraqOperationResult*> tickedMessages_getResults;
+  std::vector<CraqOperationResult*> tickedMessages_errorResults;
+  std::vector<CraqOperationResult*> tickedMessages_trackedSetResults;
+  
+  for (int s=0; s < (int)mConnections.size(); ++s)
+  {
+    if (tickedMessages_getResults.size() != 0)
+      tickedMessages_getResults.clear();
+
+    if (tickedMessages_errorResults.size() != 0)
+      tickedMessages_errorResults.clear();
+
+    if (tickedMessages_trackedSetResults.size() != 0)
+      tickedMessages_trackedSetResults.clear();
+
+
+    //can optimize by setting separate tracks for 
+    mConnections[s]->tick(tickedMessages_getResults,tickedMessages_errorResults,tickedMessages_trackedSetResults);
+
+    getResults.insert(getResults.end(), tickedMessages_getResults.begin(), tickedMessages_getResults.end());
+    trackedSetResults.insert(trackedSetResults.end(), tickedMessages_trackedSetResults.begin(), tickedMessages_trackedSetResults.end());
+
+    
+    processErrorResults(tickedMessages_errorResults);
+    
+    checkConnectionsMulti(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
+  }
+}
+
+
+
+
+
+
 
 
 /*
@@ -340,6 +439,53 @@ void AsyncCraqGet::checkConnections(int s)
     std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
   }
 }
+
+
+
+void AsyncCraqGet::checkConnectionsMulti(int s)
+{
+  if (s >= (int)mConnections.size())
+    return;
+  
+  int numOperations = 0;
+
+  //  mConnections[s].ready();
+
+  
+  //  if (mConnections[s].ready() == AsyncConnectionTwo::READY)
+  if (mConnections[s]->ready() == AsyncConnectionGet::READY)
+  {
+    if (mQueue.size() != 0)
+    {
+      //need to put in another
+      CraqDataSetGet* cdSG = mQueue.front();
+      mQueue.pop();
+
+      ++numOperations;
+      
+      if (cdSG->messageType == CraqDataSetGet::GET)
+      {
+        //perform a get in  connections.
+        mConnections[s]->getMulti(cdSG->dataKey);
+      }
+      else if (cdSG->messageType == CraqDataSetGet::SET)
+      {
+        //performing a set in connections.
+        mConnections[s]->set(cdSG->dataKey, cdSG->dataKeyValue, cdSG->trackMessage, cdSG->trackingID);
+      }
+
+      delete cdSG;
+    }
+  }
+  //  else if (mConnections[s].ready() == AsyncConnectionTwo::NEED_NEW_SOCKET)
+  else if (mConnections[s]->ready() == AsyncConnectionGet::NEED_NEW_SOCKET)
+  {
+    //need to create a new socket for the other
+    reInitializeNode(s);
+    std::cout<<"\n\nbftm debug: needed new connection.  How long will this take? \n\n";
+  }
+}
+
 
 
 
