@@ -181,7 +181,11 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
 
     mObjectInfo[obj_id].migratingTo = sid;
     std::vector<UUID>*objects=&mObjectServerMap[mObjectInfo[obj_id].connectedTo];
-    objects->erase(std::find(objects->begin(),objects->end(),obj_id));
+    std::vector<UUID>::iterator where=std::find(objects->begin(),objects->end(),obj_id);
+    assert(where!=objects->end());
+    if (where!=objects->end()) {
+        objects->erase(where);
+    }
     // Get or start the connection we need to start this migration
     getSpaceConnection(
         sid,
@@ -208,7 +212,17 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
             sid
             ))    {
         printf ("RETRYING MIGRATION\n");
-        mContext->mainStrand->post(Duration::seconds(.05),std::tr1::bind(&ObjectHost::migrate,this,obj_id,sid));
+        std::tr1::function<void(SpaceNodeConnection*)> retry(std::tr1::bind(&ObjectHost::openConnectionStartMigration,
+                                                                          this, 
+                                                                          obj_id, 
+                                                                          sid, 
+                                                                          _1));
+        mContext->mainStrand
+            ->post(Duration::seconds(.05),
+                   std::tr1::bind(&ObjectHost::getSpaceConnection,
+                                  this,
+                                  sid,
+                                  retry));
     }
         
     // FIXME do something on failure
