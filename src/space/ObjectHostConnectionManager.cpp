@@ -124,6 +124,12 @@ void ObjectHostConnectionManager::shutdown() {
 void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& set_callbacks) {
     using std::tr1::placeholders::_1;
 
+    // For some mysterious reason, Sirikata::Network::Stream uses this callback with a NULL stream to indicate
+    // all streams from a connection are gone and the underlying connection is shutting down. Why we would care
+    // about this I do not know, but we handle it because it may be used in Sirikata somewhere.
+    if (str == NULL)
+        return;
+
     SPACE_LOG(debug,"New object host connection handled");
 
     // Add the new connection to our index, set read callbacks
