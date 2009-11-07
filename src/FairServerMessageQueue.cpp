@@ -54,6 +54,10 @@ bool FairServerMessageQueue::addMessage(Message* msg){
 
     // Otherwise, store for push to network
     bool success = mServerQueues.push(destinationServer,msg)==QueueEnum::PushSucceeded;
+    if (success) {
+        printf ("BOGUS CHECK\n");
+        reportQueueInfo(mContext->time);
+    }
     return success;
 }
 
@@ -190,12 +194,14 @@ float FairServerMessageQueue::getServerWeight(ServerID sid) {
     return 0;
 }
 
-void FairServerMessageQueue::reportQueueInfo(const Time& t) const {
+void FairServerMessageQueue::reportQueueInfo(const Time& t) const {   
+    printf ("Reporting Q info for %d folks\n",mReceiveSet.size());
     for(ReceiveServerSet::const_iterator it = mReceiveSet.begin(); it != mReceiveSet.end(); it++) {
         uint32 tx_size = mServerQueues.maxSize(*it), tx_used = mServerQueues.size(*it);
         float tx_weight = mServerQueues.getQueueWeight(*it);
         uint32 rx_size = mReceiveQueues.maxSize(*it), rx_used = mReceiveQueues.size(*it);
         float rx_weight = mReceiveQueues.getQueueWeight(*it);
+        printf ("%d %f %d %f \n",tx_used,tx_weight,rx_used,rx_weight);
         mContext->trace()->serverDatagramQueueInfo(t, *it, tx_size, tx_used, tx_weight, rx_size, rx_used, rx_weight);
     }
 }

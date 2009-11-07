@@ -37,7 +37,7 @@
 #include <sirikata/network/IOServiceFactory.hpp>
 #include <sirikata/network/StreamListenerFactory.hpp>
 #include <sirikata/util/PluginManager.hpp>
-
+#include "Statistics.hpp"
 #define SPACE_LOG(level,msg) SILOG(space,level,"[SPACE] " << msg)
 
 namespace CBR {
@@ -141,11 +141,18 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
 
 bool ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
-
+    static Time starttime=Time::now(Duration::zero());
+    static size_t count=0;
+    ++count;
+    if (rand()/RAND_MAX<.00001) {
+        Time niv=Time::now(Duration::zero());
+        Duration bleh((niv-starttime)/(double)count);
+        std::cout<< "Ratio "<<bleh<<':'<<count<<'\n';
+    }
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
-
+    mContext->trace()->timestampMessage(mContext->time,  obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port(),  SERVER_PORT_OBJECT_MESSAGE_ROUTING);
     handleObjectHostMessage(conn->id, obj_msg);
     return true;
 }

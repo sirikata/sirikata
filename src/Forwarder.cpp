@@ -44,6 +44,7 @@ public:
 private:
     virtual void poll() {
         mServerMessageQueue->reportQueueInfo(mContext->time);
+        printf ("BOOYTAH\n");
     }
 
     SpaceContext* mContext;
@@ -100,6 +101,7 @@ void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq)
 
     Duration sample_rate = GetOption(STATS_SAMPLE_RATE)->as<Duration>();
     mSampler = new ForwarderSampler(mContext, sample_rate, mServerMessageQueue);
+    mContext->add(mSampler);
 }
 
 void Forwarder::poll()
