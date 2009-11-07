@@ -1275,7 +1275,7 @@ MessageLatencyAnalysis::MessageLatencyAnalysis(const char* opt_name, const uint3
         if (resiter->second.numSamples) {
             const char* lastStage=getPacketStageName(resiter->first.first);
             const char* currentStage=getPacketStageName(resiter->first.second);
-            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<std::endl;
+            std::cout<<"Stage "<<lastStage<<'-'<<currentStage<<':'<<resiter->second.average<<"s stddev "<<sqrt(resiter->second.variance)<<" #"<<resiter->second.numSamples<<std::endl;
             lastStage=currentStage;
 
         }

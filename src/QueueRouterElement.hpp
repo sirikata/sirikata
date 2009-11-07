@@ -61,10 +61,10 @@ public:
             delete pkt;
     }
 
-    void push(PacketType* pkt) {
-        push(0, pkt);
+    bool push(PacketType* pkt) {
+        return push(0, pkt);
     }
-    virtual void push(uint32 port, PacketType* pkt) {
+    virtual bool push(uint32 port, PacketType* pkt) {
         assert(pkt != NULL);
         assert(port == 0);
 
@@ -73,12 +73,13 @@ public:
         if (new_size > mMaxSize) {
             // drop
             delete pkt;
-            return;
+            return false;
         }
 
         // else store
         mSize = new_size;
         mPackets.push(pkt);
+        return true;
     }
 
     PacketType* pull() {

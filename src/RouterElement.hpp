@@ -105,7 +105,7 @@ public:
      *  \param port the port to push the packet to
      *  \param pkt the packet to push
      */
-    virtual void push(uint32 port, PacketType* pkt) = 0;
+    virtual bool push(uint32 port, PacketType* pkt) = 0;
 
 protected:
     /** An input port for this element. A convenience for inherited

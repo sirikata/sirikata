@@ -61,8 +61,7 @@ ObjectHost::SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Opt
 
     connecting = false;
 
-    queue.connect(0, &rateLimiter, 0);
-    rateLimiter.connect(0, &streamTx, 0);
+    queue.connect(0, &streamTx, 0);
 }
 
 ObjectHost::SpaceNodeConnection::~SpaceNodeConnection() {
@@ -134,7 +133,12 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
         std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), _1)
     );
 }
-
+void ObjectHost::retryOpenConnection(const UUID&uuid,ServerID sid) {
+    getSpaceConnection(
+        sid,
+        std::tr1::bind(&ObjectHost::openConnectionStartSession, this, uuid, _1)
+    );
+}
 void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn) {
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << uuid.toString());
@@ -158,13 +162,15 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
     if (mObjectInfo[uuid].connecting.regQuery)
         connect_msg.set_query_angle( mObjectInfo[uuid].connecting.queryAngle.asFloat() );
 
-    send(mContext->time,
-        uuid, OBJECT_PORT_SESSION,
-        UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(session_msg),
-        conn->server
-    );
-    // FIXME do something on failure
+    if (!send(mContext->time,
+              uuid, OBJECT_PORT_SESSION,
+              UUID::null(), OBJECT_PORT_SESSION,
+              serializePBJMessage(session_msg),
+              conn->server
+            )) {
+        printf ("RETRYING CONNECTION\n");
+        mContext->ioService->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server));
+    }
 }
 
 
@@ -194,14 +200,17 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
     CBR::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
     connect_msg.set_type(CBR::Protocol::Session::Connect::Migration);
     connect_msg.set_object(obj_id);
-    send(
-        mContext->time,
-        obj_id, OBJECT_PORT_SESSION,
-        UUID::null(), OBJECT_PORT_SESSION,
-        serializePBJMessage(session_msg),
-        sid
-    );
-
+    if (!send(
+            mContext->time,
+            obj_id, OBJECT_PORT_SESSION,
+            UUID::null(), OBJECT_PORT_SESSION,
+            serializePBJMessage(session_msg),
+            sid
+            ))    {
+        printf ("RETRYING MIGRATION\n");
+        mContext->ioService->post(Duration::seconds(.05),std::tr1::bind(&ObjectHost::migrate,this,obj_id,sid));
+    }
+        
     // FIXME do something on failure
 }
 
@@ -238,9 +247,7 @@ bool ObjectHost::send(const Time&t, const UUID& src, const uint16 src_port, cons
     // FIXME would be nice not to have to do this alloc/dealloc
     ObjectMessage* obj_msg = createObjectHostMessage(mContext->id, src, src_port, dest, dest_port, payload);
     mContext->trace()->timestampMessage(t,obj_msg->unique(),Trace::CREATED,src_port, dest_port);
-    conn->queue.push( obj_msg );
-
-    return true;
+    return conn->queue.push( obj_msg );
 }
 void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
 
@@ -250,6 +257,14 @@ void ObjectHost::ping(const Object*src, const UUID&dest, double distance) {
     if (distance>=0)
         ping_msg.set_distance(distance);
     ping_msg.set_id(mPingId++);
+    ping_msg.set_dat1(0);
+    ping_msg.set_dat2(0);
+    ping_msg.set_dat3(0);
+    ping_msg.set_dat4(0);
+    ping_msg.set_dat5(0);
+    ping_msg.set_dat6(0);
+    ping_msg.set_dat7(0);
+    ping_msg.set_dat8(0);
     ServerID destServer=getConnectedServer(src->uuid());
     if (destServer!=NullServerID) {
         send(t,src->uuid(),OBJECT_PORT_PING,dest,OBJECT_PORT_PING,serializePBJMessage(ping_msg),destServer);
@@ -311,13 +326,15 @@ void ObjectHost::randomPing(const Time&t) {
 
 
 
-    Object * a=roundRobinObject(1);
+    Object * a=randomObject();
     Object * b=randomObject();
 
     if (a&&b) {
         if (a == NULL || b == NULL) return;
         if (mObjectInfo[a->uuid()].connectedTo == NullServerID ||
             mObjectInfo[b->uuid()].connectedTo == NullServerID)
+            return;
+        if (mObjectInfo[b->uuid()].connectedTo == mObjectInfo[a->uuid()].connectedTo)
             return;
         ping(a,b->uuid(),(a->location().extrapolate(t).position()-b->location().extrapolate(t).position()).length());
     }

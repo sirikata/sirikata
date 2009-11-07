@@ -52,8 +52,9 @@ public:
     {
     }
 
-    virtual void push(uint32 port, PacketType* pkt) {
+    virtual bool push(uint32 port, PacketType* pkt) {
         assert(false);
+        return false;
     }
 
     PacketType* pull() {

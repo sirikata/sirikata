@@ -94,7 +94,7 @@ private:
 
     // Handles session messages received from the server -- connection replies, migration requests, etc.
     void handleSessionMessage(CBR::Protocol::Object::ObjectMessage* msg);
-
+    void retryOpenConnection(const UUID&uuid,ServerID sid);
 
     /** SpaceNodeConnection initiation. */
 
