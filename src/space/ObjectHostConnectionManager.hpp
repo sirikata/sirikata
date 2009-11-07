@@ -85,7 +85,7 @@ private:
     /** Reading and writing handling for ObjectHostConnections. */
 
     // Handle async reading callbacks for this connection
-    bool handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk);
+    Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk);
 
     /** Handle messages, either directly, e.g. for sessions, or by dispatching them. */
     void handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg);

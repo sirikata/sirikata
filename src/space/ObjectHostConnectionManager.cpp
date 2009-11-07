@@ -136,23 +136,23 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
     ObjectHostConnection* conn = new ObjectHostConnection(getNewConnectionID(), str);
     mConnections[conn->id] = conn;
     set_callbacks(
-        &Sirikata::Network::Stream::ignoreConnectionStatus,
+        &Sirikata::Network::Stream::ignoreConnectionCallback,
         std::tr1::bind(&ObjectHostConnectionManager::handleConnectionRead,
             this,
             conn,
             _1),
-        &Sirikata::Network::Stream::ignoreReadySend
+        &Sirikata::Network::Stream::ignoreReadySendCallback
     );
 }
 
-bool ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
+Sirikata::Network::Stream::ReceivedResponse ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
     mContext->trace()->timestampMessage(mContext->time,  obj_msg->unique(),Trace::HANDLE_OBJECT_HOST_MESSAGE,obj_msg->source_port(),obj_msg->dest_port(),  SERVER_PORT_OBJECT_MESSAGE_ROUTING);
     handleObjectHostMessage(conn->id, obj_msg);
-    return true;
+    return Sirikata::Network::Stream::AcceptedData;
 }
 
 void ObjectHostConnectionManager::handleObjectHostMessage(const ConnectionID& conn_id, CBR::Protocol::Object::ObjectMessage* msg) {

@@ -131,7 +131,7 @@ private:
 
     /** Reading and writing handling for SpaceNodeConnections. */
     // Handle async reading callbacks for this connection
-    bool handleConnectionRead(SpaceNodeConnection* conn,Sirikata::Network::Chunk& chunk);
+    Sirikata::Network::Stream::ReceivedResponse handleConnectionRead(SpaceNodeConnection* conn, Sirikata::Network::Chunk& chunk);
 
 
     /* Ping Utility Methods. */

@@ -449,15 +449,17 @@ void ObjectHost::setupSpaceConnection(ServerID server, GotSpaceConnectionCallbac
     Address4* addr = mServerIDMap->lookupExternal(server);
     Address addy(convertAddress4ToSirikata(*addr));
     conn->socket->connect(addy,
-                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
-                          std::tr1::bind(&ObjectHost::handleSpaceConnection,
-                                         this,
-                                         _1, _2, server),
-                          std::tr1::bind(&ObjectHost::handleConnectionRead,
-                                         this,
-                                         conn,
-                                         _1),
-                          &Sirikata::Network::Stream::ignoreReadySend);
+        &Sirikata::Network::Stream::ignoreSubstreamCallback,
+        std::tr1::bind(&ObjectHost::handleSpaceConnection,
+            this,
+            _1, _2, server),
+        std::tr1::bind(&ObjectHost::handleConnectionRead,
+            this,
+            conn,
+            _1),
+        &Sirikata::Network::Stream::ignoreReadySendCallback
+    );
+
     OH_LOG(debug,"Trying to connect to " << addy.toString());
     conn->connecting = true;
 }
@@ -490,13 +492,13 @@ void ObjectHost::handleSpaceConnection(const Sirikata::Network::Stream::Connecti
     conn->connectCallbacks.clear();
 }
 
-bool ObjectHost::handleConnectionRead(SpaceNodeConnection* conn, Chunk& chunk) {
+Sirikata::Network::Stream::ReceivedResponse ObjectHost::handleConnectionRead(SpaceNodeConnection* conn, Chunk& chunk) {
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);
 
     handleServerMessage( conn, obj_msg );
-    return true;
+    return Sirikata::Network::Stream::AcceptedData;
 }
 
 

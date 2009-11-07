@@ -46,7 +46,7 @@ class TCPNetwork :public Network{
     typedef std::tr1::weak_ptr<std::tr1::shared_ptr<TSQueue> > weak_dbl_ptr_queue;
     Sirikata::ThreadSafeQueue<Address4> mDisconnectedStreams;
     Sirikata::ThreadSafeQueue<Address4> mNewConnectedStreams;
-    bool bytesReceivedCallback(const weak_dbl_ptr_queue&queue, Chunk&data);
+    Sirikata::Network::Stream::ReceivedResponse bytesReceivedCallback(const weak_dbl_ptr_queue&queue, Chunk&data);
     void receivedConnectionCallback(const weak_dbl_ptr_queue&queue, const Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);
     void readySendCallback(const Address4&);
     void sendStreamConnectionCallback(const Address4&, const Sirikata::Network::Stream::ConnectionStatus, const std::string&reason);

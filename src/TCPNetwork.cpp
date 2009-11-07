@@ -39,7 +39,7 @@ void TCPNetwork::newStreamCallback(Stream*newStream, Stream::SetCallbacks&setCal
     setCallbacks(
                  std::tr1::bind(&TCPNetwork::receivedConnectionCallback,this,weak_newitem,_1,_2),
                  std::tr1::bind(&TCPNetwork::bytesReceivedCallback,this,weak_newitem,_1),
-                 &Stream::ignoreReadySend);
+                 &Stream::ignoreReadySendCallback);
 
 }
 
@@ -107,7 +107,7 @@ bool TCPNetwork::send(const Address4&addy, const Chunk& data, bool reliable, boo
 
         Stream::ConnectionCallback connectionCallback(std::tr1::bind(&TCPNetwork::sendStreamConnectionCallback,this,addy,_1,_2));
         Stream::SubstreamCallback sscb(&Stream::ignoreSubstreamCallback);
-        Stream::BytesReceivedCallback br(&Stream::ignoreBytesReceived);
+        Stream::ReceivedCallback br(&Stream::ignoreReceivedCallback);
         Stream::ReadySendCallback readySendCallback(std::tr1::bind(&TCPNetwork::readySendCallback,this,addy));
         //std::cout<< "Connecting to "<<convertAddress4ToSirikata(addy).toString()<<'\n';
         where->second.stream->connect(convertAddress4ToSirikata(addy),
@@ -245,7 +245,7 @@ Chunk* TCPNetwork::receiveOne(const Address4&from, uint32 max_size) {
     return NULL;
 }
 
-bool TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chunk&data){
+Sirikata::Network::Stream::ReceivedResponse TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chunk&data){
     dbl_ptr_queue queue(weak_queue.lock());
     if (queue&&*queue){
 
@@ -257,10 +257,10 @@ bool TCPNetwork::bytesReceivedCallback(const weak_dbl_ptr_queue&weak_queue, Chun
             //std::cout<<"Push fail of "<<data.size()<< "to "<<(*queue)->stream->getRemoteEndpoint().toString()<<'\n';
             tmp->swap(data);
             delete tmp;
-            return false;
+            return Sirikata::Network::Stream::PauseReceive;
         }
     }
-    return true;
+    return Sirikata::Network::Stream::AcceptedData;
 }
 void TCPNetwork::receivedConnectionCallback(const weak_dbl_ptr_queue&weak_queue, const Sirikata::Network::Stream::ConnectionStatus status, const std::string&reason){
     //std::cout<<" Got recv cnx callback "<<status<<" with "<<reason<<'\n';
