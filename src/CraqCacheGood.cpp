@@ -50,10 +50,8 @@ namespace CBR
         delete tMapIter->second;
 
         //delete the record from the multimap
-        timeRecMap.erase(tMapIter);
+        timeRecMap.erase(tMapIter++);
 
-        //go forward
-        ++tMapIter;
       }
     }
   }
