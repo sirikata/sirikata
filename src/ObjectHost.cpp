@@ -169,7 +169,7 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
               conn->server
             )) {
         printf ("RETRYING CONNECTION\n");
-        mContext->ioService->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server));
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server));
     }
 }
 
@@ -208,7 +208,7 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
             sid
             ))    {
         printf ("RETRYING MIGRATION\n");
-        mContext->ioService->post(Duration::seconds(.05),std::tr1::bind(&ObjectHost::migrate,this,obj_id,sid));
+        mContext->mainStrand->post(Duration::seconds(.05),std::tr1::bind(&ObjectHost::migrate,this,obj_id,sid));
     }
         
     // FIXME do something on failure
