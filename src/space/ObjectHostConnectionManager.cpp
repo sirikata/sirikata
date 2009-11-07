@@ -141,14 +141,6 @@ void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream*
 
 bool ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* conn, Sirikata::Network::Chunk& chunk) {
     SPACE_LOG(insane, "Handling connection read: " << chunk.size() << " bytes");
-    static Time starttime=Time::now(Duration::zero());
-    static size_t count=0;
-    ++count;
-    if (rand()/RAND_MAX<.00001) {
-        Time niv=Time::now(Duration::zero());
-        Duration bleh((niv-starttime)/(double)count);
-        std::cout<< "Ratio "<<bleh<<':'<<count<<'\n';
-    }
     CBR::Protocol::Object::ObjectMessage* obj_msg = new CBR::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(chunk.data(),chunk.size());
     assert(parse_success == true);

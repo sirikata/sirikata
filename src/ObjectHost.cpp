@@ -168,7 +168,6 @@ void ObjectHost::openConnectionStartSession(const UUID& uuid, SpaceNodeConnectio
               serializePBJMessage(session_msg),
               conn->server
             )) {
-        printf ("RETRYING CONNECTION\n");
         mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&ObjectHost::retryOpenConnection,this,uuid,conn->server));
     }
 }
@@ -211,7 +210,6 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
             serializePBJMessage(session_msg),
             sid
             ))    {
-        printf ("RETRYING MIGRATION\n");
         std::tr1::function<void(SpaceNodeConnection*)> retry(std::tr1::bind(&ObjectHost::openConnectionStartMigration,
                                                                           this, 
                                                                           obj_id, 

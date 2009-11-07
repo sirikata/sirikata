@@ -44,7 +44,7 @@ public:
 private:
     virtual void poll() {
         mServerMessageQueue->reportQueueInfo(mContext->time);
-        printf ("BOOYTAH\n");
+
     }
 
     SpaceContext* mContext;
