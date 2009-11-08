@@ -49,6 +49,7 @@ class Trace;
  */
 class Context {
 public:
+<<<<<<< HEAD:src/Context.hpp
     Context(const String& name, IOService* ios, IOStrand* strand, Trace* _trace, const Time& epoch, const Duration& simlen)
      : ioService(ios),
        mainStrand(strand),

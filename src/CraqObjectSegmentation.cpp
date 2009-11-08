@@ -234,6 +234,21 @@ namespace CBR
       return cacheReturn;
     }
 
+    may need to wrap.;
+    ctx->osegStrand->post(boost::bind(&CraqObjectSegmentation::beginCraqLookup,this,obj_id));
+    //    beginCraqLookup(obj_id);
+
+    //note to self.
+    issue - do I need to ensure that nullserverid returns before begincraqlookup via some strange semantics? when I add in stranding?  May need to mutex lock the lookup call from outside of here.;
+
+
+    return NullServerID;
+  }
+
+  void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id)
+  {
+    may need to have a mutex lock begin here;
+    
     UUID tmper = obj_id;
     std::map<UUID,TransLookup>::const_iterator iter = mInTransitOrLookup.find(tmper);
 
@@ -546,7 +561,6 @@ namespace CBR
         }
       }
 
-
       //delete the tracked set result
       delete trackedSetResults[s];
 
@@ -639,9 +653,6 @@ void CraqObjectSegmentation::basicWait(std::vector<CraqOperationResult*> &allGet
         //log message stating that object was processed.
         Duration timerDur = mTimer.elapsed();
         mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (((int) timerDur.toMilliseconds()) - (int)(iter->second.timeAdmitted)), (uint32) craqDhtGet.queueSize()  );
-        //        mContext->trace()->objectSegmentationProcessedRequest(mContext->time, mapDataKeyToUUID[getResults[s]->idToString()],getResults[s]->servID, mContext->id(), (uint32) (numServices - ((int)(iter->second.timeAdmitted))), (uint32) craqDhtGet.queueSize()  );
-        //debug trace
-
         
         if(iter->second.sID ==  CRAQ_OSEG_LOOKUP_SERVER_ID)
         {

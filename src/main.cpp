@@ -98,9 +98,10 @@ int main(int argc, char** argv) {
 
     IOService* ios = IOServiceFactory::makeIOService();
     IOStrand* mainStrand = ios->createStrand();
-
+    IOStrand* osegStrand = ios->createStrand();
+    
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, init_space_ctx_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, osegStrand, start_time, init_space_ctx_time, gTrace, duration);
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();
@@ -332,13 +333,16 @@ void *main_loop(void *) {
     gTrace = NULL;
 
     IOStrand* mainStrand = space_context->mainStrand;
+    IOStrand* osegStrand = space_context->osegStrand;
     IOService* ios = space_context->ioService;
 
     delete space_context;
     space_context = NULL;
 
     delete mainStrand;
+    delete osegStrand;
+    
     IOServiceFactory::destroyIOService(ios);
-
+    
     return 0;
 }

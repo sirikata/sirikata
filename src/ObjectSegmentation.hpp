@@ -12,9 +12,6 @@
 namespace CBR
 {
 
-
-  const ServerID OBJECT_IN_TRANSIT = -999;
-
 /* Listener interface for OSeg events.
  *
  * Note that these are likely to be called from another thread, so
@@ -35,19 +32,32 @@ class ObjectSegmentation : public MessageRecipient, public PollingService
     virtual void poll() = 0;
 
     SpaceContext* mContext;
-      TimeProfiler::Stage* mServiceStage;
-      OSegListener* mListener;
+    TimeProfiler::Stage* mServiceStage;
+    OSegListener* mListener;
+    
   public:
 
+
     ObjectSegmentation(SpaceContext* ctx)
-     : PollingService(ctx->mainStrand),
+     : PollingService(ctx->osegStrand),
        mContext(ctx),
        mListener(NULL)
     {
         mServiceStage = mContext->profiler->addStage("OSeg");
     }
 
-
+    /*
+    ObjectSegmentation(SpaceContext* ctx)
+     :
+       mContext(ctx),
+       mListener(NULL)
+    {
+      mStrand = ctx->ios->createStrand();
+      PollingService(mStrand);
+      mServiceStage = mContext->profiler->addStage("OSeg");
+    }
+    */
+    
 
     virtual ~ObjectSegmentation() {}
 
