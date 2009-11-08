@@ -40,8 +40,6 @@ namespace CBR
     mContext->dispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
 
-
-
     craqDhtGet.initialize(getInitArgs);
     craqDhtSet.initialize(setInitArgs);
 
@@ -425,13 +423,10 @@ namespace CBR
       std::cout<<"\n\nThe object clearly wasn't registered on this server.  This is obj id:  " <<  obj_id.toString() <<  ".  This is time:   " <<mContext->time.raw() << " Oh no.   ";
 
       if (clearToMigrate(obj_id))
-      {
         std::cout<<"  Likely a problem with clear to migrate\n\n";
-      }
       else
-      {
         std::cout<<"\n\n clear to migrate is fine migration is being called from somewhere besides server.cpp\n\n";
-      }
+
 #endif
     }
   }
@@ -525,7 +520,7 @@ namespace CBR
            if (!sent)
            {
              //             printf("\n\nbftm debug: ERROR had problems sending migrate ack msg for object %s to %i \n\n", trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->m_objid().toString().c_str(), trackingMessages[trackedSetResults[s]->trackedMessage].migAckMsg->getMessageDestination() );
-             fflush(stdout);
+             //             fflush(stdout);
              reTryMigAckMessage.push_back(to_send); //will try to re-send the tracking message
            }
 
@@ -549,7 +544,7 @@ namespace CBR
           if (!sent)
           {
             //            printf("\n\nbftm debug: error here: obj: %s", trackedAddMessages[trackedSetResults[s]->trackedMessage].msgAdded->contents.m_objid().toString().c_str());
-            fflush(stdout);
+            //            fflush(stdout);
             reTryAddedMessage.push_back(to_send);  //will try to re-send the add message
           }
         }
@@ -820,7 +815,7 @@ void CraqObjectSegmentation::checkReSends()
       if (!sent)
       {
         //        printf("\n\nbftm debug: ERROR here trying to resend add message: obj: %s", reTryAddedMessage[s]->contents.m_objid().toString().c_str());
-        fflush(stdout);
+        //        fflush(stdout);
         reReTryAddedMessage.push_back(reTryAddedMessage[s]);
       }
     }
@@ -833,7 +828,7 @@ void CraqObjectSegmentation::checkReSends()
       if (!sent)
       {
         //        printf("\n\nbftm debug: ERROR here trying to resend migrate ack msg for object %s to %i.  Size of outstanding:  %i \n\n", reTryMigAckMessage[s]->m_objid().toString().c_str(),reTryMigAckMessage[s]->getMessageDestination(), (int)reTryMigAckMessage.size() );
-        fflush(stdout);
+        //        fflush(stdout);
         reReTryMigAckMessage.push_back(reTryMigAckMessage[s]);
       }
     }

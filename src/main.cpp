@@ -101,7 +101,10 @@ int main(int argc, char** argv) {
     IOStrand* osegStrand = ios->createStrand();
     
     Time init_space_ctx_time = Time::null() + (Timer::now() - start_time);
+    //    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, osegStrand, start_time, init_space_ctx_time, gTrace, duration);
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, osegStrand, start_time, init_space_ctx_time, gTrace, duration);
+
+                                      
     gSpaceContext = space_context;
 
     String network_type = GetOption(NETWORK_TYPE)->as<String>();

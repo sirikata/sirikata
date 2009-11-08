@@ -19,7 +19,7 @@ public:
 
   enum ConnectionState {READY, NEED_NEW_SOCKET,PROCESSING};
   
-  void initialize(boost::asio::ip::tcp::socket* socket,     boost::asio::ip::tcp::resolver::iterator );  
+  void initialize(boost::asio::ip::tcp::socket* socket, boost::asio::ip::tcp::resolver::iterator, SpaceContex* spc );
 
   void tick(std::vector<CraqOperationResult*>&opResults_get, std::vector<CraqOperationResult*>&opResults_error, std::vector<CraqOperationResult*>&opResults_trackedSets);  //runs through one iteration of io_service.run_once.
   
@@ -40,6 +40,8 @@ private:
   int currentlySettingTo;
   ConnectionState mReady;
 
+  SpaceContext* ctx;
+  
   bool mTracking;
   int mTrackNumber;
   std::vector<CraqOperationResult*> mOperationResultVector;

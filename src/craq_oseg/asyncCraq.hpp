@@ -6,6 +6,8 @@
 #include "asyncUtil.hpp"
 #include "asyncConnection.hpp"
 #include "../Timer.hpp"
+#include "../SpaceContext.hpp"
+
 
 #ifndef __ASYNC_CRAQ_CLASS_H__
 #define __ASYNC_CRAQ_CLASS_H__
@@ -18,7 +20,7 @@ namespace CBR
 class AsyncCraq
 {
 public:
-  AsyncCraq();
+  AsyncCraq(SpaceContext* spc);
   ~AsyncCraq();
 
   enum AsyncCraqReqStatus{REQUEST_PROCESSED, REQUEST_NOT_PROCESSED};
@@ -49,7 +51,8 @@ private:
   std::vector<AsyncConnection*> mConnections;
   int mCurrentTrackNum;
 
-  
+
+  SpaceContext* ctx;
   bool connected;
   CraqDataResponseBuffer mReadData;  
   CraqDataGetResp mReadSomeData;

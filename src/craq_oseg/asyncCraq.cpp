@@ -28,8 +28,6 @@ AsyncCraq::AsyncCraq()
 }
 
 
-//void AsyncCraq::initialize(char* ipAdd, char* port)
-
 void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
 {
 
@@ -55,7 +53,7 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[s].ipAdd.c_str(), ipAddPort[s].port.c_str());
       boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
     }
   }
   else
@@ -77,14 +75,12 @@ void AsyncCraq::initialize(std::vector<CraqInitializeArgs> ipAddPort)
       if (whichRouterServing  != whichRouterServingPrevious)
       {
         boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), ipAddPort[whichRouterServing].ipAdd.c_str(), ipAddPort[whichRouterServing].port.c_str());
-      
         
         iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
-        
         whichRouterServingPrevious = whichRouterServing;
       }
       passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-      mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+      mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
     }
   }
   
@@ -152,9 +148,7 @@ int AsyncCraq::get(const CraqDataSetGet& dataToGet)
 */
 void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<CraqOperationResult*>&trackedSetResults)
 {
-
   Duration tickBeginDur = mTimer.elapsed();
-
   
   int numHandled = io_service.poll();
 
@@ -173,7 +167,6 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
       printf("\n\nHUGEPOLL  %i\n\n", procPollDur);
     }
   }
-
   
         
   std::vector<CraqOperationResult*> tickedMessages_getResults;
@@ -202,7 +195,7 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
     checkConnections(s); //checks whether connection is ready for an additional query and also checks if it needs a new socket.
   }
 
-
+#ifdef DEBUG_CRAQ
   if (tickBeginDur.toMilliseconds() > 100000)
   {
     Duration tickEnder = mTimer.elapsed();
@@ -210,6 +203,8 @@ void AsyncCraq::tick(std::vector<CraqOperationResult*>&getResults, std::vector<C
     if(tickTime > 2)
       printf("\n\nHUGECRAQ %i, %i, %i \n\n", tickTime, (int) getResults.size(), (int)trackedSetResults.size());
   }
+#endif
+  
 }
 
 
@@ -304,7 +299,7 @@ void AsyncCraq::reInitializeNode(int s)
     boost::asio::ip::tcp::resolver::query query(boost::asio::ip::tcp::v4(), mIpAddPort[s].ipAdd.c_str(), mIpAddPort[s].port.c_str());
     boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
   }
   else
   {
@@ -320,7 +315,7 @@ void AsyncCraq::reInitializeNode(int s)
     iterator = resolver.resolve(query);  //creates a list of endpoints that we can try to connect to.
         
     passSocket   =  new boost::asio::ip::tcp::socket(io_service);
-    mConnections[s]->initialize(passSocket,iterator); //note maybe can pass this by reference?
+    mConnections[s]->initialize(passSocket,iterator,ctx); //note maybe can pass this by reference?
   }
 }
 
