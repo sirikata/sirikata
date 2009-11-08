@@ -101,7 +101,7 @@ private:
     // Get an existing space connection or initiate a new one at random
     // which can be used for bootstrapping connections
     typedef std::tr1::function<void(SpaceNodeConnection*)> GotSpaceConnectionCallback;
-    void getSpaceConnection(GotSpaceConnectionCallback cb);
+    void getAnySpaceConnection(GotSpaceConnectionCallback cb);
     // Get the connection to the specified space node
     void getSpaceConnection(ServerID sid, GotSpaceConnectionCallback cb);
 

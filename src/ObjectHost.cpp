@@ -129,11 +129,13 @@ void ObjectHost::openConnection(Object* obj, const TimedMotionVector3f& init_loc
     mObjectInfo[obj->uuid()].connecting.cb = cb;
 
     // Get a connection to request
-    getSpaceConnection(
+    getAnySpaceConnection(
         std::tr1::bind(&ObjectHost::openConnectionStartSession, this, obj->uuid(), _1)
     );
 }
 void ObjectHost::retryOpenConnection(const UUID&uuid,ServerID sid) {
+    using std::tr1::placeholders::_1;
+
     getSpaceConnection(
         sid,
         std::tr1::bind(&ObjectHost::openConnectionStartSession, this, uuid, _1)
@@ -193,6 +195,8 @@ void ObjectHost::migrate(const UUID& obj_id, ServerID sid) {
 }
 
 void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, SpaceNodeConnection* conn) {
+    using std::tr1::placeholders::_1;
+
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't open connection to server " << sid << " for migration of object " << obj_id.toString());
         // FIXME disconnect? retry?
@@ -211,9 +215,9 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
             sid
             ))    {
         std::tr1::function<void(SpaceNodeConnection*)> retry(std::tr1::bind(&ObjectHost::openConnectionStartMigration,
-                                                                          this, 
-                                                                          obj_id, 
-                                                                          sid, 
+                                                                          this,
+                                                                          obj_id,
+                                                                          sid,
                                                                           _1));
         mContext->mainStrand
             ->post(Duration::seconds(.05),
@@ -222,7 +226,7 @@ void ObjectHost::openConnectionStartMigration(const UUID& obj_id, ServerID sid, 
                                   sid,
                                   retry));
     }
-        
+
     // FIXME do something on failure
 }
 
@@ -394,7 +398,7 @@ void ObjectHost::poll() {
 }
 
 
-void ObjectHost::getSpaceConnection(GotSpaceConnectionCallback cb) {
+void ObjectHost::getAnySpaceConnection(GotSpaceConnectionCallback cb) {
     // Check if we have any fully open connections we can already use
     if (!mConnections.empty()) {
         for(ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
